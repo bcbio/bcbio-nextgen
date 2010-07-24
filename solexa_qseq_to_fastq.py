@@ -1,5 +1,13 @@
 #!/usr/bin/env python
-"""Small wrapper around Illumina pipeline scripts to build fastq files.
+"""Convert output solexa qseq files into fastq format.
+
+Works with qseq output from Illumina's on-machine base caller in:
+
+Data/Intensities/BaseCalls/
+
+or from the offline base caller in:
+
+Data/*_Firecrest*/Bustard*
 
 Usage:
     solexa_qseq_to_fastq.py <run name> <list of lane numbers>
@@ -8,6 +16,8 @@ The lane numbers should be separated by commas, so to build fastq files for all
 lanes, you should pass:
 
     1,2,3,4,5,6,7,8
+
+Output files will be in the fastq directory as <lane>_<run_name>_fastq.txt
 """
 from __future__ import with_statement
 import os
