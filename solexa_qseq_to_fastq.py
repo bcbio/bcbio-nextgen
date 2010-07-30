@@ -27,8 +27,6 @@ import re
 import subprocess
 from optparse import OptionParser
 
-from Mgh.Solexa import Config
-
 def main(run_name, lane_nums):
     startdir = os.getcwd()
     outdir = os.path.join(startdir, "fastq")
