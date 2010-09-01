@@ -1,0 +1,6 @@
+msg_tag: sqn_finished
+dump_directories:
+  - /array10
+  - /array11
+  - /array12
+msg_db: /home/chapman/transfer/transferred.db

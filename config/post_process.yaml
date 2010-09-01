@@ -1,0 +1,36 @@
+galaxy_url: http://your/galaxy/url
+galaxy_api_key: your_galaxy_api_key
+galaxy_config: /opt/source/galaxy/web/universe_wsgi.ini
+program:
+  bowtie: bowtie
+  samtools: samtools
+  bwa: bwa
+  maq: maq
+  picard: /source/Picard
+algorithm:
+  aligner: bowtie
+  max_errors: 2
+  num_cores: 8
+  stringency: high
+  quality_format: Illumina
+  platform: SOLEXA
+  recalibrate: false
+  snpcall: false
+msg_tag: sqn_finished
+local_sqn_dir: /store4/solexadata
+analysis:
+  base_dir: /array0/projects/Sequencing
+  process_program: automated_initial_analysis.py
+  upload_program: upload_to_galaxy.py
+# configuration algorithm changes for custom post-processing steps
+custom_algorithms:
+  'Broad SNP':
+    aligner: maq
+    recalibrate: true
+    snpcall: true
+    hybrid_bait: bait_list
+    hybrid_target: target_list
+  'SNP calling':
+    aligner: bwa
+    recalibrate: true
+    snpcall: true
