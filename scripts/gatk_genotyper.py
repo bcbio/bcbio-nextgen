@@ -36,7 +36,7 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
             ref_file, dbsnp)
     realign_bam = indel_realignment(picard, align_bam, ref_file,
             realign_target_file)
-    realign_sort_bam = picard_sort(picard, realign_bam)
+    realign_sort_bam = picard_fixmate(picard, realign_bam)
     index_bam(realign_sort_bam, config["program"]["samtools"])
     snp_file = unified_genotyper(picard, realign_sort_bam, ref_file,
             config["algorithm"]["platform"], dbsnp)
@@ -140,12 +140,26 @@ def indel_realignment(picard, align_bam, ref_file, intervals):
               "-I", align_bam,
               "-R", ref_file,
               "-targetIntervals", intervals,
-              "--output", out_file,
+              "-o", out_file,
               "-l", "INFO",
               ]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with curdir_tmpdir() as tmp_dir:
             picard.run_gatk(params, tmp_dir)
+    return out_file
+
+def picard_fixmate(picard, align_bam):
+    """Run Picard's FixMateInformation generating an aligned output file.
+    """
+    base, ext = os.path.splitext(align_bam)
+    out_file = "%s-sort%s" % (base, ext)
+    if not os.path.exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            opts = [("INPUT", align_bam),
+                    ("OUTPUT", out_file),
+                    ("TMP_DIR", tmp_dir),
+                    ("SORT_ORDER", "coordinate")]
+            picard.run("FixMateInformation", opts)
     return out_file
 
 def index_ref_file(picard, ref_file):
@@ -164,18 +178,6 @@ def index_bam(bam_file, samtools_cmd):
         cl = [samtools_cmd, "index", bam_file]
         subprocess.check_call(cl)
     return index_file
-
-def picard_sort(picard, align_bam):
-    base, ext = os.path.splitext(align_bam)
-    out_file = "%s-sort%s" % (base, ext)
-    if not os.path.exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
-            opts = [("INPUT", align_bam),
-                    ("OUTPUT", out_file),
-                    ("TMP_DIR", tmp_dir),
-                    ("SORT_ORDER", "coordinate")]
-            picard.run("SortSam", opts)
-    return out_file
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
