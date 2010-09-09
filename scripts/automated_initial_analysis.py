@@ -135,7 +135,7 @@ def generate_fastq(fc_dir, fc_name, all_lanes):
         with _chdir(os.path.split(fastq_dir)[0]):
             cl = ["solexa_qseq_to_fastq.py", fc_name,
                     ",".join(str(l) for l in all_lanes)]
-            subprocess.call(cl)
+            subprocess.check_call(cl)
     return fastq_dir
 
 def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, config):
@@ -242,7 +242,7 @@ def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
         cl.append("--target=%s" % os.path.join(base_dir, target))
     if do_sort:
         cl.append("--sort")
-    subprocess.call(cl)
+    subprocess.check_call(cl)
 
 def recalibrate_quality(bam_file, sam_ref, dbsnp_file, picard_dir):
     """Recalibrate alignments with GATK and provide pdf summary.
@@ -250,7 +250,7 @@ def recalibrate_quality(bam_file, sam_ref, dbsnp_file, picard_dir):
     cl = ["picard_gatk_recalibrate.py", picard_dir, sam_ref, bam_file]
     if dbsnp_file:
         cl.append(dbsnp_file)
-    subprocess.call(cl)
+    subprocess.check_call(cl)
     out_file = glob.glob("%s*gatkrecal.bam" % os.path.splitext(bam_file)[0])[0]
     return out_file
 
@@ -260,7 +260,7 @@ def run_genotyper(bam_file, ref_file, dbsnp_file, config_file):
     cl = ["gatk_genotyper.py", config_file, ref_file, bam_file]
     if dbsnp_file:
         cl.append(dbsnp_file)
-    subprocess.call(cl)
+    subprocess.check_call(cl)
 
 def get_dbsnp_file(sam_ref):
     snp_file = None
@@ -275,7 +275,7 @@ def analyze_recalibration(recal_file, fastq1, fastq2):
     cl = ["analyze_quality_recal.py", recal_file, fastq1]
     if fastq2:
         cl.append(fastq2)
-    subprocess.call(cl)
+    subprocess.check_call(cl)
 
 def get_fastq_files(directory, lane, fc_name):
     """Retrieve fastq files for the given lane, ready to process.
@@ -289,7 +289,7 @@ def get_fastq_files(directory, lane, fc_name):
     for fname in files:
         if fname.endswith(".gz"):
             cl = ["gunzip", fname]
-            subprocess.call(cl)
+            subprocess.check_call(cl)
             ready_files.append(os.path.splitext(fname)[0])
         else:
             ready_files.append(fname)

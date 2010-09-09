@@ -47,6 +47,7 @@ import glob
 import subprocess
 
 from bcbio.picard import PicardRunner
+from bcbio.picard.utils import curdir_tmpdir
 
 def main(picard_dir, ref_file, align_bam, snp_file=None):
     platform = "illumina"
@@ -76,7 +77,8 @@ def gatk_recalibrate(picard, dup_align_bam, ref_file, recal_file, platform):
               "--default_platform", platform,
               ]
     if not os.path.exists(out_file):
-        picard.run_gatk(params)
+        with curdir_tmpdir() as tmp_dir:
+            picard.run_gatk(params, tmp_dir)
     return out_file
 
 def count_covariates(picard, dup_align_bam, ref_file, platform,
@@ -101,7 +103,8 @@ def count_covariates(picard, dup_align_bam, ref_file, platform,
     if snp_file:
         params += ["-B", "dbsnp,VCF,%s" % snp_file]
     if not os.path.exists(out_file):
-        picard.run_gatk(params)
+        with curdir_tmpdir() as tmp_dir:
+            picard.run_gatk(params, tmp_dir)
     return out_file
 
 def mark_duplicates(picard, align_bam):
@@ -110,9 +113,11 @@ def mark_duplicates(picard, align_bam):
     dup_bam = "%s-dup%s" % (base, ext)
     dup_metrics = "%s-dup.dup_metrics" % base
     if not os.path.exists(dup_bam):
-        opts = [("INPUT", align_bam),
-                ("OUTPUT", dup_bam),
-                ("METRICS_FILE", dup_metrics)]
+        with curdir_tmpdir() as tmp_dir:
+            opts = [("INPUT", align_bam),
+                    ("OUTPUT", dup_bam),
+                    ("TMP_DIR", tmp_dir),
+                    ("METRICS_FILE", dup_metrics)]
         picard.run("MarkDuplicates", opts)
     return dup_bam
 
@@ -120,10 +125,12 @@ def picard_sort(picard, align_bam):
     base, ext = os.path.splitext(align_bam)
     out_file = "%s-sort%s" % (base, ext)
     if not os.path.exists(out_file):
-        opts = [("INPUT", align_bam),
-                ("OUTPUT", out_file),
-                ("SORT_ORDER", "coordinate")]
-        picard.run("SortSam", opts)
+        with curdir_tmpdir() as tmp_dir:
+            opts = [("INPUT", align_bam),
+                    ("OUTPUT", out_file),
+                    ("TMP_DIR", tmp_dir),
+                    ("SORT_ORDER", "coordinate")]
+            picard.run("SortSam", opts)
     return out_file
 
 def NOTUSED_index_snp_file(picard, ref_dict, snp_file):

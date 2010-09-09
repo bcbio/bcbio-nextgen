@@ -38,9 +38,9 @@ def copy_and_analyze(remote_info, config, config_file):
         config_file = os.path.join(os.getcwd(), config_file)
     with _make_and_chdir(analysis_dir):
         cl = [config["analysis"]["process_program"], config_file, fc_dir]
-        subprocess.call(cl)
+        subprocess.check_call(cl)
     cl = [config["analysis"]["upload_program"], config_file, fc_dir, analysis_dir]
-    subprocess.call(cl)
+    subprocess.check_call(cl)
 
 def _remote_copy(remote_info, local_sqn_dir):
     """Securely copy files from remote directory to the local server.
@@ -58,7 +58,7 @@ def _remote_copy(remote_info, local_sqn_dir):
             cl = ["scp", "-r", "%s@%s:%s/%s" % (remote_info["user"],
                       remote_info["hostname"], remote_info["directory"], fcopy),
                   target_loc]
-            subprocess.call(cl)
+            subprocess.check_call(cl)
     return fc_dir
 
 def message_reader(msg_handler, tag_name, config):
