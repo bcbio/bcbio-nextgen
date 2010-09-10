@@ -45,9 +45,6 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
 
 def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
     """Perform SNP genotyping on the given alignment file.
-
-    XXX Discuss on defaults:
-        min_confidence 10
     """
     out_file = "%s-snp.vcf" % os.path.splitext(align_bam)[0]
     params = ["-T", "UnifiedGenotyper",
@@ -60,7 +57,7 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "--standard_min_confidence_threshold_for_emitting", "10.0",
               "--trigger_min_confidence_threshold_for_calling", "10.0",
               "--trigger_min_confidence_threshold_for_emitting", "10.0",
-              "--max_reads_at_locus", 10000,
+              "--downsample_to_coverage", 10000,
               "--min_base_quality_score", 20,
               "--platform", platform,
               "-l", "INFO",
