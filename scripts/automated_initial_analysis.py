@@ -105,6 +105,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     print info['lane'], "Converting to sorted BAM file"
     base_bam, sort_bam = sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2,
             sample_name, config_file)
+    bam_to_wig(sort_bam, config, config_file)
     if config["algorithm"]["recalibrate"]:
         print info['lane'], "Recalibrating with GATK"
         dbsnp_file = get_dbsnp_file(sam_ref)
@@ -222,9 +223,17 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
             config_file, sam_file, ref_file, fastq1]
     if fastq2:
         cl.append(fastq2)
-    child = subprocess.Popen(cl)
-    child.wait()
+    subprocess.check_call(cl)
     return bam_file, sort_bam_file
+
+def bam_to_wig(bam_file, config, config_file):
+    """Provide a BigWig coverage file of the sorted alignments.
+    """
+    wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
+    if not os.path.exists(wig_file):
+        cl = [config["analysis"]["towig_script"], bam_file, config_file]
+        subprocess.check_call(cl)
+    return wig_file
 
 def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
         sample_name, do_sort=False):

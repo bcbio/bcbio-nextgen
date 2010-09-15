@@ -98,6 +98,9 @@ def select_upload_files(lane, fc_dir, analysis_dir):
     for bam_file in glob.glob(os.path.join(analysis_dir,
             "%s_*-sort-dup.bam" % lane)):
         yield (bam_file, _name_with_ext(bam_file, ".bam"))
+    for wig_file in glob.glob(os.path.join(analysis_dir,
+            "%s_*-sort.bigwig" % lane)):
+        yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload any recalibrated BAM files used for SNP calling
     found_recal = False
     for bam_file in glob.glob(os.path.join(analysis_dir,

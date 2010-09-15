@@ -60,7 +60,8 @@ def main(picard_dir, align_bam, ref_file, fastq_one, fastq_pair=None,
     summary_table.insert(0, ("Reference organism",
         ref_org.replace("_", " "), ""))
     tmpl = Template(section_template)
-    sample_name = "%s (%s)" % (sample_name, base.replace("_", " "))
+    sample_name = "%s (%s)" % (sample_name.replace("_", "\_"),
+            base.replace("_", " "))
     section = tmpl.render(name=sample_name, summary=None,
             summary_table=summary_table,
             figures=[(f, c) for (f, c) in metrics_graphs + fastq_graphs if f],
