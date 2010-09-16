@@ -2,7 +2,11 @@
 """Convert BAM files to wiggle file format in a specified region.
 
 Usage:
-    bam_to_wiggle.py <BAM file> [<YAML config>] [<chrom> <start> <end>]
+    bam_to_wiggle.py <BAM file> [<YAML config>]
+    [--outfile=<output file name>
+     --chrom=<chrom>
+     --start=<start>
+     --end=<end>]
 
 chrom start and end are optional, in which case they default to everything.
 
@@ -13,7 +17,7 @@ program:
   samtools: samtools
   ucsc_bigwig: wigToBigWig
 
-If not specified, these will default to 
+If not specified, these will be assumed to be present in the system path.
 
 The script requires:
     pysam
@@ -23,12 +27,14 @@ The script requires:
 import os
 import sys
 import subprocess
+from optparse import OptionParser
 from contextlib import contextmanager
 
 import yaml
 import pysam
 
-def main(bam_file, config_file=None, chrom='all', start=0, end=None):
+def main(bam_file, config_file=None, chrom='all', start=0, end=None,
+        outfile=None):
     if config_file:
         with open(config_file) as in_handle:
             config = yaml.load(in_handle)
@@ -44,7 +50,7 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None):
     with open(wig_file, "w") as out_handle:
         chr_sizes = write_bam_track(bam_file, regions, config, out_handle)
     try:
-        convert_to_bigwig(wig_file, chr_sizes, config)
+        convert_to_bigwig(wig_file, chr_sizes, config, outfile)
     finally:
         os.remove(wig_file)
 
@@ -83,8 +89,9 @@ def write_bam_track(bam_file, regions, config, out_handle):
                 out_handle.write("%s %s\n" % (col.pos+1, col.n))
     return sizes
 
-def convert_to_bigwig(wig_file, chr_sizes, config):
-    bw_file = "%s.bigwig" % (os.path.splitext(wig_file)[0])
+def convert_to_bigwig(wig_file, chr_sizes, config, bw_file=None):
+    if not bw_file:
+        bw_file = "%s.bigwig" % (os.path.splitext(wig_file)[0])
     size_file = "%s-sizes.txt" % (os.path.splitext(wig_file)[0])
     with open(size_file, "w") as out_handle:
         for chrom, size in chr_sizes:
@@ -97,8 +104,19 @@ def convert_to_bigwig(wig_file, chr_sizes, config):
     return bw_file
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    parser = OptionParser()
+    parser.add_option("-o", "--outfile", dest="outfile")
+    parser.add_option("-c", "--chrom", dest="chrom")
+    parser.add_option("-s", "--start", dest="start")
+    parser.add_option("-e", "--end", dest="end")
+    (options, args) = parser.parse_args()
+    if len(args) not in [1, 2]:
         print "Incorrect arguments"
         print __doc__
         sys.exit()
-    main(*sys.argv[1:])
+    kwargs = dict(
+        outfile=options.outfile,
+        chrom=options.chrom or 'all',
+        start=options.start or 0,
+        end=options.end)
+    main(*args, **kwargs)
