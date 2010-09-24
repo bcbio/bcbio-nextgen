@@ -9,7 +9,8 @@ Usage:
 The Galaxy config needs to have information on the messaging server and queues.
 The local config should have the following information:
 
-    msg_tag: tag name to send messages
+    msg_process_tag, msg_store_tag: tag names to send messages for processing and
+                                    storage
     dump_directories: directories to check for machine output
     msg_db: flat file of output directories that have been reported
 """
@@ -21,9 +22,13 @@ import ConfigParser
 import socket
 import glob
 import getpass
+import subprocess
 
 import yaml
 from amqplib import client_0_8 as amqp
+
+from bcbio.picard import utils
+from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 
 def main(galaxy_config, local_config):
     amqp_config = _read_amqp_config(galaxy_config)
@@ -38,9 +43,28 @@ def search_for_new(config, amqp_config):
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
-                finished_message(config["msg_tag"], dname,
-                        _files_to_copy(dname), amqp_config)
+                _generate_fastq(fc_dir)
+                store_files, process_files = _files_to_copy(dname)
+                finished_message(config["msg_process_tag"], dname,
+                        process_files, amqp_config)
+                finished_message(config["msg_store_tag"], dname,
+                        store_files, amqp_config)
                 _update_reported(config["msg_db"], dname)
+
+def _generate_fastq(fc_dir):
+    """Generate fastq files for the current flowcell.
+    """
+    fc_name, fc_date = get_flowcell_info(fc_dir)
+    short_fc_name = "%s_%s" % (fc_date, fc_name)
+    fastq_dir = get_fastq_dir(fc_dir)
+    if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
+        with utils.chdir(os.path.split(fastq_dir)[0]):
+            lanes = sorted(list(set([f.split("_")[1] for f in
+                glob.glob("*qseq.txt")])))
+            cl = ["solexa_qseq_to_fastq.py", short_fc_name,
+                    ",".join(lanes)]
+            subprocess.check_call(cl)
+    return fastq_dir
 
 def _is_finished_dumping(directory):
     """Determine if the sequencing directory has all files.
@@ -56,8 +80,19 @@ def _is_finished_dumping(directory):
 def _files_to_copy(directory):
     """Retrieve files that should be remotely copied.
     """
-    param_file = glob.glob(os.path.join(directory, "*.params"))[0]
-    return ["Data", "RunInfo.xml", os.path.basename(param_file)]
+    with utils.chdir(directory):
+        image_redo_files = ["Images", "RunInfo.xml"] + glob.glob("*.params")
+        qseqs = reduce(operator.add,
+                     [glob.glob("Data/Intensities/*.xml"),
+                      glob.glob("Data/Intensities/BaseCalls/*qseq.txt"),
+                      ])
+        reports = reduce(operator.add,
+                     [glob.glob("Data/Intensities/BaseCalls/*.xml"),
+                      glob.glob("Data/Intensities/BaseCalls/*.xsl"),
+                      glob.glob("Data/Intensities/BaseCalls/*.htm"),
+                      ["Data/Intensities/BaseCalls/Plots"]])
+        fastq = ["Data/Intensities/BaseCalls/fastq"]
+    return image_redo_files + qseqs, reports + fastq
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.

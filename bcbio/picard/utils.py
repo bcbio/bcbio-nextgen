@@ -24,3 +24,16 @@ def curdir_tmpdir():
         yield tmp_dir
     finally :
         shutil.rmtree(tmp_dir)
+
+@contextlib.contextmanager
+def chdir(new_dir):
+    """Context manager to temporarily change to a new directory.
+
+    http://lucentbeing.com/blog/context-managers-and-the-with-statement-in-python/
+    """
+    cur_dir = os.getcwd()
+    os.chdir(new_dir)
+    try :
+        yield
+    finally :
+        os.chdir(cur_dir)

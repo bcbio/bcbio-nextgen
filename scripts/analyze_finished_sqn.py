@@ -24,7 +24,7 @@ def main(galaxy_config, processing_config):
     with open(processing_config) as in_handle:
         config = yaml.load(in_handle)
     message_reader(analysis_handler(config, processing_config),
-            config["msg_tag"], amqp_config)
+            config["msg_process_tag"], amqp_config)
 
 def copy_and_analyze(remote_info, config, config_file):
     """Remote copy an output directory, process it, and upload to Galaxy.
@@ -84,7 +84,7 @@ def message_reader(msg_handler, tag_name, config):
     conn.close()
 
 def analysis_handler(processing_config, config_file):
-    tag_name = processing_config["msg_tag"]
+    tag_name = processing_config["msg_process_tag"]
     def receive_msg(msg):
         if msg.properties['application_headers'].get('msg_type') == tag_name:
             copy_and_analyze(json.loads(msg.body), processing_config,
