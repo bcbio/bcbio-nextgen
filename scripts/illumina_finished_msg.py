@@ -43,13 +43,13 @@ def search_for_new(config, amqp_config):
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
-                _generate_fastq(fc_dir)
+                _update_reported(config["msg_db"], dname)
+                _generate_fastq(dname)
                 store_files, process_files = _files_to_copy(dname)
                 finished_message(config["msg_process_tag"], dname,
                         process_files, amqp_config)
                 finished_message(config["msg_store_tag"], dname,
                         store_files, amqp_config)
-                _update_reported(config["msg_db"], dname)
 
 def _generate_fastq(fc_dir):
     """Generate fastq files for the current flowcell.

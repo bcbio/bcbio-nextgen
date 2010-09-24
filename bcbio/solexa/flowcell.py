@@ -33,12 +33,12 @@ def get_fastq_dir(fc_dir):
     full_goat_bc = glob.glob(os.path.join(fc_dir, "Data", "*Firecrest*", "Bustard*"))
     bustard_bc = glob.glob(os.path.join(fc_dir, "Data", "Intensities", "*Bustard*"))
     machine_bc = os.path.join(fc_dir, "Data", "Intensities", "BaseCalls")
-    if len(full_goat_bc) > 0:
+    if os.path.exists(machine_bc):
+        return os.path.join(machine_bc, "fastq")
+    elif len(full_goat_bc) > 0:
         return os.path.join(full_goat_bc[0], "fastq")
     elif len(bustard_bc) > 0:
         return os.path.join(bustard_bc[0], "fastq")
-    elif os.path.exists(machine_bc):
-        return os.path.join(machine_bc, "fastq")
     # otherwise assume we are in the fastq directory
     # XXX What other cases can we end up with here?
     else:
