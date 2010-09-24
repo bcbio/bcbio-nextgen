@@ -81,10 +81,10 @@ def _files_to_copy(directory):
     """Retrieve files that should be remotely copied.
     """
     with utils.chdir(directory):
-        image_redo_files = reduce(operator.add(
-		glob.glob("*.params"),
-		glob.glob("Images/L*"),
-		["RunInfo.xml"]))
+        image_redo_files = reduce(operator.add,
+		[glob.glob("*.params"),
+		 glob.glob("Images/L*"),
+		 ["RunInfo.xml"]])
         qseqs = reduce(operator.add,
                      [glob.glob("Data/Intensities/*.xml"),
                       glob.glob("Data/Intensities/BaseCalls/*qseq.txt"),
