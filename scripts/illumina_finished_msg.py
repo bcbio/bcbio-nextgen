@@ -83,7 +83,7 @@ def _files_to_copy(directory):
     with utils.chdir(directory):
         image_redo_files = reduce(operator.add,
 		[glob.glob("*.params"),
-		 glob.glob("Images/L*"),
+		 glob.glob("Images/L*/C*"),
 		 ["RunInfo.xml"]])
         qseqs = reduce(operator.add,
                      [glob.glob("Data/Intensities/*.xml"),
