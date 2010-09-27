@@ -93,9 +93,9 @@ def _files_to_copy(directory):
                      [glob.glob("Data/Intensities/BaseCalls/*.xml"),
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
-                      ["Data/Intensities/BaseCalls/Plots"]])
+                      ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-    return image_redo_files + qseqs, reports + fastq
+    return sorted(image_redo_files + qseqs), sorted(reports + fastq)
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.
