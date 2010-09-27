@@ -23,6 +23,7 @@ setup(name = "bcbio-nextgen",
                  'scripts/picard_maq_recalibrate.py',
                  'scripts/picard_sam_to_bam.py',
                  'scripts/solexa_qseq_to_fastq.py',
+                 'scripts/store_finished_sqn.py',
                  'scripts/upload_to_galaxy.py'],
       package_data = {
           'config' : ['*.yaml'],
