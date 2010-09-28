@@ -23,8 +23,6 @@ from __future__ import with_statement
 import os
 import sys
 import glob
-import re
-import subprocess
 from optparse import OptionParser
 
 def main(run_name, lane_nums):
@@ -96,95 +94,6 @@ def _split_paired(files):
     one.sort()
     two.sort()
     return one, two
-
-# --- Old code using Solexa tools, here for double checking verification
-# --- purposes, if needed.
-
-def old_main(run_lane, lane_nums):
-    """The old main function, which uses the solexa pipeline.
-    """
-    config = Config.from_hostname()
-    mask_script = os.path.join(config.pipeline_dir, "bin", "maskQseq.pl")
-    build_script = os.path.join(config.pipeline_dir, "bin", "buildSeq.pl")
-    
-    startdir = os.getcwd()
-    outdir = os.path.join(startdir, "fastq")
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-    for lane_num in lane_nums:
-        lane_prefix = "s_%s" % lane_num
-        out_prefix = "%s_%s" % (lane_num, run_name)
-        write_lane_old(lane_prefix, build_script, mask_script, out_prefix, outdir)
-    # clean up intermediate files
-    for to_remove in ["_ub_qseq.txt", "_tiles.txt"]:
-        for rem_file in glob.glob(os.path.join(outdir, "*%s" % to_remove)):
-            os.remove(rem_file)
-
-def write_lane_old(lane_prefix, build_script, mask_script, out_prefix, outdir):
-    tiles_file, tiles = make_tiles_file(lane_prefix, outdir)
-    print "Writing mask files for", lane_prefix
-    has_paired_end = make_mask_files(lane_prefix, tiles, outdir, mask_script)
-    if has_paired_end:
-        ends = [1, 2]
-    else:
-        ends = [1]
-    start_dir = os.getcwd()
-    for end in ends:
-        try:
-            os.chdir(outdir)
-            cl = "%s --qualityFilter --fastq %s %s %s _ub_qseq.txt" % (build_script,
-                    tiles_file, lane_prefix, end)
-            print cl
-            if len(ends) > 1:
-                out_file = "%s_%s_fastq.txt" % (out_prefix, end)
-            else:
-                out_file = "%s_fastq.txt" % (out_prefix)
-            with open(out_file, "w") as out_handle:
-                subprocess.call(cl.split(), stdout=out_handle)
-            print "Written to", out_file
-        finally:
-            os.chdir(start_dir)
-
-def make_mask_files(lane_prefix, tiles, outdir, mask_script):
-    """Generate masked files for all qseq files with the given prefix.
-    """
-    has_paired_end = False
-    for tile in tiles:
-        for paired_end in [1, 2]:
-            base_name = "%s_%s_%04d" % (lane_prefix, paired_end, tile)
-            in_file = "%s_qseq.txt" % (base_name)
-            out_file = os.path.join(outdir, "%s_ub_qseq.txt" % base_name)
-            if os.path.exists(in_file):
-                if not has_paired_end and paired_end == 2:
-                    has_paired_end = True
-                if not os.path.exists(out_file):
-                    with open(in_file) as in_handle:
-                        line = in_handle.readline().split()
-                        assert len(line[8]) == len(line[9])
-                        read_length = len(line[8])
-                        base_str = "Y" * read_length
-                    cl = "%s --use_bases %s --orig_read_length %s %s --output %s" % (
-                            mask_script, base_str, read_length, in_file, out_file)
-                    print cl
-                    subprocess.call(cl.split())
-    return has_paired_end
-
-def make_tiles_file(lane_prefix, outdir):
-    match_pat = re.compile("%s_\d_(?P<tile>\d+)_.*" % lane_prefix)
-    files = glob.glob("%s_*qseq*.txt" % lane_prefix)
-    tiles = []
-    for fname in files:
-        match = match_pat.search(fname)
-        tiles.append(int(match.group('tile')))
-    tiles = list(set(tiles)) # remove duplicates for paired end reads
-    tiles.sort()
-    final_tiles = ["%s_%04d" % (lane_prefix, t) for t in tiles]
-    out_file = os.path.join(outdir, "%s_tiles.txt" % lane_prefix)
-    with open(out_file, "w") as out_handle:
-        out_handle.write(" ".join(final_tiles) + "\n")
-    return out_file, tiles
-
-# ----
 
 if __name__ == "__main__":
     parser = OptionParser()
