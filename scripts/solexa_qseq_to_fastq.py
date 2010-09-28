@@ -18,6 +18,9 @@ lanes, you should pass:
     1,2,3,4,5,6,7,8
 
 Output files will be in the fastq directory as <lane>_<run_name>_fastq.txt
+
+Optional arguments:
+    --failed (-f): Also write out reads failing the Illumina quality checks.
 """
 from __future__ import with_statement
 import os
@@ -25,37 +28,46 @@ import sys
 import glob
 from optparse import OptionParser
 
-def main(run_name, lane_nums):
+def main(run_name, lane_nums, do_fail=False):
     startdir = os.getcwd()
     outdir = os.path.join(startdir, "fastq")
     if not os.path.exists(outdir):
         os.makedirs(outdir)
+    if do_fail:
+        fail_dir = os.path.join(outdir, "failed")
+        if not os.path.exists(fail_dir):
+            os.makedirs(fail_dir)
+    else:
+        fail_dir = None
     for lane_num in lane_nums:
         lane_prefix = "s_%s" % lane_num
         out_prefix = "%s_%s" % (lane_num, run_name)
-        write_lane(lane_prefix, out_prefix, outdir)
+        write_lane(lane_prefix, out_prefix, outdir, fail_dir)
 
-def write_lane(lane_prefix, out_prefix, outdir):
+def write_lane(lane_prefix, out_prefix, outdir, fail_dir):
     qseq_files = glob.glob("%s_*qseq.txt" % lane_prefix)
     one_files, two_files = _split_paired(qseq_files)
-    out_files = _get_outfiles(out_prefix, outdir, len(two_files) > 0)
+    is_paired = len(two_files) > 0
+    out_files = _get_outfiles(out_prefix, outdir, is_paired)
+    fail_files = (_get_outfiles(out_prefix, fail_dir, is_paired)
+                  if fail_dir else None)
     for (num, files) in [("1", one_files), ("2", two_files)]:
         for fname in files:
-            convert_qseq_to_fastq(fname, num, out_files)
+            convert_qseq_to_fastq(fname, num, out_files, fail_files)
 
-def convert_qseq_to_fastq(fname, num, out_files):
+def convert_qseq_to_fastq(fname, num, out_files, fail_files=None):
     """Convert a qseq file into the appropriate fastq output.
     """
-    for basename, seq, qual in _qseq_iterator(fname):
-        assert len(seq) == len(qual)
-        split_seqs = [(num, seq, qual)]
-        for snum, sseq, squal in split_seqs:
-            name = "%s/%s" % (basename, snum)
-            out_files[snum].write("@%s\n%s\n+%s\n%s\n" %
-                    (name, sseq, name, squal))
+    for basename, seq, qual, passed in _qseq_iterator(fname):
+        name = "%s/%s" % (basename, num)
+        out = "@%s\n%s\n+%s\n%s\n" % (name, seq, name, qual)
+        if passed:
+            out_files[num].write(out)
+        elif fail_files:
+            fail_files[num].write(out)
 
 def _qseq_iterator(fname):
-    """Return the name, sequence, and quality of passing qseq reads.
+    """Return the name, sequence, quality, and pass info of qseq reads.
 
     Names look like:
 
@@ -64,12 +76,13 @@ def _qseq_iterator(fname):
     with open(fname) as qseq_handle:
         for line in qseq_handle:
             parts = line.strip().split("\t")
-            if int(parts[-1]) == 1:
-                name = ":".join([parts[0]] +  parts[2:6]) + "#" + parts[6]
-                seq = parts[8].replace(".", "N")
-                qual = parts[9]
-                yield name, seq, qual
-   
+            passed = int(parts[-1]) == 1
+            name = ":".join([parts[0]] +  parts[2:6]) + "#" + parts[6]
+            seq = parts[8].replace(".", "N")
+            qual = parts[9]
+            assert len(seq) == len(qual)
+            yield name, seq, qual, passed
+
 def _get_outfiles(out_prefix, outdir, has_paired_files):
     out_files = {}
     if has_paired_files:
@@ -97,8 +110,10 @@ def _split_paired(files):
 
 if __name__ == "__main__":
     parser = OptionParser()
+    parser.add_option("-f", "--failed", dest="do_fail", action="store_true",
+            default=False)
     (options, args) = parser.parse_args()
     if len(args) < 2:
         print __doc__
         sys.exit()
-    main(args[0], args[1].split(","))
+    main(args[0], args[1].split(","), options.do_fail)
