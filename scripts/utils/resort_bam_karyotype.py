@@ -53,9 +53,16 @@ def sort_bam(in_bam, sort_fn, to_include=None):
     new = pysam.Samfile(out_file, "wb", header=new_header)
     for (chrom, _) in new_chroms:
         for read in orig.fetch(chrom):
+            write = True
             read.rname = remapper[read.rname]
-            read.mrnm = remapper[read.mrnm]
-            new.write(read)
+            try:
+                read.mrnm = remapper[read.mrnm]
+            # read pair is on a chromosome we are not using
+            except KeyError:
+                assert to_include is not None
+                write = False
+            if write:
+                new.write(read)
 
 def _id_remapper(orig, new):
     """Provide a dictionary remapping original read indexes to new indexes.
