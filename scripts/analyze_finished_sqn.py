@@ -57,6 +57,9 @@ def _remote_copy(remote_info, local_sqn_dir):
     for fcopy in remote_info['to_copy']:
         target_loc = os.path.join(fc_dir, fcopy)
         if not os.path.exists(target_loc):
+            target_dir = os.path.dirname(target_loc)
+            if not os.path.exists(target_dir):
+                os.makedirs(target_dir)
             cl = ["scp", "-r", "%s@%s:%s/%s" % (remote_info["user"],
                       remote_info["hostname"], remote_info["directory"], fcopy),
                   target_loc]
