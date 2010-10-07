@@ -137,9 +137,9 @@ def solexaqa_plots(fastq_files, params, work_dir):
             subprocess.check_call(cl)
             os.rename(orig_tile_graph, tile_graph)
             os.rename(orig_qual_graph, qual_graph)
-        graphs.append((tile_graph,
-            "Error distribution per position and tile for read %s. "\
-            "Darker squares correspond to poor quality scores." % (i + 1)))
+        #graphs.append((tile_graph,
+        #    "Error distribution per position and tile for read %s. "\
+        #    "Darker squares correspond to poor quality scores." % (i + 1)))
         graphs.append((qual_graph,
             "Mean error probability per read position and tile for read %s. "\
             "Ideal flowcells will have a tight range of values "\
