@@ -121,7 +121,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
 
     print info['lane'], "Generating summary files"
     generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
-            config, sample_name)
+            config, sample_name, config_file)
     # Cleanup ToDo: 
     # gzip fastq file for storage
     # Remove SAM files
@@ -238,7 +238,7 @@ def bam_to_wig(bam_file, config, config_file):
     return wig_file
 
 def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
-        sample_name, do_sort=False):
+        sample_name, config_file, do_sort=False):
     """Run alignment summarizing script to produce a pdf with align details.
     """
     cl = ["align_summary_report.py", "--name=%s" % sample_name,
@@ -253,6 +253,7 @@ def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
         cl.append("--target=%s" % os.path.join(base_dir, target))
     if do_sort:
         cl.append("--sort")
+    cl.append("--config=%s" % config_file)
     subprocess.check_call(cl)
 
 def recalibrate_quality(bam_file, sam_ref, dbsnp_file, picard_dir):

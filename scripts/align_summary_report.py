@@ -2,8 +2,9 @@
 """Generate alignment plots and tables for a sequencing run and alignment.
 
 Requires:
-- the public Picard and internal Broad Picard reporting tools
+- Picard reporting tools
 - fastx toolkit
+- SolexaQA
 - LaTeX -- pdflatex
 - ps2pdf
 
@@ -14,7 +15,7 @@ Usage:
     align_summary_report.py <picard dir> <input bam> <ref file> <fastq one> <fastq two>
     --bait=<bait file>
     --target=<target file>
-
+    --config=<YAML configuration file specifying executable information>
     --sort -- Sort the file first
 """
 import os
@@ -25,22 +26,30 @@ import shutil
 import tempfile
 from optparse import OptionParser
 
+import yaml
 from mako.template import Template
 
 from bcbio.picard import PicardRunner
 from bcbio.picard.metrics import PicardMetrics
 
-params = dict(
-        fastx_stats_cmd = "fastx_quality_stats",
-        fastx_graph_cmd = "fastq_quality_boxplot_graph.sh",
+PARAM_DEFAULT = dict(
+        fastx_stats = "fastx_quality_stats",
+        fastx_graph = "fastq_quality_boxplot_graph.sh",
         pdflatex = "pdflatex",
         ps2pdf = "ps2pdf",
+        solexaqa = "SolexaQA.pl",
         )
 
 def main(picard_dir, align_bam, ref_file, fastq_one, fastq_pair=None,
-        bait_file=None, target_file=None, do_sort=False, sample_name=""):
+        bait_file=None, target_file=None, do_sort=False, sample_name="",
+        config=None):
     tmp_dir = _make_tmpdir()
     work_dir = os.getcwd()
+    if config:
+        with open(config) as in_handle:
+            params = yaml.load(in_handle)["program"]
+    else:
+        params = PARAM_DEFAULTS
     picard = PicardRunner(picard_dir)
     if do_sort:
         align_bam = picard_sort(picard, align_bam, tmp_dir)
@@ -53,6 +62,8 @@ def main(picard_dir, align_bam, ref_file, fastq_one, fastq_pair=None,
     base = base.replace(".", "-")
     total_count, read_size, fastq_graphs = plot_fastq_stats(
             [fastq_one, fastq_pair], base, params)
+    qa_graphs = solexaqa_plots([fastq_one, fastq_pair], params, work_dir)
+
     # add read_size to the total summary table
     summary_table[0] = (summary_table[0][0], summary_table[0][1],
             "%sbp %s" % (read_size, summary_table[0][-1]))
@@ -64,7 +75,8 @@ def main(picard_dir, align_bam, ref_file, fastq_one, fastq_pair=None,
             base.replace("_", " "))
     section = tmpl.render(name=sample_name, summary=None,
             summary_table=summary_table,
-            figures=[(f, c) for (f, c) in metrics_graphs + fastq_graphs if f],
+            figures=[(f, c) for (f, c) in metrics_graphs + fastq_graphs +
+                     qa_graphs if f],
             recal_figures=_get_recal_plots(work_dir, align_bam))
     out_file = "%s-summary.tex" % base
     out_tmpl = Template(base_template)
@@ -86,7 +98,7 @@ def plot_fastq_stats(fastq_files, out_base, params):
             cur_out_base = out_base
         stat_file = "%s_fastq_stats.txt" % cur_out_base
         if not os.path.exists(stat_file):
-            stats_cl = [params["fastx_stats_cmd"], "-i", fastq_file,
+            stats_cl = [params["fastx_stats"], "-i", fastq_file,
                         "-o", stat_file]
             child = subprocess.Popen(stats_cl)
             child.wait()
@@ -100,7 +112,7 @@ def plot_fastq_stats(fastq_files, out_base, params):
         graph_file = "%s_fastq_qual.pdf" % cur_out_base
         if not os.path.exists(graph_file):
             ps_file = "%s.ps" % os.path.splitext(graph_file)[0]
-            boxplot_cl = [params["fastx_graph_cmd"], "-i", stat_file,
+            boxplot_cl = [params["fastx_graph"], "-i", stat_file,
                          "-p",
                          "-t", fastq_file,
                          "-o", ps_file]
@@ -109,9 +121,38 @@ def plot_fastq_stats(fastq_files, out_base, params):
             topdf_cl = [params["ps2pdf"], ps_file, graph_file]
             child = subprocess.Popen(topdf_cl)
             child.wait()
-        graphs.append((graph_file, 
+        graphs.append((graph_file,
             "Quality score distribution per base for read %s" % (i + 1)))
     return count, read_size, graphs
+
+def solexaqa_plots(fastq_files, params, work_dir):
+    print "SolexaQA plots of fastq error distributions"
+    graphs = []
+    for i, fastq_file in enumerate(f for f in fastq_files if f):
+        orig_tile_graph, tile_graph = _sqa_file(fastq_file, "png", work_dir)
+        orig_qual_graph, qual_graph  = _sqa_file(fastq_file, "quality.pdf",
+                                                   work_dir)
+        if not os.path.exists(tile_graph) or not os.path.exists(qual_graph):
+            cl = [params["solexaqa"], fastq_file]
+            subprocess.check_call(cl)
+            os.rename(orig_tile_graph, tile_graph)
+            os.rename(orig_qual_graph, qual_graph)
+        graphs.append((tile_graph,
+            "Error distribution per position and tile for read %s. "\
+            "Darker squares correspond to poor quality scores." % (i + 1)))
+        graphs.append((qual_graph,
+            "Mean error probability per read position and tile for read %s. "\
+            "Ideal flowcells will have a tight range of values "\
+            "for all tiles." % (i + 1)))
+    return graphs
+
+def _sqa_file(fname, ext, work_dir):
+    """Naming for SolexaQA.pl output. Handles local files and fixing extensions
+    """
+    orig_file = os.path.join(work_dir, "%s.%s" % (os.path.basename(fname), ext))
+    # replace all '.' extensions except for last so pdflatex can handle the file
+    safe_file = orig_file.replace(".", "_", orig_file.count(".") - 1)
+    return orig_file, safe_file
 
 def picard_sort(picard, align_bam, tmp_dir):
     base, ext = os.path.splitext(align_bam)
@@ -222,6 +263,7 @@ if __name__ == "__main__":
     parser.add_option("-n", "--name", dest="sample_name")
     parser.add_option("-s", "--sort", dest="do_sort", action="store_true",
             default=False)
+    parser.add_option("-c", "--config", dest="config")
     (options, args) = parser.parse_args()
     if len(args) < 4:
         print __doc__
@@ -230,5 +272,6 @@ if __name__ == "__main__":
         bait_file=options.bait_file,
         target_file=options.target_file,
         sample_name=options.sample_name,
+        config=options.config,
         do_sort=options.do_sort)
     main(*args, **kwargs)

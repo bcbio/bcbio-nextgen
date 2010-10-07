@@ -52,12 +52,14 @@ System specific information is specified in YAML configuration files:
 * [GATK][4]
 * [bowtie][5]
 * [fastx toolkit][6]
+* [SolexaQA][6b]
 * [samtools][7]
 
 [3]: http://picard.sourceforge.net/
 [4]: http://www.broadinstitute.org/gsa/wiki/index.php/The_Genome_Analysis_Toolkit
 [5]: http://bowtie-bio.sourceforge.net/
 [6]: http://hannonlab.cshl.edu/fastx_toolkit/
+[6b]: http://solexaqa.sourceforge.net/
 [7]: http://samtools.sourceforge.net/
 
 ### Processing infrastructure
