@@ -84,12 +84,14 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     config = _update_config_w_custom(config, info)
     sample_name = "%s: %s" % (info.get("name", ""),
                               info.get("description", ""))
-    print "Processing", info["lane"], info["genome_build"], \
+    genome_build = "%s%s" % (info["genome_build"],
+                             config["algorithm"].get("ref_ext", ""))
+    print "Processing", info["lane"], genome_build, \
             sample_name, info.get("researcher", ""), \
             info.get("analysis", "")
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
     aligner_to_use = config["algorithm"]["aligner"]
-    align_ref, sam_ref = get_genome_ref(info['genome_build'],
+    align_ref, sam_ref = get_genome_ref(genome_build,
             aligner_to_use, os.path.dirname(config["galaxy_config"]))
     fastq1, fastq2 = get_fastq_files(fastq_dir, info['lane'], fc_name)
     print info['lane'], "Aligning with", config["algorithm"]["aligner"]
@@ -110,7 +112,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     bam_to_wig(sort_bam, config, config_file)
     if config["algorithm"]["recalibrate"]:
         print info['lane'], "Recalibrating with GATK"
-        dbsnp_file = get_dbsnp_file(sam_ref)
+        dbsnp_file = get_dbsnp_file(config, sam_ref)
         gatk_bam = recalibrate_quality(base_bam, sam_ref,
                 dbsnp_file, config["program"]["picard"])
         print info['lane'], "Analyzing recalibration"
@@ -274,11 +276,11 @@ def run_genotyper(bam_file, ref_file, dbsnp_file, config_file):
         cl.append(dbsnp_file)
     subprocess.check_call(cl)
 
-def get_dbsnp_file(sam_ref):
-    snp_file = None
-    snp_dir = os.path.join(os.path.split(sam_ref)[0], os.pardir, "snps")
-    if os.path.exists(snp_dir):
-        snp_file = glob.glob(os.path.join(snp_dir, "snp*.vcf"))[0]
+def get_dbsnp_file(config, sam_ref):
+    snp_file = config["algorithm"].get("dbsnp", None)
+    if snp_file:
+        base_dir = os.path.dirname(os.path.dirname(sam_ref))
+        snp_file = os.path.join(base_dir, snp_file)
     return snp_file
 
 def analyze_recalibration(recal_file, fastq1, fastq2):
@@ -310,7 +312,11 @@ def get_fastq_files(directory, lane, fc_name):
 def _remap_to_maq(ref_file):
     base_dir = os.path.dirname(os.path.dirname(ref_file))
     name = os.path.basename(ref_file)
-    return os.path.join(base_dir, "maq", "%s.fa" % name)
+    for ext in ["fa", "fasta"]:
+        test_file = os.path.join(base_dir, "maq", "%s.%s" % (name, ext))
+        if os.path.exists(test_file):
+            return test_file
+    raise ValueError("Did not find maq file %s" % ref_file)
 
 def get_genome_ref(genome_build, aligner, galaxy_base):
     """Retrieve the reference genome file location from galaxy configuration.
@@ -339,6 +345,9 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
             out_info[-1] = remap_fns[ref_get](out_info[-1])
         except KeyError:
             pass
+        except IndexError:
+            raise IndexError("Genome %s not found in %s" % (genome_build,
+                ref_file))
 
     if len(out_info) != 2:
         raise ValueError("Did not find genome reference for %s %s" %
