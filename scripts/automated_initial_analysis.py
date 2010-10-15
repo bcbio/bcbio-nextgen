@@ -82,8 +82,9 @@ def main(config_file, fc_dir):
 
 def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     config = _update_config_w_custom(config, info)
-    sample_name = "%s: %s" % (info.get("name", ""),
-                              info.get("description", ""))
+    sample_name = info.get("description", "")
+    if config["algorithm"]["include_short_name"]:
+        sample_name = "%s: %s" % (info.get("name", ""), sample_name)
     genome_build = "%s%s" % (info["genome_build"],
                              config["algorithm"].get("ref_ext", ""))
     print "Processing", info["lane"], genome_build, \
