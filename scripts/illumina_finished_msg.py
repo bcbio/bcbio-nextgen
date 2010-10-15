@@ -109,11 +109,9 @@ def _read_reported(msg_db):
 
 def _get_directories(config):
     for directory in config["dump_directories"]:
-        for dname in filter(lambda x: x.endswith("AAXX"),
-                sorted(os.listdir(directory))):
-            dname = os.path.join(directory, dname)
-            if os.path.isdir(dname):
-                yield dname
+        for dname in sorted(glob.glob(os.path.join(directory, "*A?XX"))):
+             if os.path.isdir(dname):
+                 yield dname
 
 def _update_reported(msg_db, new_dname):
     """Add a new directory to the database of reported messages.
