@@ -15,7 +15,7 @@ def get_flowcell_info(fc_dir):
     name = None
     date = None
     for p in parts:
-        if p.endswith("AAXX"):
+        if p.endswith("A?XX"):
             name = p
         elif len(p) == 6:
             try:

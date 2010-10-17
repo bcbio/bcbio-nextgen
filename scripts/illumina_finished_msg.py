@@ -6,6 +6,10 @@ dumped output directories that are finished and need to be processed.
 Usage:
     illumina_finished_msg.py <Galaxy config> <YAML local config>
 
+As in ?:
+    $ cd bcbb/nextgen
+    $ python scripts/illumina_finished_msg.py $HOME/dev/galaxy-central/universe_wsgi.ini config/transfer_info.yaml 
+
 The Galaxy config needs to have information on the messaging server and queues.
 The local config should have the following information:
 
@@ -39,7 +43,9 @@ def main(galaxy_config, local_config):
 def search_for_new(config, amqp_config):
     """Search for any new directories that have not been reported.
     """
+    print config["msg_db"]
     reported = _read_reported(config["msg_db"])
+    print reported
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
@@ -72,6 +78,7 @@ def _is_finished_dumping(directory):
     The final checkpoint file will differ depending if we are a
     single or paired end run.
     """
+    print "is_finished_dumping !"
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt"]
     return reduce(operator.or_,

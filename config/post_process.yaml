@@ -1,6 +1,6 @@
-galaxy_url: http://your/galaxy/url
+galaxy_url: http://kalkyl.uppmax.uu.se:8000/
 galaxy_api_key: your_galaxy_api_key
-galaxy_config: /opt/source/galaxy/web/universe_wsgi.ini
+galaxy_config: $HOME/opt/nextgen/config/universe_wsgi.ini
 program:
   bowtie: bowtie
   samtools: samtools
