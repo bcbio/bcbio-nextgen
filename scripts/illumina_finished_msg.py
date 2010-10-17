@@ -43,9 +43,7 @@ def main(galaxy_config, local_config):
 def search_for_new(config, amqp_config):
     """Search for any new directories that have not been reported.
     """
-    print config["msg_db"]
     reported = _read_reported(config["msg_db"])
-    print reported
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
@@ -66,6 +64,11 @@ def _generate_fastq(fc_dir):
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
         with utils.chdir(os.path.split(fastq_dir)[0]):
             lanes = sorted(list(set([f.split("_")[1] for f in
+	# XXX there are no qseq.txt files in HiSeq 2000, it looks like
+	# the following instead:
+	#
+        # Data/Intensities/BaseCalls/*.filter
+        # Data/Intensities/BaseCalls/L001/C100.1/[*.stats|*.bcl]
                 glob.glob("*qseq.txt")])))
             cl = ["solexa_qseq_to_fastq.py", short_fc_name,
                     ",".join(lanes)]
@@ -78,7 +81,6 @@ def _is_finished_dumping(directory):
     The final checkpoint file will differ depending if we are a
     single or paired end run.
     """
-    print "is_finished_dumping !"
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt"]
     return reduce(operator.or_,
