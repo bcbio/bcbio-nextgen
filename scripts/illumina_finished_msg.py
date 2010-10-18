@@ -23,6 +23,7 @@ import socket
 import glob
 import getpass
 import subprocess
+from optparse import OptionParser
 
 import yaml
 from amqplib import client_0_8 as amqp
@@ -30,13 +31,13 @@ from amqplib import client_0_8 as amqp
 from bcbio.picard import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 
-def main(galaxy_config, local_config):
+def main(galaxy_config, local_config, process_msg=True, store_msg=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
-    search_for_new(config, amqp_config)
+    search_for_new(config, amqp_config, process_msg, store_msg)
 
-def search_for_new(config, amqp_config):
+def search_for_new(config, amqp_config, process_msg, store_msg):
     """Search for any new directories that have not been reported.
     """
     reported = _read_reported(config["msg_db"])
@@ -46,10 +47,12 @@ def search_for_new(config, amqp_config):
                 _update_reported(config["msg_db"], dname)
                 _generate_fastq(dname)
                 store_files, process_files = _files_to_copy(dname)
-                finished_message(config["msg_process_tag"], dname,
-                        process_files, amqp_config)
-                finished_message(config["msg_store_tag"], dname,
-                        store_files, amqp_config)
+                if process_msg:
+                    finished_message(config["msg_process_tag"], dname,
+                            process_files, amqp_config)
+                if store_msg:
+                    finished_message(config["msg_store_tag"], dname,
+                            store_files, amqp_config)
 
 def _generate_fastq(fc_dir):
     """Generate fastq files for the current flowcell.
@@ -155,4 +158,11 @@ def _read_amqp_config(galaxy_config):
     return amqp_config
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    parser = OptionParser()
+    parser.add_option("-p", "--noprocess", dest="process_msg",
+            action="store_false", default=True)
+    parser.add_option("-p", "--nostore", dest="store_msg",
+            action="store_false", default=True)
+    (options, args) = parser.parse_args()
+    kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg)
+    main(*args, **kwargs)
