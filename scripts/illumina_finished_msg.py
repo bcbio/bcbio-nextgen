@@ -161,7 +161,7 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-p", "--noprocess", dest="process_msg",
             action="store_false", default=True)
-    parser.add_option("-p", "--nostore", dest="store_msg",
+    parser.add_option("-s", "--nostore", dest="store_msg",
             action="store_false", default=True)
     (options, args) = parser.parse_args()
     kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg)
