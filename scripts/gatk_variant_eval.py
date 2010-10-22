@@ -13,12 +13,12 @@ import yaml
 
 from bcbio.picard import PicardRunner
 
-def main(config_file, vcf_dir, ref_file, dbsnp):
+def main(config_file, vcf_dir, ref_file, dbsnp, intervals=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     picard = PicardRunner(config["program"]["picard"])
     for vcf_in in sorted(glob.glob(os.path.join(vcf_dir, "*-filter.vcf"))):
-        eval_file = variant_eval(vcf_in, ref_file, dbsnp, picard)
+        eval_file = variant_eval(vcf_in, ref_file, dbsnp, intervals, picard)
         stats = extract_eval_stats(eval_file)
         print_stats(vcf_in, stats['called'])
 
@@ -34,7 +34,7 @@ def print_stats(in_file, stats):
     titv_dbsnp = float(ti_dbsnp) / float(tv_dbsnp)
     titv_novel = float(ti_novel) / float(tv_novel)
 
-    print "%s % 7s   %.1f   %.2f   %.2f   %.2f" % (in_info, total, dbsnp,
+    print "%s % 7s   %.1f    %.2f   %.2f   %.2f" % (in_info, total, dbsnp,
             titv_all, titv_dbsnp, titv_novel)
 
 def extract_eval_stats(eval_file):
@@ -77,7 +77,7 @@ def _eval_analysis_type(in_file, analysis_name):
             parts = line.rstrip("\n\r").split()
             yield parts
 
-def variant_eval(vcf_in, ref_file, dbsnp, picard):
+def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
     """Evaluate variants in comparison with dbSNP reference.
     """
     out_file = "%s.eval" % os.path.splitext(vcf_in)[0]
@@ -88,6 +88,8 @@ def variant_eval(vcf_in, ref_file, dbsnp, picard):
               "-o", out_file,
               "-l", "INFO"
               ]
+    if target_intervals:
+        params.extend(["-L", target_intervals])
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         picard.run_gatk(params)
     return out_file
