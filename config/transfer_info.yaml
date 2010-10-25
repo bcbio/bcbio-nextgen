@@ -7,3 +7,7 @@ dump_directories:
 # Pointer to a plain text file which will be used to keep track of 
 # directories that have already been transferred.
 msg_db: /home/chapman/transfer/transferred.db
+program:
+  olb: /home/chapman/install/OLB-1.8/OLB-1.8.0
+algorithm:
+  num_cores: 8
