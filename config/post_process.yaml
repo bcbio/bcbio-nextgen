@@ -13,6 +13,7 @@ program:
   pdflatex: pdflatex
   ps2pdf: ps2pdf
   solexaqa: SolexaQA.pl
+  novobarcode: novobarcode
 algorithm:
   aligner: bowtie
   max_errors: 2
@@ -22,6 +23,8 @@ algorithm:
   platform: SOLEXA
   recalibrate: false
   snpcall: false
+  bc_distance: 3
+  bc_position: 3
 
 msg_process_tag: sqn_finished_process
 local_sqn_dir: /store4/solexadata

@@ -4,3 +4,7 @@ msg_store_tag: sqn_finished_store
 dump_directories:
   - /home/hiseq.hiseq/illumina
 msg_db: /home/roman.valls.guimera/transfer/transferred.db
+program:
+  olb: /home/chapman/install/OLB-1.8/OLB-1.8.0
+algorithm:
+  num_cores: 8

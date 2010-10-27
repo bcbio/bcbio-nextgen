@@ -49,7 +49,7 @@ def search_for_new(config, amqp_config, process_msg, store_msg):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
                 _update_reported(config["msg_db"], dname)
-                _generate_fastq(dname)
+                _generate_fastq(dname, config)
                 store_files, process_files = _files_to_copy(dname)
                 if process_msg:
                     finished_message(config["msg_process_tag"], dname,
@@ -58,14 +58,16 @@ def search_for_new(config, amqp_config, process_msg, store_msg):
                     finished_message(config["msg_store_tag"], dname,
                             store_files, amqp_config)
 
-def _generate_fastq(fc_dir):
+def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
     """
     fc_name, fc_date = get_flowcell_info(fc_dir)
     short_fc_name = "%s_%s" % (fc_date, fc_name)
     fastq_dir = get_fastq_dir(fc_dir)
+    basecall_dir = os.path.split(fastq_dir)[0]
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
-        with utils.chdir(os.path.split(fastq_dir)[0]):
+        _generate_qseq(basecall_dir, config)
+        with utils.chdir(basecall_dir):
             lanes = sorted(list(set([f.split("_")[1] for f in
 	# XXX there are no qseq.txt files in HiSeq 2000, it looks like
 	# the following instead:
@@ -77,6 +79,27 @@ def _generate_fastq(fc_dir):
                     ",".join(lanes)]
             subprocess.check_call(cl)
     return fastq_dir
+
+def _generate_qseq(bc_dir, config):
+    """Generate qseq files from illumina bcl files if not present.
+
+    More recent Illumina updates do not produce qseq files. These can be
+    generated from bcl, intensity and filter files with tools from
+    the offline base caller OLB.
+    """
+    qseqs = glob.glob(os.path.join(bc_dir, "*qseq.txt"))
+    if len(qseqs) == 0:
+        cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
+        cl = [cmd, "-i", bc_dir, "-o", bc_dir, "-p", os.path.split(bc_dir)[0],
+             "--in-place", "--overwrite"]
+        subprocess.check_call(cl)
+        with utils.chdir(bc_dir):
+            try:
+                processors = config["algorithm"]["num_cores"]
+            except KeyError:
+                processors = 8
+            cl = ["make", "-j", str(processors)]
+            subprocess.check_call(cl)
 
 def _is_finished_dumping(directory):
     """Determine if the sequencing directory has all files.
