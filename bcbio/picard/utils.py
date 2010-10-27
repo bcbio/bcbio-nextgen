@@ -32,6 +32,8 @@ def chdir(new_dir):
     http://lucentbeing.com/blog/context-managers-and-the-with-statement-in-python/
     """
     cur_dir = os.getcwd()
+    if not os.path.exists(new_dir):
+        os.makedirs(new_dir)
     os.chdir(new_dir)
     try :
         yield
