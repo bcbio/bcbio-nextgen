@@ -60,7 +60,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     config = _update_config_w_custom(config, info)
     sample_name = info.get("description", "")
     if config["algorithm"].get("include_short_name", True):
-        sample_name = "%s : %s" % (info.get("name", ""), sample_name)
+        sample_name = "%s---%s" % (info.get("name", ""), sample_name)
     genome_build = "%s%s" % (info["genome_build"],
                              config["algorithm"].get("ref_ext", ""))
     multiplex = info.get("multiplex", None)
@@ -73,9 +73,9 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     full_fastq1, full_fastq2 = get_fastq_files(fastq_dir, info['lane'], fc_name)
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
-            full_fastq2, multiplex, config):
+            full_fastq2, multiplex, lane_name, config):
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
-        msample_name = ("%s : %s" % (sample_name, msample) if msample
+        msample_name = ("%s---%s" % (sample_name, msample) if msample
                         else sample_name)
         base_bam, sort_bam = do_alignment(fastq1, fastq2, align_ref, sam_ref,
                 mlane_name, msample_name, config, config_file)
@@ -100,41 +100,42 @@ def _process_wrapper(args):
     except KeyboardInterrupt:
         raise Exception
 
-def split_by_barcode(fastq1, fastq2, multiplex, config):
+def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     """Split a fastq file into multiplex pieces using barcode details.
     """
     if not multiplex:
         return ["", "", fastq1, fastq2]
-    bc_dir = os.path.splitext(os.path.basename(fastq1))[0]
+    bc_dir = "%s_barcode" % base_name
+    nomatch_file = "%s_1_unmatched_fastq.txt" % base_name
     with utils.chdir(bc_dir):
-        tag_file, tag_size = _make_tag_file(fastq1, multiplex, config)
-        format_map = dict(Illumina="ILMFQ", Sanger="STDFQ")
-        fastq1_local = os.path.basename(fastq1)
-        if not os.path.exists(fastq1_local):
-            os.symlink(fastq1, fastq1_local)
-        cl = [config["program"]["novobarcode"], "-b", tag_file,
-              "-F", format_map[config["algorithm"]["quality_format"]],
-              "-l", str(tag_size),
-              "-f", fastq1_local]
+        tag_file = _make_tag_file(multiplex)
+        cl = [config["program"]["barcode"], tag_file,
+              "%s_--r--_--b--_fastq.txt" % base_name,
+              fastq1]
         if fastq2:
-            fastq2_local = os.path.basename(fastq2)
-            if not os.path.exists(fastq2_local):
-                os.symlink(fastq2, fastq2_local)
-            cl.append(fastq2_local)
-        subprocess.check_call(cl)
-    raise NotImplementedError
+            cl.append(fastq2)
+        cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
+        if int(config["algorithm"]["bc_read"]) == 2:
+            cl.append("--second")
+        if int(config["algorithm"]["bc_position"]) == 5:
+            cl.append("--five")
+        if not os.path.exists(nomatch_file):
+            subprocess.check_call(cl)
+    out_files = []
+    for info in multiplex:
+        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s_fastq.txt" %
+                             (base_name, x, info["barcode_id"]))
+        bc_file1 = fq_fname("1")
+        bc_file2 = fq_fname("2") if fastq2 else None
+        out_files.append((info["barcode_id"], info["name"], bc_file1, bc_file2))
+    return out_files
 
-def _make_tag_file(fastq1, barcodes, config):
-    """Create NovoBarCode tag input file.
-    """
-    tag_file = "%s-tags.cfg" % os.path.splitext(os.path.basename(fastq1))[0]
+def _make_tag_file(barcodes):
+    tag_file = "%s-barcodes.cfg" % barcodes[0]['barcode_type']
     with open(tag_file, "w") as out_handle:
-        out_handle.write("Distance %s N\n" % config["algorithm"]["bc_distance"])
-        out_handle.write("Format %s\n" % config["algorithm"]["bc_position"])
         for bc in barcodes:
             out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
-            tag_size = len(bc["sequence"])
-    return tag_file, tag_size
+    return tag_file
 
 def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         sample_name, config, config_file):

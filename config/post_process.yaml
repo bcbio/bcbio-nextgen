@@ -13,7 +13,7 @@ program:
   pdflatex: pdflatex
   ps2pdf: ps2pdf
   solexaqa: SolexaQA.pl
-  novobarcode: novobarcode
+  barcode: barcode_sort_trim.py
 algorithm:
   aligner: bowtie
   max_errors: 2
@@ -23,7 +23,8 @@ algorithm:
   platform: SOLEXA
   recalibrate: false
   snpcall: false
-  bc_distance: 3
+  bc_mismatch: 2
+  bc_read: 1
   bc_position: 3
 
 msg_process_tag: sqn_finished_process
