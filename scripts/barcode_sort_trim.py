@@ -17,12 +17,12 @@ Usage:
 for all barcodes present in the fastq multiplex.
 
 <out format> specifies how the output files should be written:
-    1_100721_FC626DUAAX_--r--_--b--_fastq.txt
+    1_100721_FC626DUAAX_--b--_--r--_fastq.txt
   It should contain two values for substitution:
-    --r-- Location of the read number (1 or 2)
     --b-- Location of the barcode identifier
+    --r-- Location of the read number (1 or 2)
   This can be used to specify any output location:
-    /your/output/dir/out_--r--_--b--.txt
+    /your/output/dir/out_--b--_--r--.txt
 
 Requires:
     Python -- versions 2.6 or 2.7

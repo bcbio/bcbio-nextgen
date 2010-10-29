@@ -34,15 +34,15 @@ def main(config_file, fc_dir, analysis_dir):
     fc_name, fc_date = get_flowcell_info(fc_dir)
     folder_name = "%s_%s" % (fc_date, fc_name)
     run_info = lims_run_details(galaxy_api, fc_name)
-    for dl_folder, access_role, dbkey, lane, name, description in run_info:
-        print folder_name, lane, name, description, dl_folder
+    for (dl_folder, access_role, dbkey, lane, bc_id, name, desc) in run_info:
+        print folder_name, lane, bc_name, name, desc, dl_folder
         library_id = get_galaxy_library(dl_folder, galaxy_api)
         folder, cur_galaxy_files = get_galaxy_folder(library_id, folder_name,
-                                                     name, description,
-                                                     galaxy_api)
+                                                     name, desc, galaxy_api)
         print "Creating storage directory"
-        store_dir = move_to_storage(lane, folder_name,
-                select_upload_files(lane, fc_dir, analysis_dir),
+        base_select = "%s_%s" % (lane, folder_name)
+        store_dir = move_to_storage(lane, bc_id, folder_name,
+                select_upload_files(base_select, bc_id, fc_dir, analysis_dir),
                 cur_galaxy_files, config)
         if store_dir:
             print "Uploading directory of files to Galaxy"
@@ -61,12 +61,23 @@ def lims_run_details(galaxy_api, fc_name):
     """
     run_info = galaxy_api.run_details(fc_name)
     for lane_info in (l for l in run_info["details"] if l.has_key("researcher")):
-        description = "%s: %s" % (lane_info["researcher"],
-                lane_info["description"])
         libname, role = _get_galaxy_libname(lane_info["private_libs"],
                                             lane_info["lab_association"])
-        yield (libname, role, lane_info["genome_build"],
-                lane_info["lane"], lane_info["name"], description)
+        for barcode in lane_info.get("multiplex", [None]):
+            cur_name = "%s_%s_%s" % (run["lane"], fc_date, fc_name)
+            if barcode:
+                cur_name = "%s_%s" % (cur_name, barcode["barcode_id"])
+
+            description = "%s: %s" % (lane_info["researcher"],
+                    lane_info["description"])
+            folder_name = lane_info["name"]
+            if barcode:
+                description += ": %s" % barcode["name"]
+                folder_name += "_%s" % barcode["id"]
+            yield (libname, role, lane_info["genome_build"],
+                    lane_info["lane"],
+                    barcode["barcode_id"] if barcode else "",
+                    folder_name, description)
 
 def _get_galaxy_libname(private_libs, lab_association):
     # simple case -- one private library. Upload there
@@ -85,35 +96,41 @@ def _get_galaxy_libname(private_libs, lab_association):
         except IndexError:
             return private_libs[0]
 
-def select_upload_files(lane, fc_dir, analysis_dir):
+def select_upload_files(base, bc_id, fc_dir, analysis_dir):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
+    # if we have barcodes, update our search name and get local fastq files
+    if bc_id:
+        fastq_dir = os.path.join(analysis_dir, "%s_barcode" % base)
+        base = "%s_%s" % (base, bc_id)
+    # otherwise, use the original fastq files
+    else:
+        fastq_dir = get_fastq_dir(fc_dir)
     # fastq, summary and alignment file
-    for fname in glob.glob(os.path.join(get_fastq_dir(fc_dir),
-            "%s_*_fastq.txt" % lane)):
+    for fname in glob.glob(os.path.join(fastq_dir, "%s*_fastq.txt" % base)):
         yield (fname, os.path.basename(fname))
     for summary_file in glob.glob(os.path.join(analysis_dir,
-            "%s_*-summary.pdf" % lane)):
+            "%s*-summary.pdf" % base)):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s_*-sort-dup.bam" % lane)):
+            "%s*-sort-dup.bam" % base)):
         yield (bam_file, _name_with_ext(bam_file, ".bam"))
     for wig_file in glob.glob(os.path.join(analysis_dir,
-            "%s_*-sort.bigwig" % lane)):
+            "%s*-sort.bigwig" % base)):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload any recalibrated BAM files used for SNP calling
     found_recal = False
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s_*-gatkrecal-realign-sort.bam" % lane)):
+            "%s*-gatkrecal-realign-sort.bam" % base)):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
         for bam_file in glob.glob(os.path.join(analysis_dir,
-                "%s_*-gatkrecal.bam" % lane)):
+                "%s*-gatkrecal.bam" % base)):
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
     # Genotype files produced by SNP calling
     for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s_*-snp-filter.vcf" % lane)):
+            "%s*-snp-filter.vcf" % base)):
         yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
 
 def _name_with_ext(orig_file, ext):
@@ -159,7 +176,7 @@ def _folders_by_name(name, items):
     return [f for f in items if f['type'] == 'folder' and
                                 f['name'] == name]
 
-def move_to_storage(lane, fc_dir, select_files, cur_galaxy_files, config):
+def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files, config):
     """Create directory for long term storage before linking to Galaxy.
     """
     galaxy_conf = ConfigParser.SafeConfigParser({'here' : ''})
@@ -169,7 +186,7 @@ def move_to_storage(lane, fc_dir, select_files, cur_galaxy_files, config):
     except ConfigParser.NoOptionError:
         raise ValueError("Galaxy config %s needs library_import_dir to be set."
                 % config["galaxy_config"])
-    storage_dir = _get_storage_dir(fc_dir, lane, os.path.join(lib_import_dir,
+    storage_dir = _get_storage_dir(fc_dir, lane, bc_id, os.path.join(lib_import_dir,
                                    "storage"))
     existing_files = [os.path.basename(f['name']) for f in cur_galaxy_files]
     need_upload = False
@@ -184,8 +201,9 @@ def move_to_storage(lane, fc_dir, select_files, cur_galaxy_files, config):
             need_upload = True
     return (storage_dir if need_upload else None)
 
-def _get_storage_dir(cur_folder, lane, storage_base):
-    store_dir = os.path.join(storage_base, cur_folder, str(lane))
+def _get_storage_dir(cur_folder, lane, bc_id, storage_base):
+    base = "%s_%s" % (lane, bc_id) if bc_id else str(lane)
+    store_dir = os.path.join(storage_base, cur_folder, base)
     if not os.path.exists(store_dir):
         os.makedirs(store_dir)
     return store_dir
