@@ -54,13 +54,13 @@ def main(config_file, fc_dir):
         map(_process_wrapper,
             ((i, fastq_dir, fc_name, fc_date, config, config_file)
                 for i in run_info["details"]))
-    write_metrics(run_info, work_dir, fc_dir, fastq_dir)
+    write_metrics(run_info, work_dir, fc_dir, fc_name, fc_date, fastq_dir)
 
 def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     config = _update_config_w_custom(config, info)
     sample_name = info.get("description", "")
     if config["algorithm"].get("include_short_name", True):
-        sample_name = "%s : %s" % (info.get("name", ""), sample_name)
+        sample_name = "%s---%s" % (info.get("name", ""), sample_name)
     genome_build = "%s%s" % (info["genome_build"],
                              config["algorithm"].get("ref_ext", ""))
     multiplex = info.get("multiplex", None)
@@ -73,9 +73,9 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     full_fastq1, full_fastq2 = get_fastq_files(fastq_dir, info['lane'], fc_name)
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
-            full_fastq2, multiplex, config):
+            full_fastq2, multiplex, lane_name, config):
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
-        msample_name = ("%s : %s" % (sample_name, msample) if msample
+        msample_name = ("%s---%s" % (sample_name, msample) if msample
                         else sample_name)
         base_bam, sort_bam = do_alignment(fastq1, fastq2, align_ref, sam_ref,
                 mlane_name, msample_name, config, config_file)
@@ -100,41 +100,42 @@ def _process_wrapper(args):
     except KeyboardInterrupt:
         raise Exception
 
-def split_by_barcode(fastq1, fastq2, multiplex, config):
+def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     """Split a fastq file into multiplex pieces using barcode details.
     """
     if not multiplex:
-        return ["", "", fastq1, fastq2]
-    bc_dir = os.path.splitext(os.path.basename(fastq1))[0]
+        return [("", "", fastq1, fastq2)]
+    bc_dir = "%s_barcode" % base_name
+    nomatch_file = "%s_1_unmatched_fastq.txt" % base_name
     with utils.chdir(bc_dir):
-        tag_file, tag_size = _make_tag_file(fastq1, multiplex, config)
-        format_map = dict(Illumina="ILMFQ", Sanger="STDFQ")
-        fastq1_local = os.path.basename(fastq1)
-        if not os.path.exists(fastq1_local):
-            os.symlink(fastq1, fastq1_local)
-        cl = [config["program"]["novobarcode"], "-b", tag_file,
-              "-F", format_map[config["algorithm"]["quality_format"]],
-              "-l", str(tag_size),
-              "-f", fastq1_local]
+        tag_file = _make_tag_file(multiplex)
+        cl = [config["program"]["barcode"], tag_file,
+              "%s_--b--_--r--_fastq.txt" % base_name,
+              fastq1]
         if fastq2:
-            fastq2_local = os.path.basename(fastq2)
-            if not os.path.exists(fastq2_local):
-                os.symlink(fastq2, fastq2_local)
-            cl.append(fastq2_local)
-        subprocess.check_call(cl)
-    raise NotImplementedError
+            cl.append(fastq2)
+        cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
+        if int(config["algorithm"]["bc_read"]) == 2:
+            cl.append("--second")
+        if int(config["algorithm"]["bc_position"]) == 5:
+            cl.append("--five")
+        if not os.path.exists(nomatch_file):
+            subprocess.check_call(cl)
+    out_files = []
+    for info in multiplex:
+        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s_fastq.txt" %
+                             (base_name, info["barcode_id"], x))
+        bc_file1 = fq_fname("1")
+        bc_file2 = fq_fname("2") if fastq2 else None
+        out_files.append((info["barcode_id"], info["name"], bc_file1, bc_file2))
+    return out_files
 
-def _make_tag_file(fastq1, barcodes, config):
-    """Create NovoBarCode tag input file.
-    """
-    tag_file = "%s-tags.cfg" % os.path.splitext(os.path.basename(fastq1))[0]
+def _make_tag_file(barcodes):
+    tag_file = "%s-barcodes.cfg" % barcodes[0]['barcode_type']
     with open(tag_file, "w") as out_handle:
-        out_handle.write("Distance %s N\n" % config["algorithm"]["bc_distance"])
-        out_handle.write("Format %s\n" % config["algorithm"]["bc_position"])
         for bc in barcodes:
             out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
-            tag_size = len(bc["sequence"])
-    return tag_file, tag_size
+    return tag_file
 
 def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         sample_name, config, config_file):
@@ -372,11 +373,12 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
 # Output high level summary information for a sequencing run in YAML format
 # that can be picked up and loaded into Galaxy.
 
-def write_metrics(run_info, analysis_dir, fc_dir, fastq_dir):
+def write_metrics(run_info, analysis_dir, fc_dir, fc_name, fc_date,
+        fastq_dir):
     """Write an output YAML file containing high level sequencing metrics.
     """
-    metrics, tab_metrics = summary_metrics(run_info, analysis_dir, fc_dir,
-            fastq_dir)
+    metrics, tab_metrics = summary_metrics(run_info, analysis_dir,
+            fc_name, fc_date, fastq_dir)
     out_file = os.path.join(analysis_dir, "run_summary.yaml")
     with open(out_file, "w") as out_handle:
         yaml.dump(metrics, out_handle, default_flow_style=False)
@@ -387,7 +389,7 @@ def write_metrics(run_info, analysis_dir, fc_dir, fastq_dir):
             writer.writerow(info)
     return out_file
 
-def summary_metrics(run_info, analysis_dir, fc_dir, fastq_dir):
+def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
     """Reformat run and analysis statistics into a YAML-ready format.
     """
     tab_out = []
@@ -395,16 +397,22 @@ def summary_metrics(run_info, analysis_dir, fc_dir, fastq_dir):
     for run in run_info["details"]:
         tab_out.append([run["lane"], run.get("researcher", ""), run["name"],
             run["description"]])
-        stats = _metrics_from_stats(_lane_stats(run["lane"], analysis_dir))
-        stats.update(_bustard_stats(run["lane"], fastq_dir))
-        cur_run_info = dict(
-                researcher = run.get("researcher_id", ""),
-                sample = run["sample_id"],
-                lane = run["lane"],
-                request = run_info["run_id"],
-                metrics = stats,
-                )
-        out_info.append(cur_run_info)
+        for barcode in run.get("multiplex", [None]):
+            cur_name = "%s_%s_%s" % (run["lane"], fc_date, fc_name)
+            if barcode:
+                cur_name = "%s_%s" % (cur_name, barcode["barcode_id"])
+            stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
+            stats.update(_bustard_stats(run["lane"], fastq_dir))
+            cur_run_info = dict(
+                    researcher = run.get("researcher_id", ""),
+                    barcode_id = str(barcode["barcode_id"]) if barcode else "",
+                    barcode_type = str(barcode["barcode_type"]) if barcode else "",
+                    sample = run["sample_id"],
+                    lane = run["lane"],
+                    request = run_info["run_id"],
+                    metrics = stats,
+                    )
+            out_info.append(cur_run_info)
     return out_info, tab_out
 
 def _metrics_from_stats(stats):
@@ -427,11 +435,13 @@ def _bustard_stats(lane_num, fastq_dir):
     sum_file = os.path.join(fastq_dir, os.pardir, "BustardSummary.xml")
     #sum_file = os.path.join(fc_dir, "Data", "Intensities", "BaseCalls",
     #        "BustardSummary.xml")
-    with open(sum_file) as in_handle:
-        results = ET.parse(in_handle).getroot().find("TileResultsByLane")
-        for lane in results:
-            if lane.find("laneNumber").text == str(lane_num):
-                stats = _collect_cluster_stats(lane)
+    stats = dict()
+    if os.path.exists(sum_file):
+        with open(sum_file) as in_handle:
+            results = ET.parse(in_handle).getroot().find("TileResultsByLane")
+            for lane in results:
+                if lane.find("laneNumber").text == str(lane_num):
+                    stats = _collect_cluster_stats(lane)
     return stats
 
 def _collect_cluster_stats(lane):
@@ -443,11 +453,11 @@ def _collect_cluster_stats(lane):
         stats["Clusters passed"] += int(tile.find("clusterCountPF").text)
     return stats
 
-def _lane_stats(lane, work_dir):
+def _lane_stats(cur_name, work_dir):
     """Parse metrics information from files in the working directory.
     """
     parser = PicardMetricsParser()
-    metrics_files = glob.glob(os.path.join(work_dir, "%s_*metrics" % lane))
+    metrics_files = glob.glob(os.path.join(work_dir, "%s*metrics" % cur_name))
     metrics = parser.extract_metrics(metrics_files)
     return metrics
 
