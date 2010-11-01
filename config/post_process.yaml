@@ -36,7 +36,7 @@ store_user: cscshared
 store_host: bricklayer01.partners.org
 
 analysis:
-  base_dir: /array0/projects/Sequencing
+  base_dir: /bubo/proj/b200129/
   towig_script: bam_to_wiggle.py
   process_program: automated_initial_analysis.py
   upload_program: upload_to_galaxy.py

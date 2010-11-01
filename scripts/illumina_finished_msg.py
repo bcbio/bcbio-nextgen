@@ -6,10 +6,6 @@ dumped output directories that are finished and need to be processed.
 Usage:
     illumina_finished_msg.py <Galaxy config> <YAML local config>
 
-As in ?:
-    $ cd bcbb/nextgen
-    $ python scripts/illumina_finished_msg.py $HOME/dev/galaxy-central/universe_wsgi.ini config/transfer_info.yaml 
-
 The Galaxy config needs to have information on the messaging server and queues.
 The local config should have the following information:
 
@@ -48,6 +44,7 @@ def search_for_new(config, amqp_config, process_msg, store_msg):
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
+    	        print "generating fastq & qseq..."
                 _update_reported(config["msg_db"], dname)
                 _generate_fastq(dname, config)
                 store_files, process_files = _files_to_copy(dname)
@@ -69,11 +66,6 @@ def _generate_fastq(fc_dir, config):
         _generate_qseq(basecall_dir, config)
         with utils.chdir(basecall_dir):
             lanes = sorted(list(set([f.split("_")[1] for f in
-	# XXX there are no qseq.txt files in HiSeq 2000, it looks like
-	# the following instead:
-	#
-        # Data/Intensities/BaseCalls/*.filter
-        # Data/Intensities/BaseCalls/L001/C100.1/[*.stats|*.bcl]
                 glob.glob("*qseq.txt")])))
             cl = ["solexa_qseq_to_fastq.py", short_fc_name,
                     ",".join(lanes)]
