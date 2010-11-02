@@ -1,6 +1,8 @@
 """Handle running, parsing and manipulating metrics available through Picard.
 """
 import os
+import glob
+import json
 
 class PicardMetricsParser:
     """Read metrics files produced by Picard analyses.
@@ -12,7 +14,7 @@ class PicardMetricsParser:
         pass
 
     def get_summary_metrics(self, align_metrics, gc_metrics, dup_metrics,
-            insert_metrics=None, hybrid_metrics=None):
+            insert_metrics=None, hybrid_metrics=None, vrn_vals=None):
         """Retrieve a high level summary of interesting metrics.
         """
         with open(align_metrics) as in_handle:
@@ -28,7 +30,7 @@ class PicardMetricsParser:
                 hybrid_vals = self._parse_hybrid_metrics(in_handle)
 
         return self._tabularize_metrics(align_vals, dup_vals, insert_vals,
-                hybrid_vals)
+                hybrid_vals, vrn_vals)
 
     def extract_metrics(self, metrics_files):
         """Return summary information for a lane of metrics files.
@@ -55,7 +57,7 @@ class PicardMetricsParser:
         return all_metrics
 
     def _tabularize_metrics(self, align_vals, dup_vals, insert_vals,
-            hybrid_vals):
+            hybrid_vals, vrn_vals):
         out = []
         # handle high level alignment for paired values
         paired = insert_vals is not None
@@ -83,6 +85,21 @@ class PicardMetricsParser:
         if hybrid_vals:
             out.append((None, None, None))
             out.extend(self._tabularize_hybrid(hybrid_vals))
+        if vrn_vals:
+            out.append((None, None, None))
+            out.extend(self._tabularize_variant(vrn_vals))
+        return out
+
+    def _tabularize_variant(self, vrn_vals):
+        out = []
+        out.append(("Total variations", vrn_vals["total"], ""))
+        out.append(("In dbSNP", "%.1f\%%" % vrn_vals["dbsnp_pct"], ""))
+        out.append(("Transition/Transversion (all)", "%.2f" %
+            vrn_vals["titv_all"], ""))
+        out.append(("Transition/Transversion (dbSNP)", "%.2f" %
+            vrn_vals["titv_dbsnp"], ""))
+        out.append(("Transition/Transversion (novel)", "%.2f" %
+            vrn_vals["titv_novel"], ""))
         return out
 
     def _tabularize_hybrid(self, hybrid_vals):
@@ -210,8 +227,10 @@ class PicardMetrics:
         if bait_file and target_file:
             hybrid_metrics = self._hybrid_select_metrics(
                     dup_bam, bait_file, target_file)
+        vrn_vals = self._variant_eval_metrics(dup_bam)
         summary_info = self._parser.get_summary_metrics(align_metrics,
-                gc_metrics, dup_metrics, insert_metrics, hybrid_metrics)
+                gc_metrics, dup_metrics, insert_metrics, hybrid_metrics,
+                vrn_vals)
         import pprint
         pprint.pprint(summary_info)
         graphs = [(gc_graph, "Distribution of GC content across reads"),
@@ -230,6 +249,21 @@ class PicardMetrics:
                     ("OUTPUT", metrics)]
             self._picard.run("CalculateHsMetrics", opts)
         return metrics
+
+    def _variant_eval_metrics(self, dup_bam):
+        """Find metrics for evaluating variant effectiveness.
+        """
+        base, ext = os.path.splitext(dup_bam)
+        mfiles = glob.glob("%s*eval_metrics" % base)
+        if len(mfiles) > 0:
+            with open(mfiles[0]) as in_handle:
+                # pull the metrics as JSON from the last line in the file
+                for line in in_handle:
+                    pass
+                metrics = json.loads(line)
+            return metrics
+        else:
+            return None
 
     def _gc_bias(self, dup_bam, ref_file):
         base, ext = os.path.splitext(dup_bam)
