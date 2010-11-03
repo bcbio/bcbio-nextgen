@@ -1,6 +1,14 @@
-msg_tag: sqn_finished
+msg_store_tag: sqn_finished_store
+msg_process_tag: sqn_finished_process
+
 dump_directories:
-  - /array10
-  - /array11
-  - /array12
-msg_db: /home/chapman/transfer/transferred.db
+  - /home/hiseq.hiseq/illumina
+msg_db: /var/spool/nextgen/transferred.db
+
+# Offline basecaller, ex: CASAVA or OLB path
+program:
+  olb: /usr/local/BclConverter-1.7.1/
+algorithm:
+  num_cores: 8
+  ionice_class: 3
+  nice: 15 
