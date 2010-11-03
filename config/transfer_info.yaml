@@ -5,6 +5,6 @@ dump_directories:
   - /home/hiseq.hiseq/illumina
 msg_db: /home/roman.valls.guimera/transfer/transferred.db
 program:
-  olb: /home/chapman/install/OLB-1.8/OLB-1.8.0
+  olb: /usr/local/BclConverter-1.7.1/
 algorithm:
-  num_cores: 8
+  num_cores: 7
