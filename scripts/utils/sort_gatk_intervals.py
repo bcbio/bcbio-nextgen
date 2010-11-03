@@ -39,10 +39,7 @@ def read_intervals(in_handle):
         if len(parts) == 1:
             chr_name, loc = parts[0].split(":")
             start, end = loc.split("-")
-            yield (chr_name, start, end, "+", "interval_%s" % i)
-        elif len(parts) == 6:
-            chr_name, start, end, strand, name, _ = parts
-            yield (chr_name, start, end, strand, name)
+            yield [chr_name, start, end, "+", "interval_%s" % i]
         elif len(parts) == 5:
             yield parts
         else:

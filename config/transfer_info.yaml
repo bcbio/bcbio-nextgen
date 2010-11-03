@@ -1,14 +1,13 @@
-msg_store_tag: sqn_finished_store
 msg_process_tag: sqn_finished_process
-
+msg_store_tag: sqn_finished_store
 dump_directories:
   - /home/hiseq.hiseq/illumina
-msg_db: /var/spool/nextgen/transferred.db
 
-# Offline basecaller, ex: CASAVA or OLB path
+# Pointer to a plain text file which will be used to keep track of
+# directories that have already been transferred.
+msg_db: /var/spool/nextgen/transferred.db
 program:
+# Offline basecaller, ex: CASAVA or OLB path
   olb: /usr/local/BclConverter-1.7.1/
 algorithm:
   num_cores: 8
-  ionice_class: 3
-  nice: 15 
