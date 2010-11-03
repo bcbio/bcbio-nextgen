@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 """Evaluate variant calls using GATK tools.
 
+Usage:
+    gatk_variant_eval.py <Picard location> <VCF file or directory> <reference seq file>
+                         <dbSNP file> [<interval file of targets>]
+
+If a directory is passed, this will print out a text table of SNP counts and
+Transition/Transversion ratios. If a single file is passed, a JSON string will
+be printed that could be picked up and parsed by calling programs in an
+automated pipeline.
+
 http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval
 """
 import os
@@ -8,21 +17,24 @@ import sys
 import subprocess
 import itertools
 import glob
+import json
 
 import yaml
 
 from bcbio.picard import PicardRunner
 
-def main(config_file, vcf_dir, ref_file, dbsnp, intervals=None):
-    with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
-    picard = PicardRunner(config["program"]["picard"])
-    for vcf_in in sorted(glob.glob(os.path.join(vcf_dir, "*-filter.vcf"))):
+def main(picard_dir, vcf_info, ref_file, dbsnp, intervals=None):
+    picard = PicardRunner(picard_dir)
+    if os.path.isdir(vcf_info):
+        vcf_files = sorted(glob.glob(os.path.join(vcf_info, "*-filter.vcf")))
+    else:
+        vcf_files = [vcf_info]
+    for vcf_in in vcf_files:
         eval_file = variant_eval(vcf_in, ref_file, dbsnp, intervals, picard)
         stats = extract_eval_stats(eval_file)
-        print_stats(vcf_in, stats['called'])
+        print_stats(vcf_in, stats['called'], len(vcf_files) == 1)
 
-def print_stats(in_file, stats):
+def print_stats(in_file, stats, print_json=False):
     in_info = "_".join(os.path.basename(in_file).split("_")[:2])
     total = sum(itertools.chain.from_iterable(s.itervalues() for s in stats.itervalues()))
     dbsnp = sum(stats['known'].itervalues()) / float(total) * 100.0
@@ -34,8 +46,13 @@ def print_stats(in_file, stats):
     titv_dbsnp = float(ti_dbsnp) / float(tv_dbsnp)
     titv_novel = float(ti_novel) / float(tv_novel)
 
-    print "%s % 7s   %.1f    %.2f   %.2f   %.2f" % (in_info, total, dbsnp,
-            titv_all, titv_dbsnp, titv_novel)
+    info = dict(total=total, dbsnp_pct = dbsnp, titv_all=titv_all,
+            titv_dbsnp=titv_dbsnp, titv_novel=titv_novel)
+    if print_json:
+        print json.dumps(info)
+    else:
+        print "%s % 7s   %.1f    %.2f   %.2f   %.2f" % (in_info, total, dbsnp,
+                titv_all, titv_dbsnp, titv_novel)
 
 def extract_eval_stats(eval_file):
     """Parse statistics of interest from GATK output file.

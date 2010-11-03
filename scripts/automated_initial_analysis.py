@@ -25,6 +25,7 @@ import csv
 from optparse import OptionParser
 from multiprocessing import Pool
 import xml.etree.ElementTree as ET
+import StringIO
 
 import yaml
 
@@ -89,7 +90,8 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
             analyze_recalibration(gatk_bam, fastq1, fastq2)
             if config["algorithm"]["snpcall"]:
                 print info['lane'], "Providing SNP genotyping with GATK"
-                run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
+                vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
+                eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
         print info['lane'], "Generating summary files"
         generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
                 config, msample_name, config_file)
@@ -290,6 +292,21 @@ def run_genotyper(bam_file, ref_file, dbsnp_file, config_file):
     if dbsnp_file:
         cl.append(dbsnp_file)
     subprocess.check_call(cl)
+    base, ext = os.path.splitext(bam_file)
+    return glob.glob("%s*snp-filter.vcf" % base)[0]
+
+def eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
+    """Evaluate variant genotyping, producing a JSON metrics file with values.
+    """
+    metrics_file = "%s.eval_metrics" % vrn_file
+    cl = ["gatk_variant_eval.py", config["program"]["picard"], vrn_file,
+          ref_file, dbsnp_file]
+    target = config["algorithm"].get("hybrid_target", "")
+    if target:
+        base_dir = os.path.dirname(os.path.dirname(ref_file))
+        cl.append(os.path.join(base_dir, target))
+    with open(metrics_file, "w") as out_handle:
+        subprocess.check_call(cl, stdout=out_handle)
 
 def get_dbsnp_file(config, sam_ref):
     snp_file = config["algorithm"].get("dbsnp", None)
