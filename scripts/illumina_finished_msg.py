@@ -23,7 +23,7 @@ import socket
 import glob
 import getpass
 import subprocess
-import logging
+from logbook import *
 from optparse import OptionParser
 
 import yaml
@@ -32,11 +32,15 @@ from amqplib import client_0_8 as amqp
 from bcbio.picard import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 
+log = Logger('illumina_finished_msg')
+FileHandler('illumina_finished_msg.log')
+
 def main(galaxy_config, local_config, process_msg=True, store_msg=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
-    #search_for_new(config, amqp_config, process_msg, store_msg)
+    log.info("Searching for newly reported directories")
+    search_for_new(config, amqp_config, process_msg, store_msg)
 
 def search_for_new(config, amqp_config, process_msg, store_msg):
     """Search for any new directories that have not been reported.
@@ -45,8 +49,14 @@ def search_for_new(config, amqp_config, process_msg, store_msg):
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
-    	        print "generating fastq & qseq..."
+		log.info("The instrument has finished dumping on directory %s" % dname)
+		# XXX Maybe the dataset is reported as "transferred" too early, shouldn't
+		# it be reported when the messages have been received by RabbitMQ ?
+		# OTOH, concurrent runs of the script would interfere with this... What
+		# if this transferred.db contents are right into RabbitMQ ?
                 _update_reported(config["msg_db"], dname)
+    	        
+		log.info("Generating qseq and fastq files for %s" % dname)
                 _generate_fastq(dname, config)
                 store_files, process_files = _files_to_copy(dname)
                 if process_msg:
@@ -64,13 +74,17 @@ def _generate_fastq(fc_dir, config):
     fastq_dir = get_fastq_dir(fc_dir)
     basecall_dir = os.path.split(fastq_dir)[0]
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
+	log.info("Qseq files not present: generating them first.")
         _generate_qseq(basecall_dir, config)
+	log.info("Qseq files generated.")
         with utils.chdir(basecall_dir):
             lanes = sorted(list(set([f.split("_")[1] for f in
                 glob.glob("*qseq.txt")])))
             cl = ["solexa_qseq_to_fastq.py", short_fc_name,
                     ",".join(lanes)]
+	    log.info("Converting qseq to fastq on all lanes.")
             subprocess.check_call(cl)
+	    log.info("Qseq to fastq conversion completed.")
     return fastq_dir
 
 def _generate_qseq(bc_dir, config):
@@ -80,7 +94,6 @@ def _generate_qseq(bc_dir, config):
     generated from bcl, intensity and filter files with tools from
     the offline base caller OLB.
     """
-    print "Generating qseq files..."
     qseqs = glob.glob(os.path.join(bc_dir, "*qseq.txt"))
     if len(qseqs) == 0:
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
@@ -97,7 +110,6 @@ def _generate_qseq(bc_dir, config):
 		ionice_class = 3
 		nice = 10
             cl = ["sudo", "nice", "-n", str(nice), "ionice", "-c", str(ionice_class), "make", "-j", str(processors)]
-#            cl = ["make", "-j", str(processors)]
             subprocess.check_call(cl)
 
 def _is_finished_dumping(directory):
