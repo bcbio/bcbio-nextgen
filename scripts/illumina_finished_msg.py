@@ -23,6 +23,7 @@ import socket
 import glob
 import getpass
 import subprocess
+import logging
 from optparse import OptionParser
 
 import yaml
@@ -79,6 +80,7 @@ def _generate_qseq(bc_dir, config):
     generated from bcl, intensity and filter files with tools from
     the offline base caller OLB.
     """
+    print "Generating qseq files..."
     qseqs = glob.glob(os.path.join(bc_dir, "*qseq.txt"))
     if len(qseqs) == 0:
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
@@ -88,9 +90,14 @@ def _generate_qseq(bc_dir, config):
         with utils.chdir(bc_dir):
             try:
                 processors = config["algorithm"]["num_cores"]
+		ionice_class = config["algorithm"]["ionice_class"]
+		nice = config["algorithm"]["nice"]
             except KeyError:
                 processors = 8
-            cl = ["make", "-j", str(processors)]
+		ionice_class = 3
+		nice = 10
+            cl = ["sudo", "nice", "-n", str(nice), "ionice", "-c", str(ionice_class), "make", "-j", str(processors)]
+#            cl = ["make", "-j", str(processors)]
             subprocess.check_call(cl)
 
 def _is_finished_dumping(directory):
@@ -180,6 +187,13 @@ def _read_amqp_config(galaxy_config):
     for option in config.options("galaxy_amqp"):
         amqp_config[option] = config.get("galaxy_amqp", option)
     return amqp_config
+
+#def _setlimits():
+#    """Set maximum CPU time to 1 second in child process,
+#	after fork() but before exec()
+##    """
+#    resource.setrlimit(resource.RLIMIT_CPU, (1, 1))
+
 
 if __name__ == "__main__":
     parser = OptionParser()

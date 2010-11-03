@@ -1,5 +1,6 @@
 msg_tag: sqn_finished_process
-msg_store_tag: sqn_finished_store 
+msg_store_tag: sqn_finished_store
+msg_process_tag: sqn_finished_process
 
 dump_directories:
   - /home/hiseq.hiseq/illumina
@@ -8,3 +9,5 @@ program:
   olb: /usr/local/BclConverter-1.7.1/
 algorithm:
   num_cores: 7
+  ionice_class: 3
+  nice: 15 
