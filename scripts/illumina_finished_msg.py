@@ -32,12 +32,14 @@ from amqplib import client_0_8 as amqp
 from bcbio.picard import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 
-logbook.FileHandler('illumina_finished_msg.log')
+log = Logger('illumina_finished_msg')
+FileHandler('illumina_finished_msg.log')
 
 def main(galaxy_config, local_config, process_msg=True, store_msg=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
+    log.info("Searching for newly reported directories")
     search_for_new(config, amqp_config, process_msg, store_msg)
 
 def search_for_new(config, amqp_config, process_msg, store_msg):
@@ -50,6 +52,8 @@ def search_for_new(config, amqp_config, process_msg, store_msg):
 		log.info("The instrument has finished dumping on directory %s" % dname)
 		# XXX Maybe the dataset is reported as "transferred" too early, shouldn't
 		# it be reported when the messages have been received by RabbitMQ ?
+		# OTOH, concurrent runs of the script would interfere with this... What
+		# if this transferred.db contents are right into RabbitMQ ?
                 _update_reported(config["msg_db"], dname)
     	        
 		log.info("Generating qseq and fastq files for %s" % dname)
