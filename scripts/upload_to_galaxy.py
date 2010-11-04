@@ -33,9 +33,9 @@ def main(config_file, fc_dir, analysis_dir):
 
     fc_name, fc_date = get_flowcell_info(fc_dir)
     folder_name = "%s_%s" % (fc_date, fc_name)
-    run_info = lims_run_details(galaxy_api, fc_name)
+    run_info = lims_run_details(galaxy_api, fc_name, folder_name)
     for (dl_folder, access_role, dbkey, lane, bc_id, name, desc) in run_info:
-        print folder_name, lane, bc_name, name, desc, dl_folder
+        print folder_name, lane, bc_id, name, desc, dl_folder
         library_id = get_galaxy_library(dl_folder, galaxy_api)
         folder, cur_galaxy_files = get_galaxy_folder(library_id, folder_name,
                                                      name, desc, galaxy_api)
@@ -56,7 +56,7 @@ def main(config_file, fc_dir, analysis_dir):
 # analysis directories.
 # These should be editing to match a local workflow if adjusting this.
 
-def lims_run_details(galaxy_api, fc_name):
+def lims_run_details(galaxy_api, fc_name, base_folder_name):
     """Retrieve run infomation on a flow cell from Next Gen LIMS.
     """
     run_info = galaxy_api.run_details(fc_name)
@@ -64,7 +64,7 @@ def lims_run_details(galaxy_api, fc_name):
         libname, role = _get_galaxy_libname(lane_info["private_libs"],
                                             lane_info["lab_association"])
         for barcode in lane_info.get("multiplex", [None]):
-            cur_name = "%s_%s_%s" % (run["lane"], fc_date, fc_name)
+            cur_name = "%s_%s" % (lane_info["lane"], base_folder_name)
             if barcode:
                 cur_name = "%s_%s" % (cur_name, barcode["barcode_id"])
 
