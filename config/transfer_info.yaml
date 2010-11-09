@@ -4,10 +4,12 @@ dump_directories:
   - /array10
   - /array11
   - /array12
+log_dir: /home/chapman/transfer/log
 # Pointer to a plain text file which will be used to keep track of 
 # directories that have already been transferred.
 msg_db: /home/chapman/transfer/transferred.db
 program:
   olb: /home/chapman/install/OLB-1.8/OLB-1.8.0
+  olb_make: make
 algorithm:
   num_cores: 8

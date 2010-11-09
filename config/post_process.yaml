@@ -27,9 +27,9 @@ algorithm:
   bc_read: 1
   bc_position: 3
 
+log_dir: /array0/projects/Sequencing/log
 msg_process_tag: sqn_finished_process
 local_sqn_dir: /store4/solexadata
-
 msg_store_tag: sqn_finished_store
 store_dir: /mad/store/clients/cscshared/solexadata
 store_user: cscshared
