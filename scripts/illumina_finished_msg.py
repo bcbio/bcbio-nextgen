@@ -42,6 +42,8 @@ def main(galaxy_config, local_config, process_msg=True, store_msg=True):
         config = yaml.load(in_handle)
     log_dir = config["log_dir"]
     if log_dir:
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
         handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
             LOG_NAME))
     else:
