@@ -181,6 +181,10 @@ def finished_message(tag_name, directory, files_to_copy, config):
                            userid=config['userid'], password=config['password'],
                            virtual_host=config['virtual_host'], insist=False)
     chan = conn.channel()
+    chan.queue_declare(queue=tag_name, exclusive=False, auto_delete=False,
+            durable=True)
+    chan.exchange_declare(exchange=config['exchange'], type="fanout", durable=True,
+            auto_delete=False)
     msg = amqp.Message(json.dumps(data),
                        content_type='application/json',
                        application_headers={'msg_type': tag_name})
