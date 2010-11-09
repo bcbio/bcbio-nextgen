@@ -28,19 +28,26 @@ from optparse import OptionParser
 
 import yaml
 from amqplib import client_0_8 as amqp
+import logbook
 
 from bcbio.picard import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 
-log = Logger('illumina_finished_msg')
-FileHandler('illumina_finished_msg.log')
+LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
+log = logbook.Logger(LOG_NAME)
 
 def main(galaxy_config, local_config, process_msg=True, store_msg=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
-    log.info("Searching for newly reported directories")
-    search_for_new(config, amqp_config, process_msg, store_msg)
+    log_dir = config["log_dir"]
+    if log_dir:
+        handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
+            LOG_NAME))
+    else:
+        handler = logbook.StreamHandler()
+    with handler.applicationbound():
+        search_for_new(config, amqp_config, process_msg, store_msg)
 
 def search_for_new(config, amqp_config, process_msg, store_msg):
     """Search for any new directories that have not been reported.
@@ -50,10 +57,6 @@ def search_for_new(config, amqp_config, process_msg, store_msg):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
 		log.info("The instrument has finished dumping on directory %s" % dname)
-		# XXX Maybe the dataset is reported as "transferred" too early, shouldn't
-		# it be reported when the messages have been received by RabbitMQ ?
-		# OTOH, concurrent runs of the script would interfere with this... What
-		# if this transferred.db contents are right into RabbitMQ ?
                 _update_reported(config["msg_db"], dname)
     	        
 		log.info("Generating qseq and fastq files for %s" % dname)
@@ -74,7 +77,7 @@ def _generate_fastq(fc_dir, config):
     fastq_dir = get_fastq_dir(fc_dir)
     basecall_dir = os.path.split(fastq_dir)[0]
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
-	log.info("Qseq files not present: generating them first.")
+	log.info("Generating fastq files for %s" % fc_dir)
         _generate_qseq(basecall_dir, config)
 	log.info("Qseq files generated.")
         with utils.chdir(basecall_dir):
@@ -96,6 +99,7 @@ def _generate_qseq(bc_dir, config):
     """
     qseqs = glob.glob(os.path.join(bc_dir, "*qseq.txt"))
     if len(qseqs) == 0:
+	log.info("Generating qseq files at %s" % bc_dir)
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
         cl = [cmd, "-i", bc_dir, "-o", bc_dir, "-p", os.path.split(bc_dir)[0],
              "--in-place", "--overwrite"]
@@ -107,9 +111,7 @@ def _generate_qseq(bc_dir, config):
 		nice = config["algorithm"]["nice"]
             except KeyError:
                 processors = 8
-		ionice_class = 3
-		nice = 10
-            cl = ["sudo", "nice", "-n", str(nice), "ionice", "-c", str(ionice_class), "make", "-j", str(processors)]
+            cl = [config["program"].get("olb_make", "make"), "-j", str(processors)]
             subprocess.check_call(cl)
 
 def _is_finished_dumping(directory):
@@ -168,6 +170,7 @@ def _update_reported(msg_db, new_dname):
 def finished_message(tag_name, directory, files_to_copy, config):
     """Wait for messages with the give tag, passing on to the supplied handler.
     """
+    log.info("Sending finished message to: %s" % tag_name)
     user = getpass.getuser()
     hostname = socket.gethostbyaddr(socket.gethostname())[0]
     data = dict(

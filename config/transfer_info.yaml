@@ -1,13 +1,15 @@
 msg_process_tag: sqn_finished_process
 msg_store_tag: sqn_finished_store
 dump_directories:
-  - /home/hiseq.hiseq/illumina
-
-# Pointer to a plain text file which will be used to keep track of
+  - /array10
+  - /array11
+  - /array12
+log_dir: /home/chapman/transfer/log
+# Pointer to a plain text file which will be used to keep track of 
 # directories that have already been transferred.
-msg_db: /var/spool/nextgen/transferred.db
+msg_db: /home/chapman/transfer/transferred.db
 program:
-# Offline basecaller, ex: CASAVA or OLB path
-  olb: /usr/local/BclConverter-1.7.1/
+  olb: /home/chapman/install/OLB-1.8/OLB-1.8.0
+  olb_make: make
 algorithm:
   num_cores: 8
