@@ -105,7 +105,7 @@ def _generate_qseq(bc_dir, config):
                 processors = config["algorithm"]["num_cores"]
             except KeyError:
                 processors = 8
-            cl = [config["program"].get("olb_make", "make"), "-j", str(processors)]
+            cl = config["program"].get("olb_make", "make").split() + ["-j", str(processors)]
             subprocess.check_call(cl)
 
 def _is_finished_dumping(directory):
