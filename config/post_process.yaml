@@ -16,8 +16,18 @@ algorithm:
   platform: SOLEXA
   recalibrate: false
   snpcall: false
-msg_tag: sqn_finished
+  bc_mismatch: 2
+  bc_read: 1
+  bc_position: 3
+
+log_dir: /array0/projects/Sequencing/log
+msg_process_tag: sqn_finished_process
 local_sqn_dir: /store4/solexadata
+msg_store_tag: sqn_finished_store
+store_dir: /mad/store/clients/cscshared/solexadata
+store_user: cscshared
+store_host: bricklayer01.partners.org
+
 analysis:
   base_dir: /array0/projects/Sequencing
   process_program: automated_initial_analysis.py
