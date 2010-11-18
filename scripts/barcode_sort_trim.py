@@ -77,16 +77,17 @@ def best_match(end_gen, barcodes, mismatch):
             pass
     # check for best approximate match within mismatch values
     match_info = []
-    for bc_seq, bc_id in barcodes.iteritems():
-        test_seq = end_gen(len(bc_seq))
-        aligns = pairwise2.align.globalms(bc_seq, test_seq,
-                5.0, -4.0, -9.0, -0.5, one_alignment_only=True)
-        (abc_seq, atest_seq) = aligns[0][:2] if len(aligns) == 1 else ("", "")
-        matches = sum(1 for i, base in enumerate(abc_seq)
-                      if base == atest_seq[i])
-        cur_mismatch = len(test_seq) - matches
-        if cur_mismatch <= mismatch:
-            match_info.append((cur_mismatch, bc_id, abc_seq, atest_seq))
+    if mismatch > 0:
+        for bc_seq, bc_id in barcodes.iteritems():
+            test_seq = end_gen(len(bc_seq))
+            aligns = pairwise2.align.globalms(bc_seq, test_seq,
+                    5.0, -4.0, -9.0, -0.5, one_alignment_only=True)
+            (abc_seq, atest_seq) = aligns[0][:2] if len(aligns) == 1 else ("", "")
+            matches = sum(1 for i, base in enumerate(abc_seq)
+                          if base == atest_seq[i])
+            cur_mismatch = len(test_seq) - matches
+            if cur_mismatch <= mismatch:
+                match_info.append((cur_mismatch, bc_id, abc_seq, atest_seq))
     if len(match_info) > 0:
         match_info.sort()
         name, bc_seq, test_seq = match_info[0][1:]
