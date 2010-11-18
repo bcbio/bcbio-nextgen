@@ -8,19 +8,32 @@ import sys
 import ConfigParser
 import json
 import contextlib
+import logbook
 
 import yaml
 from amqplib import client_0_8 as amqp
 import fabric.api as fabric
 import fabric.contrib.files as fabric_files
 
+LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
+log = logbook.Logger(LOG_NAME)
+
 def main(galaxy_config, processing_config):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(processing_config) as in_handle:
         config = yaml.load(in_handle)
     store_tag = config["msg_store_tag"]
-    handlers = [(store_tag, store_handler(config, store_tag))]
-    message_reader(handlers, amqp_config)
+    log_dir = config["log_dir"]
+    if log_dir:
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
+            LOG_NAME))
+    else:
+        handler = logbook.StreamHandler()
+    with handler.applicationbound():
+	handlers = [(store_tag, store_handler(config, store_tag))]
+	message_reader(handlers, amqp_config)
 
 def copy_for_storage(remote_info, config):
     """Securely copy files from remote directory to the storage server.
@@ -29,7 +42,8 @@ def copy_for_storage(remote_info, config):
     is necessary, Fabric is used to manage setting up copies on the remote
     storage server.
     """
-    print remote_info
+    log.info("Copying run data over to remote storage: %s" % config["store_host"])
+    log.debug("The contents from the JSON file bundle are:\n %s" % remote_info)
     base_dir = config["store_dir"]
     fabric.env.host_string = "%s@%s" % (config["store_user"], config["store_host"])
     fc_dir = os.path.join(base_dir, os.path.basename(remote_info['directory']))
@@ -41,7 +55,7 @@ def copy_for_storage(remote_info, config):
             target_dir = os.path.dirname(target_loc)
             if not fabric_files.exists(target_dir):
                 fabric.run("mkdir -p %s" % target_dir)
-            cl = ["scp", "-r", "%s@%s:%s/%s" % (
+            cl = ["rsync", "-craz", "%s@%s:%s/%s" % (
                   remote_info["user"], remote_info["hostname"], remote_info["directory"],
                   fcopy), target_loc]
             fabric.run(" ".join(cl))
