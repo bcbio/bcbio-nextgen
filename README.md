@@ -21,8 +21,11 @@ management on top of the existing functionality.
 Two main scripts drive the automation of the process:
 
 * `scripts/illumina_finished_msg.py` -- Sits on a machine where sequencing
-  runs are dumped. It checks for new results, reporting to a RabbitMQ messaging
-  queue whenever a new run is finished.
+  runs are dumped.
+
+  ** It performs preliminar file conversions (BCL->Qseq->FastQ).
+  ** It checks for new results, reporting to a RabbitMQ messaging queue whenever a new run is finished.
+
 * `scripts/analyze_finished_sqn.py` -- Continuously running server script on
   the Galaxy analysis machine. When new results are reported in the messaging queue,
   this copies over the relevant files and kicks off an automated analysis.
