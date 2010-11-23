@@ -1,12 +1,9 @@
 #!/usr/bin/env python
-"""Convert output solexa qseq files into fastq format.
+"""Convert output solexa qseq files into fastq format, handling multiplexing.
 
 Works with qseq output from Illumina's on-machine base caller in:
-
 Data/Intensities/BaseCalls/
-
 or from the offline base caller in:
-
 Data/*_Firecrest*/Bustard*
 
 Usage:
@@ -19,8 +16,13 @@ lanes, you should pass:
 
 Output files will be in the fastq directory as <lane>_<run_name>_fastq.txt
 
+Illumina barcoded samples contain barcodes in a separate qseq lane, which are
+identified by being much shorter than the primary read. Barcodes are added to
+the 3' end of the first sequence to remain consistent with other homebrew
+barcoding methods.
+
 Optional arguments:
-    --failed (-f): Also write out reads failing the Illumina quality checks.
+    --failed (-f): Write out reads failing the Illumina quality checks instead.
 """
 from __future__ import with_statement
 import os
@@ -46,27 +48,47 @@ def main(run_name, lane_nums, do_fail=False):
 
 def write_lane(lane_prefix, out_prefix, outdir, fail_dir):
     qseq_files = glob.glob("%s_*qseq.txt" % lane_prefix)
-    one_files, two_files = _split_paired(qseq_files)
+    one_files, two_files, bc_files = _split_paired(qseq_files)
     is_paired = len(two_files) > 0
-    out_files = _get_outfiles(out_prefix, outdir, is_paired)
+    out_files = (_get_outfiles(out_prefix, outdir, is_paired)
+                 if not fail_dir else None)
     fail_files = (_get_outfiles(out_prefix, fail_dir, is_paired)
                   if fail_dir else None)
     for (num, files) in [("1", one_files), ("2", two_files)]:
-        for fname in files:
-            convert_qseq_to_fastq(fname, num, out_files, fail_files)
+        for i, fname in enumerate(files):
+            bc_file = _get_associated_barcode(num, i, fname, bc_files)
+            convert_qseq_to_fastq(fname, num, bc_file, out_files, fail_files)
 
-def convert_qseq_to_fastq(fname, num, out_files, fail_files=None):
+def _get_associated_barcode(read_num, file_num, fname, bc_files):
+    """Get barcodes for the first read if present.
+    """
+    if read_num == "1" and len(bc_files) > 0:
+        bc_file = bc_files[file_num]
+        bc_parts = bc_file.split("_")
+        read_parts = fname.split("_")
+        assert (bc_parts[1] == read_parts[1] and
+                bc_parts[3] == read_parts[3]), (bc_parts, read_parts)
+        return bc_file
+    return None
+
+def convert_qseq_to_fastq(fname, num, bc_file, out_files, fail_files=None):
     """Convert a qseq file into the appropriate fastq output.
     """
-    for basename, seq, qual, passed in _qseq_iterator(fname):
+    bc_iterator = _qseq_iterator(bc_file, fail_files is None) if bc_file else None
+    for basename, seq, qual, passed in _qseq_iterator(fname, fail_files is None):
+        # if we have barcodes, add them to the 3' end of the sequence
+        if bc_iterator:
+            (_, bc_seq, bc_qual, _) = bc_iterator.next()
+            seq = "%s%s" % (seq, bc_seq)
+            qual = "%s%s" % (qual, bc_qual)
         name = "%s/%s" % (basename, num)
-        out = "@%s\n%s\n+%s\n%s\n" % (name, seq, name, qual)
+        out = "@%s\n%s\n+\n%s\n" % (name, seq, qual)
         if passed:
             out_files[num].write(out)
         elif fail_files:
             fail_files[num].write(out)
 
-def _qseq_iterator(fname):
+def _qseq_iterator(fname, pass_wanted):
     """Return the name, sequence, quality, and pass info of qseq reads.
 
     Names look like:
@@ -77,11 +99,12 @@ def _qseq_iterator(fname):
         for line in qseq_handle:
             parts = line.strip().split("\t")
             passed = int(parts[-1]) == 1
-            name = ":".join([parts[0]] +  parts[2:6]) + "#" + parts[6]
-            seq = parts[8].replace(".", "N")
-            qual = parts[9]
-            assert len(seq) == len(qual)
-            yield name, seq, qual, passed
+            if passed is pass_wanted:
+                name = ":".join([parts[0]] +  parts[2:6]) + "#" + parts[6]
+                seq = parts[8].replace(".", "N")
+                qual = parts[9]
+                assert len(seq) == len(qual)
+                yield name, seq, qual, passed
 
 def _get_outfiles(out_prefix, outdir, has_paired_files):
     out_files = {}
@@ -96,17 +119,44 @@ def _get_outfiles(out_prefix, outdir, has_paired_files):
     return out_files
 
 def _split_paired(files):
+    """Identify first read, second read and barcode sequences in qseqs.
+
+    Barcoded sequences are identified by being much shorter than reads
+    in the first lane.
+    """
+    files.sort()
     one = []
     two = []
+    bcs = []
+    ref_size = None
     for f in files:
         parts = f.split("_")
         if parts[2] == "1":
             one.append(f)
-        else:
+            if ref_size is None:
+                ref_size = _get_qseq_seq_size(f) // 2
+        elif parts[2] == "2":
+            cur_size = _get_qseq_seq_size(f)
+            assert ref_size is not None
+            if cur_size < ref_size:
+                bcs.append(f)
+            else:
+                two.append(f)
+        elif parts[2] == "3":
             two.append(f)
+        else:
+            raise ValueError("Unexpected part: %s" % f)
     one.sort()
     two.sort()
-    return one, two
+    bcs.sort()
+    if len(two) > 0: assert len(two) == len(one)
+    if len(bcs) > 0: assert len(bcs) == len(one)
+    return one, two, bcs
+
+def _get_qseq_seq_size(fname):
+    with open(fname) as in_handle:
+        parts = in_handle.readline().split("\t")
+        return len(parts[8])
 
 if __name__ == "__main__":
     parser = OptionParser()
