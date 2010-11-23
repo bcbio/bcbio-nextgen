@@ -27,6 +27,17 @@ def get_flowcell_info(fc_dir):
         raise ValueError("Did not find flowcell name: %s" % fc_dir)
     return name, date
 
+def get_qseq_dir(fc_dir):
+    """Retrieve the qseq directory within Solexa flowcell output.
+    """
+    machine_bc = os.path.join(fc_dir, "Data", "Intensities", "BaseCalls")
+    if os.path.exists(machine_bc):
+        return machine_bc
+    # otherwise assume we are in the qseq directory
+    # XXX What other cases can we end up with here?
+    else:
+        return fc_dir
+
 def get_fastq_dir(fc_dir):
     """Retrieve the fastq directory within Solexa flowcell output.
     """
@@ -43,6 +54,7 @@ def get_fastq_dir(fc_dir):
     # XXX What other cases can we end up with here?
     else:
         return fc_dir
+
 
 class GalaxySqnLimsApi:
     """Manage talking with the Galaxy REST api for sequencing information.

@@ -31,7 +31,7 @@ from amqplib import client_0_8 as amqp
 import logbook
 
 from bcbio.picard import utils
-from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
+from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
@@ -58,18 +58,18 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
-		log.info("The instrument has finished dumping on directory %s" % dname)
+		#log.info("The instrument has finished dumping on directory %s" % dname)
 
-                _update_reported(config["msg_db"], dname)
+                #_update_reported(config["msg_db"], dname)
     	        
-		log.info("Generating qseq and fastq files for %s" % dname)
+		#log.info("Generating qseq and fastq files for %s" % dname)
 
 		if qseq:
-		    _generate_qseq(basecall_dir, config)
+		    _generate_qseq(get_qseq_dir(dname), config)
 
 		if fastq:
 	            _generate_fastq(dname, config)
-		#log.DEBUG("Test AMQP run for store processing... this log stanza will be removed from code")
+		log.debug("Test AMQP run for store processing... this log stanza will be removed from code")
                 store_files, process_files = _files_to_copy(dname)
                 if process_msg:
                     finished_message(config["msg_process_tag"], dname,
@@ -87,7 +87,6 @@ def _generate_fastq(fc_dir, config):
     basecall_dir = os.path.split(fastq_dir)[0]
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
 	log.info("Generating fastq files for %s" % fc_dir)
-        _generate_qseq(basecall_dir, config)
         with utils.chdir(basecall_dir):
             lanes = sorted(list(set([f.split("_")[1] for f in
                 glob.glob("*qseq.txt")])))
@@ -109,8 +108,9 @@ def _generate_qseq(bc_dir, config):
     if len(qseqs) == 0:
 	log.info("Generating qseq files at %s" % bc_dir)
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-i", bc_dir, "-o", bc_dir, "-p", os.path.split(bc_dir)[0], "-L", config["log_dir"]
-             "--in-place", "--overwrite"]
+        cl = [cmd, "-L", config["log_dir"], "setupBclToQseq.log", "-i", bc_dir,
+		"-o", bc_dir, "-p", os.path.split(bc_dir)[0],
+		"--in-place", "--overwrite"]
         subprocess.check_call(cl)
 	log.info("Qseq files generated.")
         with utils.chdir(bc_dir):
@@ -227,5 +227,5 @@ if __name__ == "__main__":
     parser.add_option("-q", "--noqseq", dest="qseq",
             action="store_false", default=True)
     (options, args) = parser.parse_args()
-    kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg, fastq=options.fastq, qseq=option.fastq)
+    kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg, fastq=options.fastq, qseq=options.qseq)
     main(*args, **kwargs)

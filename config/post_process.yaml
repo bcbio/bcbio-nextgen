@@ -6,7 +6,14 @@ program:
   samtools: samtools
   bwa: bwa
   maq: maq
+  ucsc_bigwig: wigToBigWig
   picard: /source/Picard
+  fastx_stats: fastx_quality_stats
+  fastx_graph: fastq_quality_boxplot_graph.sh
+  pdflatex: pdflatex
+  ps2pdf: ps2pdf
+  solexaqa: SolexaQA.pl
+  barcode: barcode_sort_trim.py
 algorithm:
   aligner: bowtie
   max_errors: 2
@@ -30,17 +37,21 @@ store_host: bricklayer01.partners.org
 
 analysis:
   base_dir: /array0/projects/Sequencing
+  towig_script: bam_to_wiggle.py
   process_program: automated_initial_analysis.py
   upload_program: upload_to_galaxy.py
 # configuration algorithm changes for custom post-processing steps
 custom_algorithms:
   'Broad SNP':
+    ref_ext: '-broad'
     aligner: maq
     recalibrate: true
     snpcall: true
+    dbsnp: snps/snp130.vcf
     hybrid_bait: bait_list
     hybrid_target: target_list
   'SNP calling':
     aligner: bwa
     recalibrate: true
     snpcall: true
+    dbsnp: snps/snp130.vcf

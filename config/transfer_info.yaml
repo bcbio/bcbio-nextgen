@@ -7,8 +7,7 @@ dump_directories:
 log_dir: /home/chapman/transfer/log
 # Pointer to a plain text file which will be used to keep track of 
 # directories that have already been transferred.
-msg_db: /var/spool/nextgen/transferred.db
-# Offline basecaller, ex: CASAVA or OLB path
+msg_db: /home/chapman/transfer/transferred.db
 program:
   olb: /home/chapman/install/OLB-1.8/OLB-1.8.0
   olb_make: make
