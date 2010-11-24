@@ -101,7 +101,7 @@ def count_covariates(picard, dup_align_bam, ref_file, platform,
               "--default_platform", platform,
               ]
     if snp_file:
-        params += ["-B", "dbsnp,VCF,%s" % snp_file]
+        params += ["-B:dbsnp,VCF", snp_file]
     if not os.path.exists(out_file):
         with curdir_tmpdir() as tmp_dir:
             picard.run_gatk(params, tmp_dir)

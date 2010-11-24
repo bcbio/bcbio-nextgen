@@ -34,13 +34,14 @@ import os
 import itertools
 import unittest
 import collections
+import csv
 from optparse import OptionParser
 
 from Bio import pairwise2
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 def main(barcode_file, out_format, in1, in2,
-         mismatch, first_read, three_end, verbose):
+         mismatch, first_read, three_end, metrics_file, verbose):
     barcodes = read_barcodes(barcode_file)
     stats = collections.defaultdict(int)
     out_writer = output_to_fastq(out_format)
@@ -53,11 +54,25 @@ def main(barcode_file, out_format, in1, in2,
         out_writer(bc_name, name1, seq1, qual1, name2, seq2, qual2)
         stats[bc_name] += 1
 
+    sort_bcs = []
+    for bc in stats.keys():
+        try:
+            sort_bc = float(bc)
+        except ValueError:
+            sort_bc = str(bc)
+        sort_bcs.append((sort_bc, bc))
+    sort_bcs.sort()
+    sort_bcs = [s[1] for s in sort_bcs]
     if verbose:
         print "% -10s %s" % ("barcode", "count")
-        for s, val in stats.iteritems():
-            print "% -10s %s" % (s, val)
+        for bc in sort_bcs:
+            print "% -10s %s" % (bc, stats[bc])
         print "% -10s %s" % ("total", sum(stats.values()))
+    if metrics_file:
+        with open(metrics_file, "w") as out_handle:
+            writer = csv.writer(out_handle, dialect="excel-tab")
+            for bc in sort_bcs:
+                writer.writerow([bc, stats[bc]])
 
 def best_match(end_gen, barcodes, mismatch):
     """Identify barcode best matching to the test sequence, with mismatch.
@@ -232,6 +247,7 @@ if __name__ == "__main__":
     parser.add_option("-q", "--quiet", dest="verbose",
                       action="store_false", default=True)
     parser.add_option("-m", "--mismatch", dest="mismatch", default=1)
+    parser.add_option("-o", "--metrics", dest="metrics_file", default=None)
     options, args = parser.parse_args()
     if len(args) == 3:
         barcode_file, out_format, in1 = args
@@ -242,4 +258,5 @@ if __name__ == "__main__":
         print __doc__
         sys.exit()
     main(barcode_file, out_format, in1, in2, int(options.mismatch),
-         options.first_read, options.three_end, options.verbose)
+         options.first_read, options.three_end, options.metrics_file,
+         options.verbose)

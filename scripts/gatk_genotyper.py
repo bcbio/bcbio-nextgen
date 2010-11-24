@@ -63,7 +63,7 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B", "dbsnp,VCF,%s" % dbsnp]
+        params += ["-B:dbsnp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         picard.run_gatk(params)
     return out_file
@@ -78,7 +78,7 @@ def variant_filtration(picard, snp_file, ref_file):
     params = ["-T", "VariantFiltration",
               "-R", ref_file,
               "-o", out_file,
-              "-B", "variant,VCF,%s" % snp_file,
+              "-B:variant,VCF", snp_file,
               "--filterName", "QUALFilter",
               "--filterExpression", "QUAL <= 50.0",
               "--filterName", "QDFilter",
@@ -101,13 +101,13 @@ def NOTUSED_variant_eval(picard, filter_snp, ref_file, dbsnp):
     """
     out_file = "%s-eval.txt" % os.path.splitext(filter_snp)[0]
     params = ["-T", "VariantEval",
-              "-B", "eval,VCF,%s" % filter_snp,
+              "-B:eval,VCF", filter_snp,
               "-R", ref_file,
               "-o", out_file,
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B", "comp,VCF,%s" % dbsnp]
+        params += ["-B:comp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         picard.run_gatk(params)
     return out_file
@@ -123,7 +123,7 @@ def realigner_targets(picard, align_bam, ref_file, dbsnp=None):
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B", "dbsnp,VCF,%s" % dbsnp]
+        params += ["-B:dbsnp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         picard.run_gatk(params)
     return out_file

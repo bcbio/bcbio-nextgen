@@ -22,6 +22,9 @@ import subprocess
 import glob
 import copy
 import csv
+import copy
+import shutil
+import collections
 from optparse import OptionParser
 from multiprocessing import Pool
 import xml.etree.ElementTree as ET
@@ -33,6 +36,7 @@ from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.picard.metrics import PicardMetricsParser
 from bcbio.picard import utils
+from bcbio.picard import PicardRunner
 
 def main(config_file, fc_dir):
     work_dir = os.getcwd()
@@ -41,29 +45,44 @@ def main(config_file, fc_dir):
     galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
     fc_name, fc_date = get_flowcell_info(fc_dir)
     run_info = galaxy_api.run_details(fc_name)
+    run_items = _add_multiplex_to_control(run_info["details"])
     fastq_dir = get_fastq_dir(fc_dir)
-    if config["algorithm"]["num_cores"] > 1:
-        pool = Pool(config["algorithm"]["num_cores"])
-        try:
-            pool.map(_process_wrapper,
-                    ((i, fastq_dir, fc_name, fc_date, config, config_file)
-                        for i in run_info["details"]))
-        except:
+    align_dir = os.path.join(work_dir, "alignments")
+
+    # process each flowcell lane
+    pool = (Pool(config["algorithm"]["num_cores"])
+            if config["algorithm"]["num_cores"] > 1 else None)
+    map_fn = pool.map if pool else map
+    try:
+        map_fn(_process_lane_wrapper,
+                ((i, fastq_dir, fc_name, fc_date, align_dir, config, config_file)
+                    for i in run_items))
+    except:
+        if pool:
             pool.terminate()
-            raise
-    else:
-        map(_process_wrapper,
-            ((i, fastq_dir, fc_name, fc_date, config, config_file)
-                for i in run_info["details"]))
+        raise
+    # process samples, potentially multiplexed across multiple lanes
+    sample_files, sample_fastq, sample_info = organize_samples(align_dir,
+            fastq_dir, work_dir, fc_name, fc_date, run_items)
+    try:
+        map_fn(_process_sample_wrapper,
+          ((name, sample_fastq[name], sample_info[name], bam_files, work_dir,
+              config, config_file) for name, bam_files in sample_files))
+    except:
+        if pool:
+            pool.terminate()
+        raise
     write_metrics(run_info, work_dir, fc_dir, fc_name, fc_date, fastq_dir)
 
-def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
+def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
+        config_file):
+    """Do alignments for a lane, potentially splitting based on barcodes.
+    """
     config = _update_config_w_custom(config, info)
     sample_name = info.get("description", "")
     if config["algorithm"].get("include_short_name", True):
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
-    genome_build = "%s%s" % (info["genome_build"],
-                             config["algorithm"].get("ref_ext", ""))
+    genome_build = info["genome_build"]
     multiplex = info.get("multiplex", None)
     print "Processing", info["lane"], genome_build, \
             sample_name, info.get("researcher", ""), \
@@ -76,31 +95,122 @@ def process_lane(info, fastq_dir, fc_name, fc_date, config, config_file):
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
             full_fastq2, multiplex, lane_name, config):
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
-        msample_name = ("%s---%s" % (sample_name, msample) if msample
-                        else sample_name)
-        base_bam, sort_bam = do_alignment(fastq1, fastq2, align_ref, sam_ref,
-                mlane_name, msample_name, config, config_file)
-        bam_to_wig(sort_bam, config, config_file)
-        if config["algorithm"]["recalibrate"]:
-            print info['lane'], "Recalibrating with GATK"
-            dbsnp_file = get_dbsnp_file(config, sam_ref)
-            gatk_bam = recalibrate_quality(base_bam, sam_ref,
-                    dbsnp_file, config["program"]["picard"])
-            print info['lane'], "Analyzing recalibration"
-            analyze_recalibration(gatk_bam, fastq1, fastq2)
-            if config["algorithm"]["snpcall"]:
-                print info['lane'], "Providing SNP genotyping with GATK"
-                vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
-                eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
-        print info['lane'], "Generating summary files"
-        generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
-                config, msample_name, config_file)
+        if msample is None:
+            msample = "%s---%s" % (sample_name, mname)
+        do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
+                msample, align_dir, config, config_file)
 
-def _process_wrapper(args):
+def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
+        config, config_file):
+    """Finalize processing for a sample, potentially multiplexed.
+    """
+    config = _update_config_w_custom(config, info)
+    genome_build = info["genome_build"]
+    (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
+                   os.path.dirname(config["galaxy_config"]))
+    fastq1, fastq2 = _combine_fastq_files(fastq_files, work_dir)
+    print sample_name, "Combining and preparing wig file"
+    sort_bam = merge_bam_files(bam_files, work_dir, config)
+    bam_to_wig(sort_bam, config, config_file)
+    if config["algorithm"]["recalibrate"]:
+        print sample_name, "Recalibrating with GATK"
+        dbsnp_file = get_dbsnp_file(config, sam_ref)
+        gatk_bam = recalibrate_quality(sort_bam, sam_ref,
+                dbsnp_file, config["program"]["picard"])
+        #print sample_name, "Analyzing recalibration"
+        analyze_recalibration(gatk_bam, fastq1, fastq2)
+        if config["algorithm"]["snpcall"]:
+            print sample_name, "Providing SNP genotyping with GATK"
+            vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
+            eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
+    print sample_name, "Generating summary files"
+    generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
+            config, sample_name, config_file)
+
+def _combine_fastq_files(in_files, work_dir):
+    if len(in_files) == 1:
+        return in_files[0]
+    else:
+        cur1, cur2 = in_files[0]
+        out1 = os.path.join(work_dir, os.path.basename(cur1))
+        out2 = os.path.join(work_dir, os.path.basename(cur2)) if cur2 else None
+        if not os.path.exists(out1):
+            with open(out1, "a") as out_handle:
+                for (cur1, _) in in_files:
+                    with open(cur1) as in_handle:
+                        shutil.copyfileobj(in_handle, out_handle)
+        if out2 and not os.path.exists(out2):
+            with open(out2, "a") as out_handle:
+                for (_, cur2) in in_files:
+                    with open(cur2) as in_handle:
+                        shutil.copyfileobj(in_handle, out_handle)
+        return out1, out2
+
+def _process_lane_wrapper(args):
     try:
         return process_lane(*args)
     except KeyboardInterrupt:
         raise Exception
+
+def _process_sample_wrapper(args):
+    try:
+        return process_sample(*args)
+    except KeyboardInterrupt:
+        raise Exception
+
+def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items):
+    """Organize BAM output files by sample name, handling multiplexing.
+    """
+    bams_by_sample = collections.defaultdict(list)
+    sample_info = dict()
+    fastq_by_sample = collections.defaultdict(list)
+    for lane_info in run_items:
+        multiplex = lane_info.get("multiplex", None)
+        if multiplex:
+            mfastq_dir = os.path.join(work_dir, "%s_%s_%s_barcode" %
+                    (lane_info["lane"], fc_date, fc_name))
+            for multi in multiplex:
+                name = (lane_info["name"], lane_info["description"], multi["name"])
+                fname = os.path.join(align_dir, "%s_%s_%s_%s-sort.bam" %
+                    (lane_info["lane"], fc_date, fc_name, multi["barcode_id"]))
+                assert os.path.exists(fname)
+                bams_by_sample[name].append(fname)
+                sample_info[name] = lane_info
+                fastq_by_sample[name].append(get_fastq_files(mfastq_dir,
+                    lane_info["lane"], fc_name, multi["barcode_id"]))
+        else:
+            name = (lane_info["name"], lane_info["description"])
+            fname = os.path.join(align_dir, "%s_%s_%s-sort.bam" %
+                    (lane_info["lane"], fc_date, fc_name))
+            assert os.path.exists(fname)
+            bams_by_sample[name].append(fname)
+            sample_info[name] = lane_info
+            fastq_by_sample[name].append(get_fastq_files(fastq_dir,
+                lane_info["lane"], fc_name))
+    return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
+
+def _add_multiplex_to_control(run_items):
+    """Add multiplexing to our control if we are using Illumina standard.
+    """
+    multiplexes = []
+    control = None
+    control_i = -1
+    for i, item in enumerate(run_items):
+        if item.get("description", "").lower() == "control":
+            control = item
+            control_i = i
+        else:
+            multiplexes.append(item.get("multiplex", ""))
+    unique_multiplexes = list(set(str(m) for m in multiplexes))
+    if (control and (len(multiplexes) == len(run_items) - 1) and
+            len(unique_multiplexes) == 1):
+        cntl_multiplex = copy.deepcopy(multiplexes[0])
+        for i, multi in enumerate(cntl_multiplex):
+            multi['name'] = control["description"]
+            cntl_multiplex[i] = multi
+        control["multiplex"] = cntl_multiplex
+        run_items[control_i] = control
+    return run_items
 
 def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     """Split a fastq file into multiplex pieces using barcode details.
@@ -108,20 +218,22 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     if not multiplex:
         return [("", "", fastq1, fastq2)]
     bc_dir = "%s_barcode" % base_name
-    nomatch_file = "%s_1_unmatched_fastq.txt" % base_name
+    nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
+    metrics_file = "%s_bc.metrics" % base_name
     with utils.chdir(bc_dir):
-        tag_file = _make_tag_file(multiplex)
-        cl = [config["program"]["barcode"], tag_file,
-              "%s_--b--_--r--_fastq.txt" % base_name,
-              fastq1]
-        if fastq2:
-            cl.append(fastq2)
-        cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
-        if int(config["algorithm"]["bc_read"]) == 2:
-            cl.append("--second")
-        if int(config["algorithm"]["bc_position"]) == 5:
-            cl.append("--five")
         if not os.path.exists(nomatch_file):
+            tag_file = _make_tag_file(multiplex)
+            cl = [config["program"]["barcode"], tag_file,
+                  "%s_--b--_--r--_fastq.txt" % base_name,
+                  fastq1]
+            if fastq2:
+                cl.append(fastq2)
+            cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
+            cl.append("--metrics=%s" % metrics_file)
+            if int(config["algorithm"]["bc_read"]) == 2:
+                cl.append("--second")
+            if int(config["algorithm"]["bc_position"]) == 5:
+                cl.append("--five")
             subprocess.check_call(cl)
     out_files = []
     for info in multiplex:
@@ -136,34 +248,37 @@ def _make_tag_file(barcodes):
     tag_file = "%s-barcodes.cfg" % barcodes[0]['barcode_type']
     with open(tag_file, "w") as out_handle:
         for bc in barcodes:
-            out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
+            #out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
+            out_handle.write("%s %s\n" % (bc["barcode_id"], "%sA" % bc["sequence"]))
     return tag_file
 
 def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
-        sample_name, config, config_file):
-    """Align to the provided reference genome, generating a sorted BAM file.
+        sample_name, align_dir, config, config_file):
+    """Align to the provided reference genome, returning an aligned SAM file.
     """
     aligner_to_use = config["algorithm"]["aligner"]
+    if not os.path.exists(align_dir):
+        os.makedirs(align_dir)
     print lane_name, "Aligning with", aligner_to_use
     if aligner_to_use == "bowtie":
         sam_file = bowtie_to_sam(fastq1, fastq2, align_ref, lane_name,
-                config)
+                align_dir, config)
     elif aligner_to_use == "bwa":
         sam_file = bwa_align_to_sam(fastq1, fastq2, align_ref, lane_name,
-                config)
+                align_dir, config)
     elif aligner_to_use == "maq":
         sam_file = maq_align_to_sam(fastq1, fastq2, align_ref, lane_name,
-                sample_name, config_file)
+                sample_name, align_dir, config_file)
     else:
         raise ValueError("Do not recognize aligner: %s" % aligner_to_use)
     print lane_name, "Converting to sorted BAM file"
-    return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2,
-            sample_name, config_file)
+    sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
+                    lane_name, config_file)
 
-def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, config):
+def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Before a standard or paired end alignment with bowtie.
     """
-    out_file = "%s.sam" % out_base
+    out_file = os.path.join(align_dir, "%s.sam" % out_base)
     if not os.path.exists(out_file):
         cl = [config["program"]["bowtie"]]
         cl += ["-q", "--solexa1.3-quals",
@@ -186,19 +301,18 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, config):
         child.wait()
     return out_file
 
-def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, config):
+def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Perform a BWA alignment, generating a SAM file.
     """
-    sai1_file = "%s_1.sai" % out_base
-    sai2_file = None
-    sam_file = "%s.sam" % out_base
+    sai1_file = os.path.join(align_dir, "%s_1.sai" % out_base)
+    sai2_file = (os.path.join(align_dir, "%s_2.sai" % out_base)
+                 if pair_file else None)
+    sam_file = os.path.join(align_dir, "%s.sam" % out_base)
     if not os.path.exists(sam_file):
         if not os.path.exists(sai1_file):
             _run_bwa_align(fastq_file, ref_file, sai1_file, config)
-        if pair_file:
-            sai2_file = "%s_2.sai" % out_base
-            if not os.path.exists(sai2_file):
-                _run_bwa_align(pair_file, ref_file, sai2_file, config)
+        if sai2_file and not os.path.exists(sai2_file):
+            _run_bwa_align(pair_file, ref_file, sai2_file, config)
         align_type = "sampe" if sai2_file else "samse"
         sam_cl = [config["program"]["bwa"], align_type, ref_file, sai1_file]
         if sai2_file:
@@ -212,10 +326,11 @@ def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, config):
     return sam_file
 
 def maq_align_to_sam(fastq_file, pair_file, ref_file, out_base,
-        sample_name, config_file):
+        sample_name, align_dir, config_file):
     """Produce a BAM output using Picard to do a maq alignment.
     """
-    bam_file = "%s-maq-cal.bam" % out_base
+    raise NotImplementedError("Need to update for alignment directory")
+    bam_file = os.path.join(align_dir, "%s-maq-cal.bam" % out_base)
     cl = ["picard_maq_recalibrate.py", "--name=%s" % sample_name,
             config_file, out_base, ref_file, fastq_file]
     if pair_file:
@@ -234,18 +349,31 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
         child.wait()
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-        config_file):
+        lane_name, config_file):
     """Convert SAM file to merged and sorted BAM file.
     """
-    base, ext = os.path.splitext(sam_file)
-    bam_file = "%s.bam" % base
-    sort_bam_file = "%s-sort.bam" % base
+    lane = lane_name.split("_")[0]
     cl = ["picard_sam_to_bam.py", "--name=%s" % sample_name,
+            "--rg=%s" % lane, "--pu=%s" % lane_name,
             config_file, sam_file, ref_file, fastq1]
     if fastq2:
         cl.append(fastq2)
     subprocess.check_call(cl)
-    return bam_file, sort_bam_file
+
+def merge_bam_files(bam_files, work_dir, config):
+    """Merge multiple BAM files from a sample into a single BAM for processing.
+    """
+    out_file = os.path.join(work_dir, os.path.basename(bam_files[0]))
+    if not os.path.exists(out_file):
+        picard = PicardRunner(config["program"]["picard"])
+        with utils.curdir_tmpdir() as tmp_dir:
+            opts = [("OUTPUT", out_file),
+                    ("SORT_ORDER", "coordinate"),
+                    ("TMP_DIR", tmp_dir)]
+            for b in bam_files:
+                opts.append(("INPUT", b))
+            picard.run("MergeSamFiles", opts)
+    return out_file
 
 def bam_to_wig(bam_file, config, config_file):
     """Provide a BigWig coverage file of the sorted alignments.
@@ -260,6 +388,7 @@ def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
         sample_name, config_file, do_sort=False):
     """Run alignment summarizing script to produce a pdf with align details.
     """
+    sample_name = " : ".join(sample_name)
     cl = ["align_summary_report.py", "--name=%s" % sample_name,
             config["program"]["picard"], bam_file, sam_ref, fastq1]
     if fastq2:
@@ -275,9 +404,10 @@ def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
     cl.append("--config=%s" % config_file)
     subprocess.check_call(cl)
 
-def recalibrate_quality(bam_file, sam_ref, dbsnp_file, picard_dir):
+def recalibrate_quality(sort_bam_file, sam_ref, dbsnp_file, picard_dir):
     """Recalibrate alignments with GATK and provide pdf summary.
     """
+    bam_file = sort_bam_file.replace("-sort.bam", ".bam")
     cl = ["picard_gatk_recalibrate.py", picard_dir, sam_ref, bam_file]
     if dbsnp_file:
         cl.append(dbsnp_file)
@@ -323,10 +453,14 @@ def analyze_recalibration(recal_file, fastq1, fastq2):
         cl.append(fastq2)
     subprocess.check_call(cl)
 
-def get_fastq_files(directory, lane, fc_name):
+def get_fastq_files(directory, lane, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    files = glob.glob(os.path.join(directory, "%s_*%s*txt*" % (lane, fc_name)))
+    if bc_name:
+        glob_str = "%s_*%s_%s_*txt*" % (lane, fc_name, bc_name)
+    else:
+        glob_str = "%s_*%s*txt*" % (lane, fc_name)
+    files = glob.glob(os.path.join(directory, glob_str))
     files.sort()
     if len(files) > 2 or len(files) == 0:
         raise ValueError("Did not find correct files for %s %s %s %s" %

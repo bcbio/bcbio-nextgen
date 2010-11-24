@@ -19,8 +19,7 @@ algorithm:
   max_errors: 2
   num_cores: 8
   stringency: high
-  quality_format: Illumina
-  platform: SOLEXA
+  platform: illumina
   recalibrate: false
   snpcall: false
   bc_mismatch: 2
