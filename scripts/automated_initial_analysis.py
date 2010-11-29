@@ -116,11 +116,11 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
         print sample_name, "Recalibrating with GATK"
         dbsnp_file = get_dbsnp_file(config, sam_ref)
         gatk_bam = recalibrate_quality(sort_bam, sam_ref,
-                dbsnp_file, config["program"]["picard"])
-        #print sample_name, "Analyzing recalibration"
+                dbsnp_file, config_file)
+        print sample_name, "Analyzing recalibration"
         analyze_recalibration(gatk_bam, fastq1, fastq2)
         if config["algorithm"]["snpcall"]:
-            print sample_name, "Providing SNP genotyping with GATK"
+            print sample_name, "SNP genotyping with GATK"
             vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
             eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
     print sample_name, "Generating summary files"
@@ -404,16 +404,17 @@ def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
     cl.append("--config=%s" % config_file)
     subprocess.check_call(cl)
 
-def recalibrate_quality(sort_bam_file, sam_ref, dbsnp_file, picard_dir):
+def recalibrate_quality(sort_bam_file, sam_ref, dbsnp_file, config_file):
     """Recalibrate alignments with GATK and provide pdf summary.
     """
     bam_file = sort_bam_file.replace("-sort.bam", ".bam")
-    cl = ["picard_gatk_recalibrate.py", picard_dir, sam_ref, bam_file]
+    cl = ["picard_gatk_recalibrate.py", config_file, sam_ref, bam_file]
     if dbsnp_file:
         cl.append(dbsnp_file)
     subprocess.check_call(cl)
-    out_file = glob.glob("%s*gatkrecal.bam" % os.path.splitext(bam_file)[0])[0]
-    return out_file
+    out_files = glob.glob("%s*-gatkrecal.bam" % os.path.splitext(sort_bam_file)[0])
+    assert len(out_files) == 1, out_files
+    return out_files[0]
 
 def run_genotyper(bam_file, ref_file, dbsnp_file, config_file):
     """Perform SNP genotyping and analysis using GATK.

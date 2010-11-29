@@ -30,6 +30,12 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     picard = PicardRunner(config["program"]["picard"])
+    platform = config["algorithm"]["platform"]
+    # GATK gene caller has a different naming for platform
+    if platform.lower() == "illumina":
+        platform = "SOLEXA"
+    else:
+        raise ValueError("Unexpected platform: %s" % platform)
     ref_dict = index_ref_file(picard, ref_file)
     index_bam(align_bam, config["program"]["samtools"])
     realign_target_file = realigner_targets(picard, align_bam,
@@ -39,7 +45,7 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     realign_sort_bam = picard_fixmate(picard, realign_bam)
     index_bam(realign_sort_bam, config["program"]["samtools"])
     snp_file = unified_genotyper(picard, realign_sort_bam, ref_file,
-            config["algorithm"]["platform"], dbsnp)
+            platform, dbsnp)
     filter_snp = variant_filtration(picard, snp_file, ref_file)
     #eval_snp = variant_eval(picard, filter_snp, ref_file, dbsnp)
 
@@ -51,6 +57,10 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "-I", align_bam,
               "-R", ref_file,
               "-o", out_file,
+              "-A", "DepthOfCoverage",
+              "-A", "AlleleBalance",
+              "-A", "HomopolymerRun",
+              "-A", "QualByDepth",
               "--genotype_model", "JOINT_ESTIMATE",
               "--base_model", "EMPIRICAL",
               "--standard_min_confidence_threshold_for_calling", "10.0",
