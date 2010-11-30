@@ -32,22 +32,24 @@ def main(config_file, fc_dir, analysis_dir):
         config["galaxy_api_key"])
 
     fc_name, fc_date = get_flowcell_info(fc_dir)
-    folder_name = "%s_%s" % (fc_date, fc_name)
-    run_info = lims_run_details(galaxy_api, fc_name, folder_name)
-    for (dl_folder, access_role, dbkey, lane, bc_id, name, desc) in run_info:
-        print folder_name, lane, bc_id, name, desc, dl_folder
-        library_id = get_galaxy_library(dl_folder, galaxy_api)
-        folder, cur_galaxy_files = get_galaxy_folder(library_id, folder_name,
-                                                     name, desc, galaxy_api)
-        print "Creating storage directory"
-        base_select = "%s_%s" % (lane, folder_name)
-        store_dir = move_to_storage(lane, bc_id, folder_name,
-                select_upload_files(base_select, bc_id, fc_dir, analysis_dir),
-                cur_galaxy_files, config)
-        if store_dir:
-            print "Uploading directory of files to Galaxy"
-            print galaxy_api.upload_directory(library_id, folder['id'],
-                                              store_dir, dbkey, access_role)
+    base_folder_name = "%s_%s" % (fc_date, fc_name)
+    run_info = lims_run_details(galaxy_api, fc_name, base_folder_name)
+    for (library_name, access_role, dbkey, lane, bc_id, name, desc,
+            local_name) in run_info:
+        library_id = get_galaxy_library(library_name, galaxy_api)
+        upload_files = list(select_upload_files(local_name, bc_id, fc_dir,
+            analysis_dir))
+        if len(upload_files) > 0:
+            print lane, bc_id, name, desc, library_name
+            print "Creating storage directory"
+            folder, cur_galaxy_files = get_galaxy_folder(library_id, base_folder_name,
+                                                         name, desc, galaxy_api)
+            store_dir = move_to_storage(lane, bc_id, base_folder_name, upload_files,
+                    cur_galaxy_files, config)
+            if store_dir:
+                print "Uploading directory of files to Galaxy"
+                print galaxy_api.upload_directory(library_id, folder['id'],
+                                                  store_dir, dbkey, access_role)
     add_run_summary_metrics(analysis_dir, galaxy_api)
 
 # LIMS specific code for retrieving information on what to upload from
@@ -64,20 +66,17 @@ def lims_run_details(galaxy_api, fc_name, base_folder_name):
         libname, role = _get_galaxy_libname(lane_info["private_libs"],
                                             lane_info["lab_association"])
         for barcode in lane_info.get("multiplex", [None]):
-            cur_name = "%s_%s" % (lane_info["lane"], base_folder_name)
-            if barcode:
-                cur_name = "%s_%s" % (cur_name, barcode["barcode_id"])
-
+            remote_folder = lane_info["name"]
             description = "%s: %s" % (lane_info["researcher"],
                     lane_info["description"])
-            folder_name = lane_info["name"]
+            local_name = "%s_%s" % (base_folder_name, lane_info["lane"])
             if barcode:
+                remote_folder += "_%s" % barcode["id"]
                 description += ": %s" % barcode["name"]
-                folder_name += "_%s" % barcode["id"]
+                local_name += "_%s" % barcode["id"]
             yield (libname, role, lane_info["genome_build"],
-                    lane_info["lane"],
-                    barcode["barcode_id"] if barcode else "",
-                    folder_name, description)
+                    lane_info["lane"], barcode["barcode_id"] if barcode else "",
+                    remote_folder, description, local_name)
 
 def _get_galaxy_libname(private_libs, lab_association):
     # simple case -- one private library. Upload there
@@ -99,38 +98,31 @@ def _get_galaxy_libname(private_libs, lab_association):
 def select_upload_files(base, bc_id, fc_dir, analysis_dir):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
-    # if we have barcodes, update our search name and get local fastq files
-    if bc_id:
-        fastq_dir = os.path.join(analysis_dir, "%s_barcode" % base)
-        base = "%s_%s" % (base, bc_id)
-    # otherwise, use the original fastq files
-    else:
-        fastq_dir = get_fastq_dir(fc_dir)
-    # fastq, summary and alignment file
-    for fname in glob.glob(os.path.join(fastq_dir, "%s*_fastq.txt" % base)):
+    fastq_dir = analysis_dir if bc_id else get_fastq_dir(fc_dir)
+    for fname in glob.glob(os.path.join(fastq_dir, "%s_*fastq.txt" % base)):
         yield (fname, os.path.basename(fname))
     for summary_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-summary.pdf" % base)):
+            "%s-*summary.pdf" % base)):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-sort-dup.bam" % base)):
+            "%s-*sort-dup.bam" % base)):
         yield (bam_file, _name_with_ext(bam_file, ".bam"))
     for wig_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-sort.bigwig" % base)):
+            "%s-*sort.bigwig" % base)):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload any recalibrated BAM files used for SNP calling
     found_recal = False
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-gatkrecal-realign-sort.bam" % base)):
+            "%s-*gatkrecal-realign-sort.bam" % base)):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
         for bam_file in glob.glob(os.path.join(analysis_dir,
-                "%s*-gatkrecal.bam" % base)):
+                "%-*gatkrecal.bam" % base)):
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
     # Genotype files produced by SNP calling
     for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-snp-filter.vcf" % base)):
+            "%s-*snp-filter.vcf" % base)):
         yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
 
 def _name_with_ext(orig_file, ext):

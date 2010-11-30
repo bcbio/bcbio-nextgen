@@ -49,6 +49,9 @@ def main(config_file, fc_dir):
     fastq_dir = get_fastq_dir(fc_dir)
     align_dir = os.path.join(work_dir, "alignments")
 
+    write_metrics(run_info, work_dir, fc_dir, fc_name, fc_date, fastq_dir)
+    raise NotImplementedError
+
     # process each flowcell lane
     pool = (Pool(config["algorithm"]["num_cores"])
             if config["algorithm"]["num_cores"] > 1 else None)
@@ -529,10 +532,11 @@ def write_metrics(run_info, analysis_dir, fc_dir, fc_name, fc_date,
         fastq_dir):
     """Write an output YAML file containing high level sequencing metrics.
     """
-    metrics, tab_metrics = summary_metrics(run_info, analysis_dir,
-            fc_name, fc_date, fastq_dir)
+    lane_stats, sample_stats, tab_metrics = summary_metrics(run_info,
+            analysis_dir, fc_name, fc_date, fastq_dir)
     out_file = os.path.join(analysis_dir, "run_summary.yaml")
     with open(out_file, "w") as out_handle:
+        metrics = dict(lanes=lane_stats, samples=sample_stats)
         yaml.dump(metrics, out_handle, default_flow_style=False)
     tab_out_file = os.path.join(fc_dir, "run_summary.tsv")
     with open(tab_out_file, "w") as out_handle:
@@ -545,43 +549,49 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
     """Reformat run and analysis statistics into a YAML-ready format.
     """
     tab_out = []
-    out_info = []
+    lane_info = []
+    sample_info = []
     for run in run_info["details"]:
         tab_out.append([run["lane"], run.get("researcher", ""), run["name"],
             run["description"]])
+        base_info = dict(
+                researcher = run.get("researcher_id", ""),
+                sample = run["sample_id"],
+                lane = run["lane"],
+                request = run_info["run_id"])
+        cur_lane_info = copy.deepcopy(base_info)
+        cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
+                fc_date)
+        lane_info.append(cur_lane_info)
         for barcode in run.get("multiplex", [None]):
             cur_name = "%s_%s_%s" % (run["lane"], fc_date, fc_name)
             if barcode:
-                cur_name = "%s_%s" % (cur_name, barcode["barcode_id"])
+                cur_name = "%s_%s-" % (cur_name, barcode["barcode_id"])
             stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
-            stats.update(_bustard_stats(run["lane"], fastq_dir))
-            cur_run_info = dict(
-                    researcher = run.get("researcher_id", ""),
-                    barcode_id = str(barcode["barcode_id"]) if barcode else "",
-                    barcode_type = str(barcode["barcode_type"]) if barcode else "",
-                    sample = run["sample_id"],
-                    lane = run["lane"],
-                    request = run_info["run_id"],
-                    metrics = stats,
-                    )
-            out_info.append(cur_run_info)
-    return out_info, tab_out
+            if stats:
+                cur_run_info = copy.deepcopy(base_info)
+                cur_run_info["metrics"] = stats
+                cur_run_info["barcode_id"] = str(barcode["barcode_id"]) if barcode else ""
+                cur_run_info["barcode_type"] = str(barcode["barcode_type"]) if barcode else ""
+                sample_info.append(cur_run_info)
+    return lane_info, sample_info, tab_out
 
 def _metrics_from_stats(stats):
     """Remap Broad metrics names to our local names.
     """
-    s_to_m = dict(
-            AL_MEAN_READ_LENGTH = 'Read length',
-            AL_TOTAL_READS = 'Reads',
-            AL_PF_READS_ALIGNED = 'Aligned',
-            DUP_READ_PAIR_DUPLICATES = 'Pair duplicates'
-            )
-    metrics = dict()
-    for stat_name, metric_name in s_to_m.iteritems():
-        metrics[metric_name] = stats[stat_name]
-    return metrics
+    if stats:
+        s_to_m = dict(
+                AL_MEAN_READ_LENGTH = 'Read length',
+                AL_TOTAL_READS = 'Reads',
+                AL_PF_READS_ALIGNED = 'Aligned',
+                DUP_READ_PAIR_DUPLICATES = 'Pair duplicates'
+                )
+        metrics = dict()
+        for stat_name, metric_name in s_to_m.iteritems():
+            metrics[metric_name] = stats[stat_name]
+        return metrics
 
-def _bustard_stats(lane_num, fastq_dir):
+def _bustard_stats(lane_num, fastq_dir, fc_date):
     """Extract statistics about the flow cell from Bustard outputs.
     """
     sum_file = os.path.join(fastq_dir, os.pardir, "BustardSummary.xml")
@@ -594,6 +604,21 @@ def _bustard_stats(lane_num, fastq_dir):
             for lane in results:
                 if lane.find("laneNumber").text == str(lane_num):
                     stats = _collect_cluster_stats(lane)
+    read_stats = _calc_fastq_stats(fastq_dir, lane_num, fc_date)
+    stats.update(read_stats)
+    return stats
+
+def _calc_fastq_stats(fastq_dir, lane_num, fc_date):
+    """Grab read length from fastq; could provide distribution if non-equal.
+    """
+    stats = dict()
+    fastq_files = glob.glob(os.path.join(fastq_dir, "%s_%s*" % (lane_num,
+        fc_date)))
+    if len(fastq_files) > 0:
+        fastq_file = sorted(fastq_files)[-1]
+        with open(fastq_file) as in_handle:
+            line = in_handle.readline()
+            stats["Read length"] = len(in_handle.readline().strip())
     return stats
 
 def _collect_cluster_stats(lane):
