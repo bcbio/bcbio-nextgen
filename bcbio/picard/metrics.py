@@ -115,11 +115,13 @@ class PicardMetricsParser:
             float(hybrid_vals["MEAN_BAIT_COVERAGE"]), ""))
         out.append(self._count_percent("On target bases",
             hybrid_vals["ON_TARGET_BASES"], total))
-        out.append(("Mean target coverage", "%.1f" %
+        out.append(("Mean target coverage", "%dx" %
             float(hybrid_vals["MEAN_TARGET_COVERAGE"]), ""))
+        out.append(("10x coverage targets", "%.1f\%%" %
+            (float(hybrid_vals["PCT_TARGET_BASES_10X"]) * 100.0), ""))
         out.append(("Zero coverage targets", "%.1f\%%" %
-            float(hybrid_vals["ZERO_CVG_TARGETS_PCT"]), ""))
-        out.append(("Fold enrichment", "%.1f" %
+            (float(hybrid_vals["ZERO_CVG_TARGETS_PCT"]) * 100.0), ""))
+        out.append(("Fold enrichment", "%dx" %
             float(hybrid_vals["FOLD_ENRICHMENT"]), ""))
         return out
 

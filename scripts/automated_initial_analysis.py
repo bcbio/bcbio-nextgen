@@ -49,9 +49,6 @@ def main(config_file, fc_dir):
     fastq_dir = get_fastq_dir(fc_dir)
     align_dir = os.path.join(work_dir, "alignments")
 
-    write_metrics(run_info, work_dir, fc_dir, fc_name, fc_date, fastq_dir)
-    raise NotImplementedError
-
     # process each flowcell lane
     pool = (Pool(config["algorithm"]["num_cores"])
             if config["algorithm"]["num_cores"] > 1 else None)
