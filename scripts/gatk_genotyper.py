@@ -82,6 +82,9 @@ def variant_filtration(picard, snp_file, ref_file):
 
     XXX missing:
         interval list
+
+    Recommended Broad hard filtering for deep coverage exomes:
+        QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || SB > -0.10
     """
     out_file = "%s-filter%s" % os.path.splitext(snp_file)
     params = ["-T", "VariantFiltration",
@@ -93,9 +96,11 @@ def variant_filtration(picard, snp_file, ref_file):
               "--filterName", "QDFilter",
               "--filterExpression", "QD < 5.0",
               "--filterName", "ABFilter",
-              "--filterExpression", "AB > 0.75",
+              "--filterExpression", "AB > 0.75 && DP > 40",
               "--filterName", "HRunFilter",
               "--filterExpression", "HRun > 3.0",
+              "--filterName", "SBFilter",
+              "--filterExpression", "SB > -0.10",
               "-l", "INFO",
               ]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):

@@ -69,7 +69,7 @@ def lims_run_details(galaxy_api, fc_name, base_folder_name):
             remote_folder = lane_info["name"]
             description = "%s: %s" % (lane_info["researcher"],
                     lane_info["description"])
-            local_name = "%s_%s" % (base_folder_name, lane_info["lane"])
+            local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
             if barcode:
                 remote_folder += "_%s" % barcode["id"]
                 description += ": %s" % barcode["name"]
@@ -118,7 +118,7 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir):
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
         for bam_file in glob.glob(os.path.join(analysis_dir,
-                "%-*gatkrecal.bam" % base)):
+                "%s-*gatkrecal.bam" % base)):
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
     # Genotype files produced by SNP calling
     for snp_file in glob.glob(os.path.join(analysis_dir,
@@ -212,4 +212,8 @@ def get_galaxy_library(lab_association, galaxy_api):
     return ret_info["id"]
 
 if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print "Incorrect arguments"
+        print __doc__
+        sys.exit()
     main(*sys.argv[1:])

@@ -651,5 +651,9 @@ def _update_config_w_custom(config, lane_info):
 if __name__ == "__main__":
     parser = OptionParser()
     (options, args) = parser.parse_args()
+    if len(args) < 2:
+        print "Incorrect arguments"
+        print __doc__
+        sys.exit()
     kwargs = dict()
     main(*args, **kwargs)
