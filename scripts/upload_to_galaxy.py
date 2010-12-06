@@ -71,9 +71,9 @@ def lims_run_details(galaxy_api, fc_name, base_folder_name):
                     lane_info["description"])
             local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
             if barcode:
-                remote_folder += "_%s" % barcode["id"]
+                remote_folder += "_%s" % barcode["barcode_id"]
                 description += ": %s" % barcode["name"]
-                local_name += "_%s" % barcode["id"]
+                local_name += "_%s" % barcode["barcode_id"]
             yield (libname, role, lane_info["genome_build"],
                     lane_info["lane"], barcode["barcode_id"] if barcode else "",
                     remote_folder, description, local_name)
@@ -124,6 +124,10 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir):
     for snp_file in glob.glob(os.path.join(analysis_dir,
             "%s-*snp-filter.vcf" % base)):
         yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
+    # Effect information on SNPs
+    for snp_file in glob.glob(os.path.join(analysis_dir,
+            "%s-*snp-filter-effects.tsv" % base)):
+        yield (snp_file, _name_with_ext(bam_file, "-snp-effects.tsv"))
 
 def _name_with_ext(orig_file, ext):
     """Return a normalized filename without internal processing names.

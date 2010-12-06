@@ -123,6 +123,8 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
             print sample_name, "SNP genotyping with GATK"
             vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
             eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
+            print sample_name, "Calculating variation effects"
+            variation_effects(vrn_file, genome_build, sam_ref, config)
     print sample_name, "Generating summary files"
     generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
             config, sample_name, config_file)
@@ -438,6 +440,18 @@ def eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
         cl.append(os.path.join(base_dir, target))
     with open(metrics_file, "w") as out_handle:
         subprocess.check_call(cl, stdout=out_handle)
+
+def variation_effects(vrn_file, genome_build, ref_file, config):
+    """Calculate effects of variations, associating them with transcripts.
+    """
+    snp_eff_dir = config["program"]["snpEff"]
+    snp_eff_jar = os.path.join(snp_eff_dir, "snpEff.jar")
+    cl = ["variant_effects.py", snp_eff_jar, vrn_file, genome_build]
+    target = config["algorithm"].get("hybrid_target", "")
+    if target:
+        base_dir = os.path.dirname(os.path.dirname(ref_file))
+        cl.append(os.path.join(base_dir, target))
+    subprocess.check_call(cl)
 
 def get_dbsnp_file(config, sam_ref):
     snp_file = config["algorithm"].get("dbsnp", None)
