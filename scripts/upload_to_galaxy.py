@@ -3,6 +3,11 @@
 
 Usage:
     upload_to_galaxy.py <config file> <flowcell directory> <analysis output dir>
+                        [<YAML run information>]
+
+The optional <YAML run information> file specifies details about the
+flowcell lanes, instead of retrieving it from Galaxy. An example
+configuration file is located in 'config/run_info.yaml'
 
 The configuration file is in YAML format with the following key/value pairs:
 
@@ -25,32 +30,43 @@ import yaml
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
 from bcbio.galaxy.api import GalaxyApiAccess
 
-def main(config_file, fc_dir, analysis_dir):
+def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    galaxy_api = GalaxyApiAccess(config["galaxy_url"],
-        config["galaxy_api_key"])
+    if run_info_yaml:
+        with open(run_info_yaml) as in_handle:
+            run_details = yaml.load(in_handle)
+        run_info = dict(details=run_details, run_id="")
+        galaxy_api = None
+    else:
+        galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
+        run_info = galaxy_api.run_details(fc_name)
 
     fc_name, fc_date = get_flowcell_info(fc_dir)
     base_folder_name = "%s_%s" % (fc_date, fc_name)
-    run_info = lims_run_details(galaxy_api, fc_name, base_folder_name)
+    run_details = lims_run_details(run_info, fc_name, base_folder_name)
     for (library_name, access_role, dbkey, lane, bc_id, name, desc,
-            local_name) in run_info:
-        library_id = get_galaxy_library(library_name, galaxy_api)
+            local_name) in run_details:
+        library_id = (get_galaxy_library(library_name, galaxy_api)
+                      if library_name else None)
         upload_files = list(select_upload_files(local_name, bc_id, fc_dir,
             analysis_dir))
         if len(upload_files) > 0:
             print lane, bc_id, name, desc, library_name
             print "Creating storage directory"
-            folder, cur_galaxy_files = get_galaxy_folder(library_id, base_folder_name,
-                                                         name, desc, galaxy_api)
+            if library_id:
+                folder, cur_galaxy_files = get_galaxy_folder(library_id,
+                               base_folder_name, name, desc, galaxy_api)
+            else:
+                cur_galaxy_files = []
             store_dir = move_to_storage(lane, bc_id, base_folder_name, upload_files,
                     cur_galaxy_files, config)
-            if store_dir:
+            if store_dir and library_id:
                 print "Uploading directory of files to Galaxy"
                 print galaxy_api.upload_directory(library_id, folder['id'],
                                                   store_dir, dbkey, access_role)
-    add_run_summary_metrics(analysis_dir, galaxy_api)
+    if galaxy_api:
+        add_run_summary_metrics(analysis_dir, galaxy_api)
 
 # LIMS specific code for retrieving information on what to upload from
 # the Galaxy NGLIMs.
@@ -58,16 +74,19 @@ def main(config_file, fc_dir, analysis_dir):
 # analysis directories.
 # These should be editing to match a local workflow if adjusting this.
 
-def lims_run_details(galaxy_api, fc_name, base_folder_name):
+def lims_run_details(run_info, fc_name, base_folder_name):
     """Retrieve run infomation on a flow cell from Next Gen LIMS.
     """
-    run_info = galaxy_api.run_details(fc_name)
-    for lane_info in (l for l in run_info["details"] if l.has_key("researcher")):
-        libname, role = _get_galaxy_libname(lane_info["private_libs"],
-                                            lane_info["lab_association"])
+    for lane_info in (l for l in run_info["details"] if l.has_key("researcher")
+                      or not run_info["run_id"]):
+        if lane_info.get("private_libs", None) is not None:
+            libname, role = _get_galaxy_libname(lane_info["private_libs"],
+                                                lane_info["lab_association"])
+        else:
+            libname, role = (None, None)
         for barcode in lane_info.get("multiplex", [None]):
-            remote_folder = lane_info["name"]
-            description = "%s: %s" % (lane_info["researcher"],
+            remote_folder = lane_info.get("name", "")
+            description = "%s: %s" % (lane_info.get("researcher", ""),
                     lane_info["description"])
             local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
             if barcode:

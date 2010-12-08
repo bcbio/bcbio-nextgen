@@ -7,6 +7,11 @@ and analysis.
 
 Usage:
     automated_initial_analysis.py <YAML config file> <flow cell dir>
+                                  [<YAML run information>]
+
+The optional <YAML run information> file specifies details about the
+flowcell lanes, instead of retrieving it from Galaxy. An example
+configuration file is located in 'config/run_info.yaml'
 
 Workflow:
     - Retrieve details on a run.
@@ -38,13 +43,18 @@ from bcbio.picard.metrics import PicardMetricsParser
 from bcbio.picard import utils
 from bcbio.picard import PicardRunner
 
-def main(config_file, fc_dir):
+def main(config_file, fc_dir, run_info_yaml=None):
     work_dir = os.getcwd()
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
+    if run_info_yaml:
+        with open(run_info_yaml) as in_handle:
+            run_details = yaml.load(in_handle)
+        run_info = dict(details=run_details, run_id="")
+    else:
+        galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
+        run_info = galaxy_api.run_details(fc_name)
     fc_name, fc_date = get_flowcell_info(fc_dir)
-    run_info = galaxy_api.run_details(fc_name)
     run_items = _add_multiplex_to_control(run_info["details"])
     fastq_dir = get_fastq_dir(fc_dir)
     align_dir = os.path.join(work_dir, "alignments")
@@ -80,7 +90,8 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
     """
     config = _update_config_w_custom(config, info)
     sample_name = info.get("description", "")
-    if config["algorithm"].get("include_short_name", True):
+    if (config["algorithm"].get("include_short_name", True) and
+            info.get("name", "")):
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
     genome_build = info["genome_build"]
     multiplex = info.get("multiplex", None)
@@ -172,7 +183,8 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
             mfastq_dir = os.path.join(work_dir, "%s_%s_%s_barcode" %
                     (lane_info["lane"], fc_date, fc_name))
             for multi in multiplex:
-                name = (lane_info["name"], lane_info["description"], multi["name"])
+                name = (lane_info.get("name", ""), lane_info["description"],
+                        multi["name"])
                 fname = os.path.join(align_dir, "%s_%s_%s_%s-sort.bam" %
                     (lane_info["lane"], fc_date, fc_name, multi["barcode_id"]))
                 assert os.path.exists(fname)
@@ -181,7 +193,7 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
                 fastq_by_sample[name].append(get_fastq_files(mfastq_dir,
                     lane_info["lane"], fc_name, multi["barcode_id"]))
         else:
-            name = (lane_info["name"], lane_info["description"])
+            name = (lane_info.get("name", ""), lane_info["description"])
             fname = os.path.join(align_dir, "%s_%s_%s-sort.bam" %
                     (lane_info["lane"], fc_date, fc_name))
             assert os.path.exists(fname)
@@ -563,11 +575,11 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
     lane_info = []
     sample_info = []
     for run in run_info["details"]:
-        tab_out.append([run["lane"], run.get("researcher", ""), run["name"],
-            run["description"]])
+        tab_out.append([run["lane"], run.get("researcher", ""),
+            run.get("name", ""), run.get("description")])
         base_info = dict(
                 researcher = run.get("researcher_id", ""),
-                sample = run["sample_id"],
+                sample = run.get("sample_id", ""),
                 lane = run["lane"],
                 request = run_info["run_id"])
         cur_lane_info = copy.deepcopy(base_info)
