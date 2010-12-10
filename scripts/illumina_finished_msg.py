@@ -58,18 +58,18 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
-		#log.info("The instrument has finished dumping on directory %s" % dname)
+		log.info("The instrument has finished dumping on directory %s" % dname)
 
-                #_update_reported(config["msg_db"], dname)
+                _update_reported(config["msg_db"], dname)
     	        
-		#log.info("Generating qseq and fastq files for %s" % dname)
+		log.info("Generating qseq and fastq files for %s" % dname)
 
 		if qseq:
 		    _generate_qseq(get_qseq_dir(dname), config)
 
 		if fastq:
 	            _generate_fastq(dname, config)
-		log.debug("Test AMQP run for store processing... this log stanza will be removed from code")
+		#log.debug("Test AMQP run for store processing... this log stanza will be removed from code")
                 store_files, process_files = _files_to_copy(dname)
                 if process_msg:
                     finished_message(config["msg_process_tag"], dname,
@@ -104,13 +104,15 @@ def _generate_qseq(bc_dir, config):
     generated from bcl, intensity and filter files with tools from
     the offline base caller OLB.
     """
-    qseqs = glob.glob(os.path.join(bc_dir, "*qseq.txt"))
-    if len(qseqs) == 0:
+    if os.path.exists(os.path.join(bc_dir, "finished.txt")):
+	log.info("Qseq files have already been generated for %s, skipping" % bc_dir)
+    else:
 	log.info("Generating qseq files at %s" % bc_dir)
+	bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
+
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", config["log_dir"], "setupBclToQseq.log", "-i", bc_dir,
-		"-o", bc_dir, "-p", os.path.split(bc_dir)[0],
-		"--in-place", "--overwrite"]
+        cl = [cmd, "-L", bcl2qseq_log, "-i", bc_dir, "-o", bc_dir,
+		"-p", os.path.split(bc_dir)[0],	"--in-place", "--overwrite"]
         subprocess.check_call(cl)
 	log.info("Qseq files generated.")
         with utils.chdir(bc_dir):
@@ -151,8 +153,9 @@ def _files_to_copy(directory):
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
         fastq = ["Data/Intensities/BaseCalls/fastq"]
 	# All raw dataset on a tar
-	archival = ["%s.tar" % os.path.dirname(directory)]
-    return sorted(image_redo_files + archival), sorted(reports + fastq)
+	#archival = ["%s.tar" % os.path.dirname(directory)]
+	#sorted(image_redo_files + archival)
+    return sorted(image_redo_files), sorted(reports + fastq)
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.

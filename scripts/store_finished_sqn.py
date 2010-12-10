@@ -1,4 +1,6 @@
 """Transfer raw files from finished NGS runs for backup and storage.
+This script runs on the analysis side, pulls the files from the dump
+machine via rsync.
 
 Usage:
     store_finished_sqn.py <Galaxy config file> <Post-processing config file>
@@ -37,7 +39,17 @@ def main(galaxy_config, processing_config):
 	handlers = [(store_tag, store_handler(config, store_tag))]
 	message_reader(handlers, amqp_config)
 
-def copy_for_storage(remote_info, config):
+#def copy_to_storage(remote_info, config):
+#    """XXX Pulls files from dumping machine
+#    """
+#
+#    log.info()
+#    c1 = ["rsync", "-craz", "%s@%s:%s/%s" % (remote_info['directory'],
+#		".tar", config["store_user"], config["store_host"],
+#		config["store_dir"]]
+#    fabric.run(" ".join(cl))
+
+def copy_from_storage(remote_info, config):
     """Securely copy files from remote directory to the storage server.
 
     This requires ssh public keys to be setup so that no password entry
@@ -57,7 +69,7 @@ def copy_for_storage(remote_info, config):
             target_dir = os.path.dirname(target_loc)
             if not fabric_files.exists(target_dir):
                 fabric.run("mkdir -p %s" % target_dir)
-            cl = ["rsync", "-craz", "%s@%s:%s/%s" % (
+            cl = ["scp", "-r", "%s@%s:%s/%s" % (
                   remote_info["user"], remote_info["hostname"], remote_info["directory"],
                   fcopy), target_loc]
             fabric.run(" ".join(cl))
@@ -65,7 +77,8 @@ def copy_for_storage(remote_info, config):
 def store_handler(config, tag_name):
     def receive_msg(msg):
         if msg.properties['application_headers'].get('msg_type') == tag_name:
-            copy_for_storage(json.loads(msg.body), config)
+            copy_from_storage(json.loads(msg.body), config)
+            #copy_to_storage(json.loads(msg.body), config)
     return receive_msg
 
 def message_reader(handlers, config):
