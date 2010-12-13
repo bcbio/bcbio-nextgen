@@ -47,6 +47,7 @@ def main(config_file, fc_dir, run_info_yaml=None):
     work_dir = os.getcwd()
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
+    fc_name, fc_date = get_flowcell_info(fc_dir)
     if run_info_yaml:
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
@@ -54,7 +55,6 @@ def main(config_file, fc_dir, run_info_yaml=None):
     else:
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name)
-    fc_name, fc_date = get_flowcell_info(fc_dir)
     run_items = _add_multiplex_to_control(run_info["details"])
     fastq_dir = get_fastq_dir(fc_dir)
     align_dir = os.path.join(work_dir, "alignments")
@@ -272,7 +272,13 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
     """
     aligner_to_use = config["algorithm"]["aligner"]
     if not os.path.exists(align_dir):
-        os.makedirs(align_dir)
+        try:
+            os.makedirs(align_dir)
+        # in case we have made it in another process
+        # should really be using a lock or something smarter here
+        except OSError:
+            pass
+        assert os.path.exists(align_dir)
     print lane_name, "Aligning with", aligner_to_use
     if aligner_to_use == "bowtie":
         sam_file = bowtie_to_sam(fastq1, fastq2, align_ref, lane_name,
