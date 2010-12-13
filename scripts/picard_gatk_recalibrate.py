@@ -75,6 +75,7 @@ def gatk_recalibrate(picard, dup_align_bam, ref_file, recal_file, platform):
               "-R", ref_file,
               "-I", dup_align_bam,
               "--out", out_file,
+              "-baq",  "RECALCULATE",
               "-l", "INFO",
               "-U",
               "-OQ",
