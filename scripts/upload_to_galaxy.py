@@ -33,6 +33,7 @@ from bcbio.galaxy.api import GalaxyApiAccess
 def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
+    fc_name, fc_date = get_flowcell_info(fc_dir)
     if run_info_yaml:
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
@@ -42,7 +43,6 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name)
 
-    fc_name, fc_date = get_flowcell_info(fc_dir)
     base_folder_name = "%s_%s" % (fc_date, fc_name)
     run_details = lims_run_details(run_info, fc_name, base_folder_name)
     for (library_name, access_role, dbkey, lane, bc_id, name, desc,
