@@ -8,6 +8,7 @@ program:
   maq: maq
   ucsc_bigwig: wigToBigWig
   picard: /source/Picard
+  snpEff: /source/share/snpEff
   fastx_stats: fastx_quality_stats
   fastx_graph: fastq_quality_boxplot_graph.sh
   pdflatex: pdflatex
@@ -19,8 +20,7 @@ algorithm:
   max_errors: 2
   num_cores: 8
   stringency: high
-  quality_format: Illumina
-  platform: SOLEXA
+  platform: illumina
   recalibrate: false
   snpcall: false
   bc_mismatch: 2

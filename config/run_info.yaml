@@ -1,0 +1,8 @@
+- lane: 1
+  description: 'Your sample 1'
+  analysis: Standard
+  genome_build: hg19
+- lane: 2
+  description: 'Your sample 2'
+  analysis: Standard
+  genome_build: mm9

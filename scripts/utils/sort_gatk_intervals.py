@@ -12,7 +12,8 @@ import sys
 import os
 
 def main(interval_file, seqdict_file=None):
-    out_file = "%s.sort.%s" % os.path.splitext(interval_file)
+    out_file = "%s-sort.interval_list" % (
+            os.path.splitext(interval_file)[0].replace(".", "-"))
     with open(out_file, "w") as out_handle:
         with open(interval_file) as in_handle:
             if seqdict_file is None:
@@ -39,7 +40,11 @@ def read_intervals(in_handle):
         if len(parts) == 1:
             chr_name, loc = parts[0].split(":")
             start, end = loc.split("-")
-            yield [chr_name, start, end, "+", "interval_%s" % i]
+            yield (chr_name, start, end, "+", "interval_%s" % i)
+        elif len(parts) == 6:
+            chr_name, start, end, strand, name, _ = parts
+            #chr_name, start, end, name, _, strand = parts
+            yield (chr_name, start, end, strand, name)
         elif len(parts) == 5:
             yield parts
         else:

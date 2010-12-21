@@ -83,8 +83,8 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
     out_file = "%s.eval" % os.path.splitext(vcf_in)[0]
     params = ["-T", "VariantEval",
               "-R", ref_file,
-              "-B", "eval,VCF,%s" % vcf_in,
-              "-B", "dbsnp,VCF,%s" % dbsnp,
+              "-B:eval,VCF", vcf_in,
+              "-B:dbsnp,VCF", dbsnp,
               "-o", out_file,
               "-l", "INFO"
               ]

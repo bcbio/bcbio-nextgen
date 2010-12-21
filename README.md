@@ -57,6 +57,7 @@ System specific information is specified in YAML configuration files:
 * [fastx toolkit][6]
 * [SolexaQA][6b]
 * [samtools][7]
+* [snpEff][16]
 
 [3]: http://picard.sourceforge.net/
 [4]: http://www.broadinstitute.org/gsa/wiki/index.php/The_Genome_Analysis_Toolkit
@@ -64,6 +65,7 @@ System specific information is specified in YAML configuration files:
 [6]: http://hannonlab.cshl.edu/fastx_toolkit/
 [6b]: http://solexaqa.sourceforge.net/
 [7]: http://samtools.sourceforge.net/
+[16]: http://sourceforge.net/projects/snpeff/
 
 ### Processing infrastructure
 

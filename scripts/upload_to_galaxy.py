@@ -3,6 +3,11 @@
 
 Usage:
     upload_to_galaxy.py <config file> <flowcell directory> <analysis output dir>
+                        [<YAML run information>]
+
+The optional <YAML run information> file specifies details about the
+flowcell lanes, instead of retrieving it from Galaxy. An example
+configuration file is located in 'config/run_info.yaml'
 
 The configuration file is in YAML format with the following key/value pairs:
 
@@ -25,30 +30,43 @@ import yaml
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
 from bcbio.galaxy.api import GalaxyApiAccess
 
-def main(config_file, fc_dir, analysis_dir):
+def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    galaxy_api = GalaxyApiAccess(config["galaxy_url"],
-        config["galaxy_api_key"])
+    if run_info_yaml:
+        with open(run_info_yaml) as in_handle:
+            run_details = yaml.load(in_handle)
+        run_info = dict(details=run_details, run_id="")
+        galaxy_api = None
+    else:
+        galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
+        run_info = galaxy_api.run_details(fc_name)
 
     fc_name, fc_date = get_flowcell_info(fc_dir)
-    folder_name = "%s_%s" % (fc_date, fc_name)
-    run_info = lims_run_details(galaxy_api, fc_name, folder_name)
-    for (dl_folder, access_role, dbkey, lane, bc_id, name, desc) in run_info:
-        print folder_name, lane, bc_id, name, desc, dl_folder
-        library_id = get_galaxy_library(dl_folder, galaxy_api)
-        folder, cur_galaxy_files = get_galaxy_folder(library_id, folder_name,
-                                                     name, desc, galaxy_api)
-        print "Creating storage directory"
-        base_select = "%s_%s" % (lane, folder_name)
-        store_dir = move_to_storage(lane, bc_id, folder_name,
-                select_upload_files(base_select, bc_id, fc_dir, analysis_dir),
-                cur_galaxy_files, config)
-        if store_dir:
-            print "Uploading directory of files to Galaxy"
-            print galaxy_api.upload_directory(library_id, folder['id'],
-                                              store_dir, dbkey, access_role)
-    add_run_summary_metrics(analysis_dir, galaxy_api)
+    base_folder_name = "%s_%s" % (fc_date, fc_name)
+    run_details = lims_run_details(run_info, fc_name, base_folder_name)
+    for (library_name, access_role, dbkey, lane, bc_id, name, desc,
+            local_name) in run_details:
+        library_id = (get_galaxy_library(library_name, galaxy_api)
+                      if library_name else None)
+        upload_files = list(select_upload_files(local_name, bc_id, fc_dir,
+            analysis_dir))
+        if len(upload_files) > 0:
+            print lane, bc_id, name, desc, library_name
+            print "Creating storage directory"
+            if library_id:
+                folder, cur_galaxy_files = get_galaxy_folder(library_id,
+                               base_folder_name, name, desc, galaxy_api)
+            else:
+                cur_galaxy_files = []
+            store_dir = move_to_storage(lane, bc_id, base_folder_name, upload_files,
+                    cur_galaxy_files, config)
+            if store_dir and library_id:
+                print "Uploading directory of files to Galaxy"
+                print galaxy_api.upload_directory(library_id, folder['id'],
+                                                  store_dir, dbkey, access_role)
+    if galaxy_api:
+        add_run_summary_metrics(analysis_dir, galaxy_api)
 
 # LIMS specific code for retrieving information on what to upload from
 # the Galaxy NGLIMs.
@@ -56,28 +74,28 @@ def main(config_file, fc_dir, analysis_dir):
 # analysis directories.
 # These should be editing to match a local workflow if adjusting this.
 
-def lims_run_details(galaxy_api, fc_name, base_folder_name):
+def lims_run_details(run_info, fc_name, base_folder_name):
     """Retrieve run infomation on a flow cell from Next Gen LIMS.
     """
-    run_info = galaxy_api.run_details(fc_name)
-    for lane_info in (l for l in run_info["details"] if l.has_key("researcher")):
-        libname, role = _get_galaxy_libname(lane_info["private_libs"],
-                                            lane_info["lab_association"])
+    for lane_info in (l for l in run_info["details"] if l.has_key("researcher")
+                      or not run_info["run_id"]):
+        if lane_info.get("private_libs", None) is not None:
+            libname, role = _get_galaxy_libname(lane_info["private_libs"],
+                                                lane_info["lab_association"])
+        else:
+            libname, role = (None, None)
         for barcode in lane_info.get("multiplex", [None]):
-            cur_name = "%s_%s" % (lane_info["lane"], base_folder_name)
-            if barcode:
-                cur_name = "%s_%s" % (cur_name, barcode["barcode_id"])
-
-            description = "%s: %s" % (lane_info["researcher"],
+            remote_folder = lane_info.get("name", "")
+            description = "%s: %s" % (lane_info.get("researcher", ""),
                     lane_info["description"])
-            folder_name = lane_info["name"]
+            local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
             if barcode:
+                remote_folder += "_%s" % barcode["barcode_id"]
                 description += ": %s" % barcode["name"]
-                folder_name += "_%s" % barcode["id"]
+                local_name += "_%s" % barcode["barcode_id"]
             yield (libname, role, lane_info["genome_build"],
-                    lane_info["lane"],
-                    barcode["barcode_id"] if barcode else "",
-                    folder_name, description)
+                    lane_info["lane"], barcode["barcode_id"] if barcode else "",
+                    remote_folder, description, local_name)
 
 def _get_galaxy_libname(private_libs, lab_association):
     # simple case -- one private library. Upload there
@@ -99,39 +117,36 @@ def _get_galaxy_libname(private_libs, lab_association):
 def select_upload_files(base, bc_id, fc_dir, analysis_dir):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
-    # if we have barcodes, update our search name and get local fastq files
-    if bc_id:
-        fastq_dir = os.path.join(analysis_dir, "%s_barcode" % base)
-        base = "%s_%s" % (base, bc_id)
-    # otherwise, use the original fastq files
-    else:
-        fastq_dir = get_fastq_dir(fc_dir)
-    # fastq, summary and alignment file
-    for fname in glob.glob(os.path.join(fastq_dir, "%s*_fastq.txt" % base)):
+    fastq_dir = analysis_dir if bc_id else get_fastq_dir(fc_dir)
+    for fname in glob.glob(os.path.join(fastq_dir, "%s_*fastq.txt" % base)):
         yield (fname, os.path.basename(fname))
     for summary_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-summary.pdf" % base)):
+            "%s-*summary.pdf" % base)):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-sort-dup.bam" % base)):
+            "%s-*sort-dup.bam" % base)):
         yield (bam_file, _name_with_ext(bam_file, ".bam"))
     for wig_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-sort.bigwig" % base)):
+            "%s-*sort.bigwig" % base)):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload any recalibrated BAM files used for SNP calling
     found_recal = False
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-gatkrecal-realign-sort.bam" % base)):
+            "%s-*gatkrecal-realign-sort.bam" % base)):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
         for bam_file in glob.glob(os.path.join(analysis_dir,
-                "%s*-gatkrecal.bam" % base)):
+                "%s-*gatkrecal.bam" % base)):
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
     # Genotype files produced by SNP calling
     for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s*-snp-filter.vcf" % base)):
+            "%s-*snp-filter.vcf" % base)):
         yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
+    # Effect information on SNPs
+    for snp_file in glob.glob(os.path.join(analysis_dir,
+            "%s-*snp-filter-effects.tsv" % base)):
+        yield (snp_file, _name_with_ext(bam_file, "-snp-effects.tsv"))
 
 def _name_with_ext(orig_file, ext):
     """Return a normalized filename without internal processing names.
@@ -220,4 +235,8 @@ def get_galaxy_library(lab_association, galaxy_api):
     return ret_info["id"]
 
 if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print "Incorrect arguments"
+        print __doc__
+        sys.exit()
     main(*sys.argv[1:])

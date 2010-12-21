@@ -6,7 +6,7 @@ import subprocess
 class PicardRunner:
     """Simplify running Picard commands.
     """
-    def __init__(self, picard_dir, max_memory="4g"):
+    def __init__(self, picard_dir, max_memory="6g"):
         self._memory_args = []
         if max_memory:
             self._memory_args.append("-Xmx%s" % max_memory)
