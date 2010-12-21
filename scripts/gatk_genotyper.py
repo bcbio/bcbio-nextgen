@@ -47,7 +47,7 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     snp_file = unified_genotyper(picard, realign_sort_bam, ref_file,
             platform, dbsnp)
     filter_snp = variant_filtration(picard, snp_file, ref_file)
-    eval_snp = variant_eval(picard, filter_snp, ref_file, dbsnp)
+    #eval_snp = variant_eval(picard, filter_snp, ref_file, dbsnp)
 
 def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
     """Perform SNP genotyping on the given alignment file.
@@ -108,7 +108,7 @@ def variant_filtration(picard, snp_file, ref_file):
         picard.run_gatk(params)
     return out_file
 
-def variant_eval(picard, filter_snp, ref_file, dbsnp):
+def NOTUSED_variant_eval(picard, filter_snp, ref_file, dbsnp):
     """Provide summary evaluating called variants.
 
     XXX missing:

@@ -80,7 +80,7 @@ def _remote_copy(remote_info, local_sqn_dir):
                       remote_info["hostname"], remote_info["directory"], fcopy),
                   target_loc]
             subprocess.check_call(cl)
-	    log.info("Files copied successfully.")
+    log.info("Files copied.")
     return fc_dir
 
 def analysis_handler(processing_config, tag_name, config_file):
