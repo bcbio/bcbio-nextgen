@@ -44,6 +44,22 @@ from bcbio.picard import utils
 from bcbio.picard import PicardRunner
 
 def main(config_file, fc_dir, run_info_yaml=None):
+LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
+log = logbook.Logger(LOG_NAME)
+
+def main(config_file, fc_dir):
+    
+    log_dir = config["log_dir"]
+    if log_dir:
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
+            LOG_NAME))
+    else:
+        handler = logbook.StreamHandler()
+
+    log.info("Initial analysis...")
+ 
     work_dir = os.getcwd()
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)

@@ -36,7 +36,7 @@ from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_di
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
-def main(galaxy_config, local_config, process_msg=True, store_msg=True, qseq=True, fastq=True):
+def main(galaxy_config, local_config, process_msg=True, store_msg=True, qseq=True, fastq=True, archive=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
@@ -49,34 +49,48 @@ def main(galaxy_config, local_config, process_msg=True, store_msg=True, qseq=Tru
     else:
         handler = logbook.StreamHandler()
     with handler.applicationbound():
-        search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq)
+        search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, archive)
 
-def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
+def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, archive):
     """Search for any new directories that have not been reported.
     """
     reported = _read_reported(config["msg_db"])
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
-		log.info("The instrument has finished dumping on directory %s" % dname)
-
+                log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
     	        
-		log.info("Generating qseq and fastq files for %s" % dname)
-
-		if qseq:
-		    _generate_qseq(get_qseq_dir(dname), config)
-
-		if fastq:
-	            _generate_fastq(dname, config)
-		#log.debug("Test AMQP run for store processing... this log stanza will be removed from code")
+                if archive:
+                    log.info("Generating archive for %s" % dname)
+                    _archive_dataset(dname)
+                                		
+                if qseq:
+                    log.info("Generating qseq files for %s" % dname)
+                    _generate_qseq(get_qseq_dir(dname), config)
+                    
+                if fastq:
+                    log.info("Generating fastq files for %s" % dname)
+                    _generate_fastq(dname, config)        
+        
                 store_files, process_files = _files_to_copy(dname)
                 if process_msg:
                     finished_message(config["msg_process_tag"], dname,
-                            process_files, amqp_config)
+                                     process_files, amqp_config)
                 if store_msg:
                     finished_message(config["msg_store_tag"], dname,
-                            store_files, amqp_config)
+                                     store_files, amqp_config)
+
+def _archive_dataset(fc_dir):
+    with utils.chdir(os.path.dirname(fc_dir)):
+        #ToDo if exists already, don't re-create
+        log.info("Archiving dataset %s" % fc_dir)
+        cl = ["tarit.sh", fc_dir]
+        subprocess.check_call(cl)
+        #finished_message(config["msg_archive_tag"], dname)
+
+        # ToDo Generate LVM snapshots so this process can be parallelized
+        # http://wiki.rdiff-backup.org/wiki/index.php/ContribScripts
 
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
@@ -229,6 +243,8 @@ if __name__ == "__main__":
             action="store_false", default=True)
     parser.add_option("-q", "--noqseq", dest="qseq",
             action="store_false", default=True)
+    parser.add_option("-a", "--noarchive", dest="archive",
+            action="store_false", default=True)
     (options, args) = parser.parse_args()
-    kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg, fastq=options.fastq, qseq=options.qseq)
+    kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg, fastq=options.fastq, qseq=options.qseq, archive=options.archive)
     main(*args, **kwargs)
