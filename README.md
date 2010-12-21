@@ -54,20 +54,16 @@ git clone git://github.com/chapmanb/bcbb.git
 
 Install the modules listed in requirements (ToDo: to be integrated in setup.py?)
 
-<code>
-(yum or apt-get) install rabbitmq-server
-pip install logbook amqplib pyyaml
-cd bcbb/nextgen && python setup.py install
-</code>
+	(yum or apt-get) install rabbitmq-server
+	pip install logbook amqplib pyyaml
+	cd bcbb/nextgen && python setup.py install
 
 The following are just convenience links to operate the scripts more easily:
 
-<code>
-mv bcbb opt/bcbb
-ln -sf bcbb/nextgen nextgen
-mkdir ~/config && cp bcbb/nextgen/config/. ~/config
-mkdir ~/transfer && touch ~/transfer/transferred.db
-</code>
+	mv bcbb opt/bcbb
+	ln -sf bcbb/nextgen nextgen
+	mkdir ~/config && cp bcbb/nextgen/config/. ~/config
+	mkdir ~/transfer && touch ~/transfer/transferred.db
 
 Now, you may adjust the YAML & ini files in ~/config now to your environment and
 you are ready to go !
@@ -77,7 +73,7 @@ you are ready to go !
 The installation instructions assume that you have full root access to install
 python modules and packages (production environment). If this is not the case,
 you may want to install a python VirtualEnv and other tools automatically on your $HOME
-to ease your development needs:
+to ease your development needs using the following script:
 
 http://bitbucket.org/tmslnz/python-dreamhost-batch/src/tip/pyHost.sh
 
