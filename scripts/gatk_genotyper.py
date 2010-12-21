@@ -30,6 +30,12 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     picard = PicardRunner(config["program"]["picard"])
+    platform = config["algorithm"]["platform"]
+    # GATK gene caller has a different naming for platform
+    if platform.lower() == "illumina":
+        platform = "SOLEXA"
+    else:
+        raise ValueError("Unexpected platform: %s" % platform)
     ref_dict = index_ref_file(picard, ref_file)
     index_bam(align_bam, config["program"]["samtools"])
     realign_target_file = realigner_targets(picard, align_bam,
@@ -39,7 +45,7 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     realign_sort_bam = picard_fixmate(picard, realign_bam)
     index_bam(realign_sort_bam, config["program"]["samtools"])
     snp_file = unified_genotyper(picard, realign_sort_bam, ref_file,
-            config["algorithm"]["platform"], dbsnp)
+            platform, dbsnp)
     filter_snp = variant_filtration(picard, snp_file, ref_file)
     eval_snp = variant_eval(picard, filter_snp, ref_file, dbsnp)
 
@@ -51,8 +57,12 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "-I", align_bam,
               "-R", ref_file,
               "-o", out_file,
-              "--genotype_model", "JOINT_ESTIMATE",
+              "-A", "DepthOfCoverage",
+              "-A", "AlleleBalance",
+              "-A", "HomopolymerRun",
+              "-A", "QualByDepth",
               "--base_model", "EMPIRICAL",
+              "-baq", "CALCULATE_AS_NECESSARY",
               "--standard_min_confidence_threshold_for_calling", "10.0",
               "--standard_min_confidence_threshold_for_emitting", "10.0",
               "--trigger_min_confidence_threshold_for_calling", "10.0",
@@ -63,7 +73,7 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B", "dbsnp,VCF,%s" % dbsnp]
+        params += ["-B:dbsnp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         picard.run_gatk(params)
     return out_file
@@ -73,20 +83,25 @@ def variant_filtration(picard, snp_file, ref_file):
 
     XXX missing:
         interval list
+
+    Recommended Broad hard filtering for deep coverage exomes:
+        QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || SB > -0.10
     """
     out_file = "%s-filter%s" % os.path.splitext(snp_file)
     params = ["-T", "VariantFiltration",
               "-R", ref_file,
               "-o", out_file,
-              "-B", "variant,VCF,%s" % snp_file,
+              "-B:variant,VCF", snp_file,
               "--filterName", "QUALFilter",
               "--filterExpression", "QUAL <= 50.0",
               "--filterName", "QDFilter",
               "--filterExpression", "QD < 5.0",
               "--filterName", "ABFilter",
-              "--filterExpression", "AB > 0.75",
+              "--filterExpression", "AB > 0.75 && DP > 40",
               "--filterName", "HRunFilter",
               "--filterExpression", "HRun > 3.0",
+              "--filterName", "SBFilter",
+              "--filterExpression", "SB > -0.10",
               "-l", "INFO",
               ]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
@@ -101,13 +116,13 @@ def variant_eval(picard, filter_snp, ref_file, dbsnp):
     """
     out_file = "%s-eval.txt" % os.path.splitext(filter_snp)[0]
     params = ["-T", "VariantEval",
-              "-B", "eval,VCF,%s" % filter_snp,
+              "-B:eval,VCF", filter_snp,
               "-R", ref_file,
               "-o", out_file,
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B", "comp,VCF,%s" % dbsnp]
+        params += ["-B:comp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         picard.run_gatk(params)
     return out_file
@@ -123,7 +138,7 @@ def realigner_targets(picard, align_bam, ref_file, dbsnp=None):
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B", "dbsnp,VCF,%s" % dbsnp]
+        params += ["-B:dbsnp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         picard.run_gatk(params)
     return out_file

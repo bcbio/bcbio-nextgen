@@ -6,7 +6,7 @@ http://www.broadinstitute.org/gsa/wiki/index.php/Built-in_command-line_arguments
 http://www.broadinstitute.org/gsa/wiki/index.php/The_DBSNP_rod
 
 Usage:
-    picard_maq_recalibrate.py <picard dir> <reference file> <align BAM file>
+    picard_maq_recalibrate.py <config YAML> <reference file> <align BAM file>
                               <snp file>
 
 Process description, from Broad:
@@ -46,12 +46,16 @@ import sys
 import glob
 import subprocess
 
+import yaml
+
 from bcbio.picard import PicardRunner
 from bcbio.picard.utils import curdir_tmpdir
 
-def main(picard_dir, ref_file, align_bam, snp_file=None):
-    platform = "illumina"
-    picard = PicardRunner(picard_dir)
+def main(config_file, ref_file, align_bam, snp_file=None):
+    with open(config_file) as in_handle:
+        config = yaml.load(in_handle)
+    picard = PicardRunner(config["program"]["picard"])
+    platform = config["algorithm"]["platform"]
     ref_dict = index_ref_file(picard, ref_file)
     #snp_dict = (index_snp_file(picard, ref_dict, snp_file) if snp_file else
     #        None)
@@ -71,6 +75,7 @@ def gatk_recalibrate(picard, dup_align_bam, ref_file, recal_file, platform):
               "-R", ref_file,
               "-I", dup_align_bam,
               "--out", out_file,
+              "-baq",  "RECALCULATE",
               "-l", "INFO",
               "-U",
               "-OQ",
@@ -101,7 +106,7 @@ def count_covariates(picard, dup_align_bam, ref_file, platform,
               "--default_platform", platform,
               ]
     if snp_file:
-        params += ["-B", "dbsnp,VCF,%s" % snp_file]
+        params += ["-B:dbsnp,VCF", snp_file]
     if not os.path.exists(out_file):
         with curdir_tmpdir() as tmp_dir:
             picard.run_gatk(params, tmp_dir)

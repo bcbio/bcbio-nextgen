@@ -250,7 +250,8 @@ def _get_fastq_handles(bam_file, is_paired):
     return out_files, out_handles
 
 def _clean_intermediates(bam_file, fastq1, fastq2, report_dir):
-    for bam_rem in glob.glob("%s_*fastq*" % os.path.splitext(bam_file)[0]):
+    base = os.path.splitext(bam_file)[0]
+    for bam_rem in glob.glob("%s_*fastq*" % base):
         os.remove(bam_rem)
     for fastq in (fastq1, fastq2):
         if fastq:
@@ -258,7 +259,8 @@ def _clean_intermediates(bam_file, fastq1, fastq2, report_dir):
                     os.path.splitext(fastq)[0]):
                 os.remove(fastq_rem)
     for latex_ext in ["aux", "log"]:
-        for latex_rem in glob.glob(os.path.join(report_dir, "*.%s" % latex_ext)):
+        for latex_rem in glob.glob(os.path.join(report_dir, "%s*.%s" %
+                            (os.path.basename(base), latex_ext))):
             os.remove(latex_rem)
 
 def run_latex_report(base, report_dir, section_info):
