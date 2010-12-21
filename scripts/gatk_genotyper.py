@@ -62,6 +62,7 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "-A", "HomopolymerRun",
               "-A", "QualByDepth",
               "--base_model", "EMPIRICAL",
+              "-baq", "CALCULATE_AS_NECESSARY",
               "--standard_min_confidence_threshold_for_calling", "10.0",
               "--standard_min_confidence_threshold_for_emitting", "10.0",
               "--trigger_min_confidence_threshold_for_calling", "10.0",
