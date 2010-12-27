@@ -65,8 +65,9 @@ The following are just convenience links to operate the scripts more easily:
 	mkdir ~/config && cp bcbb/nextgen/config/. ~/config
 	mkdir ~/transfer && touch ~/transfer/transferred.db
 
-Now, you may adjust the YAML & ini files in ~/config now to your environment and
-you are ready to go !
+Now, you may adjust the YAML & ini files in ~/config now to your environment.
+It is also a good idea to set your $PATH pointing to any third-party binaries
+you are using.
 
 ### Pipeline development environment
 

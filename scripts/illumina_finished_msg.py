@@ -63,7 +63,10 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, arc
     	        
                 if archive:
                     log.info("Generating archive for %s" % dname)
-                    _archive_dataset(dname)
+                    store_files = _archive_dataset(dname, config)
+                    
+                    finished_message(config["msg_store_tag"], dname,
+                     store_files, amqp_config)
                                 		
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
@@ -81,16 +84,28 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, arc
                     finished_message(config["msg_store_tag"], dname,
                                      store_files, amqp_config)
 
-def _archive_dataset(fc_dir):
+def _archive_dataset(fc_dir, config):
+    """
+    Generates an archive of the raw dataset, before any basecalling or conversion.
+    """
+    archive_files = []
+    archive_cmd = config["program"]["archive"]
+    
     with utils.chdir(os.path.dirname(fc_dir)):
-        #ToDo if exists already, don't re-create
-        log.info("Archiving dataset %s" % fc_dir)
-        cl = ["tarit.sh", fc_dir]
-        subprocess.check_call(cl)
-        #finished_message(config["msg_archive_tag"], dname)
-
-        # ToDo Generate LVM snapshots so this process can be parallelized
-        # http://wiki.rdiff-backup.org/wiki/index.php/ContribScripts
+        if os.path.exists(fc_dir):
+            log.info("Archiving dataset %s" % fc_dir)
+            cl = [archive_cmd, fc_dir]
+            print cl
+            subprocess.check_call(cl)
+    
+    if config["program"]["archive"] == "tar_md5.py":
+        log.debug("Files %s [.tar & .md5]" % fc_dir)
+        archive_files = [fc_dir+".tar", fc_dir+".md5"]
+        
+    return archive_files
+    # ToDo Add LVM snapshot generation so that archiving and the basecalling
+    # can be run in parallel.
+    # http://wiki.rdiff-backup.org/wiki/index.php/ContribScripts
 
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
@@ -106,9 +121,9 @@ def _generate_fastq(fc_dir, config):
                 glob.glob("*qseq.txt")])))
             cl = ["solexa_qseq_to_fastq.py", short_fc_name,
                     ",".join(lanes)]
-	    log.info("Converting qseq to fastq on all lanes.")
+            log.info("Converting qseq to fastq on all lanes.")
             subprocess.check_call(cl)
-	    log.info("Qseq to fastq conversion completed.")
+            log.info("Qseq to fastq conversion completed.")
     return fastq_dir
 
 def _generate_qseq(bc_dir, config):
