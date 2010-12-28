@@ -18,10 +18,10 @@ def picard_sort(picard, align_bam):
             picard.run("SortSam", opts)
     return out_file
 
-def picard_merge(picard, *in_files):
+def picard_merge(picard, in_files):
     """Merge multiple BAM files together with Picard.
     """
-    out_file = "%s-merge.bam" % os.path.commonprefix(in_files)
+    out_file = "%smerge.bam" % os.path.commonprefix(in_files)
     if not os.path.exists(out_file):
         with curdir_tmpdir() as tmp_dir:
             opts = [("OUTPUT", out_file),
@@ -29,5 +29,13 @@ def picard_merge(picard, *in_files):
                     ("TMP_DIR", tmp_dir)]
             for in_file in in_files:
                 opts.append(("INPUT", in_file))
-            picard.run("MergeSam", opts)
+            picard.run("MergeSamFiles", opts)
     return out_file
+
+def picard_index(picard, in_bam):
+    index_file = "%s.bai" % in_bam
+    if not os.path.exists(index_file):
+        opts = [("INPUT", in_bam),
+                ("OUTPUT", index_file)]
+        picard.run("BuildBamIndex", opts)
+    return index_file
