@@ -30,12 +30,6 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     picard = PicardRunner(config["program"]["picard"])
-    platform = config["algorithm"]["platform"]
-    # GATK gene caller has a different naming for platform
-    if platform.lower() == "illumina":
-        platform = "SOLEXA"
-    else:
-        raise ValueError("Unexpected platform: %s" % platform)
     ref_dict = index_ref_file(picard, ref_file)
     index_bam(align_bam, config["program"]["samtools"])
     realign_target_file = realigner_targets(picard, align_bam,
@@ -45,11 +39,11 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     realign_sort_bam = picard_fixmate(picard, realign_bam)
     index_bam(realign_sort_bam, config["program"]["samtools"])
     snp_file = unified_genotyper(picard, realign_sort_bam, ref_file,
-            platform, dbsnp)
+                                 dbsnp)
     filter_snp = variant_filtration(picard, snp_file, ref_file)
     #eval_snp = variant_eval(picard, filter_snp, ref_file, dbsnp)
 
-def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
+def unified_genotyper(picard, align_bam, ref_file, dbsnp=None):
     """Perform SNP genotyping on the given alignment file.
     """
     out_file = "%s-snp.vcf" % os.path.splitext(align_bam)[0]
@@ -61,7 +55,7 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "-A", "AlleleBalance",
               "-A", "HomopolymerRun",
               "-A", "QualByDepth",
-              "--base_model", "EMPIRICAL",
+              "--genotype_likelihoods_model", "SNP",
               "-baq", "CALCULATE_AS_NECESSARY",
               "--standard_min_confidence_threshold_for_calling", "10.0",
               "--standard_min_confidence_threshold_for_emitting", "10.0",
@@ -69,7 +63,6 @@ def unified_genotyper(picard, align_bam, ref_file, platform, dbsnp=None):
               "--trigger_min_confidence_threshold_for_emitting", "10.0",
               "--downsample_to_coverage", 10000,
               "--min_base_quality_score", 20,
-              "--platform", platform,
               "-l", "INFO",
               ]
     if dbsnp:
