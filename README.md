@@ -16,13 +16,15 @@ management on top of the existing functionality.
 [1]: http://galaxy.psu.edu/
 [2]: http://bitbucket.org/chapmanb/galaxy-central
 
+ToDo: pictoric representation of the workflow/pipelie
+
 ## Code structure
 
 Two main scripts drive the automation of the process:
 
 * `scripts/illumina_finished_msg.py` -- Sits on a machine where sequencing
-  runs are dumped. It checks for new results, reporting to a RabbitMQ messaging
-  queue whenever a new run is finished.
+  runs are dumped.
+
 * `scripts/analyze_finished_sqn.py` -- Continuously running server script on
   the Galaxy analysis machine. When new results are reported in the messaging queue,
   this copies over the relevant files and kicks off an automated analysis.
@@ -43,6 +45,38 @@ System specific information is specified in YAML configuration files:
   program commandlines and customization for processing algorithms.
 * `config/transfer_info.yaml` -- Configuration on the sequencing machine, specifying where
   to check for new results.
+
+## Installation
+
+Clone a copy from from chapmanb branch:
+
+git clone git://github.com/chapmanb/bcbb.git
+
+Install the modules listed in requirements (ToDo: to be integrated in setup.py?)
+
+	(yum or apt-get) install rabbitmq-server
+	pip install logbook amqplib pyyaml
+	cd bcbb/nextgen && python setup.py install
+
+The following are just convenience links to operate the scripts more easily:
+
+	mv bcbb opt/bcbb
+	ln -sf bcbb/nextgen nextgen
+	mkdir ~/config && cp bcbb/nextgen/config/. ~/config
+	mkdir ~/transfer && touch ~/transfer/transferred.db
+
+Now, you may adjust the YAML & ini files in ~/config now to your environment.
+It is also a good idea to set your $PATH pointing to any third-party binaries
+you are using.
+
+### Pipeline development environment
+
+The installation instructions assume that you have full root access to install
+python modules and packages (production environment). If this is not the case,
+you may want to install a python VirtualEnv and other tools automatically on your $HOME
+to ease your development needs using the following script:
+
+http://bitbucket.org/tmslnz/python-dreamhost-batch/src/tip/pyHost.sh
 
 ## Requirements
 
@@ -79,6 +113,7 @@ System specific information is specified in YAML configuration files:
 * [mako][13]
 * [PyYAML][14]
 * [amqplib][15]
+* [logbook] [16]
 
 [10]: http://biopython.org
 [11]: http://rpy.sourceforge.net/rpy2.html
@@ -86,3 +121,4 @@ System specific information is specified in YAML configuration files:
 [13]: http://www.makotemplates.org/
 [14]: http://pyyaml.org/
 [15]: http://code.google.com/p/py-amqplib
+[16]: http://packages.python.org/Logbook
