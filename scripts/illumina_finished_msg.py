@@ -37,7 +37,7 @@ LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
 def main(galaxy_config, local_config, process_msg=True, store_msg=True,
-         qseq=True, fastq=True, archive=True):
+         qseq=True, fastq=True, archive=False):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
@@ -236,8 +236,8 @@ if __name__ == "__main__":
             action="store_false", default=True)
     parser.add_option("-q", "--noqseq", dest="qseq",
             action="store_false", default=True)
-    parser.add_option("-a", "--noarchive", dest="archive",
-            action="store_false", default=True)
+    parser.add_option("-a", "--archive", dest="archive",
+            action="store_true", default=False)
     (options, args) = parser.parse_args()
     kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg,
                   fastq=options.fastq, qseq=options.qseq, archive=options.archive)
