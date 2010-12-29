@@ -36,6 +36,7 @@ import xml.etree.ElementTree as ET
 import StringIO
 
 import yaml
+import logbook
 
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
@@ -52,9 +53,9 @@ def main(config_file, fc_dir, run_info_yaml=None):
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
     with log_handler.applicationbound():
-        run_main(config, fc_dir)
+        run_main(config, config_file, fc_dir, run_info_yaml)
 
-def run_main(config, fc_dir, run_info_yaml):
+def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     fc_name, fc_date = get_flowcell_info(fc_dir)
     if run_info_yaml:
