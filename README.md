@@ -16,7 +16,7 @@ management on top of the existing functionality.
 [1]: http://galaxy.psu.edu/
 [2]: http://bitbucket.org/chapmanb/galaxy-central
 
-ToDo: pictoric representation of the workflow/pipelie
+ToDo: pictoric representation of the workflow/pipeline
 
 ## Code structure
 
@@ -52,18 +52,18 @@ Clone a copy from from chapmanb branch:
 
 git clone git://github.com/chapmanb/bcbb.git
 
-Install the modules listed in requirements (ToDo: to be integrated in setup.py?)
+Install the modules listed in requirements
 
-	(yum or apt-get) install rabbitmq-server
-	pip install logbook amqplib pyyaml
-	cd bcbb/nextgen && python setup.py install
+        (yum or apt-get) install rabbitmq-server
+        pip install logbook amqplib pyyaml
+        cd bcbb/nextgen && python setup.py install
 
 The following are just convenience links to operate the scripts more easily:
 
-	mv bcbb opt/bcbb
-	ln -sf bcbb/nextgen nextgen
-	mkdir ~/config && cp bcbb/nextgen/config/. ~/config
-	mkdir ~/transfer && touch ~/transfer/transferred.db
+        mv bcbb opt/bcbb
+        ln -sf bcbb/nextgen nextgen
+        mkdir ~/config && cp bcbb/nextgen/config/. ~/config
+        mkdir ~/transfer && touch ~/transfer/transferred.db
 
 Now, you may adjust the YAML & ini files in ~/config now to your environment.
 It is also a good idea to set your $PATH pointing to any third-party binaries
@@ -80,9 +80,9 @@ http://bitbucket.org/tmslnz/python-dreamhost-batch/src/tip/pyHost.sh
 
 ## Requirements
 
-### Next gen analysis 
+### Next gen analysis
 
-* [Picard][3] 
+* [Picard][3]
 * [GATK][4]
 * [bowtie][5]
 * [fastx toolkit][6]

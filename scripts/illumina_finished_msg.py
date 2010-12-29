@@ -23,32 +23,26 @@ import socket
 import glob
 import getpass
 import subprocess
-from logbook import *
 from optparse import OptionParser
 
 import yaml
 from amqplib import client_0_8 as amqp
 import logbook
 
+from bcbio.log import create_log_handler
 from bcbio.picard import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
-def main(galaxy_config, local_config, process_msg=True, store_msg=True, qseq=True, fastq=True, archive=True):
+def main(galaxy_config, local_config, process_msg=True, store_msg=True,
+         qseq=True, fastq=True, archive=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
-    log_dir = config["log_dir"]
-    if log_dir:
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
-            LOG_NAME))
-    else:
-        handler = logbook.StreamHandler()
-    with handler.applicationbound():
+    log_handler = create_log_handler(config, LOG_NAME)
+    with log_handler.applicationbound():
         search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, archive)
 
 def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, archive):
@@ -60,23 +54,16 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, arc
             if _is_finished_dumping(dname):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
-    	        
-                if archive:
-                    log.info("Generating archive for %s" % dname)
-                    store_files = _archive_dataset(dname, config)
-                    
-                    finished_message(config["msg_store_tag"], dname,
-                     store_files, amqp_config)
-                                		
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
-                    
                 if fastq:
                     log.info("Generating fastq files for %s" % dname)
-                    _generate_fastq(dname, config)        
-        
+                    _generate_fastq(dname, config)
                 store_files, process_files = _files_to_copy(dname)
+                if archive:
+                    log.info("Generating archive for %s" % dname)
+                    store_files = _archive_dataset(dname, config)
                 if process_msg:
                     finished_message(config["msg_process_tag"], dname,
                                      process_files, amqp_config)
@@ -85,27 +72,24 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, arc
                                      store_files, amqp_config)
 
 def _archive_dataset(fc_dir, config):
-    """
-    Generates an archive of the raw dataset, before any basecalling or conversion.
+    """Generates an archive of the raw dataset, before any basecalling or conversion.
+
+    ToDo Add LVM snapshot generation so that archiving and the basecalling
+    can be run in parallel.
+    http://wiki.rdiff-backup.org/wiki/index.php/ContribScripts
     """
     archive_files = []
     archive_cmd = config["program"]["archive"]
-    
     with utils.chdir(os.path.dirname(fc_dir)):
         if os.path.exists(fc_dir):
             log.info("Archiving dataset %s" % fc_dir)
             cl = [archive_cmd, fc_dir]
             print cl
             subprocess.check_call(cl)
-    
     if config["program"]["archive"] == "tar_md5.py":
         log.debug("Files %s [.tar & .md5]" % fc_dir)
         archive_files = [fc_dir+".tar", fc_dir+".md5"]
-        
     return archive_files
-    # ToDo Add LVM snapshot generation so that archiving and the basecalling
-    # can be run in parallel.
-    # http://wiki.rdiff-backup.org/wiki/index.php/ContribScripts
 
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
@@ -115,7 +99,7 @@ def _generate_fastq(fc_dir, config):
     fastq_dir = get_fastq_dir(fc_dir)
     basecall_dir = os.path.split(fastq_dir)[0]
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
-	log.info("Generating fastq files for %s" % fc_dir)
+        log.info("Generating fastq files for %s" % fc_dir)
         with utils.chdir(basecall_dir):
             lanes = sorted(list(set([f.split("_")[1] for f in
                 glob.glob("*qseq.txt")])))
@@ -133,17 +117,14 @@ def _generate_qseq(bc_dir, config):
     generated from bcl, intensity and filter files with tools from
     the offline base caller OLB.
     """
-    if os.path.exists(os.path.join(bc_dir, "finished.txt")):
-	log.info("Qseq files have already been generated for %s, skipping" % bc_dir)
-    else:
-	log.info("Generating qseq files at %s" % bc_dir)
-	bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
-
+    if not os.path.exists(os.path.join(bc_dir, "finished.txt")):
+        log.info("Generating qseq files at %s" % bc_dir)
+        bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
         cl = [cmd, "-L", bcl2qseq_log, "-i", bc_dir, "-o", bc_dir,
-		"-p", os.path.split(bc_dir)[0],	"--in-place", "--overwrite"]
+              "-p", os.path.split(bc_dir)[0],	"--in-place", "--overwrite"]
         subprocess.check_call(cl)
-	log.info("Qseq files generated.")
+        log.info("Qseq files generated.")
         with utils.chdir(bc_dir):
             try:
                 processors = config["algorithm"]["num_cores"]
@@ -168,9 +149,9 @@ def _files_to_copy(directory):
     """
     with utils.chdir(directory):
         image_redo_files = reduce(operator.add,
-		[glob.glob("*.params"),
-		 glob.glob("Images/L*/C*"),
-		 ["RunInfo.xml"]])
+                                  [glob.glob("*.params"),
+                                   glob.glob("Images/L*/C*"),
+                                   ["RunInfo.xml"]])
         qseqs = reduce(operator.add,
                      [glob.glob("Data/Intensities/*.xml"),
                       glob.glob("Data/Intensities/BaseCalls/*qseq.txt"),
@@ -181,9 +162,6 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-	# All raw dataset on a tar
-	#archival = ["%s.tar" % os.path.dirname(directory)]
-	#sorted(image_redo_files + archival)
     return sorted(image_redo_files), sorted(reports + fastq)
 
 def _read_reported(msg_db):
@@ -261,5 +239,6 @@ if __name__ == "__main__":
     parser.add_option("-a", "--noarchive", dest="archive",
             action="store_false", default=True)
     (options, args) = parser.parse_args()
-    kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg, fastq=options.fastq, qseq=options.qseq, archive=options.archive)
+    kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg,
+                  fastq=options.fastq, qseq=options.qseq, archive=options.archive)
     main(*args, **kwargs)

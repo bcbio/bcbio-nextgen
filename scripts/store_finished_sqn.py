@@ -1,4 +1,5 @@
 """Transfer raw files from finished NGS runs for backup and storage.
+
 This script runs on the analysis side, pulls the files from the dump
 machine via rsync.
 
@@ -17,6 +18,8 @@ from amqplib import client_0_8 as amqp
 import fabric.api as fabric
 import fabric.contrib.files as fabric_files
 
+from bcbio.log import create_log_handler
+
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
@@ -25,31 +28,12 @@ def main(galaxy_config, processing_config):
     with open(processing_config) as in_handle:
         config = yaml.load(in_handle)
     store_tag = config["msg_store_tag"]
-    
-    log_dir = config["log_dir"]
-    if log_dir:
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
-            LOG_NAME))
-    else:
-        handler = logbook.StreamHandler()
+    log_handler = create_log_handler(config, LOG_NAME)
+    handlers = [(store_tag, store_handler(config, store_tag))]
+    with log_handler.applicationbound():
+        message_reader(handlers, amqp_config)
 
-    with handler.applicationbound():
-	handlers = [(store_tag, store_handler(config, store_tag))]
-	message_reader(handlers, amqp_config)
-
-#def copy_to_storage(remote_info, config):
-#    """XXX Pulls files from dumping machine
-#    """
-#
-#    log.info()
-#    c1 = ["rsync", "-craz", "%s@%s:%s/%s" % (remote_info['directory'],
-#		".tar", config["store_user"], config["store_host"],
-#		config["store_dir"]]
-#    fabric.run(" ".join(cl))
-
-def copy_from_storage(remote_info, config):
+def copy_for_storage(remote_info, config):
     """Securely copy files from remote directory to the storage server.
 
     This requires ssh public keys to be setup so that no password entry
@@ -77,8 +61,7 @@ def copy_from_storage(remote_info, config):
 def store_handler(config, tag_name):
     def receive_msg(msg):
         if msg.properties['application_headers'].get('msg_type') == tag_name:
-            copy_from_storage(json.loads(msg.body), config)
-            #copy_to_storage(json.loads(msg.body), config)
+            copy_for_storage(json.loads(msg.body), config)
     return receive_msg
 
 def message_reader(handlers, config):

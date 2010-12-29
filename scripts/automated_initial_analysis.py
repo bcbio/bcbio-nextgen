@@ -42,27 +42,20 @@ from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.picard.metrics import PicardMetricsParser
 from bcbio.picard import utils
 from bcbio.picard import PicardRunner
+from bcbio.log import create_log_handler
 
-def main(config_file, fc_dir, run_info_yaml=None):
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
-def main(config_file, fc_dir):
-    
-    log_dir = config["log_dir"]
-    if log_dir:
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
-            LOG_NAME))
-    else:
-        handler = logbook.StreamHandler()
-
-    log.info("Initial analysis...")
- 
-    work_dir = os.getcwd()
+def main(config_file, fc_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
+    log_handler = create_log_handler(config, LOG_NAME)
+    with log_handler.applicationbound():
+        run_main(config, fc_dir)
+
+def run_main(config, fc_dir, run_info_yaml):
+    work_dir = os.getcwd()
     fc_name, fc_date = get_flowcell_info(fc_dir)
     if run_info_yaml:
         with open(run_info_yaml) as in_handle:

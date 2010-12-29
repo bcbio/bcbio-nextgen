@@ -20,6 +20,8 @@ import logbook
 import yaml
 from amqplib import client_0_8 as amqp
 
+from bcbio.log import create_log_handler
+
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
@@ -27,20 +29,12 @@ def main(galaxy_config, processing_config):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(processing_config) as in_handle:
         config = yaml.load(in_handle)
+    log_handler = create_log_handler(config, LOG_NAME)
     process_tag = config["msg_process_tag"]
-
-    log_dir = config["log_dir"]
-    if log_dir:
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" %
-            LOG_NAME))
-    else:
-        handler = logbook.StreamHandler()
-
     handlers = [(process_tag,
-        analysis_handler(config, process_tag, processing_config))]
-    message_reader(handlers, amqp_config)
+                 analysis_handler(config, process_tag, processing_config))]
+    with log_handler.applicationbound():
+        message_reader(handlers, amqp_config)
 
 def copy_and_analyze(remote_info, config, config_file):
     """Remote copy an output directory, process it, and upload to Galaxy.
@@ -73,9 +67,9 @@ def _remote_copy(remote_info, local_sqn_dir):
         if not os.path.exists(target_loc):
             target_dir = os.path.dirname(target_loc)
             if not os.path.exists(target_dir):
-	    	log.info("Target directory does not exist, creating %s" % target_dir)
+                log.info("Target directory does not exist, creating %s" % target_dir)
                 os.makedirs(target_dir)
-		log.info("Copying files to remote storage host...")
+            log.info("Copying files to remote storage host...")
             cl = ["scp", "-r", "%s@%s:%s/%s" % (remote_info["user"],
                       remote_info["hostname"], remote_info["directory"], fcopy),
                   target_loc]
