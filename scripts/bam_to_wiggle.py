@@ -34,7 +34,7 @@ import yaml
 import pysam
 
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
-        outfile=None):
+         outfile=None):
     if config_file:
         with open(config_file) as in_handle:
             config = yaml.load(in_handle)
