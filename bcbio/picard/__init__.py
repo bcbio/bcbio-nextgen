@@ -3,6 +3,8 @@
 import os
 import subprocess
 
+import run as run_fns
+
 class PicardRunner:
     """Simplify running Picard commands.
     """
@@ -11,6 +13,10 @@ class PicardRunner:
         if max_memory:
             self._memory_args.append("-Xmx%s" % max_memory)
         self._picard_dir = picard_dir
+
+    def run_fn(self, name, *args, **kwds):
+        fn = getattr(run_fns, name)
+        fn(self, *args, **kwds)
 
     def run(self, command, options):
         options = ["%s=%s" % (x, y) for x, y in options]
