@@ -1,3 +1,7 @@
+# Example file for specifying run information to automated_initial_analysis.py
+# In a fully Galaxy automated setup this information would be retrieved
+# from the Galaxy server based on user inputs. This allows you to
+# run the automated pipeline separately.
 - lane: 1
   description: 'Your sample 1'
   analysis: Standard
@@ -6,3 +10,18 @@
   description: 'Your sample 2'
   analysis: Standard
   genome_build: mm9
+- lane: 3
+  description: 'Multiplex example'
+  analysis: Standard
+  genome_build: hg19
+  multiplex:
+    - barcode_type: Illumina
+      barcode_id: 1
+      name: 'One Barcode Sample'
+      sequence: ATCACG
+    - barcode_type: Illumina
+      barcode_id: 2
+      name: 'Another Barcode Sample'
+      sequence: CGATGT 
+
+    
