@@ -3,6 +3,11 @@
 Usage:
     analyze_finished_sqn.py <Galaxy config file> <Post-processing config file>
 
+The server can run the copy and processing on a remote host by setting the
+analysis user and host parameters in your post_process.yaml file.
+ssh keys need to be configured to allow passwordless login between
+the machine running this server and the analysis host.
+
 Need to configure the RabbitMQ server with:
 
     rabbitmqctl add_user galaxy password
@@ -19,6 +24,8 @@ import logbook
 
 import yaml
 from amqplib import client_0_8 as amqp
+import fabric.api as fabric
+import fabric.contrib.files as fabric_files
 
 from bcbio.log import create_log_handler
 
@@ -39,42 +46,56 @@ def main(galaxy_config, processing_config):
 def copy_and_analyze(remote_info, config, config_file):
     """Remote copy an output directory, process it, and upload to Galaxy.
     """
-    log.debug("The remote host information is: %s" % remote_info)
-    fc_dir = _remote_copy(remote_info, config["local_sqn_dir"])
-    log.debug("The flowcell directory is: %s" % fc_dir)
+    user = config["analysis"].get("user", None)
+    host = config["analysis"].get("host", None)
+    shell = config["analysis"].get("login_shell", None)
+    if not user or not host:
+        user = os.environ["USER"]
+        host = os.environ["HOST"]
+    if not shell:
+        shell = os.environ["SHELL"]
+    fabric.env.host_string = "%s@%s" % (user, host)
+    fabric.env.shell = "%s -i -l -c" % shell
+    log.debug("Remote host information: %s" % remote_info)
+    fc_dir = _remote_copy(remote_info, config)
+
+    if config["analysis"].get("config_file", None):
+        config_file = config["analysis"]["config_file"]
+    elif not config_file.startswith("/"):
+        config_file = os.path.join(os.getcwd(), config_file)
+
     analysis_dir = os.path.join(config["analysis"]["base_dir"],
                                 os.path.basename(remote_info["directory"]))
-    if not config_file.startswith("/"):
-        config_file = os.path.join(os.getcwd(), config_file)
-    with _make_and_chdir(analysis_dir):
+    if not fabric_files.exists(analysis_dir):
+        fabric.run("mkdir %s" % analysis_dir)
+    with fabric.cd(analysis_dir):
         cl = [config["analysis"]["process_program"], config_file, fc_dir]
-        subprocess.check_call(cl)
+        fabric.run(" ".join(cl))
     cl = [config["analysis"]["upload_program"], config_file, fc_dir, analysis_dir]
-    subprocess.check_call(cl)
+    fabric.run(" ".join(cl))
 
-def _remote_copy(remote_info, local_sqn_dir):
+def _remote_copy(remote_info, config):
     """Securely copy files from remote directory to the processing server.
 
     This requires ssh public keys to be setup so that no password entry
     is necessary.
     """
-    fc_dir = os.path.join(local_sqn_dir,
-            os.path.basename(remote_info['directory']))
-    if not os.path.exists(fc_dir):
-        os.makedirs(fc_dir)
+    fc_dir = os.path.join(config["analysis"]["store_dir"],
+                          os.path.basename(remote_info['directory']))
+    log.info("Copying analysis files to %s" % fc_dir)
+    if not fabric_files.exists(fc_dir):
+        fabric.run("mkdir %s" % fc_dir)
     for fcopy in remote_info['to_copy']:
         target_loc = os.path.join(fc_dir, fcopy)
-        if not os.path.exists(target_loc):
+        if not fabric_files.exists(target_loc):
             target_dir = os.path.dirname(target_loc)
-            if not os.path.exists(target_dir):
-                log.info("Target directory does not exist, creating %s" % target_dir)
-                os.makedirs(target_dir)
-            log.info("Copying files to remote storage host...")
-            cl = ["scp", "-r", "%s@%s:%s/%s" % (remote_info["user"],
-                      remote_info["hostname"], remote_info["directory"], fcopy),
+            if not fabric_files.exists(target_dir):
+                fabric.run("mkdir -p %s" % target_dir)
+            cl = ["scp", "-r", "%s@%s:%s/%s" %
+                  (remote_info["user"], remote_info["hostname"],
+                   remote_info["directory"], fcopy),
                   target_loc]
-            subprocess.check_call(cl)
-    log.info("Files copied.")
+            fabric.run(" ".join(cl))
     return fc_dir
 
 def analysis_handler(processing_config, tag_name, config_file):
@@ -118,17 +139,6 @@ def _read_amqp_config(galaxy_config):
     for option in config.options("galaxy_amqp"):
         amqp_config[option] = config.get("galaxy_amqp", option)
     return amqp_config
-
-@contextlib.contextmanager
-def _make_and_chdir(new_dir):
-    if not os.path.exists(new_dir):
-        os.makedirs(new_dir)
-    cur_dir = os.getcwd()
-    try:
-        os.chdir(new_dir)
-        yield
-    finally:
-        os.chdir(cur_dir)
 
 if __name__ == "__main__":
     main(*sys.argv[1:])

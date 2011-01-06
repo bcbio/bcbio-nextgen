@@ -29,13 +29,21 @@ algorithm:
 
 log_dir: /array0/projects/Sequencing/log
 msg_process_tag: sqn_finished_process
-local_sqn_dir: /store4/solexadata
 msg_store_tag: sqn_finished_store
 store_dir: /mad/store/clients/cscshared/solexadata
 store_user: cscshared
 store_host: bricklayer01.partners.org
 
 analysis:
+  # Can specify a remote server to copy analysis files and run
+  # the analysis programs on. This needs a configuration file 
+  # like this with program information for the remote machine.
+  # The default is to run the analysis on the local machine.
+  user:
+  host:
+  login_shell:
+  config_file:
+  store_dir: /store4/solexadata
   base_dir: /array0/projects/Sequencing
   towig_script: bam_to_wiggle.py
   process_program: automated_initial_analysis.py
