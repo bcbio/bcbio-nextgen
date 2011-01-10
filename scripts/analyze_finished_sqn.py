@@ -15,6 +15,7 @@ Need to configure the RabbitMQ server with:
     rabbitmqctl set_permissions -p galaxy_messaging_engine galaxy '.*' '.*' '.*'
 """
 import os
+import re
 import sys
 import ConfigParser
 import json
@@ -51,7 +52,7 @@ def copy_and_analyze(remote_info, config, config_file):
     shell = config["analysis"].get("login_shell", None)
     if not user or not host:
         user = os.environ["USER"]
-        host = os.environ["HOST"]
+        host = re.sub(r'\..*', '', os.uname()[1])
     if not shell:
         shell = os.environ["SHELL"]
     fabric.env.host_string = "%s@%s" % (user, host)

@@ -58,6 +58,7 @@ def main(config_file, fc_dir, run_info_yaml=None):
 def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     fc_name, fc_date = get_flowcell_info(fc_dir)
+    log.debug("Flowcell name is %s" % fc_name)
     if run_info_yaml:
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
