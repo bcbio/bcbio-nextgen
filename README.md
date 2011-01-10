@@ -48,15 +48,23 @@ System specific information is specified in YAML configuration files:
 
 ## Installation
 
-Clone a copy from from chapmanb branch:
+### Backend
+
+Clone a copy from chapmanb branch:
 
 git clone git://github.com/chapmanb/bcbb.git
 
-Install the modules listed in requirements
+Install the modules listed in requirements:
 
         (yum or apt-get) install rabbitmq-server
         pip install logbook amqplib pyyaml
         cd bcbb/nextgen && python setup.py install
+
+And setup rabbitmq accordingly once it is running by:
+
+        rabbitmqctl add_user galaxy <password>
+        rabbitmqctl add_vhost galaxy_messaging_engine 
+        rabbitmqctl set_permissions -p galaxy_messaging_engine galaxy ".*" ".*" ".*"
 
 The following are just convenience links to operate the scripts more easily:
 
@@ -69,14 +77,20 @@ Now, you may adjust the YAML & ini files in ~/config now to your environment.
 It is also a good idea to set your $PATH pointing to any third-party binaries
 you are using.
 
-### Pipeline development environment
+### Frontend
+
+Follow up the following instructions to setup the Galaxy instance:
+
+https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
+
+### Development environment
 
 The installation instructions assume that you have full root access to install
 python modules and packages (production environment). If this is not the case,
 you may want to install a python VirtualEnv and other tools automatically on your $HOME
 to ease your development needs using the following script:
 
-http://bitbucket.org/tmslnz/python-dreamhost-batch/src/tip/pyHost.sh
+wget https://bitbucket.org/brainstorm/custom_env/raw/1cd4f4ae27d5/pyHost.sh && ./pyHost.sh
 
 ## Requirements
 
@@ -113,7 +127,7 @@ http://bitbucket.org/tmslnz/python-dreamhost-batch/src/tip/pyHost.sh
 * [mako][13]
 * [PyYAML][14]
 * [amqplib][15]
-* [logbook] [16]
+* [logbook] [17]
 
 [10]: http://biopython.org
 [11]: http://rpy.sourceforge.net/rpy2.html
@@ -121,4 +135,4 @@ http://bitbucket.org/tmslnz/python-dreamhost-batch/src/tip/pyHost.sh
 [13]: http://www.makotemplates.org/
 [14]: http://pyyaml.org/
 [15]: http://code.google.com/p/py-amqplib
-[16]: http://packages.python.org/Logbook
+[17]: http://packages.python.org/Logbook
