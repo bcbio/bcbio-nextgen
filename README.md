@@ -20,14 +20,31 @@ ToDo: pictoric representation of the workflow/pipeline
 
 ## Code structure
 
-Two main scripts drive the automation of the process:
+The main scripts that handle automation of the analysis and storage
+are:
 
 * `scripts/illumina_finished_msg.py` -- Sits on a machine where sequencing
-  runs are dumped.
+  runs are dumped. Should be run via a cron job every hour or so to
+  check for new output runs.
 
 * `scripts/analyze_finished_sqn.py` -- Continuously running server script on
   the Galaxy analysis machine. When new results are reported in the messaging queue,
-  this copies over the relevant files and kicks off an automated analysis.
+  this copies over the relevant fastq files and starts an automated
+  analysis.
+
+* `scripts/store_finished_sqn.py` -- Continuously running server that
+  manages long term storage of larger files, like qseq and images.
+
+System specific information is specified in configuration files:
+
+* `config/transfer_info.yaml` -- Configuration on the sequencing
+  machine, specifying where to check for new sequencing data.
+* `config/post_process.yaml` -- Configuration for analysis and
+  storage. This contains links to Galaxy, program commandlines and
+  customization for processing algorithms.
+* `config/universe_wsgi.ini` -- Configuration variables that should be
+  included on your Galaxy server. RabbitMQ details are specified here
+  for communication between the sequencing and analysis machine.
 
 The scripts involved in the actual processing:
 
@@ -39,12 +56,6 @@ The scripts involved in the actual processing:
   statistics on alignments, duplicates, GC distribution, quality scores,
   and other metrics of interest.
  
-System specific information is specified in YAML configuration files:
-
-* `config/post_process.yaml` -- The main configuration file containing Galaxy details,
-  program commandlines and customization for processing algorithms.
-* `config/transfer_info.yaml` -- Configuration on the sequencing machine, specifying where
-  to check for new results.
 
 ## Installation
 
