@@ -88,6 +88,23 @@ Now, you may adjust the YAML & ini files in ~/config now to your environment.
 It is also a good idea to set your $PATH pointing to any third-party binaries
 you are using.
 
+#### ssh keys
+
+The sequencing, analysis and storage machines transfer files using
+secure copy. This requires that you can securely copy files between
+machines without passwords, using [ssh public key authentication][i1].
+You want to enable password-less ssh for the following machine
+combinations:
+
+* `analyze_finished_sqn` server to `illumina_finished_msg` machine
+* `store_finished_sqn` server to `illumina_finished_msg` machine
+* `analyze_finished_sqn` to actual analysis machine, if different else
+  localhost
+* `store_finished_sqn` server to actual storage machine, if different
+  else localhost
+
+[i1]: http://macnugget.org/projects/publickeys/
+
 ### Frontend
 
 Follow up the following instructions to setup the Galaxy instance:
