@@ -84,7 +84,6 @@ def _archive_dataset(fc_dir, config):
         if os.path.exists(fc_dir):
             log.info("Archiving dataset %s" % fc_dir)
             cl = [archive_cmd, fc_dir]
-            print cl
             subprocess.check_call(cl)
     if config["program"]["archive"] == "tar_md5.py":
         log.debug("Files %s [.tar & .md5]" % fc_dir)

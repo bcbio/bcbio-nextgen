@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Script to tar a dataset for archival.
 
 It generates a TAR archive while computing MD5 checksum for each file.
@@ -20,7 +21,8 @@ from subprocess import *
 #    def __exit__(self, *args):
 #        self.close()
 
-def all_files(root, patterns='*', single_level=False, yield_folders=True):
+# From O'reilly Python Cookbook 2nd edition
+def all_files(root, patterns='*', single_level=False, yield_folders=False):
 # Expand patterns from semicolon-separated string to list
     patterns = patterns.split(';')
     for path, subdirs, files in os.walk(root):
@@ -41,7 +43,7 @@ def make_hashed_tar(tar_filename, tree_to_backup):
     for item in list(tree_to_backup):
         tar.add(item)
         if os.path.isfile(item):
-            hashfile.write(hashlib.md5(item).hexdigest()+"\t"+os.path.item)
+            hashfile.write(hashlib.md5(item).hexdigest()+"\t"+item)
             hashfile.write("\n")
     tar.close()
     hashfile.close()
