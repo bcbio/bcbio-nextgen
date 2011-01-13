@@ -26,7 +26,8 @@ def main(config_file, month, year):
         config = yaml.load(in_handle)
     galaxy_api = GalaxyApiAccess(config["galaxy_url"],
         config["galaxy_api_key"])
-    start_date = datetime(year, month - 1, 15, 0, 0, 0)
+    smonth, syear = (month - 1, year) if month > 1 else (12, year - 1)
+    start_date = datetime(syear, smonth, 15, 0, 0, 0)
     # last day calculation useful if definition of month is
     # from first to last day instead of 15th-15th
     #(_, last_day) = calendar.monthrange(year, month)
@@ -37,7 +38,8 @@ def main(config_file, month, year):
         writer = csv.writer(out_handle)
         writer.writerow([
             "Date", "Product", "Payment", "Researcher", "Lab", "Email",
-            "Project", "Sample", "Description", "Genome", "Flowcell"])
+            "Project", "Sample", "Description", "Genome", "Flowcell",
+            "Lane", "Notes"])
         for s in galaxy_api.sqn_report(start_date.isoformat(),
                 end_date.isoformat()):
             f_parts = s["sqn_run"]["run_folder"].split("_")
@@ -53,7 +55,9 @@ def main(config_file, month, year):
                 s["name"],
                 s["description"],
                 s["genome_build"],
-                flowcell])
+                flowcell,
+                s["sqn_run"]["lane"],
+                s["sqn_run"]["results_notes"]])
 
 if __name__ == "__main__":
     parser = OptionParser()
