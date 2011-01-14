@@ -55,7 +55,6 @@ The scripts involved in the actual processing:
 * `scripts/align_summary_report.py` -- Produces a PDF summary file with
   statistics on alignments, duplicates, GC distribution, quality scores,
   and other metrics of interest.
- 
 
 ## Installation
 
@@ -67,26 +66,38 @@ git clone git://github.com/chapmanb/bcbb.git
 
 Install the modules listed in requirements:
 
-        (yum or apt-get) install rabbitmq-server
         pip install logbook amqplib pyyaml
         cd bcbb/nextgen && python setup.py install
 
-And setup rabbitmq accordingly once it is running by:
+Copy the YAML & ini files in config and adjust them to match your
+environment. It is also a good idea to set your $PATH pointing to
+any third-party binaries you are using.
 
-        rabbitmqctl add_user galaxy <password>
-        rabbitmqctl add_vhost galaxy_messaging_engine 
-        rabbitmqctl set_permissions -p galaxy_messaging_engine galaxy ".*" ".*" ".*"
+#### RabbitMQ messaging server
 
-The following are just convenience links to operate the scripts more easily:
+Communication between the sequencing machine and the analysis machine
+running Galaxy is managed using RabbitMQ messaging. This allows
+complete separation between all of the machines. The RabbitMQ server
+can run anywhere; an easy solution is to install it on the Galaxy
+analysis server:
 
-        mv bcbb opt/bcbb
-        ln -sf bcbb/nextgen nextgen
-        mkdir ~/config && cp bcbb/nextgen/config/. ~/config
-        mkdir ~/transfer && touch ~/transfer/transferred.db
+        (yum or apt-get) install rabbitmq-server
 
-Now, you may adjust the YAML & ini files in ~/config now to your environment.
-It is also a good idea to set your $PATH pointing to any third-party binaries
-you are using.
+Setup rabbitmq for passing Galaxy messages:
+
+        rabbitmqctl add_user <username> <password>
+        rabbitmqctl add_vhost galaxy_messaging_engine
+        rabbitmqctl set_permissions -p galaxy_messaging_engine <username> ".*" ".*" ".*"
+
+Then adjust the `[galaxy_amqp]` section of your `universe_wsgi.ini`
+Galaxy configuration file. An example configuration is available in
+the config directory; you'll need to specifically change these three
+values:
+
+        [galaxy_amqp]
+        host = <host you installed the RabbitMQ server on>
+        userid = <username>
+        password = <password>
 
 #### ssh keys
 
