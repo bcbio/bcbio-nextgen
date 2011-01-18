@@ -23,13 +23,20 @@ class GalaxyApiAccess:
         response = urllib2.urlopen("%s?%s" % (url, params))
         return json.loads(response.read())
 
-    def _post(self, url, data, params=None):
+    def _post(self, url, data, params=None, need_return=True):
         url, params = self._make_url(url, params)
         request = urllib2.Request("%s?%s" % (url, params),
                 headers = {'Content-Type' : 'application/json'},
                 data = json.dumps(data))
         response = urllib2.urlopen(request)
-        return json.loads(response.read())
+        try:
+            data = json.loads(response.read())
+        except ValueError:
+            if need_return:
+                raise
+            else:
+                data = {}
+        return data
 
     def get_libraries(self):
         return self._get("/api/libraries")
@@ -61,7 +68,8 @@ class GalaxyApiAccess:
                 data=dict(create_type='file', upload_option='upload_directory',
                     folder_id=folder_id, server_dir=directory,
                     dbkey=dbkey, roles=str(access_role),
-                    file_type=file_type, link_data_only=str(link_data_only)))
+                    file_type=file_type, link_data_only=str(link_data_only)),
+                need_return=False)
 
     def run_details(self, run):
         """Next Gen LIMS specific API functionality.
