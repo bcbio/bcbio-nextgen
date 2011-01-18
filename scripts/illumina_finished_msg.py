@@ -130,9 +130,10 @@ def _is_finished_dumping(directory, hook):
     finished = reduce(operator.or_,
             [os.path.exists(os.path.join(directory, f)) for f in to_check])
     
-    if finished:
+    if finished and hook:
+        log.info("Calling external script: '%s'" % hook)
         subprocess.call(hook)
-        
+                
     return finished
 
 def _files_to_copy(directory):
@@ -236,5 +237,4 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg,
                   fastq=options.fastq, qseq=options.qseq, hook=options.hook)
-    print kwargs
     main(*args, **kwargs)
