@@ -31,5 +31,13 @@ setup(name = "bcbio-nextgen",
                  ],
       package_data = {
           'config' : ['*.yaml'],
-          }
-      )
+          },
+      install_requires = [
+          "biopython >= 1.56",
+          "Mako >= 0.3.6",
+          "PyYAML >= 3.09",
+          "amqplib >= 0.6.1",
+          "Logbook >= 0.3",
+          "pysam >= 0.3.1",
+          "rpy2 >= 2.1.9"
+      ])

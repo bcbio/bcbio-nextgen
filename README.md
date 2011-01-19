@@ -64,9 +64,9 @@ Clone a copy from chapmanb branch:
 
 git clone git://github.com/chapmanb/bcbb.git
 
-Install the modules listed in requirements:
+Install using the standard python approach. Required python
+dependencies will also be installed:
 
-        pip install logbook amqplib pyyaml
         cd bcbb/nextgen && python setup.py install
 
 Copy the YAML & ini files in config and adjust them to match your
