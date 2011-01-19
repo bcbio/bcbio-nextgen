@@ -42,7 +42,7 @@ analysis:
   user:
   host:
   login_shell:
-  config_file:
+  config_file: /path/to/remote/post_process.yaml
   store_dir: /store4/solexadata
   base_dir: /array0/projects/Sequencing
   towig_script: bam_to_wiggle.py

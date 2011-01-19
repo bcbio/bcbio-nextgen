@@ -1,10 +1,23 @@
 #!/usr/bin/env python
 """Script to tar a dataset for archival.
 
-It generates a TAR archive while computing MD5 checksum for each file.
+It generates a TAR archive while computing MD5 checksum for each file (not directories).
 
-From VeriTAR:
-http://www.g-loaded.eu/2007/12/01/veritar-verify-checksums-of-files-within-a-tar-archive/
+Usage:
+    python tar_md5.py <dir>
+    
+Will generate "dir.md5", containing:
+
+md5_hash    full_path_to_file
+
+And "dir.tar" with all the dir contents.
+
+VeriTAR[1] can be used to verify all the files in the tarball without unpacking it:
+
+./veritar [options] tar_archive checksum_file
+
+
+[1] http://www.g-loaded.eu/2007/12/01/veritar-verify-checksums-of-files-within-a-tar-archive/
 
 ToDo: Stream the backup to archival system using ssh/rsync while tarring (more pipework)
 """

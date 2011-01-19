@@ -37,21 +37,27 @@ LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
 def main(galaxy_config, local_config, process_msg=True, store_msg=True,
-         qseq=True, fastq=True, archive=False):
+         qseq=True, fastq=True, hook=""):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
     with log_handler.applicationbound():
-        search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, archive)
+        search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq,
+                       hook)
 
-def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, archive):
+def posthook(func):
+    if hook:
+        log.debug("Calling external script %s" % hook)
+        subprocess.check_call(hook)
+
+def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hook):
     """Search for any new directories that have not been reported.
     """
     reported = _read_reported(config["msg_db"])
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
-            if _is_finished_dumping(dname):
+            if _is_finished_dumping(dname, hook):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
                 if qseq:
@@ -60,35 +66,15 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, arc
                 if fastq:
                     log.info("Generating fastq files for %s" % dname)
                     _generate_fastq(dname, config)
+
                 store_files, process_files = _files_to_copy(dname)
-                if archive:
-                    log.info("Generating archive for %s" % dname)
-                    store_files = _archive_dataset(dname, config)
+
                 if process_msg:
                     finished_message(config["msg_process_tag"], dname,
                                      process_files, amqp_config)
                 if store_msg:
                     finished_message(config["msg_store_tag"], dname,
                                      store_files, amqp_config)
-
-def _archive_dataset(fc_dir, config):
-    """Generates an archive of the raw dataset, before any basecalling or conversion.
-
-    ToDo Add LVM snapshot generation so that archiving and the basecalling
-    can be run in parallel.
-    http://wiki.rdiff-backup.org/wiki/index.php/ContribScripts
-    """
-    archive_files = []
-    archive_cmd = config["program"]["archive"]
-    with utils.chdir(os.path.dirname(fc_dir)):
-        if os.path.exists(fc_dir):
-            log.info("Archiving dataset %s" % fc_dir)
-            cl = [archive_cmd, fc_dir]
-            subprocess.check_call(cl)
-    if config["program"]["archive"] == "tar_md5.py":
-        log.debug("Files %s [.tar & .md5]" % fc_dir)
-        archive_files = [fc_dir+".tar", fc_dir+".md5"]
-    return archive_files
 
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
@@ -132,7 +118,7 @@ def _generate_qseq(bc_dir, config):
             cl = config["program"].get("olb_make", "make").split() + ["-j", str(processors)]
             subprocess.check_call(cl)
 
-def _is_finished_dumping(directory):
+def _is_finished_dumping(directory, hook):
     """Determine if the sequencing directory has all files.
 
     The final checkpoint file will differ depending if we are a
@@ -140,8 +126,15 @@ def _is_finished_dumping(directory):
     """
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt"]
-    return reduce(operator.or_,
+    
+    finished = reduce(operator.or_,
             [os.path.exists(os.path.join(directory, f)) for f in to_check])
+    
+    if finished and hook:
+        log.info("Calling external script: '%s'" % hook)
+        subprocess.call(hook)
+                
+    return finished
 
 def _files_to_copy(directory):
     """Retrieve files that should be remotely copied.
@@ -237,7 +230,11 @@ if __name__ == "__main__":
             action="store_false", default=True)
     parser.add_option("-a", "--archive", dest="archive",
             action="store_true", default=False)
+
+    parser.add_option("-e", "--hook", dest="hook", help="Runs an arbitrary script right after the instrument finishes dumping, before pre-processing",
+            action="store", default="")
+
     (options, args) = parser.parse_args()
     kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg,
-                  fastq=options.fastq, qseq=options.qseq, archive=options.archive)
+                  fastq=options.fastq, qseq=options.qseq, hook=options.hook)
     main(*args, **kwargs)
