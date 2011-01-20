@@ -64,7 +64,8 @@ Clone a copy from chapmanb branch:
 
 git clone git://github.com/chapmanb/bcbb.git
 
-Install using the standard python approach. Required python
+Install using the standard python approach. You will need a recent
+version of Python 2 (2.6 or 2.7). The required python library
 dependencies will also be installed:
 
         cd bcbb/nextgen && python setup.py install
