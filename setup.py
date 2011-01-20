@@ -39,5 +39,5 @@ setup(name = "bcbio-nextgen",
           "amqplib >= 0.6.1",
           "Logbook >= 0.3",
           "pysam >= 0.3.1",
-          "rpy2 >= 2.1.9"
+          "rpy2 >= 2.0.7"
       ])
