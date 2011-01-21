@@ -21,23 +21,12 @@ class PicardRunner:
     def run(self, command, options):
         options = ["%s=%s" % (x, y) for x, y in options]
         options.append("VALIDATION_STRINGENCY=SILENT")
-        dist_file = os.path.join(self._picard_dir, "dist", "%s.jar" % command)
-        private_dist_file = os.path.join(self._picard_dir, "Picard-private",
-                "dist", "%s.jar" % command)
-        if not os.path.exists(dist_file):
-            if os.path.exists(private_dist_file):
-                dist_file = private_dist_file
-            else:
-                raise ValueError("Could not find jar %s in %s" % (command,
-                    self._picard_dir))
-        #cl = ["java", "-XX:-UseGCOverheadLimit", "-Xmx1800m", "-Xms1800m", "-jar", dist_file] + options
+        dist_file = self._get_jar(command)
         cl = ["java"] + self._memory_args +["-jar", dist_file] + options
         subprocess.check_call(cl)
 
     def run_gatk(self, params, tmp_dir=None):
-        gatk_jar = os.path.join(self._picard_dir, "GATK", "dist",
-                "GenomeAnalysisTK.jar")
-         #       "GATK-Picard.jar")
+        gatk_jar = self._get_jar("GenomeAnalysisTK")
         local_args = []
         if tmp_dir:
             local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
@@ -45,3 +34,17 @@ class PicardRunner:
                 ["-jar", gatk_jar] + [str(x) for x in params]
         #print " ".join(cl)
         subprocess.check_call(cl)
+
+    def _get_jar(self, command):
+        """Retrieve the jar for running the specified command.
+        """
+        dirs = [self._picard_dir,
+                os.path.join(self._picard_dir, "dist"),
+                os.path.join(self._picard_dir, "Picard-private", "dist"),
+                os.path.join(self._picard_dir, "GATK"),
+                os.path.join(self._picard_dir, "GATK", "dist")]
+        for dir_check in dirs:
+            check_file = os.path.join(dir_check, "%s.jar" % command)
+            if os.path.exists(check_file):
+                return check_file
+        raise ValueError("Could not find jar %s in %s" % (command, self._picard_dir))
