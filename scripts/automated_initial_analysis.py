@@ -19,6 +19,7 @@ Workflow:
     - Perform secondary analyses like SNP calling.
     - Generate summary report.
 """
+import re
 import os
 import sys
 import json
@@ -500,6 +501,7 @@ def analyze_recalibration(recal_file, fastq1, fastq2):
 def get_fastq_files(directory, lane, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
+    # ToDo: File schemas shouldn't be parametrizable via config ?
     if bc_name:
         glob_str = "%s_*%s_%s_*txt*" % (lane, fc_name, bc_name)
     else:
@@ -542,23 +544,31 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
     out_info = []
     for ref_get in [aligner, "samtools"]:
         ref_file = os.path.join(galaxy_base, "tool-data", ref_files[ref_get])
-        with open(ref_file) as in_handle:
-            for line in in_handle:
-                if not line.startswith("#"):
-                    parts = line.strip().split()
-                    if parts[0] == "index":
-                        parts = parts[1:]
-                    if parts[0] == genome_build:
-                        out_info.append(parts[-1])
-                        break
+        
         try:
+            with open(ref_file) as in_handle:
+                for line in in_handle:
+                    if not line.startswith("#"):
+                        # Handles empty lines in a cross-platform way
+                        if not re.search("\A\r\n?|\A\n", line):
+                            parts = line.strip().split()
+                            # ToDo: Why one would put "index" in the first position ?
+                            if parts[0] == "index":
+                                parts = parts[1:]
+                            if parts[0] == genome_build:
+                                out_info.append(parts[-1])
+                                print out_info
+                                break
+                        
+        
             out_info[-1] = remap_fns[ref_get](out_info[-1])
         except KeyError:
             pass
         except IndexError:
             raise IndexError("Genome %s not found in %s" % (genome_build,
                 ref_file))
-
+    
+    return tuple(out_info)
     if len(out_info) != 2:
         raise ValueError("Did not find genome reference for %s %s" %
                 (genome_build, aligner))
