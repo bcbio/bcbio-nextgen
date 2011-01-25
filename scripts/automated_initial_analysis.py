@@ -544,7 +544,7 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
         ref_file = os.path.join(galaxy_base, "tool-data", ref_files[ref_get])
         with open(ref_file) as in_handle:
             for line in in_handle:
-                if not line.startswith("#"):
+                if line.strip() and not line.startswith("#"):
                     parts = line.strip().split()
                     if parts[0] == "index":
                         parts = parts[1:]
