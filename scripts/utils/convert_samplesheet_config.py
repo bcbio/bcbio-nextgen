@@ -57,7 +57,7 @@ def generate_barcode_ids(info_iter):
 def read_input_csv(in_file):
     """Parse useful details from SampleSheet CSV file.
     """
-    with open(in_file) as in_handle:
+    with open(in_file, "rU") as in_handle:
         reader = csv.reader(in_handle)
         reader.next() # header
         for line in reader:

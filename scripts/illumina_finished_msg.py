@@ -48,7 +48,7 @@ def main(galaxy_config, local_config, process_msg=True, store_msg=True,
 
 def posthook(func):
     if hook:
-        log.debug("Calling external script %s" % hook)
+        log.info("Calling external script %s" % hook)
         subprocess.check_call(hook)
 
 def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hook):
@@ -60,6 +60,11 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
             if _is_finished_dumping(dname, hook):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
+                sheet = _run_has_samplesheet(dname, config)
+                
+                if sheet:
+                    log.info("CSV Samplesheet %s found, converting to yaml" % sheet)
+                    print _samplesheet_to_yaml(dname, sheet)
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
@@ -76,6 +81,44 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
                     finished_message(config["msg_store_tag"], dname,
                                      store_files, amqp_config)
 
+def _samplesheet_to_yaml(fc_dir, sheet):
+    cl = ["utils/convert_samplesheet_config.py", sheet]
+    subprocess.check_call(cl)
+    
+    return sheet
+
+def _run_has_samplesheet(fc_dir, config):
+    """Checks if there's a suitable SampleSheet.csv present for the run
+    ToDo: Generalize.
+          Assumes filename schema: "Multiplex_Flowcell_Machine_Date_samplesheet.csv"
+          And that the fc_id is: "Date_Machine_????_Flowcell"
+          
+          Where Flowcell:  ????????XX
+          And Date:        101227
+    """
+    
+    ### ToDo GO DIRECTLY ON PARSING THE CSV FOR THE FC_ID !!!
+    
+    fc_name, fc_date = get_flowcell_info(fc_dir)
+    sheet_dir = config["samplesheet_directories"][0]
+    sheets = []
+    found = []
+    
+    with utils.chdir(sheet_dir):
+        sheets = glob.glob("*.csv")
+    
+    for sh in sheets:
+        sh_date = sh.split("_")[3]
+        if sh_date == fc_date:
+            print sheets
+            found.append(sh)
+
+    print sheets
+
+
+    sys.exit()
+
+    
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
     """
@@ -141,6 +184,7 @@ def _files_to_copy(directory):
     """
     with utils.chdir(directory):
         image_redo_files = reduce(operator.add,
+
                                   [glob.glob("*.params"),
                                    glob.glob("Images/L*/C*"),
                                    ["RunInfo.xml"]])
@@ -231,8 +275,8 @@ if __name__ == "__main__":
     parser.add_option("-a", "--archive", dest="archive",
             action="store_true", default=False)
 
-    parser.add_option("-e", "--hook", dest="hook", help="Runs an arbitrary script right after the instrument finishes dumping, before pre-processing",
-            action="store", default="")
+    parser.add_option("-e", "--hook", dest="hook", help="Runs an arbitrary script right after the instrument \
+            finishes dumping, before pre-processing", action="store", default="")
 
     (options, args) = parser.parse_args()
     kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg,
