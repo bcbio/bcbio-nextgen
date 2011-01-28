@@ -27,7 +27,11 @@ from optparse import OptionParser
 
 import yaml
 from amqplib import client_0_8 as amqp
+from difflib import get_close_matches
 import logbook
+
+#from utils.convert_samplesheet_config import read_input_csv as read_samplesheet
+from bcbio.solexa.samplesheet import SampleSheet
 
 from bcbio.log import create_log_handler
 from bcbio.picard import utils
@@ -60,11 +64,12 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
             if _is_finished_dumping(dname, hook):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
-                sheet = _run_has_samplesheet(dname, config)
+                sheet_dir = _run_has_samplesheet(dname, config)
                 
-                if sheet:
-                    log.info("CSV Samplesheet %s found, converting to yaml" % sheet)
-                    print _samplesheet_to_yaml(dname, sheet)
+                if sheet_dir:
+                    log.info("CSV Samplesheet %s found, converting to yaml" % os.path.basename(sheet_dir))
+                    _samplesheet_to_yaml(dname, sheet_dir)
+                    sys.exit()
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
@@ -81,42 +86,43 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
                     finished_message(config["msg_store_tag"], dname,
                                      store_files, amqp_config)
 
-def _samplesheet_to_yaml(fc_dir, sheet):
-    cl = ["utils/convert_samplesheet_config.py", sheet]
-    subprocess.check_call(cl)
-    
-    return sheet
-
-def _run_has_samplesheet(fc_dir, config):
-    """Checks if there's a suitable SampleSheet.csv present for the run
-    ToDo: Generalize.
-          Assumes filename schema: "Multiplex_Flowcell_Machine_Date_samplesheet.csv"
-          And that the fc_id is: "Date_Machine_????_Flowcell"
-          
-          Where Flowcell:  ????????XX
-          And Date:        101227
+def _samplesheet_to_yaml(fc_dir, sheet_dir):
+    """Writes the yaml file on the Run directory (fc_dir) as "run_info.yaml".
     """
     
-    ### ToDo GO DIRECTLY ON PARSING THE CSV FOR THE FC_ID !!!
+    sheet = SampleSheet(sheet_dir)
+    yaml_sheet = sheet.csv2yaml(sheet_dir)
     
-    fc_name, fc_date = get_flowcell_info(fc_dir)
-    sheet_dir = config["samplesheet_directories"][0]
-    sheets = []
-    found = []
+    with utils.chdir(fc_dir):
+        run_info = os.path.join(fc_dir, "run_info.yaml")
+        open(run_info, "w").write(yaml_sheet)
     
-    with utils.chdir(sheet_dir):
+def _run_has_samplesheet(fc_dir, config):
+    """Checks if there's a suitable SampleSheet.csv present for the run
+    """
+    
+    # ToDo: Handle multiple samplesheet directories
+    sheet_dir = config["samplesheet_directories"]
+    fc_name, _ = get_flowcell_info(fc_dir)    
+
+    fcid_sheet = {}
+    
+    with utils.chdir(sheet_dir[0]):
         sheets = glob.glob("*.csv")
+        for sh in sheets:
+            fc_id = SampleSheet(sh).get_fcid()
+            assert(len(fc_id) == 1)
+            
+            fcid_sheet[fc_id[0]] = sh 
+
+    # Human errors on Lab while entering data on the SampleSheet.
+    # Only one best candidate is returned
+    fc_name = get_close_matches(fc_name, fcid_sheet.keys(), 1)[0]
     
-    for sh in sheets:
-        sh_date = sh.split("_")[3]
-        if sh_date == fc_date:
-            print sheets
-            found.append(sh)
-
-    print sheets
-
-
-    sys.exit()
+    if fcid_sheet.has_key(fc_name):
+        return os.path.join(sheet_dir[0], fcid_sheet[fc_name])
+    else:
+        return None    
 
     
 def _generate_fastq(fc_dir, config):
@@ -184,7 +190,6 @@ def _files_to_copy(directory):
     """
     with utils.chdir(directory):
         image_redo_files = reduce(operator.add,
-
                                   [glob.glob("*.params"),
                                    glob.glob("Images/L*/C*"),
                                    ["RunInfo.xml"]])
@@ -197,8 +202,11 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
+        
+        run_info = glob.glob("run_info.yaml")
+        
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-    return sorted(image_redo_files), sorted(reports + fastq)
+    return sorted(image_redo_files + run_info), sorted(reports + fastq)
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.
