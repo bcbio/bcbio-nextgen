@@ -52,7 +52,7 @@ def main(galaxy_config, local_config, process_msg=True, store_msg=True,
 
 def posthook(func):
     if hook:
-        log.info("Calling external script %s" % hook)
+        log.info("Executing provided script after dump has finished: %s" % hook)
         subprocess.check_call(hook)
 
 def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hook):
@@ -69,7 +69,6 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
                 if sheet_dir:
                     log.info("CSV Samplesheet %s found, converting to yaml" % os.path.basename(sheet_dir))
                     _samplesheet_to_yaml(dname, sheet_dir)
-                    sys.exit()
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
@@ -94,8 +93,7 @@ def _samplesheet_to_yaml(fc_dir, sheet_dir):
     yaml_sheet = sheet.csv2yaml(sheet_dir)
     
     with utils.chdir(fc_dir):
-        run_info = os.path.join(fc_dir, "run_info.yaml")
-        open(run_info, "w").write(yaml_sheet)
+        open("run_info.yaml", "w").write(yaml_sheet)
     
 def _run_has_samplesheet(fc_dir, config):
     """Checks if there's a suitable SampleSheet.csv present for the run
@@ -116,7 +114,7 @@ def _run_has_samplesheet(fc_dir, config):
             fcid_sheet[fc_id[0]] = sh 
 
     # Human errors on Lab while entering data on the SampleSheet.
-    # Only one best candidate is returned
+    # Only one best candidate is returned, default cutoff used (60%)
     fc_name = get_close_matches(fc_name, fcid_sheet.keys(), 1)[0]
     
     if fcid_sheet.has_key(fc_name):
@@ -283,7 +281,7 @@ if __name__ == "__main__":
     parser.add_option("-a", "--archive", dest="archive",
             action="store_true", default=False)
 
-    parser.add_option("-e", "--hook", dest="hook", help="Runs an arbitrary script right after the instrument \
+    parser.add_option("-e", "--execute-after-dump", dest="hook", help="Runs an arbitrary script right after the instrument \
             finishes dumping, before pre-processing", action="store", default="")
 
     (options, args) = parser.parse_args()
