@@ -89,8 +89,8 @@ def run_has_samplesheet(fc_dir, config):
                 fcid_sheet[fc_id] = os.path.join(ss_dir, ss)
     # Human errors on Lab while entering data on the SampleSheet.
     # Only one best candidate is returned, default cutoff used (60%)
-    fc_name = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1)[0]
-    if fcid_sheet.has_key(fc_name):
-        return fcid_sheet[fc_name]
+    potential_fcids = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1)
+    if len(potential_fcids) > 0 and fcid_sheet.has_key(potential_fcids[0]):
+        return fcid_sheet[potential_fcids[0]]
     else:
         return None
