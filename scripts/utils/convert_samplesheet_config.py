@@ -7,17 +7,9 @@ files from Illumina SampleSheet or Genesifter.
 Usage:
   convert_samplesheet_config.py <input csv>
 """
-
 import sys
-import os
-from bcbio.solexa.samplesheet import SampleSheet
+
+from bcbio.solexa import samplesheet
 
 if __name__ == "__main__":
-    
-    in_file = sys.argv[1]
-    out_file = "%s.yaml" % os.path.splitext(in_file)[0]
-    
-    sh = SampleSheet(in_file)
-    yaml_sheet = sh.csv2yaml(in_file)
-    
-    open(out_file, "w").write(yaml_sheet)
+    samplesheet.csv2yaml(sys.argv[1])

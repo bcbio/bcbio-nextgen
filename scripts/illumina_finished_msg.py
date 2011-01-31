@@ -27,12 +27,9 @@ from optparse import OptionParser
 
 import yaml
 from amqplib import client_0_8 as amqp
-from difflib import get_close_matches
 import logbook
 
-#from utils.convert_samplesheet_config import read_input_csv as read_samplesheet
-from bcbio.solexa.samplesheet import SampleSheet
-
+from bcbio.solexa import samplesheet
 from bcbio.log import create_log_handler
 from bcbio.picard import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
@@ -50,11 +47,6 @@ def main(galaxy_config, local_config, process_msg=True, store_msg=True,
         search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq,
                        hook)
 
-def posthook(func):
-    if hook:
-        log.info("Executing provided script after dump has finished: %s" % hook)
-        subprocess.check_call(hook)
-
 def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hook):
     """Search for any new directories that have not been reported.
     """
@@ -64,11 +56,13 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
             if _is_finished_dumping(dname, hook):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
-                sheet_dir = _run_has_samplesheet(dname, config)
-                
-                if sheet_dir:
-                    log.info("CSV Samplesheet %s found, converting to yaml" % os.path.basename(sheet_dir))
-                    _samplesheet_to_yaml(dname, sheet_dir)
+
+                ss_file = samplesheet.run_has_samplesheet(dname, config)
+                if ss_file:
+                    out_file = os.path.join(dname, "run_info.yaml")
+                    log.info("CSV Samplesheet %s found, converting to %s" %
+                             (ss_file, out_file))
+                    samplesheet.csv2yaml(ss_file, out_file)
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
@@ -85,44 +79,6 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
                     finished_message(config["msg_store_tag"], dname,
                                      store_files, amqp_config)
 
-def _samplesheet_to_yaml(fc_dir, sheet_dir):
-    """Writes the yaml file on the Run directory (fc_dir) as "run_info.yaml".
-    """
-    
-    sheet = SampleSheet(sheet_dir)
-    yaml_sheet = sheet.csv2yaml(sheet_dir)
-    
-    with utils.chdir(fc_dir):
-        open("run_info.yaml", "w").write(yaml_sheet)
-    
-def _run_has_samplesheet(fc_dir, config):
-    """Checks if there's a suitable SampleSheet.csv present for the run
-    """
-    
-    # ToDo: Handle multiple samplesheet directories
-    sheet_dir = config["samplesheet_directories"]
-    fc_name, _ = get_flowcell_info(fc_dir)    
-
-    fcid_sheet = {}
-    
-    with utils.chdir(sheet_dir[0]):
-        sheets = glob.glob("*.csv")
-        for sh in sheets:
-            fc_id = SampleSheet(sh).get_fcid()
-            assert(len(fc_id) == 1)
-            
-            fcid_sheet[fc_id[0]] = sh 
-
-    # Human errors on Lab while entering data on the SampleSheet.
-    # Only one best candidate is returned, default cutoff used (60%)
-    fc_name = get_close_matches(fc_name, fcid_sheet.keys(), 1)[0]
-    
-    if fcid_sheet.has_key(fc_name):
-        return os.path.join(sheet_dir[0], fcid_sheet[fc_name])
-    else:
-        return None    
-
-    
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
     """
@@ -173,14 +129,11 @@ def _is_finished_dumping(directory, hook):
     """
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt"]
-    
     finished = reduce(operator.or_,
             [os.path.exists(os.path.join(directory, f)) for f in to_check])
-    
     if finished and hook:
         log.info("Calling external script: '%s'" % hook)
         subprocess.call(hook)
-                
     return finished
 
 def _files_to_copy(directory):
@@ -200,9 +153,7 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
-        
         run_info = glob.glob("run_info.yaml")
-        
         fastq = ["Data/Intensities/BaseCalls/fastq"]
     return sorted(image_redo_files + run_info), sorted(reports + fastq)
 

@@ -1,26 +1,20 @@
-#!/usr/bin/env python
 """Converts Illumina SampleSheet CSV files to the run_info.yaml input file.
 
 This allows running the analysis pipeline without Galaxy, using CSV input
 files from Illumina SampleSheet or Genesifter.
-
-Usage:
-  convert_samplesheet_config.py <input csv>
 """
 import os
 import sys
 import csv
 import itertools
+import difflib
 
 import yaml
 
-def main(in_file):
-    out_file = "%s.yaml" % os.path.splitext(in_file)[0]
-    barcode_ids = generate_barcode_ids(read_input_csv(in_file))
-    lanes = organize_lanes(read_input_csv(in_file), barcode_ids)
-    return yaml.dump(lanes, default_flow_style=False)
+from bcbio.solexa.flowcell import (get_flowcell_info)
+from bcbio.picard import utils
 
-def organize_lanes(info_iter, barcode_ids):
+def _organize_lanes(info_iter, barcode_ids):
     """Organize flat lane information into nested YAML structure.
     """
     all_lanes = []
@@ -42,7 +36,7 @@ def organize_lanes(info_iter, barcode_ids):
         all_lanes.append(cur_lane)
     return all_lanes
 
-def generate_barcode_ids(info_iter):
+def _generate_barcode_ids(info_iter):
     """Create unique barcode IDs assigned to sequences
     """
     bc_type = "SampleSheet"
@@ -53,7 +47,7 @@ def generate_barcode_ids(info_iter):
         barcode_ids[bc] = (bc_type, i+1)
     return barcode_ids
 
-def read_input_csv(in_file):
+def _read_input_csv(in_file):
     """Parse useful details from SampleSheet CSV file.
     """
     with open(in_file, "rU") as in_handle:
@@ -63,16 +57,39 @@ def read_input_csv(in_file):
             (fc_id, lane, sample_id, genome, barcode) = line[:5]
             yield fc_id, lane, sample_id, genome, barcode
 
-class SampleSheet:
-    
-    def __init__(self, in_file):
-        self.info_iter = read_input_csv(in_file)
-        
-    def get_fcid(self):
-        return list(set(x[0] for x in self.info_iter))
-    
-    def csv2yaml(self, in_file):
-        return main(in_file)
-        
-if __name__ == "__main__":
-    main(*sys.argv[1:])
+def _get_flowcell_id(in_file):
+    """Retrieve the unique flowcell id represented in the SampleSheet.
+    """
+    fc_ids = set([x[0] for x in _read_input_csv(in_file)])
+    assert len(fc_ids) == 1
+    return fc_ids.pop()
+
+def csv2yaml(in_file, out_file=None):
+    """Convert a CSV SampleSheet to YAML run_info format.
+    """
+    if out_file is None:
+        out_file = "%s.yaml" % os.path.splitext(in_file)[0]
+    barcode_ids = _generate_barcode_ids(_read_input_csv(in_file))
+    lanes = _organize_lanes(_read_input_csv(in_file), barcode_ids)
+    with open(out_file, "w") as out_handle:
+        out_handle.write(yaml.dump(lanes, default_flow_style=False))
+    return out_file
+
+def run_has_samplesheet(fc_dir, config):
+    """Checks if there's a suitable SampleSheet.csv present for the run
+    """
+    fc_name, _ = get_flowcell_info(fc_dir)
+    sheet_dirs = config.get("samplesheet_directories", [])
+    fcid_sheet = {}
+    for ss_dir in (s for s in sheet_dirs if os.path.exists(s)):
+        with utils.chdir(ss_dir):
+            for ss in glob.glob("*.csv"):
+                fc_id = _get_flowcell_id(ss)
+                fcid_sheet[fc_id] = os.path.join(ss_dir, ss)
+    # Human errors on Lab while entering data on the SampleSheet.
+    # Only one best candidate is returned, default cutoff used (60%)
+    fc_name = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1)[0]
+    if fcid_sheet.has_key(fc_name):
+        return fcid_sheet[fc_name]
+    else:
+        return None
