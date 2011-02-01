@@ -38,6 +38,12 @@ class NormalizedBam:
             read_counts += 1
         return self._normalize(read_counts, self._total)
 
+    def coverage_pileup(self, space, start, end):
+        """Retrieve pileup coverage across a specified region.
+        """
+        return ((col.pos, self._normalize(col.n, self._total))
+                for col in self._bam.pileup(space, start, end))
+
     def _normalize(self, count, total):
         """Normalize to reads per million.
         """
@@ -52,7 +58,6 @@ def random_regions(base, n, size):
         base_info[space].append(start + spread)
         base_info[space].append(end - spread)
     regions = []
-    print "Generating", n, "regions of size", size
     for _ in range(n):
         space = random.choice(base_info.keys())
         pos = random.randint(min(base_info[space]), max(base_info[space]))
