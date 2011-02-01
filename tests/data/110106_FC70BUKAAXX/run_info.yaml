@@ -1,4 +1,4 @@
-- analysis: Broad SNP
+- analysis: SNP calling
   description: Test1
   genome_build: hg19
   lane: 1
@@ -51,7 +51,7 @@
     barcode_type: Illumina
     name: BAC02
     sequence: CTTGTA
-- analysis: Broad SNP
+- analysis: SNP calling
   description: Test2
   genome_build: hg19
   lane: 2
