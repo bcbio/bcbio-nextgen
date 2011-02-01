@@ -29,6 +29,7 @@ import yaml
 from amqplib import client_0_8 as amqp
 import logbook
 
+from bcbio.solexa import samplesheet
 from bcbio.log import create_log_handler
 from bcbio.picard import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
@@ -46,11 +47,6 @@ def main(galaxy_config, local_config, process_msg=True, store_msg=True,
         search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq,
                        hook)
 
-def posthook(func):
-    if hook:
-        log.debug("Calling external script %s" % hook)
-        subprocess.check_call(hook)
-
 def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hook):
     """Search for any new directories that have not been reported.
     """
@@ -60,6 +56,13 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hoo
             if _is_finished_dumping(dname, hook):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
+
+                ss_file = samplesheet.run_has_samplesheet(dname, config)
+                if ss_file:
+                    out_file = os.path.join(dname, "run_info.yaml")
+                    log.info("CSV Samplesheet %s found, converting to %s" %
+                             (ss_file, out_file))
+                    samplesheet.csv2yaml(ss_file, out_file)
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
@@ -126,14 +129,11 @@ def _is_finished_dumping(directory, hook):
     """
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt"]
-    
     finished = reduce(operator.or_,
             [os.path.exists(os.path.join(directory, f)) for f in to_check])
-    
     if finished and hook:
         log.info("Calling external script: '%s'" % hook)
         subprocess.call(hook)
-                
     return finished
 
 def _files_to_copy(directory):
@@ -153,8 +153,9 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
+        run_info = glob.glob("run_info.yaml")
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-    return sorted(image_redo_files), sorted(reports + fastq)
+    return sorted(image_redo_files + run_info), sorted(reports + fastq)
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.
@@ -231,8 +232,8 @@ if __name__ == "__main__":
     parser.add_option("-a", "--archive", dest="archive",
             action="store_true", default=False)
 
-    parser.add_option("-e", "--hook", dest="hook", help="Runs an arbitrary script right after the instrument finishes dumping, before pre-processing",
-            action="store", default="")
+    parser.add_option("-e", "--execute-after-dump", dest="hook", help="Runs an arbitrary script right after the instrument \
+            finishes dumping, before pre-processing", action="store", default="")
 
     (options, args) = parser.parse_args()
     kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg,

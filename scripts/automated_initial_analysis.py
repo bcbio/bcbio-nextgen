@@ -542,6 +542,7 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
     out_info = []
     for ref_get in [aligner, "samtools"]:
         ref_file = os.path.join(galaxy_base, "tool-data", ref_files[ref_get])
+        cur_ref = None
         with open(ref_file) as in_handle:
             for line in in_handle:
                 if line.strip() and not line.startswith("#"):
@@ -549,15 +550,16 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
                     if parts[0] == "index":
                         parts = parts[1:]
                     if parts[0] == genome_build:
-                        out_info.append(parts[-1])
+                        cur_ref = parts[-1]
                         break
-        try:
-            out_info[-1] = remap_fns[ref_get](out_info[-1])
-        except KeyError:
-            pass
-        except IndexError:
+        if cur_ref is None:
             raise IndexError("Genome %s not found in %s" % (genome_build,
                 ref_file))
+        try:
+            cur_ref = remap_fns[ref_get](cur_ref)
+        except KeyError:
+            pass
+        out_info.append(cur_ref)
 
     if len(out_info) != 2:
         raise ValueError("Did not find genome reference for %s %s" %
