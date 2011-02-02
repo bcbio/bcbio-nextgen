@@ -41,18 +41,21 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
     else:
         config = {"program": dict(samtools="samtools",
                                   ucsc_bigwig="wigToBigWig")}
+    if outfile is None:
+        outfile = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if start > 0:
         start = int(start) - 1
     if end is not None:
         end = int(end)
     regions = [(chrom, start, end)]
-    wig_file = "%s.wig" % os.path.splitext(bam_file)[0]
-    with open(wig_file, "w") as out_handle:
-        chr_sizes = write_bam_track(bam_file, regions, config, out_handle)
-    try:
-        convert_to_bigwig(wig_file, chr_sizes, config, outfile)
-    finally:
-        os.remove(wig_file)
+    if not os.path.exists(outfile):
+        wig_file = "%s.wig" % os.path.splitext(bam_file)[0]
+        with open(wig_file, "w") as out_handle:
+            chr_sizes = write_bam_track(bam_file, regions, config, out_handle)
+        try:
+            convert_to_bigwig(wig_file, chr_sizes, config, outfile)
+        finally:
+            os.remove(wig_file)
 
 @contextmanager
 def indexed_bam(bam_file, config):
