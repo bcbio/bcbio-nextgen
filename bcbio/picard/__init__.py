@@ -16,7 +16,7 @@ class PicardRunner:
 
     def run_fn(self, name, *args, **kwds):
         fn = getattr(run_fns, name)
-        fn(self, *args, **kwds)
+        return fn(self, *args, **kwds)
 
     def run(self, command, options):
         options = ["%s=%s" % (x, y) for x, y in options]
