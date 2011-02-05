@@ -10,7 +10,7 @@ import contextlib
 
 @contextlib.contextmanager
 def test_workdir():
-    dirname = os.path.join(os.path.dirname(__file__), "test_output")
+    dirname = os.path.join(os.path.dirname(__file__), "test_automated_output")
     if os.path.exists(dirname):
         shutil.rmtree(dirname)
     os.makedirs(dirname)
@@ -35,9 +35,10 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """Run full automated analysis pipeline.
         """
         with test_workdir():
+            data_dir = os.path.join(os.pardir, "data", "automated")
             cl = ["automated_initial_analysis.py",
-                  os.path.join(os.pardir, "post_process.yaml"),
-                  os.path.join(os.pardir, os.pardir, "data", "110106_FC70BUKAAXX"),
-                  os.path.join(os.pardir, "run_info.yaml")]
+                  os.path.join(data_dir, "post_process.yaml"),
+                  os.path.join(data_dir, os.pardir, "110106_FC70BUKAAXX"),
+                  os.path.join(data_dir, "run_info.yaml")]
             subprocess.check_call(cl)
 

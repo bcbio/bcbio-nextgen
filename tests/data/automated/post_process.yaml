@@ -5,8 +5,8 @@ program:
   bwa: bwa
   maq: maq
   ucsc_bigwig: wigToBigWig
-  picard: /source/Picard
-  snpEff: /source/share/snpEff
+  picard: /usr/share/Picard
+  snpEff: /usr/share/snpEff
   fastx_stats: fastx_quality_stats
   fastx_graph: fastq_quality_boxplot_graph.sh
   pdflatex: pdflatex
