@@ -39,10 +39,11 @@ class PicardRunner:
         """Retrieve the jar for running the specified command.
         """
         dirs = [self._picard_dir,
+                os.path.join(self._picard_dir, os.pardir, "gatk"),
                 os.path.join(self._picard_dir, "dist"),
-                os.path.join(self._picard_dir, "Picard-private", "dist"),
                 os.path.join(self._picard_dir, "GATK"),
-                os.path.join(self._picard_dir, "GATK", "dist")]
+                os.path.join(self._picard_dir, "GATK", "dist"),
+                os.path.join(self._picard_dir, "Picard-private", "dist")]
         for dir_check in dirs:
             check_file = os.path.join(dir_check, "%s.jar" % command)
             if os.path.exists(check_file):

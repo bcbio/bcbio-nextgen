@@ -128,8 +128,9 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     """
     config = _update_config_w_custom(config, info)
     genome_build = info["genome_build"]
+    (_, galaxy_dir) = _get_full_paths("", config, config_file)
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
-                   os.path.dirname(config["galaxy_config"]))
+                                  galaxy_dir)
     fastq1, fastq2 = _combine_fastq_files(fastq_files, work_dir)
     print sample_name, "Combining and preparing wig file"
     sort_bam = merge_bam_files(bam_files, work_dir, config)

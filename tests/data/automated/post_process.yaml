@@ -5,8 +5,8 @@ program:
   bwa: bwa
   maq: maq
   ucsc_bigwig: wigToBigWig
-  picard: /usr/share/Picard
-  snpEff: /usr/share/snpEff
+  picard: /usr/share/java/picard
+  snpEff: /usr/share/java/snpeff
   fastx_stats: fastx_quality_stats
   fastx_graph: fastq_quality_boxplot_graph.sh
   pdflatex: pdflatex
@@ -33,4 +33,4 @@ custom_algorithms:
     aligner: bwa
     recalibrate: true
     snpcall: true
-    dbsnp: snps/snp130.vcf
+    dbsnp: snps/dbSNP132.vcf

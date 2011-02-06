@@ -15,6 +15,8 @@ import subprocess
 # remap Galaxy genome names to the ones used by snpEff
 GENOME_REMAP = {
         "GRCh37": "hg37.60",
+        "hg19" : "hg37.60",
+        "mm9" : "mm37.60",
         }
 
 def main(snpeff_jar, vcf_ref, genome, interval_file=None):
