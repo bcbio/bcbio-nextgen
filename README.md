@@ -10,7 +10,7 @@ The scripts are tightly integrated with the [Galaxy][o1]
 web-based analysis tool. Samples are entered and tracked through a LIMS
 system and processed results are uploading into Galaxy Data Libraries for
 researcher access and additional analysis. See the
-[full installation instructions for the front end][o2] and a
+[installation instructions for the front end][o2] and a
 [detailed description of the full system][o3].
 
 [o1]: http://galaxy.psu.edu/
@@ -90,20 +90,21 @@ any third-party binaries you are using.
 
 The test suite exercises the various scripts driving the analysis, so
 are a good starting point to ensure everything has been installed
-correctly. Tests are run using [nose][i7]:
+correctly. Tests are run from the main directory using [nose][i7]:
 
-           nosetest -v -s
+      nosetest -v -s
 
 `tests/test_automated_analysis.py` is quite extensive and exercises
 the full framework using an automatically downloaded test dataset. It
 runs through barcode deconvolution, alignment and full SNP
-analysis. The configuration for the tests can be tweaked:
+analysis. The configuration for the tests can be tweaked for your
+environment:
 
 * `tests/data/automated/post_process.yaml` -- May need adjustment to
   point to installed software in non-standard locations.
 * `tests/data/automated/run_info.yaml` -- The `analysis` variable
   can be changed to 'Standard' if SNP calling is not required in your
-  environment. This will run a pipeline of alignment and analysis.
+  environment. This will run a smaller pipeline of alignment and analysis.
 
 #### RabbitMQ messaging server
 
