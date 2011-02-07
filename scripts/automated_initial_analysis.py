@@ -109,9 +109,9 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
     print "Processing", info["lane"], genome_build, \
             sample_name, info.get("researcher", ""), \
             info.get("analysis", ""), multiplex
+    fastq_dir, galaxy_dir = _get_full_paths(fastq_dir, config, config_file)
     align_ref, sam_ref = get_genome_ref(genome_build,
-            config["algorithm"]["aligner"],
-            os.path.dirname(config["galaxy_config"]))
+            config["algorithm"]["aligner"], galaxy_dir)
     full_fastq1, full_fastq2 = get_fastq_files(fastq_dir, info['lane'], fc_name)
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
@@ -128,8 +128,9 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     """
     config = _update_config_w_custom(config, info)
     genome_build = info["genome_build"]
+    (_, galaxy_dir) = _get_full_paths("", config, config_file)
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
-                   os.path.dirname(config["galaxy_config"]))
+                                  galaxy_dir)
     fastq1, fastq2 = _combine_fastq_files(fastq_files, work_dir)
     print sample_name, "Combining and preparing wig file"
     sort_bam = merge_bam_files(bam_files, work_dir, config)
@@ -540,8 +541,9 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
             maq = _remap_to_maq
             )
     out_info = []
+    ref_dir = os.path.join(galaxy_base, "tool-data")
     for ref_get in [aligner, "samtools"]:
-        ref_file = os.path.join(galaxy_base, "tool-data", ref_files[ref_get])
+        ref_file = os.path.join(ref_dir, ref_files[ref_get])
         cur_ref = None
         with open(ref_file) as in_handle:
             for line in in_handle:
@@ -559,7 +561,7 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
             cur_ref = remap_fns[ref_get](cur_ref)
         except KeyError:
             pass
-        out_info.append(cur_ref)
+        out_info.append(_add_full_path(cur_ref, ref_dir))
 
     if len(out_info) != 2:
         raise ValueError("Did not find genome reference for %s %s" %
@@ -679,6 +681,21 @@ def _lane_stats(cur_name, work_dir):
     metrics_files = glob.glob(os.path.join(work_dir, "%s*metrics" % cur_name))
     metrics = parser.extract_metrics(metrics_files)
     return metrics
+
+def _add_full_path(dirname, basedir=None):
+    if basedir is None:
+        basedir = os.getcwd()
+    if not dirname.startswith("/"):
+        dirname = os.path.join(basedir, dirname)
+    return dirname
+
+def _get_full_paths(fastq_dir, config, config_file):
+    """Retrieve full paths for directories in the case of relative locations.
+    """
+    fastq_dir = _add_full_path(fastq_dir)
+    config_dir = _add_full_path(os.path.dirname(config_file))
+    galaxy_config_file = _add_full_path(config["galaxy_config"], config_dir)
+    return fastq_dir, os.path.dirname(galaxy_config_file)
 
 # Utility functions
 

@@ -1,0 +1,36 @@
+galaxy_config: universe_wsgi.ini
+program:
+  bowtie: bowtie
+  samtools: samtools
+  bwa: bwa
+  maq: maq
+  ucsc_bigwig: wigToBigWig
+  picard: /usr/share/java/picard
+  snpEff: /usr/share/java/snpeff
+  fastx_stats: fastx_quality_stats
+  fastx_graph: fastq_quality_boxplot_graph.sh
+  pdflatex: pdflatex
+  ps2pdf: ps2pdf
+  solexaqa: SolexaQA.pl
+  barcode: barcode_sort_trim.py
+algorithm:
+  aligner: bowtie
+  max_errors: 2
+  num_cores: 1
+  stringency: high
+  platform: illumina
+  recalibrate: false
+  snpcall: false
+  bc_mismatch: 2
+  bc_read: 1
+  bc_position: 3
+
+analysis:
+  towig_script: bam_to_wiggle.py
+# configuration algorithm changes for custom post-processing steps
+custom_algorithms:
+  'SNP calling':
+    aligner: bwa
+    recalibrate: true
+    snpcall: true
+    dbsnp: snps/dbSNP132.vcf

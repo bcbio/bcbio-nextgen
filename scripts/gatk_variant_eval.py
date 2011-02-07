@@ -37,14 +37,20 @@ def main(picard_dir, vcf_info, ref_file, dbsnp, intervals=None):
 def print_stats(in_file, stats, print_json=False):
     in_info = "_".join(os.path.basename(in_file).split("_")[:2])
     total = sum(itertools.chain.from_iterable(s.itervalues() for s in stats.itervalues()))
-    dbsnp = sum(stats['known'].itervalues()) / float(total) * 100.0
+    if total > 0:
+        dbsnp = sum(stats['known'].itervalues()) / float(total) * 100.0
+    else:
+        dbsnp = -1.0
     tv_dbsnp = stats['known']['tv']
     ti_dbsnp = stats['known']['ti']
     tv_novel = stats['novel']['tv']
     ti_novel = stats['novel']['ti']
-    titv_all = float(ti_novel + ti_dbsnp) / float(tv_novel + tv_dbsnp)
-    titv_dbsnp = float(ti_dbsnp) / float(tv_dbsnp)
-    titv_novel = float(ti_novel) / float(tv_novel)
+    if tv_novel > 0 and tv_dbsnp > 0:
+        titv_all = float(ti_novel + ti_dbsnp) / float(tv_novel + tv_dbsnp)
+        titv_dbsnp = float(ti_dbsnp) / float(tv_dbsnp)
+        titv_novel = float(ti_novel) / float(tv_novel)
+    else:
+        titv_all, titv_dbsnp, titv_novel = (-1.0, -1.0, -1.0)
 
     info = dict(total=total, dbsnp_pct = dbsnp, titv_all=titv_all,
             titv_dbsnp=titv_dbsnp, titv_novel=titv_novel)

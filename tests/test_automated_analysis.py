@@ -1,0 +1,58 @@
+"""This directory is setup with configurations to run the main functional test.
+
+It exercises a full analysis pipeline on a smaller subset of data.
+"""
+import os
+import subprocess
+import unittest
+import shutil
+import contextlib
+
+@contextlib.contextmanager
+def test_workdir():
+    dirname = os.path.join(os.path.dirname(__file__), "test_automated_output")
+    if os.path.exists(dirname):
+        shutil.rmtree(dirname)
+    os.makedirs(dirname)
+    orig_dir = os.getcwd()
+    try:
+        os.chdir(dirname)
+        yield
+    finally:
+        os.chdir(orig_dir)
+
+class AutomatedAnalysisTest(unittest.TestCase):
+    """Setup a full automated analysis and run the pipeline.
+    """
+    def _install_test_files(self, data_dir):
+        """Download required sequence and reference files.
+        """
+        read_url = "http://chapmanb.s3.amazonaws.com/110106_FC70BUKAAXX.tar.gz"
+        read_dir = os.path.join(data_dir, os.pardir, "110106_FC70BUKAAXX")
+        if not os.path.exists(read_dir):
+            self._download_to_dir(read_url, read_dir)
+
+        genome_url = "http://chapmanb.s3.amazonaws.com/genomes_automated_test.tar.gz"
+        genome_dir = os.path.join(data_dir, os.pardir, "genomes")
+        if not os.path.exists(genome_dir):
+            self._download_to_dir(genome_url, genome_dir)
+
+    def _download_to_dir(self, url, dirname):
+        cl = ["wget", url]
+        subprocess.check_call(cl)
+        cl = ["tar", "-xzvpf", os.path.basename(url)]
+        subprocess.check_call(cl)
+        os.rename(os.path.basename(dirname), dirname)
+
+    def test_run_full_pipeline(self):
+        """Run full automated analysis pipeline.
+        """
+        with test_workdir():
+            data_dir = os.path.join(os.pardir, "data", "automated")
+            self._install_test_files(data_dir)
+            cl = ["automated_initial_analysis.py",
+                  os.path.join(data_dir, "post_process.yaml"),
+                  os.path.join(data_dir, os.pardir, "110106_FC70BUKAAXX"),
+                  os.path.join(data_dir, "run_info.yaml")]
+            subprocess.check_call(cl)
+
