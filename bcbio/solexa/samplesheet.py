@@ -55,15 +55,18 @@ def _read_input_csv(in_file):
         reader = csv.reader(in_handle)
         reader.next() # header
         for line in reader:
-            (fc_id, lane, sample_id, genome, barcode) = line[:5]
-            yield fc_id, lane, sample_id, genome, barcode
-
+            if line: # empty lines
+                (fc_id, lane, sample_id, genome, barcode) = line[:5]
+                yield fc_id, lane, sample_id, genome, barcode
+            
 def _get_flowcell_id(in_file):
     """Retrieve the unique flowcell id represented in the SampleSheet.
     """
-    fc_ids = set([x[0] for x in _read_input_csv(in_file)])
-    assert len(fc_ids) == 1
-    return fc_ids.pop()
+    fc_id = set([x[0] for x in _read_input_csv(in_file)])
+    if len(fc_id) > 1:
+        raise ValueError("There is more than one FCID in the samplesheet file: %s" % in_file)
+    else:
+        return fc_id
 
 def csv2yaml(in_file, out_file=None):
     """Convert a CSV SampleSheet to YAML run_info format.
@@ -85,10 +88,13 @@ def run_has_samplesheet(fc_dir, config):
     for ss_dir in (s for s in sheet_dirs if os.path.exists(s)):
         with utils.chdir(ss_dir):
             for ss in glob.glob("*.csv"):
-                fc_id = _get_flowcell_id(ss)
-                fcid_sheet[fc_id] = os.path.join(ss_dir, ss)
+                fc_ids = _get_flowcell_id(ss)
+                for fcid in fc_ids:
+                    if fcid:
+                        fcid_sheet[fcid] = os.path.join(ss_dir, ss)
     # Human errors on Lab while entering data on the SampleSheet.
     # Only one best candidate is returned, default cutoff used (60%)
+
     potential_fcids = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1)
     if len(potential_fcids) > 0 and fcid_sheet.has_key(potential_fcids[0]):
         return fcid_sheet[potential_fcids[0]]

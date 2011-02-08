@@ -38,22 +38,21 @@ LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
 def main(galaxy_config, local_config, process_msg=True, store_msg=True,
-         qseq=True, fastq=True, hook=""):
+         qseq=True, fastq=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
     with log_handler.applicationbound():
-        search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq,
-                       hook)
+        search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq)
 
-def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq, hook):
+def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
     """Search for any new directories that have not been reported.
     """
     reported = _read_reported(config["msg_db"])
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
-            if _is_finished_dumping(dname, hook):
+            if _is_finished_dumping(dname):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
 
@@ -121,7 +120,7 @@ def _generate_qseq(bc_dir, config):
             cl = config["program"].get("olb_make", "make").split() + ["-j", str(processors)]
             subprocess.check_call(cl)
 
-def _is_finished_dumping(directory, hook):
+def _is_finished_dumping(directory):
     """Determine if the sequencing directory has all files.
 
     The final checkpoint file will differ depending if we are a
@@ -129,12 +128,9 @@ def _is_finished_dumping(directory, hook):
     """
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt"]
-    finished = reduce(operator.or_,
+
+    return reduce(operator.or_,
             [os.path.exists(os.path.join(directory, f)) for f in to_check])
-    if finished and hook:
-        log.info("Calling external script: '%s'" % hook)
-        subprocess.call(hook)
-    return finished
 
 def _files_to_copy(directory):
     """Retrieve files that should be remotely copied.
@@ -229,13 +225,8 @@ if __name__ == "__main__":
             action="store_false", default=True)
     parser.add_option("-q", "--noqseq", dest="qseq",
             action="store_false", default=True)
-    parser.add_option("-a", "--archive", dest="archive",
-            action="store_true", default=False)
-
-    parser.add_option("-e", "--execute-after-dump", dest="hook", help="Runs an arbitrary script right after the instrument \
-            finishes dumping, before pre-processing", action="store", default="")
 
     (options, args) = parser.parse_args()
     kwargs = dict(process_msg=options.process_msg, store_msg=options.store_msg,
-                  fastq=options.fastq, qseq=options.qseq, hook=options.hook)
+                  fastq=options.fastq, qseq=options.qseq)
     main(*args, **kwargs)
