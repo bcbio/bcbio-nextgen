@@ -6,15 +6,16 @@ from an Illumina sequencer, converting them to standard Fastq format,
 aligning to a reference genome, doing SNP calling, and producing a
 summary PDF of results.
 
-The scripts are tightly integrated with the [Galaxy][1] 
+The scripts are tightly integrated with the [Galaxy][o1]
 web-based analysis tool. Samples are entered and tracked through a LIMS
 system and processed results are uploading into Galaxy Data Libraries for
-researcher access and additional analysis. Our [clone of Galaxy][2]
-tracks the main development work adding an intuitive interface for sample
-management on top of the existing functionality.
+researcher access and additional analysis. See the
+[installation instructions for the front end][o2] and a
+[detailed description of the full system][o3].
 
-[1]: http://galaxy.psu.edu/
-[2]: http://bitbucket.org/chapmanb/galaxy-central
+[o1]: http://galaxy.psu.edu/
+[o2]: https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
+[o3]: http://bcbio.wordpress.com/2011/01/11/next-generation-sequencing-information-management-and-analysis-system-for-galaxy/
 
 ToDo: pictoric representation of the workflow/pipeline
 
@@ -58,21 +59,52 @@ The scripts involved in the actual processing:
 
 ## Installation
 
-### Backend
+### Required libraries and data files
 
-Clone a copy from chapmanb branch:
+The code drives a number of next-generation sequencing analysis tools,
+which will need to be installed along with associated data files. The
+[CloudBioLinux][i2] and [Galaxy CloudMan][i3] projects contain
+automated scripts to help with installation:
 
-git clone git://github.com/chapmanb/bcbb.git
+* [Install bioinformatics software][i4]
+* Install data files like genome builds in association with
+  Galaxy: [my script][i5] and [from the Galaxy team][i6].
+
+### Scripts and configuration
+
+Clone a copy of the code from GitHub:
+
+      git clone git://github.com/chapmanb/bcbb.git
 
 Install using the standard python approach. You will need a recent
 version of Python 2 (2.6 or 2.7). The required python library
 dependencies will also be installed:
 
-        cd bcbb/nextgen && python setup.py install
+      cd bcbb/nextgen && python setup.py install
 
 Copy the YAML & ini files in config and adjust them to match your
 environment. It is also a good idea to set your $PATH pointing to
 any third-party binaries you are using.
+
+### Testing
+
+The test suite exercises the various scripts driving the analysis, so
+are a good starting point to ensure everything has been installed
+correctly. Tests are run from the main directory using [nose][i7]:
+
+      nosetest -v -s
+
+`tests/test_automated_analysis.py` is quite extensive and exercises
+the full framework using an automatically downloaded test dataset. It
+runs through barcode deconvolution, alignment and full SNP
+analysis. The configuration for the tests can be tweaked for your
+environment:
+
+* `tests/data/automated/post_process.yaml` -- May need adjustment to
+  point to installed software in non-standard locations.
+* `tests/data/automated/run_info.yaml` -- The `analysis` variable
+  can be changed to 'Standard' if SNP calling is not required in your
+  environment. This will run a smaller pipeline of alignment and analysis.
 
 #### RabbitMQ messaging server
 
@@ -115,14 +147,6 @@ combinations:
 * `store_finished_sqn` server to actual storage machine, if different
   else localhost
 
-[i1]: http://macnugget.org/projects/publickeys/
-
-### Frontend
-
-Follow up the following instructions to setup the Galaxy instance:
-
-https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
-
 ### Development environment
 
 The installation instructions assume that you have full root access to install
@@ -130,7 +154,15 @@ python modules and packages (production environment). If this is not the case,
 you may want to install a python VirtualEnv and other tools automatically on your $HOME
 to ease your development needs using the following script:
 
-wget https://bitbucket.org/brainstorm/custom_env/raw/1cd4f4ae27d5/pyHost.sh && ./pyHost.sh
+        wget https://bitbucket.org/brainstorm/custom_env/raw/1cd4f4ae27d5/pyHost.sh && ./pyHost.sh
+
+[i1]: http://macnugget.org/projects/publickeys/
+[i2]: http://cloudbiolinux.com
+[i3]: http://www.biomedcentral.com/1471-2105/11/S12/S4
+[i4]: https://github.com/chapmanb/bcbb/blob/master/ec2/biolinux/fabfile.py
+[i5]: https://github.com/chapmanb/bcbb/blob/master/ec2/biolinux/data_fabfile.py
+[i6]: https://bitbucket.org/afgane/mi-deployment/src
+[i7]: http://somethingaboutorange.com/mrl/projects/nose/
 
 ## Requirements
 
