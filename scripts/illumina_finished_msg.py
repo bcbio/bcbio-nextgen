@@ -151,7 +151,7 @@ def _files_to_copy(directory):
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
         run_info = glob.glob("run_info.yaml")
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-    return sorted(image_redo_files + run_info), sorted(reports + fastq)
+    return sorted(image_redo_files + run_info), sorted(reports + fastq + run_info)
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.

@@ -20,12 +20,13 @@ def _organize_lanes(info_iter, barcode_ids):
     """
     all_lanes = []
     for (lane, org), info in itertools.groupby(info_iter, lambda x: (x[1], x[3])):
-        cur_lane = dict(lane=lane, genome_build=org, analysis="Standard")
+        cur_lane = dict(lane=lane, genome_build="hg19", analysis="Standard")
         info = list(info)
         if len(info) == 1: # non-barcoded sample
             cur_lane["description"] = info[0][1]
         else: # barcoded sample
-            cur_lane["description"] = "Barcoded %s" % lane
+            cur_lane["description"] = "Barcoded lane %s by %s" % (lane, info[0][3])
+            print cur_lane
             multiplex = []
             for (_, _, sample_id, _, bc_seq) in info:
                 bc_type, bc_id = barcode_ids[bc_seq]

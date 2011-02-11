@@ -62,7 +62,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     if run_info_yaml:
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
-        run_info = dict(details=run_details, run_id="")
+            run_info = dict(details=run_details, run_id="")
     else:
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name)
@@ -328,7 +328,7 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
             cl += [fastq_file]
         cl += [out_file]
         cl = [str(i) for i in cl]
-        #print " ".join(cl)
+        log.info("Running bowtie with cmdline: %s" % " ".join(cl))
         child = subprocess.Popen(cl)
         child.wait()
     return out_file
