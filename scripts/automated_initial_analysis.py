@@ -59,7 +59,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     fc_name, fc_date = get_flowcell_info(fc_dir)
     log.debug("Flowcell name is %s" % fc_name)
-    if run_info_yaml:
+    if os.path.exists(run_info_yaml):
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
             run_info = dict(details=run_details, run_id="")
@@ -518,6 +518,7 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
             ready_files.append(os.path.splitext(fname)[0])
         else:
             ready_files.append(fname)
+    
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
 def _remap_to_maq(ref_file):
