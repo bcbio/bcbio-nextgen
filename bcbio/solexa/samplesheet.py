@@ -58,15 +58,15 @@ def _read_input_csv(in_file):
             if line: # empty lines
                 (fc_id, lane, sample_id, genome, barcode) = line[:5]
                 yield fc_id, lane, sample_id, genome, barcode
-            
-def _get_flowcell_id(in_file):
+
+def _get_flowcell_id(in_file, require_single=True):
     """Retrieve the unique flowcell id represented in the SampleSheet.
     """
-    fc_id = set([x[0] for x in _read_input_csv(in_file)])
-    if len(fc_id) > 1:
+    fc_ids = set([x[0] for x in _read_input_csv(in_file)])
+    if require_single and len(fc_ids) > 1:
         raise ValueError("There is more than one FCID in the samplesheet file: %s" % in_file)
     else:
-        return fc_id
+        return fc_ids
 
 def csv2yaml(in_file, out_file=None):
     """Convert a CSV SampleSheet to YAML run_info format.
@@ -79,7 +79,7 @@ def csv2yaml(in_file, out_file=None):
         out_handle.write(yaml.dump(lanes, default_flow_style=False))
     return out_file
 
-def run_has_samplesheet(fc_dir, config):
+def run_has_samplesheet(fc_dir, config, require_single=True):
     """Checks if there's a suitable SampleSheet.csv present for the run
     """
     fc_name, _ = get_flowcell_info(fc_dir)
@@ -88,7 +88,7 @@ def run_has_samplesheet(fc_dir, config):
     for ss_dir in (s for s in sheet_dirs if os.path.exists(s)):
         with utils.chdir(ss_dir):
             for ss in glob.glob("*.csv"):
-                fc_ids = _get_flowcell_id(ss)
+                fc_ids = _get_flowcell_id(ss, require_single)
                 for fcid in fc_ids:
                     if fcid:
                         fcid_sheet[fcid] = os.path.join(ss_dir, ss)
