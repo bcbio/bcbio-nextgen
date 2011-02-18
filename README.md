@@ -13,11 +13,12 @@ researcher access and additional analysis. See the
 [installation instructions for the front end][o2] and a
 [detailed description of the full system][o3].
 
+![Overview of workflow][o4]
+
 [o1]: http://galaxy.psu.edu/
 [o2]: https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
 [o3]: http://bcbio.wordpress.com/2011/01/11/next-generation-sequencing-information-management-and-analysis-system-for-galaxy/
-
-ToDo: pictoric representation of the workflow/pipeline
+[o4]: http://chapmanb.github.com/bcbb/nglims_organization.png
 
 ## Code structure
 
