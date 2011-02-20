@@ -107,7 +107,7 @@ environment:
   can be changed to 'Standard' if SNP calling is not required in your
   environment. This will run a smaller pipeline of alignment and analysis.
 
-#### RabbitMQ messaging server
+### RabbitMQ messaging server
 
 Communication between the sequencing machine and the analysis machine
 running Galaxy is managed using RabbitMQ messaging. This allows
@@ -133,7 +133,7 @@ values:
         userid = <username>
         password = <password>
 
-#### ssh keys
+### ssh keys
 
 The sequencing, analysis and storage machines transfer files using
 secure copy. This requires that you can securely copy files between
@@ -147,6 +147,22 @@ combinations:
   localhost
 * `store_finished_sqn` server to actual storage machine, if different
   else localhost
+
+### Sequencing machines
+
+The backend has been developed using Illumina GAII and HiSeq sequencing
+machines. It is designed to be general and support other platforms, and 
+we welcome feedback from researchers with different machines at their
+institutions.
+
+Illumina machines produce run directories that include the date, machine
+identifier, and flowcell ID:
+
+    110216_HWI-EAS264_00035_FC638NPAAXX
+
+The data and flowcell ID will be parsed from the directory named used as a
+shortened reference name that includes an easier to remember date and the unique
+flowcell ID for traceability.
 
 ### Development environment
 
