@@ -77,7 +77,7 @@ class GalaxyApiAccess:
         try:
             details = self._get("/nglims/api_run_details", dict(run=run))
         except ValueError:
-            raise ValueError("Could not information in Galaxy for run: %s" % run)
+            raise ValueError("Could not find information in Galaxy for run: %s" % run)
         return details
 
     def sequencing_projects(self):
