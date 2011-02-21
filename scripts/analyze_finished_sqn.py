@@ -65,20 +65,20 @@ def copy_and_analyze(remote_info, config, config_file):
     elif not config_file.startswith("/"):
         config_file = os.path.join(os.getcwd(), config_file)
 
-    analysis_fcdir = os.path.join(config["analysis"]["base_dir"],
+    analysis_dir = os.path.join(config["analysis"]["base_dir"],
                                 os.path.basename(remote_info["directory"]))
     
     # Converted from an Illumina/Genesifter SampleSheet.csv
     run_yaml = os.path.join(config["analysis"]["store_dir"],
                                 os.path.basename(fc_dir), "run_info.yaml")
     
-    if not fabric_files.exists(analysis_fcdir):
-        fabric.run("mkdir %s" % analysis_fcdir)
+    if not fabric_files.exists(analysis_dir):
+        fabric.run("mkdir %s" % analysis_dir)
 
-    with fabric.cd(analysis_fcdir):
+    with fabric.cd(analysis_dir):
         cl = [config["analysis"]["process_program"], config_file, fc_dir, run_yaml]
         fabric.run(" ".join(cl))
-    cl = [config["analysis"]["upload_program"], config_file, fc_dir, analysis_fcdir]
+    cl = [config["analysis"]["upload_program"], config_file, fc_dir, analysis_dir]
     fabric.run(" ".join(cl))
 
 def _remote_copy(remote_info, config):
@@ -129,7 +129,7 @@ def message_reader(handlers, config):
         chan.basic_consume(queue=tag_name, no_ack=True,
                            callback=handler, consumer_tag=tag_name)
 
-    log.debug("Waiting to consume message from AMQP queue...")
+    log.debug("AMQP: Waiting to consume message")
     while True:
         chan.wait()
     for (tag_name, _) in handlers:
