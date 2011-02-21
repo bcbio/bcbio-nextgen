@@ -120,12 +120,17 @@ def message_reader(handlers, config):
                            virtual_host=config['virtual_host'], insist=False)
     chan = conn.channel()
     for tag_name, handler in handlers:
+
+# ToDo: py-amqplib is single threaded: ergo, no proper concurrency
+# http://www.loose-bits.com/2010/10/distributed-task-locking-in-celery.html#more
+      
         chan.queue_declare(queue=tag_name, exclusive=False, auto_delete=False,
                 durable=True)
         chan.exchange_declare(exchange=config['exchange'], type="fanout", durable=True,
                 auto_delete=False)
         chan.queue_bind(queue=tag_name, exchange=config['exchange'],
                         routing_key=config['routing_key'])
+        log.debug("AMQP: Consuming %s" % tag_name)
         chan.basic_consume(queue=tag_name, no_ack=True,
                            callback=handler, consumer_tag=tag_name)
 

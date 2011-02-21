@@ -58,12 +58,14 @@ def main(config_file, fc_dir, run_info_yaml=None):
 def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     fc_name, fc_date = get_flowcell_info(fc_dir)
-    log.debug("Flowcell name is %s" % fc_name)
-    if run_info_yaml:
+    
+    if os.path.exists(run_info_yaml):
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
             run_info = dict(details=run_details, run_id="")
+            log.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
     else:
+        log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name)
     run_items = _add_multiplex_to_control(run_info["details"])
@@ -86,9 +88,12 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     sample_files, sample_fastq, sample_info = organize_samples(align_dir,
             fastq_dir, work_dir, fc_name, fc_date, run_items)
     try:
+        print sample_files
+        print sample_fastq
+        print sample_info
         map_fn(_process_sample_wrapper,
           ((name, sample_fastq[name], sample_info[name], bam_files, work_dir,
-              config, config_file) for name, bam_files in sample_files))
+              config, config_file) for _, name, bam_files in sample_files))
     except:
         if pool:
             pool.terminate()
@@ -106,9 +111,9 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
     genome_build = info["genome_build"]
     multiplex = info.get("multiplex", None)
-    print "Processing", info["lane"], genome_build, \
+    log.info("Processing", info["lane"], genome_build, \
             sample_name, info.get("researcher", ""), \
-            info.get("analysis", ""), multiplex
+            info.get("analysis", ""), multiplex)
     fastq_dir, galaxy_dir = _get_full_paths(fastq_dir, config, config_file)
     align_ref, sam_ref = get_genome_ref(genome_build,
             config["algorithm"]["aligner"], galaxy_dir)
@@ -132,23 +137,23 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
                                   galaxy_dir)
     fastq1, fastq2 = _combine_fastq_files(fastq_files, work_dir)
-    print sample_name, "Combining and preparing wig file"
+    log.info("Combining and preparing wig file %s" % sample_name)
     sort_bam = merge_bam_files(bam_files, work_dir, config)
     bam_to_wig(sort_bam, config, config_file)
     if config["algorithm"]["recalibrate"]:
-        print sample_name, "Recalibrating with GATK"
+        log.info("Recalibrating %s with GATK" % sample_name)
         dbsnp_file = get_dbsnp_file(config, sam_ref)
         gatk_bam = recalibrate_quality(sort_bam, sam_ref,
                 dbsnp_file, config_file)
-        print sample_name, "Analyzing recalibration"
+        log.info("Analyzing recalibration %s" % sample_name)
         analyze_recalibration(gatk_bam, fastq1, fastq2)
         if config["algorithm"]["snpcall"]:
-            print sample_name, "SNP genotyping with GATK"
+            log.info("SNP genotyping %s with GATK" % sample_name)
             vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
             eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
-            print sample_name, "Calculating variation effects"
+            log.info("Calculating variation effects for %s" % sample_name)
             variation_effects(vrn_file, genome_build, sam_ref, config)
-    print sample_name, "Generating summary files"
+    log.info("Generating summary files for %s" % sample_name)
     generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
             config, sample_name, config_file)
 
@@ -328,7 +333,7 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
             cl += [fastq_file]
         cl += [out_file]
         cl = [str(i) for i in cl]
-        log.info("Running bowtie with cmdline: %s" % " ".join(cl))
+	log.info("Running bowtie with cmdline: %s" % " ".join(cl))
         child = subprocess.Popen(cl)
         child.wait()
     return out_file
@@ -518,6 +523,7 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
             ready_files.append(os.path.splitext(fname)[0])
         else:
             ready_files.append(fname)
+    
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
 def _remap_to_maq(ref_file):
