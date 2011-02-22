@@ -14,7 +14,6 @@ The config file is in YAML format and specifies the location of the wigToBigWig
 program from UCSC:
 
 program:
-  samtools: samtools
   ucsc_bigwig: wigToBigWig
 
 If not specified, these will be assumed to be present in the system path.
@@ -38,8 +37,7 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
         with open(config_file) as in_handle:
             config = yaml.load(in_handle)
     else:
-        config = {"program": dict(samtools="samtools",
-                                  ucsc_bigwig="wigToBigWig")}
+        config = {"program": {"ucsc_bigwig" : "wigToBigWig"}}
     if outfile is None:
         outfile = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if start > 0:
@@ -61,9 +59,6 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
 def indexed_bam(bam_file, config):
     if not os.path.exists(bam_file + ".bai"):
         pysam.index(bam_file)
-        #cl = [config["program"]["samtools"], "index", bam_file]
-        #child = subprocess.Popen(cl)
-        #child.wait()
     sam_reader = pysam.Samfile(bam_file, "rb")
     yield sam_reader
     sam_reader.close()
