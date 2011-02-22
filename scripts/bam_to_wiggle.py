@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Convert BAM files to wiggle file format in a specified region.
+"""Convert BAM files to BigWig file format in a specified region.
 
 Usage:
     bam_to_wiggle.py <BAM file> [<YAML config>]
@@ -10,8 +10,8 @@ Usage:
 
 chrom start and end are optional, in which case they default to everything.
 
-The config file is in YAML format and specifies the locations of samtools and
-the wigToBigWig program from UCSC:
+The config file is in YAML format and specifies the location of the wigToBigWig
+program from UCSC:
 
 program:
   samtools: samtools
@@ -20,9 +20,8 @@ program:
 If not specified, these will be assumed to be present in the system path.
 
 The script requires:
-    pysam
-    samtools
-    wigToBigWig from UCSC
+    pysam (http://code.google.com/p/pysam/)
+    wigToBigWig from UCSC (http://hgdownload.cse.ucsc.edu/admin/exe/)
 """
 import os
 import sys
@@ -61,9 +60,10 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
 @contextmanager
 def indexed_bam(bam_file, config):
     if not os.path.exists(bam_file + ".bai"):
-        cl = [config["program"]["samtools"], "index", bam_file]
-        child = subprocess.Popen(cl)
-        child.wait()
+        pysam.index(bam_file)
+        #cl = [config["program"]["samtools"], "index", bam_file]
+        #child = subprocess.Popen(cl)
+        #child.wait()
     sam_reader = pysam.Samfile(bam_file, "rb")
     yield sam_reader
     sam_reader.close()
