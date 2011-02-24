@@ -104,7 +104,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
     if (config["algorithm"].get("include_short_name", True) and
             info.get("name", "")):
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
-    genome_build = info["genome_build"]
+    genome_build = info.get("genome_build", None)
     multiplex = info.get("multiplex", None)
     print "Processing", info["lane"], genome_build, \
             sample_name, info.get("researcher", ""), \
@@ -119,7 +119,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)
-        if os.path.exists(fastq1):
+        if os.path.exists(fastq1) and config["algorithm"]["aligner"]:
             do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
                     msample, align_dir, config, config_file)
 
@@ -532,6 +532,8 @@ def _remap_to_maq(ref_file):
 def get_genome_ref(genome_build, aligner, galaxy_base):
     """Retrieve the reference genome file location from galaxy configuration.
     """
+    if not aligner or not genome_build:
+        return (None, None)
     ref_files = dict(
             bowtie = "bowtie_indices.loc",
             bwa = "bwa_index.loc",
@@ -703,8 +705,8 @@ def _update_config_w_custom(config, lane_info):
     """Update the configuration for this lane if a custom analysis is specified.
     """
     config = copy.deepcopy(config)
-    custom = config["custom_algorithms"].get(lane_info.get("analysis", None),
-            None)
+    analysis_type = lane_info.get("analysis", "")
+    custom = config["custom_algorithms"].get(analysis_type, None)
     if custom:
         for key, val in custom.iteritems():
             config["algorithm"][key] = val
