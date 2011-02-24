@@ -128,7 +128,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     """Finalize processing for a sample, potentially multiplexed.
     """
     config = _update_config_w_custom(config, info)
-    genome_build = info["genome_build"]
+    genome_build = info.get("genome_build", None)
     (_, galaxy_dir) = _get_full_paths("", config, config_file)
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
                                   galaxy_dir)
@@ -149,9 +149,10 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
             eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
             print sample_name, "Calculating variation effects"
             variation_effects(vrn_file, genome_build, sam_ref, config)
-    print sample_name, "Generating summary files"
-    generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
-            config, sample_name, config_file)
+    if sam_ref is not None:
+        print sample_name, "Generating summary files"
+        generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
+                config, sample_name, config_file)
 
 def _combine_fastq_files(in_files, work_dir):
     if len(in_files) == 1:
