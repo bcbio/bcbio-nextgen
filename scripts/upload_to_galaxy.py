@@ -81,7 +81,8 @@ def lims_run_details(run_info, fc_name, base_folder_name):
                       or not run_info["run_id"]):
         if lane_info.get("private_libs", None) is not None:
             libname, role = _get_galaxy_libname(lane_info["private_libs"],
-                                                lane_info["lab_association"])
+                                                lane_info["lab_association"],
+                                                lane_info["researcher"])
         else:
             libname, role = (None, None)
         for barcode in lane_info.get("multiplex", [None]):
@@ -97,13 +98,17 @@ def lims_run_details(run_info, fc_name, base_folder_name):
                     lane_info["lane"], barcode["barcode_id"] if barcode else "",
                     remote_folder, description, local_name)
 
-def _get_galaxy_libname(private_libs, lab_association):
+def _get_galaxy_libname(private_libs, lab_association, researcher):
+    print private_libs, lab_association
     # simple case -- one private library. Upload there
     if len(private_libs) == 1:
         return private_libs[0]
-    # no private libraries -- use the lab association
+    # no private libraries -- use the lab association or researcher name
     elif len(private_libs) == 0:
-        return lab_association, ""
+        if not lab_association:
+            return researcher, ""
+        else:
+            return lab_association, ""
     # multiple libraries -- find the one that matches the lab association
     else:
         check_libs = [l.lower() for (l, _) in private_libs]
