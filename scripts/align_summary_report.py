@@ -89,8 +89,10 @@ def plot_fastq_stats(fastq_files, out_base, params):
     """Use fastx toolkit to prepare a plot of quality statistics.
     """
     print "Drawing plot of fastq quality scores"
-    fastq_files = [f for f in fastq_files if f]
+    fastq_files = [f for f in fastq_files if f and os.path.getsize(f) > 0]
     graphs = []
+    count = 0
+    read_size = 0
     for i, fastq_file in enumerate(fastq_files):
         if len(fastq_files) > 1:
             cur_out_base = "%s_%s" % (out_base, i+1)
@@ -128,7 +130,7 @@ def plot_fastq_stats(fastq_files, out_base, params):
 def solexaqa_plots(fastq_files, params, work_dir):
     print "SolexaQA plots of fastq error distributions"
     graphs = []
-    for i, fastq_file in enumerate(f for f in fastq_files if f):
+    for i, fastq_file in enumerate(f for f in fastq_files if f and os.path.getsize(f) > 0):
         orig_tile_graph, tile_graph = _sqa_file(fastq_file, "png", work_dir)
         orig_qual_graph, qual_graph  = _sqa_file(fastq_file, "quality.pdf",
                                                    work_dir)
