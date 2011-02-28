@@ -63,3 +63,5 @@ custom_algorithms:
     recalibrate: true
     snpcall: true
     dbsnp: snps/snp130.vcf
+  'Minimal':
+    aligner: ""

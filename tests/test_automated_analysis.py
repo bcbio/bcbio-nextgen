@@ -9,7 +9,7 @@ import shutil
 import contextlib
 
 @contextlib.contextmanager
-def test_workdir():
+def make_workdir():
     dirname = os.path.join(os.path.dirname(__file__), "test_automated_output")
     if os.path.exists(dirname):
         shutil.rmtree(dirname)
@@ -24,6 +24,9 @@ def test_workdir():
 class AutomatedAnalysisTest(unittest.TestCase):
     """Setup a full automated analysis and run the pipeline.
     """
+    def setUp(self):
+        self.data_dir = os.path.join(os.pardir, "data", "automated")
+
     def _install_test_files(self, data_dir):
         """Download required sequence and reference files.
         """
@@ -47,12 +50,23 @@ class AutomatedAnalysisTest(unittest.TestCase):
     def test_run_full_pipeline(self):
         """Run full automated analysis pipeline.
         """
-        with test_workdir():
-            data_dir = os.path.join(os.pardir, "data", "automated")
-            self._install_test_files(data_dir)
+        with make_workdir():
+            self._install_test_files(self.data_dir)
             cl = ["automated_initial_analysis.py",
-                  os.path.join(data_dir, "post_process.yaml"),
-                  os.path.join(data_dir, os.pardir, "110106_FC70BUKAAXX"),
-                  os.path.join(data_dir, "run_info.yaml")]
+                  os.path.join(self.data_dir, "post_process.yaml"),
+                  os.path.join(self.data_dir, os.pardir, "110106_FC70BUKAAXX"),
+                  os.path.join(self.data_dir, "run_info.yaml")]
             subprocess.check_call(cl)
+
+    def test_empty_fastq(self):
+        """Handle analysis of empty fastq inputs from failed runs.
+        """
+        with make_workdir():
+            cl = ["automated_initial_analysis.py",
+                  os.path.join(self.data_dir, "post_process.yaml"),
+                  os.path.join(self.data_dir, os.pardir, "110221_empty_FC12345AAXX"),
+                  os.path.join(self.data_dir, "run_info.yaml")]
+            subprocess.check_call(cl)
+
+
 

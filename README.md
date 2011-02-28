@@ -107,7 +107,7 @@ environment:
   can be changed to 'Standard' if SNP calling is not required in your
   environment. This will run a smaller pipeline of alignment and analysis.
 
-#### RabbitMQ messaging server
+### RabbitMQ messaging server
 
 Communication between the sequencing machine and the analysis machine
 running Galaxy is managed using RabbitMQ messaging. This allows
@@ -133,7 +133,7 @@ values:
         userid = <username>
         password = <password>
 
-#### ssh keys
+### ssh keys
 
 The sequencing, analysis and storage machines transfer files using
 secure copy. This requires that you can securely copy files between
@@ -147,6 +147,22 @@ combinations:
   localhost
 * `store_finished_sqn` server to actual storage machine, if different
   else localhost
+
+### Sequencing machines
+
+The backend has been developed using Illumina GAII and HiSeq sequencing
+machines. It is designed to be general and support other platforms, and 
+we welcome feedback from researchers with different machines at their
+institutions.
+
+Illumina machines produce run directories that include the date, machine
+identifier, and flowcell ID:
+
+    110216_HWI-EAS264_00035_FC638NPAAXX
+
+The data and flowcell ID will be parsed from the directory named used as a
+shortened reference name that includes an easier to remember date and the unique
+flowcell ID for traceability.
 
 ### Development environment
 
@@ -172,16 +188,18 @@ to ease your development needs using the following script:
 * [Picard][3]
 * [GATK][4]
 * [bowtie][5]
-* [fastx toolkit][6]
-* [SolexaQA][6b]
 * [samtools][7]
 * [snpEff][16]
+* [fastx toolkit][6]
+* [SolexaQA][6b]
+* [matrix2png][6c]
 
 [3]: http://picard.sourceforge.net/
 [4]: http://www.broadinstitute.org/gsa/wiki/index.php/The_Genome_Analysis_Toolkit
 [5]: http://bowtie-bio.sourceforge.net/
 [6]: http://hannonlab.cshl.edu/fastx_toolkit/
 [6b]: http://solexaqa.sourceforge.net/
+[6c]: http://www.bioinformatics.ubc.ca/matrix2png/
 [7]: http://samtools.sourceforge.net/
 [16]: http://sourceforge.net/projects/snpeff/
 

@@ -74,8 +74,13 @@ def message_reader(handlers, config):
     for tag_name, handler in handlers:
         chan.queue_declare(queue=tag_name, exclusive=False, auto_delete=False,
                 durable=True)
-        chan.exchange_declare(exchange=config['exchange'], type="fanout", durable=True,
-                auto_delete=False)
+        try:
+            chan.exchange_declare(exchange=config['exchange'], type="fanout", durable=True,
+                    auto_delete=False)
+        except amqp.exceptions.AMQPChannelException:
+            chan.exchange_delete(exchange=config['exchange'])
+            chan.exchange_declare(exchange=config['exchange'], type="fanout", durable=True,
+                    auto_delete=False)
         chan.queue_bind(queue=tag_name, exchange=config['exchange'],
                         routing_key=config['routing_key'])
 

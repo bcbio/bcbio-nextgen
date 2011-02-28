@@ -30,8 +30,8 @@ class SampleSheetTest(unittest.TestCase):
         """
         fcdir = "fake/101007_80HM7ABXX"
         config = {"samplesheet_directories" : [os.path.dirname(self.ss_file)]}
-        ss = samplesheet.run_has_samplesheet(fcdir, config)
+        ss = samplesheet.run_has_samplesheet(fcdir, config, False)
         assert ss is not None
         fcdir = "fake/101007_NOPEXX"
-        ss = samplesheet.run_has_samplesheet(fcdir, config)
+        ss = samplesheet.run_has_samplesheet(fcdir, config, False)
         assert ss is None

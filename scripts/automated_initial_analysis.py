@@ -109,7 +109,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
     if (config["algorithm"].get("include_short_name", True) and
             info.get("name", "")):
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
-    genome_build = info["genome_build"]
+    genome_build = info.get("genome_build", None)
     multiplex = info.get("multiplex", None)
     log.info("Processing", info["lane"], genome_build, \
             sample_name, info.get("researcher", ""), \
@@ -124,15 +124,16 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)
-        do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
-                msample, align_dir, config, config_file)
+        if os.path.exists(fastq1) and config["algorithm"]["aligner"]:
+            do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
+                    msample, align_dir, config, config_file)
 
 def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
         config, config_file):
     """Finalize processing for a sample, potentially multiplexed.
     """
     config = _update_config_w_custom(config, info)
-    genome_build = info["genome_build"]
+    genome_build = info.get("genome_build", None)
     (_, galaxy_dir) = _get_full_paths("", config, config_file)
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
                                   galaxy_dir)
@@ -153,9 +154,10 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
             eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
             log.info("Calculating variation effects for %s" % sample_name)
             variation_effects(vrn_file, genome_build, sam_ref, config)
-    log.info("Generating summary files for %s" % sample_name)
-    generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
-            config, sample_name, config_file)
+    if sam_ref is not None:
+        print sample_name, "Generating summary files"
+        generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
+                config, sample_name, config_file)
 
 def _combine_fastq_files(in_files, work_dir):
     if len(in_files) == 1:
@@ -204,20 +206,20 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
                         multi["name"])
                 fname = os.path.join(align_dir, "%s_%s_%s_%s-sort.bam" %
                     (lane_info["lane"], fc_date, fc_name, multi["barcode_id"]))
-                assert os.path.exists(fname)
-                bams_by_sample[name].append(fname)
-                sample_info[name] = lane_info
-                fastq_by_sample[name].append(get_fastq_files(mfastq_dir,
-                    lane_info["lane"], fc_name, multi["barcode_id"]))
+                if os.path.exists(fname):
+                    bams_by_sample[name].append(fname)
+                    sample_info[name] = lane_info
+                    fastq_by_sample[name].append(get_fastq_files(mfastq_dir,
+                        lane_info["lane"], fc_name, multi["barcode_id"]))
         else:
             name = (lane_info.get("name", ""), lane_info["description"])
             fname = os.path.join(align_dir, "%s_%s_%s-sort.bam" %
                     (lane_info["lane"], fc_date, fc_name))
-            assert os.path.exists(fname)
-            bams_by_sample[name].append(fname)
-            sample_info[name] = lane_info
-            fastq_by_sample[name].append(get_fastq_files(fastq_dir,
-                lane_info["lane"], fc_name))
+            if os.path.exists(fname):
+                bams_by_sample[name].append(fname)
+                sample_info[name] = lane_info
+                fastq_by_sample[name].append(get_fastq_files(fastq_dir,
+                    lane_info["lane"], fc_name))
     return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
 
 def _add_multiplex_to_control(run_items):
@@ -402,8 +404,7 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
               "-k %s" % config["algorithm"]["max_errors"],
               ref_file, fastq_file]
     with open(out_file, "w") as out_handle:
-        child = subprocess.Popen(aln_cl, stdout=out_handle)
-        child.wait()
+        subprocess.check_call(aln_cl, stdout=out_handle)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
         lane_name, config_file):
@@ -558,6 +559,8 @@ def _remap_to_maq(ref_file):
 def get_genome_ref(genome_build, aligner, galaxy_base):
     """Retrieve the reference genome file location from galaxy configuration.
     """
+    if not aligner or not genome_build:
+        return (None, None)
     ref_files = dict(
             bowtie = "bowtie_indices.loc",
             bwa = "bwa_index.loc",
@@ -729,8 +732,8 @@ def _update_config_w_custom(config, lane_info):
     """Update the configuration for this lane if a custom analysis is specified.
     """
     config = copy.deepcopy(config)
-    custom = config["custom_algorithms"].get(lane_info.get("analysis", None),
-            None)
+    analysis_type = lane_info.get("analysis", "")
+    custom = config["custom_algorithms"].get(analysis_type, None)
     if custom:
         for key, val in custom.iteritems():
             config["algorithm"][key] = val

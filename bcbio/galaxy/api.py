@@ -74,7 +74,11 @@ class GalaxyApiAccess:
     def run_details(self, run):
         """Next Gen LIMS specific API functionality.
         """
-        return self._get("/nglims/api_run_details", dict(run=run))
+        try:
+            details = self._get("/nglims/api_run_details", dict(run=run))
+        except ValueError:
+            raise ValueError("Could not find information in Galaxy for run: %s" % run)
+        return details
 
     def sequencing_projects(self):
         """Next Gen LIMS: retrieve summary information of sequencing projects.

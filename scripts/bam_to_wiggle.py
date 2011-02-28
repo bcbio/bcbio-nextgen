@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Convert BAM files to wiggle file format in a specified region.
+"""Convert BAM files to BigWig file format in a specified region.
 
 Usage:
     bam_to_wiggle.py <BAM file> [<YAML config>]
@@ -10,19 +10,17 @@ Usage:
 
 chrom start and end are optional, in which case they default to everything.
 
-The config file is in YAML format and specifies the locations of samtools and
-the wigToBigWig program from UCSC:
+The config file is in YAML format and specifies the location of the wigToBigWig
+program from UCSC:
 
 program:
-  samtools: samtools
   ucsc_bigwig: wigToBigWig
 
 If not specified, these will be assumed to be present in the system path.
 
 The script requires:
-    pysam
-    samtools
-    wigToBigWig from UCSC
+    pysam (http://code.google.com/p/pysam/)
+    wigToBigWig from UCSC (http://hgdownload.cse.ucsc.edu/admin/exe/)
 """
 import os
 import sys
@@ -39,8 +37,7 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
         with open(config_file) as in_handle:
             config = yaml.load(in_handle)
     else:
-        config = {"program": dict(samtools="samtools",
-                                  ucsc_bigwig="wigToBigWig")}
+        config = {"program": {"ucsc_bigwig" : "wigToBigWig"}}
     if outfile is None:
         outfile = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if start > 0:
@@ -51,18 +48,17 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
     if not os.path.exists(outfile):
         wig_file = "%s.wig" % os.path.splitext(bam_file)[0]
         with open(wig_file, "w") as out_handle:
-            chr_sizes = write_bam_track(bam_file, regions, config, out_handle)
+            chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
         try:
-            convert_to_bigwig(wig_file, chr_sizes, config, outfile)
+            if wig_valid:
+                convert_to_bigwig(wig_file, chr_sizes, config, outfile)
         finally:
             os.remove(wig_file)
 
 @contextmanager
 def indexed_bam(bam_file, config):
     if not os.path.exists(bam_file + ".bai"):
-        cl = [config["program"]["samtools"], "index", bam_file]
-        child = subprocess.Popen(cl)
-        child.wait()
+        pysam.index(bam_file)
     sam_reader = pysam.Samfile(bam_file, "rb")
     yield sam_reader
     sam_reader.close()
@@ -73,6 +69,7 @@ def write_bam_track(bam_file, regions, config, out_handle):
         "visibility=full",
         ]))
     sizes = []
+    is_valid = False
     with indexed_bam(bam_file, config) as work_bam:
         for ref_info in work_bam.header.get("SQ", []):
             sizes.append((ref_info["SN"], ref_info["LN"]))
@@ -90,7 +87,8 @@ def write_bam_track(bam_file, regions, config, out_handle):
             out_handle.write("variableStep chrom=%s\n" % chrom)
             for col in work_bam.pileup(chrom, start, end):
                 out_handle.write("%s %s\n" % (col.pos+1, col.n))
-    return sizes
+                is_valid = True
+    return sizes, is_valid
 
 def convert_to_bigwig(wig_file, chr_sizes, config, bw_file=None):
     if not bw_file:
