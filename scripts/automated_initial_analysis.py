@@ -77,9 +77,12 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
             if config["algorithm"]["num_cores"] > 1 else None)
     map_fn = pool.map if pool else map
     try:
+        print run_items
+
         map_fn(_process_lane_wrapper,
                 ((i, fastq_dir, fc_name, fc_date, align_dir, config, config_file)
                     for i in run_items))
+        
     except:
         if pool:
             pool.terminate()
@@ -88,9 +91,6 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     sample_files, sample_fastq, sample_info = organize_samples(align_dir,
             fastq_dir, work_dir, fc_name, fc_date, run_items)
     try:
-        print sample_files
-        print sample_fastq
-        print sample_info
         map_fn(_process_sample_wrapper,
           ((name, sample_fastq[name], sample_info[name], bam_files, work_dir,
               config, config_file) for _, name, bam_files in sample_files))
@@ -296,19 +296,23 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         except OSError:
             pass
         assert os.path.exists(align_dir)
-    print lane_name, "Aligning with", aligner_to_use
+
+    log.info("Aligning lane %s with %s aligner" % (lane_name, aligner_to_use))
     if aligner_to_use == "bowtie":
         sam_file = bowtie_to_sam(fastq1, fastq2, align_ref, lane_name,
-                align_dir, config)
+                                 align_dir, config)
+    elif aligner_to_use == "tophat":
+        sam_file = tophat_align_to_sam(fastq1, fastq2, align_ref, lane_name,
+                                       align_dir, config)
     elif aligner_to_use == "bwa":
         sam_file = bwa_align_to_sam(fastq1, fastq2, align_ref, lane_name,
-                align_dir, config)
+                                    align_dir, config)
     elif aligner_to_use == "maq":
         sam_file = maq_align_to_sam(fastq1, fastq2, align_ref, lane_name,
-                sample_name, align_dir, config_file)
+                                    sample_name, align_dir, config_file)
     else:
         raise ValueError("Do not recognize aligner: %s" % aligner_to_use)
-    print lane_name, "Converting to sorted BAM file"
+    log.info("Converting lane %s to sorted BAM file" % lane_name)
     sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
                     lane_name, config_file)
 
@@ -336,6 +340,22 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
 	log.info("Running bowtie with cmdline: %s" % " ".join(cl))
         child = subprocess.Popen(cl)
         child.wait()
+    return out_file
+
+def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
+    out_dir = os.path.join(align_dir, "%s.sam" % out_base)
+    if not os.path.exists(out_file):
+        cl = [config["program"]["tophat"]]
+        cl += ["--solexa1.3-quals",
+               "-p 8",
+               "-r 45",
+               ref_file]
+        cl += [fastq_file]
+        cl += ["-o", out_dir]
+        
+    log.info("Running tophat with cmdline: %s" % " ".join(cl))
+    child = subprocess.check_call(cl)
+    child.wait()
     return out_file
 
 def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
