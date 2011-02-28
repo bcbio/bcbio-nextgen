@@ -20,11 +20,8 @@ def _organize_lanes(info_iter, barcode_ids):
     """
     all_lanes = []
     for (fcid, lane, sampleref), info in itertools.groupby(info_iter, lambda x: (x[0], x[1], x[1])):
-        cur_lane = dict(lane=lane, fc_id=fcid, genome_build=sampleref, analysis="Standard")
         info = list(info)
-        # Wetlab should change samplesheet columns according to illumina
-        #cur_lane = dict(lane=lane, genome_build=info[0][3], analysis="Standard")
-        cur_lane = dict(flowcell_id=fcid, lane=lane, genome_build="hg19", analysis="Standard")
+        cur_lane = dict(flowcell_id=fcid, lane=lane, genome_build=info[0][3], analysis="Standard")
         if len(info) == 1: # non-barcoded sample
             cur_lane["description"] = info[0][1]
         else: # barcoded sample
