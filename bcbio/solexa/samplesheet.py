@@ -19,13 +19,13 @@ def _organize_lanes(info_iter, barcode_ids):
     """Organize flat lane information into nested YAML structure.
     """
     all_lanes = []
-    for (lane, org), info in itertools.groupby(info_iter, lambda x: (x[1], x[3])):
-        cur_lane = dict(lane=lane, genome_build=org, analysis="Standard")
+    for (fcid, lane, sampleref), info in itertools.groupby(info_iter, lambda x: (x[0], x[1], x[1])):
         info = list(info)
+        cur_lane = dict(flowcell_id=fcid, lane=lane, genome_build=info[0][3], analysis="Standard")
         if len(info) == 1: # non-barcoded sample
             cur_lane["description"] = info[0][1]
         else: # barcoded sample
-            cur_lane["description"] = "Barcoded %s" % lane
+            cur_lane["description"] = "Barcoded lane %s by %s" % (lane, info[0][3])
             multiplex = []
             for (_, _, sample_id, _, bc_seq) in info:
                 bc_type, bc_id = barcode_ids[bc_seq]
@@ -92,10 +92,11 @@ def run_has_samplesheet(fc_dir, config, require_single=True):
                 for fcid in fc_ids:
                     if fcid:
                         fcid_sheet[fcid] = os.path.join(ss_dir, ss)
-    # Human errors on Lab while entering data on the SampleSheet.
-    # Only one best candidate is returned, default cutoff used (60%)
+    # difflib handles human errors while entering data on the SampleSheet.
+    # Only one best candidate is returned (if any). 0.85 cutoff allows for
+    # maximum of 2 mismatches in fcid
 
-    potential_fcids = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1)
+    potential_fcids = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1, 0.85)
     if len(potential_fcids) > 0 and fcid_sheet.has_key(potential_fcids[0]):
         return fcid_sheet[potential_fcids[0]]
     else:

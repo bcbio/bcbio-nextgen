@@ -67,10 +67,16 @@ def copy_and_analyze(remote_info, config, config_file):
 
     analysis_dir = os.path.join(config["analysis"]["base_dir"],
                                 os.path.basename(remote_info["directory"]))
+    
+    # Converted from an Illumina/Genesifter SampleSheet.csv
+    run_yaml = os.path.join(config["analysis"]["store_dir"],
+                                os.path.basename(fc_dir), "run_info.yaml")
+    
     if not fabric_files.exists(analysis_dir):
         fabric.run("mkdir %s" % analysis_dir)
+
     with fabric.cd(analysis_dir):
-        cl = [config["analysis"]["process_program"], config_file, fc_dir]
+        cl = [config["analysis"]["process_program"], config_file, fc_dir, run_yaml]
         fabric.run(" ".join(cl))
     cl = [config["analysis"]["upload_program"], config_file, fc_dir, analysis_dir]
     fabric.run(" ".join(cl))
@@ -114,6 +120,10 @@ def message_reader(handlers, config):
                            virtual_host=config['virtual_host'], insist=False)
     chan = conn.channel()
     for tag_name, handler in handlers:
+
+# ToDo: py-amqplib is single threaded: ergo, no proper concurrency
+# http://www.loose-bits.com/2010/10/distributed-task-locking-in-celery.html#more
+      
         chan.queue_declare(queue=tag_name, exclusive=False, auto_delete=False,
                 durable=True)
         try:
@@ -125,10 +135,11 @@ def message_reader(handlers, config):
                     auto_delete=False)
         chan.queue_bind(queue=tag_name, exchange=config['exchange'],
                         routing_key=config['routing_key'])
+        log.debug("AMQP: Consuming %s" % tag_name)
         chan.basic_consume(queue=tag_name, no_ack=True,
                            callback=handler, consumer_tag=tag_name)
 
-    log.debug("Waiting to consume message from AMQP queue...")
+    log.debug("AMQP: Waiting to consume message")
     while True:
         chan.wait()
     for (tag_name, _) in handlers:
