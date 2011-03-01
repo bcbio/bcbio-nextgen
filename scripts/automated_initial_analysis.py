@@ -58,12 +58,12 @@ def main(config_file, fc_dir, run_info_yaml=None):
 def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     fc_name, fc_date = get_flowcell_info(fc_dir)
-    
-    if os.path.exists(run_info_yaml):
+
+    if run_info_yaml and os.path.exists(run_info_yaml):
+        log.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
-            run_info = dict(details=run_details, run_id="")
-            log.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
+        run_info = dict(details=run_details, run_id="")
     else:
         log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
@@ -77,12 +77,9 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
             if config["algorithm"]["num_cores"] > 1 else None)
     map_fn = pool.map if pool else map
     try:
-        print run_items
-
         map_fn(_process_lane_wrapper,
                 ((i, fastq_dir, fc_name, fc_date, align_dir, config, config_file)
                     for i in run_items))
-        
     except:
         if pool:
             pool.terminate()
@@ -93,7 +90,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     try:
         map_fn(_process_sample_wrapper,
           ((name, sample_fastq[name], sample_info[name], bam_files, work_dir,
-              config, config_file) for _, name, bam_files in sample_files))
+              config, config_file) for name, bam_files in sample_files))
     except:
         if pool:
             pool.terminate()
@@ -138,21 +135,21 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
                                   galaxy_dir)
     fastq1, fastq2 = _combine_fastq_files(fastq_files, work_dir)
-    log.info("Combining and preparing wig file %s" % sample_name)
+    log.info("Combining and preparing wig file %s" % str(sample_name))
     sort_bam = merge_bam_files(bam_files, work_dir, config)
     bam_to_wig(sort_bam, config, config_file)
     if config["algorithm"]["recalibrate"]:
-        log.info("Recalibrating %s with GATK" % sample_name)
+        log.info("Recalibrating %s with GATK" % str(sample_name))
         dbsnp_file = get_dbsnp_file(config, sam_ref)
         gatk_bam = recalibrate_quality(sort_bam, sam_ref,
                 dbsnp_file, config_file)
-        log.info("Analyzing recalibration %s" % sample_name)
+        log.info("Analyzing recalibration %s" % str(sample_name))
         analyze_recalibration(gatk_bam, fastq1, fastq2)
         if config["algorithm"]["snpcall"]:
-            log.info("SNP genotyping %s with GATK" % sample_name)
+            log.info("SNP genotyping %s with GATK" % str(sample_name))
             vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
             eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
-            log.info("Calculating variation effects for %s" % sample_name)
+            log.info("Calculating variation effects for %s" % str(sample_name))
             variation_effects(vrn_file, genome_build, sam_ref, config)
     if sam_ref is not None:
         print sample_name, "Generating summary files"
@@ -354,10 +351,8 @@ def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, co
                ref_file]
         cl += [fastq_file]
         cl += ["-o", out_dir]
-        
     log.info("Running tophat with cmdline: %s" % " ".join(cl))
     child = subprocess.check_call(cl)
-    child.wait()
     return out_file
 
 def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
