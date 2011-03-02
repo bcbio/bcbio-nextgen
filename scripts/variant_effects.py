@@ -26,7 +26,7 @@ def main(snpeff_jar, vcf_ref, genome, interval_file=None):
         vcf_files = sorted(glob.glob(os.path.join(vcf_ref, "*-snp-filter.vcf")))
     else:
         vcf_files = [vcf_ref]
-    for vcf_in in vcf_files:
+    for vcf_in in (v for v in vcf_files if _vcf_has_items(v)):
         se_interval = (convert_to_snpeff_interval(interval_file, vcf_ref)
                        if interval_file else None)
         try:
@@ -37,6 +37,17 @@ def main(snpeff_jar, vcf_ref, genome, interval_file=None):
                 if fname and os.path.exists(fname):
                     os.remove(fname)
 
+def _vcf_has_items(in_file):
+    with open(in_file) as in_handle:
+        while 1:
+            line = in_handle.next()
+            if not line.startswith("#"):
+                break
+        line = in_handle.next()
+        if line:
+            return True
+    return False
+
 def run_snpeff(snp_in, genome, snpeff_jar, snpeff_config, se_interval):
     out_file = "%s-effects.tsv" % (os.path.splitext(snp_in)[0])
     if not os.path.exists(out_file):
@@ -44,6 +55,7 @@ def run_snpeff(snp_in, genome, snpeff_jar, snpeff_config, se_interval):
               genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
+        print " ".join(cl)
         with open(out_file, "w") as out_handle:
             subprocess.check_call(cl, stdout=out_handle)
     return out_file

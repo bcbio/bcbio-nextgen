@@ -136,16 +136,22 @@ def solexaqa_plots(fastq_files, params, work_dir):
                                                    work_dir)
         if not os.path.exists(tile_graph) or not os.path.exists(qual_graph):
             cl = [params["solexaqa"], fastq_file]
-            subprocess.check_call(cl)
-            os.rename(orig_tile_graph, tile_graph)
-            os.rename(orig_qual_graph, qual_graph)
-        #graphs.append((tile_graph,
-        #    "Error distribution per position and tile for read %s. "\
-        #    "Darker squares correspond to poor quality scores." % (i + 1)))
-        graphs.append((qual_graph,
-            "Mean error probability per read position and tile for read %s. "\
-            "Ideal flowcells will have a tight range of values "\
-            "for all tiles." % (i + 1)))
+            # SolexaQA is cranky, ignore it if we have problems
+            try:
+                subprocess.check_call(cl)
+            except subprocess.CalledProcessError, msg:
+                print msg
+            if os.path.exists(orig_tile_graph):
+                os.rename(orig_tile_graph, tile_graph)
+                #graphs.append((tile_graph,
+                #    "Error distribution per position and tile for read %s. "\
+                #    "Darker squares correspond to poor quality scores." % (i + 1)))
+            if os.path.exists(orig_qual_graph):
+                os.rename(orig_qual_graph, qual_graph)
+                graphs.append((qual_graph,
+                    "Mean error probability per read position and tile for read %s. "\
+                    "Ideal flowcells will have a tight range of values "\
+                    "for all tiles." % (i + 1)))
     return graphs
 
 def _sqa_file(fname, ext, work_dir):
@@ -169,9 +175,7 @@ def picard_sort(picard, align_bam, tmp_dir):
 
 def run_pdflatex(tex_file, params):
     cl = [params["pdflatex"], tex_file]
-    with open(os.devnull, "w") as ignore:
-        child = subprocess.Popen(cl, stdout=ignore, stderr=ignore)
-    child.wait()
+    subprocess.check_call(cl)
 
 def _get_recal_plots(work_dir, align_bam):
     """Retrieve any recalibration report plots for display.

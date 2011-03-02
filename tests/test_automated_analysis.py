@@ -47,7 +47,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         subprocess.check_call(cl)
         os.rename(os.path.basename(dirname), dirname)
 
-    def notest_run_full_pipeline(self):
+    def test_run_full_pipeline(self):
         """Run full automated analysis pipeline.
         """
         with make_workdir():

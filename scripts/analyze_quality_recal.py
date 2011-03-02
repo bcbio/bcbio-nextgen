@@ -120,10 +120,14 @@ def _positions_to_examine(db_file):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute("""SELECT MAX(position) FROM data""")
-    position = int(cursor.fetchone()[0])
+    position = cursor.fetchone()[0]
+    if position is not None:
+        position = int(position)
     cursor.close()
     split_at = 50
-    if position < split_at:
+    if position is None:
+        return []
+    elif position < split_at:
         return [("<= %s" % position, "lt%s" % position)]
     else:
         return [("< %s" % split_at, "lt%s" % split_at),
@@ -219,8 +223,7 @@ def bam_to_fastq(bam_file, is_paired):
         print bam_file
         in_bam = pysam.Samfile(bam_file, mode='rb')
         for read in in_bam:
-            print read, read.is_read1, read.is_unmapped
-            num = 1 if read.is_read1 else 2
+            num = 1 if (not read.is_proper_pair or read.is_read1) else 2
             # reverse the sequence and quality if mapped to opposite strand
             if read.is_reverse:
                 seq = str(Seq.reverse_complement(Seq.Seq(read.seq)))
