@@ -44,6 +44,7 @@ java -jar GATK-Picard.jar
 import os
 import sys
 import glob
+import shutil
 import subprocess
 
 import yaml
@@ -64,7 +65,7 @@ def main(config_file, ref_file, align_bam, snp_file=None):
     recal_file = count_covariates(picard, dup_align_bam, ref_file, platform,
             snp_file)
     recal_bam = gatk_recalibrate(picard, dup_align_bam, ref_file, recal_file,
-            platform)
+                                 platform)
 
 def gatk_recalibrate(picard, dup_align_bam, ref_file, recal_file, platform):
     """Step 2 of GATK recalibration -- use covariates to re-write output file.
@@ -82,9 +83,26 @@ def gatk_recalibrate(picard, dup_align_bam, ref_file, recal_file, platform):
               "--default_platform", platform,
               ]
     if not os.path.exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
-            picard.run_gatk(params, tmp_dir)
+        if _recal_available(recal_file):
+            with curdir_tmpdir() as tmp_dir:
+                picard.run_gatk(params, tmp_dir)
+        else:
+            shutil.copy(dup_align_bam, out_file)
     return out_file
+
+def _recal_available(recal_file):
+    """Determine if it's possible to do a recalibration; do we have data?
+    """
+    if os.path.exists(recal_file):
+        with open(recal_file) as in_handle:
+            while 1:
+                line = in_handle.next()
+                if not line.startswith("#"):
+                    break
+            test_line = in_handle.next()
+            if test_line and not test_line.startswith("EOF"):
+                return True
+    return False
 
 def count_covariates(picard, dup_align_bam, ref_file, platform,
         snp_file):

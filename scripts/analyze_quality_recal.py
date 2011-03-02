@@ -216,8 +216,10 @@ def bam_to_fastq(bam_file, is_paired):
     out_files, out_handles = _get_fastq_handles(bam_file,
             is_paired)
     if len(out_handles) > 0:
+        print bam_file
         in_bam = pysam.Samfile(bam_file, mode='rb')
         for read in in_bam:
+            print read, read.is_read1, read.is_unmapped
             num = 1 if read.is_read1 else 2
             # reverse the sequence and quality if mapped to opposite strand
             if read.is_reverse:
