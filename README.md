@@ -205,15 +205,19 @@ to ease your development needs using the following script:
 
 ### Processing infrastructure
 
-* RabbitMQ
-* LaTeX -- pdflatex
-* R with ggplot2 and sqldf
+* RabbitMQ for communication between machines
+* LaTeX and pdflatex for report generation
 * ps2pdf
 
-### Python modules
+### Optional software for generating report graphs
+
+* R with ggplot2, plyr, sqldf libraries.
+* [rpy2][11]. Your R needs to be built with shared libraries
+  available: `./configure --enable-R-shlib`.
+
+### Python modules installed with the package
 
 * [Biopython][10]
-* [rpy2][11]
 * [pysam][12]
 * [mako][13]
 * [PyYAML][14]
