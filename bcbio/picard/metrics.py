@@ -22,10 +22,10 @@ class PicardMetricsParser:
         with open(dup_metrics) as in_handle:
             dup_vals = self._parse_dup_metrics(in_handle)
         (insert_vals, hybrid_vals) = (None, None)
-        if insert_metrics:
+        if insert_metrics and os.path.exists(insert_metrics):
             with open(insert_metrics) as in_handle:
                 insert_vals = self._parse_insert_metrics(in_handle)
-        if hybrid_metrics:
+        if hybrid_metrics and os.path.exists(hybrid_metrics):
             with open(hybrid_metrics) as in_handle:
                 hybrid_vals = self._parse_hybrid_metrics(in_handle)
 
@@ -79,9 +79,10 @@ class PicardMetricsParser:
                     ""))
             out.append(self._count_percent("Pair duplicates",
                 dup_vals["READ_PAIR_DUPLICATES"], dup_total))
+            std = insert_vals.get("STANDARD_DEVIATION", "?")
+            std_dev = "+/- %.1f" % float(std) if (std and std != "?") else ""
             out.append(("Insert size",
-                "%.1f" % float(insert_vals["MEAN_INSERT_SIZE"]),
-                "+/- %.1f" % float(insert_vals["STANDARD_DEVIATION"])))
+                "%.1f" % float(insert_vals["MEAN_INSERT_SIZE"]), std_dev))
         if hybrid_vals:
             out.append((None, None, None))
             out.extend(self._tabularize_hybrid(hybrid_vals))
