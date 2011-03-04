@@ -38,11 +38,17 @@ except ImportError:
 from Bio import SeqIO
 from Bio import Seq
 import pysam
-import rpy2.robjects as robjects
 from mako.template import Template
+try:
+    import rpy2.robjects as robjects
+except ImportError:
+    robjects = None
 
 def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
         db_dir=None):
+    if not _are_libraries_installed():
+        print "R libraries or rpy2 not installed. Not running recalibration plot."
+        return
     # setup output directories
     work_dir = os.getcwd()
     report_dir = os.path.join(work_dir, "reports")
@@ -80,6 +86,22 @@ def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
 
     run_latex_report(base, report_dir, section_info)
     _clean_intermediates(recal_bam, fastq1, fastq2, report_dir)
+
+def _are_libraries_installed():
+    if robjects is None:
+        print "rpy2 not installed: http://rpy.sourceforge.net/rpy2.html"
+        return False
+    import rpy2.rinterface
+    try:
+        robjects.r('''
+          library(sqldf)
+          library(plyr)
+          library(ggplot2)
+        ''')
+    except rpy2.rinterface.RRuntimeError:
+        print "Some R libraries not installed"
+        return False
+    return True
 
 def draw_quality_plot(db_file, plot_file, position_select, title):
     """Draw a plot of remapped qualities using ggplot2.
