@@ -25,6 +25,7 @@ from bcbio.picard import PicardRunner
 
 def main(picard_dir, vcf_info, ref_file, dbsnp, intervals=None):
     picard = PicardRunner(picard_dir)
+    
     if os.path.isdir(vcf_info):
         vcf_files = sorted(glob.glob(os.path.join(vcf_info, "*-filter.vcf")))
     else:

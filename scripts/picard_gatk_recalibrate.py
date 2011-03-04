@@ -56,13 +56,15 @@ def main(config_file, ref_file, align_bam, snp_file=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     picard = PicardRunner(config["program"]["picard"])
+    gatk = PicardRunner(config["program"]["gatk"])
+    
     platform = config["algorithm"]["platform"]
     ref_dict = index_ref_file(picard, ref_file)
     #snp_dict = (index_snp_file(picard, ref_dict, snp_file) if snp_file else
     #        None)
     align_sort_bam = picard_sort(picard, align_bam)
     dup_align_bam = mark_duplicates(picard, align_sort_bam)
-    recal_file = count_covariates(picard, dup_align_bam, ref_file, platform,
+    recal_file = count_covariates(gatk, dup_align_bam, ref_file, platform,
             snp_file)
     recal_bam = gatk_recalibrate(picard, dup_align_bam, ref_file, recal_file,
                                  platform)
@@ -104,7 +106,7 @@ def _recal_available(recal_file):
                 return True
     return False
 
-def count_covariates(picard, dup_align_bam, ref_file, platform,
+def count_covariates(gatk, dup_align_bam, ref_file, platform,
         snp_file):
     """Step 1 of GATK recalibration process -- counting covariates.
     """
@@ -127,7 +129,7 @@ def count_covariates(picard, dup_align_bam, ref_file, platform,
         params += ["-B:dbsnp,VCF", snp_file]
     if not os.path.exists(out_file):
         with curdir_tmpdir() as tmp_dir:
-            picard.run_gatk(params, tmp_dir)
+            gatk.run_gatk(params, tmp_dir)
     return out_file
 
 def mark_duplicates(picard, align_bam):

@@ -122,6 +122,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)
         if os.path.exists(fastq1) and config["algorithm"]["aligner"]:
+            print "CANNOT GET TOPHAT"+config["algorithm"]["aligner"]
             do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
                     msample, align_dir, config, config_file)
 
@@ -483,7 +484,7 @@ def eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.
     """
     metrics_file = "%s.eval_metrics" % vrn_file
-    cl = ["gatk_variant_eval.py", config["program"]["picard"], vrn_file,
+    cl = ["gatk_variant_eval.py", config["program"]["gatk"], vrn_file,
           ref_file, dbsnp_file]
     target = config["algorithm"].get("hybrid_target", "")
     if target:
