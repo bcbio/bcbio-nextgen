@@ -14,9 +14,10 @@ try:
 except ImportError:
     multiprocessing = None
 try:
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        from IPython.kernel import client as ipclient
+    ipclient = None
+    #with warnings.catch_warnings():
+    #    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    #    from IPython.kernel import client as ipclient
 except ImportError:
     ipclient = None
 
