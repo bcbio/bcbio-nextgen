@@ -31,7 +31,6 @@ import copy
 import shutil
 import collections
 from optparse import OptionParser
-from multiprocessing import Pool
 import xml.etree.ElementTree as ET
 import StringIO
 
@@ -41,7 +40,7 @@ import logbook
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.picard.metrics import PicardMetricsParser
-from bcbio.picard import utils
+from bcbio import utils
 from bcbio.picard import PicardRunner
 from bcbio.log import create_log_handler
 
@@ -73,30 +72,22 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     align_dir = os.path.join(work_dir, "alignments")
 
     # process each flowcell lane
-    pool = (Pool(config["algorithm"]["num_cores"])
-            if config["algorithm"]["num_cores"] > 1 else None)
-    map_fn = pool.map if pool else map
-    try:
-        map_fn(_process_lane_wrapper,
-                ((i, fastq_dir, fc_name, fc_date, align_dir, config, config_file)
-                    for i in run_items))
-    except:
-        if pool:
-            pool.terminate()
-        raise
+    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
+        for _ in cpmap(process_lane,
+                       ((i, fastq_dir, fc_name, fc_date, align_dir, config, config_file)
+                        for i in run_items)):
+            pass
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = organize_samples(align_dir,
             fastq_dir, work_dir, fc_name, fc_date, run_items)
-    try:
-        map_fn(_process_sample_wrapper,
-          ((name, sample_fastq[name], sample_info[name], bam_files, work_dir,
-              config, config_file) for name, bam_files in sample_files))
-    except:
-        if pool:
-            pool.terminate()
-        raise
+    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
+        for _ in cpmap(process_sample, ((name, sample_fastq[name], sample_info[name],
+                                         bam_files, work_dir, config, config_file)
+                                        for name, bam_files in sample_files)):
+            pass
     write_metrics(run_info, work_dir, fc_dir, fc_name, fc_date, fastq_dir)
 
+@utils.map_wrap
 def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         config_file):
     """Do alignments for a lane, potentially splitting based on barcodes.
@@ -125,6 +116,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
             do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
                     msample, align_dir, config, config_file)
 
+@utils.map_wrap
 def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
         config, config_file):
     """Finalize processing for a sample, potentially multiplexed.
@@ -174,18 +166,6 @@ def _combine_fastq_files(in_files, work_dir):
                     with open(cur2) as in_handle:
                         shutil.copyfileobj(in_handle, out_handle)
         return out1, out2
-
-def _process_lane_wrapper(args):
-    try:
-        return process_lane(*args)
-    except KeyboardInterrupt:
-        raise Exception
-
-def _process_sample_wrapper(args):
-    try:
-        return process_sample(*args)
-    except KeyboardInterrupt:
-        raise Exception
 
 def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items):
     """Organize BAM output files by sample name, handling multiplexing.

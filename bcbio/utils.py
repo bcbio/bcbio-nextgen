@@ -1,4 +1,4 @@
-"""Helpful utilities for building analysis piplelines.
+"""Helpful utilities for building analysis pipelines.
 """
 import os
 import tempfile
@@ -50,6 +50,7 @@ def cpmap(cores=1, ipython=False):
         IMapIterator.next = wrapper(IMapIterator.next)
         pool = multiprocessing.Pool(int(cores))
         yield pool.imap
+        pool.terminate()
 
 def map_wrap(f):
     """Wrap standard function to easily pass into 'map' processing.
