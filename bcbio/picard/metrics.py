@@ -236,8 +236,11 @@ class PicardMetrics:
                 vrn_vals)
         import pprint
         pprint.pprint(summary_info)
-        graphs = [(gc_graph, "Distribution of GC content across reads"),
-                  (insert_graph, "Distribution of paired end insert sizes")]
+        graphs = []
+        if gc_graph and os.path.exists(gc_graph):
+            graphs.append((gc_graph, "Distribution of GC content across reads"))
+        if insert_graph and os.path.exists(insert_graph):
+            graphs.append((insert_graph, "Distribution of paired end insert sizes"))
         return summary_info, graphs
 
     def _hybrid_select_metrics(self, dup_bam, bait_file, target_file):
