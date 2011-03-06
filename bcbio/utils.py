@@ -106,3 +106,11 @@ def tmpfile(*args, **kwargs):
         os.close(fd)
         if os.path.exists(fname):
             os.remove(fname)
+
+def create_dirs(config, names=None):
+    if names is None:
+        names = config["dir"].keys()
+    for dname in names:
+        d = config["dir"][dname]
+        if not os.path.exists(d):
+            os.makedirs(d)
