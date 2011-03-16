@@ -206,7 +206,10 @@ def _counts_at_position(positions, orig_reader, cmp_reader):
     for orig_parts in orig_reader:
         cmp_parts = cmp_reader.next()
         for pos in positions:
-            pos_counts[pos][int(orig_parts[pos+1])][int(cmp_parts[pos+1])] += 1
+            try:
+                pos_counts[pos][int(orig_parts[pos+1])][int(cmp_parts[pos+1])] += 1
+            except IndexError:
+                pass
     for pos, count_dict in pos_counts.iteritems():
         for orig_val, cmp_dict in count_dict.iteritems():
             for cmp_val, count in cmp_dict.iteritems():

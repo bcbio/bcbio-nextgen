@@ -36,6 +36,7 @@ import StringIO
 
 import yaml
 import logbook
+from Bio import SeqIO
 
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
@@ -67,8 +68,8 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
         log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name)
-    run_items = _add_multiplex_to_control(run_info["details"])
     fastq_dir = get_fastq_dir(fc_dir)
+    run_items = _add_multiplex_across_lanes(run_info["details"], fastq_dir, fc_name)
     align_dir = os.path.join(work_dir, "alignments")
 
     # process each flowcell lane
@@ -199,28 +200,50 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
                     lane_info["lane"], fc_name))
     return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
 
-def _add_multiplex_to_control(run_items):
-    """Add multiplexing to our control if we are using Illumina standard.
+def _get_fastq_size(item, fastq_dir, fc_name):
+    """Retrieve the size of reads from the first flowcell sequence.
     """
-    multiplexes = []
-    control = None
-    control_i = -1
-    for i, item in enumerate(run_items):
-        if item.get("description", "").lower() == "control":
-            control = item
-            control_i = i
-        else:
-            multiplexes.append(item.get("multiplex", ""))
-    unique_multiplexes = list(set(str(m) for m in multiplexes))
-    if (control and (len(multiplexes) == len(run_items) - 1) and
-            len(unique_multiplexes) == 1):
-        cntl_multiplex = copy.deepcopy(multiplexes[0])
-        for i, multi in enumerate(cntl_multiplex):
-            multi['name'] = control["description"]
-            cntl_multiplex[i] = multi
-        control["multiplex"] = cntl_multiplex
-        run_items[control_i] = control
-    return run_items
+    (fastq1, _) = get_fastq_files(fastq_dir, item['lane'], fc_name)
+    with open(fastq1) as in_handle:
+        rec = SeqIO.parse(in_handle, "fastq").next()
+    return len(rec.seq)
+
+def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
+    """Add multiplex information to control and non-multiplexed lanes.
+
+    Illumina runs include barcode reads for non-multiplex lanes, and the
+    control, when run on a multiplexed flow cell. This checks for this
+    situation and adds details to trim off the extra bases.
+    """
+    fastq_dir = _add_full_path(fastq_dir)
+    # determine if we have multiplexes and collect expected size
+    fastq_sizes = []
+    tag_sizes = []
+    for item in run_items:
+        if item.get("multiplex", None):
+            tag_sizes.extend([len(b["sequence"]) for b in item["multiplex"]])
+            fastq_sizes.append(_get_fastq_size(item, fastq_dir, fc_name))
+    fastq_sizes = list(set(fastq_sizes))
+    tag_sizes = list(set(tag_sizes))
+    final_items = []
+    for item in run_items:
+        if item.get("multiplex", None) is None:
+            assert len(fastq_sizes) == 1, \
+                   "Multi and non-multiplex reads with multiple sizes"
+            expected_size = fastq_sizes[0]
+            assert len(tag_sizes) == 1, \
+                   "Expect identical tag size for a flowcell"
+            tag_size = tag_sizes[0]
+            this_size = _get_fastq_size(item, fastq_dir, fc_name)
+            if this_size == expected_size:
+                item["multiplex"] = [{"name" : item.get("name", item["description"]),
+                                      "barcode_id": "trim",
+                                      "sequence" : "N" * tag_size}]
+            else:
+                assert this_size == expected_size - tag_size, \
+                       "Unexpected non-multiplex sequence"
+        final_items.append(item)
+    return final_items
 
 def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     """Split a fastq file into multiplex pieces using barcode details.
@@ -255,7 +278,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     return out_files
 
 def _make_tag_file(barcodes):
-    tag_file = "%s-barcodes.cfg" % barcodes[0]['barcode_type']
+    tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
     with open(tag_file, "w") as out_handle:
         for bc in barcodes:
             #out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
@@ -316,7 +339,7 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
             cl += [fastq_file]
         cl += [out_file]
         cl = [str(i) for i in cl]
-	log.info("Running bowtie with cmdline: %s" % " ".join(cl))
+        log.info("Running bowtie with cmdline: %s" % " ".join(cl))
         child = subprocess.Popen(cl)
         child.wait()
     return out_file
@@ -519,7 +542,6 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
             ready_files.append(os.path.splitext(fname)[0])
         else:
             ready_files.append(fname)
-    
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
 def _remap_to_maq(ref_file):
@@ -620,7 +642,8 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
                 cur_run_info = copy.deepcopy(base_info)
                 cur_run_info["metrics"] = stats
                 cur_run_info["barcode_id"] = str(barcode["barcode_id"]) if barcode else ""
-                cur_run_info["barcode_type"] = str(barcode["barcode_type"]) if barcode else ""
+                cur_run_info["barcode_type"] = (str(barcode.get("barcode_type", ""))
+                                                if barcode else "")
                 sample_info.append(cur_run_info)
     return lane_info, sample_info, tab_out
 
