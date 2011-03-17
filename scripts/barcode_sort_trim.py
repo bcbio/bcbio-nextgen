@@ -81,6 +81,10 @@ def best_match(end_gen, barcodes, mismatch):
     unmatched is returned for items which can't be matched to a barcode within
     the provided parameters.
     """
+    if len(barcodes) == 1 and barcodes.values() == ["trim"]:
+        size = len(barcodes.keys()[0])
+        test_seq = end_gen(size)
+        return barcodes.values()[0], test_seq, test_seq
     # easiest, fastest case -- exact match
     sizes = list(set(len(b) for b in barcodes.keys()))
     for s in sizes:

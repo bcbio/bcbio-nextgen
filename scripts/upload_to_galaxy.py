@@ -157,6 +157,9 @@ def _name_with_ext(orig_file, ext):
     """Return a normalized filename without internal processing names.
     """
     base = os.path.basename(orig_file).split("-")[0]
+    for extra in ["_trim"]:
+        if base.endswith(extra):
+            base = base[:-len(extra)]
     return "%s%s" % (base, ext)
 
 def add_run_summary_metrics(analysis_dir, galaxy_api):
