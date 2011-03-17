@@ -108,7 +108,7 @@ def _generate_qseq(bc_dir, config):
         log.info("Generating qseq files at %s" % bc_dir)
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log, "-i", bc_dir, "-o", bc_dir,
+        cl = [cmd, "-L", bcl2qseq_log, "-i", bc_dir, "-o", bc_dir, "-b" bc_dir,
               "-p", os.path.split(bc_dir)[0],	"--in-place", "--overwrite"]
         subprocess.check_call(cl)
         log.info("Qseq files generated.")
