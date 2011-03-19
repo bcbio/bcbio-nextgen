@@ -56,7 +56,11 @@ def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
     if db_dir is None:
         db_dir = work_dir
     if not os.path.exists(image_dir):
-        os.makedirs(image_dir)
+        # avoid error with creating directories simultaneously on two threads
+        try:
+            os.makedirs(image_dir)
+        except OSError:
+            pass
     (base, _) = os.path.splitext(recal_bam)
     orig_files = {1: fastq1, 2: fastq2}
 
