@@ -40,7 +40,7 @@ from Bio import SeqIO
 
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
-from bcbio.picard.metrics import PicardMetricsParser
+from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
 from bcbio.picard import PicardRunner
 from bcbio.log import create_log_handler

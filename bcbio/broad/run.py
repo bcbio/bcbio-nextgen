@@ -2,7 +2,7 @@
 """
 import os
 
-from bcbio.picard.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir
 
 def picard_sort(picard, align_bam):
     """Sort a BAM file by coordinates.

@@ -21,7 +21,7 @@ from optparse import OptionParser
 import yaml
 
 from bcbio.picard import PicardRunner
-from bcbio.picard.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir
 
 def main(config_file, out_base, ref_file, read1, read2=None, sample_name=""):
     with open(config_file) as in_handle:

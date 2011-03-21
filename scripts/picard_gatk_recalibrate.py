@@ -50,7 +50,7 @@ import subprocess
 import yaml
 
 from bcbio.picard import PicardRunner
-from bcbio.picard.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir
 
 def main(config_file, ref_file, align_bam, snp_file=None):
     with open(config_file) as in_handle:

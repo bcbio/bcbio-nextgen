@@ -30,7 +30,7 @@ import yaml
 from mako.template import Template
 
 from bcbio.picard import PicardRunner
-from bcbio.picard.metrics import PicardMetrics
+from bcbio.broad.metrics import PicardMetrics
 
 PARAM_DEFAULT = dict(
         fastx_stats = "fastx_quality_stats",

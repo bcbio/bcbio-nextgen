@@ -20,8 +20,8 @@ import yaml
 
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
-from bcbio.picard.metrics import PicardMetricsParser
-from bcbio.picard import utils
+from bcbio.broad.metrics import PicardMetricsParser
+from bcbio import utils
 
 def main(config_file, fc_dir):
     work_dir = os.getcwd()
