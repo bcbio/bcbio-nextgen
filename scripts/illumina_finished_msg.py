@@ -127,7 +127,8 @@ def _is_finished_dumping(directory):
     single or paired end run.
     """
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
-                "Basecalling_Netcopy_complete_READ2.txt"]
+                "Basecalling_Netcopy_complete_READ2.txt",
+                "Basecalling_Netcopy_complete_Read2.txt"]
 
     return reduce(operator.or_,
             [os.path.exists(os.path.join(directory, f)) for f in to_check])
@@ -139,7 +140,7 @@ def _files_to_copy(directory):
         image_redo_files = reduce(operator.add,
                                   [glob.glob("*.params"),
                                    glob.glob("Images/L*/C*"),
-                                   ["RunInfo.xml"]])
+                                   ["RunInfo.xml", "runParameters.xml"]])
         qseqs = reduce(operator.add,
                      [glob.glob("Data/Intensities/*.xml"),
                       glob.glob("Data/Intensities/BaseCalls/*qseq.txt"),
@@ -149,9 +150,12 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
+        
+        logs = reduce(operator.add, ["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"])
         run_info = glob.glob("run_info.yaml")
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-    return sorted(image_redo_files + run_info), sorted(reports + fastq + run_info)
+        
+    return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.
