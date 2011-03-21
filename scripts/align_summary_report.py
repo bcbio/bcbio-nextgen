@@ -29,7 +29,7 @@ from optparse import OptionParser
 import yaml
 from mako.template import Template
 
-from bcbio.picard import PicardRunner
+from bcbio.broad import BroadRunner
 from bcbio.broad.metrics import PicardMetrics
 
 PARAM_DEFAULT = dict(
@@ -50,7 +50,7 @@ def main(picard_dir, align_bam, ref_file, fastq_one, fastq_pair=None,
             params = yaml.load(in_handle)["program"]
     else:
         params = PARAM_DEFAULTS
-    picard = PicardRunner(picard_dir)
+    picard = BroadRunner(picard_dir)
     if do_sort:
         align_bam = picard_sort(picard, align_bam, tmp_dir)
 

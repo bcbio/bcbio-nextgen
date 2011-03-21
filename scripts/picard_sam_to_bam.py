@@ -16,14 +16,14 @@ from optparse import OptionParser
 
 import yaml
 
-from bcbio.picard import PicardRunner
+from bcbio.broad import BroadRunner
 from bcbio.utils import curdir_tmpdir
 
 def main(config_file, align_sam, ref_file, fastq_one, fastq_pair=None,
         sample_name="", rg_name="", pu_name=""):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    picard = PicardRunner(config["program"]["picard"])
+    picard = BroadRunner(config["program"]["picard"])
     platform = config["algorithm"]["platform"]
     if platform.lower() == "illumina":
         qual_format = "Illumina"

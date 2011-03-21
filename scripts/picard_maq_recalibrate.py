@@ -20,7 +20,7 @@ from optparse import OptionParser
 
 import yaml
 
-from bcbio.picard import PicardRunner
+from bcbio.broad import BroadRunner
 from bcbio.utils import curdir_tmpdir
 
 def main(config_file, out_base, ref_file, read1, read2=None, sample_name=""):
@@ -30,7 +30,7 @@ def main(config_file, out_base, ref_file, read1, read2=None, sample_name=""):
     maq_cmd = config["program"]["maq"]
     stringency = config["algorithm"]["stringency"]
 
-    picard = PicardRunner(config["program"]["picard"])
+    picard = BroadRunner(config["program"]["picard"], config["program"].get("gatk", ""))
     bam_reads = fastq_to_bam(picard, sample_name,
             config["algorithm"]["quality_format"], read1, read2)
     base_align = picard_run_maq(picard, maq_cmd, bam_reads, ref_file, barcode,

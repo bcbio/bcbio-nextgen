@@ -13,7 +13,7 @@ import glob
 import yaml
 
 from bcbio.solexa.flowcell import (get_flowcell_info)
-from bcbio.picard import utils
+from bcbio import utils
 
 def _organize_lanes(info_iter, barcode_ids):
     """Organize flat lane information into nested YAML structure.

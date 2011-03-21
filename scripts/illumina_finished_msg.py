@@ -31,7 +31,7 @@ import logbook
 
 from bcbio.solexa import samplesheet
 from bcbio.log import create_log_handler
-from bcbio.picard import utils
+from bcbio.broad import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
