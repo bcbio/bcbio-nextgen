@@ -50,6 +50,10 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
         wig_file = "%s.wig" % os.path.splitext(bam_file)[0]
         with open(wig_file, "w") as out_handle:
             chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
+        if not wig_valid:
+            sys.stderr.write("Failed to write wig file\n")
+            os.remove(wig_file)
+            sys.exit(1)
         try:
             if wig_valid:
                 convert_to_bigwig(wig_file, chr_sizes, config, outfile)
