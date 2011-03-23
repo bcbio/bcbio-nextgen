@@ -21,6 +21,7 @@ If not specified, these will be assumed to be present in the system path.
 The script requires:
     pysam (http://code.google.com/p/pysam/)
     wigToBigWig from UCSC (http://hgdownload.cse.ucsc.edu/admin/exe/)
+If a configuration file is used, then PyYAML is also required (http://pyyaml.org/)
 """
 import os
 import sys
@@ -28,12 +29,12 @@ import subprocess
 from optparse import OptionParser
 from contextlib import contextmanager
 
-import yaml
 import pysam
 
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
          outfile=None):
     if config_file:
+        import yaml
         with open(config_file) as in_handle:
             config = yaml.load(in_handle)
     else:
