@@ -108,8 +108,17 @@ def _generate_qseq(bc_dir, config):
         log.info("Generating qseq files at %s" % bc_dir)
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log, "-i", bc_dir, "-o", bc_dir,
-              "-p", os.path.split(bc_dir)[0],	"--in-place", "--overwrite"]
+        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "-p", os.path.split(bc_dir)[0],
+              "--in-place", "--overwrite"]
+        # in OLB version 1.9, the -i flag changed to intensities instead of input
+        version_cl = [cmd, "-v"]
+        p = subprocess.Popen(version_cl, stdout=subprocess.PIPE)
+        (out, _) = p.communicate()
+        olb_version = float(out.strip().split()[-1].rsplit(".", 1)[0])
+        if olb_version > 1.8:
+            cl += ["-b", bc_dir]
+        else:
+            cl += ["-i", bc_dir]
         subprocess.check_call(cl)
         log.info("Qseq files generated.")
         with utils.chdir(bc_dir):
