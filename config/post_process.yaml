@@ -7,9 +7,15 @@ program:
   bwa: bwa
   maq: maq
   ucsc_bigwig: wigToBigWig
+<<<<<<< HEAD
   picard: /source/Picard
   gatk: /source/GATK
   snpEff: /source/share/snpEff
+=======
+  picard: /usr/share/java/picard
+  gatk: /usr/share/java/gatk
+  snpEff: /usr/share/java/snpeff
+>>>>>>> 40255e29cb15afc5572ccbaa082233e67581093c
   fastx_stats: fastx_quality_stats
   fastx_graph: fastq_quality_boxplot_graph.sh
   pdflatex: pdflatex

@@ -49,15 +49,13 @@ import subprocess
 
 import yaml
 
-from bcbio.picard import PicardRunner
-from bcbio.picard.utils import curdir_tmpdir
+from bcbio.broad import BroadRunner
+from bcbio.utils import curdir_tmpdir
 
 def main(config_file, ref_file, align_bam, snp_file=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    picard = PicardRunner(config["program"]["picard"])
-    gatk = PicardRunner(config["program"]["gatk"])
-    
+    picard = BroadRunner(config["program"]["picard"], config["program"].get("gatk", ""))
     platform = config["algorithm"]["platform"]
     ref_dict = index_ref_file(picard, ref_file)
     #snp_dict = (index_snp_file(picard, ref_dict, snp_file) if snp_file else

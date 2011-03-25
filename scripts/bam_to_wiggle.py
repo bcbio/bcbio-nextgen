@@ -21,6 +21,7 @@ If not specified, these will be assumed to be present in the system path.
 The script requires:
     pysam (http://code.google.com/p/pysam/)
     wigToBigWig from UCSC (http://hgdownload.cse.ucsc.edu/admin/exe/)
+If a configuration file is used, then PyYAML is also required (http://pyyaml.org/)
 """
 import os
 import sys
@@ -28,12 +29,12 @@ import subprocess
 from optparse import OptionParser
 from contextlib import contextmanager
 
-import yaml
 import pysam
 
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
          outfile=None):
     if config_file:
+        import yaml
         with open(config_file) as in_handle:
             config = yaml.load(in_handle)
     else:
@@ -68,21 +69,14 @@ def write_bam_track(bam_file, regions, config, out_handle):
         "name=%s" % os.path.splitext(os.path.split(bam_file)[-1])[0],
         "visibility=full",
         ]))
-    sizes = []
     is_valid = False
     with indexed_bam(bam_file, config) as work_bam:
-        for ref_info in work_bam.header.get("SQ", []):
-            sizes.append((ref_info["SN"], ref_info["LN"]))
+        sizes = zip(work_bam.references, work_bam.lengths)
         if len(regions) == 1 and regions[0][0] == "all":
-            regions = []
-            for ref_info in work_bam.header.get("SQ", []):
-                regions.append((ref_info["SN"], 0, None))
+            regions = [(name, 0, length) for name, length in sizes]
         for chrom, start, end in regions:
-            if end is None:
-                for ref_info in work_bam.header.get("SQ", []):
-                    if ref_info["SN"] == chrom:
-                        end = int(ref_info["LN"])
-                        break
+            if end is None and chrom in work_bam.references:
+                end = work_bam.lengths[work_bam.references.index(chrom)]
             assert end is not None, "Could not find %s in header" % chrom
             out_handle.write("variableStep chrom=%s\n" % chrom)
             for col in work_bam.pileup(chrom, start, end):

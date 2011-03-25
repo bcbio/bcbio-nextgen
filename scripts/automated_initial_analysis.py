@@ -40,9 +40,9 @@ from Bio import SeqIO
 
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
-from bcbio.picard.metrics import PicardMetricsParser
+from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
-from bcbio.picard import PicardRunner
+from bcbio.broad import BroadRunner
 from bcbio.log import create_log_handler
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -422,7 +422,7 @@ def merge_bam_files(bam_files, work_dir, config):
     """
     out_file = os.path.join(work_dir, os.path.basename(bam_files[0]))
     if not os.path.exists(out_file):
-        picard = PicardRunner(config["program"]["picard"])
+        picard = BroadRunner(config["program"]["picard"])
         with utils.curdir_tmpdir() as tmp_dir:
             opts = [("OUTPUT", out_file),
                     ("SORT_ORDER", "coordinate"),
@@ -487,8 +487,8 @@ def eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.
     """
     metrics_file = "%s.eval_metrics" % vrn_file
-    cl = ["gatk_variant_eval.py", config["program"]["gatk"], vrn_file,
-          ref_file, dbsnp_file]
+    cl = ["gatk_variant_eval.py", config["program"].get("gatk", config["program"]["picard"]),
+          vrn_file, ref_file, dbsnp_file]
     target = config["algorithm"].get("hybrid_target", "")
     if target:
         base_dir = os.path.dirname(os.path.dirname(ref_file))
