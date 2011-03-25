@@ -33,18 +33,18 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
                          config["program"].get("gatk", ""))
     ref_dict = index_ref_file(picard, ref_file)
     index_bam(align_bam, config["program"]["samtools"])
-    realign_target_file = realigner_targets(gatk, align_bam,
+    realign_target_file = realigner_targets(picard, align_bam,
             ref_file, dbsnp)
-    realign_bam = indel_realignment(gatk, align_bam, ref_file,
+    realign_bam = indel_realignment(picard, align_bam, ref_file,
             realign_target_file)
     realign_sort_bam = picard_fixmate(picard, realign_bam)
     index_bam(realign_sort_bam, config["program"]["samtools"])
-    snp_file = unified_genotyper(gatk, realign_sort_bam, ref_file,
+    snp_file = unified_genotyper(picard, realign_sort_bam, ref_file,
                                  dbsnp)
-    filter_snp = variant_filtration(gatk, snp_file, ref_file)
+    filter_snp = variant_filtration(picard, snp_file, ref_file)
     #eval_snp = variant_eval(picard, filter_snp, ref_file, dbsnp)
 
-def unified_genotyper(gatk, align_bam, ref_file, dbsnp=None):
+def unified_genotyper(picard, align_bam, ref_file, dbsnp=None):
     """Perform SNP genotyping on the given alignment file.
     """
     out_file = "%s-snp.vcf" % os.path.splitext(align_bam)[0]
@@ -69,10 +69,10 @@ def unified_genotyper(gatk, align_bam, ref_file, dbsnp=None):
     if dbsnp:
         params += ["-B:dbsnp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        gatk.run_gatk(params)
+        picard.run_gatk(params)
     return out_file
 
-def variant_filtration(gatk, snp_file, ref_file):
+def variant_filtration(picard, snp_file, ref_file):
     """Filter out problematic SNP calls.
 
     XXX missing:
@@ -99,10 +99,10 @@ def variant_filtration(gatk, snp_file, ref_file):
               "-l", "INFO",
               ]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        gatk.run_gatk(params)
+        picard.run_gatk(params)
     return out_file
 
-def NOTUSED_variant_eval(gatk, filter_snp, ref_file, dbsnp):
+def NOTUSED_variant_eval(picard, filter_snp, ref_file, dbsnp):
     """Provide summary evaluating called variants.
 
     XXX missing:
@@ -118,10 +118,10 @@ def NOTUSED_variant_eval(gatk, filter_snp, ref_file, dbsnp):
     if dbsnp:
         params += ["-B:comp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        gatk.run_gatk(params)
+        picard.run_gatk(params)
     return out_file
 
-def realigner_targets(gatk, align_bam, ref_file, dbsnp=None):
+def realigner_targets(picard, align_bam, ref_file, dbsnp=None):
     """Generate a list of interval regions for realignment around indels.
     """
     out_file = "%s-realign.intervals" % os.path.splitext(align_bam)[0]
@@ -134,10 +134,10 @@ def realigner_targets(gatk, align_bam, ref_file, dbsnp=None):
     if dbsnp:
         params += ["-B:dbsnp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        gatk.run_gatk(params)
+        picard.run_gatk(params)
     return out_file
 
-def indel_realignment(gatk, align_bam, ref_file, intervals):
+def indel_realignment(picard, align_bam, ref_file, intervals):
     """Perform realignment of BAM file in specified regions
     """
     out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
@@ -150,7 +150,7 @@ def indel_realignment(gatk, align_bam, ref_file, intervals):
               ]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with curdir_tmpdir() as tmp_dir:
-            gatk.run_gatk(params, tmp_dir)
+            picard.run_gatk(params, tmp_dir)
     return out_file
 
 def picard_fixmate(picard, align_bam):
