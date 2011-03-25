@@ -29,9 +29,9 @@ import yaml
 from amqplib import client_0_8 as amqp
 import logbook
 
+from bcbio import utils
 from bcbio.solexa import samplesheet
 from bcbio.log import create_log_handler
-from bcbio.broad import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -160,7 +160,7 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
         
-        logs = reduce(operator.add, ["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"])
+        logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
         run_info = glob.glob("run_info.yaml")
         fastq = ["Data/Intensities/BaseCalls/fastq"]
         
