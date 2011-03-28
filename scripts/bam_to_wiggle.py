@@ -29,6 +29,7 @@ If a configuration file is used, then PyYAML is also required (http://pyyaml.org
 import os
 import sys
 import subprocess
+import tempfile
 from optparse import OptionParser
 from contextlib import contextmanager
 
@@ -57,9 +58,11 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
         #of Galaxy since that appears to create an empty placeholder file.
         #print "Warning, replacing existing file!"
         os.remove(outfile)
-    wig_file = "%s.wig" % os.path.splitext(bam_file)[0]
-    with open(wig_file, "w") as out_handle:
-        chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
+    #Use a temp file to avoid any possiblity of not having write permission
+    out_handle = tempfile.NamedTemporaryFile(delete=False)
+    wig_file = out_handle.name
+    chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
+    out_handle.close()
     try:
         if wig_valid:
             convert_to_bigwig(wig_file, chr_sizes, config, outfile)
