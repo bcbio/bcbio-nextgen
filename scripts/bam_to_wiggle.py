@@ -10,6 +10,9 @@ Usage:
 
 chrom start and end are optional, in which case they default to everything.
 
+Warning: If the output file already exists, it will be replaced!
+Earlier versions of this script would silently abort in this situation.
+
 The config file is in YAML format and specifies the location of the wigToBigWig
 program from UCSC:
 
@@ -46,15 +49,19 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
     if end is not None:
         end = int(end)
     regions = [(chrom, start, end)]
-    if not os.path.exists(outfile):
-        wig_file = "%s.wig" % os.path.splitext(bam_file)[0]
-        with open(wig_file, "w") as out_handle:
-            chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
-        try:
-            if wig_valid:
-                convert_to_bigwig(wig_file, chr_sizes, config, outfile)
-        finally:
-            os.remove(wig_file)
+    if os.path.exists(outfile):
+        #Replacing the file by default is essential on the current version
+        #of Galaxy since that appears to create an empty placeholder file.
+        #print "Warning, replacing existing file!"
+        os.remove(outfile)
+    wig_file = "%s.wig" % os.path.splitext(bam_file)[0]
+    with open(wig_file, "w") as out_handle:
+        chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
+    try:
+        if wig_valid:
+            convert_to_bigwig(wig_file, chr_sizes, config, outfile)
+    finally:
+        os.remove(wig_file)
 
 @contextmanager
 def indexed_bam(bam_file, config):
