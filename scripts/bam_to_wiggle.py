@@ -49,6 +49,9 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
     if end is not None:
         end = int(end)
     regions = [(chrom, start, end)]
+    if os.path.abspath(bam_file) == os.path.abspath(outfile):
+        sys.stderr.write("Bad arguments, input and output files are the same.\n")
+        sys.exit(1)
     if os.path.exists(outfile):
         #Replacing the file by default is essential on the current version
         #of Galaxy since that appears to create an empty placeholder file.
