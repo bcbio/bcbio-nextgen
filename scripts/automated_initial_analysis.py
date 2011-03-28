@@ -67,7 +67,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     else:
         log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name)
+        run_info = galaxy_api.run_details(fc_name, fc_date)
     fastq_dir = get_fastq_dir(fc_dir)
     run_items = _add_multiplex_across_lanes(run_info["details"], fastq_dir, fc_name)
     align_dir = os.path.join(work_dir, "alignments")
