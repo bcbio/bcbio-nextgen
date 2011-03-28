@@ -29,9 +29,9 @@ import yaml
 from amqplib import client_0_8 as amqp
 import logbook
 
-from bcbio import utils
 from bcbio.solexa import samplesheet
 from bcbio.log import create_log_handler
+from bcbio import utils
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -108,8 +108,7 @@ def _generate_qseq(bc_dir, config):
         log.info("Generating qseq files at %s" % bc_dir)
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "-p", os.path.split(bc_dir)[0],
-              "--in-place", "--overwrite"]
+        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite"]
         # in OLB version 1.9, the -i flag changed to intensities instead of input
         version_cl = [cmd, "-v"]
         p = subprocess.Popen(version_cl, stdout=subprocess.PIPE)
@@ -118,7 +117,7 @@ def _generate_qseq(bc_dir, config):
         if olb_version > 1.8:
             cl += ["-b", bc_dir]
         else:
-            cl += ["-i", bc_dir]
+            cl += ["-i", bc_dir, "-p", os.path.split(bc_dir)[0]]
         subprocess.check_call(cl)
         log.info("Qseq files generated.")
         with utils.chdir(bc_dir):
@@ -137,7 +136,7 @@ def _is_finished_dumping(directory):
     """
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt",
-                "Basecalling_Netcopy_complete_Read2.txt"]
+                "Basecalling_Netcopy_complete_Read3.txt"]
 
     return reduce(operator.or_,
             [os.path.exists(os.path.join(directory, f)) for f in to_check])
