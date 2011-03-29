@@ -108,7 +108,7 @@ def _generate_qseq(bc_dir, config):
         log.info("Generating qseq files at %s" % bc_dir)
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite"]
+        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "-P", "_pos.txt", "--in-place", "--overwrite"]
         # in OLB version 1.9, the -i flag changed to intensities instead of input
         version_cl = [cmd, "-v"]
         p = subprocess.Popen(version_cl, stdout=subprocess.PIPE)
