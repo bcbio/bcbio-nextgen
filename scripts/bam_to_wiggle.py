@@ -10,9 +10,6 @@ Usage:
 
 chrom start and end are optional, in which case they default to everything.
 
-Warning: If the output file already exists, it will be replaced!
-Earlier versions of this script would silently abort in this situation.
-
 The config file is in YAML format and specifies the location of the wigToBigWig
 program from UCSC:
 
@@ -31,7 +28,7 @@ import sys
 import subprocess
 import tempfile
 from optparse import OptionParser
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 
 import pysam
 
@@ -53,21 +50,17 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
     if os.path.abspath(bam_file) == os.path.abspath(outfile):
         sys.stderr.write("Bad arguments, input and output files are the same.\n")
         sys.exit(1)
-    if os.path.exists(outfile):
-        #Replacing the file by default is essential on the current version
-        #of Galaxy since that appears to create an empty placeholder file.
-        #print "Warning, replacing existing file!"
-        os.remove(outfile)
-    #Use a temp file to avoid any possiblity of not having write permission
-    out_handle = tempfile.NamedTemporaryFile(delete=False)
-    wig_file = out_handle.name
-    chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
-    out_handle.close()
-    try:
-        if wig_valid:
-            convert_to_bigwig(wig_file, chr_sizes, config, outfile)
-    finally:
-        os.remove(wig_file)
+    if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
+        #Use a temp file to avoid any possiblity of not having write permission
+        out_handle = tempfile.NamedTemporaryFile(delete=False)
+        wig_file = out_handle.name
+        with closing(out_handle):
+            chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle)
+        try:
+            if wig_valid:
+                convert_to_bigwig(wig_file, chr_sizes, config, outfile)
+        finally:
+            os.remove(wig_file)
 
 @contextmanager
 def indexed_bam(bam_file, config):

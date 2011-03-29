@@ -435,7 +435,7 @@ def bam_to_wig(bam_file, config, config_file):
     """Provide a BigWig coverage file of the sorted alignments.
     """
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
-    if not os.path.exists(wig_file):
+    if not (os.path.exists(wig_file) and os.path.getsize(wig_file) > 0):
         cl = [config["analysis"]["towig_script"], bam_file, config_file]
         subprocess.check_call(cl)
     return wig_file
