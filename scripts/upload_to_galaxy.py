@@ -41,7 +41,7 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
         galaxy_api = None
     else:
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name)
+        run_info = galaxy_api.run_details(fc_name, fc_date)
 
     base_folder_name = "%s_%s" % (fc_date, fc_name)
     run_details = lims_run_details(run_info, fc_name, base_folder_name)
