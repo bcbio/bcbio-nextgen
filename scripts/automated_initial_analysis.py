@@ -114,7 +114,6 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)
         if os.path.exists(fastq1) and config["algorithm"]["aligner"]:
-            print "CANNOT GET TOPHAT"+config["algorithm"]["aligner"]
             do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
                     msample, align_dir, config, config_file)
 
@@ -205,9 +204,12 @@ def _get_fastq_size(item, fastq_dir, fc_name):
     """Retrieve the size of reads from the first flowcell sequence.
     """
     (fastq1, _) = get_fastq_files(fastq_dir, item['lane'], fc_name)
-    with open(fastq1) as in_handle:
-        rec = SeqIO.parse(in_handle, "fastq").next()
-    return len(rec.seq)
+    try:
+        with open(fastq1) as in_handle:
+            rec = SeqIO.parse(in_handle, "fastq").next()
+        return len(rec.seq)
+    except StopIteration:
+            log.warn("Found a zero-sized fastq file for lane %s" % item['lane'])
 
 def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     """Add multiplex information to control and non-multiplexed lanes.
