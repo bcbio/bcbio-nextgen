@@ -343,8 +343,7 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         cl += [out_file]
         cl = [str(i) for i in cl]
         log.info("Running bowtie with cmdline: %s" % " ".join(cl))
-        child = subprocess.Popen(cl)
-        child.wait()
+        subprocess.check_call(cl)
     return out_file
 
 def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
@@ -381,8 +380,7 @@ def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, confi
         if sai2_file:
             sam_cl.append(pair_file)
         with open(sam_file, "w") as out_handle:
-            child = subprocess.Popen(sam_cl, stdout=out_handle)
-            child.wait()
+            subprocess.check_call(sam_cl, stdout=out_handle)
     return sam_file
 
 def maq_align_to_sam(fastq_file, pair_file, ref_file, out_base,
