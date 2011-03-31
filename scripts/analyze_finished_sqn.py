@@ -104,6 +104,7 @@ def _remote_copy(remote_info, config):
                    remote_info["directory"], fcopy),
                   target_loc]
             fabric.run(" ".join(cl))
+    log.info("Analysis files copied")
     return fc_dir
 
 def analysis_handler(processing_config, tag_name, config_file):
