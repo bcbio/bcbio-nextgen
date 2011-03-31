@@ -81,7 +81,7 @@ def write_bam_track(bam_file, regions, config, out_handle, normalize):
     normal_scale = 1e6
     is_valid = False
     with indexed_bam(bam_file, config) as work_bam:
-        total = sum(1 for _ in work_bam.fetch()) if normalize else None
+        total = sum(1 for r in work_bam.fetch() if not r.is_unmapped) if normalize else None
         sizes = zip(work_bam.references, work_bam.lengths)
         if len(regions) == 1 and regions[0][0] == "all":
             regions = [(name, 0, length) for name, length in sizes]
