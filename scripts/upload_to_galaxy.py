@@ -72,7 +72,7 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
 # the Galaxy NGLIMs.
 # Also includes function for selecting files to upload from flow cell and
 # analysis directories.
-# These should be editing to match a local workflow if adjusting this.
+# These should be edited to match a local workflow if adjusting this.
 
 def lims_run_details(run_info, fc_name, base_folder_name):
     """Retrieve run infomation on a flow cell from Next Gen LIMS.
@@ -126,31 +126,31 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir):
     for fname in glob.glob(os.path.join(fastq_dir, "%s_*fastq.txt" % base)):
         yield (fname, os.path.basename(fname))
     for summary_file in glob.glob(os.path.join(analysis_dir,
-            "%s-*summary.pdf" % base)):
+            "%s*summary.pdf" % base)):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s-*sort-dup.bam" % base)):
+            "%s*sort-dup.bam" % base)):
         yield (bam_file, _name_with_ext(bam_file, ".bam"))
     for wig_file in glob.glob(os.path.join(analysis_dir,
-            "%s-*sort.bigwig" % base)):
+            "%s*sort.bigwig" % base)):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload any recalibrated BAM files used for SNP calling
     found_recal = False
     for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s-*gatkrecal-realign-sort.bam" % base)):
+            "%s*gatkrecal-realign-sort.bam" % base)):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
         for bam_file in glob.glob(os.path.join(analysis_dir,
-                "%s-*gatkrecal.bam" % base)):
+                "%s*gatkrecal.bam" % base)):
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
     # Genotype files produced by SNP calling
     for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s-*snp-filter.vcf" % base)):
+            "%s*snp-filter.vcf" % base)):
         yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
     # Effect information on SNPs
     for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s-*snp-filter-effects.tsv" % base)):
+            "%s*snp-filter-effects.tsv" % base)):
         yield (snp_file, _name_with_ext(bam_file, "-snp-effects.tsv"))
 
 def _name_with_ext(orig_file, ext):
