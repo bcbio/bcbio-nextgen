@@ -60,7 +60,7 @@ def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
         try:
             os.makedirs(image_dir)
         except OSError:
-            pass
+            assert os.path.isdir(image_dir)
     (base, _) = os.path.splitext(recal_bam)
     orig_files = {1: fastq1, 2: fastq2}
 

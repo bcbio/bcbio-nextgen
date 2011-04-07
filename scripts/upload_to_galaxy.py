@@ -29,6 +29,7 @@ import yaml
 
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
 from bcbio.galaxy.api import GalaxyApiAccess
+from bcbio import utils
 
 def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
@@ -238,8 +239,7 @@ def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files, config)
 def _get_storage_dir(cur_folder, lane, bc_id, storage_base):
     base = "%s_%s" % (lane, bc_id) if bc_id else str(lane)
     store_dir = os.path.join(storage_base, cur_folder, base)
-    if not os.path.exists(store_dir):
-        os.makedirs(store_dir)
+    utils.safe_makedir(store_dir)
     return store_dir
 
 def get_galaxy_library(lab_association, galaxy_api):
