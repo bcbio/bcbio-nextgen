@@ -31,6 +31,7 @@ from mako.template import Template
 
 from bcbio.broad import BroadRunner
 from bcbio.broad.metrics import PicardMetrics
+from bcbio import utils
 
 PARAM_DEFAULT = dict(
         fastx_stats = "fastx_quality_stats",
@@ -43,47 +44,46 @@ PARAM_DEFAULT = dict(
 def main(picard_dir, align_bam, ref_file, fastq_one, fastq_pair=None,
         bait_file=None, target_file=None, do_sort=False, sample_name="",
         config=None):
-    tmp_dir = _make_tmpdir()
-    work_dir = os.getcwd()
-    if config:
-        with open(config) as in_handle:
-            params = yaml.load(in_handle)["program"]
-    else:
-        params = PARAM_DEFAULTS
-    picard = BroadRunner(picard_dir)
-    if do_sort:
-        align_bam = picard_sort(picard, align_bam, tmp_dir)
+    with utils.curdir_tmpdir() as tmp_dir:
+        work_dir = os.getcwd()
+        if config:
+            with open(config) as in_handle:
+                params = yaml.load(in_handle)["program"]
+        else:
+            params = PARAM_DEFAULTS
+        picard = BroadRunner(picard_dir)
+        if do_sort:
+            align_bam = picard_sort(picard, align_bam, tmp_dir)
 
-    metrics = PicardMetrics(picard, tmp_dir)
-    summary_table, metrics_graphs = metrics.report(
-            align_bam, ref_file, fastq_pair is not None,
-            bait_file, target_file)
-    base, ext = os.path.splitext(align_bam)
-    base = base.replace(".", "-")
-    total_count, read_size, fastq_graphs = plot_fastq_stats(
-            [fastq_one, fastq_pair], base, params)
-    qa_graphs = solexaqa_plots([fastq_one, fastq_pair], params, work_dir)
+        metrics = PicardMetrics(picard, tmp_dir)
+        summary_table, metrics_graphs = metrics.report(
+                align_bam, ref_file, fastq_pair is not None,
+                bait_file, target_file)
+        base, ext = os.path.splitext(align_bam)
+        base = base.replace(".", "-")
+        total_count, read_size, fastq_graphs = plot_fastq_stats(
+                [fastq_one, fastq_pair], base, params)
+        qa_graphs = solexaqa_plots([fastq_one, fastq_pair], params, work_dir)
 
-    # add read_size to the total summary table
-    summary_table[0] = (summary_table[0][0], summary_table[0][1],
-            "%sbp %s" % (read_size, summary_table[0][-1]))
-    ref_org = os.path.splitext(os.path.split(ref_file)[-1])[0]
-    summary_table.insert(0, ("Reference organism",
-        ref_org.replace("_", " "), ""))
-    tmpl = Template(section_template)
-    sample_name = "%s (%s)" % (sample_name.replace("_", "\_"),
-            base.replace("_", " "))
-    section = tmpl.render(name=sample_name, summary=None,
-            summary_table=summary_table,
-            figures=[(f, c) for (f, c) in metrics_graphs + fastq_graphs +
-                     qa_graphs if f],
-            recal_figures=_get_recal_plots(work_dir, align_bam))
-    out_file = "%s-summary.tex" % base
-    out_tmpl = Template(base_template)
-    with open(out_file, "w") as out_handle:
-        out_handle.write(out_tmpl.render(parts=[section]))
-    run_pdflatex(out_file, params)
-    shutil.rmtree(tmp_dir)
+        # add read_size to the total summary table
+        summary_table[0] = (summary_table[0][0], summary_table[0][1],
+                "%sbp %s" % (read_size, summary_table[0][-1]))
+        ref_org = os.path.splitext(os.path.split(ref_file)[-1])[0]
+        summary_table.insert(0, ("Reference organism",
+            ref_org.replace("_", " "), ""))
+        tmpl = Template(section_template)
+        sample_name = "%s (%s)" % (sample_name.replace("_", "\_"),
+                base.replace("_", " "))
+        section = tmpl.render(name=sample_name, summary=None,
+                summary_table=summary_table,
+                figures=[(f, c) for (f, c) in metrics_graphs + fastq_graphs +
+                         qa_graphs if f],
+                recal_figures=_get_recal_plots(work_dir, align_bam))
+        out_file = "%s-summary.tex" % base
+        out_tmpl = Template(base_template)
+        with open(out_file, "w") as out_handle:
+            out_handle.write(out_tmpl.render(parts=[section]))
+        run_pdflatex(out_file, params)
 
 def plot_fastq_stats(fastq_files, out_base, params):
     """Use fastx toolkit to prepare a plot of quality statistics.
@@ -185,15 +185,6 @@ def _get_recal_plots(work_dir, align_bam):
         "%s*-plot.pdf" % base))
     reports.sort()
     return reports
-
-def _make_tmpdir():
-    tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-    if not os.path.exists(tmp_dir_base):
-        os.makedirs(tmp_dir_base)
-    tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
-    if not os.path.exists(tmp_dir):
-        os.makedirs(tmp_dir)
-    return tmp_dir
 
 section_template = r"""
 \subsection*{${name}}
