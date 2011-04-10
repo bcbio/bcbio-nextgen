@@ -174,10 +174,10 @@ to ease your development needs using the following script:
         wget https://bitbucket.org/brainstorm/custom_env/raw/1cd4f4ae27d5/pyHost.sh && ./pyHost.sh
 
 [i1]: http://macnugget.org/projects/publickeys/
-[i2]: http://cloudbiolinux.com
+[i2]: http://cloudbiolinux.org
 [i3]: http://www.biomedcentral.com/1471-2105/11/S12/S4
-[i4]: https://github.com/chapmanb/bcbb/blob/master/ec2/biolinux/fabfile.py
-[i5]: https://github.com/chapmanb/bcbb/blob/master/ec2/biolinux/data_fabfile.py
+[i4]: https://github.com/chapmanb/cloudbiolinux/blob/master/fabfile.py
+[i5]: https://github.com/chapmanb/cloudbiolinux/blob/master/data_fabfile.py
 [i6]: https://bitbucket.org/afgane/mi-deployment/src
 [i7]: http://somethingaboutorange.com/mrl/projects/nose/
 
