@@ -14,7 +14,7 @@ The local config should have the following information:
     dump_directories: directories to check for machine output
     msg_db: flat file of output directories that have been reported
 """
-import os
+import os, shutil
 import sys
 import json
 import operator
@@ -62,6 +62,7 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
                     log.info("CSV Samplesheet %s found, converting to %s" %
                              (ss_file, out_file))
                     samplesheet.csv2yaml(ss_file, out_file)
+                    copyfile(ss_file, dname)
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
@@ -162,7 +163,8 @@ def _files_to_copy(directory):
                        "Data/Status.htm", "Data/Status_Files", "InterOp"]])
         
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
-        run_info = glob.glob("run_info.yaml")
+        run_info = glob.glob("run_info.yaml", "*.csv")
+
         fastq = ["Data/Intensities/BaseCalls/fastq"]
         
     return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)
