@@ -270,12 +270,12 @@ def _get_fastq_handles(bam_file, is_paired):
     out_handles = dict()
     if is_paired:
         for index in [1, 2]:
-            cur_file = "%s_%s_fastq.txt" % (base, index)
+            cur_file = "%s_%s_fastq" % (base, index)
             out_files.append(cur_file)
             if not (os.path.exists(cur_file) and os.path.getsize(cur_file) > 0):
                 out_handles[index] = open(cur_file, "w")
     else:
-        cur_file = "%s_fastq.txt" % base
+        cur_file = "%s_fastq" % base
         out_files.append(cur_file)
         out_files.append(None)
         if not(os.path.exists(cur_file) and os.path.getsize(cur_file) > 0):
