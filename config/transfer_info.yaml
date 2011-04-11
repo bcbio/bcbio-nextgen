@@ -5,6 +5,7 @@ dump_directories:
   - /array11
   - /array12
 log_dir: /home/chapman/transfer/log
+email_notify: ngs_admin@example.com
 samplesheet_directories:
   - /path/to/csv/samplesheets/dir
 # Pointer to a plain text file which will be used to keep track of 

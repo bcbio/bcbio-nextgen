@@ -154,10 +154,12 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*qseq.txt"),
                       ])
         reports = reduce(operator.add,
-                     [glob.glob("Data/Intensities/BaseCalls/*.xml"),
+                     [glob.glob("*.xml"),
+                      glob.glob("Data/Intensities/BaseCalls/*.xml"),
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
-                      ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
+                      ["Data/Intensities/BaseCalls/Plots", "Data/reports", 
+                       "Data/Status.htm", "Data/Status_Files", "InterOp"]])
         
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
         run_info = glob.glob("run_info.yaml")
