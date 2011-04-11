@@ -64,6 +64,7 @@ def copy_and_analyze(remote_info, config, config_file):
         config_file = config["analysis"]["config_file"]
     elif not config_file.startswith("/"):
         config_file = os.path.join(os.getcwd(), config_file)
+
     # Converted from an Illumina/Genesifter SampleSheet.csv
     run_yaml = os.path.join(config["analysis"]["store_dir"],
                                 os.path.basename(fc_dir), "run_info.yaml")

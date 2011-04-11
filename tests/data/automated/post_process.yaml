@@ -5,9 +5,9 @@ program:
   bwa: bwa
   maq: maq
   ucsc_bigwig: wigToBigWig
-  picard: /usr/share/java/picard
-  gatk: /usr/share/java/gatk
-  snpEff: /usr/share/java/snpeff
+  picard: /bubo/sw/apps/bioinfo/picard/1.40/
+  gatk: /bubo/sw/apps/bioinfo/GATK/1.0.5365/kalkyl
+  snpEff: /bubo/home/h5/roman/glob/snpEff
   fastx_stats: fastx_quality_stats
   fastx_graph: fastq_quality_boxplot_graph.sh
   pdflatex: pdflatex
@@ -17,7 +17,7 @@ program:
 algorithm:
   aligner: bowtie
   max_errors: 2
-  num_cores: 1
+  num_cores: 8
   stringency: high
   platform: illumina
   recalibrate: false

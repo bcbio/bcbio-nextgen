@@ -256,13 +256,13 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     if not multiplex:
         return [("", "", fastq1, fastq2)]
     bc_dir = "%s_barcode" % base_name
-    nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
+    nomatch_file = "%s_unmatched_1_fastq" % base_name
     metrics_file = "%s_bc.metrics" % base_name
     with utils.chdir(bc_dir):
         if not os.path.exists(nomatch_file):
             tag_file = _make_tag_file(multiplex)
             cl = [config["program"]["barcode"], tag_file,
-                  "%s_--b--_--r--_fastq.txt" % base_name,
+                  "%s_--b--_--r--_fastq" % base_name,
                   fastq1]
             if fastq2:
                 cl.append(fastq2)
@@ -275,7 +275,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
             subprocess.check_call(cl)
     out_files = []
     for info in multiplex:
-        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s_fastq.txt" %
+        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s_fastq" %
                              (base_name, info["barcode_id"], x))
         bc_file1 = fq_fname("1")
         bc_file2 = fq_fname("2") if fastq2 else None

@@ -17,7 +17,7 @@ Usage:
 for all barcodes present in the fastq multiplex.
 
 <out format> specifies how the output files should be written:
-    1_100721_FC626DUAAX_--b--_--r--_fastq.txt
+    1_100721_FC626DUAAX_--b--_--r--_fastq
   It should contain two values for substitution:
     --b-- Location of the barcode identifier
     --r-- Location of the read number (1 or 2)

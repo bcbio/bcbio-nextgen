@@ -14,7 +14,7 @@ The local config should have the following information:
     dump_directories: directories to check for machine output
     msg_db: flat file of output directories that have been reported
 """
-import os
+import os, shutil
 import sys
 import json
 import operator
@@ -62,6 +62,7 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
                     log.info("CSV Samplesheet %s found, converting to %s" %
                              (ss_file, out_file))
                     samplesheet.csv2yaml(ss_file, out_file)
+                    copyfile(ss_file, dname)
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
@@ -108,7 +109,7 @@ def _generate_qseq(bc_dir, config):
         log.info("Generating qseq files at %s" % bc_dir)
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite"]
+        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "-P", "_pos.txt", "--in-place", "--overwrite"]
         # in OLB version 1.9, the -i flag changed to intensities instead of input
         version_cl = [cmd, "-v"]
         p = subprocess.Popen(version_cl, stdout=subprocess.PIPE)
@@ -154,13 +155,16 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*qseq.txt"),
                       ])
         reports = reduce(operator.add,
-                     [glob.glob("Data/Intensities/BaseCalls/*.xml"),
+                     [glob.glob("*.xml"),
+                      glob.glob("Data/Intensities/BaseCalls/*.xml"),
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
-                      ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
+                      ["Data/Intensities/BaseCalls/Plots", "Data/reports", 
+                       "Data/Status.htm", "Data/Status_Files", "InterOp"]])
         
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
-        run_info = glob.glob("run_info.yaml")
+        run_info = glob.glob("run_info.yaml", "*.csv")
+
         fastq = ["Data/Intensities/BaseCalls/fastq"]
         
     return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)

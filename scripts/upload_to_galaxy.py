@@ -122,13 +122,8 @@ def _get_galaxy_libname(private_libs, lab_association, researcher):
 def select_upload_files(base, bc_id, fc_dir, analysis_dir):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
-    # look for fastq files in a barcode directory or the main fastq directory
-    bc_base = base.rsplit("_", 1)[0] if bc_id else base
-    bc_dir = os.path.join(analysis_dir, "%s_barcode" % bc_base)
-    fastq_glob = "%s_*fastq.txt" % base
-    found_fastq = False
-    for fname in glob.glob(os.path.join(bc_dir, fastq_glob)):
-        found_fastq = True
+    fastq_dir = analysis_dir if bc_id else get_fastq_dir(fc_dir)
+    for fname in glob.glob(os.path.join(fastq_dir, "%s_*fastq" % base)):
         yield (fname, os.path.basename(fname))
     if not found_fastq:
         fastq_dir = get_fastq_dir(fc_dir)
