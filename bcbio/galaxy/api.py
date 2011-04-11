@@ -71,13 +71,18 @@ class GalaxyApiAccess:
                     file_type=file_type, link_data_only=str(link_data_only)),
                 need_return=False)
 
-    def run_details(self, run):
+    def run_details(self, run_bc, run_date=None):
         """Next Gen LIMS specific API functionality.
         """
         try:
-            details = self._get("/nglims/api_run_details", dict(run=run))
+            details = self._get("/nglims/api_run_details", dict(run=run_bc))
         except ValueError:
-            raise ValueError("Could not find information in Galaxy for run: %s" % run)
+            raise ValueError("Could not find information in Galaxy for run: %s" % run_bc)
+        if details.has_key("error") and run_date is not None:
+            try:
+                details = self._get("/nglims/api_run_details", dict(run=run_date))
+            except ValueError:
+                raise ValueError("Could not find information in Galaxy for run: %s" % run_date)
         return details
 
     def sequencing_projects(self):
