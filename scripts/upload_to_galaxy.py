@@ -123,7 +123,7 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
     fastq_dir = analysis_dir if bc_id else get_fastq_dir(fc_dir)
-    for fname in glob.glob(os.path.join(fastq_dir, "%s_*fastq.txt" % base)):
+    for fname in glob.glob(os.path.join(fastq_dir, "%s_*fastq" % base)):
         yield (fname, os.path.basename(fname))
     for summary_file in glob.glob(os.path.join(analysis_dir,
             "%s-*summary.pdf" % base)):
