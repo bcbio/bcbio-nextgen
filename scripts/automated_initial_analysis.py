@@ -67,7 +67,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     else:
         log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name)
+        run_info = galaxy_api.run_details(fc_name, fc_date)
     fastq_dir = get_fastq_dir(fc_dir)
     run_items = _add_multiplex_across_lanes(run_info["details"], fastq_dir, fc_name)
     align_dir = os.path.join(work_dir, "alignments")
@@ -114,7 +114,6 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)
         if os.path.exists(fastq1) and config["algorithm"]["aligner"]:
-            print "CANNOT GET TOPHAT"+config["algorithm"]["aligner"]
             do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
                     msample, align_dir, config, config_file)
 
@@ -205,9 +204,12 @@ def _get_fastq_size(item, fastq_dir, fc_name):
     """Retrieve the size of reads from the first flowcell sequence.
     """
     (fastq1, _) = get_fastq_files(fastq_dir, item['lane'], fc_name)
-    with open(fastq1) as in_handle:
-        rec = SeqIO.parse(in_handle, "fastq").next()
-    return len(rec.seq)
+    try:
+        with open(fastq1) as in_handle:
+            rec = SeqIO.parse(in_handle, "fastq").next()
+        return len(rec.seq)
+    except StopIteration:
+            log.warn("Found a zero-sized fastq file for lane %s" % item['lane'])
 
 def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     """Add multiplex information to control and non-multiplexed lanes.
@@ -341,8 +343,7 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         cl += [out_file]
         cl = [str(i) for i in cl]
         log.info("Running bowtie with cmdline: %s" % " ".join(cl))
-        child = subprocess.Popen(cl)
-        child.wait()
+        subprocess.check_call(cl)
     return out_file
 
 def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
@@ -379,8 +380,7 @@ def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, confi
         if sai2_file:
             sam_cl.append(pair_file)
         with open(sam_file, "w") as out_handle:
-            child = subprocess.Popen(sam_cl, stdout=out_handle)
-            child.wait()
+            subprocess.check_call(sam_cl, stdout=out_handle)
     return sam_file
 
 def maq_align_to_sam(fastq_file, pair_file, ref_file, out_base,
@@ -436,7 +436,7 @@ def bam_to_wig(bam_file, config, config_file):
     """Provide a BigWig coverage file of the sorted alignments.
     """
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
-    if not os.path.exists(wig_file):
+    if not (os.path.exists(wig_file) and os.path.getsize(wig_file) > 0):
         cl = [config["analysis"]["towig_script"], bam_file, config_file]
         subprocess.check_call(cl)
     return wig_file
