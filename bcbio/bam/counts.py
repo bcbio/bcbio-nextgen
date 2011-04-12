@@ -19,7 +19,7 @@ class NormalizedBam:
         if quick:
             self._total = 1e6
         else:
-            self._total = sum(1 for _ in self._bam.fetch())
+            self._total = sum(1 for r in self._bam.fetch() if not r.is_unmapped)
             print name, self._total
 
     def all_regions(self):
