@@ -18,6 +18,6 @@ def create_log_handler(config, log_name):
         
     if email:
         handler = logbook.MailHandler(email, [email], subject = "BCBB pipeline notification",
-                                      server_addr=localhost, format_string=logbook.handlers.MAIL_FORMAT_STRING,
+                                      format_string=logbook.handlers.MAIL_FORMAT_STRING,
                                       level='INFO', bubble = True)
     return handler
