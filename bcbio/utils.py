@@ -64,7 +64,11 @@ def map_wrap(f):
 def curdir_tmpdir():
     """Context manager to create and remove a temporary directory.
     """
-    tmp_dir_base = os.path.join(os.getcwd(), "tmp")
+    if os.getenv("TMPDIR"):
+        tmp_dir_base = os.getenv("TMPDIR")
+    else:
+        tmp_dir_base = os.path.join(os.getcwd(), "tmp")
+
     if not os.path.exists(tmp_dir_base):
         # we could get an error here if multiple processes are creating
         # the directory at the same time. Grr, concurrency.
