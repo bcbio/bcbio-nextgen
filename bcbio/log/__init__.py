@@ -17,7 +17,9 @@ def create_log_handler(config, log_name):
         handler = logbook.StreamHandler(sys.stdout)
         
     if email:
-        handler = logbook.MailHandler(email, [email], subject = "BCBB pipeline notification",
-                                      format_string=logbook.handlers.MAIL_FORMAT_STRING,
+        handler = logbook.MailHandler(email, [email], 
+                                      format_string=u'''Subject: [BCBB pipeline] Run {record.extra[run]} \
+                                      
+                                      {record.message}''',
                                       level='INFO', bubble = True)
     return handler

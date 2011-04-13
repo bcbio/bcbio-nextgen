@@ -43,12 +43,14 @@ def main(galaxy_config, local_config, process_msg=True, store_msg=True,
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
+    
     with log_handler.applicationbound():
         search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq)
 
 def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
     """Search for any new directories that have not been reported.
     """
+
     reported = _read_reported(config["msg_db"])
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
@@ -56,28 +58,31 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
 
-                ss_file = samplesheet.run_has_samplesheet(dname, config)
-                if ss_file:
-                    out_file = os.path.join(dname, "run_info.yaml")
-                    log.info("CSV Samplesheet %s found, converting to %s" %
-                             (ss_file, out_file))
-                    samplesheet.csv2yaml(ss_file, out_file)
-                    copyfile(ss_file, dname)
-                if qseq:
-                    log.info("Generating qseq files for %s" % dname)
-                    _generate_qseq(get_qseq_dir(dname), config)
-                if fastq:
-                    log.info("Generating fastq files for %s" % dname)
-                    _generate_fastq(dname, config)
-
-                store_files, process_files = _files_to_copy(dname)
-
-                if process_msg:
-                    finished_message(config["msg_process_tag"], dname,
-                                     process_files, amqp_config)
-                if store_msg:
-                    finished_message(config["msg_store_tag"], dname,
-                                     store_files, amqp_config)
+                # Injects run_name on logging calls.
+                # Convenient for run_name on "Subject" for email notifications
+                with logbook.Processor(lambda record: record.extra.__setitem__('run', os.path.basename(dname))):
+                    ss_file = samplesheet.run_has_samplesheet(dname, config)
+                    if ss_file:
+                        out_file = os.path.join(dname, "run_info.yaml")
+                        log.info("CSV Samplesheet %s found, converting to %s" %
+                                 (ss_file, out_file))
+                        samplesheet.csv2yaml(ss_file, out_file)
+                        copyfile(ss_file, dname)
+                    if qseq:
+                        log.info("Generating qseq files for %s" % dname)
+                        _generate_qseq(get_qseq_dir(dname), config)
+                    if fastq:
+                        log.info("Generating fastq files for %s" % dname)
+                        _generate_fastq(dname, config)
+    
+                    store_files, process_files = _files_to_copy(dname)
+    
+                    if process_msg:
+                        finished_message(config["msg_process_tag"], dname,
+                                         process_files, amqp_config)
+                    if store_msg:
+                        finished_message(config["msg_store_tag"], dname,
+                                         store_files, amqp_config)
 
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
@@ -162,9 +167,12 @@ def _files_to_copy(directory):
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports", 
                        "Data/Status.htm", "Data/Status_Files", "InterOp"]])
         
+        run_info = reduce(operator.add,
+                        [glob.glob("run_info.yaml"),
+                         glob.glob("*.csv"),
+                        ])
+        
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
-        run_info = glob.glob("run_info.yaml", "*.csv")
-
         fastq = ["Data/Intensities/BaseCalls/fastq"]
         
     return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)
