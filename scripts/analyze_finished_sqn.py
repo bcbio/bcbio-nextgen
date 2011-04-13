@@ -68,8 +68,11 @@ def copy_and_analyze(remote_info, config, config_file):
     # Converted from an Illumina/Genesifter SampleSheet.csv
     run_yaml = os.path.join(config["analysis"]["store_dir"],
                                 os.path.basename(fc_dir), "run_info.yaml")
-    if not os.path.exists(run_yaml):
-        run_yaml = None
+    
+    # TODO: Find a solution for PUSH architecture (check if *remote* file exists too)
+    # fabric_files.exists(run_yaml)
+    #if not os.path.exists(run_yaml):
+    #    run_yaml = None
 
     analysis_dir = os.path.join(config["analysis"]["base_dir"],
                                 os.path.basename(remote_info["directory"]))

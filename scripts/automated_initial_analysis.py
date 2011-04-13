@@ -23,7 +23,7 @@ import os
 import sys
 import json
 import contextlib
-import subprocess
+import subprocess, shlex
 import glob
 import copy
 import csv
@@ -52,6 +52,7 @@ def main(config_file, fc_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
+    
     with log_handler.applicationbound():
         run_main(config, config_file, fc_dir, run_info_yaml)
 
@@ -100,9 +101,13 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
     genome_build = info.get("genome_build", None)
     multiplex = info.get("multiplex", None)
-    log.info("Processing", info["lane"], genome_build, \
-            sample_name, info.get("researcher", ""), \
-            info.get("analysis", ""), multiplex)
+    
+    log.info("Processing sample %s on lane %s with reference genome %s by researcher %s. Using %s analysis preset" \
+             % (sample_name, info["lane"], genome_build, \
+                info.get("researcher", "unknown"), info.get("analysis", "")))
+    if multiplex:
+        log.debug("Sample %s is multiplexed as: %s" % (sample_name, multiplex))
+    
     fastq_dir, galaxy_dir = _get_full_paths(fastq_dir, config, config_file)
     align_ref, sam_ref = get_genome_ref(genome_build,
             config["algorithm"]["aligner"], galaxy_dir)
@@ -204,12 +209,14 @@ def _get_fastq_size(item, fastq_dir, fc_name):
     """Retrieve the size of reads from the first flowcell sequence.
     """
     (fastq1, _) = get_fastq_files(fastq_dir, item['lane'], fc_name)
-    try:
-        with open(fastq1) as in_handle:
+    with open(fastq1) as in_handle:
+        try:
             rec = SeqIO.parse(in_handle, "fastq").next()
-        return len(rec.seq)
-    except StopIteration:
+            size = len(rec.seq)
+        except StopIteration:
             log.warn("Found a zero-sized fastq file for lane %s" % item['lane'])
+            size = 0
+    return size
 
 def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     """Add multiplex information to control and non-multiplexed lanes.
@@ -226,7 +233,14 @@ def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
         if item.get("multiplex", None):
             tag_sizes.extend([len(b["sequence"]) for b in item["multiplex"]])
             fastq_sizes.append(_get_fastq_size(item, fastq_dir, fc_name))
+    
     fastq_sizes = list(set(fastq_sizes))
+
+    # discard 0 sizes to handle the case where lane(s) are empty or failed
+    try:
+        fastq_sizes.remove(0)
+    except ValueError: pass
+    
     tag_sizes = list(set(tag_sizes))
     final_items = []
     for item in run_items:
@@ -348,17 +362,17 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
 
 def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     out_dir = os.path.join(align_dir, "%s.sam" % out_base)
-    if not os.path.exists(out_file):
-        cl = [config["program"]["tophat"]]
-        cl += ["--solexa1.3-quals",
-               "-p 8",
-               "-r 45",
-               ref_file]
-        cl += [fastq_file]
-        cl += ["-o", out_dir]
-    log.info("Running tophat with cmdline: %s" % " ".join(cl))
-    child = subprocess.check_call(cl)
-    return out_file
+    if not os.path.exists(out_dir):
+        cl = config["program"]["tophat"]
+        cl += "--solexa1.3-quals"+ \
+              "-p 8"+ \
+              "-r 45"+ \
+              ref_file
+        cl += fastq_file+" "+pair_file
+        cl += "-o "+out_dir
+    log.info("Running tophat with cmdline: %s" % cl)
+    child = subprocess.check_call(shlex.split(cl))
+    return out_dir
 
 def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Perform a BWA alignment, generating a SAM file.
@@ -527,9 +541,9 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
     if bc_name:
-        glob_str = "%s_*%s_%s_*txt*" % (lane, fc_name, bc_name)
+        glob_str = "%s_*%s_%s_*fastq*" % (lane, fc_name, bc_name)
     else:
-        glob_str = "%s_*%s*txt*" % (lane, fc_name)
+        glob_str = "%s_*%s*fastq*" % (lane, fc_name)
     files = glob.glob(os.path.join(directory, glob_str))
     files.sort()
     if len(files) > 2 or len(files) == 0:
@@ -563,7 +577,8 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
             bowtie = "bowtie_indices.loc",
             bwa = "bwa_index.loc",
             samtools = "sam_fa_indices.loc",
-            maq = "bowtie_indices.loc")
+            maq = "bowtie_indices.loc",
+	    tophat = "bowtie_indices.loc")
     remap_fns = dict(
             maq = _remap_to_maq
             )

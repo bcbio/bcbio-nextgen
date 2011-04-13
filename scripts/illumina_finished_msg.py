@@ -67,7 +67,7 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
                         log.info("CSV Samplesheet %s found, converting to %s" %
                                  (ss_file, out_file))
                         samplesheet.csv2yaml(ss_file, out_file)
-                        copyfile(ss_file, dname)
+                        #copyfile(ss_file, dname)
                     if qseq:
                         log.info("Generating qseq files for %s" % dname)
                         _generate_qseq(get_qseq_dir(dname), config)
