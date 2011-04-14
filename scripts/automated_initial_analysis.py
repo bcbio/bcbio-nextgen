@@ -309,14 +309,7 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
     """Align to the provided reference genome, returning an aligned SAM file.
     """
     aligner_to_use = config["algorithm"]["aligner"]
-    if not os.path.exists(align_dir):
-        try:
-            os.makedirs(align_dir)
-        # in case we have made it in another process
-        # should really be using a lock or something smarter here
-        except OSError:
-            pass
-        assert os.path.exists(align_dir)
+    utils.safe_makedir(align_dir)
 
     log.info("Aligning lane %s with %s aligner" % (lane_name, aligner_to_use))
     if aligner_to_use == "bowtie":

@@ -34,11 +34,17 @@ def main(run_name, lane_nums, do_fail=False):
     startdir = os.getcwd()
     outdir = os.path.join(startdir, "fastq")
     if not os.path.exists(outdir):
-        os.makedirs(outdir)
+        try:
+            os.makedirs(outdir)
+        except OSError:
+            assert os.path.isdir(outdir)
     if do_fail:
         fail_dir = os.path.join(outdir, "failed")
         if not os.path.exists(fail_dir):
-            os.makedirs(fail_dir)
+            try:
+                os.makedirs(fail_dir)
+            except OSError:
+                assert os.path.isdir(fail_dir)
     else:
         fail_dir = None
     for lane_num in lane_nums:

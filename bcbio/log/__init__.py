@@ -5,13 +5,14 @@ import sys
 
 import logbook
 
+from bcbio import utils
+
 def create_log_handler(config, log_name):
     log_dir = config.get("log_dir", None)
     email = config.get("email_notify", None)
     
     if log_dir:
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        utils.safe_makedir(log_dir)
         handler = logbook.FileHandler(os.path.join(log_dir, "%s.log" % log_name))
     else:
         handler = logbook.StreamHandler(sys.stdout)
