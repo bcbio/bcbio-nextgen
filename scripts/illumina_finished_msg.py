@@ -202,7 +202,7 @@ def _update_reported(msg_db, new_dname):
 def finished_message(tag_name, directory, files_to_copy, config):
     """Wait for messages with the give tag, passing on to the supplied handler.
     """
-    log.info("Sending finished message to: %s" % tag_name)
+    log.debug("Sending finished message to: %s" % tag_name)
     user = getpass.getuser()
     hostname = socket.gethostbyaddr(socket.gethostname())[0]
     data = dict(
