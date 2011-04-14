@@ -18,8 +18,6 @@ def create_log_handler(config, log_name):
         
     if email:
         handler = logbook.MailHandler(email, [email], 
-                                      format_string=u'''Subject: [BCBB pipeline] Run {record.extra[run]} \
-                                      
-                                      {record.message}''',
+                                      format_string=u'''Subject: [BCBB pipeline] {record.extra[run]} \n\n {record.message}''',
                                       level='INFO', bubble = True)
     return handler
