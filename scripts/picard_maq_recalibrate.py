@@ -21,7 +21,7 @@ from optparse import OptionParser
 import yaml
 
 from bcbio.broad import BroadRunner
-from bcbio.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir, safe_makedir
 
 def main(config_file, out_base, ref_file, read1, read2=None, sample_name=""):
     with open(config_file) as in_handle:
@@ -63,8 +63,7 @@ def calibrate_scores(picard, input_bam, base_align, ref_file):
 def picard_run_maq(picard, maq_cmd, input_bam, ref_file, barcode, lane,
         out_base, stringency, is_paired=False, limit=None, ext=""):
     out_dir = "%s-maq%s" % (out_base, ext)
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    safe_makedir(out_dir)
     bam_out_file = "%s.bam" % (out_dir)
     with curdir_tmpdir() as tmp_dir:
         std_opts = [("INPUT", input_bam),

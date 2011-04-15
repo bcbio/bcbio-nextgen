@@ -95,6 +95,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
     """Do alignments for a lane, potentially splitting based on barcodes.
     """
     config = _update_config_w_custom(config, info)
+    
     sample_name = info.get("description", "")
     if (config["algorithm"].get("include_short_name", True) and
             info.get("name", "")):
@@ -128,6 +129,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     """Finalize processing for a sample, potentially multiplexed.
     """
     config = _update_config_w_custom(config, info)
+    
     genome_build = info.get("genome_build", None)
     (_, galaxy_dir) = _get_full_paths("", config, config_file)
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
@@ -287,7 +289,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
             subprocess.check_call(cl)
     out_files = []
     for info in multiplex:
-        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s_fastq" %
+        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s.fastq" %
                              (base_name, info["barcode_id"], x))
         bc_file1 = fq_fname("1")
         bc_file2 = fq_fname("2") if fastq2 else None
@@ -307,14 +309,7 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
     """Align to the provided reference genome, returning an aligned SAM file.
     """
     aligner_to_use = config["algorithm"]["aligner"]
-    if not os.path.exists(align_dir):
-        try:
-            os.makedirs(align_dir)
-        # in case we have made it in another process
-        # should really be using a lock or something smarter here
-        except OSError:
-            pass
-        assert os.path.exists(align_dir)
+    utils.safe_makedir(align_dir)
 
     log.info("Aligning lane %s with %s aligner" % (lane_name, aligner_to_use))
     if aligner_to_use == "bowtie":
@@ -363,15 +358,18 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
 def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     out_dir = os.path.join(align_dir, "%s.sam" % out_base)
     if not os.path.exists(out_dir):
-        cl = config["program"]["tophat"]
-        cl += "--solexa1.3-quals"+ \
-              "-p 8"+ \
-              "-r 45"+ \
-              ref_file
-        cl += fastq_file+" "+pair_file
-        cl += "-o "+out_dir
+        cl = [config["program"]["tophat"]]
+        cl += ["--solexa1.3-quals",
+              "-p 8",
+              "-r 45",
+              ref_file]
+        if pair_file:
+            cl += [fastq_file, pair_file]
+        else:
+            cl += [fastq_file]
+        cl += ["-o ", out_dir]
     log.info("Running tophat with cmdline: %s" % cl)
-    child = subprocess.check_call(shlex.split(cl))
+    child = subprocess.check_call(cl)
     return out_dir
 
 def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
@@ -541,9 +539,9 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
     if bc_name:
-        glob_str = "%s_*%s_%s_*fastq*" % (lane, fc_name, bc_name)
+        glob_str = "%s_*%s_%s_*.fastq" % (lane, fc_name, bc_name)
     else:
-        glob_str = "%s_*%s*fastq*" % (lane, fc_name)
+        glob_str = "%s_*%s*.fastq" % (lane, fc_name)
     files = glob.glob(os.path.join(directory, glob_str))
     files.sort()
     if len(files) > 2 or len(files) == 0:
@@ -560,6 +558,8 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
 def _remap_to_maq(ref_file):
+    """ToDo: Why is this needed for ?
+    """
     base_dir = os.path.dirname(os.path.dirname(ref_file))
     name = os.path.basename(ref_file)
     for ext in ["fa", "fasta"]:
@@ -578,7 +578,7 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
             bwa = "bwa_index.loc",
             samtools = "sam_fa_indices.loc",
             maq = "bowtie_indices.loc",
-	    tophat = "bowtie_indices.loc")
+	        tophat = "bowtie_indices.loc")
     remap_fns = dict(
             maq = _remap_to_maq
             )

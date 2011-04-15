@@ -35,7 +35,7 @@ from contextlib import contextmanager, closing
 import pysam
 
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
-         outfile=None, normalize=False):
+         outfile=None, normalize=False, use_tempfile=False):
     if config_file:
         import yaml
         with open(config_file) as in_handle:
@@ -53,9 +53,13 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
         sys.stderr.write("Bad arguments, input and output files are the same.\n")
         sys.exit(1)
     if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
-        #Use a temp file to avoid any possiblity of not having write permission
-        out_handle = tempfile.NamedTemporaryFile(delete=False)
-        wig_file = out_handle.name
+        if use_tempfile:
+            #Use a temp file to avoid any possiblity of not having write permission
+            out_handle = tempfile.NamedTemporaryFile(delete=False)
+            wig_file = out_handle.name
+        else:
+            wig_file = "%s.wig" % os.path.splitext(outfile)[0]
+            out_handle = open(wig_file, "w")
         with closing(out_handle):
             chr_sizes, wig_valid = write_bam_track(bam_file, regions, config, out_handle,
                                                    normalize)
@@ -121,6 +125,8 @@ if __name__ == "__main__":
     parser.add_option("-e", "--end", dest="end")
     parser.add_option("-n", "--normalize", dest="normalize",
                       action="store_true", default=False)
+    parser.add_option("-t", "--tempfile", dest="use_tempfile",
+                      action="store_true", default=False)
     (options, args) = parser.parse_args()
     if len(args) not in [1, 2]:
         print "Incorrect arguments"
@@ -131,5 +137,6 @@ if __name__ == "__main__":
         chrom=options.chrom or 'all',
         start=options.start or 0,
         end=options.end,
-        normalize=options.normalize)
+        normalize=options.normalize,
+        use_tempfile=options.use_tempfile)
     main(*args, **kwargs)

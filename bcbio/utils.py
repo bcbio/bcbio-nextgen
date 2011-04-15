@@ -60,6 +60,17 @@ def map_wrap(f):
         return apply(f, *args, **kwargs)
     return wrapper
 
+def safe_makedir(dname):
+    """Make a directory if it doesn't exist, handling concurrent race conditions.
+    """
+    if not os.path.exists(dname):
+        # we could get an error here if multiple processes are creating
+        # the directory at the same time. Grr, concurrency.
+        try:
+            os.makedirs(dname)
+        except OSError:
+            assert os.path.isdir(dname)
+
 @contextlib.contextmanager
 def curdir_tmpdir():
     """Context manager to create and remove a temporary directory.
@@ -68,17 +79,11 @@ def curdir_tmpdir():
         tmp_dir_base = os.getenv("TMPDIR")
     else:
         tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-
     if not os.path.exists(tmp_dir_base):
-        # we could get an error here if multiple processes are creating
-        # the directory at the same time. Grr, concurrency.
-        try:
-            os.makedirs(tmp_dir_base)
-        except OSError:
-            pass
-    tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
-    if not os.path.exists(tmp_dir):
-        os.makedirs(tmp_dir)
+        tmp_dir_base = os.path.join(os.getcwd(), "tmp")
+        safe_makedir(tmp_dir_base)
+        tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
+        safe_makedir(tmp_dir)
     try :
         yield tmp_dir
     finally :
@@ -91,8 +96,7 @@ def chdir(new_dir):
     http://lucentbeing.com/blog/context-managers-and-the-with-statement-in-python/
     """
     cur_dir = os.getcwd()
-    if not os.path.exists(new_dir):
-        os.makedirs(new_dir)
+    safe_makedir(new_dir)
     os.chdir(new_dir)
     try :
         yield
@@ -116,5 +120,4 @@ def create_dirs(config, names=None):
         names = config["dir"].keys()
     for dname in names:
         d = config["dir"][dname]
-        if not os.path.exists(d):
-            os.makedirs(d)
+        safe_makedir(d)

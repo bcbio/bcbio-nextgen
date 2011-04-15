@@ -14,7 +14,7 @@ lanes, you should pass:
 
     1,2,3,4,5,6,7,8
 
-Output files will be in the fastq directory as <lane>_<run_name>_fastq
+Output files will be in the fastq directory as <lane>_<run_name>.fastq
 
 Illumina barcoded samples contain barcodes in a separate qseq lane, which are
 identified by being much shorter than the primary read. Barcodes are added to
@@ -34,11 +34,17 @@ def main(run_name, lane_nums, do_fail=False):
     startdir = os.getcwd()
     outdir = os.path.join(startdir, "fastq")
     if not os.path.exists(outdir):
-        os.makedirs(outdir)
+        try:
+            os.makedirs(outdir)
+        except OSError:
+            assert os.path.isdir(outdir)
     if do_fail:
         fail_dir = os.path.join(outdir, "failed")
         if not os.path.exists(fail_dir):
-            os.makedirs(fail_dir)
+            try:
+                os.makedirs(fail_dir)
+            except OSError:
+                assert os.path.isdir(fail_dir)
     else:
         fail_dir = None
     for lane_num in lane_nums:
@@ -110,10 +116,10 @@ def _get_outfiles(out_prefix, outdir, has_paired_files):
     out_files = {}
     if has_paired_files:
         for num in ("1", "2"):
-            out_files[num] = os.path.join(outdir, "%s_%s_fastq" % (
+            out_files[num] = os.path.join(outdir, "%s_%s.fastq" % (
                 out_prefix, num))
     else:
-        out_files["1"] = os.path.join(outdir, "%s_fastq" % out_prefix)
+        out_files["1"] = os.path.join(outdir, "%s.fastq" % out_prefix)
     for index, fname in out_files.items():
         out_files[index] = open(fname, "w")
     return out_files

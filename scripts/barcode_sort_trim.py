@@ -165,7 +165,10 @@ def output_to_fastq(output_base):
     """
     work_dir = os.path.dirname(output_base)
     if not os.path.exists(work_dir) and work_dir:
-        os.makedirs(work_dir)
+        try:
+            os.makedirs(work_dir)
+        except OSError:
+            assert os.path.isdir(work_dir)
     out_handles = dict()
     def write_reads(barcode, name1, seq1, qual1, name2, seq2, qual2):
         read1name = output_base.replace("--r--", "1").replace("--b--", barcode)

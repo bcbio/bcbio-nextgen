@@ -67,7 +67,7 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
                         log.info("CSV Samplesheet %s found, converting to %s" %
                                  (ss_file, out_file))
                         samplesheet.csv2yaml(ss_file, out_file)
-                        #copyfile(ss_file, dname)
+                        #shutil.copyfile(ss_file, dname)
                     if qseq:
                         log.info("Generating qseq files for %s" % dname)
                         _generate_qseq(get_qseq_dir(dname), config)
@@ -114,7 +114,7 @@ def _generate_qseq(bc_dir, config):
         log.info("Generating qseq files at %s" % bc_dir)
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "-P", "_pos.txt", "--in-place", "--overwrite"]
+        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite"]
         # in OLB version 1.9, the -i flag changed to intensities instead of input
         version_cl = [cmd, "-v"]
         p = subprocess.Popen(version_cl, stdout=subprocess.PIPE)
@@ -202,7 +202,7 @@ def _update_reported(msg_db, new_dname):
 def finished_message(tag_name, directory, files_to_copy, config):
     """Wait for messages with the give tag, passing on to the supplied handler.
     """
-    log.info("Sending finished message to: %s" % tag_name)
+    log.debug("Sending finished message to: %s" % tag_name)
     user = getpass.getuser()
     hostname = socket.gethostbyaddr(socket.gethostname())[0]
     data = dict(

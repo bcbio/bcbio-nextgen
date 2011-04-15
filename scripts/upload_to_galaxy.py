@@ -29,6 +29,7 @@ import yaml
 
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
 from bcbio.galaxy.api import GalaxyApiAccess
+from bcbio import utils
 
 def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
@@ -50,7 +51,7 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
         library_id = (get_galaxy_library(library_name, galaxy_api)
                       if library_name else None)
         upload_files = list(select_upload_files(local_name, bc_id, fc_dir,
-            analysis_dir))
+                                                analysis_dir, config))
         if len(upload_files) > 0:
             print lane, bc_id, name, desc, library_name
             print "Creating storage directory"
@@ -60,7 +61,7 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
             else:
                 cur_galaxy_files = []
             store_dir = move_to_storage(lane, bc_id, base_folder_name, upload_files,
-                    cur_galaxy_files, config)
+                                        cur_galaxy_files, config)
             if store_dir and library_id:
                 print "Uploading directory of files to Galaxy"
                 print galaxy_api.upload_directory(library_id, folder['id'],
@@ -119,16 +120,23 @@ def _get_galaxy_libname(private_libs, lab_association, researcher):
         except IndexError:
             return private_libs[0]
 
-def select_upload_files(base, bc_id, fc_dir, analysis_dir):
+def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
-    fastq_dir = analysis_dir if bc_id else get_fastq_dir(fc_dir)
-    for fname in glob.glob(os.path.join(fastq_dir, "%s_*fastq" % base)):
-        yield (fname, os.path.basename(fname))
-    if not found_fastq:
-        fastq_dir = get_fastq_dir(fc_dir)
-        for fname in glob.glob(os.path.join(fastq_dir, fastq_glob)):
+    # Configurable upload of fastq files -- BAM provide same information, compacted
+    if config["algorithm"].get("upload_fastq", True):
+        # look for fastq files in a barcode directory or the main fastq directory
+        bc_base = base.rsplit("_", 1)[0] if bc_id else base
+        bc_dir = os.path.join(analysis_dir, "%s_barcode" % bc_base)
+        fastq_glob = "%s_*.fastq" % base
+        found_fastq = False
+        for fname in glob.glob(os.path.join(bc_dir, fastq_glob)):
+            found_fastq = True
             yield (fname, os.path.basename(fname))
+        if not found_fastq:
+            fastq_dir = get_fastq_dir(fc_dir)
+            for fname in glob.glob(os.path.join(fastq_dir, fastq_glob)):
+                yield (fname, os.path.basename(fname))
     for summary_file in glob.glob(os.path.join(analysis_dir,
             "%s*summary.pdf" % base)):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
@@ -231,8 +239,7 @@ def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files, config)
 def _get_storage_dir(cur_folder, lane, bc_id, storage_base):
     base = "%s_%s" % (lane, bc_id) if bc_id else str(lane)
     store_dir = os.path.join(storage_base, cur_folder, base)
-    if not os.path.exists(store_dir):
-        os.makedirs(store_dir)
+    utils.safe_makedir(store_dir)
     return store_dir
 
 def get_galaxy_library(lab_association, galaxy_api):

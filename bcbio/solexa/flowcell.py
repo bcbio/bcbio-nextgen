@@ -55,6 +55,10 @@ def get_fastq_dir(fc_dir):
     else:
         return fc_dir
 
+def is_multiplexed():
+    """Detects whether a Run is multiplexed or not based on 
+    """
+    pass
 
 class GalaxySqnLimsApi:
     """Manage talking with the Galaxy REST api for sequencing information.

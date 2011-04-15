@@ -4,6 +4,7 @@ program:
   samtools: samtools
   bwa: bwa
   maq: maq
+  tophat: tophat
   ucsc_bigwig: wigToBigWig
   picard: /bubo/sw/apps/bioinfo/picard/1.40/
   gatk: /bubo/sw/apps/bioinfo/GATK/1.0.5365/kalkyl
@@ -15,9 +16,9 @@ program:
   solexaqa: SolexaQA.pl
   barcode: barcode_sort_trim.py
 algorithm:
-  aligner: bowtie
+  aligner: bowtie 
   max_errors: 2
-  num_cores: 8
+  num_cores: 1
   stringency: high
   platform: illumina
   recalibrate: false
@@ -31,9 +32,11 @@ analysis:
 # configuration algorithm changes for custom post-processing steps
 custom_algorithms:
   'SNP calling':
-    aligner: bwa
+    aligner: tophat
     recalibrate: true
     snpcall: true
     dbsnp: snps/dbSNP132.vcf
+  'Standard':
+    aligner: tophat
   'Minimal':
     aligner: ""
