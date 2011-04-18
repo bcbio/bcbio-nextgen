@@ -276,7 +276,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
         if not os.path.exists(nomatch_file):
             tag_file = _make_tag_file(multiplex)
             cl = [config["program"]["barcode"], tag_file,
-                  "%s_--b--_--r--_fastq" % base_name,
+                  "%s_--b--_--r--_fastq.txt" % base_name,
                   fastq1]
             if fastq2:
                 cl.append(fastq2)
@@ -289,7 +289,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
             subprocess.check_call(cl)
     out_files = []
     for info in multiplex:
-        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s.fastq" %
+        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s_fastq.txt" %
                              (base_name, info["barcode_id"], x))
         bc_file1 = fq_fname("1")
         bc_file2 = fq_fname("2") if fastq2 else None
@@ -539,9 +539,9 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
     if bc_name:
-        glob_str = "%s_*%s_%s_*.fastq" % (lane, fc_name, bc_name)
+        glob_str = "%s_*%s_%s_*_fastq.txt" % (lane, fc_name, bc_name)
     else:
-        glob_str = "%s_*%s*.fastq" % (lane, fc_name)
+        glob_str = "%s_*%s*_fastq.txt" % (lane, fc_name)
     files = glob.glob(os.path.join(directory, glob_str))
     files.sort()
     if len(files) > 2 or len(files) == 0:
