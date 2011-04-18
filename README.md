@@ -181,14 +181,14 @@ to ease your development needs using the following script:
 After basecalling, a number of FastQ files are generated via <a href="https://github.com/brainstorm/bcbb/blob/master/nextgen/scripts/solexa_qseq_to_fastq.py">solexa_qseq_to_fastq.py</a> script:
 
 <pre>
-1_081227_B45GT6ABXX_1.fastq
-1_081227_B45GT6ABXX_2.fastq
+1_081227_B45GT6ABXX_1_fastq.txt
+1_081227_B45GT6ABXX_2_fastq.txt
 (...)
 </pre>
 
 The template of them being:
 
-lane_date_fcid_<1|2>.fastq
+lane_date_fcid_<1|2>_fastq.txt
 
 Where 1|2 is the forward and reverse read respectively.
 
@@ -295,15 +295,15 @@ Contains the results of the alignments *for each sample*. As we see on the listi
 Those contain fastq files conforming with the naming schema we've seen before. They are the result of the demultiplexing process, where the "unmatched" files contain the reads that have not passed the approximate barcoding matching algorithm:
 
 <pre>
-4_110126_B816J0ABXX_1_1.fastq
-4_110126_B816J0ABXX_5_2.fastq
-4_110126_B816J0ABXX_1_2.fastq
-4_110126_B816J0ABXX_6_1.fastq
-4_110126_B816J0ABXX_5_1.fastq
-4_110126_B816J0ABXX_6_2.fastq
+4_110126_B816J0ABXX_1_1_fastq.txt
+4_110126_B816J0ABXX_5_2_fastq.txt
+4_110126_B816J0ABXX_1_2_fastq.txt
+4_110126_B816J0ABXX_6_1_fastq.txt
+4_110126_B816J0ABXX_5_1_fastq.txt
+4_110126_B816J0ABXX_6_2_fastq.txt
 
-4_110126_B816J0ABXX_unmatched_1.fastq
-4_110126_B816J0ABXX_unmatched_2.fastq
+4_110126_B816J0ABXX_unmatched_1_fastq.txt
+4_110126_B816J0ABXX_unmatched_2_fastq.txt
 
 4_110126_B816J0ABXX_bc.metrics
 SampleSheet-barcodes.cfg
