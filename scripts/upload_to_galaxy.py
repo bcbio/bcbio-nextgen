@@ -128,7 +128,7 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
         # look for fastq files in a barcode directory or the main fastq directory
         bc_base = base.rsplit("_", 1)[0] if bc_id else base
         bc_dir = os.path.join(analysis_dir, "%s_barcode" % bc_base)
-        fastq_glob = "%s_*.fastq" % base
+        fastq_glob = "%s_*fastq.txt" % base
         found_fastq = False
         for fname in glob.glob(os.path.join(bc_dir, fastq_glob)):
             found_fastq = True

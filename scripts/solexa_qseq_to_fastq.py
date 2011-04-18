@@ -14,7 +14,7 @@ lanes, you should pass:
 
     1,2,3,4,5,6,7,8
 
-Output files will be in the fastq directory as <lane>_<run_name>.fastq
+Output files will be in the fastq directory as <lane>_<run_name>_fastq.txt
 
 Illumina barcoded samples contain barcodes in a separate qseq lane, which are
 identified by being much shorter than the primary read. Barcodes are added to
