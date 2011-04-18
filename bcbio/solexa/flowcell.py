@@ -10,7 +10,7 @@ import json
 def get_flowcell_info(fc_dir):
     """Parse the flow cell ID and date from a flow cell directory.
     """
-    (_, fc_dir) = os.path.split(fc_dir)
+    os.path.basename(os.path.normpath(fc_dir))
     parts = fc_dir.split("_")
     name = None
     date = None
