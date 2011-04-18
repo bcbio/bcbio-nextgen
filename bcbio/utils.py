@@ -75,15 +75,10 @@ def safe_makedir(dname):
 def curdir_tmpdir():
     """Context manager to create and remove a temporary directory.
     """
-    if os.getenv("TMPDIR"):
-        tmp_dir_base = os.getenv("TMPDIR")
-    else:
-        tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-    if not os.path.exists(tmp_dir_base):
-        tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-        safe_makedir(tmp_dir_base)
-        tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
-        safe_makedir(tmp_dir)
+    tmp_dir_base = os.path.join(os.getcwd(), "tmp")
+    safe_makedir(tmp_dir_base)
+    tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
+    safe_makedir(tmp_dir)
     try :
         yield tmp_dir
     finally :

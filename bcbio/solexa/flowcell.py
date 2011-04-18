@@ -10,7 +10,7 @@ import json
 def get_flowcell_info(fc_dir):
     """Parse the flow cell ID and date from a flow cell directory.
     """
-    (_, fc_dir) = os.path.split(fc_dir)
+    os.path.basename(os.path.normpath(fc_dir))
     parts = fc_dir.split("_")
     name = None
     date = None
@@ -55,6 +55,10 @@ def get_fastq_dir(fc_dir):
     else:
         return fc_dir
 
+def is_multiplexed():
+    """Detects whether a Run is multiplexed or not based on 
+    """
+    pass
 
 class GalaxySqnLimsApi:
     """Manage talking with the Galaxy REST api for sequencing information.
