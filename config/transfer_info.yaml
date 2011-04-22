@@ -5,6 +5,11 @@ dump_directories:
   - /array11
   - /array12
 log_dir: /home/chapman/transfer/log
+# Optional directory to do post-processing analysis. 
+# Needed if doing processing on the same machine as output.
+postprocess_dir: 
+# Optional directories to look for Illumina samplesheets.
+# Needed if using these samplesheets for specifying run contents.
 samplesheet_directories:
   - /path/to/csv/samplesheets/dir
 # Pointer to a plain text file which will be used to keep track of 

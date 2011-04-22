@@ -5,6 +5,13 @@ dumped output directories that are finished and need to be processed.
 
 Usage:
     illumina_finished_msg.py <Galaxy config> <YAML local config>
+                             [<post-processing config file>]
+
+If a post-processing configuration file is passed, the messaging step will be
+skipped and we will move directly into analysis on the current machine. Use
+this if there is no RabbitMQ messaging server and your dump machine is directly
+connected to the analysis machine. You will also want to set postprocess_dir in
+the YAML local config to the directory to write fastq and analysis files.
 
 The Galaxy config needs to have information on the messaging server and queues.
 The local config should have the following information:
@@ -37,16 +44,18 @@ from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_di
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
-def main(galaxy_config, local_config, process_msg=True, store_msg=True,
-         qseq=True, fastq=True):
+def main(galaxy_config, local_config, post_config_file=None,
+         process_msg=True, store_msg=True, qseq=True, fastq=True):
     amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
     with log_handler.applicationbound():
-        search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq)
+        search_for_new(config, amqp_config, post_config_file,
+                       process_msg, store_msg, qseq, fastq)
 
-def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
+def search_for_new(config, amqp_config, post_config_file,
+                   process_msg, store_msg, qseq, fastq):
     """Search for any new directories that have not been reported.
     """
     reported = _read_reported(config["msg_db"])
@@ -55,28 +64,56 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
             if _is_finished_dumping(dname):
                 log.info("The instrument has finished dumping on directory %s" % dname)
                 _update_reported(config["msg_db"], dname)
-
-                ss_file = samplesheet.run_has_samplesheet(dname, config)
-                if ss_file:
-                    out_file = os.path.join(dname, "run_info.yaml")
-                    log.info("CSV Samplesheet %s found, converting to %s" %
-                             (ss_file, out_file))
-                    samplesheet.csv2yaml(ss_file, out_file)
+                _process_samplesheets(dname, config)
                 if qseq:
                     log.info("Generating qseq files for %s" % dname)
                     _generate_qseq(get_qseq_dir(dname), config)
+                fastq_dir = None
                 if fastq:
                     log.info("Generating fastq files for %s" % dname)
-                    _generate_fastq(dname, config)
+                    fastq_dir = _generate_fastq(dname, config)
+                _post_process_run(dname, config, amqp_config,
+                                  fastq_dir, post_config_file)
 
-                store_files, process_files = _files_to_copy(dname)
+def _post_process_run(dname, config, amqp_config,
+                      fastq_dir=None, post_config_file=None):
+    """With a finished directory, send out message or process directly.
+    """
+    # without a configuration file, send out message for processing
+    if post_config_file is None:
+        store_files, process_files = _files_to_copy(dname)
+        if process_msg:
+            finished_message(config["msg_process_tag"], dname,
+                             process_files, amqp_config)
+        if store_msg:
+            finished_message(config["msg_store_tag"], dname,
+                             store_files, amqp_config)
+    # otherwise process locally
+    else:
+        analyze_locally(dname, config, post_config_file, fastq_dir)
 
-                if process_msg:
-                    finished_message(config["msg_process_tag"], dname,
-                                     process_files, amqp_config)
-                if store_msg:
-                    finished_message(config["msg_store_tag"], dname,
-                                     store_files, amqp_config)
+def analyze_locally(dname, config, post_config_file, fastq_dir):
+    """Run analysis directly on the local machine.
+    """
+    assert fastq_dir is not None
+    run_yaml = os.path.join(dname, "run_info.yaml")
+    analysis_dir = os.path.join(fastq_dir, os.pardir, "analysis")
+    utils.safe_makedir(analysis_dir)
+    with utils.chdir(analysis_dir):
+        cl = [config["analysis"]["process_program"], post_config_file, fastq_dir]
+        if os.path.exists(run_yaml):
+            cl.append(run_yaml)
+        subprocess.check_call(cl)
+
+def _process_samplesheets(dname, config):
+    """Process Illumina samplesheets into YAML files for post-processing.
+    """
+    ss_file = samplesheet.run_has_samplesheet(dname, config)
+    if ss_file:
+        out_file = os.path.join(dname, "run_info.yaml")
+        log.info("CSV Samplesheet %s found, converting to %s" %
+                 (ss_file, out_file))
+        samplesheet.csv2yaml(ss_file, out_file)
 
 def _generate_fastq(fc_dir, config):
     """Generate fastq files for the current flowcell.
@@ -85,13 +122,19 @@ def _generate_fastq(fc_dir, config):
     short_fc_name = "%s_%s" % (fc_date, fc_name)
     fastq_dir = get_fastq_dir(fc_dir)
     basecall_dir = os.path.split(fastq_dir)[0]
+    postprocess_dir = config.get("postprocess_dir", "")
+    if postprocess_dir:
+        fastq_dir = os.path.join(postprocess_dir, os.path.basename(fc_dir),
+                                 "fastq")
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
         log.info("Generating fastq files for %s" % fc_dir)
         with utils.chdir(basecall_dir):
             lanes = sorted(list(set([f.split("_")[1] for f in
                 glob.glob("*qseq.txt")])))
             cl = ["solexa_qseq_to_fastq.py", short_fc_name,
-                    ",".join(lanes)]
+                  ",".join(lanes)]
+            if postprocess_dir:
+                cl += ["-o", fastq_dir]
             log.info("Converting qseq to fastq on all lanes.")
             subprocess.check_call(cl)
             log.info("Qseq to fastq conversion completed.")
@@ -158,11 +201,9 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
                       ["Data/Intensities/BaseCalls/Plots", "Data/reports"]])
-        
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
         run_info = glob.glob("run_info.yaml")
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-        
     return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)
 
 def _read_reported(msg_db):
