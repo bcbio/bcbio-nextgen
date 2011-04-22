@@ -27,7 +27,7 @@ algorithm:
   bc_mismatch: 2
   bc_read: 1
   bc_position: 3
-  upload_fastq: fals
+  upload_fastq: false
   save_diskspace: true
 
 log_dir: /array0/projects/Sequencing/log
