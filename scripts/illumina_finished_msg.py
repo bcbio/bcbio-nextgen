@@ -73,10 +73,11 @@ def search_for_new(config, amqp_config, post_config_file,
                     log.info("Generating fastq files for %s" % dname)
                     fastq_dir = _generate_fastq(dname, config)
                 _post_process_run(dname, config, amqp_config,
-                                  fastq_dir, post_config_file)
+                                  fastq_dir, post_config_file,
+                                  process_msg, store_msg)
 
-def _post_process_run(dname, config, amqp_config,
-                      fastq_dir=None, post_config_file=None):
+def _post_process_run(dname, config, amqp_config, fastq_dir, post_config_file,
+                      process_msg, store_msg):
     """With a finished directory, send out message or process directly.
     """
     # without a configuration file, send out message for processing
@@ -96,11 +97,13 @@ def analyze_locally(dname, config, post_config_file, fastq_dir):
     """Run analysis directly on the local machine.
     """
     assert fastq_dir is not None
+    with open(post_config_file) as in_handle:
+        post_config = yaml.load(in_handle)
     run_yaml = os.path.join(dname, "run_info.yaml")
     analysis_dir = os.path.join(fastq_dir, os.pardir, "analysis")
     utils.safe_makedir(analysis_dir)
     with utils.chdir(analysis_dir):
-        cl = [config["analysis"]["process_program"], post_config_file, fastq_dir]
+        cl = [post_config["analysis"]["process_program"], post_config_file, fastq_dir]
         if os.path.exists(run_yaml):
             cl.append(run_yaml)
         subprocess.check_call(cl)
