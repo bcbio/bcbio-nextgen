@@ -17,7 +17,7 @@ from optparse import OptionParser
 import yaml
 
 from bcbio.broad import BroadRunner
-from bcbio.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir, save_diskspace
 
 def main(config_file, align_sam, ref_file, fastq_one, fastq_pair=None,
         sample_name="", rg_name="", pu_name=""):
@@ -37,7 +37,9 @@ def main(config_file, align_sam, ref_file, fastq_one, fastq_pair=None,
                 tmp_dir)
         out_bam = picard_merge_bam(picard, align_sam, out_fastq_bam,
                 ref_file, tmp_dir, fastq_pair is not None)
-        picard_sort(picard, out_bam, tmp_dir)
+        sort_bam = picard_sort(picard, out_bam, tmp_dir)
+    save_diskspace(out_fastq_bam, "Combined into output BAM %s" % out_bam, config)
+    save_diskspace(out_bam, "Sorted to %s" % sort_bam, config)
 
 def picard_merge_bam(picard, align_sam, fastq_bam, ref_file,
         tmp_dir, is_paired):

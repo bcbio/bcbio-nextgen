@@ -314,7 +314,7 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         raise ValueError("Do not recognize aligner: %s" % aligner_to_use)
     log.info("Converting lane %s to sorted BAM file" % lane_name)
     sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                    lane_name, config_file)
+                    lane_name, config, config_file)
 
 def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Before a standard or paired end alignment with bowtie.
@@ -401,7 +401,7 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
         subprocess.check_call(aln_cl, stdout=out_handle)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-        lane_name, config_file):
+                    lane_name, config, config_file):
     """Convert SAM file to merged and sorted BAM file.
     """
     lane = lane_name.split("_")[0]
@@ -411,6 +411,7 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
     if fastq2:
         cl.append(fastq2)
     subprocess.check_call(cl)
+    utils.save_diskspace(sam_file, "SAM converted to BAM", config)
 
 def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
@@ -425,6 +426,8 @@ def merge_bam_files(bam_files, work_dir, config):
             for b in bam_files:
                 opts.append(("INPUT", b))
             picard.run("MergeSamFiles", opts)
+    for b in bam_files:
+        utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
     return out_file
 
 def bam_to_wig(bam_file, config, config_file):
