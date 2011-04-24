@@ -259,7 +259,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
     metrics_file = "%s_bc.metrics" % base_name
     with utils.chdir(bc_dir):
-        if not os.path.exists(nomatch_file):
+        if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):
             tag_file = _make_tag_file(multiplex)
             cl = [config["program"]["barcode"], tag_file,
                   "%s_--b--_--r--_fastq.txt" % base_name,
