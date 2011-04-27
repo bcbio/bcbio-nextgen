@@ -61,7 +61,7 @@ class GalaxyApiAccess:
             folder_id))
 
     def upload_directory(self, library_id, folder_id, directory, dbkey,
-            access_role='', file_type='auto', link_data_only=True):
+            access_role='', file_type='auto', link_data_only='link_to_files'):
         """Upload a directory of files with a specific type to Galaxy.
         """
         return self._post("/api/libraries/%s/contents" % library_id,
