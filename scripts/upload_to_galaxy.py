@@ -123,6 +123,7 @@ def _get_galaxy_libname(private_libs, lab_association, researcher):
 def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
+    base_glob = _dir_glob(base, analysis_dir)
     # Configurable upload of fastq files -- BAM provide same information, compacted
     if config["algorithm"].get("upload_fastq", True):
         # look for fastq files in a barcode directory or the main fastq directory
@@ -137,33 +138,34 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
             fastq_dir = get_fastq_dir(fc_dir)
             for fname in glob.glob(os.path.join(fastq_dir, fastq_glob)):
                 yield (fname, os.path.basename(fname))
-    for summary_file in glob.glob(os.path.join(analysis_dir,
-            "%s*summary.pdf" % base)):
+    for summary_file in base_glob("summary.pdf"):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
-    for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*sort-dup.bam" % base)):
+    for bam_file in base_glob("sort-dup.bam"):
         yield (bam_file, _name_with_ext(bam_file, ".bam"))
-    for wig_file in glob.glob(os.path.join(analysis_dir,
-            "%s*sort.bigwig" % base)):
+    for wig_file in base_glob("sort.bigwig"):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload any recalibrated BAM files used for SNP calling
     found_recal = False
-    for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*gatkrecal-realign-sort.bam" % base)):
+    for bam_file in base_glob("gatkrecal-realign-sort.bam"):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
-        for bam_file in glob.glob(os.path.join(analysis_dir,
-                "%s*gatkrecal.bam" % base)):
+        for bam_file in base_glob("gatkrecal.bam"):
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
     # Genotype files produced by SNP calling
-    for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s*snp-filter.vcf" % base)):
+    for snp_file in base_glob("snp-filter.vcf"):
         yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
     # Effect information on SNPs
-    for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s*snp-filter-effects.tsv" % base)):
+    for snp_file in base_glob("snp-filter-effects.tsv"):
         yield (snp_file, _name_with_ext(bam_file, "-snp-effects.tsv"))
+
+def _dir_glob(base, work_dir):
+    # Allowed characters that can trail the base. This prevents picking up
+    # NAME_10 when globbing for NAME_1
+    trailers = "[-_.]"
+    def _safe_glob(ext):
+        return glob.glob(os.path.join(work_dir, "%s%s*%s" % (base, trailers, ext)))
+    return _safe_glob
 
 def _name_with_ext(orig_file, ext):
     """Return a normalized filename without internal processing names.
