@@ -3,6 +3,7 @@
 import urllib
 import urllib2
 import json
+import time
 
 class GalaxyApiAccess:
     """Simple front end for accessing Galaxy's REST API.
@@ -10,6 +11,7 @@ class GalaxyApiAccess:
     def __init__(self, galaxy_url, api_key):
         self._base_url = galaxy_url
         self._key = api_key
+        self._max_tries = 5
 
     def _make_url(self, rel_url, params=None):
         if not params:
@@ -21,7 +23,17 @@ class GalaxyApiAccess:
     def _get(self, url, params=None):
         url, params = self._make_url(url, params)
         response = urllib2.urlopen("%s?%s" % (url, params))
-        return json.loads(response.read())
+        num_tries = 0
+        while 1:
+            try:
+                out = json.loads(response.read())
+                break
+            except ValueError, msg:
+                if num_tries > self._max_tries:
+                    raise
+                time.sleep(3)
+                num_tries += 1
+        return out
 
     def _post(self, url, data, params=None, need_return=True):
         url, params = self._make_url(url, params)
