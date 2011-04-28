@@ -22,9 +22,9 @@ class GalaxyApiAccess:
 
     def _get(self, url, params=None):
         url, params = self._make_url(url, params)
-        response = urllib2.urlopen("%s?%s" % (url, params))
         num_tries = 0
         while 1:
+            response = urllib2.urlopen("%s?%s" % (url, params))
             try:
                 out = json.loads(response.read())
                 break

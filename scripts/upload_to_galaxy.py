@@ -23,6 +23,7 @@ import shutil
 import ConfigParser
 import urllib
 import urllib2
+import time
 import json
 
 import yaml
@@ -117,7 +118,7 @@ def _get_galaxy_libname(private_libs, lab_association, researcher):
             i = check_libs.index(lab_association.lower())
             return private_libs[i]
         # can't find the lab association, give us the first library
-        except IndexError:
+        except (IndexError, ValueError):
             return private_libs[0]
 
 def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
@@ -195,19 +196,35 @@ def get_galaxy_folder(library_id, folder_name, lane, description, galaxy_api):
     """
     items = galaxy_api.library_contents(library_id)
     root = _folders_by_name('/', items)[0]
-    run_folders = _folders_by_name("/%s" % folder_name, items)
-    if len(run_folders) == 0:
-        run_folders = galaxy_api.create_folder(library_id,
-                root['id'], folder_name)
-    lane_folders = _folders_by_name("/%s/%s" % (folder_name, lane), items)
-    if len(lane_folders) == 0:
-        lane_folders = galaxy_api.create_folder(library_id,
-                run_folders[0]['id'], str(lane), description)
-        cur_files = []
-    else:
-        cur_files = [f for f in items if f['type'] == 'file'
-                and f['name'].startswith("/%s/%s" % (folder_name, lane))]
+    run_folders = _safe_get_folders("/%s" % folder_name, items,
+                                    library_id, root["id"], folder_name, "",
+                                    galaxy_api)
+    lane_folders = _safe_get_folders("/%s/%s" % (folder_name, lane), items,
+                                     library_id, run_folders[0]['id'],
+                                     str(lane), description, galaxy_api)
+    cur_files = [f for f in items if f['type'] == 'file'
+                 and f['name'].startswith("/%s/%s" % (folder_name, lane))]
     return lane_folders[0], cur_files
+
+def _safe_get_folders(base_name, items, library_id, base_folder_id, name,
+                      description, galaxy_api):
+    """Retrieve folders for a run or lane, retrying in the case of network errors.
+    """
+    max_tries = 5
+    num_tries = 0
+    while 1:
+        try:
+            folders = _folders_by_name(base_name, items)
+            if len(folders) == 0:
+                folders = galaxy_api.create_folder(library_id, base_folder_id,
+                                                   name, description)
+            break
+        except ValueError:
+            if num_tries > max_tries:
+                raise
+            time.sleep(2)
+            num_tries += 1
+    return folders
 
 def _folders_by_name(name, items):
     return [f for f in items if f['type'] == 'folder' and
