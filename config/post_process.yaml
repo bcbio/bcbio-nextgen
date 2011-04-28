@@ -10,11 +10,8 @@ program:
   picard: /usr/share/java/picard
   gatk: /usr/share/java/gatk
   snpEff: /usr/share/java/snpeff
-  fastx_stats: fastx_quality_stats
-  fastx_graph: fastq_quality_boxplot_graph.sh
+  fastqc: fastqc
   pdflatex: pdflatex
-  ps2pdf: ps2pdf
-  solexaqa: SolexaQA.pl
   barcode: barcode_sort_trim.py
 algorithm:
   aligner: bowtie
