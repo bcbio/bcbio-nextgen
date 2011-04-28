@@ -1,22 +1,18 @@
 #!/usr/bin/env python
-"""Generate alignment plots and tables for a sequencing run and alignment.
+"""Generate PDF report with plots and tables for a sequencing run and alignment.
 
 Requires:
-- Picard reporting tools
-- fastx toolkit
-- SolexaQA
+- Picard (http://picard.sourceforge.net/)
+- FastQC (http://www.bioinformatics.bbsrc.ac.uk/projects/fastqc/)
 - LaTeX -- pdflatex
-- ps2pdf
-
-Generate a LaTeX report on a sequencing run and it's alignment to the 
-reference genome.
 
 Usage:
-    align_summary_report.py <picard dir> <input bam> <ref file> <fastq one> <fastq two>
+    align_summary_report.py <picard dir> <input bam> <ref file>
+    --paired
     --bait=<bait file>
     --target=<target file>
     --config=<YAML configuration file specifying executable information>
-    --sort -- Sort the file first
+    --sort
 """
 import os
 import sys
@@ -33,134 +29,130 @@ from bcbio.broad import BroadRunner
 from bcbio.broad.metrics import PicardMetrics
 from bcbio import utils
 
-PARAM_DEFAULT = dict(
-        fastx_stats = "fastx_quality_stats",
-        fastx_graph = "fastq_quality_boxplot_graph.sh",
-        pdflatex = "pdflatex",
-        ps2pdf = "ps2pdf",
-        solexaqa = "SolexaQA.pl",
-        )
-
-def main(picard_dir, align_bam, ref_file, fastq_one, fastq_pair=None,
-        bait_file=None, target_file=None, do_sort=False, sample_name="",
-        config=None):
+def main(picard_dir, align_bam, ref_file, is_paired, bait_file=None,
+         target_file=None, do_sort=False, sample_name="", config=None):
     with utils.curdir_tmpdir() as tmp_dir:
         work_dir = os.getcwd()
+        params = {}
         if config:
             with open(config) as in_handle:
                 params = yaml.load(in_handle)["program"]
-        else:
-            params = PARAM_DEFAULTS
         picard = BroadRunner(picard_dir)
         if do_sort:
             align_bam = picard_sort(picard, align_bam, tmp_dir)
 
         metrics = PicardMetrics(picard, tmp_dir)
         summary_table, metrics_graphs = metrics.report(
-                align_bam, ref_file, fastq_pair is not None,
-                bait_file, target_file)
+                align_bam, ref_file, is_paired, bait_file, target_file)
+        metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
         base, ext = os.path.splitext(align_bam)
         base = base.replace(".", "-")
-        total_count, read_size, fastq_graphs = plot_fastq_stats(
-                [fastq_one, fastq_pair], base, params)
-        qa_graphs = solexaqa_plots([fastq_one, fastq_pair], params, work_dir)
+        fastqc_graphs, fastqc_stats, fastqc_overrep = \
+                       fastqc_report(align_bam, params)
 
-        # add read_size to the total summary table
-        summary_table[0] = (summary_table[0][0], summary_table[0][1],
-                "%sbp %s" % (read_size, summary_table[0][-1]))
-        ref_org = os.path.splitext(os.path.split(ref_file)[-1])[0]
-        summary_table.insert(0, ("Reference organism",
-            ref_org.replace("_", " "), ""))
+        all_graphs = fastqc_graphs + metrics_graphs
+        summary_table = _update_summary_table(summary_table, ref_file, fastqc_stats)
         tmpl = Template(section_template)
+        if sample_name is None:
+            sample_name = fastqc_stats["Filename"]
         sample_name = "%s (%s)" % (sample_name.replace("_", "\_"),
                 base.replace("_", " "))
         section = tmpl.render(name=sample_name, summary=None,
-                summary_table=summary_table,
-                figures=[(f, c) for (f, c) in metrics_graphs + fastq_graphs +
-                         qa_graphs if f],
-                recal_figures=_get_recal_plots(work_dir, align_bam))
+                              summary_table=summary_table,
+                              figures=[(f, c, i) for (f, c, i) in all_graphs if f],
+                              overrep=fastqc_overrep,
+                              recal_figures=_get_recal_plots(work_dir, align_bam))
         out_file = "%s-summary.tex" % base
         out_tmpl = Template(base_template)
         with open(out_file, "w") as out_handle:
             out_handle.write(out_tmpl.render(parts=[section]))
         run_pdflatex(out_file, params)
 
-def plot_fastq_stats(fastq_files, out_base, params):
-    """Use fastx toolkit to prepare a plot of quality statistics.
-    """
-    print "Drawing plot of fastq quality scores"
-    fastq_files = [f for f in fastq_files if f and os.path.getsize(f) > 0]
-    graphs = []
-    count = 0
-    read_size = 0
-    for i, fastq_file in enumerate(fastq_files):
-        if len(fastq_files) > 1:
-            cur_out_base = "%s_%s" % (out_base, i+1)
-        else:
-            cur_out_base = out_base
-        stat_file = "%s_fastq_stats.txt" % cur_out_base
-        if not os.path.exists(stat_file):
-            stats_cl = [params["fastx_stats"], "-i", fastq_file,
-                        "-o", stat_file]
-            child = subprocess.Popen(stats_cl)
-            child.wait()
-        with open(stat_file) as in_handle:
-            # look at the last line in the stats file
-            for line in in_handle:
-                pass
-            parts = line.split()
-            count = int(parts[1])
-            read_size = int(parts[0])
-        graph_file = "%s_fastq_qual.pdf" % cur_out_base
-        if not os.path.exists(graph_file):
-            ps_file = "%s.ps" % os.path.splitext(graph_file)[0]
-            boxplot_cl = [params["fastx_graph"], "-i", stat_file,
-                         "-p",
-                         "-t", fastq_file,
-                         "-o", ps_file]
-            child = subprocess.Popen(boxplot_cl)
-            child.wait()
-            topdf_cl = [params["ps2pdf"], ps_file, graph_file]
-            child = subprocess.Popen(topdf_cl)
-            child.wait()
-        graphs.append((graph_file,
-            "Quality score distribution per base for read %s" % (i + 1)))
-    return count, read_size, graphs
+def _update_summary_table(summary_table, ref_file, fastqc_stats):
+    stats_want = []
+    summary_table[0] = (summary_table[0][0], summary_table[0][1],
+            "%sbp %s" % (fastqc_stats.get("Sequence length", "0"), summary_table[0][-1]))
+    for stat in stats_want:
+        summary_table.insert(0, (stat, fastqc_stats.get(stat, ""), ""))
+    ref_org = os.path.splitext(os.path.split(ref_file)[-1])[0]
+    summary_table.insert(0, ("Reference organism",
+        ref_org.replace("_", " "), ""))
+    return summary_table
 
-def solexaqa_plots(fastq_files, params, work_dir):
-    print "SolexaQA plots of fastq error distributions"
-    graphs = []
-    for i, fastq_file in enumerate(f for f in fastq_files if f and os.path.getsize(f) > 0):
-        orig_tile_graph, tile_graph = _sqa_file(fastq_file, "png", work_dir)
-        orig_qual_graph, qual_graph  = _sqa_file(fastq_file, "quality.pdf",
-                                                   work_dir)
-        if not os.path.exists(tile_graph) or not os.path.exists(qual_graph):
-            cl = [params["solexaqa"], fastq_file]
-            # SolexaQA is cranky, ignore it if we have problems
-            try:
-                subprocess.check_call(cl)
-            except subprocess.CalledProcessError, msg:
-                print msg
-            if os.path.exists(orig_tile_graph):
-                os.rename(orig_tile_graph, tile_graph)
-                #graphs.append((tile_graph,
-                #    "Error distribution per position and tile for read %s. "\
-                #    "Darker squares correspond to poor quality scores." % (i + 1)))
-            if os.path.exists(orig_qual_graph):
-                os.rename(orig_qual_graph, qual_graph)
-                graphs.append((qual_graph,
-                    "Mean error probability per read position and tile for read %s. "\
-                    "Ideal flowcells will have a tight range of values "\
-                    "for all tiles." % (i + 1)))
-    return graphs
-
-def _sqa_file(fname, ext, work_dir):
-    """Naming for SolexaQA.pl output. Handles local files and fixing extensions
+def fastqc_report(bam_file, config):
+    """Calculate statistics about a read using FastQC.
     """
-    orig_file = os.path.join(work_dir, "%s.%s" % (os.path.basename(fname), ext))
-    # replace all '.' extensions except for last so pdflatex can handle the file
-    safe_file = orig_file.replace(".", "_", orig_file.count(".") - 1)
-    return orig_file, safe_file
+    out_dir = _run_fastqc(bam_file, config)
+    parser = FastQCParser(out_dir)
+    graphs = parser.get_fastqc_graphs()
+    stats, overrep = parser.get_fastqc_summary()
+    return graphs, stats, overrep
+
+class FastQCParser:
+    def __init__(self, base_dir):
+        self._dir = base_dir
+        self._max_seq_size = 45
+
+    def get_fastqc_graphs(self):
+        graphs = (("per_base_quality.png", "", 1.0),
+                  ("per_base_sequence_content.png", "", 0.85),
+                  ("per_sequence_gc_content.png", "", 0.85),
+                  ("kmer_profiles.png", "", 0.85),)
+        final_graphs = []
+        for f, caption, size in graphs:
+            full_f = os.path.join(self._dir, "Images", f)
+            if os.path.exists(full_f):
+                final_graphs.append((full_f, caption, size))
+        return final_graphs
+
+    def get_fastqc_summary(self):
+        stats = {}
+        for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
+            k, v = stat_line.split("\t")[:2]
+            stats[k] = v
+        over_rep = []
+        for line in self._fastqc_data_section("Overrepresented sequences")[1:]:
+            over_rep.append(line.split("\t"))
+            over_rep[-1][0] = self._splitseq(over_rep[-1][0])
+        return stats, over_rep
+
+    def _splitseq(self, seq):
+        pieces = []
+        cur_piece = []
+        for s in seq:
+            if len(cur_piece) >= self._max_seq_size:
+                pieces.append("".join(cur_piece))
+                cur_piece = []
+            cur_piece.append(s)
+        pieces.append("".join(cur_piece))
+        return " ".join(pieces)
+
+    def _fastqc_data_section(self, section_name):
+        out = []
+        in_section = False
+        data_file = os.path.join(self._dir, "fastqc_data.txt")
+        if os.path.exists(data_file):
+            with open(data_file) as in_handle:
+                for line in in_handle:
+                    if line.startswith(">>%s" % section_name):
+                        in_section = True
+                    elif in_section:
+                        if line.startswith(">>END"):
+                            break
+                        out.append(line.rstrip("\r\n"))
+        return out
+
+def _run_fastqc(bam_file, config):
+    out_base = "fastqc"
+    utils.safe_makedir(out_base)
+    fastqc_out = os.path.join(out_base, "%s_fastqc" %
+                              os.path.splitext(os.path.basename(bam_file))[0])
+    if not os.path.exists(fastqc_out):
+        cl = [config.get("fastqc", "fastqc"), "-o", out_base, "-f", "bam", bam_file]
+        subprocess.check_call(cl)
+    if os.path.exists("%s.zip" % fastqc_out):
+        os.remove("%s.zip" % fastqc_out)
+    return fastqc_out
 
 def picard_sort(picard, align_bam, tmp_dir):
     base, ext = os.path.splitext(align_bam)
@@ -174,7 +166,7 @@ def picard_sort(picard, align_bam, tmp_dir):
     return out_file
 
 def run_pdflatex(tex_file, params):
-    cl = [params["pdflatex"], tex_file]
+    cl = [params.get("pdflatex", "pdflatex"), tex_file]
     subprocess.check_call(cl)
 
 def _get_recal_plots(work_dir, align_bam):
@@ -213,19 +205,29 @@ section_template = r"""
     \end{verbatim}
 % endif
 
-% for i, (figure, caption) in enumerate(figures):
+% for i, (figure, caption, size) in enumerate(figures):
     \begin{figure}[htbp]
       \centering
-      \includegraphics[width=
-      % if i < 1:
-        0.52
-      % else:
-        0.75
-      %endif
-      \linewidth]{${figure}}
+      \includegraphics[width=${size}\linewidth] {${figure}}
       \caption{${caption}}
     \end{figure}
 % endfor
+
+% if len(overrep) > 0:
+    \begin{table}[htbp]
+    \centering
+    \begin{tabular}{|p{8cm}rrp{4cm}|}
+    \hline
+    Sequence & Count & Percent & Match \\ 
+    \hline
+    % for seq, count, percent, match in overrep:
+        \texttt{${seq}} & ${count} & ${"%.2f" % float(percent)} & ${match} \\ 
+    % endfor
+    \hline
+    \end{tabular}
+    \caption{Overrepresented read sequences}
+    \end{table}
+% endif
 
 \FloatBarrier
 % if len(recal_figures) > 0:
@@ -260,12 +262,15 @@ if __name__ == "__main__":
     parser.add_option("-n", "--name", dest="sample_name")
     parser.add_option("-s", "--sort", dest="do_sort", action="store_true",
             default=False)
+    parser.add_option("-p", "--paired", dest="is_paired", action="store_true",
+            default=False)
     parser.add_option("-c", "--config", dest="config")
     (options, args) = parser.parse_args()
-    if len(args) < 4:
+    if len(args) < 3:
         print __doc__
         sys.exit()
     kwargs = dict(
+        is_paired=options.is_paired,
         bait_file=options.bait_file,
         target_file=options.target_file,
         sample_name=options.sample_name,

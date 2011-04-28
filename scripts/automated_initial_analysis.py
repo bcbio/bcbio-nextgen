@@ -146,7 +146,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
             variation_effects(vrn_file, genome_build, sam_ref, config)
     if sam_ref is not None:
         print sample_name, "Generating summary files"
-        generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
+        generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
                 config, sample_name, config_file)
 
 def _combine_fastq_files(in_files, work_dir):
@@ -439,15 +439,15 @@ def bam_to_wig(bam_file, config, config_file):
         subprocess.check_call(cl)
     return wig_file
 
-def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
+def generate_align_summary(bam_file, is_paired, sam_ref, config,
         sample_name, config_file, do_sort=False):
     """Run alignment summarizing script to produce a pdf with align details.
     """
     sample_name = " : ".join(sample_name)
     cl = ["align_summary_report.py", "--name=%s" % sample_name,
-            config["program"]["picard"], bam_file, sam_ref, fastq1]
-    if fastq2:
-        cl.append(fastq2)
+            config["program"]["picard"], bam_file, sam_ref]
+    if is_paired:
+        cl.append("--paired")
     bait = config["algorithm"].get("hybrid_bait", "")
     target = config["algorithm"].get("hybrid_target", "")
     if bait and target:
