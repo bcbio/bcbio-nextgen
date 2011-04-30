@@ -224,10 +224,14 @@ def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     # determine if we have multiplexes and collect expected size
     fastq_sizes = []
     tag_sizes = []
+    has_barcodes = False
     for item in run_items:
         if item.get("multiplex", None):
+            has_barcodes = True
             tag_sizes.extend([len(b["sequence"]) for b in item["multiplex"]])
             fastq_sizes.append(_get_fastq_size(item, fastq_dir, fc_name))
+    if not has_barcodes: # nothing to worry about
+        return run_items
     fastq_sizes = list(set(fastq_sizes))
     tag_sizes = list(set(tag_sizes))
     final_items = []
