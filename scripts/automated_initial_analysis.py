@@ -288,11 +288,36 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
 
 def _make_tag_file(barcodes):
     tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
+    barcodes = _adjust_illumina_tags(barcodes)
     with open(tag_file, "w") as out_handle:
         for bc in barcodes:
-            #out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
-            out_handle.write("%s %s\n" % (bc["barcode_id"], "%sA" % bc["sequence"]))
+            out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
     return tag_file
+
+def _adjust_illumina_tags(barcodes):
+    """Handle additional trailing A in Illumina barocdes.
+
+    Illumina barcodes are listed as 6bp sequences but have an additional
+    A base when coming off on the sequencer. This checks for this case and
+    adjusts the sequences appropriately if needed.
+    """
+    illumina_size = 7
+    all_illumina = True
+    need_a = False
+    for bc in barcodes:
+        if bc.get("barcode_type", "illumina").lower().find("illumina") == -1:
+            all_illumina = False
+        if (not bc["sequence"].upper().endswith("A") or
+            len(bc["sequence"]) < illumina_size):
+            need_a = True
+    if all_illumina and need_a:
+        new = []
+        for bc in barcodes:
+            new_bc = copy.deepcopy(bc)
+            new_bc["sequence"] = "%sA" % new_bc["sequence"]
+            new.append(new_bc)
+        barcodes = new
+    return barcodes
 
 def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         sample_name, align_dir, config, config_file):
