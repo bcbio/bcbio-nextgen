@@ -64,17 +64,18 @@ def search_for_new(config, amqp_config, process_msg, store_msg, qseq, fastq):
                     ss_file = samplesheet.run_has_samplesheet(dname, config)
                     if ss_file:
                         out_file = os.path.join(dname, "run_info.yaml")
-                        log.info("CSV Samplesheet %s found, converting to %s" %
+                        log.debug("CSV Samplesheet %s found, converting to %s" %
                                  (ss_file, out_file))
                         samplesheet.csv2yaml(ss_file, out_file)
                         #copyfile(ss_file, dname)
                     if qseq:
-                        log.info("Generating qseq files for %s" % dname)
+                        log.debug("Generating qseq files for %s" % dname)
                         _generate_qseq(get_qseq_dir(dname), config)
                     if fastq:
-                        log.info("Generating fastq files for %s" % dname)
+                        log.debug("Generating fastq files for %s" % dname)
                         _generate_fastq(dname, config)
-    
+   
+                    log.info("Pre-processing complete, transferring files") 
                     store_files, process_files = _files_to_copy(dname)
     
                     if process_msg:
@@ -92,15 +93,13 @@ def _generate_fastq(fc_dir, config):
     fastq_dir = get_fastq_dir(fc_dir)
     basecall_dir = os.path.split(fastq_dir)[0]
     if not fastq_dir == fc_dir and not os.path.exists(fastq_dir):
-        log.info("Generating fastq files for %s" % fc_dir)
         with utils.chdir(basecall_dir):
             lanes = sorted(list(set([f.split("_")[1] for f in
                 glob.glob("*qseq.txt")])))
             cl = ["solexa_qseq_to_fastq.py", short_fc_name,
                     ",".join(lanes)]
-            log.info("Converting qseq to fastq on all lanes.")
+            log.debug("Converting qseq to fastq on all lanes.")
             subprocess.check_call(cl)
-            log.info("Qseq to fastq conversion completed.")
     return fastq_dir
 
 def _generate_qseq(bc_dir, config):
@@ -111,7 +110,6 @@ def _generate_qseq(bc_dir, config):
     the offline base caller OLB.
     """
     if not os.path.exists(os.path.join(bc_dir, "finished.txt")):
-        log.info("Generating qseq files at %s" % bc_dir)
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
         cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite"]
@@ -125,7 +123,6 @@ def _generate_qseq(bc_dir, config):
         else:
             cl += ["-i", bc_dir, "-p", os.path.split(bc_dir)[0]]
         subprocess.check_call(cl)
-        log.info("Qseq files generated.")
         with utils.chdir(bc_dir):
             try:
                 processors = config["algorithm"]["num_cores"]
