@@ -23,6 +23,7 @@ import shutil
 import ConfigParser
 import urllib
 import urllib2
+import time
 import json
 
 import yaml
@@ -117,12 +118,13 @@ def _get_galaxy_libname(private_libs, lab_association, researcher):
             i = check_libs.index(lab_association.lower())
             return private_libs[i]
         # can't find the lab association, give us the first library
-        except IndexError:
+        except (IndexError, ValueError):
             return private_libs[0]
 
 def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
     """Select fastq, bam alignment and summary files for upload to Galaxy.
     """
+    base_glob = _dir_glob(base, analysis_dir)
     # Configurable upload of fastq files -- BAM provide same information, compacted
     if config["algorithm"].get("upload_fastq", True):
         # look for fastq files in a barcode directory or the main fastq directory
@@ -137,33 +139,34 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
             fastq_dir = get_fastq_dir(fc_dir)
             for fname in glob.glob(os.path.join(fastq_dir, fastq_glob)):
                 yield (fname, os.path.basename(fname))
-    for summary_file in glob.glob(os.path.join(analysis_dir,
-            "%s*summary.pdf" % base)):
+    for summary_file in base_glob("summary.pdf"):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
-    for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*sort-dup.bam" % base)):
+    for bam_file in base_glob("sort-dup.bam"):
         yield (bam_file, _name_with_ext(bam_file, ".bam"))
-    for wig_file in glob.glob(os.path.join(analysis_dir,
-            "%s*sort.bigwig" % base)):
+    for wig_file in base_glob("sort.bigwig"):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload any recalibrated BAM files used for SNP calling
     found_recal = False
-    for bam_file in glob.glob(os.path.join(analysis_dir,
-            "%s*gatkrecal-realign-sort.bam" % base)):
+    for bam_file in base_glob("gatkrecal-realign-sort.bam"):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
-        for bam_file in glob.glob(os.path.join(analysis_dir,
-                "%s*gatkrecal.bam" % base)):
+        for bam_file in base_glob("gatkrecal.bam"):
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
     # Genotype files produced by SNP calling
-    for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s*snp-filter.vcf" % base)):
+    for snp_file in base_glob("snp-filter.vcf"):
         yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
     # Effect information on SNPs
-    for snp_file in glob.glob(os.path.join(analysis_dir,
-            "%s*snp-filter-effects.tsv" % base)):
+    for snp_file in base_glob("snp-filter-effects.tsv"):
         yield (snp_file, _name_with_ext(bam_file, "-snp-effects.tsv"))
+
+def _dir_glob(base, work_dir):
+    # Allowed characters that can trail the base. This prevents picking up
+    # NAME_10 when globbing for NAME_1
+    trailers = "[-_.]"
+    def _safe_glob(ext):
+        return glob.glob(os.path.join(work_dir, "%s%s*%s" % (base, trailers, ext)))
+    return _safe_glob
 
 def _name_with_ext(orig_file, ext):
     """Return a normalized filename without internal processing names.
@@ -193,19 +196,35 @@ def get_galaxy_folder(library_id, folder_name, lane, description, galaxy_api):
     """
     items = galaxy_api.library_contents(library_id)
     root = _folders_by_name('/', items)[0]
-    run_folders = _folders_by_name("/%s" % folder_name, items)
-    if len(run_folders) == 0:
-        run_folders = galaxy_api.create_folder(library_id,
-                root['id'], folder_name)
-    lane_folders = _folders_by_name("/%s/%s" % (folder_name, lane), items)
-    if len(lane_folders) == 0:
-        lane_folders = galaxy_api.create_folder(library_id,
-                run_folders[0]['id'], str(lane), description)
-        cur_files = []
-    else:
-        cur_files = [f for f in items if f['type'] == 'file'
-                and f['name'].startswith("/%s/%s" % (folder_name, lane))]
+    run_folders = _safe_get_folders("/%s" % folder_name, items,
+                                    library_id, root["id"], folder_name, "",
+                                    galaxy_api)
+    lane_folders = _safe_get_folders("/%s/%s" % (folder_name, lane), items,
+                                     library_id, run_folders[0]['id'],
+                                     str(lane), description, galaxy_api)
+    cur_files = [f for f in items if f['type'] == 'file'
+                 and f['name'].startswith("/%s/%s" % (folder_name, lane))]
     return lane_folders[0], cur_files
+
+def _safe_get_folders(base_name, items, library_id, base_folder_id, name,
+                      description, galaxy_api):
+    """Retrieve folders for a run or lane, retrying in the case of network errors.
+    """
+    max_tries = 5
+    num_tries = 0
+    while 1:
+        try:
+            folders = _folders_by_name(base_name, items)
+            if len(folders) == 0:
+                folders = galaxy_api.create_folder(library_id, base_folder_id,
+                                                   name, description)
+            break
+        except ValueError:
+            if num_tries > max_tries:
+                raise
+            time.sleep(2)
+            num_tries += 1
+    return folders
 
 def _folders_by_name(name, items):
     return [f for f in items if f['type'] == 'folder' and

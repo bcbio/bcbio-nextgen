@@ -153,7 +153,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
             variation_effects(vrn_file, genome_build, sam_ref, config)
     if sam_ref is not None:
         print sample_name, "Generating summary files"
-        generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
+        generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
                 config, sample_name, config_file)
 
 def _combine_fastq_files(in_files, work_dir):
@@ -231,11 +231,14 @@ def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     # determine if we have multiplexes and collect expected size
     fastq_sizes = []
     tag_sizes = []
+    has_barcodes = False
     for item in run_items:
         if item.get("multiplex", None):
+            has_barcodes = True
             tag_sizes.extend([len(b["sequence"]) for b in item["multiplex"]])
             fastq_sizes.append(_get_fastq_size(item, fastq_dir, fc_name))
-    
+    if not has_barcodes: # nothing to worry about
+        return run_items
     fastq_sizes = list(set(fastq_sizes))
 
     # discard 0 sizes to handle the case where lane(s) are empty or failed
@@ -273,7 +276,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     nomatch_file = "%s_unmatched_1_fastq" % base_name
     metrics_file = "%s_bc.metrics" % base_name
     with utils.chdir(bc_dir):
-        if not os.path.exists(nomatch_file):
+        if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):
             tag_file = _make_tag_file(multiplex)
             cl = [config["program"]["barcode"], tag_file,
                   "%s_--b--_--r--_fastq.txt" % base_name,
@@ -298,11 +301,36 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
 
 def _make_tag_file(barcodes):
     tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
+    barcodes = _adjust_illumina_tags(barcodes)
     with open(tag_file, "w") as out_handle:
         for bc in barcodes:
-            #out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
-            out_handle.write("%s %s\n" % (bc["barcode_id"], "%sA" % bc["sequence"]))
+            out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
     return tag_file
+
+def _adjust_illumina_tags(barcodes):
+    """Handle additional trailing A in Illumina barocdes.
+
+    Illumina barcodes are listed as 6bp sequences but have an additional
+    A base when coming off on the sequencer. This checks for this case and
+    adjusts the sequences appropriately if needed.
+    """
+    illumina_size = 7
+    all_illumina = True
+    need_a = False
+    for bc in barcodes:
+        if bc.get("barcode_type", "illumina").lower().find("illumina") == -1:
+            all_illumina = False
+        if (not bc["sequence"].upper().endswith("A") or
+            len(bc["sequence"]) < illumina_size):
+            need_a = True
+    if all_illumina and need_a:
+        new = []
+        for bc in barcodes:
+            new_bc = copy.deepcopy(bc)
+            new_bc["sequence"] = "%sA" % new_bc["sequence"]
+            new.append(new_bc)
+        barcodes = new
+    return barcodes
 
 def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         sample_name, align_dir, config, config_file):
@@ -328,7 +356,7 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         raise ValueError("Do not recognize aligner: %s" % aligner_to_use)
     log.info("Converting lane %s to sorted BAM file" % lane_name)
     sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                    lane_name, config_file)
+                    lane_name, config, config_file)
 
 def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Before a standard or paired end alignment with bowtie.
@@ -418,7 +446,7 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
         subprocess.check_call(aln_cl, stdout=out_handle)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-        lane_name, config_file):
+                    lane_name, config, config_file):
     """Convert SAM file to merged and sorted BAM file.
     """
     lane = lane_name.split("_")[0]
@@ -428,6 +456,7 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
     if fastq2:
         cl.append(fastq2)
     subprocess.check_call(cl)
+    utils.save_diskspace(sam_file, "SAM converted to BAM", config)
 
 def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
@@ -442,6 +471,8 @@ def merge_bam_files(bam_files, work_dir, config):
             for b in bam_files:
                 opts.append(("INPUT", b))
             picard.run("MergeSamFiles", opts)
+    for b in bam_files:
+        utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
     return out_file
 
 def bam_to_wig(bam_file, config, config_file):
@@ -453,15 +484,15 @@ def bam_to_wig(bam_file, config, config_file):
         subprocess.check_call(cl)
     return wig_file
 
-def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
+def generate_align_summary(bam_file, is_paired, sam_ref, config,
         sample_name, config_file, do_sort=False):
     """Run alignment summarizing script to produce a pdf with align details.
     """
     sample_name = " : ".join(sample_name)
     cl = ["align_summary_report.py", "--name=%s" % sample_name,
-            config["program"]["picard"], bam_file, sam_ref, fastq1]
-    if fastq2:
-        cl.append(fastq2)
+            config["program"]["picard"], bam_file, sam_ref]
+    if is_paired:
+        cl.append("--paired")
     bait = config["algorithm"].get("hybrid_bait", "")
     target = config["algorithm"].get("hybrid_target", "")
     if bait and target:

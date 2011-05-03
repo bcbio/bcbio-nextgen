@@ -23,6 +23,8 @@ barcoding methods.
 
 Optional arguments:
     --failed (-f): Write out reads failing the Illumina quality checks instead.
+    --outdir (-o): Write out fastq files to different output directory; defaults
+                   to a directory named fastq in the current directory.
 """
 from __future__ import with_statement
 import os
@@ -30,9 +32,9 @@ import sys
 import glob
 from optparse import OptionParser
 
-def main(run_name, lane_nums, do_fail=False):
-    startdir = os.getcwd()
-    outdir = os.path.join(startdir, "fastq")
+def main(run_name, lane_nums, do_fail=False, outdir=None):
+    if outdir is None:
+        outdir = os.path.join(os.getcwd(), "fastq")
     if not os.path.exists(outdir):
         try:
             os.makedirs(outdir)
@@ -167,9 +169,11 @@ def _get_qseq_seq_size(fname):
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-f", "--failed", dest="do_fail", action="store_true",
-            default=False)
+                      default=False)
+    parser.add_option("-o", "--outdir", dest="outdir", action="store",
+                      default=None)
     (options, args) = parser.parse_args()
     if len(args) < 2:
         print __doc__
         sys.exit()
-    main(args[0], args[1].split(","), options.do_fail)
+    main(args[0], args[1].split(","), options.do_fail, options.outdir)
