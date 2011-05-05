@@ -39,10 +39,15 @@ analysis:
   # the analysis programs on. This needs a configuration file 
   # like this with program information for the remote machine.
   # The default is to run the analysis on the local machine.
+  # You can also specify a different remote host to initiate
+  # the copy from. This is useful for NFS shared filesystems
+  # where you want to manage the copy from the base machine.
   user:
   host:
   login_shell:
   config_file: /path/to/remote/post_process.yaml
+  copy_user:
+  copy_host:
   store_dir: /store4/solexadata
   base_dir: /array0/projects/Sequencing
   towig_script: bam_to_wiggle.py
