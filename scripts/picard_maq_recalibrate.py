@@ -30,7 +30,8 @@ def main(config_file, out_base, ref_file, read1, read2=None, sample_name=""):
     maq_cmd = config["program"]["maq"]
     stringency = config["algorithm"]["stringency"]
 
-    picard = BroadRunner(config["program"]["picard"], config["program"].get("gatk", ""))
+    picard = BroadRunner(config["program"]["picard"], config["program"].get("gatk", ""),
+                         max_memory=config["algorithm"].get("java_memory", ""))
     bam_reads = fastq_to_bam(picard, sample_name,
             config["algorithm"]["quality_format"], read1, read2)
     base_align = picard_run_maq(picard, maq_cmd, bam_reads, ref_file, barcode,

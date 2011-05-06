@@ -24,6 +24,7 @@ algorithm:
   bc_mismatch: 2
   bc_read: 1
   bc_position: 3
+  java_memory: 6g
   upload_fastq: false
   save_diskspace: true
 

@@ -11,10 +11,11 @@ import run as run_fns
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """
-    def __init__(self, picard_dir, gatk_dir="", max_memory="6g"):
+    def __init__(self, picard_dir, gatk_dir="", max_memory=None):
         self._memory_args = []
-        if max_memory:
-            self._memory_args.append("-Xmx%s" % max_memory)
+        if not max_memory:
+            max_memory = "6g"
+        self._memory_args.append("-Xmx%s" % max_memory)
         self._picard_dir = picard_dir
         self._gatk_dir = gatk_dir or picard_dir
 

@@ -23,7 +23,8 @@ def main(config_file, align_sam, ref_file, fastq_one, fastq_pair=None,
         sample_name="", rg_name="", pu_name=""):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    picard = BroadRunner(config["program"]["picard"])
+    picard = BroadRunner(config["program"]["picard"],
+                         max_memory=config["algorithm"].get("java_memory", ""))
     platform = config["algorithm"]["platform"]
     if platform.lower() == "illumina":
         qual_format = "Illumina"
