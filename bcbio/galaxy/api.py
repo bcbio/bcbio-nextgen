@@ -83,6 +83,30 @@ class GalaxyApiAccess:
                     file_type=file_type, link_data_only=str(link_data_only)),
                 need_return=False)
 
+    def upload_from_filesystem(self, library_id, folder_id, fname, dbkey,
+            access_role='', file_type='auto', link_data_only='link_to_files'):
+        """Upload to Galaxy using 'Upload files from filesystem paths'
+        """
+        return self._post("/api/libraries/%s/contents" % library_id,
+                data=dict(create_type='file', upload_option='upload_paths',
+                    folder_id=folder_id, filesystem_paths=fname,
+                    dbkey=dbkey, roles=str(access_role),
+                    file_type=file_type, link_data_only=str(link_data_only)),
+                need_return=False)
+
+    def get_datalibrary_id(self, name):
+        """Retrieve a data library with the given name or create new.
+        """
+        ret_info = None
+        for lib_info in self.get_libraries():
+            if lib_info["name"].strip() == name.strip():
+                ret_info = lib_info
+                break
+        # need to add a new library
+        if ret_info is None:
+            ret_info = self.create_library(name)[0]
+        return ret_info["id"]
+
     def run_details(self, run_bc, run_date=None):
         """Next Gen LIMS specific API functionality.
         """

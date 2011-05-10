@@ -34,10 +34,13 @@ def main(picard_dir, align_bam, ref_file, is_paired, bait_file=None,
     with utils.curdir_tmpdir() as tmp_dir:
         work_dir = os.getcwd()
         params = {}
+        java_memory = ""
         if config:
             with open(config) as in_handle:
-                params = yaml.load(in_handle)["program"]
-        picard = BroadRunner(picard_dir)
+                info = yaml.load(in_handle)
+                params = info["program"]
+                java_memory = info["algorithm"].get("java_memory", "")
+        picard = BroadRunner(picard_dir, max_memory=java_memory)
         if do_sort:
             align_bam = picard_sort(picard, align_bam, tmp_dir)
 
