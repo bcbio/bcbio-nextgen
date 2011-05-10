@@ -31,6 +31,7 @@ import glob
 import getpass
 import subprocess
 from optparse import OptionParser
+from xml.etree.ElementTree import ElementTree
 
 import yaml
 from amqplib import client_0_8 as amqp
@@ -180,8 +181,36 @@ def _is_finished_dumping(directory):
     The final checkpoint file will differ depending if we are a
     single or paired end run.
     """
-    # Recent versions of RTA (1.10 or better), write the complete
-    # file at the end as expected. This is the most reliable source.
+    #if _is_finished_dumping_checkpoint(directory):
+    #    return True
+    # Check final output files; handles both HiSeq and GAII
+    run_info = os.path.join(directory, "RunInfo.xml")
+    hi_seq_checkpoint = "Basecalling_Netcopy_complete_Read%s.txt" % \
+                        _expected_reads(run_info)
+    to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
+                "Basecalling_Netcopy_complete_READ2.txt",
+                hi_seq_checkpoint]
+    return reduce(operator.or_,
+            [os.path.exists(os.path.join(directory, f)) for f in to_check])
+
+def _expected_reads(run_info_file):
+    """Parse the number of expected reads from the RunInfo.xml file.
+    """
+    reads = []
+    if os.path.exists(run_info_file):
+        tree = ElementTree()
+        tree.parse(run_info_file)
+        read_elem = tree.find("Run/Reads")
+        reads = read_elem.findall("Read")
+    return len(reads)
+
+def _is_finished_dumping_checkpoint(directory):
+    """Recent versions of RTA (1.10 or better), write the complete file.
+
+    This is the most straightforward source but as of 1.10 still does not
+    work correctly as the file will be created at the end of Read 1 even
+    if there are multiple reads.
+    """
     check_file = os.path.join(directory, "Basecalling_Netcopy_complete.txt")
     check_v1, check_v2 = (1, 10)
     if os.path.exists(check_file):
@@ -192,13 +221,6 @@ def _is_finished_dumping(directory):
             v1, v2 = [float(v) for v in version.split(".")[:2]]
             if ((v1 > check_v1) or (v1 == check_v1 and v2 >= check_v2)):
                 return True
-    # If not found, check for output from previous versions
-    to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
-                "Basecalling_Netcopy_complete_READ2.txt",
-                "Basecalling_Netcopy_complete_Read3.txt"]
-
-    return reduce(operator.or_,
-            [os.path.exists(os.path.join(directory, f)) for f in to_check])
 
 def _files_to_copy(directory):
     """Retrieve files that should be remotely copied.
