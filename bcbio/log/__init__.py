@@ -9,7 +9,7 @@ from bcbio import utils
 
 def create_log_handler(config, log_name):
     log_dir = config.get("log_dir", None)
-    email = config.get("email_notify", None)
+    email = config.get("email", None)
     
     if log_dir:
         utils.safe_makedir(log_dir)

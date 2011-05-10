@@ -5,7 +5,8 @@ dump_directories:
   - /array11
   - /array12
 log_dir: /home/chapman/transfer/log
-email_notify: ngs_admin@example.com
+# Notifications from the logging system via email
+#email: ngs_admin@example.com
 # Optional directory to do post-processing analysis. 
 # Needed if doing processing on the same machine as output.
 postprocess_dir: 

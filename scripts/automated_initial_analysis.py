@@ -23,7 +23,7 @@ import os
 import sys
 import json
 import contextlib
-import subprocess, shlex
+import subprocess
 import glob
 import copy
 import csv
@@ -273,7 +273,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     if not multiplex:
         return [("", "", fastq1, fastq2)]
     bc_dir = "%s_barcode" % base_name
-    nomatch_file = "%s_unmatched_1_fastq" % base_name
+    nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
     metrics_file = "%s_bc.metrics" % base_name
     with utils.chdir(bc_dir):
         if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):

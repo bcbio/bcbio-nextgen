@@ -21,7 +21,7 @@ The local config should have the following information:
     dump_directories: directories to check for machine output
     msg_db: flat file of output directories that have been reported
 """
-import os, shutil
+import os
 import sys
 import json
 import operator
