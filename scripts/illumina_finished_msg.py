@@ -180,6 +180,19 @@ def _is_finished_dumping(directory):
     The final checkpoint file will differ depending if we are a
     single or paired end run.
     """
+    # Recent versions of RTA (1.10 or better), write the complete
+    # file at the end as expected. This is the most reliable source.
+    check_file = os.path.join(directory, "Basecalling_Netcopy_complete.txt")
+    check_v1, check_v2 = (1, 10)
+    if os.path.exists(check_file):
+        with open(check_file) as in_handle:
+            line = in_handle.readline().strip()
+        if line:
+            version = line.split()[-1]
+            v1, v2 = [float(v) for v in version.split(".")[:2]]
+            if ((v1 > check_v1) or (v1 == check_v1 and v2 >= check_v2)):
+                return True
+    # If not found, check for output from previous versions
     to_check = ["Basecalling_Netcopy_complete_SINGLEREAD.txt",
                 "Basecalling_Netcopy_complete_READ2.txt",
                 "Basecalling_Netcopy_complete_Read3.txt"]

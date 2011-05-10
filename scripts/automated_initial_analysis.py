@@ -447,7 +447,8 @@ def merge_bam_files(bam_files, work_dir, config):
     """
     out_file = os.path.join(work_dir, os.path.basename(bam_files[0]))
     if not os.path.exists(out_file):
-        picard = BroadRunner(config["program"]["picard"])
+        picard = BroadRunner(config["program"]["picard"],
+                             max_memory=config["algorithm"].get("java_memory", ""))
         with utils.curdir_tmpdir() as tmp_dir:
             opts = [("OUTPUT", out_file),
                     ("SORT_ORDER", "coordinate"),

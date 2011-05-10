@@ -34,10 +34,13 @@ def main(picard_dir, align_bam, ref_file, is_paired, bait_file=None,
     with utils.curdir_tmpdir() as tmp_dir:
         work_dir = os.getcwd()
         params = {}
+        java_memory = ""
         if config:
             with open(config) as in_handle:
-                params = yaml.load(in_handle)["program"]
-        picard = BroadRunner(picard_dir)
+                info = yaml.load(in_handle)
+                params = info["program"]
+                java_memory = info["algorithm"].get("java_memory", "")
+        picard = BroadRunner(picard_dir, max_memory=java_memory)
         if do_sort:
             align_bam = picard_sort(picard, align_bam, tmp_dir)
 
@@ -92,6 +95,7 @@ class FastQCParser:
     def __init__(self, base_dir):
         self._dir = base_dir
         self._max_seq_size = 45
+        self._max_overrep = 20
 
     def get_fastqc_graphs(self):
         graphs = (("per_base_quality.png", "", 1.0),
@@ -108,13 +112,14 @@ class FastQCParser:
     def get_fastqc_summary(self):
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
-            k, v = stat_line.split("\t")[:2]
+            k, v = [self._safe_latex(x) for x in stat_line.split("\t")[:2]]
             stats[k] = v
         over_rep = []
         for line in self._fastqc_data_section("Overrepresented sequences")[1:]:
-            over_rep.append(line.split("\t"))
+            parts = [self._safe_latex(x) for x in line.split("\t")]
+            over_rep.append(parts)
             over_rep[-1][0] = self._splitseq(over_rep[-1][0])
-        return stats, over_rep
+        return stats, over_rep[:self._max_overrep]
 
     def _splitseq(self, seq):
         pieces = []
@@ -141,6 +146,14 @@ class FastQCParser:
                             break
                         out.append(line.rstrip("\r\n"))
         return out
+
+    def _safe_latex(self, to_fix):
+        """Escape characters that make LaTeX unhappy.
+        """
+        chars = ["%", "_", "&"]
+        for char in chars:
+            to_fix = to_fix.replace(char, "\\%s" % char)
+        return to_fix
 
 def _run_fastqc(bam_file, config):
     out_base = "fastqc"
