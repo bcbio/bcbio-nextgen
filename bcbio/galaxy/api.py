@@ -83,6 +83,19 @@ class GalaxyApiAccess:
                     file_type=file_type, link_data_only=str(link_data_only)),
                 need_return=False)
 
+    def get_datalibrary_id(self, name):
+        """Retrieve a data library with the given name or create new.
+        """
+        ret_info = None
+        for lib_info in self.get_libraries():
+            if lib_info["name"].strip() == name.strip():
+                ret_info = lib_info
+                break
+        # need to add a new library
+        if ret_info is None:
+            ret_info = self.create_library(name)[0]
+        return ret_info["id"]
+
     def run_details(self, run_bc, run_date=None):
         """Next Gen LIMS specific API functionality.
         """
