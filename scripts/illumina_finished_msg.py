@@ -70,42 +70,17 @@ def search_for_new(config, amqp_config, post_config_file,
                 with logbook.Processor(lambda record: record.extra.__setitem__('run', os.path.basename(dname))):
                     log.info("The instrument has finished dumping on directory %s" % dname)
                     _update_reported(config["msg_db"], dname)
-
-                    ss_file = samplesheet.run_has_samplesheet(dname, config)
-                    if ss_file:
-                        out_file = os.path.join(dname, "run_info.yaml")
-                        log.debug("CSV Samplesheet %s found, converting to %s" %
-                                 (ss_file, out_file))
-                        samplesheet.csv2yaml(ss_file, out_file)
-                        #copyfile(ss_file, dname)
+                    _process_samplesheets(dname, config)
                     if qseq:
-                        log.debug("Generating qseq files for %s" % dname)
+                        log.info("Generating qseq files for %s" % dname)
                         _generate_qseq(get_qseq_dir(dname), config)
+                    fastq_dir = None
                     if fastq:
-                        log.debug("Generating fastq files for %s" % dname)
-                        _generate_fastq(dname, config)
-   
-                    log.info("Pre-processing complete, transferring files") 
-                    store_files, process_files = _files_to_copy(dname)
-
-    
-                    if process_msg:
-                        finished_message(config["msg_process_tag"], dname,
-                                         process_files, amqp_config)
-                    if store_msg:
-                        finished_message(config["msg_store_tag"], dname,
-                                         store_files, amqp_config)
-                _process_samplesheets(dname, config)
-                if qseq:
-                    log.info("Generating qseq files for %s" % dname)
-                    _generate_qseq(get_qseq_dir(dname), config)
-                fastq_dir = None
-                if fastq:
-                    log.info("Generating fastq files for %s" % dname)
-                    fastq_dir = _generate_fastq(dname, config)
-                _post_process_run(dname, config, amqp_config,
-                                  fastq_dir, post_config_file,
-                                  process_msg, store_msg)
+                        log.info("Generating fastq files for %s" % dname)
+                        fastq_dir = _generate_fastq(dname, config)
+                    _post_process_run(dname, config, amqp_config,
+                                      fastq_dir, post_config_file,
+                                      process_msg, store_msg)
 
 def _post_process_run(dname, config, amqp_config, fastq_dir, post_config_file,
                       process_msg, store_msg):
