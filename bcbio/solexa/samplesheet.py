@@ -22,7 +22,8 @@ def _organize_lanes(info_iter, barcode_ids):
     for (fcid, lane, sampleref), info in itertools.groupby(info_iter, lambda x: (x[0], x[1], x[1])):
         info = list(info)
         cur_lane = dict(flowcell_id=fcid, lane=lane, genome_build=info[0][3], analysis="Standard")
-        if len(info) == 1: # non-barcoded sample
+        
+        if not _has_barcode(info):
             cur_lane["description"] = info[0][1]
         else: # barcoded sample
             cur_lane["description"] = "Barcoded lane %s" % lane
@@ -36,6 +37,10 @@ def _organize_lanes(info_iter, barcode_ids):
             cur_lane["multiplex"] = multiplex
         all_lanes.append(cur_lane)
     return all_lanes
+
+def _has_barcode(sample):
+    if sample[0][4]:
+        return True
 
 def _generate_barcode_ids(info_iter):
     """Create unique barcode IDs assigned to sequences
