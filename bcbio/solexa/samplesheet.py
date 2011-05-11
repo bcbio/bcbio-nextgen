@@ -64,7 +64,7 @@ def _get_flowcell_id(in_file, require_single=True):
     """
     fc_ids = set([x[0] for x in _read_input_csv(in_file)])
     if require_single and len(fc_ids) > 1:
-        raise ValueError("There is more than one FCID in the samplesheet file: %s" % in_file)
+        raise ValueError("There are several FCIDs in the same samplesheet file: %s" % in_file)
     else:
         return fc_ids
 

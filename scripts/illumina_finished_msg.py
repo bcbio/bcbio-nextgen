@@ -65,12 +65,12 @@ def search_for_new(config, amqp_config, post_config_file,
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
             if _is_finished_dumping(dname):
-                log.info("The instrument has finished dumping on directory %s" % dname)
-                _update_reported(config["msg_db"], dname)
-
                 # Injects run_name on logging calls.
                 # Convenient for run_name on "Subject" for email notifications
                 with logbook.Processor(lambda record: record.extra.__setitem__('run', os.path.basename(dname))):
+                    log.info("The instrument has finished dumping on directory %s" % dname)
+                    _update_reported(config["msg_db"], dname)
+
                     ss_file = samplesheet.run_has_samplesheet(dname, config)
                     if ss_file:
                         out_file = os.path.join(dname, "run_info.yaml")
@@ -87,6 +87,7 @@ def search_for_new(config, amqp_config, post_config_file,
    
                     log.info("Pre-processing complete, transferring files") 
                     store_files, process_files = _files_to_copy(dname)
+
     
                     if process_msg:
                         finished_message(config["msg_process_tag"], dname,
