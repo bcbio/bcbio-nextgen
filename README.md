@@ -243,19 +243,22 @@ The template of them being:
 
     lane_date_fcid_<1|2>_fastq.txt
 
-Where 1|2 is the forward and reverse read respectively.
+Where 1|2 is the forward and reverse read respectively. Only reads that 
+pass the quality filter (PF) are kept. Quality scores
+are not converted to Sanger, but are kept in the produced format (currently
+Illumina 1.3+). The dots in the fastq files are converted into Ns.
 
-### Post-processing generated files
+## Post-processing generated files
 
 Those are distributed in three directories: alignments, barcode and the top level run directory.
 
-#### Top level directory
+### Top level directory
 
 Those files comprise both plain text files, images and structured data
 that can be useful both automatically and in human-readable form to get
 different aspects about the sequencing results.
 
-###### run_summary.yaml
+* `run_summary.yaml`
 
 Contains a structured view of the run global parameters.
 
@@ -271,7 +274,7 @@ Contains a structured view of the run global parameters.
       researcher: ''
       sample: ''
 
-###### PDF files
+* PDF files
 
 Taking a look at an specific sample in a lane, we find the different
 sub-components that conform the final summary report (`*-summary.pdf`).
@@ -288,13 +291,11 @@ histogram.
     6_110126_B816J0ABXX_5-sort_2_fastq_qual.pdf
     6_110126_B816J0ABXX_5-sort-summary.pdf
 
-###### BigWig files
+* BigWig files
 
 Per-sample wigtoBigWig converted files.
 
-##### Derived files
-
-###### *_metrics files
+* `*_metrics files`
 
 They contain plain text values from picard, namely: 
 
@@ -308,7 +309,7 @@ used to generate plots. For instance, for `sort-dup.align_metrics`, the
 output from net.sf.picard.analysis.CollectAlignmentSummaryMetrics is
 stored.
 
-##### alignments directory
+### alignments directory
 
 Contains the results of the alignments for each sample. As we see
 on the listing below, lane 1, barcode id 5 has been aligned in 
@@ -321,7 +322,7 @@ generated.
     1_110126_B816J0ABXX_5-sort.bam
     1_110126_B816J0ABXX_5_1_fastq.bam
 
-###### *_barcode directories
+### *_barcode directories
 
 Those contain fastq files conforming with the naming schema we've seen before. They are the result of the demultiplexing process, where the "unmatched" files contain the reads that have not passed the approximate barcoding matching algorithm:
 
@@ -352,15 +353,10 @@ The `_bc.metrics` file has a plain read distribution for each barcode:
     9	14390566
     unmatched	908420
 
-###### How does fastq generation and barcoding work ?
-
 Barcodes are added to the 3' end of the first sequence. That way, it
 remains platform-independent and can be easily handled downstream.
 This [GitHub discussion][in2] explains how demultiplexing works. The
 demultiplexing is performed by the [barcode_sort_trim.py][in3] script.
-Only reads that pass the quality filter (PF) are kept. Quality scores
-are not converted to Sanger, but are kept in the produced format (currently
-Illumina 1.3+). The dots in the fastq files are converted into Ns.
 
 [in1]: http://bioinformatics.oxfordjournals.org/content/early/2009/06/08/bioinformatics.btp352.short
 [in2]: https://github.com/chapmanb/mgh_projects/commit/3387d82f3496025ad13b69e8d9cbb47cf6ee2af9#nglims_paper/nglims_galaxy.tex-P57
