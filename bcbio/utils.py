@@ -83,21 +83,25 @@ def memoize_outfile(ext):
         return wrapper
     return decor
 
+def safe_makedir(dname):
+    """Make a directory if it doesn't exist, handling concurrent race conditions.
+    """
+    if not os.path.exists(dname):
+        # we could get an error here if multiple processes are creating
+        # the directory at the same time. Grr, concurrency.
+        try:
+            os.makedirs(dname)
+        except OSError:
+            assert os.path.isdir(dname)
+
 @contextlib.contextmanager
 def curdir_tmpdir():
     """Context manager to create and remove a temporary directory.
     """
     tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-    if not os.path.exists(tmp_dir_base):
-        # we could get an error here if multiple processes are creating
-        # the directory at the same time. Grr, concurrency.
-        try:
-            os.makedirs(tmp_dir_base)
-        except OSError:
-            pass
+    safe_makedir(tmp_dir_base)
     tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
-    if not os.path.exists(tmp_dir):
-        os.makedirs(tmp_dir)
+    safe_makedir(tmp_dir)
     try :
         yield tmp_dir
     finally :
@@ -110,8 +114,7 @@ def chdir(new_dir):
     http://lucentbeing.com/blog/context-managers-and-the-with-statement-in-python/
     """
     cur_dir = os.getcwd()
-    if not os.path.exists(new_dir):
-        os.makedirs(new_dir)
+    safe_makedir(new_dir)
     os.chdir(new_dir)
     try :
         yield
@@ -135,5 +138,15 @@ def create_dirs(config, names=None):
         names = config["dir"].keys()
     for dname in names:
         d = config["dir"][dname]
-        if not os.path.exists(d):
-            os.makedirs(d)
+        safe_makedir(d)
+
+def save_diskspace(fname, reason, config):
+    """Overwrite a file in place with a short message to save disk.
+
+    This keeps files as a sanity check on processes working, but saves
+    disk by replacing them with a short message.
+    """
+    if config["algorithm"].get("save_diskspace", False):
+        with open(fname, "w") as out_handle:
+            out_handle.write("File removed to save disk space: %s" % reason)
+

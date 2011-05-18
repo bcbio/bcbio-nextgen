@@ -2,7 +2,7 @@
 """Evaluate variant calls using GATK tools.
 
 Usage:
-    gatk_variant_eval.py <Picard location> <VCF file or directory> <reference seq file>
+    gatk_variant_eval.py <GATK directory> <VCF file or directory> <reference seq file>
                          <dbSNP file> [<interval file of targets>]
 
 If a directory is passed, this will print out a text table of SNP counts and
@@ -21,10 +21,10 @@ import json
 
 import yaml
 
-from bcbio.picard import PicardRunner
+from bcbio.broad import BroadRunner
 
-def main(picard_dir, vcf_info, ref_file, dbsnp, intervals=None):
-    picard = PicardRunner(picard_dir)
+def main(gatk_dir, vcf_info, ref_file, dbsnp, intervals=None):
+    picard = BroadRunner(gatk_dir)
     if os.path.isdir(vcf_info):
         vcf_files = sorted(glob.glob(os.path.join(vcf_info, "*-filter.vcf")))
     else:

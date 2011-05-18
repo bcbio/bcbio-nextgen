@@ -23,13 +23,15 @@ import subprocess
 
 import yaml
 
-from bcbio.picard import PicardRunner
-from bcbio.picard.utils import curdir_tmpdir
+from bcbio.broad import BroadRunner
+from bcbio.utils import curdir_tmpdir
 
 def main(config_file, ref_file, align_bam, dbsnp=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    picard = PicardRunner(config["program"]["picard"])
+    picard = BroadRunner(config["program"]["picard"],
+                         config["program"].get("gatk", ""),
+                         max_memory=config["algorithm"].get("java_memory", ""))
     ref_dict = index_ref_file(picard, ref_file)
     index_bam(align_bam, config["program"]["samtools"])
     realign_target_file = realigner_targets(picard, align_bam,

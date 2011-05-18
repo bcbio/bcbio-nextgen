@@ -104,3 +104,7 @@
     barcode_type: Illumina
     name: BAC02
     sequence: CTTGTA
+- analysis: Standard
+  description: Test3
+  genome_build: hg19
+  lane: 3

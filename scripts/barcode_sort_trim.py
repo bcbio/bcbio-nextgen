@@ -81,6 +81,10 @@ def best_match(end_gen, barcodes, mismatch):
     unmatched is returned for items which can't be matched to a barcode within
     the provided parameters.
     """
+    if len(barcodes) == 1 and barcodes.values() == ["trim"]:
+        size = len(barcodes.keys()[0])
+        test_seq = end_gen(size)
+        return barcodes.values()[0], test_seq, test_seq
     # easiest, fastest case -- exact match
     sizes = list(set(len(b) for b in barcodes.keys()))
     for s in sizes:
@@ -161,7 +165,10 @@ def output_to_fastq(output_base):
     """
     work_dir = os.path.dirname(output_base)
     if not os.path.exists(work_dir) and work_dir:
-        os.makedirs(work_dir)
+        try:
+            os.makedirs(work_dir)
+        except OSError:
+            assert os.path.isdir(work_dir)
     out_handles = dict()
     def write_reads(barcode, name1, seq1, qual1, name2, seq2, qual2):
         read1name = output_base.replace("--r--", "1").replace("--b--", barcode)
@@ -237,6 +244,20 @@ class BarcodeTest(unittest.TestCase):
         assert bc_id == "unmatched"
         (bc_id, _, _) = best_match(end_generator("GCTTGT"), self.barcodes, 2)
         assert bc_id == "unmatched"
+
+    def test_4_custom_barcodes(self):
+        """ Detect longer non-standard custom barcodes, trimming
+        """
+        # Use the custom long barcode
+        custom_barcode = dict((bc_seq, bc_id) for bc_id, bc_seq in self.barcodes.iteritems())
+        # Simulate an arbitrary read, attach barcode and remove it from the 3' end
+        seq = "GATTACA"*5+custom_barcode["7"]
+        (bc_id, bc_seq, match_seq) = best_match(end_generator(seq), self.barcodes, 1)
+        (removed, _, _, _) = remove_barcode(seq, "B"*9, seq, "g"*9, match_seq, True, True)
+        # Was the barcode properly identified and removed with 1 mismatch allowed ?
+        assert bc_id == "7"
+        assert bc_seq == match_seq
+        assert removed == "GATTACA"*5
 
 if __name__ == "__main__":
     parser = OptionParser()

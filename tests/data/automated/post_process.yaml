@@ -6,6 +6,7 @@ program:
   maq: maq
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
+  gatk: /usr/share/java/gatk
   snpEff: /usr/share/java/snpeff
   fastx_stats: fastx_quality_stats
   fastx_graph: fastq_quality_boxplot_graph.sh
@@ -24,6 +25,8 @@ algorithm:
   bc_mismatch: 2
   bc_read: 1
   bc_position: 3
+  java_memory: 5g
+  save_diskspace: true
 
 analysis:
   towig_script: bam_to_wiggle.py

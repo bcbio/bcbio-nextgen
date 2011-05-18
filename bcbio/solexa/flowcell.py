@@ -55,7 +55,6 @@ def get_fastq_dir(fc_dir):
     else:
         return fc_dir
 
-
 class GalaxySqnLimsApi:
     """Manage talking with the Galaxy REST api for sequencing information.
     """

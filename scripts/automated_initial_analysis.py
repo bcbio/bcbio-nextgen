@@ -36,12 +36,13 @@ import StringIO
 
 import yaml
 import logbook
+from Bio import SeqIO
 
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
-from bcbio.picard.metrics import PicardMetricsParser
+from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
-from bcbio.picard import PicardRunner
+from bcbio.broad import BroadRunner
 from bcbio.log import create_log_handler
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -51,6 +52,7 @@ def main(config_file, fc_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
+    
     with log_handler.applicationbound():
         run_main(config, config_file, fc_dir, run_info_yaml)
 
@@ -66,9 +68,9 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     else:
         log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name)
-    run_items = _add_multiplex_to_control(run_info["details"])
+        run_info = galaxy_api.run_details(fc_name, fc_date)
     fastq_dir = get_fastq_dir(fc_dir)
+    run_items = _add_multiplex_across_lanes(run_info["details"], fastq_dir, fc_name)
     align_dir = os.path.join(work_dir, "alignments")
 
     # process each flowcell lane
@@ -93,15 +95,20 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
     """Do alignments for a lane, potentially splitting based on barcodes.
     """
     config = _update_config_w_custom(config, info)
+    
     sample_name = info.get("description", "")
     if (config["algorithm"].get("include_short_name", True) and
             info.get("name", "")):
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
     genome_build = info.get("genome_build", None)
     multiplex = info.get("multiplex", None)
-    log.info("Processing", info["lane"], genome_build, \
-            sample_name, info.get("researcher", ""), \
-            info.get("analysis", ""), multiplex)
+    
+    log.info("Processing sample %s on lane %s with reference genome %s by researcher %s. Using %s analysis preset" \
+             % (sample_name, info["lane"], genome_build, \
+                info.get("researcher", "unknown"), info.get("analysis", "")))
+    if multiplex:
+        log.debug("Sample %s is multiplexed as: %s" % (sample_name, multiplex))
+    
     fastq_dir, galaxy_dir = _get_full_paths(fastq_dir, config, config_file)
     align_ref, sam_ref = get_genome_ref(genome_build,
             config["algorithm"]["aligner"], galaxy_dir)
@@ -122,6 +129,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     """Finalize processing for a sample, potentially multiplexed.
     """
     config = _update_config_w_custom(config, info)
+    
     genome_build = info.get("genome_build", None)
     (_, galaxy_dir) = _get_full_paths("", config, config_file)
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
@@ -145,7 +153,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
             variation_effects(vrn_file, genome_build, sam_ref, config)
     if sam_ref is not None:
         print sample_name, "Generating summary files"
-        generate_align_summary(sort_bam, fastq1, fastq2, sam_ref,
+        generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
                 config, sample_name, config_file)
 
 def _combine_fastq_files(in_files, work_dir):
@@ -199,28 +207,65 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
                     lane_info["lane"], fc_name))
     return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
 
-def _add_multiplex_to_control(run_items):
-    """Add multiplexing to our control if we are using Illumina standard.
+def _get_fastq_size(item, fastq_dir, fc_name):
+    """Retrieve the size of reads from the first flowcell sequence.
     """
-    multiplexes = []
-    control = None
-    control_i = -1
-    for i, item in enumerate(run_items):
-        if item.get("description", "").lower() == "control":
-            control = item
-            control_i = i
-        else:
-            multiplexes.append(item.get("multiplex", ""))
-    unique_multiplexes = list(set(str(m) for m in multiplexes))
-    if (control and (len(multiplexes) == len(run_items) - 1) and
-            len(unique_multiplexes) == 1):
-        cntl_multiplex = copy.deepcopy(multiplexes[0])
-        for i, multi in enumerate(cntl_multiplex):
-            multi['name'] = control["description"]
-            cntl_multiplex[i] = multi
-        control["multiplex"] = cntl_multiplex
-        run_items[control_i] = control
-    return run_items
+    (fastq1, _) = get_fastq_files(fastq_dir, item['lane'], fc_name)
+    with open(fastq1) as in_handle:
+        try:
+            rec = SeqIO.parse(in_handle, "fastq").next()
+            size = len(rec.seq)
+        except StopIteration:
+            log.warn("Found a zero-sized fastq file for lane %s" % item['lane'])
+            size = 0
+    return size
+
+def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
+    """Add multiplex information to control and non-multiplexed lanes.
+
+    Illumina runs include barcode reads for non-multiplex lanes, and the
+    control, when run on a multiplexed flow cell. This checks for this
+    situation and adds details to trim off the extra bases.
+    """
+    fastq_dir = _add_full_path(fastq_dir)
+    # determine if we have multiplexes and collect expected size
+    fastq_sizes = []
+    tag_sizes = []
+    has_barcodes = False
+    for item in run_items:
+        if item.get("multiplex", None):
+            has_barcodes = True
+            tag_sizes.extend([len(b["sequence"]) for b in item["multiplex"]])
+            fastq_sizes.append(_get_fastq_size(item, fastq_dir, fc_name))
+    if not has_barcodes: # nothing to worry about
+        return run_items
+    fastq_sizes = list(set(fastq_sizes))
+
+    # discard 0 sizes to handle the case where lane(s) are empty or failed
+    try:
+        fastq_sizes.remove(0)
+    except ValueError: pass
+    
+    tag_sizes = list(set(tag_sizes))
+    final_items = []
+    for item in run_items:
+        if item.get("multiplex", None) is None:
+            assert len(fastq_sizes) == 1, \
+                   "Multi and non-multiplex reads with multiple sizes"
+            expected_size = fastq_sizes[0]
+            assert len(tag_sizes) == 1, \
+                   "Expect identical tag size for a flowcell"
+            tag_size = tag_sizes[0]
+            this_size = _get_fastq_size(item, fastq_dir, fc_name)
+            if this_size == expected_size:
+                item["multiplex"] = [{"name" : item.get("name", item["description"]),
+                                      "barcode_id": "trim",
+                                      "sequence" : "N" * tag_size}]
+            else:
+                assert this_size == expected_size - tag_size, \
+                       "Unexpected non-multiplex sequence"
+        final_items.append(item)
+    return final_items
 
 def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     """Split a fastq file into multiplex pieces using barcode details.
@@ -231,7 +276,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
     metrics_file = "%s_bc.metrics" % base_name
     with utils.chdir(bc_dir):
-        if not os.path.exists(nomatch_file):
+        if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):
             tag_file = _make_tag_file(multiplex)
             cl = [config["program"]["barcode"], tag_file,
                   "%s_--b--_--r--_fastq.txt" % base_name,
@@ -255,26 +300,44 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
     return out_files
 
 def _make_tag_file(barcodes):
-    tag_file = "%s-barcodes.cfg" % barcodes[0]['barcode_type']
+    tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
+    barcodes = _adjust_illumina_tags(barcodes)
     with open(tag_file, "w") as out_handle:
         for bc in barcodes:
-            #out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
-            out_handle.write("%s %s\n" % (bc["barcode_id"], "%sA" % bc["sequence"]))
+            out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
     return tag_file
+
+def _adjust_illumina_tags(barcodes):
+    """Handle additional trailing A in Illumina barocdes.
+
+    Illumina barcodes are listed as 6bp sequences but have an additional
+    A base when coming off on the sequencer. This checks for this case and
+    adjusts the sequences appropriately if needed.
+    """
+    illumina_size = 7
+    all_illumina = True
+    need_a = False
+    for bc in barcodes:
+        if bc.get("barcode_type", "illumina").lower().find("illumina") == -1:
+            all_illumina = False
+        if (not bc["sequence"].upper().endswith("A") or
+            len(bc["sequence"]) < illumina_size):
+            need_a = True
+    if all_illumina and need_a:
+        new = []
+        for bc in barcodes:
+            new_bc = copy.deepcopy(bc)
+            new_bc["sequence"] = "%sA" % new_bc["sequence"]
+            new.append(new_bc)
+        barcodes = new
+    return barcodes
 
 def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         sample_name, align_dir, config, config_file):
     """Align to the provided reference genome, returning an aligned SAM file.
     """
     aligner_to_use = config["algorithm"]["aligner"]
-    if not os.path.exists(align_dir):
-        try:
-            os.makedirs(align_dir)
-        # in case we have made it in another process
-        # should really be using a lock or something smarter here
-        except OSError:
-            pass
-        assert os.path.exists(align_dir)
+    utils.safe_makedir(align_dir)
 
     log.info("Aligning lane %s with %s aligner" % (lane_name, aligner_to_use))
     if aligner_to_use == "bowtie":
@@ -293,7 +356,7 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         raise ValueError("Do not recognize aligner: %s" % aligner_to_use)
     log.info("Converting lane %s to sorted BAM file" % lane_name)
     sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                    lane_name, config_file)
+                    lane_name, config, config_file)
 
 def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Before a standard or paired end alignment with bowtie.
@@ -316,24 +379,26 @@ def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
             cl += [fastq_file]
         cl += [out_file]
         cl = [str(i) for i in cl]
-	log.info("Running bowtie with cmdline: %s" % " ".join(cl))
-        child = subprocess.Popen(cl)
-        child.wait()
+        log.info("Running bowtie with cmdline: %s" % " ".join(cl))
+        subprocess.check_call(cl)
     return out_file
 
 def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     out_dir = os.path.join(align_dir, "%s.sam" % out_base)
-    if not os.path.exists(out_file):
+    if not os.path.exists(out_dir):
         cl = [config["program"]["tophat"]]
         cl += ["--solexa1.3-quals",
-               "-p 8",
-               "-r 45",
-               ref_file]
-        cl += [fastq_file]
-        cl += ["-o", out_dir]
-    log.info("Running tophat with cmdline: %s" % " ".join(cl))
+              "-p 8",
+              "-r 45",
+              ref_file]
+        if pair_file:
+            cl += [fastq_file, pair_file]
+        else:
+            cl += [fastq_file]
+        cl += ["-o ", out_dir]
+    log.info("Running tophat with cmdline: %s" % cl)
     child = subprocess.check_call(cl)
-    return out_file
+    return out_dir
 
 def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Perform a BWA alignment, generating a SAM file.
@@ -355,8 +420,7 @@ def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, confi
         if sai2_file:
             sam_cl.append(pair_file)
         with open(sam_file, "w") as out_handle:
-            child = subprocess.Popen(sam_cl, stdout=out_handle)
-            child.wait()
+            subprocess.check_call(sam_cl, stdout=out_handle)
     return sam_file
 
 def maq_align_to_sam(fastq_file, pair_file, ref_file, out_base,
@@ -382,7 +446,7 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
         subprocess.check_call(aln_cl, stdout=out_handle)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-        lane_name, config_file):
+                    lane_name, config, config_file):
     """Convert SAM file to merged and sorted BAM file.
     """
     lane = lane_name.split("_")[0]
@@ -392,13 +456,15 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
     if fastq2:
         cl.append(fastq2)
     subprocess.check_call(cl)
+    utils.save_diskspace(sam_file, "SAM converted to BAM", config)
 
 def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
     """
     out_file = os.path.join(work_dir, os.path.basename(bam_files[0]))
     if not os.path.exists(out_file):
-        picard = PicardRunner(config["program"]["picard"])
+        picard = BroadRunner(config["program"]["picard"],
+                             max_memory=config["algorithm"].get("java_memory", ""))
         with utils.curdir_tmpdir() as tmp_dir:
             opts = [("OUTPUT", out_file),
                     ("SORT_ORDER", "coordinate"),
@@ -406,26 +472,28 @@ def merge_bam_files(bam_files, work_dir, config):
             for b in bam_files:
                 opts.append(("INPUT", b))
             picard.run("MergeSamFiles", opts)
+    for b in bam_files:
+        utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
     return out_file
 
 def bam_to_wig(bam_file, config, config_file):
     """Provide a BigWig coverage file of the sorted alignments.
     """
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
-    if not os.path.exists(wig_file):
+    if not (os.path.exists(wig_file) and os.path.getsize(wig_file) > 0):
         cl = [config["analysis"]["towig_script"], bam_file, config_file]
         subprocess.check_call(cl)
     return wig_file
 
-def generate_align_summary(bam_file, fastq1, fastq2, sam_ref, config,
+def generate_align_summary(bam_file, is_paired, sam_ref, config,
         sample_name, config_file, do_sort=False):
     """Run alignment summarizing script to produce a pdf with align details.
     """
     sample_name = " : ".join(sample_name)
     cl = ["align_summary_report.py", "--name=%s" % sample_name,
-            config["program"]["picard"], bam_file, sam_ref, fastq1]
-    if fastq2:
-        cl.append(fastq2)
+            config["program"]["picard"], bam_file, sam_ref]
+    if is_paired:
+        cl.append("--paired")
     bait = config["algorithm"].get("hybrid_bait", "")
     target = config["algorithm"].get("hybrid_target", "")
     if bait and target:
@@ -463,8 +531,8 @@ def eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.
     """
     metrics_file = "%s.eval_metrics" % vrn_file
-    cl = ["gatk_variant_eval.py", config["program"]["picard"], vrn_file,
-          ref_file, dbsnp_file]
+    cl = ["gatk_variant_eval.py", config["program"].get("gatk", config["program"]["picard"]),
+          vrn_file, ref_file, dbsnp_file]
     target = config["algorithm"].get("hybrid_target", "")
     if target:
         base_dir = os.path.dirname(os.path.dirname(ref_file))
@@ -503,9 +571,9 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
     if bc_name:
-        glob_str = "%s_*%s_%s_*txt*" % (lane, fc_name, bc_name)
+        glob_str = "%s_*%s_%s_*_fastq.txt" % (lane, fc_name, bc_name)
     else:
-        glob_str = "%s_*%s*txt*" % (lane, fc_name)
+        glob_str = "%s_*%s*_fastq.txt" % (lane, fc_name)
     files = glob.glob(os.path.join(directory, glob_str))
     files.sort()
     if len(files) > 2 or len(files) == 0:
@@ -519,10 +587,11 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
             ready_files.append(os.path.splitext(fname)[0])
         else:
             ready_files.append(fname)
-    
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
 def _remap_to_maq(ref_file):
+    """ToDo: Why is this needed for ?
+    """
     base_dir = os.path.dirname(os.path.dirname(ref_file))
     name = os.path.basename(ref_file)
     for ext in ["fa", "fasta"]:
@@ -540,7 +609,8 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
             bowtie = "bowtie_indices.loc",
             bwa = "bwa_index.loc",
             samtools = "sam_fa_indices.loc",
-            maq = "bowtie_indices.loc")
+            maq = "bowtie_indices.loc",
+	        tophat = "bowtie_indices.loc")
     remap_fns = dict(
             maq = _remap_to_maq
             )
@@ -587,10 +657,15 @@ def write_metrics(run_info, analysis_dir, fc_dir, fc_name, fc_date,
         metrics = dict(lanes=lane_stats, samples=sample_stats)
         yaml.dump(metrics, out_handle, default_flow_style=False)
     tab_out_file = os.path.join(fc_dir, "run_summary.tsv")
-    with open(tab_out_file, "w") as out_handle:
-        writer = csv.writer(out_handle, dialect="excel-tab")
-        for info in tab_metrics:
-            writer.writerow(info)
+    try:
+        with open(tab_out_file, "w") as out_handle:
+            writer = csv.writer(out_handle, dialect="excel-tab")
+            for info in tab_metrics:
+                writer.writerow(info)
+    # If on NFS mounted directory can fail due to filesystem or permissions
+    # errors. That's okay, we'll just not write the file.
+    except IOError:
+        pass
     return out_file
 
 def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
@@ -620,7 +695,8 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
                 cur_run_info = copy.deepcopy(base_info)
                 cur_run_info["metrics"] = stats
                 cur_run_info["barcode_id"] = str(barcode["barcode_id"]) if barcode else ""
-                cur_run_info["barcode_type"] = str(barcode["barcode_type"]) if barcode else ""
+                cur_run_info["barcode_type"] = (str(barcode.get("barcode_type", ""))
+                                                if barcode else "")
                 sample_info.append(cur_run_info)
     return lane_info, sample_info, tab_out
 

@@ -56,7 +56,11 @@ def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
     if db_dir is None:
         db_dir = work_dir
     if not os.path.exists(image_dir):
-        os.makedirs(image_dir)
+        # avoid error with creating directories simultaneously on two threads
+        try:
+            os.makedirs(image_dir)
+        except OSError:
+            assert os.path.isdir(image_dir)
     (base, _) = os.path.splitext(recal_bam)
     orig_files = {1: fastq1, 2: fastq2}
 
@@ -206,7 +210,10 @@ def _counts_at_position(positions, orig_reader, cmp_reader):
     for orig_parts in orig_reader:
         cmp_parts = cmp_reader.next()
         for pos in positions:
-            pos_counts[pos][int(orig_parts[pos+1])][int(cmp_parts[pos+1])] += 1
+            try:
+                pos_counts[pos][int(orig_parts[pos+1])][int(cmp_parts[pos+1])] += 1
+            except IndexError:
+                pass
     for pos, count_dict in pos_counts.iteritems():
         for orig_val, cmp_dict in count_dict.iteritems():
             for cmp_val, count in cmp_dict.iteritems():
@@ -242,10 +249,9 @@ def bam_to_fastq(bam_file, is_paired):
     out_files, out_handles = _get_fastq_handles(bam_file,
             is_paired)
     if len(out_handles) > 0:
-        print bam_file
         in_bam = pysam.Samfile(bam_file, mode='rb')
         for read in in_bam:
-            num = 1 if (not read.is_proper_pair or read.is_read1) else 2
+            num = 1 if (not read.is_paired or read.is_read1) else 2
             # reverse the sequence and quality if mapped to opposite strand
             if read.is_reverse:
                 seq = str(Seq.reverse_complement(Seq.Seq(read.seq)))

@@ -7,13 +7,11 @@ program:
   bwa: bwa
   maq: maq
   ucsc_bigwig: wigToBigWig
-  picard: /source/Picard
-  snpEff: /source/share/snpEff
-  fastx_stats: fastx_quality_stats
-  fastx_graph: fastq_quality_boxplot_graph.sh
+  picard: /usr/share/java/picard
+  gatk: /usr/share/java/gatk
+  snpEff: /usr/share/java/snpeff
+  fastqc: fastqc
   pdflatex: pdflatex
-  ps2pdf: ps2pdf
-  solexaqa: SolexaQA.pl
   barcode: barcode_sort_trim.py
 algorithm:
   aligner: bowtie
@@ -26,6 +24,9 @@ algorithm:
   bc_mismatch: 2
   bc_read: 1
   bc_position: 3
+  java_memory: 6g
+  upload_fastq: false
+  save_diskspace: true
 
 log_dir: /array0/projects/Sequencing/log
 msg_process_tag: sqn_finished_process
@@ -39,10 +40,15 @@ analysis:
   # the analysis programs on. This needs a configuration file 
   # like this with program information for the remote machine.
   # The default is to run the analysis on the local machine.
+  # You can also specify a different remote host to initiate
+  # the copy from. This is useful for NFS shared filesystems
+  # where you want to manage the copy from the base machine.
   user:
   host:
   login_shell:
   config_file: /path/to/remote/post_process.yaml
+  copy_user:
+  copy_host:
   store_dir: /store4/solexadata
   base_dir: /array0/projects/Sequencing
   towig_script: bam_to_wiggle.py

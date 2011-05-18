@@ -47,23 +47,21 @@ def main(galaxy_config, processing_config):
 def copy_and_analyze(remote_info, config, config_file):
     """Remote copy an output directory, process it, and upload to Galaxy.
     """
-    user = config["analysis"].get("user", None)
-    host = config["analysis"].get("host", None)
-    shell = config["analysis"].get("login_shell", None)
-    if not user or not host:
-        user = os.environ["USER"]
-        host = re.sub(r'\..*', '', os.uname()[1])
-    if not shell:
-        shell = os.environ["SHELL"]
-    fabric.env.host_string = "%s@%s" % (user, host)
-    fabric.env.shell = "%s -i -l -c" % shell
     log.debug("Remote host information: %s" % remote_info)
-    fc_dir = _remote_copy(remote_info, config)
+    a_host_str, a_shell, c_host_str = _config_hosts(config)
 
+    with fabric.settings(host_string=c_host_str):
+        fc_dir = _remote_copy(remote_info, config)
+
+    with fabric.settings(host_string=a_host_str, shell=a_shell):
+        _analyze_and_upload(remote_info, config, config_file, fc_dir)
+
+def _analyze_and_upload(remote_info, config, config_file, fc_dir):
     if config["analysis"].get("config_file", None):
         config_file = config["analysis"]["config_file"]
     elif not config_file.startswith("/"):
         config_file = os.path.join(os.getcwd(), config_file)
+
     # Converted from an Illumina/Genesifter SampleSheet.csv
     run_yaml = os.path.join(config["analysis"]["store_dir"],
                                 os.path.basename(fc_dir), "run_info.yaml")
@@ -81,6 +79,26 @@ def copy_and_analyze(remote_info, config, config_file):
         fabric.run(" ".join(cl))
     cl = [config["analysis"]["upload_program"], config_file, fc_dir, analysis_dir]
     fabric.run(" ".join(cl))
+
+def _config_hosts(config):
+    """Retrieve configured machines to perform analysis and copy on.
+    """
+    user = config["analysis"].get("user", None)
+    host = config["analysis"].get("host", None)
+    shell = config["analysis"].get("login_shell", None)
+    if not user or not host:
+        user = os.environ["USER"]
+        host = re.sub(r'\..*', '', os.uname()[1])
+    if not shell:
+        shell = os.environ["SHELL"]
+    copy_user = config["analysis"].get("copy_user", None)
+    copy_host = config["analysis"].get("copy_host", None)
+    if not copy_user or not copy_host:
+        copy_user, copy_host = (user, host)
+    analysis_host_str = "%s@%s" % (user, host)
+    analysis_shell = "%s -i -l -c" % shell
+    copy_host_str = "%s@%s" % (copy_user, copy_host)
+    return analysis_host_str, analysis_shell, copy_host_str
 
 def _remote_copy(remote_info, config):
     """Securely copy files from remote directory to the processing server.
@@ -104,6 +122,7 @@ def _remote_copy(remote_info, config):
                    remote_info["directory"], fcopy),
                   target_loc]
             fabric.run(" ".join(cl))
+    log.info("Analysis files copied")
     return fc_dir
 
 def analysis_handler(processing_config, tag_name, config_file):
