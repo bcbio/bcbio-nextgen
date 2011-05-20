@@ -50,7 +50,8 @@ def picard_index_ref(picard, ref_file):
         picard.run("CreateSequenceDictionary", opts)
     return dict_file
 
-def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None):
+def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
+                           deep_coverage=False):
     """Generate a list of interval regions for realignment around indels.
     """
     out_file = "%s-realign.intervals" % os.path.splitext(align_bam)[0]
@@ -62,11 +63,15 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None):
               ]
     if dbsnp:
         params += ["-B:dbsnp,VCF", dbsnp]
+    if deep_coverage:
+        params += ["--mismatchFraction", "0.30",
+                   "--maxIntervalSize", "650"]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         runner.run_gatk(params)
     return out_file
 
-def gatk_indel_realignment(runner, align_bam, ref_file, intervals):
+def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
+                           deep_coverage=False):
     """Perform realignment of BAM file in specified regions
     """
     out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
@@ -77,18 +82,23 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals):
               "-o", out_file,
               "-l", "INFO",
               ]
+    if deep_coverage:
+        params += ["--maxReadsInMemory", "300000",
+                   "--maxReadsForRealignment", str(int(5e5)),
+                   "--maxReadsForConsensuses", "500",
+                   "--maxConsensuses", "100"]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with curdir_tmpdir() as tmp_dir:
             runner.run_gatk(params, tmp_dir)
     return out_file
 
-def gatk_realigner(runner, ref_file, align_bam, dbsnp=None):
+def gatk_realigner(runner, align_bam, ref_file, dbsnp=None,
+                   deep_coverage=False):
     """Realign a BAM file around indels using GATK.
     """
     picard_index_ref(runner, ref_file)
     realign_target_file = gatk_realigner_targets(runner, align_bam,
-                                                 ref_file, dbsnp)
+                                                 ref_file, dbsnp, deep_coverage)
     realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
-                                         realign_target_file)
+                                         realign_target_file, deep_coverage)
     return realign_bam
-
