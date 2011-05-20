@@ -60,6 +60,29 @@ def map_wrap(f):
         return apply(f, *args, **kwargs)
     return wrapper
 
+def memoize_outfile(ext):
+    """Creates outfile from input file and ext, running if outfile not present.
+
+    This requires a standard function usage. The first arg, or kwarg 'in_file', needs
+    to be the input file that is being processed. The output name is created with the
+    provided ext relative to the input. The function is only run if the created
+    out_file is not present.
+    """
+    def decor(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            if len(args) > 0:
+                in_file = args[0]
+            else:
+                in_file = kwargs['in_file']
+            out_file = "%s%s" % (os.path.splitext(in_file)[0], ext)
+            if not os.path.exists(out_file) or os.path.getsize(out_file) == 0:
+                kwargs['out_file'] = out_file
+                f(*args, **kwargs)
+            return out_file
+        return wrapper
+    return decor
+
 def safe_makedir(dname):
     """Make a directory if it doesn't exist, handling concurrent race conditions.
     """
