@@ -17,6 +17,7 @@ GENOME_REMAP = {
         "GRCh37": "hg37.60",
         "hg19" : "hg37.60",
         "mm9" : "mm37.60",
+        "araTha_tair9": "athaliana130",
         }
 
 def main(snpeff_jar, vcf_ref, genome, interval_file=None):
