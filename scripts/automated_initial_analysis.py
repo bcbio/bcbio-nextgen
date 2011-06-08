@@ -289,6 +289,8 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
                 cl.append("--second")
             if int(config["algorithm"]["bc_position"]) == 5:
                 cl.append("--five")
+            if config["algorithm"].get("bc_allow_indels", True) is False:
+                cl.append("--noindel")
             subprocess.check_call(cl)
     out_files = []
     for info in multiplex:
