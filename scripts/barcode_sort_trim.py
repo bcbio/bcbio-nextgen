@@ -104,7 +104,8 @@ def best_match(end_gen, barcodes, mismatch):
             (abc_seq, atest_seq) = aligns[0][:2] if len(aligns) == 1 else ("", "")
             matches = sum(1 for i, base in enumerate(abc_seq)
                           if base == atest_seq[i])
-            cur_mismatch = len(test_seq) - matches
+            gaps = abc_seq.count("-")
+            cur_mismatch = len(test_seq) - matches + gaps
             if cur_mismatch <= mismatch:
                 match_info.append((cur_mismatch, bc_id, abc_seq, atest_seq))
     if len(match_info) > 0:
@@ -238,6 +239,8 @@ class BarcodeTest(unittest.TestCase):
         (bc_id, _, _) = best_match(end_generator("GATTGT"), self.barcodes, 1)
         # single gap deletion
         (bc_id, _, _) = best_match(end_generator("GCGAGT"), self.barcodes, 1)
+        assert bc_id == "unmatched"
+        (bc_id, _, _) = best_match(end_generator("GCGAGT"), self.barcodes, 2)
         assert bc_id == "2"
         # too many errors
         (bc_id, _, _) = best_match(end_generator("GCATGT"), self.barcodes, 1)
