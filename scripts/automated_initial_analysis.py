@@ -44,6 +44,7 @@ from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
 from bcbio.broad import BroadRunner
 from bcbio.log import create_log_handler
+from bcbio.ngsalign import bowtie, bwa, tophat
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
@@ -338,114 +339,18 @@ def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
         sample_name, align_dir, config, config_file):
     """Align to the provided reference genome, returning an aligned SAM file.
     """
+    align_fns = {"bowtie": bowtie.align,
+                 "tophat": tophat.align,
+                 "bwa": bwa.align}
     aligner_to_use = config["algorithm"]["aligner"]
     utils.safe_makedir(align_dir)
-
     log.info("Aligning lane %s with %s aligner" % (lane_name, aligner_to_use))
-    if aligner_to_use == "bowtie":
-        sam_file = bowtie_to_sam(fastq1, fastq2, align_ref, lane_name,
-                                 align_dir, config)
-    elif aligner_to_use == "tophat":
-        sam_file = tophat_align_to_sam(fastq1, fastq2, align_ref, lane_name,
-                                       align_dir, config)
-    elif aligner_to_use == "bwa":
-        sam_file = bwa_align_to_sam(fastq1, fastq2, align_ref, lane_name,
-                                    align_dir, config)
-    elif aligner_to_use == "maq":
-        sam_file = maq_align_to_sam(fastq1, fastq2, align_ref, lane_name,
-                                    sample_name, align_dir, config_file)
-    else:
-        raise ValueError("Do not recognize aligner: %s" % aligner_to_use)
+    align_fn = align_fns[aligner_to_use]
+    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, align_dir, config)
+
     log.info("Converting lane %s to sorted BAM file" % lane_name)
     sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
                     lane_name, config, config_file)
-
-def bowtie_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
-    """Before a standard or paired end alignment with bowtie.
-    """
-    out_file = os.path.join(align_dir, "%s.sam" % out_base)
-    if not os.path.exists(out_file):
-        cl = [config["program"]["bowtie"]]
-        cl += ["-q", "--solexa1.3-quals",
-               "-v", config["algorithm"]["max_errors"],
-               "-k", 1,
-               "-X", 1000, # matches bwa sampe default size
-               "-M", 1,
-               "--best",
-               "--strata",
-               "--sam",
-               ref_file]
-        if pair_file:
-            cl += ["-1", fastq_file, "-2", pair_file]
-        else:
-            cl += [fastq_file]
-        cl += [out_file]
-        cl = [str(i) for i in cl]
-        log.info("Running bowtie with cmdline: %s" % " ".join(cl))
-        subprocess.check_call(cl)
-    return out_file
-
-def tophat_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
-    out_dir = os.path.join(align_dir, "%s.sam" % out_base)
-    if not os.path.exists(out_dir):
-        cl = [config["program"]["tophat"]]
-        cl += ["--solexa1.3-quals",
-              "-p 8",
-              "-r 45",
-              ref_file]
-        if pair_file:
-            cl += [fastq_file, pair_file]
-        else:
-            cl += [fastq_file]
-        cl += ["-o ", out_dir]
-    log.info("Running tophat with cmdline: %s" % cl)
-    child = subprocess.check_call(cl)
-    return out_dir
-
-def bwa_align_to_sam(fastq_file, pair_file, ref_file, out_base, align_dir, config):
-    """Perform a BWA alignment, generating a SAM file.
-    """
-    sai1_file = os.path.join(align_dir, "%s_1.sai" % out_base)
-    sai2_file = (os.path.join(align_dir, "%s_2.sai" % out_base)
-                 if pair_file else None)
-    sam_file = os.path.join(align_dir, "%s.sam" % out_base)
-    if not os.path.exists(sam_file):
-        if not os.path.exists(sai1_file):
-            _run_bwa_align(fastq_file, ref_file, sai1_file, config)
-        if sai2_file and not os.path.exists(sai2_file):
-            _run_bwa_align(pair_file, ref_file, sai2_file, config)
-        align_type = "sampe" if sai2_file else "samse"
-        sam_cl = [config["program"]["bwa"], align_type, ref_file, sai1_file]
-        if sai2_file:
-            sam_cl.append(sai2_file)
-        sam_cl.append(fastq_file)
-        if sai2_file:
-            sam_cl.append(pair_file)
-        with open(sam_file, "w") as out_handle:
-            subprocess.check_call(sam_cl, stdout=out_handle)
-    return sam_file
-
-def maq_align_to_sam(fastq_file, pair_file, ref_file, out_base,
-        sample_name, align_dir, config_file):
-    """Produce a BAM output using Picard to do a maq alignment.
-    """
-    raise NotImplementedError("Need to update for alignment directory")
-    bam_file = os.path.join(align_dir, "%s-maq-cal.bam" % out_base)
-    cl = ["picard_maq_recalibrate.py", "--name=%s" % sample_name,
-            config_file, out_base, ref_file, fastq_file]
-    if pair_file:
-        cl.append(pair_file)
-    child = subprocess.Popen(cl)
-    child.wait()
-    return bam_file
-
-def _run_bwa_align(fastq_file, ref_file, out_file, config):
-    aln_cl = [config["program"]["bwa"], "aln",
-              "-n %s" % config["algorithm"]["max_errors"],
-              "-k %s" % config["algorithm"]["max_errors"],
-              ref_file, fastq_file]
-    with open(out_file, "w") as out_handle:
-        subprocess.check_call(aln_cl, stdout=out_handle)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
                     lane_name, config, config_file):
