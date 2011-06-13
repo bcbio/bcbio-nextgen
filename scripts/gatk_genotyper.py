@@ -97,25 +97,6 @@ def variant_filtration(picard, snp_file, ref_file):
         picard.run_gatk(params)
     return out_file
 
-def NOTUSED_variant_eval(picard, filter_snp, ref_file, dbsnp):
-    """Provide summary evaluating called variants.
-
-    XXX missing:
-        interval list
-    """
-    out_file = "%s-eval.txt" % os.path.splitext(filter_snp)[0]
-    params = ["-T", "VariantEval",
-              "-B:eval,VCF", filter_snp,
-              "-R", ref_file,
-              "-o", out_file,
-              "-l", "INFO",
-              ]
-    if dbsnp:
-        params += ["-B:comp,VCF", dbsnp]
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        picard.run_gatk(params)
-    return out_file
-
 def picard_fixmate(picard, align_bam):
     """Run Picard's FixMateInformation generating an aligned output file.
     """
