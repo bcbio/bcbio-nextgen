@@ -369,16 +369,9 @@ def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
     """
     out_file = os.path.join(work_dir, os.path.basename(bam_files[0]))
-    if not os.path.exists(out_file):
-        picard = BroadRunner(config["program"]["picard"],
-                             max_memory=config["algorithm"].get("java_memory", ""))
-        with utils.curdir_tmpdir() as tmp_dir:
-            opts = [("OUTPUT", out_file),
-                    ("SORT_ORDER", "coordinate"),
-                    ("TMP_DIR", tmp_dir)]
-            for b in bam_files:
-                opts.append(("INPUT", b))
-            picard.run("MergeSamFiles", opts)
+    picard = BroadRunner(config["program"]["picard"],
+                         max_memory=config["algorithm"].get("java_memory", ""))
+    picard.run_fn("picard_merge", bam_files, out_file)
     for b in bam_files:
         utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
     return out_file
