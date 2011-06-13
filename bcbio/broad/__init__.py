@@ -6,7 +6,7 @@
 import os
 import subprocess
 
-import run as run_fns
+from bcbio.broad import gatkrun, picardrun
 
 class BroadRunner:
     """Simplify running Broad commandline tools.
@@ -20,11 +20,19 @@ class BroadRunner:
         self._gatk_dir = gatk_dir or picard_dir
 
     def run_fn(self, name, *args, **kwds):
-        """Run pre-build functionality that used Broad tools by name.
+        """Run pre-built functionality that used Broad tools by name.
 
-        See the run module for available functions.
+        See the gatkrun, picardrun module for available functions.
         """
-        fn = getattr(run_fns, name)
+        fn = None
+        to_check = [gatkrun, picardrun]
+        for ns in to_check:
+            try:
+                fn = getattr(ns, name)
+                break
+            except AttributeError:
+                pass
+        assert fn is not None, "Could not find function %s in %s" % (name, to_check)
         return fn(self, *args, **kwds)
 
     def run(self, command, options):
