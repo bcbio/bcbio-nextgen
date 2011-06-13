@@ -30,7 +30,7 @@ def main(config_file, align_sam, ref_file, fastq_one, fastq_pair=None,
         qual_format = "Illumina"
     else:
         raise ValueError("Need to specify quality format for %s" % platform)
-    index_ref_file(picard, ref_file)
+    picard.run_fn("picard_index_ref", ref_file)
     base_dir = os.path.split(align_sam)[0]
     with curdir_tmpdir() as tmp_dir:
         out_fastq_bam = picard_fastq_to_bam(picard, fastq_one, fastq_pair,
@@ -38,7 +38,7 @@ def main(config_file, align_sam, ref_file, fastq_one, fastq_pair=None,
                 tmp_dir)
         out_bam = picard_merge_bam(picard, align_sam, out_fastq_bam,
                 ref_file, tmp_dir, fastq_pair is not None)
-        sort_bam = picard_sort(picard, out_bam, tmp_dir)
+        sort_bam = picard.run_fn("picard_sort", out_bam)
     save_diskspace(out_fastq_bam, "Combined into output BAM %s" % out_bam, config)
     save_diskspace(out_bam, "Sorted to %s" % sort_bam, config)
 
@@ -74,27 +74,6 @@ def picard_fastq_to_bam(picard, fastq_one, fastq_two, base_dir,
             opts.append(("FASTQ2", fastq_two))
         picard.run("FastqToSam", opts)
     return out_bam
-
-def picard_sort(picard, align_bam, tmp_dir):
-    base, ext = os.path.splitext(align_bam)
-    out_file = "%s-sort%s" % (base, ext)
-    if not os.path.exists(out_file):
-        opts = [("INPUT", align_bam),
-                ("OUTPUT", out_file),
-                ("TMP_DIR", tmp_dir),
-                ("SORT_ORDER", "coordinate")]
-        picard.run("SortSam", opts)
-    return out_file
-
-def index_ref_file(picard, ref_file):
-    """Provide a Picard style dict index file for a reference genome.
-    """
-    dict_file = "%s.dict" % os.path.splitext(ref_file)[0]
-    if not os.path.exists(dict_file):
-        opts = [("REFERENCE", ref_file),
-                ("OUTPUT", dict_file)]
-        picard.run("CreateSequenceDictionary", opts)
-    return dict_file
 
 if __name__ == "__main__":
     parser = OptionParser()
