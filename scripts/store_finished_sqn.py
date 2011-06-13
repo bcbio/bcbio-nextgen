@@ -8,7 +8,6 @@ Usage:
 """
 import os
 import sys
-import ConfigParser
 import json
 import contextlib
 import logbook
@@ -19,12 +18,13 @@ import fabric.api as fabric
 import fabric.contrib.files as fabric_files
 
 from bcbio.log import create_log_handler
+from bcbio.utils import read_galaxy_amqp_config
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
 def main(galaxy_config, processing_config):
-    amqp_config = _read_amqp_config(galaxy_config)
+    amqp_config = read_galaxy_amqp_config(galaxy_config)
     with open(processing_config) as in_handle:
         config = yaml.load(in_handle)
     store_tag = config["msg_store_tag"]
@@ -93,16 +93,6 @@ def message_reader(handlers, config):
         chan.basic_cancel(tag_name)
     chan.close()
     conn.close()
-
-def _read_amqp_config(galaxy_config):
-    """Read connection information on the RabbitMQ server from Galaxy config.
-    """
-    config = ConfigParser.ConfigParser()
-    config.read(galaxy_config)
-    amqp_config = {}
-    for option in config.options("galaxy_amqp"):
-        amqp_config[option] = config.get("galaxy_amqp", option)
-    return amqp_config
 
 if __name__ == "__main__":
     main(*sys.argv[1:])

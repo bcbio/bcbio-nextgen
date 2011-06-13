@@ -117,11 +117,13 @@ analysis server:
 
         (yum or apt-get) install rabbitmq-server
 
-Setup rabbitmq for passing Galaxy messages:
+Setup rabbitmq for passing Galaxy and processing messages:
 
         rabbitmqctl add_user <username> <password>
         rabbitmqctl add_vhost galaxy_messaging_engine
         rabbitmqctl set_permissions -p galaxy_messaging_engine <username> ".*" ".*" ".*"
+        rabbitmqctl add_vhost bionextgen
+        rabbitmqctl set_permissions -p bionextgen <username> ".*" ".*" ".*"
 
 Then adjust the `[galaxy_amqp]` section of your `universe_wsgi.ini`
 Galaxy configuration file. An example configuration is available in

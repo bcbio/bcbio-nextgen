@@ -55,6 +55,7 @@ analysis:
   towig_script: bam_to_wiggle.py
   process_program: automated_initial_analysis.py
   upload_program: upload_to_galaxy.py
+  rabbitmq_vhost: bionextgen
 # configuration algorithm changes for custom post-processing steps
 custom_algorithms:
   'Broad SNP':

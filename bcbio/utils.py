@@ -7,6 +7,7 @@ import contextlib
 import itertools
 import functools
 import warnings
+import ConfigParser
 
 try:
     import multiprocessing
@@ -95,7 +96,7 @@ def safe_makedir(dname):
             assert os.path.isdir(dname)
 
 @contextlib.contextmanager
-def curdir_tmpdir():
+def curdir_tmpdir(remove=True):
     """Context manager to create and remove a temporary directory.
     """
     tmp_dir_base = os.path.join(os.getcwd(), "tmp")
@@ -105,7 +106,8 @@ def curdir_tmpdir():
     try :
         yield tmp_dir
     finally :
-        shutil.rmtree(tmp_dir)
+        if remove:
+            shutil.rmtree(tmp_dir)
 
 @contextlib.contextmanager
 def chdir(new_dir):
@@ -150,3 +152,12 @@ def save_diskspace(fname, reason, config):
         with open(fname, "w") as out_handle:
             out_handle.write("File removed to save disk space: %s" % reason)
 
+def read_galaxy_amqp_config(galaxy_config):
+    """Read connection information on the RabbitMQ server from Galaxy config.
+    """
+    config = ConfigParser.ConfigParser()
+    config.read(galaxy_config)
+    amqp_config = {}
+    for option in config.options("galaxy_amqp"):
+        amqp_config[option] = config.get("galaxy_amqp", option)
+    return amqp_config
