@@ -5,7 +5,6 @@ http://www.broadinstitute.org/gsa/wiki/index.php/Unified_genotyper
 http://www.broadinstitute.org/gsa/wiki/index.php/Local_realignment_around_indels
 http://www.broadinstitute.org/gsa/wiki/index.php/IndelGenotyper
 http://www.broadinstitute.org/gsa/wiki/index.php/VariantFiltrationWalker
-http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval_v2.0
 
 
 Usage:
@@ -15,7 +14,6 @@ Usage:
 Requires:
   - Picard
   - GATK
-  - samtools
 """
 import os
 import sys
@@ -32,18 +30,14 @@ def main(config_file, ref_file, align_bam, dbsnp=None):
     picard = BroadRunner(config["program"]["picard"],
                          config["program"].get("gatk", ""),
                          max_memory=config["algorithm"].get("java_memory", ""))
-    ref_dict = index_ref_file(picard, ref_file)
-    index_bam(align_bam, config["program"]["samtools"])
-    realign_target_file = realigner_targets(picard, align_bam,
-            ref_file, dbsnp)
-    realign_bam = indel_realignment(picard, align_bam, ref_file,
-            realign_target_file)
+    ref_dict = picard.run_fn("picard_index_ref", ref_file)
+    picard.run_fn("picard_index", align_bam)
+    realign_bam = picard.run_fn("gatk_realigner", align_bam, ref_file, dbsnp)
     realign_sort_bam = picard_fixmate(picard, realign_bam)
-    index_bam(realign_sort_bam, config["program"]["samtools"])
+    picard.run_fn("picard_index", realign_sort_bam)
     snp_file = unified_genotyper(picard, realign_sort_bam, ref_file,
                                  dbsnp)
     filter_snp = variant_filtration(picard, snp_file, ref_file)
-    #eval_snp = variant_eval(picard, filter_snp, ref_file, dbsnp)
 
 def unified_genotyper(picard, align_bam, ref_file, dbsnp=None):
     """Perform SNP genotyping on the given alignment file.
@@ -122,38 +116,6 @@ def NOTUSED_variant_eval(picard, filter_snp, ref_file, dbsnp):
         picard.run_gatk(params)
     return out_file
 
-def realigner_targets(picard, align_bam, ref_file, dbsnp=None):
-    """Generate a list of interval regions for realignment around indels.
-    """
-    out_file = "%s-realign.intervals" % os.path.splitext(align_bam)[0]
-    params = ["-T", "RealignerTargetCreator",
-              "-I", align_bam,
-              "-R", ref_file,
-              "-o", out_file,
-              "-l", "INFO",
-              ]
-    if dbsnp:
-        params += ["-B:dbsnp,VCF", dbsnp]
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        picard.run_gatk(params)
-    return out_file
-
-def indel_realignment(picard, align_bam, ref_file, intervals):
-    """Perform realignment of BAM file in specified regions
-    """
-    out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
-    params = ["-T", "IndelRealigner",
-              "-I", align_bam,
-              "-R", ref_file,
-              "-targetIntervals", intervals,
-              "-o", out_file,
-              "-l", "INFO",
-              ]
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        with curdir_tmpdir() as tmp_dir:
-            picard.run_gatk(params, tmp_dir)
-    return out_file
-
 def picard_fixmate(picard, align_bam):
     """Run Picard's FixMateInformation generating an aligned output file.
     """
@@ -167,23 +129,6 @@ def picard_fixmate(picard, align_bam):
                     ("SORT_ORDER", "coordinate")]
             picard.run("FixMateInformation", opts)
     return out_file
-
-def index_ref_file(picard, ref_file):
-    """Provide a Picard style dict index file for a reference genome.
-    """
-    dict_file = "%s.dict" % os.path.splitext(ref_file)[0]
-    if not os.path.exists(dict_file):
-        opts = [("REFERENCE", ref_file),
-                ("OUTPUT", dict_file)]
-        picard.run("CreateSequenceDictionary", opts)
-    return dict_file
-
-def index_bam(bam_file, samtools_cmd):
-    index_file = "%s.bai" % bam_file
-    if not os.path.exists(index_file):
-        cl = [samtools_cmd, "index", bam_file]
-        subprocess.check_call(cl)
-    return index_file
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
