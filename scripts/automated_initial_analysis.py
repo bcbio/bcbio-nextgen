@@ -123,7 +123,7 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
             log.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
             align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
                               mlane_name, msample, align_dir, galaxy_dir,
-                              config, config_file)
+                              config)
 
 @utils.map_wrap
 def process_sample(sample_name, fastq_files, info, bam_files, work_dir,

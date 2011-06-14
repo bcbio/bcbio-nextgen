@@ -50,7 +50,7 @@ def gatk_realigner(runner, align_bam, ref_file, dbsnp=None,
                    deep_coverage=False):
     """Realign a BAM file around indels using GATK.
     """
-    picard_index_ref(runner, ref_file)
+    runner.run_fn("picard_index_ref", ref_file)
     realign_target_file = gatk_realigner_targets(runner, align_bam,
                                                  ref_file, dbsnp, deep_coverage)
     realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,

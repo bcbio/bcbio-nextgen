@@ -3,11 +3,11 @@
 This works as part of the lane/flowcell process step of the pipeline.
 """
 import os
-import subprocess
 from collections import namedtuple
 
 from bcbio import utils
 from bcbio.ngsalign import bowtie, bwa, tophat
+from bcbio.broad import BroadRunner
 
 # Define a next-generation sequencing tool to plugin:
 # align_fn -- runs an aligner and generates SAM output
@@ -28,29 +28,38 @@ _tools = {
 
 def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
                       lane_name, sample_name, align_dir, galaxy_dir,
-                      config, config_file):
+                      config):
     """Align to the named genome build, returning a sorted BAM file.
     """
     utils.safe_makedir(align_dir)
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, galaxy_dir)
     align_fn = _tools[aligner].align_fn
     sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, align_dir, config)
-
-    sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                    lane_name, config, config_file)
+    return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
+                           lane_name, config)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-                    lane_name, config, config_file):
+                    lane_name, config):
     """Convert SAM file to merged and sorted BAM file.
     """
-    lane = lane_name.split("_")[0]
-    cl = ["picard_sam_to_bam.py", "--name=%s" % sample_name,
-            "--rg=%s" % lane, "--pu=%s" % lane_name,
-            config_file, sam_file, ref_file, fastq1]
-    if fastq2:
-        cl.append(fastq2)
-    subprocess.check_call(cl)
+    rg_name = lane_name.split("_")[0]
+    picard = BroadRunner(config["program"]["picard"],
+                         max_memory=config["algorithm"].get("java_memory", ""))
+    platform = config["algorithm"]["platform"]
+    base_dir = os.path.dirname(sam_file)
+
+    picard.run_fn("picard_index_ref", ref_file)
+    out_fastq_bam = picard.run_fn("picard_fastq_to_bam", fastq1, fastq2,
+                                  base_dir, platform, sample_name, rg_name, lane_name)
+    out_bam = picard.run_fn("picard_sam_to_bam", sam_file, out_fastq_bam, ref_file,
+                            fastq2 is not None)
+    sort_bam = picard.run_fn("picard_sort", out_bam)
+
     utils.save_diskspace(sam_file, "SAM converted to BAM", config)
+    utils.save_diskspace(out_fastq_bam, "Combined into output BAM %s" % out_bam, config)
+    utils.save_diskspace(out_bam, "Sorted to %s" % sort_bam, config)
+
+    return sort_bam
 
 def get_genome_ref(genome_build, aligner, galaxy_base):
     """Retrieve the reference genome file location from galaxy configuration.
