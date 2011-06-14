@@ -161,3 +161,10 @@ def read_galaxy_amqp_config(galaxy_config):
     for option in config.options("galaxy_amqp"):
         amqp_config[option] = config.get("galaxy_amqp", option)
     return amqp_config
+
+def add_full_path(dirname, basedir=None):
+    if basedir is None:
+        basedir = os.getcwd()
+    if not dirname.startswith("/"):
+        dirname = os.path.join(basedir, dirname)
+    return dirname

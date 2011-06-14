@@ -44,7 +44,7 @@ from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
 from bcbio.broad import BroadRunner
 from bcbio.log import create_log_handler
-from bcbio.ngsalign import bowtie, bwa, tophat
+from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
@@ -111,8 +111,6 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         log.debug("Sample %s is multiplexed as: %s" % (sample_name, multiplex))
     
     fastq_dir, galaxy_dir = _get_full_paths(fastq_dir, config, config_file)
-    align_ref, sam_ref = get_genome_ref(genome_build,
-            config["algorithm"]["aligner"], galaxy_dir)
     full_fastq1, full_fastq2 = get_fastq_files(fastq_dir, info['lane'], fc_name)
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
@@ -120,9 +118,12 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)
-        if os.path.exists(fastq1) and config["algorithm"]["aligner"]:
-            do_alignment(fastq1, fastq2, align_ref, sam_ref, mlane_name,
-                    msample, align_dir, config, config_file)
+        aligner = config["algorithm"].get("aligner", None)
+        if os.path.exists(fastq1) and aligner:
+            log.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
+            align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
+                              mlane_name, msample, align_dir, galaxy_dir,
+                              config, config_file)
 
 @utils.map_wrap
 def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
@@ -228,7 +229,7 @@ def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     control, when run on a multiplexed flow cell. This checks for this
     situation and adds details to trim off the extra bases.
     """
-    fastq_dir = _add_full_path(fastq_dir)
+    fastq_dir = utils.add_full_path(fastq_dir)
     # determine if we have multiplexes and collect expected size
     fastq_sizes = []
     tag_sizes = []
@@ -334,36 +335,6 @@ def _adjust_illumina_tags(barcodes):
             new.append(new_bc)
         barcodes = new
     return barcodes
-
-def do_alignment(fastq1, fastq2, align_ref, sam_ref, lane_name,
-        sample_name, align_dir, config, config_file):
-    """Align to the provided reference genome, returning an aligned SAM file.
-    """
-    align_fns = {"bowtie": bowtie.align,
-                 "tophat": tophat.align,
-                 "bwa": bwa.align}
-    aligner_to_use = config["algorithm"]["aligner"]
-    utils.safe_makedir(align_dir)
-    log.info("Aligning lane %s with %s aligner" % (lane_name, aligner_to_use))
-    align_fn = align_fns[aligner_to_use]
-    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, align_dir, config)
-
-    log.info("Converting lane %s to sorted BAM file" % lane_name)
-    sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                    lane_name, config, config_file)
-
-def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-                    lane_name, config, config_file):
-    """Convert SAM file to merged and sorted BAM file.
-    """
-    lane = lane_name.split("_")[0]
-    cl = ["picard_sam_to_bam.py", "--name=%s" % sample_name,
-            "--rg=%s" % lane, "--pu=%s" % lane_name,
-            config_file, sam_file, ref_file, fastq1]
-    if fastq2:
-        cl.append(fastq2)
-    subprocess.check_call(cl)
-    utils.save_diskspace(sam_file, "SAM converted to BAM", config)
 
 def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
@@ -489,60 +460,6 @@ def get_fastq_files(directory, lane, fc_name, bc_name=None):
             ready_files.append(fname)
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
-def _remap_to_maq(ref_file):
-    """ToDo: Why is this needed for ?
-    """
-    base_dir = os.path.dirname(os.path.dirname(ref_file))
-    name = os.path.basename(ref_file)
-    for ext in ["fa", "fasta"]:
-        test_file = os.path.join(base_dir, "maq", "%s.%s" % (name, ext))
-        if os.path.exists(test_file):
-            return test_file
-    raise ValueError("Did not find maq file %s" % ref_file)
-
-def get_genome_ref(genome_build, aligner, galaxy_base):
-    """Retrieve the reference genome file location from galaxy configuration.
-    """
-    if not aligner or not genome_build:
-        return (None, None)
-    ref_files = dict(
-            bowtie = "bowtie_indices.loc",
-            bwa = "bwa_index.loc",
-            samtools = "sam_fa_indices.loc",
-            maq = "bowtie_indices.loc",
-	        tophat = "bowtie_indices.loc")
-    remap_fns = dict(
-            maq = _remap_to_maq
-            )
-    out_info = []
-    ref_dir = os.path.join(galaxy_base, "tool-data")
-    for ref_get in [aligner, "samtools"]:
-        ref_file = os.path.join(ref_dir, ref_files[ref_get])
-        cur_ref = None
-        with open(ref_file) as in_handle:
-            for line in in_handle:
-                if line.strip() and not line.startswith("#"):
-                    parts = line.strip().split()
-                    if parts[0] == "index":
-                        parts = parts[1:]
-                    if parts[0] == genome_build:
-                        cur_ref = parts[-1]
-                        break
-        if cur_ref is None:
-            raise IndexError("Genome %s not found in %s" % (genome_build,
-                ref_file))
-        try:
-            cur_ref = remap_fns[ref_get](cur_ref)
-        except KeyError:
-            pass
-        out_info.append(_add_full_path(cur_ref, ref_dir))
-
-    if len(out_info) != 2:
-        raise ValueError("Did not find genome reference for %s %s" %
-                (genome_build, aligner))
-    else:
-        return tuple(out_info)
-
 # Output high level summary information for a sequencing run in YAML format
 # that can be picked up and loaded into Galaxy.
 
@@ -662,19 +579,12 @@ def _lane_stats(cur_name, work_dir):
     metrics = parser.extract_metrics(metrics_files)
     return metrics
 
-def _add_full_path(dirname, basedir=None):
-    if basedir is None:
-        basedir = os.getcwd()
-    if not dirname.startswith("/"):
-        dirname = os.path.join(basedir, dirname)
-    return dirname
-
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.
     """
-    fastq_dir = _add_full_path(fastq_dir)
-    config_dir = _add_full_path(os.path.dirname(config_file))
-    galaxy_config_file = _add_full_path(config["galaxy_config"], config_dir)
+    fastq_dir = utils.add_full_path(fastq_dir)
+    config_dir = utils.add_full_path(os.path.dirname(config_file))
+    galaxy_config_file = utils.add_full_path(config["galaxy_config"], config_dir)
     return fastq_dir, os.path.dirname(galaxy_config_file)
 
 # Utility functions

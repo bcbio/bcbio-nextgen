@@ -3,6 +3,8 @@
 import os
 import subprocess
 
+galaxy_location_file = "bwa_index.loc"
+
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Perform a BWA alignment, generating a SAM file.
     """

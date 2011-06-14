@@ -3,6 +3,8 @@
 import os
 import subprocess
 
+galaxy_location_file = "bowtie_indices.loc"
+
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Before a standard or paired end alignment with bowtie.
     """
