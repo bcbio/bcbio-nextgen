@@ -25,7 +25,6 @@ import json
 import contextlib
 import subprocess
 import glob
-import copy
 import csv
 import copy
 import shutil
@@ -36,7 +35,6 @@ import StringIO
 
 import yaml
 import logbook
-from Bio import SeqIO
 
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
@@ -44,7 +42,9 @@ from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
 from bcbio.broad import BroadRunner
 from bcbio.log import create_log_handler
+from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
+from bcbio.pipeline.demultiplex import split_by_barcode, add_multiplex_across_lanes
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
@@ -71,7 +71,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name, fc_date)
     fastq_dir = get_fastq_dir(fc_dir)
-    run_items = _add_multiplex_across_lanes(run_info["details"], fastq_dir, fc_name)
+    run_items = add_multiplex_across_lanes(run_info["details"], fastq_dir, fc_name)
     align_dir = os.path.join(work_dir, "alignments")
 
     # process each flowcell lane
@@ -209,133 +209,6 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
                     lane_info["lane"], fc_name))
     return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
 
-def _get_fastq_size(item, fastq_dir, fc_name):
-    """Retrieve the size of reads from the first flowcell sequence.
-    """
-    (fastq1, _) = get_fastq_files(fastq_dir, item['lane'], fc_name)
-    with open(fastq1) as in_handle:
-        try:
-            rec = SeqIO.parse(in_handle, "fastq").next()
-            size = len(rec.seq)
-        except StopIteration:
-            log.warn("Found a zero-sized fastq file for lane %s" % item['lane'])
-            size = 0
-    return size
-
-def _add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
-    """Add multiplex information to control and non-multiplexed lanes.
-
-    Illumina runs include barcode reads for non-multiplex lanes, and the
-    control, when run on a multiplexed flow cell. This checks for this
-    situation and adds details to trim off the extra bases.
-    """
-    fastq_dir = utils.add_full_path(fastq_dir)
-    # determine if we have multiplexes and collect expected size
-    fastq_sizes = []
-    tag_sizes = []
-    has_barcodes = False
-    for item in run_items:
-        if item.get("multiplex", None):
-            has_barcodes = True
-            tag_sizes.extend([len(b["sequence"]) for b in item["multiplex"]])
-            fastq_sizes.append(_get_fastq_size(item, fastq_dir, fc_name))
-    if not has_barcodes: # nothing to worry about
-        return run_items
-    fastq_sizes = list(set(fastq_sizes))
-
-    # discard 0 sizes to handle the case where lane(s) are empty or failed
-    try:
-        fastq_sizes.remove(0)
-    except ValueError: pass
-    
-    tag_sizes = list(set(tag_sizes))
-    final_items = []
-    for item in run_items:
-        if item.get("multiplex", None) is None:
-            assert len(fastq_sizes) == 1, \
-                   "Multi and non-multiplex reads with multiple sizes"
-            expected_size = fastq_sizes[0]
-            assert len(tag_sizes) == 1, \
-                   "Expect identical tag size for a flowcell"
-            tag_size = tag_sizes[0]
-            this_size = _get_fastq_size(item, fastq_dir, fc_name)
-            if this_size == expected_size:
-                item["multiplex"] = [{"name" : item.get("name", item["description"]),
-                                      "barcode_id": "trim",
-                                      "sequence" : "N" * tag_size}]
-            else:
-                assert this_size == expected_size - tag_size, \
-                       "Unexpected non-multiplex sequence"
-        final_items.append(item)
-    return final_items
-
-def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
-    """Split a fastq file into multiplex pieces using barcode details.
-    """
-    if not multiplex:
-        return [("", "", fastq1, fastq2)]
-    bc_dir = "%s_barcode" % base_name
-    nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
-    metrics_file = "%s_bc.metrics" % base_name
-    with utils.chdir(bc_dir):
-        if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):
-            tag_file = _make_tag_file(multiplex)
-            cl = [config["program"]["barcode"], tag_file,
-                  "%s_--b--_--r--_fastq.txt" % base_name,
-                  fastq1]
-            if fastq2:
-                cl.append(fastq2)
-            cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
-            cl.append("--metrics=%s" % metrics_file)
-            if int(config["algorithm"]["bc_read"]) == 2:
-                cl.append("--second")
-            if int(config["algorithm"]["bc_position"]) == 5:
-                cl.append("--five")
-            if config["algorithm"].get("bc_allow_indels", True) is False:
-                cl.append("--noindel")
-            subprocess.check_call(cl)
-    out_files = []
-    for info in multiplex:
-        fq_fname = lambda x: os.path.join(bc_dir, "%s_%s_%s_fastq.txt" %
-                             (base_name, info["barcode_id"], x))
-        bc_file1 = fq_fname("1")
-        bc_file2 = fq_fname("2") if fastq2 else None
-        out_files.append((info["barcode_id"], info["name"], bc_file1, bc_file2))
-    return out_files
-
-def _make_tag_file(barcodes):
-    tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
-    barcodes = _adjust_illumina_tags(barcodes)
-    with open(tag_file, "w") as out_handle:
-        for bc in barcodes:
-            out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
-    return tag_file
-
-def _adjust_illumina_tags(barcodes):
-    """Handle additional trailing A in Illumina barocdes.
-
-    Illumina barcodes are listed as 6bp sequences but have an additional
-    A base when coming off on the sequencer. This checks for this case and
-    adjusts the sequences appropriately if needed.
-    """
-    illumina_size = 7
-    all_illumina = True
-    need_a = False
-    for bc in barcodes:
-        if bc.get("barcode_type", "illumina").lower().find("illumina") == -1:
-            all_illumina = False
-        if (not bc["sequence"].upper().endswith("A") or
-            len(bc["sequence"]) < illumina_size):
-            need_a = True
-    if all_illumina and need_a:
-        new = []
-        for bc in barcodes:
-            new_bc = copy.deepcopy(bc)
-            new_bc["sequence"] = "%sA" % new_bc["sequence"]
-            new.append(new_bc)
-        barcodes = new
-    return barcodes
-
 def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
     """
@@ -437,28 +310,6 @@ def analyze_recalibration(recal_file, fastq1, fastq2):
     if fastq2:
         cl.append(fastq2)
     subprocess.check_call(cl)
-
-def get_fastq_files(directory, lane, fc_name, bc_name=None):
-    """Retrieve fastq files for the given lane, ready to process.
-    """
-    if bc_name:
-        glob_str = "%s_*%s_%s_*_fastq.txt" % (lane, fc_name, bc_name)
-    else:
-        glob_str = "%s_*%s*_fastq.txt" % (lane, fc_name)
-    files = glob.glob(os.path.join(directory, glob_str))
-    files.sort()
-    if len(files) > 2 or len(files) == 0:
-        raise ValueError("Did not find correct files for %s %s %s %s" %
-                (directory, lane, fc_name, files))
-    ready_files = []
-    for fname in files:
-        if fname.endswith(".gz"):
-            cl = ["gunzip", fname]
-            subprocess.check_call(cl)
-            ready_files.append(os.path.splitext(fname)[0])
-        else:
-            ready_files.append(fname)
-    return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
 # Output high level summary information for a sequencing run in YAML format
 # that can be picked up and loaded into Galaxy.
