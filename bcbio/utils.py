@@ -14,31 +14,16 @@ try:
     from multiprocessing.pool import IMapIterator
 except ImportError:
     multiprocessing = None
-try:
-    ipclient = None
-    #with warnings.catch_warnings():
-    #    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    #    from IPython.kernel import client as ipclient
-except ImportError:
-    ipclient = None
 
 @contextlib.contextmanager
-def cpmap(cores=1, ipython=False):
+def cpmap(cores=1):
     """Configurable parallel map context manager.
 
     Returns appropriate map compatible function based on configuration:
     - Local single core (the default)
     - Multiple local cores
-    - Parallelized on a cluster using ipython.
     """
-    if ipython or cores=="ipython":
-        raise NotImplementedError("Not working yet")
-        if ipclient is None:
-            raise ImportError("ipython parallelization not available.")
-        mec = ipclient.MultiEngineClient()
-        # Would be ideal to have an imap style lazy map
-        yield mec.map
-    elif int(cores) == 1:
+    if int(cores) == 1:
         yield itertools.imap
     else:
         if multiprocessing is None:
