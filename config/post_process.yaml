@@ -5,7 +5,6 @@ program:
   bowtie: bowtie
   samtools: samtools
   bwa: bwa
-  maq: maq
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
   gatk: /usr/share/java/gatk
@@ -17,7 +16,6 @@ algorithm:
   aligner: bowtie
   max_errors: 2
   num_cores: 8
-  stringency: high
   platform: illumina
   recalibrate: false
   snpcall: false

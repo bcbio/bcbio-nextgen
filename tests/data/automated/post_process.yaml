@@ -3,22 +3,17 @@ program:
   bowtie: bowtie
   samtools: samtools
   bwa: bwa
-  maq: maq
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
   gatk: /usr/share/java/gatk
   snpEff: /usr/share/java/snpeff
-  fastx_stats: fastx_quality_stats
-  fastx_graph: fastq_quality_boxplot_graph.sh
+  fastqc: fastqc
   pdflatex: pdflatex
-  ps2pdf: ps2pdf
-  solexaqa: SolexaQA.pl
   barcode: barcode_sort_trim.py
 algorithm:
   aligner: bowtie
   max_errors: 2
   num_cores: 1
-  stringency: high
   platform: illumina
   recalibrate: false
   snpcall: false

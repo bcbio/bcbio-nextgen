@@ -63,9 +63,13 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)
 
     # process each flowcell lane
+    lane_items = []
     with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
-        for _ in cpmap(process_lane, ((info, fc_name, fc_date, dirs, config)
-                                      for info in run_items)):
+        for cur_items in cpmap(process_lane, ((info, fc_name, fc_date, dirs, config)
+                                              for info in run_items)):
+            lane_items.extend(cur_items)
+    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
+        for _ in cpmap(process_alignment, lane_items):
             pass
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = organize_samples(dirs, fc_name, fc_date, run_items)
@@ -91,7 +95,7 @@ def _get_run_info(fc_name, fc_date, config, run_info_yaml):
 
 @utils.map_wrap
 def process_lane(info, fc_name, fc_date, dirs, config):
-    """Do alignments for a lane, potentially splitting based on barcodes.
+    """Prepare lanes, potentially splitting based on barcodes.
     """
     config = _update_config_w_custom(config, info)
 
@@ -111,16 +115,25 @@ def process_lane(info, fc_name, fc_date, dirs, config):
 
     full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"], info['lane'], fc_name)
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
+    lane_items = []
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
             full_fastq2, multiplex, lane_name, config):
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)
-        aligner = config["algorithm"].get("aligner", None)
-        if os.path.exists(fastq1) and aligner:
-            log.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
-            align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
-                              mlane_name, msample, dirs, config)
+        lane_items.append((fastq1, fastq2, genome_build, mlane_name, msample,
+                           dirs, config))
+    return lane_items
+
+@utils.map_wrap
+def process_alignment(fastq1, fastq2, genome_build, lane_name, sample, dirs, config):
+    """Do an alignment of fastq files, preparing a sorted BAM output file.
+    """
+    aligner = config["algorithm"].get("aligner", None)
+    if os.path.exists(fastq1) and aligner:
+        log.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
+        align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
+                          lane_name, sample, dirs, config)
 
 @utils.map_wrap
 def process_sample(sample_name, fastq_files, info, bam_files, dirs, config, config_file):
