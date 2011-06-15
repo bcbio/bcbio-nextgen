@@ -48,65 +48,68 @@ def main(config_file, fc_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
-    
     with log_handler.applicationbound():
         run_main(config, config_file, fc_dir, run_info_yaml)
 
 def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
-    fc_name, fc_date = get_flowcell_info(fc_dir)
+    align_dir = os.path.join(work_dir, "alignments")
 
+    fc_name, fc_date = get_flowcell_info(fc_dir)
+    run_info = _get_run_info(fc_name, fc_date, config, run_info_yaml)
+    fastq_dir, galaxy_dir = _get_full_paths(get_fastq_dir(fc_dir), config, config_file)
+    dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir, "work": work_dir,
+            "flowcell": fc_dir}
+    run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)
+
+    # process each flowcell lane
+    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
+        for _ in cpmap(process_lane, ((info, fc_name, fc_date, dirs, config)
+                                      for info in run_items)):
+            pass
+    # process samples, potentially multiplexed across multiple lanes
+    sample_files, sample_fastq, sample_info = organize_samples(dirs, fc_name, fc_date, run_items)
+    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
+        for _ in cpmap(process_sample, ((name, sample_fastq[name], sample_info[name],
+                                         bam_files, dirs, config, config_file)
+                                        for name, bam_files in sample_files)):
+            pass
+    write_metrics(run_info, fc_name, fc_date, dirs)
+
+def _get_run_info(fc_name, fc_date, config, run_info_yaml):
+    """Retrieve run information from a passed YAML file or the Galaxy API.
+    """
     if run_info_yaml and os.path.exists(run_info_yaml):
         log.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
-        run_info = dict(details=run_details, run_id="")
+        return dict(details=run_details, run_id="")
     else:
         log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name, fc_date)
-    fastq_dir = get_fastq_dir(fc_dir)
-    run_items = add_multiplex_across_lanes(run_info["details"], fastq_dir, fc_name)
-    align_dir = os.path.join(work_dir, "alignments")
-
-    # process each flowcell lane
-    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
-        for _ in cpmap(process_lane,
-                       ((i, fastq_dir, fc_name, fc_date, align_dir, config, config_file)
-                        for i in run_items)):
-            pass
-    # process samples, potentially multiplexed across multiple lanes
-    sample_files, sample_fastq, sample_info = organize_samples(align_dir,
-            fastq_dir, work_dir, fc_name, fc_date, run_items)
-    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
-        for _ in cpmap(process_sample, ((name, sample_fastq[name], sample_info[name],
-                                         bam_files, work_dir, config, config_file)
-                                        for name, bam_files in sample_files)):
-            pass
-    write_metrics(run_info, work_dir, fc_dir, fc_name, fc_date, fastq_dir)
+        return galaxy_api.run_details(fc_name, fc_date)
 
 @utils.map_wrap
-def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
-        config_file):
+def process_lane(info, fc_name, fc_date, dirs, config):
     """Do alignments for a lane, potentially splitting based on barcodes.
     """
     config = _update_config_w_custom(config, info)
-    
+
     sample_name = info.get("description", "")
     if (config["algorithm"].get("include_short_name", True) and
             info.get("name", "")):
         sample_name = "%s---%s" % (info.get("name", ""), sample_name)
     genome_build = info.get("genome_build", None)
     multiplex = info.get("multiplex", None)
-    
-    log.info("Processing sample %s on lane %s with reference genome %s by researcher %s. Using %s analysis preset" \
-             % (sample_name, info["lane"], genome_build, \
-                info.get("researcher", "unknown"), info.get("analysis", "")))
+
+    log.info("Processing sample: %s; lane %s; reference genome %s; " \
+             "researcher %s; analysis method %s" %
+             (sample_name, info["lane"], genome_build,
+              info.get("researcher", ""), info.get("analysis", "")))
     if multiplex:
         log.debug("Sample %s is multiplexed as: %s" % (sample_name, multiplex))
-    
-    fastq_dir, galaxy_dir = _get_full_paths(fastq_dir, config, config_file)
-    full_fastq1, full_fastq2 = get_fastq_files(fastq_dir, info['lane'], fc_name)
+
+    full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"], info['lane'], fc_name)
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
             full_fastq2, multiplex, lane_name, config):
@@ -117,23 +120,20 @@ def process_lane(info, fastq_dir, fc_name, fc_date, align_dir, config,
         if os.path.exists(fastq1) and aligner:
             log.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
             align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
-                              mlane_name, msample, align_dir, galaxy_dir,
-                              config)
+                              mlane_name, msample, dirs, config)
 
 @utils.map_wrap
-def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
-        config, config_file):
+def process_sample(sample_name, fastq_files, info, bam_files, dirs, config, config_file):
     """Finalize processing for a sample, potentially multiplexed.
     """
     config = _update_config_w_custom(config, info)
-    
+
     genome_build = info.get("genome_build", None)
-    (_, galaxy_dir) = _get_full_paths("", config, config_file)
     (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
-                                  galaxy_dir)
-    fastq1, fastq2 = combine_fastq_files(fastq_files, work_dir)
+                                  dirs["galaxy"])
+    fastq1, fastq2 = combine_fastq_files(fastq_files, dirs["work"])
     log.info("Combining and preparing wig file %s" % str(sample_name))
-    sort_bam = merge_bam_files(bam_files, work_dir, config)
+    sort_bam = merge_bam_files(bam_files, dirs["work"], config)
     bam_to_wig(sort_bam, config, config_file)
     if config["algorithm"]["recalibrate"]:
         log.info("Recalibrating %s with GATK" % str(sample_name))

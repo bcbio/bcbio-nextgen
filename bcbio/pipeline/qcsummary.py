@@ -34,17 +34,16 @@ def generate_align_summary(bam_file, is_paired, sam_ref, config,
 # Output high level summary information for a sequencing run in YAML format
 # that can be picked up and loaded into Galaxy.
 
-def write_metrics(run_info, analysis_dir, fc_dir, fc_name, fc_date,
-        fastq_dir):
+def write_metrics(run_info, fc_name, fc_date, dirs):
     """Write an output YAML file containing high level sequencing metrics.
     """
     lane_stats, sample_stats, tab_metrics = summary_metrics(run_info,
-            analysis_dir, fc_name, fc_date, fastq_dir)
-    out_file = os.path.join(analysis_dir, "run_summary.yaml")
+            dirs["work"], fc_name, fc_date, dirs["fastq"])
+    out_file = os.path.join(dirs["work"], "run_summary.yaml")
     with open(out_file, "w") as out_handle:
         metrics = dict(lanes=lane_stats, samples=sample_stats)
         yaml.dump(metrics, out_handle, default_flow_style=False)
-    tab_out_file = os.path.join(fc_dir, "run_summary.tsv")
+    tab_out_file = os.path.join(dirs["flowcell"], "run_summary.tsv")
     try:
         with open(tab_out_file, "w") as out_handle:
             writer = csv.writer(out_handle, dialect="excel-tab")

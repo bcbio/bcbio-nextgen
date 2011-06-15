@@ -26,14 +26,13 @@ _tools = {
     }
 
 def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
-                      lane_name, sample_name, align_dir, galaxy_dir,
-                      config):
+                      lane_name, sample_name, dirs, config):
     """Align to the named genome build, returning a sorted BAM file.
     """
-    utils.safe_makedir(align_dir)
-    align_ref, sam_ref = get_genome_ref(genome_build, aligner, galaxy_dir)
+    utils.safe_makedir(dirs["align"])
+    align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     align_fn = _tools[aligner].align_fn
-    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, align_dir, config)
+    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, dirs["align"], config)
     return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
                            lane_name, config)
 

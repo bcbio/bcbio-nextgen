@@ -30,7 +30,7 @@ def combine_fastq_files(in_files, work_dir):
                         shutil.copyfileobj(in_handle, out_handle)
         return out1, out2
 
-def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items):
+def organize_samples(dirs, fc_name, fc_date, run_items):
     """Organize BAM output files by sample name, handling multiplexing.
     """
     bams_by_sample = collections.defaultdict(list)
@@ -39,12 +39,12 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
     for lane_info in run_items:
         multiplex = lane_info.get("multiplex", None)
         if multiplex:
-            mfastq_dir = os.path.join(work_dir, "%s_%s_%s_barcode" %
+            mfastq_dir = os.path.join(dirs["work"], "%s_%s_%s_barcode" %
                     (lane_info["lane"], fc_date, fc_name))
             for multi in multiplex:
                 name = (lane_info.get("name", ""), lane_info["description"],
                         multi["name"])
-                fname = os.path.join(align_dir, "%s_%s_%s_%s-sort.bam" %
+                fname = os.path.join(dirs["align"], "%s_%s_%s_%s-sort.bam" %
                     (lane_info["lane"], fc_date, fc_name, multi["barcode_id"]))
                 if os.path.exists(fname):
                     bams_by_sample[name].append(fname)
@@ -53,12 +53,12 @@ def organize_samples(align_dir, fastq_dir, work_dir, fc_name, fc_date, run_items
                         lane_info["lane"], fc_name, multi["barcode_id"]))
         else:
             name = (lane_info.get("name", ""), lane_info["description"])
-            fname = os.path.join(align_dir, "%s_%s_%s-sort.bam" %
+            fname = os.path.join(dirs["align"], "%s_%s_%s-sort.bam" %
                     (lane_info["lane"], fc_date, fc_name))
             if os.path.exists(fname):
                 bams_by_sample[name].append(fname)
                 sample_info[name] = lane_info
-                fastq_by_sample[name].append(get_fastq_files(fastq_dir,
+                fastq_by_sample[name].append(get_fastq_files(dirs["fastq"],
                     lane_info["lane"], fc_name))
     return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
 

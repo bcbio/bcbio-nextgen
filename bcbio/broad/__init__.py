@@ -75,4 +75,3 @@ def runner_from_config(config):
     return BroadRunner(config["program"]["picard"],
                        config["program"].get("gatk", ""),
                        max_memory=config["algorithm"].get("java_memory", ""))
-
