@@ -221,7 +221,7 @@ class PicardMetrics:
     def report(self, align_bam, ref_file, is_paired, bait_file, target_file):
         """Produce report metrics using Picard with sorted aligned BAM file.
         """
-        dup_bam, dup_metrics = self._mark_duplicates(align_bam)
+        dup_bam, dup_metrics = self._picard.run_fn("picard_mark_duplicates", align_bam)
         align_metrics = self._collect_align_metrics(dup_bam, ref_file)
         gc_graph, gc_metrics = self._gc_bias(dup_bam, ref_file)
         insert_graph, insert_metrics, hybrid_metrics = (None, None, None)
@@ -303,21 +303,6 @@ class PicardMetrics:
                     ("R", ref_file)]
             self._picard.run("CollectAlignmentSummaryMetrics", opts)
         return align_metrics
-
-    def _mark_duplicates(self, align_bam):
-        """Mark duplicated reads, returning marked bam file and metrics.
-        """
-        base, ext = os.path.splitext(align_bam)
-        base = base.replace(".", "-")
-        dup_bam = "%s-dup%s" % (base, ext)
-        dup_metrics = "%s-dup.dup_metrics" % base
-        if not os.path.exists(dup_bam):
-            opts = [("INPUT", align_bam),
-                    ("OUTPUT", dup_bam),
-                    ("TMP_DIR", self._tmp_dir),
-                    ("METRICS_FILE", dup_metrics)]
-            self._picard.run("MarkDuplicates", opts)
-        return dup_bam, dup_metrics
 
 def _add_commas(s, sep=','):
     """Add commas to output counts.

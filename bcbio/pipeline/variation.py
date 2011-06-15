@@ -4,20 +4,15 @@ import os
 import glob
 import subprocess
 
+from bcbio.variation.recalibrate import gatk_recalibrate
+
 # ## Recalibration
 
-def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref, config, config_file):
+def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref, config):
     """Recalibrate alignments with GATK and provide pdf summary.
     """
     dbsnp_file = _get_dbsnp_file(config, sam_ref)
-    bam_file = sort_bam_file.replace("-sort.bam", ".bam")
-    cl = ["picard_gatk_recalibrate.py", config_file, sam_ref, bam_file]
-    if dbsnp_file:
-        cl.append(dbsnp_file)
-    subprocess.check_call(cl)
-    out_files = glob.glob("%s*-gatkrecal.bam" % os.path.splitext(sort_bam_file)[0])
-    assert len(out_files) == 1, out_files
-    recal_file = out_files[0]
+    recal_file = gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
     _analyze_recalibration(recal_file, fastq1, fastq2)
     return recal_file
 
