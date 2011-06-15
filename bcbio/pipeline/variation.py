@@ -1,11 +1,12 @@
 """Next-gen variant detection and evaluation with GATK and SnpEff.
 """
 import os
+import json
 import subprocess
 
 from bcbio.variation.recalibrate import gatk_recalibrate
 from bcbio.variation.realign import gatk_realigner
-from bcbio.variation.genotype import gatk_genotyper
+from bcbio.variation.genotype import gatk_genotyper, gatk_evaluate_variants
 
 # ## Recalibration
 
@@ -47,14 +48,12 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.
     """
     metrics_file = "%s.eval_metrics" % vrn_file
-    cl = ["gatk_variant_eval.py", config["program"].get("gatk", config["program"]["picard"]),
-          vrn_file, ref_file, dbsnp_file]
-    target = config["algorithm"].get("hybrid_target", "")
-    if target:
-        base_dir = os.path.dirname(os.path.dirname(ref_file))
-        cl.append(os.path.join(base_dir, target))
-    with open(metrics_file, "w") as out_handle:
-        subprocess.check_call(cl, stdout=out_handle)
+    target = config["algorithm"].get("hybrid_target", None)
+    if not os.path.exists(metrics_file):
+        stats = gatk_evaluate_variants(vrn_file, ref_file, config, dbsnp_file, target)
+        with open(metrics_file, "w") as out_handle:
+            json.dump(stats, out_handle)
+    return metrics_file
 
 # ## Calculate variation effects
 

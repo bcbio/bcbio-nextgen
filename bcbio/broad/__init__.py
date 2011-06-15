@@ -70,3 +70,9 @@ class BroadRunner:
             if os.path.exists(check_file):
                 return check_file
         raise ValueError("Could not find jar %s in %s" % (command, self._picard_dir))
+
+def runner_from_config(config):
+    return BroadRunner(config["program"]["picard"],
+                       config["program"].get("gatk", ""),
+                       max_memory=config["algorithm"].get("java_memory", ""))
+
