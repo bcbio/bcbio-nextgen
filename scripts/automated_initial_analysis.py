@@ -21,13 +21,9 @@ Workflow:
 """
 import os
 import sys
-import json
 import subprocess
-import glob
 import copy
 from optparse import OptionParser
-import xml.etree.ElementTree as ET
-import StringIO
 
 import yaml
 import logbook
@@ -42,6 +38,8 @@ from bcbio.pipeline.demultiplex import split_by_barcode, add_multiplex_across_la
 from bcbio.pipeline.merge import (combine_fastq_files, organize_samples,
                                   merge_bam_files)
 from bcbio.pipeline.qcsummary import (generate_align_summary, write_metrics)
+from bcbio.pipeline.variation import (recalibrate_quality, run_genotyper,
+                                      variation_effects)
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
@@ -139,15 +137,11 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
     bam_to_wig(sort_bam, config, config_file)
     if config["algorithm"]["recalibrate"]:
         log.info("Recalibrating %s with GATK" % str(sample_name))
-        dbsnp_file = get_dbsnp_file(config, sam_ref)
-        gatk_bam = recalibrate_quality(sort_bam, sam_ref,
-                dbsnp_file, config_file)
-        log.info("Analyzing recalibration %s" % str(sample_name))
-        analyze_recalibration(gatk_bam, fastq1, fastq2)
+        gatk_bam = recalibrate_quality(sort_bam, fastq1, fastq2, sam_ref,
+                                       config, config_file)
         if config["algorithm"]["snpcall"]:
             log.info("SNP genotyping %s with GATK" % str(sample_name))
-            vrn_file = run_genotyper(gatk_bam, sam_ref, dbsnp_file, config_file)
-            eval_genotyper(vrn_file, sam_ref, dbsnp_file, config)
+            vrn_file = run_genotyper(gatk_bam, sam_ref, config, config_file)
             log.info("Calculating variation effects for %s" % str(sample_name))
             variation_effects(vrn_file, genome_build, sam_ref, config)
     if sam_ref is not None:
@@ -164,67 +158,7 @@ def bam_to_wig(bam_file, config, config_file):
         subprocess.check_call(cl)
     return wig_file
 
-def recalibrate_quality(sort_bam_file, sam_ref, dbsnp_file, config_file):
-    """Recalibrate alignments with GATK and provide pdf summary.
-    """
-    bam_file = sort_bam_file.replace("-sort.bam", ".bam")
-    cl = ["picard_gatk_recalibrate.py", config_file, sam_ref, bam_file]
-    if dbsnp_file:
-        cl.append(dbsnp_file)
-    subprocess.check_call(cl)
-    out_files = glob.glob("%s*-gatkrecal.bam" % os.path.splitext(sort_bam_file)[0])
-    assert len(out_files) == 1, out_files
-    return out_files[0]
-
-def run_genotyper(bam_file, ref_file, dbsnp_file, config_file):
-    """Perform SNP genotyping and analysis using GATK.
-    """
-    cl = ["gatk_genotyper.py", config_file, ref_file, bam_file]
-    if dbsnp_file:
-        cl.append(dbsnp_file)
-    subprocess.check_call(cl)
-    base, ext = os.path.splitext(bam_file)
-    return glob.glob("%s*snp-filter.vcf" % base)[0]
-
-def eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
-    """Evaluate variant genotyping, producing a JSON metrics file with values.
-    """
-    metrics_file = "%s.eval_metrics" % vrn_file
-    cl = ["gatk_variant_eval.py", config["program"].get("gatk", config["program"]["picard"]),
-          vrn_file, ref_file, dbsnp_file]
-    target = config["algorithm"].get("hybrid_target", "")
-    if target:
-        base_dir = os.path.dirname(os.path.dirname(ref_file))
-        cl.append(os.path.join(base_dir, target))
-    with open(metrics_file, "w") as out_handle:
-        subprocess.check_call(cl, stdout=out_handle)
-
-def variation_effects(vrn_file, genome_build, ref_file, config):
-    """Calculate effects of variations, associating them with transcripts.
-    """
-    snp_eff_dir = config["program"]["snpEff"]
-    snp_eff_jar = os.path.join(snp_eff_dir, "snpEff.jar")
-    cl = ["variant_effects.py", snp_eff_jar, vrn_file, genome_build]
-    target = config["algorithm"].get("hybrid_target", "")
-    if target:
-        base_dir = os.path.dirname(os.path.dirname(ref_file))
-        cl.append(os.path.join(base_dir, target))
-    subprocess.check_call(cl)
-
-def get_dbsnp_file(config, sam_ref):
-    snp_file = config["algorithm"].get("dbsnp", None)
-    if snp_file:
-        base_dir = os.path.dirname(os.path.dirname(sam_ref))
-        snp_file = os.path.join(base_dir, snp_file)
-    return snp_file
-
-def analyze_recalibration(recal_file, fastq1, fastq2):
-    """Provide a pdf report of GATK recalibration of scores.
-    """
-    cl = ["analyze_quality_recal.py", recal_file, fastq1]
-    if fastq2:
-        cl.append(fastq2)
-    subprocess.check_call(cl)
+# ## Utility functions
 
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.
@@ -233,8 +167,6 @@ def _get_full_paths(fastq_dir, config, config_file):
     config_dir = utils.add_full_path(os.path.dirname(config_file))
     galaxy_config_file = utils.add_full_path(config["galaxy_config"], config_dir)
     return fastq_dir, os.path.dirname(galaxy_config_file)
-
-# Utility functions
 
 def _update_config_w_custom(config, lane_info):
     """Update the configuration for this lane if a custom analysis is specified.
