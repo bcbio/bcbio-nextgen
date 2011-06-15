@@ -140,7 +140,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, work_dir,
         gatk_bam = recalibrate_quality(sort_bam, fastq1, fastq2, sam_ref, config)
         if config["algorithm"]["snpcall"]:
             log.info("SNP genotyping %s with GATK" % str(sample_name))
-            vrn_file = run_genotyper(gatk_bam, sam_ref, config, config_file)
+            vrn_file = run_genotyper(gatk_bam, sam_ref, config)
             log.info("Calculating variation effects for %s" % str(sample_name))
             variation_effects(vrn_file, genome_build, sam_ref, config)
     if sam_ref is not None:

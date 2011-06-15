@@ -107,3 +107,17 @@ def picard_mark_duplicates(picard, align_bam):
                     ("METRICS_FILE", dup_metrics)]
         picard.run("MarkDuplicates", opts)
     return dup_bam, dup_metrics
+
+def picard_fixmate(picard, align_bam):
+    """Run Picard's FixMateInformation generating an aligned output file.
+    """
+    base, ext = os.path.splitext(align_bam)
+    out_file = "%s-sort%s" % (base, ext)
+    if not os.path.exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            opts = [("INPUT", align_bam),
+                    ("OUTPUT", out_file),
+                    ("TMP_DIR", tmp_dir),
+                    ("SORT_ORDER", "coordinate")]
+            picard.run("FixMateInformation", opts)
+    return out_file

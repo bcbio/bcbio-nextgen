@@ -1,7 +1,8 @@
-"""Convenience functions for running common GATK utilities.
+"""Perform realignment of BAM files around indels using the GATK toolkit.
 """
 import os
 
+from bcbio.broad import BroadRunner
 from bcbio.utils import curdir_tmpdir
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
@@ -46,13 +47,18 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
             runner.run_gatk(params, tmp_dir)
     return out_file
 
-def gatk_realigner(runner, align_bam, ref_file, dbsnp=None,
+def gatk_realigner(align_bam, ref_file, config, dbsnp=None,
                    deep_coverage=False):
-    """Realign a BAM file around indels using GATK.
+    """Realign a BAM file around indels using GATK, returning sorted BAM.
     """
+    runner = BroadRunner(config["program"]["picard"],
+                         config["program"].get("gatk", ""),
+                         max_memory=config["algorithm"].get("java_memory", ""))
+    runner.run_fn("picard_index", align_bam)
     runner.run_fn("picard_index_ref", ref_file)
     realign_target_file = gatk_realigner_targets(runner, align_bam,
                                                  ref_file, dbsnp, deep_coverage)
     realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
                                          realign_target_file, deep_coverage)
-    return realign_bam
+    realign_sort_bam = runner.run_fn("picard_fixmate", realign_bam)
+    return realign_sort_bam

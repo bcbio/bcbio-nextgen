@@ -1,10 +1,11 @@
 """Next-gen variant detection and evaluation with GATK and SnpEff.
 """
 import os
-import glob
 import subprocess
 
 from bcbio.variation.recalibrate import gatk_recalibrate
+from bcbio.variation.realign import gatk_realigner
+from bcbio.variation.genotype import gatk_genotyper
 
 # ## Recalibration
 
@@ -33,18 +34,14 @@ def _get_dbsnp_file(config, sam_ref):
 
 # ## Genotyping
 
-def run_genotyper(bam_file, ref_file, config, config_file):
+def run_genotyper(bam_file, ref_file, config):
     """Perform SNP genotyping and analysis using GATK.
     """
     dbsnp_file = _get_dbsnp_file(config, ref_file)
-    cl = ["gatk_genotyper.py", config_file, ref_file, bam_file]
-    if dbsnp_file:
-        cl.append(dbsnp_file)
-    subprocess.check_call(cl)
-    base = os.path.splitext(bam_file)[0]
-    vrn_file = glob.glob("%s*snp-filter.vcf" % base)[0]
-    _eval_genotyper(vrn_file, ref_file, dbsnp_file, config)
-    return vrn_file
+    realign_bam = gatk_realigner(bam_file, ref_file, config, dbsnp_file)
+    filter_snp = gatk_genotyper(realign_bam, ref_file, config, dbsnp_file)
+    _eval_genotyper(filter_snp, ref_file, dbsnp_file, config)
+    return filter_snp
 
 def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.
