@@ -8,14 +8,13 @@ http://www.broadinstitute.org/gsa/wiki/index.php/Base_quality_score_recalibratio
 import os
 import shutil
 
-from bcbio.broad import BroadRunner
+from bcbio import broad
 from bcbio.utils import curdir_tmpdir
 
 def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
     """
-    picard = BroadRunner(config["program"]["picard"], config["program"].get("gatk", ""),
-                         max_memory=config["algorithm"].get("java_memory", ""))
+    picard = broad.runner_from_config(config)
     platform = config["algorithm"]["platform"]
     picard.run_fn("picard_index_ref", ref_file)
     (dup_align_bam, _) = picard.run_fn("picard_mark_duplicates", align_bam)

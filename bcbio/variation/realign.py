@@ -2,7 +2,7 @@
 """
 import os
 
-from bcbio.broad import BroadRunner
+from bcbio import broad
 from bcbio.utils import curdir_tmpdir
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
@@ -51,9 +51,7 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None,
                    deep_coverage=False):
     """Realign a BAM file around indels using GATK, returning sorted BAM.
     """
-    runner = BroadRunner(config["program"]["picard"],
-                         config["program"].get("gatk", ""),
-                         max_memory=config["algorithm"].get("java_memory", ""))
+    runner = broad.runner_from_config(config)
     runner.run_fn("picard_index", align_bam)
     runner.run_fn("picard_index_ref", ref_file)
     realign_target_file = gatk_realigner_targets(runner, align_bam,

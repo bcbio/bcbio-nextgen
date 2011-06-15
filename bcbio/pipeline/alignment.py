@@ -5,9 +5,8 @@ This works as part of the lane/flowcell process step of the pipeline.
 import os
 from collections import namedtuple
 
-from bcbio import utils
+from bcbio import utils, broad
 from bcbio.ngsalign import bowtie, bwa, tophat
-from bcbio.broad import BroadRunner
 
 # Define a next-generation sequencing tool to plugin:
 # align_fn -- runs an aligner and generates SAM output
@@ -43,8 +42,7 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
     """Convert SAM file to merged and sorted BAM file.
     """
     rg_name = lane_name.split("_")[0]
-    picard = BroadRunner(config["program"]["picard"],
-                         max_memory=config["algorithm"].get("java_memory", ""))
+    picard = broad.runner_from_config(config)
     platform = config["algorithm"]["platform"]
     base_dir = os.path.dirname(sam_file)
 

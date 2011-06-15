@@ -8,8 +8,7 @@ import os
 import shutil
 import collections
 
-from bcbio import utils
-from bcbio.broad import BroadRunner
+from bcbio import utils, broad
 from bcbio.pipeline.fastq import get_fastq_files
 
 def combine_fastq_files(in_files, work_dir):
@@ -67,8 +66,7 @@ def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
     """
     out_file = os.path.join(work_dir, os.path.basename(bam_files[0]))
-    picard = BroadRunner(config["program"]["picard"],
-                         max_memory=config["algorithm"].get("java_memory", ""))
+    picard = broad.runner_from_config(config)
     picard.run_fn("picard_merge", bam_files, out_file)
     for b in bam_files:
         utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
