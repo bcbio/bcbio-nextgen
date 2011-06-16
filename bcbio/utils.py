@@ -6,7 +6,6 @@ import shutil
 import contextlib
 import itertools
 import functools
-import warnings
 import ConfigParser
 
 try:
@@ -137,9 +136,10 @@ def save_diskspace(fname, reason, config):
         with open(fname, "w") as out_handle:
             out_handle.write("File removed to save disk space: %s" % reason)
 
-def read_galaxy_amqp_config(galaxy_config):
+def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.
     """
+    galaxy_config = add_full_path(galaxy_config, base_dir)
     config = ConfigParser.ConfigParser()
     config.read(galaxy_config)
     amqp_config = {}

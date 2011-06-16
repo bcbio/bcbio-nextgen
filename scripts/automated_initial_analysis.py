@@ -32,6 +32,7 @@ from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio import utils
 from bcbio.log import create_log_handler
+from bcbio.distributed import messaging
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
 from bcbio.pipeline.demultiplex import split_by_barcode, add_multiplex_across_lanes
@@ -57,9 +58,10 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
 
     fc_name, fc_date = get_flowcell_info(fc_dir)
     run_info = _get_run_info(fc_name, fc_date, config, run_info_yaml)
-    fastq_dir, galaxy_dir = _get_full_paths(get_fastq_dir(fc_dir), config, config_file)
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
+                                                        config, config_file)
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir, "work": work_dir,
-            "flowcell": fc_dir}
+            "flowcell": fc_dir, "config": config_dir}
     run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)
 
     # process each flowcell lane
@@ -178,7 +180,7 @@ def _get_full_paths(fastq_dir, config, config_file):
     fastq_dir = utils.add_full_path(fastq_dir)
     config_dir = utils.add_full_path(os.path.dirname(config_file))
     galaxy_config_file = utils.add_full_path(config["galaxy_config"], config_dir)
-    return fastq_dir, os.path.dirname(galaxy_config_file)
+    return fastq_dir, os.path.dirname(galaxy_config_file), config_dir
 
 def _update_config_w_custom(config, lane_info):
     """Update the configuration for this lane if a custom analysis is specified.
