@@ -37,7 +37,11 @@ def runner(dirs, config):
             result = job.apply_async()
             while not result.ready():
                 time.sleep(5)
-            return result.join()
+            out = []
+            for x in result.join():
+                if x:
+                    out.extend(x)
+            return out
         return _run
 
 # ## Utility functions
@@ -67,5 +71,7 @@ def create_celeryconfig(task_module, dirs, config):
     try:
         yield out_file
     finally:
-        os.remove(out_file)
-
+        pyc_file = "%s.pyc" % os.path.splitext(out_file)[0]
+        for fname in [pyc_file, out_file]:
+            if os.path.exists(fname):
+                os.remove(fname)

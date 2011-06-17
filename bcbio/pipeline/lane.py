@@ -31,7 +31,7 @@ def process_lane(info, fc_name, fc_date, dirs, config):
     lane_name = "%s_%s_%s" % (info['lane'], fc_date, fc_name)
     lane_items = []
     for mname, msample, fastq1, fastq2 in split_by_barcode(full_fastq1,
-            full_fastq2, multiplex, lane_name, config):
+            full_fastq2, multiplex, lane_name, dirs, config):
         mlane_name = "%s_%s" % (lane_name, mname) if mname else lane_name
         if msample is None:
             msample = "%s---%s" % (sample_name, mname)

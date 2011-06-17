@@ -9,12 +9,12 @@ from Bio import SeqIO
 from bcbio import utils
 from bcbio.pipeline.fastq import get_fastq_files
 
-def split_by_barcode(fastq1, fastq2, multiplex, base_name, config):
+def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
     """Split a fastq file into multiplex pieces using barcode details.
     """
     if not multiplex:
         return [("", "", fastq1, fastq2)]
-    bc_dir = "%s_barcode" % base_name
+    bc_dir = os.path.join(dirs["work"], "%s_barcode" % base_name)
     nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
     metrics_file = "%s_bc.metrics" % base_name
     with utils.chdir(bc_dir):

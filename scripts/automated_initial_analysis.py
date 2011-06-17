@@ -52,33 +52,39 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     run_info = _get_run_info(fc_name, fc_date, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
                                                         config, config_file)
+    config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
     run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)
 
     # process each flowcell lane
     lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
-    lane_items = _run_parallel("process_lane", lanes, config)
-    _run_parallel("process_alignment", lane_items, config)
+    lane_items = _run_parallel("process_lane", lanes, dirs, config)
+    _run_parallel("process_alignment", lane_items, dirs, config)
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = \
                   organize_samples(dirs, fc_name, fc_date, run_items)
     samples = ((n, sample_fastq[n], sample_info[n], bam_files, dirs, config, config_file)
                for n, bam_files in sample_files)
-    _run_parallel("process_sample", samples, config)
+    _run_parallel("process_sample", samples, dirs, config)
 
     write_metrics(run_info, fc_name, fc_date, dirs)
 
-def _run_parallel(fn_name, items, config):
+def _run_parallel(fn_name, items, dirs, config):
     """Process a supplied function: single, multi-processor or distributed.
     """
-    out = []
-    fn = globals()[fn_name]
-    with utils.cpmap(config["algorithm"]["num_cores"]) as cpmap:
-        for data in cpmap(fn, items):
-            if data:
-                out.extend(data)
-    return out
+    parallel = config["algorithm"]["num_cores"]
+    if str(parallel).lower() == "messaging":
+        runner = messaging.runner(dirs, config)
+        return runner(fn_name, items)
+    else:
+        out = []
+        fn = globals()[fn_name]
+        with utils.cpmap(int(parallel)) as cpmap:
+            for data in cpmap(fn, items):
+                if data:
+                    out.extend(data)
+        return out
 
 # ## multiprocessing ready entry points
 
