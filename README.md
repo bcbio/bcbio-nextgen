@@ -100,7 +100,9 @@ The pipeline can be run in parallel in two different ways:
 * parallel messaging -- This allows scaling beyond the cores on a
   single machine. It requires multiple machines with a shared
   filesystem, with communication handled using RabbitMQ messaging.
-  This is ideally suited for clusters. To enable:
+  This is ideally suited for clusters.
+
+To enable parallel messaging:
 
 1. Configure RabbitMQ as described below. Ensure all processing
    machines can talk to the RabbitMQ server on port 5672. Update
@@ -112,7 +114,7 @@ The pipeline can be run in parallel in two different ways:
    processing machine. This takes one argument, the
    `post_process.yaml` file (which references the `universe_wsgi.ini`
    configuration). On an lsf cluster, you could start these with:
-   `bsub -q your_core -n processors -x nextgen_analysis_server post_process.yaml`
+   `bsub -q your_core -n processors -x nextgen_analysis_server.py post_process.yaml`
 
 4. Run the analysis script `automated_initial_analysis.py`. This will
    offload parallel work to the workers started in step 3 but also
