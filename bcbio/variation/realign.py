@@ -2,6 +2,8 @@
 """
 import os
 
+import pysam
+
 from bcbio import broad
 from bcbio.utils import curdir_tmpdir
 
@@ -54,6 +56,8 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None,
     runner = broad.runner_from_config(config)
     runner.run_fn("picard_index", align_bam)
     runner.run_fn("picard_index_ref", ref_file)
+    if not os.path.exists("%s.fai" % ref_file):
+        pysam.faidx(ref_file)
     realign_target_file = gatk_realigner_targets(runner, align_bam,
                                                  ref_file, dbsnp, deep_coverage)
     realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
