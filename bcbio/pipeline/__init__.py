@@ -13,3 +13,5 @@ This structures processing steps into the following modules:
     - variation.py: Calculate SNP/indel variations for a sample.
     - qcsummary.py: Quality control, alignment metrics and summary information.
 """
+import logbook
+log = logbook.Logger("nextgen_pipeline")
