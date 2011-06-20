@@ -77,7 +77,8 @@ def safe_makedir(dname):
         try:
             os.makedirs(dname)
         except OSError:
-            assert os.path.isdir(dname)
+            if not os.path.isdir(dname):
+                raise
 
 @contextlib.contextmanager
 def curdir_tmpdir(remove=True):

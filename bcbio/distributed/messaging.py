@@ -63,7 +63,7 @@ CELERYD_CONCURRENCY = ${cores}
 def create_celeryconfig(task_module, dirs, config):
     amqp_config = utils.read_galaxy_amqp_config(config["galaxy_config"], dirs["config"])
     out_file = os.path.join(dirs["work"], "celeryconfig.py")
-    amqp_config["rabbitmq_vhost"] = config["analysis"]["rabbitmq_vhost"]
+    amqp_config["rabbitmq_vhost"] = config["distributed"]["rabbitmq_vhost"]
     amqp_config["cores"] = multiprocessing.cpu_count()
     amqp_config["task_import"] = task_module
     with open(out_file, "w") as out_handle:
