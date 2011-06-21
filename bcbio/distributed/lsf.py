@@ -22,9 +22,10 @@ def are_running(jobids):
     """
     run_info = subprocess.check_output(["bjobs"])
     running = []
-    for line in (l for l in run_info.split("\n") if l):
-        pid, _, status = line.split()[:3]
-        if status.lower() in ["run"]:
-            running.append(pid)
+    for parts in (l.split() for l in run_info.split("\n") if l.strip()):
+        if len(parts) >= 3:
+            pid, _, status = parts[:3]
+            if status.lower() in ["run"]:
+                running.append(pid)
     want_running = set(running).intersection(set(jobids))
     return len(want_running) == len(jobids)
