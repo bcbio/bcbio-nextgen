@@ -61,18 +61,12 @@ distributed:
   rabbitmq_vhost: bionextgen
 # configuration algorithm changes for custom post-processing steps
 custom_algorithms:
-  'Broad SNP':
-    ref_ext: '-broad'
-    aligner: maq
-    recalibrate: true
-    snpcall: true
-    dbsnp: snps/snp130.vcf
-    hybrid_bait: bait_list
-    hybrid_target: target_list
   'SNP calling':
     aligner: bwa
     recalibrate: true
     snpcall: true
-    dbsnp: snps/snp130.vcf
+    dbsnp: variation/dbsnp_132.vcf
+    hybrid_bait:
+    hybrid_target:
   'Minimal':
     aligner: ""

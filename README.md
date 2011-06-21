@@ -110,13 +110,30 @@ To enable parallel messaging:
 
 2. Change `num_cores` in `post_process.yaml` to `messaging`
 
-3. Start the processing server, `nextgen_analysis_server.py` on each
+The `distributed_nextgen_pipeline.py` helper script runs pipelines in a
+distributed cluster environment. It takes care of starting worker
+nodes, running the processing, and then cleaning up jobs afterwards:
+
+1. Edit your `post_process.yaml` file to set parameters in the
+  `distributed` section corresponding to your environment: this
+  includes the type of cluster management, arguments to start jobs,
+  and the number of workers to start.
+
+2. Execute `distributed_nextgen_pipeline.py` using the same arguments as
+   `automated_initial_analysis.py`: the `post_process.yaml`
+   configuration file, the directory of fastq files, and a
+   `run_info.yaml` file specifying the fastq details, barcodes,
+   and the types of analyses to run.
+
+If you have a different architecture you can run the distributed
+processing by hand:
+
+1. Start the processing server, `nextgen_analysis_server.py` on each
    processing machine. This takes one argument, the
    `post_process.yaml` file (which references the `universe_wsgi.ini`
-   configuration). On an lsf cluster, you could start these with:
-   `bsub -q your_core -n processors -x nextgen_analysis_server.py post_process.yaml`
+   configuration).
 
-4. Run the analysis script `automated_initial_analysis.py`. This will
+2. Run the analysis script `automated_initial_analysis.py`. This will
    offload parallel work to the workers started in step 3 but also
    does processing itself, so should be run as a job in cluster
    environments.
