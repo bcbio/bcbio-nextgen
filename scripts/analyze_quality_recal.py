@@ -41,7 +41,7 @@ import pysam
 from mako.template import Template
 try:
     import rpy2.robjects as robjects
-except ImportError:
+except (ImportError, LookupError):
     robjects = None
 
 def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
