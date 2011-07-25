@@ -48,7 +48,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     align_dir = os.path.join(work_dir, "alignments")
 
-    fc_name, fc_date, run_info = _get_run_info(config, run_info_yaml)
+    fc_name, fc_date, run_info = _get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
@@ -101,7 +101,7 @@ def process_sample(*args):
 
 # ## Utility functions
 
-def _get_run_info(fc_name, fc_date, config, run_info_yaml):
+def _get_run_info(fc_dir, config, run_info_yaml):
     """Retrieve run information from a passed YAML file or the Galaxy API.
     """
     try:
