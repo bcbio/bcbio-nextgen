@@ -48,8 +48,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     align_dir = os.path.join(work_dir, "alignments")
 
-    fc_name, fc_date = get_flowcell_info(fc_dir)
-    run_info = _get_run_info(fc_name, fc_date, config, run_info_yaml)
+    fc_name, fc_date, run_info = _get_run_info(config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
@@ -105,15 +104,22 @@ def process_sample(*args):
 def _get_run_info(fc_name, fc_date, config, run_info_yaml):
     """Retrieve run information from a passed YAML file or the Galaxy API.
     """
+    try:
+        fc_name, fc_date = get_flowcell_info(fc_dir)
+    except ValueError:
+        fc_name, fc_date = None
     if run_info_yaml and os.path.exists(run_info_yaml):
         log.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
         with open(run_info_yaml) as in_handle:
             run_details = yaml.load(in_handle)
-        return dict(details=run_details, run_id="")
+        run_info = dict(details=run_details, run_id="")
     else:
+        assert fc_name is not None, fc_dir
+        assert fc_date is not None, fc_date
         log.info("Fetching run details from Galaxy instance")
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        return galaxy_api.run_details(fc_name, fc_date)
+        run_info = galaxy_api.run_details(fc_name, fc_date)
+    return fc_name, fc_date, run_info
 
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.

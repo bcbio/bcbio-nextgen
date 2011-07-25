@@ -49,8 +49,8 @@ def organize_samples(dirs, fc_name, fc_date, run_items):
                 if os.path.exists(fname):
                     bams_by_sample[name].append(fname)
                     sample_info[name] = lane_info
-                    fastq_by_sample[name].append(get_fastq_files(mfastq_dir,
-                        lane_info["lane"], fc_name, multi["barcode_id"]))
+                    fastq_by_sample[name].append(get_fastq_files(mfastq_dir, lane_info,
+                                                                 fc_name, multi["barcode_id"]))
         else:
             name = (lane_info.get("name", ""), lane_info["description"])
             fname = os.path.join(dirs["align"], "%s_%s_%s-sort.bam" %
@@ -59,7 +59,7 @@ def organize_samples(dirs, fc_name, fc_date, run_items):
                 bams_by_sample[name].append(fname)
                 sample_info[name] = lane_info
                 fastq_by_sample[name].append(get_fastq_files(dirs["fastq"],
-                    lane_info["lane"], fc_name))
+                                                             lane_info, fc_name))
     return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
 
 def merge_bam_files(bam_files, work_dir, config):

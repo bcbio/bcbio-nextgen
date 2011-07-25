@@ -126,7 +126,7 @@ def add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
 def _get_fastq_size(item, fastq_dir, fc_name):
     """Retrieve the size of reads from the first flowcell sequence.
     """
-    (fastq1, _) = get_fastq_files(fastq_dir, item['lane'], fc_name)
+    (fastq1, _) = get_fastq_files(fastq_dir, item, fc_name)
     with open(fastq1) as in_handle:
         try:
             rec = SeqIO.parse(in_handle, "fastq").next()
