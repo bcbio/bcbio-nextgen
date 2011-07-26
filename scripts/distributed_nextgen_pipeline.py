@@ -45,11 +45,28 @@ def start_workers(cluster, config, config_file):
     return jobids
 
 def run_analysis(config_file, fc_dir, run_info_yaml, cluster, config):
-    args = config["distributed"]["platform_args"].split()
+    # get arguments, ignoring need for multiple cores in arguments
+    # since analysis is single threaded runner
+    args = []
+    ignore = False
+    for a in config["distributed"]["platform_args"].split():
+        if ignore:
+            ignore = False
+        elif a == "-n":
+            ignore = True
+        else:
+            args.append(a)
     program_cl = [config["analysis"]["process_program"], config_file, fc_dir]
     if run_info_yaml:
         program_cl.append(run_info_yaml)
     jobid = cluster.submit_job(args, program_cl)
+    try:
+        _monitor_analysis(cluster, jobid)
+    except:
+        stop_workers(cluster, [jobid])
+        raise
+
+def _monitor_analysis(cluster, jobid):
     # wait for job to start
     while not(cluster.are_running([jobid])):
         time.sleep(5)
