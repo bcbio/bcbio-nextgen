@@ -25,11 +25,11 @@ from optparse import OptionParser
 
 import yaml
 
-from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
-from bcbio.galaxy.api import GalaxyApiAccess
+from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio import utils
 from bcbio.log import create_log_handler
 from bcbio.distributed import messaging
+from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline import log
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
@@ -48,7 +48,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     align_dir = os.path.join(work_dir, "alignments")
 
-    fc_name, fc_date, run_info = _get_run_info(fc_dir, config, run_info_yaml)
+    fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
@@ -100,26 +100,6 @@ def process_sample(*args):
     return sample.process_sample(*args)
 
 # ## Utility functions
-
-def _get_run_info(fc_dir, config, run_info_yaml):
-    """Retrieve run information from a passed YAML file or the Galaxy API.
-    """
-    try:
-        fc_name, fc_date = get_flowcell_info(fc_dir)
-    except ValueError:
-        fc_name, fc_date = None
-    if run_info_yaml and os.path.exists(run_info_yaml):
-        log.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
-        with open(run_info_yaml) as in_handle:
-            run_details = yaml.load(in_handle)
-        run_info = dict(details=run_details, run_id="")
-    else:
-        assert fc_name is not None, fc_dir
-        assert fc_date is not None, fc_date
-        log.info("Fetching run details from Galaxy instance")
-        galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name, fc_date)
-    return fc_name, fc_date, run_info
 
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.
