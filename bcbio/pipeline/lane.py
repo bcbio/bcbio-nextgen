@@ -57,5 +57,8 @@ def _update_config_w_custom(config, lane_info):
     if custom:
         for key, val in custom.iteritems():
             config["algorithm"][key] = val
+    # apply any algorithm details specified with the lane
+    for key, val in lane_info.get("algorithm", {}).iteritems():
+        config["algorithm"][key] = val
     return config
 

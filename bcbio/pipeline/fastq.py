@@ -28,7 +28,7 @@ def get_fastq_files(directory, item, fc_name, bc_name=None):
             subprocess.check_call(cl)
             ready_files.append(os.path.splitext(fname)[0])
         else:
-            assert os.path.exists(fname)
+            assert os.path.exists(fname), fname
             ready_files.append(fname)
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
