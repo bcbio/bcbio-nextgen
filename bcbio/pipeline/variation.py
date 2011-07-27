@@ -7,6 +7,7 @@ import subprocess
 from bcbio.variation.recalibrate import gatk_recalibrate
 from bcbio.variation.realign import gatk_realigner
 from bcbio.variation.genotype import gatk_genotyper, gatk_evaluate_variants
+from bcbio.variation.effects import snpeff_effects
 
 # ## Recalibration
 
@@ -57,16 +58,9 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
 
 # ## Calculate variation effects
 
-def variation_effects(vrn_file, genome_build, ref_file, config):
+def variation_effects(vrn_file, genome_build, config):
     """Calculate effects of variations, associating them with transcripts.
     """
-    snp_eff_dir = config["program"]["snpEff"]
-    snp_eff_jar = os.path.join(snp_eff_dir, "snpEff.jar")
-    cl = ["variant_effects.py", snp_eff_jar, vrn_file, genome_build]
-    target = config["algorithm"].get("hybrid_target", "")
-    if target:
-        base_dir = os.path.dirname(os.path.dirname(ref_file))
-        cl.append(os.path.join(base_dir, target))
-    subprocess.check_call(cl)
-
-
+    snpeff_jar = os.path.join(config["program"]["snpEff"], "snpEff.jar")
+    return snpeff_effects(snpeff_jar, vrn_file, genome_build,
+                          config["algorithm"].get("hybrid_target", None))

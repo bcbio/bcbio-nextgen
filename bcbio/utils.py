@@ -124,14 +124,18 @@ def tmpfile(*args, **kwargs):
 def file_transaction(*rollback_files):
     """Wrap file generation in a transaction, removing partial files on failure.
 
-    This allows a safe restart at any
+    This allows a safe restart at any point, helping to deal with interrupted
+    pipelines.
     """
     try:
         yield None
     except:
-        for fname in rollback_files:
-            if os.path.exists(fname):
-                os.remove(fname)
+        for fnames in rollback_files:
+            if isinstance(fnames, str):
+                fnames = [fnames]
+            for fname in fnames:
+                if fname and os.path.exists(fname):
+                    os.remove(fname)
         raise
 
 def create_dirs(config, names=None):

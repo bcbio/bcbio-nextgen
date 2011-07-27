@@ -35,7 +35,6 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
             log.info("SNP genotyping %s with GATK" % str(sample_name))
             vrn_file = run_genotyper(gatk_bam, sam_ref, config)
             log.info("Calculating variation effects for %s" % str(sample_name))
-            variation_effects(vrn_file, genome_build, sam_ref, config)
     if sam_ref is not None:
         log.info("Generating summary files: %s" % str(sample_name))
         generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
