@@ -15,6 +15,7 @@ import os
 import itertools
 
 from bcbio import broad
+from bcbio.utils import file_transaction
 
 # ## SNP Genotyping
 
@@ -53,7 +54,8 @@ def _unified_genotyper(picard, align_bam, ref_file, dbsnp=None):
     if dbsnp:
         params += ["-B:dbsnp,VCF", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        picard.run_gatk(params)
+        with file_transaction(out_file):
+            picard.run_gatk(params)
     return out_file
 
 def _variant_filtration(picard, snp_file, ref_file):
@@ -80,7 +82,8 @@ def _variant_filtration(picard, snp_file, ref_file):
               "-l", "INFO",
               ]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        picard.run_gatk(params)
+        with file_transaction(out_file):
+            picard.run_gatk(params)
     return out_file
 
 # ## Variant evaluation
@@ -168,5 +171,6 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
     if target_intervals:
         params.extend(["-L", target_intervals])
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        picard.run_gatk(params)
+        with file_transaction(out_file):
+            picard.run_gatk(params)
     return out_file

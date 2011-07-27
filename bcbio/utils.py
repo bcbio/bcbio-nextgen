@@ -120,6 +120,20 @@ def tmpfile(*args, **kwargs):
         if os.path.exists(fname):
             os.remove(fname)
 
+@contextlib.contextmanager
+def file_transaction(*rollback_files):
+    """Wrap file generation in a transaction, removing partial files on failure.
+
+    This allows a safe restart at any
+    """
+    try:
+        yield None
+    except:
+        for fname in rollback_files:
+            if os.path.exists(fname):
+                os.remove(fname)
+        raise
+
 def create_dirs(config, names=None):
     if names is None:
         names = config["dir"].keys()

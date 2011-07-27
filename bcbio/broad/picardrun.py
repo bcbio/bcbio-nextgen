@@ -2,7 +2,7 @@
 """
 import os
 
-from bcbio.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir, file_transaction
 
 def picard_sort(picard, align_bam):
     """Sort a BAM file by coordinates.
@@ -15,7 +15,8 @@ def picard_sort(picard, align_bam):
                     ("OUTPUT", out_file),
                     ("TMP_DIR", tmp_dir),
                     ("SORT_ORDER", "coordinate")]
-            picard.run("SortSam", opts)
+            with file_transaction(out_file):
+                picard.run("SortSam", opts)
     return out_file
 
 def picard_merge(picard, in_files, out_file=None):
@@ -30,7 +31,8 @@ def picard_merge(picard, in_files, out_file=None):
                     ("TMP_DIR", tmp_dir)]
             for in_file in in_files:
                 opts.append(("INPUT", in_file))
-            picard.run("MergeSamFiles", opts)
+            with file_transaction(out_file):
+                picard.run("MergeSamFiles", opts)
     return out_file
 
 def picard_index(picard, in_bam):
@@ -38,7 +40,8 @@ def picard_index(picard, in_bam):
     if not os.path.exists(index_file):
         opts = [("INPUT", in_bam),
                 ("OUTPUT", index_file)]
-        picard.run("BuildBamIndex", opts)
+        with file_transaction(index_file):
+            picard.run("BuildBamIndex", opts)
     return index_file
 
 def picard_index_ref(picard, ref_file):
@@ -48,7 +51,8 @@ def picard_index_ref(picard, ref_file):
     if not os.path.exists(dict_file):
         opts = [("REFERENCE", ref_file),
                 ("OUTPUT", dict_file)]
-        picard.run("CreateSequenceDictionary", opts)
+        with file_transaction(dict_file):
+            picard.run("CreateSequenceDictionary", opts)
     return dict_file
 
 def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir,
@@ -74,7 +78,8 @@ def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir,
                     ("OUTPUT", out_bam)]
             if fastq_two:
                 opts.append(("FASTQ2", fastq_two))
-            picard.run("FastqToSam", opts)
+            with file_transaction(out_bam):
+                picard.run("FastqToSam", opts)
     return out_bam
 
 def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
@@ -91,7 +96,8 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                     ("TMP_DIR", tmp_dir),
                     ("PAIRED_RUN", ("true" if is_paired else "false")),
                     ]
-            picard.run("MergeBamAlignment", opts)
+            with file_transaction(out_bam):
+                picard.run("MergeBamAlignment", opts)
     return out_bam
 
 def picard_mark_duplicates(picard, align_bam):
@@ -105,7 +111,8 @@ def picard_mark_duplicates(picard, align_bam):
                     ("OUTPUT", dup_bam),
                     ("TMP_DIR", tmp_dir),
                     ("METRICS_FILE", dup_metrics)]
-        picard.run("MarkDuplicates", opts)
+        with file_transaction(dup_bam, dup_metrics):
+            picard.run("MarkDuplicates", opts)
     return dup_bam, dup_metrics
 
 def picard_fixmate(picard, align_bam):
@@ -119,5 +126,6 @@ def picard_fixmate(picard, align_bam):
                     ("OUTPUT", out_file),
                     ("TMP_DIR", tmp_dir),
                     ("SORT_ORDER", "coordinate")]
-            picard.run("FixMateInformation", opts)
+            with file_transaction(out_file):
+                picard.run("FixMateInformation", opts)
     return out_file

@@ -5,7 +5,7 @@ import os
 import pysam
 
 from bcbio import broad
-from bcbio.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir, file_transaction
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
                            deep_coverage=False):
@@ -24,7 +24,8 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
         params += ["--mismatchFraction", "0.30",
                    "--maxIntervalSize", "650"]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        runner.run_gatk(params)
+        with file_transaction(out_file):
+            runner.run_gatk(params)
     return out_file
 
 def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
@@ -46,7 +47,8 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                    "--maxConsensuses", "100"]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with curdir_tmpdir() as tmp_dir:
-            runner.run_gatk(params, tmp_dir)
+            with file_transaction(out_file):
+                runner.run_gatk(params, tmp_dir)
     return out_file
 
 def gatk_realigner(align_bam, ref_file, config, dbsnp=None,

@@ -6,6 +6,7 @@ that should be processed together.
 import os
 import subprocess
 
+from bcbio.utils import file_transaction
 from bcbio.pipeline.lane import _update_config_w_custom
 from bcbio.pipeline import log
 from bcbio.pipeline.alignment import get_genome_ref
@@ -46,6 +47,7 @@ def bam_to_wig(bam_file, config, config_file):
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if not (os.path.exists(wig_file) and os.path.getsize(wig_file) > 0):
         cl = [config["analysis"]["towig_script"], bam_file, config_file]
-        subprocess.check_call(cl)
+        with file_transaction(wig_file):
+            subprocess.check_call(cl)
     return wig_file
 

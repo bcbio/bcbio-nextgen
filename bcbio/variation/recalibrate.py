@@ -9,7 +9,7 @@ import os
 import shutil
 
 from bcbio import broad
-from bcbio.utils import curdir_tmpdir
+from bcbio.utils import curdir_tmpdir, file_transaction
 
 def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
@@ -41,7 +41,8 @@ def _gatk_table_recalibrate(picard, dup_align_bam, ref_file, recal_file, platfor
     if not os.path.exists(out_file):
         if _recal_available(recal_file):
             with curdir_tmpdir() as tmp_dir:
-                picard.run_gatk(params, tmp_dir)
+                with file_transaction(out_file):
+                    picard.run_gatk(params, tmp_dir)
         else:
             shutil.copy(dup_align_bam, out_file)
     return out_file
@@ -83,6 +84,7 @@ def _gatk_count_covariates(picard, dup_align_bam, ref_file, platform,
         params += ["-B:dbsnp,VCF", snp_file]
     if not os.path.exists(out_file):
         with curdir_tmpdir() as tmp_dir:
-            picard.run_gatk(params, tmp_dir)
+            with file_transaction(out_file):
+                picard.run_gatk(params, tmp_dir)
     return out_file
 

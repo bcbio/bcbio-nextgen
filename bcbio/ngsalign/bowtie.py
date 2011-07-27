@@ -3,6 +3,8 @@
 import os
 import subprocess
 
+from bcbio.utils import file_transaction
+
 galaxy_location_file = "bowtie_indices.loc"
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
@@ -26,6 +28,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
             cl += [fastq_file]
         cl += [out_file]
         cl = [str(i) for i in cl]
-        subprocess.check_call(cl)
+        with file_transaction(out_file):
+            subprocess.check_call(cl)
     return out_file
 
