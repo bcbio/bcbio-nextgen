@@ -18,13 +18,13 @@ import subprocess
 
 import yaml
 
-from bcbio.distributed import lsf
+from bcbio.distributed import lsf, sge
 
 def main(config_file, fc_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     assert config["algorithm"]["num_cores"] == "messaging", \
-           "Designed for use with messaging parallelization"
+           "Designed for use with 'messaging' parallelization"
     cluster = globals()[config["distributed"]["cluster_platform"]]
     print "Starting cluster workers"
     jobids = start_workers(cluster, config, config_file)
