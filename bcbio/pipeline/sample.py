@@ -28,6 +28,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
     log.info("Combining and preparing wig file %s" % str(sample_name))
     sort_bam = merge_bam_files(bam_files, dirs["work"], config)
     bam_to_wig(sort_bam, config, config_file)
+    (gatk_bam, vrn_file, effects_file) = ("", "", "")
     if config["algorithm"]["recalibrate"]:
         log.info("Recalibrating %s with GATK" % str(sample_name))
         gatk_bam = recalibrate_quality(sort_bam, fastq1, fastq2, sam_ref, config)
@@ -35,10 +36,13 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
             log.info("SNP genotyping %s with GATK" % str(sample_name))
             vrn_file = run_genotyper(gatk_bam, sam_ref, config)
             log.info("Calculating variation effects for %s" % str(sample_name))
+            effects_file = variation_effects(vrn_file, genome_build, config)
     if sam_ref is not None:
         log.info("Generating summary files: %s" % str(sample_name))
         generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
                 config, sample_name, config_file)
+    return [sample_name, fastq_files, info, sort_bam, gatk_bam, vrn_file,
+            effects_file]
 
 def bam_to_wig(bam_file, config, config_file):
     """Provide a BigWig coverage file of the sorted alignments.

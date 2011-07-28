@@ -134,7 +134,7 @@ def file_transaction(*rollback_files):
             if isinstance(fnames, str):
                 fnames = [fnames]
             for fname in fnames:
-                if fname and os.path.exists(fname):
+                if fname and os.path.exists(fname) and os.path.isfile(fname):
                     os.remove(fname)
         raise
 

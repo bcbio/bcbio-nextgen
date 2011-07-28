@@ -58,6 +58,7 @@ distributed:
   cluster_platform: lsf
   platform_args: '-q long_parallel -n 4 -R "rusage=[1500m]"'
   num_workers: 2
+  cores_per_host: 0 # zero uses all cores, otherwise can configure
   rabbitmq_vhost: bionextgen
 # configuration algorithm changes for custom post-processing steps
 custom_algorithms:

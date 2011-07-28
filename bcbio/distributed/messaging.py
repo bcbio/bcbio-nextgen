@@ -64,7 +64,10 @@ def create_celeryconfig(task_module, dirs, config):
     amqp_config = utils.read_galaxy_amqp_config(config["galaxy_config"], dirs["config"])
     out_file = os.path.join(dirs["work"], "celeryconfig.py")
     amqp_config["rabbitmq_vhost"] = config["distributed"]["rabbitmq_vhost"]
-    amqp_config["cores"] = multiprocessing.cpu_count()
+    cores = config["distributed"].get("cores_per_host", 0)
+    if cores < 1:
+        cores = multiprocessing.cpu_count()
+    amqp_config["cores"] = cores
     amqp_config["task_import"] = task_module
     with open(out_file, "w") as out_handle:
         out_handle.write(Template(_celeryconfig_tmpl).render(**amqp_config))
