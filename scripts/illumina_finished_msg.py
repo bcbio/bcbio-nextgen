@@ -264,7 +264,7 @@ def _read_reported(msg_db):
 
 def _get_directories(config):
     for directory in config["dump_directories"]:
-        for dname in sorted(glob.glob(os.path.join(directory, "*[Aa]*[XXxx]"))):
+        for dname in sorted(glob.glob(os.path.join(directory, "*[Aa]*[Xx][Xx]"))):
              if os.path.isdir(dname):
                  yield dname
 
