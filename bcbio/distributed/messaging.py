@@ -57,6 +57,8 @@ BROKER_VHOST = "${rabbitmq_vhost}"
 CELERY_RESULT_BACKEND= "amqp"
 CELERY_TASK_SERIALIZER = "json"
 CELERYD_CONCURRENCY = ${cores}
+CELERY_ACKS_LATE = True
+CELERYD_PREFETCH_MULTIPLIER = 1
 """
 
 @contextlib.contextmanager
