@@ -28,22 +28,17 @@ import json
 
 import yaml
 
-from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
+from bcbio.solexa.flowcell import get_fastq_dir
+from bcbio.pipeline.run_info import get_run_info
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio import utils
 
 def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    fc_name, fc_date = get_flowcell_info(fc_dir)
-    if run_info_yaml:
-        with open(run_info_yaml) as in_handle:
-            run_details = yaml.load(in_handle)
-        run_info = dict(details=run_details, run_id="")
-        galaxy_api = None
-    else:
-        galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name, fc_date)
+    galaxy_api = (GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
+                  if run_info_yaml is None else None)
+    fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
 
     base_folder_name = "%s_%s" % (fc_date, fc_name)
     run_details = lims_run_details(run_info, fc_name, base_folder_name)
@@ -62,7 +57,7 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
             else:
                 cur_galaxy_files = []
             store_dir = move_to_storage(lane, bc_id, base_folder_name, upload_files,
-                                        cur_galaxy_files, config)
+                                        cur_galaxy_files, config, config_file)
             if store_dir and library_id:
                 print "Uploading directory of files to Galaxy"
                 print galaxy_api.upload_directory(library_id, folder['id'],
@@ -230,16 +225,19 @@ def _folders_by_name(name, items):
     return [f for f in items if f['type'] == 'folder' and
                                 f['name'] == name]
 
-def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files, config):
+def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files,
+                    config, config_file):
     """Create directory for long term storage before linking to Galaxy.
     """
+    galaxy_config_file = utils.add_full_path(config["galaxy_config"],
+                                             os.path.dirname(config_file))
     galaxy_conf = ConfigParser.SafeConfigParser({'here' : ''})
-    galaxy_conf.read(config["galaxy_config"])
+    galaxy_conf.read(galaxy_config_file)
     try:
         lib_import_dir = galaxy_conf.get("app:main", "library_import_dir")
-    except ConfigParser.NoOptionError:
+    except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
         raise ValueError("Galaxy config %s needs library_import_dir to be set."
-                % config["galaxy_config"])
+                         % galaxy_config_file)
     storage_dir = _get_storage_dir(fc_dir, lane, bc_id, os.path.join(lib_import_dir,
                                    "storage"))
     existing_files = [os.path.basename(f['name']) for f in cur_galaxy_files]
