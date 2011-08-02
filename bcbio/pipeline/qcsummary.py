@@ -8,31 +8,165 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 import yaml
+from mako.template import Template
 
-from bcbio.broad.metrics import PicardMetricsParser
+from bcbio.broad import runner_from_config
+from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser
+from bcbio import utils
 
-def generate_align_summary(bam_file, is_paired, sam_ref, config,
-        sample_name, config_file, do_sort=False):
+# ## High level functions to generate summary PDF
+
+def generate_align_summary(bam_file, is_paired, sam_ref, sample_name,
+                           config, dirs):
     """Run alignment summarizing script to produce a pdf with align details.
     """
-    sample_name = " : ".join(sample_name)
-    cl = ["align_summary_report.py", "--name=%s" % sample_name,
-            config["program"]["picard"], bam_file, sam_ref]
-    if is_paired:
-        cl.append("--paired")
-    bait = config["algorithm"].get("hybrid_bait", "")
-    target = config["algorithm"].get("hybrid_target", "")
-    if bait and target:
-        base_dir = os.path.dirname(os.path.dirname(sam_ref))
-        cl.append("--bait=%s" % os.path.join(base_dir, bait))
-        cl.append("--target=%s" % os.path.join(base_dir, target))
-    if do_sort:
-        cl.append("--sort")
-    cl.append("--config=%s" % config_file)
-    subprocess.check_call(cl)
+    with utils.chdir(dirs["work"]):
+        with utils.curdir_tmpdir() as tmp_dir:
+            graphs, summary, overrep = \
+                    _graphs_and_summary(bam_file, sam_ref, is_paired,
+                                        tmp_dir, config)
+        return _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
+                             dirs, config)
 
-# Output high level summary information for a sequencing run in YAML format
-# that can be picked up and loaded into Galaxy.
+def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
+                  dirs, config):
+    base = os.path.splitext(os.path.basename(bam_file))[0]
+    sample_name = base if sample_name is None else " : ".join(sample_name)
+    tmpl = Template(_section_template)
+    sample_name = "%s (%s)" % (sample_name.replace("_", "\_"),
+                               base.replace("_", "\_"))
+    recal_plots = sorted(glob.glob(os.path.join(dirs["work"], "reports", "images",
+                                                "%s*-plot.pdf" % base)))
+    section = tmpl.render(name=sample_name, summary=None,
+                          summary_table=summary,
+                          figures=[(f, c, i) for (f, c, i) in graphs if f],
+                          overrep=overrep,
+                          recal_figures=recal_plots)
+    out_file = os.path.join(dirs["work"], "%s-summary.tex" % base)
+    out_tmpl = Template(_base_template)
+    with open(out_file, "w") as out_handle:
+        out_handle.write(out_tmpl.render(parts=[section]))
+    cl = [config.get("program", {}).get("pdflatex", "pdflatex"), out_file]
+    subprocess.check_call(cl)
+    return "%s.pdf" % os.path.splitext(out_file)[0]
+
+def _graphs_and_summary(bam_file, sam_ref, is_paired, tmp_dir, config):
+    """Prepare picard/FastQC graphs and summary details.
+    """
+    bait = config["algorithm"].get("hybrid_bait", None)
+    target = config["algorithm"].get("hybrid_target", None)
+    broad_runner = runner_from_config(config)
+    metrics = PicardMetrics(broad_runner, tmp_dir)
+    summary_table, metrics_graphs = \
+                   metrics.report(bam_file, sam_ref, is_paired, bait, target)
+    metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
+    fastqc_graphs, fastqc_stats, fastqc_overrep = \
+                   fastqc_report(bam_file, config)
+    all_graphs = fastqc_graphs + metrics_graphs
+    summary_table = _update_summary_table(summary_table, sam_ref, fastqc_stats)
+    return all_graphs, summary_table, fastqc_overrep
+
+def _update_summary_table(summary_table, ref_file, fastqc_stats):
+    stats_want = []
+    summary_table[0] = (summary_table[0][0], summary_table[0][1],
+            "%sbp %s" % (fastqc_stats.get("Sequence length", "0"), summary_table[0][-1]))
+    for stat in stats_want:
+        summary_table.insert(0, (stat, fastqc_stats.get(stat, ""), ""))
+    ref_org = os.path.splitext(os.path.split(ref_file)[-1])[0]
+    summary_table.insert(0, ("Reference organism",
+        ref_org.replace("_", " "), ""))
+    return summary_table
+
+# ## Run and parse read information from FastQC
+
+def fastqc_report(bam_file, config):
+    """Calculate statistics about a read using FastQC.
+    """
+    out_dir = _run_fastqc(bam_file, config)
+    parser = FastQCParser(out_dir)
+    graphs = parser.get_fastqc_graphs()
+    stats, overrep = parser.get_fastqc_summary()
+    return graphs, stats, overrep
+
+class FastQCParser:
+    def __init__(self, base_dir):
+        self._dir = base_dir
+        self._max_seq_size = 45
+        self._max_overrep = 20
+
+    def get_fastqc_graphs(self):
+        graphs = (("per_base_quality.png", "", 1.0),
+                  ("per_base_sequence_content.png", "", 0.85),
+                  ("per_sequence_gc_content.png", "", 0.85),
+                  ("kmer_profiles.png", "", 0.85),)
+        final_graphs = []
+        for f, caption, size in graphs:
+            full_f = os.path.join(self._dir, "Images", f)
+            if os.path.exists(full_f):
+                final_graphs.append((full_f, caption, size))
+        return final_graphs
+
+    def get_fastqc_summary(self):
+        stats = {}
+        for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
+            k, v = [self._safe_latex(x) for x in stat_line.split("\t")[:2]]
+            stats[k] = v
+        over_rep = []
+        for line in self._fastqc_data_section("Overrepresented sequences")[1:]:
+            parts = [self._safe_latex(x) for x in line.split("\t")]
+            over_rep.append(parts)
+            over_rep[-1][0] = self._splitseq(over_rep[-1][0])
+        return stats, over_rep[:self._max_overrep]
+
+    def _splitseq(self, seq):
+        pieces = []
+        cur_piece = []
+        for s in seq:
+            if len(cur_piece) >= self._max_seq_size:
+                pieces.append("".join(cur_piece))
+                cur_piece = []
+            cur_piece.append(s)
+        pieces.append("".join(cur_piece))
+        return " ".join(pieces)
+
+    def _fastqc_data_section(self, section_name):
+        out = []
+        in_section = False
+        data_file = os.path.join(self._dir, "fastqc_data.txt")
+        if os.path.exists(data_file):
+            with open(data_file) as in_handle:
+                for line in in_handle:
+                    if line.startswith(">>%s" % section_name):
+                        in_section = True
+                    elif in_section:
+                        if line.startswith(">>END"):
+                            break
+                        out.append(line.rstrip("\r\n"))
+        return out
+
+    def _safe_latex(self, to_fix):
+        """Escape characters that make LaTeX unhappy.
+        """
+        chars = ["%", "_", "&"]
+        for char in chars:
+            to_fix = to_fix.replace(char, "\\%s" % char)
+        return to_fix
+
+def _run_fastqc(bam_file, config):
+    out_base = "fastqc"
+    utils.safe_makedir(out_base)
+    fastqc_out = os.path.join(out_base, "%s_fastqc" %
+                              os.path.splitext(os.path.basename(bam_file))[0])
+    if not os.path.exists(fastqc_out):
+        cl = [config.get("program", {}).get("fastqc", "fastqc"),
+              "-o", out_base, "-f", "bam", bam_file]
+        subprocess.check_call(cl)
+    if os.path.exists("%s.zip" % fastqc_out):
+        os.remove("%s.zip" % fastqc_out)
+    return fastqc_out
+
+
+# ## High level summary in YAML format for loading into Galaxy.
 
 def write_metrics(run_info, fc_name, fc_date, dirs):
     """Write an output YAML file containing high level sequencing metrics.
@@ -147,3 +281,82 @@ def _lane_stats(cur_name, work_dir):
     metrics_files = glob.glob(os.path.join(work_dir, "%s*metrics" % cur_name))
     metrics = parser.extract_metrics(metrics_files)
     return metrics
+
+# ## LaTeX templates for output PDF
+
+_section_template = r"""
+\subsection*{${name}}
+
+% if summary_table:
+    \begin{table}[h]
+    \centering
+    \begin{tabular}{|l|rr|}
+    \hline
+    % for label, val, extra in summary_table:
+        %if label is not None:
+            ${label} & ${val} & ${extra} \\ 
+        %else:
+            \hline
+        %endif
+    %endfor
+    \hline
+    \end{tabular}
+    \caption{Summary of lane results}
+    \end{table}
+% endif
+
+% if summary:
+    \begin{verbatim}
+    ${summary}
+    \end{verbatim}
+% endif
+
+% for i, (figure, caption, size) in enumerate(figures):
+    \begin{figure}[htbp]
+      \centering
+      \includegraphics[width=${size}\linewidth] {${figure}}
+      \caption{${caption}}
+    \end{figure}
+% endfor
+
+% if len(overrep) > 0:
+    \begin{table}[htbp]
+    \centering
+    \begin{tabular}{|p{8cm}rrp{4cm}|}
+    \hline
+    Sequence & Count & Percent & Match \\ 
+    \hline
+    % for seq, count, percent, match in overrep:
+        \texttt{${seq}} & ${count} & ${"%.2f" % float(percent)} & ${match} \\ 
+    % endfor
+    \hline
+    \end{tabular}
+    \caption{Overrepresented read sequences}
+    \end{table}
+% endif
+
+\FloatBarrier
+% if len(recal_figures) > 0:
+    \subsubsection*{Quality score recalibration}
+    % for figure in recal_figures:
+        \begin{figure}[htbp]
+          \centering
+          \includegraphics[width=0.48\linewidth]{${figure}}
+        \end{figure}
+    % endfor
+% endif
+\FloatBarrier
+"""
+
+_base_template = r"""
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage{placeins}
+
+\begin{document}
+% for part in parts:
+    ${part}
+% endfor
+\end{document}
+"""

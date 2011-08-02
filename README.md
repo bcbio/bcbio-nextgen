@@ -51,12 +51,12 @@ System specific information is specified in configuration files:
 The scripts involved in the actual processing:
 
 * `scripts/automated_initial_analysis.py` -- Drives the high level analysis of
-  sequencing lanes based on information specified through the Galaxy LIMS system
-* `scripts/upload_to_galaxy.py` -- Handles storing and uploading Fastq,
-  alignment, analysis and summary files to Galaxy.
-* `scripts/align_summary_report.py` -- Produces a PDF summary file with
+  sequencing lanes based on information specified through the Galaxy LIMS
+  system or in a YAML configuration file. Also produces a PDF summary file with
   statistics on alignments, duplicates, GC distribution, quality scores,
   and other metrics of interest.
+* `scripts/upload_to_galaxy.py` -- Handles storing and uploading Fastq,
+  alignment, analysis and summary files to Galaxy.
 
 ## Installation
 

@@ -40,7 +40,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
     if sam_ref is not None:
         log.info("Generating summary files: %s" % str(sample_name))
         generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
-                config, sample_name, config_file)
+                               sample_name, config, dirs)
     return [sample_name, fastq_files, info, sort_bam, gatk_bam, vrn_file,
             effects_file]
 
