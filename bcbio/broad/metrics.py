@@ -3,8 +3,11 @@
 import os
 import glob
 import json
+import contextlib
 
-from bcbio.utils import tempfile, file_transaction
+from bcbio.utils import tmpfile, file_transaction
+
+import pysam
 
 class PicardMetricsParser:
     """Read metrics files produced by Picard analyses.
@@ -251,12 +254,14 @@ class PicardMetrics:
         base, ext = os.path.splitext(dup_bam)
         metrics = "%s.hs_metrics" % base
         if not os.path.exists(metrics):
-            opts = [("BAIT_INTERVALS", bait_file),
-                    ("TARGET_INTERVALS", target_file),
-                    ("INPUT", dup_bam),
-                    ("OUTPUT", metrics)]
-            with file_transaction(metrics):
-                self._picard.run("CalculateHsMetrics", opts)
+            with bed_to_interval(bait_file, dup_bam) as ready_bait:
+                with bed_to_interval(target_file, dup_bam) as ready_target:
+                    opts = [("BAIT_INTERVALS", ready_bait),
+                            ("TARGET_INTERVALS", ready_target),
+                            ("INPUT", dup_bam),
+                            ("OUTPUT", metrics)]
+                    with file_transaction(metrics):
+                        self._picard.run("CalculateHsMetrics", opts)
         return metrics
 
     def _variant_eval_metrics(self, dup_bam):
@@ -317,3 +322,27 @@ def _add_commas(s, sep=','):
     """
     if len(s) <= 3: return s
     return _add_commas(s[:-3], sep) + sep + s[-3:]
+
+@contextlib.contextmanager
+def bed_to_interval(orig_bed, bam_file):
+    """Add header and format BED bait and target files for Picard if necessary.
+    """
+    with open(orig_bed) as in_handle:
+        line = in_handle.readline()
+    if line.startswith("@"):
+        yield orig_bed
+    else:
+        bam_handle = pysam.Samfile(bam_file, "rb")
+        with contextlib.closing(bam_handle):
+            header = bam_handle.text
+        with tmpfile(dir=os.getcwd(), prefix="picardbed") as tmp_bed:
+            with open(tmp_bed, "w") as out_handle:
+                out_handle.write(header)
+                with open(orig_bed) as in_handle:
+                    for line in in_handle:
+                        parts = line.rstrip().split("\t")
+                        if len(parts) == 3:
+                            parts.append("+")
+                            parts.append("a")
+                        out_handle.write("\t".join(parts) + "\n")
+            yield tmp_bed
