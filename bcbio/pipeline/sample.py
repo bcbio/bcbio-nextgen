@@ -27,7 +27,6 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
     fastq1, fastq2 = combine_fastq_files(fastq_files, dirs["work"])
     log.info("Combining and preparing wig file %s" % str(sample_name))
     sort_bam = merge_bam_files(bam_files, dirs["work"], config)
-    bam_to_wig(sort_bam, config, config_file)
     (gatk_bam, vrn_file, effects_file) = ("", "", "")
     if config["algorithm"]["recalibrate"]:
         log.info("Recalibrating %s with GATK" % str(sample_name))
@@ -42,6 +41,7 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
         log.info("Generating summary files: %s" % str(sample_name))
         generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
                                sample_name, config, dirs)
+    bam_to_wig(sort_bam, config, config_file)
     return [sample_name, fastq_files, info, sort_bam, gatk_bam, vrn_file,
             effects_file]
 
