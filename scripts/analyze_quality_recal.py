@@ -13,6 +13,8 @@ Usage:
     --input_format -- Quality score encoding of input fastq files.
     --dbdir -- Where to store database files. This is needed for cluster
     jobs on NFS since sqlite can behave strangely on NFS with lock errors.
+    --workdir -- The working directory to write output files to. Defaults to the current
+      directory
 
 Requirements:
     sqlite
@@ -45,12 +47,12 @@ except (ImportError, LookupError):
     robjects = None
 
 def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
-        db_dir=None):
+        db_dir=None, work_dir=None):
     if not _are_libraries_installed():
         print "R libraries or rpy2 not installed. Not running recalibration plot."
         return
-    # setup output directories
-    work_dir = os.getcwd()
+    if work_dir is None:
+        work_dir = os.getcwd()
     report_dir = os.path.join(work_dir, "reports")
     image_dir = os.path.join(report_dir, "images")
     if db_dir is None:
@@ -61,7 +63,7 @@ def main(recal_bam, fastq1, fastq2=None, chunk_size=None, input_format=None,
             os.makedirs(image_dir)
         except OSError:
             assert os.path.isdir(image_dir)
-    (base, _) = os.path.splitext(recal_bam)
+    base = os.path.splitext(os.path.basename(recal_bam))[0]
     orig_files = {1: fastq1, 2: fastq2}
 
     section_info = []
@@ -342,8 +344,10 @@ if __name__ == "__main__":
             default="fastq-illumina")
     parser.add_option("-d", "--dbdir", dest="dbdir",
             default=None)
+    parser.add_option("-w", "--workdir", dest="workdir",
+            default=None)
     (options, args) = parser.parse_args()
     kwargs = dict(chunk_size = int(options.chunk_size),
                   input_format = options.input_format,
-                  db_dir = options.dbdir)
+                  db_dir = options.dbdir, work_dir = options.workdir)
     main(*args, **kwargs)

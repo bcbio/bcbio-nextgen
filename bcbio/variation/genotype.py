@@ -126,7 +126,7 @@ def _extract_eval_stats(eval_file):
         for dbsnp_type in ['known', 'novel']:
             stats[snp_type][dbsnp_type] = dict(ti=0, tv=0)
     for line in _eval_analysis_type(eval_file, "Ti/Tv Variant Evaluator"):
-        if line[:2] == ['eval', 'dbsnp']:
+        if line[1:3] == ['dbsnp', 'eval']:
             snp_type = line[3]
             dbsnp_type = line[4]
             try:
@@ -144,11 +144,11 @@ def _eval_analysis_type(in_file, analysis_name):
     with open(in_file) as in_handle:
         # read until we reach the analysis
         for line in in_handle:
-            if (line.startswith("Analysis Name:") and
+            if (line.startswith("##:GATKReport") and
                 line.find(analysis_name) > 0):
                 break
         # read off header lines
-        for _ in range(4):
+        for _ in range(1):
             in_handle.next()
         # read the table until a blank line
         for line in in_handle:
@@ -165,6 +165,8 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
               "-R", ref_file,
               "-B:eval,VCF", vcf_in,
               "-B:dbsnp,VCF", dbsnp,
+              "-select", "\"FILTER == 'PASS'\"",
+              "-selectName", "called",
               "-o", out_file,
               "-l", "INFO"
               ]

@@ -11,20 +11,22 @@ from bcbio.variation.effects import snpeff_effects
 
 # ## Recalibration
 
-def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref, config):
+def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref,
+                        dirs, config):
     """Recalibrate alignments with GATK and provide pdf summary.
     """
     dbsnp_file = _get_dbsnp_file(config, sam_ref)
     recal_file = gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
-    _analyze_recalibration(recal_file, fastq1, fastq2)
+    _analyze_recalibration(recal_file, fastq1, fastq2, dirs)
     return recal_file
 
-def _analyze_recalibration(recal_file, fastq1, fastq2):
+def _analyze_recalibration(recal_file, fastq1, fastq2, dirs):
     """Provide a pdf report of GATK recalibration of scores.
     """
     cl = ["analyze_quality_recal.py", recal_file, fastq1]
     if fastq2:
         cl.append(fastq2)
+    cl.append("--workdir=%s" % dirs["work"])
     subprocess.check_call(cl)
 
 def _get_dbsnp_file(config, sam_ref):
