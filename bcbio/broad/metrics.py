@@ -4,6 +4,8 @@ import os
 import glob
 import json
 
+from bcbio.utils import tempfile, file_transaction
+
 class PicardMetricsParser:
     """Read metrics files produced by Picard analyses.
 
@@ -253,7 +255,8 @@ class PicardMetrics:
                     ("TARGET_INTERVALS", target_file),
                     ("INPUT", dup_bam),
                     ("OUTPUT", metrics)]
-            self._picard.run("CalculateHsMetrics", opts)
+            with file_transaction(metrics):
+                self._picard.run("CalculateHsMetrics", opts)
         return metrics
 
     def _variant_eval_metrics(self, dup_bam):
@@ -280,7 +283,8 @@ class PicardMetrics:
                     ("OUTPUT", gc_metrics),
                     ("CHART", gc_graph),
                     ("R", ref_file)]
-            self._picard.run("CollectGcBiasMetrics", opts)
+            with file_transaction(gc_graph, gc_metrics):
+                self._picard.run("CollectGcBiasMetrics", opts)
         return gc_graph, gc_metrics
 
     def _insert_sizes(self, dup_bam):
@@ -291,7 +295,8 @@ class PicardMetrics:
             opts = [("INPUT", dup_bam),
                     ("OUTPUT", insert_metrics),
                     ("H", insert_graph)]
-            self._picard.run("CollectInsertSizeMetrics", opts)
+            with file_transaction(insert_graph, insert_metrics):
+                self._picard.run("CollectInsertSizeMetrics", opts)
         return insert_graph, insert_metrics
 
     def _collect_align_metrics(self, dup_bam, ref_file):
@@ -301,7 +306,8 @@ class PicardMetrics:
             opts = [("INPUT", dup_bam),
                     ("OUTPUT", align_metrics),
                     ("R", ref_file)]
-            self._picard.run("CollectAlignmentSummaryMetrics", opts)
+            with file_transaction(align_metrics):
+                self._picard.run("CollectAlignmentSummaryMetrics", opts)
         return align_metrics
 
 def _add_commas(s, sep=','):
