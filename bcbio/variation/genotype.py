@@ -128,14 +128,14 @@ def _extract_eval_stats(eval_file):
     for line in _eval_analysis_type(eval_file, "Ti/Tv Variant Evaluator"):
         if line[1:3] == ['dbsnp', 'eval']:
             snp_type = line[3]
-            dbsnp_type = line[4]
+            dbsnp_type = line[5]
             try:
                 cur = stats[snp_type][dbsnp_type]
             except KeyError:
                 cur = None
             if cur:
-                stats[snp_type][dbsnp_type]["ti"] = int(line[5])
-                stats[snp_type][dbsnp_type]["tv"] = int(line[6])
+                stats[snp_type][dbsnp_type]["ti"] = int(line[6])
+                stats[snp_type][dbsnp_type]["tv"] = int(line[7])
     return stats
 
 def _eval_analysis_type(in_file, analysis_name):
@@ -165,8 +165,7 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
               "-R", ref_file,
               "-B:eval,VCF", vcf_in,
               "-B:dbsnp,VCF", dbsnp,
-              "-select", "\"FILTER == 'PASS'\"",
-              "-selectName", "called",
+              "-ST", "Filter",
               "-o", out_file,
               "-l", "INFO"
               ]
