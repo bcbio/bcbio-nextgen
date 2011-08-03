@@ -1,0 +1,8 @@
+include *.md
+include config/*.yaml
+include config/*.ini
+include tests/*.py
+include tests/data/*.csv
+include tests/data/automated/*.yaml
+include tests/data/automated/*.ini
+include tests/data/automated/tool-data/*.loc
