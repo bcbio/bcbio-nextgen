@@ -205,7 +205,7 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
                 request = run_info["run_id"])
         cur_lane_info = copy.deepcopy(base_info)
         cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
-                fc_date)
+                                                  fc_date, analysis_dir)
         lane_info.append(cur_lane_info)
         for barcode in run.get("multiplex", [None]):
             cur_name = "%s_%s_%s" % (run["lane"], fc_date, fc_name)
@@ -236,7 +236,7 @@ def _metrics_from_stats(stats):
             metrics[metric_name] = stats[stat_name]
         return metrics
 
-def _bustard_stats(lane_num, fastq_dir, fc_date):
+def _bustard_stats(lane_num, fastq_dir, fc_date, analysis_dir):
     """Extract statistics about the flow cell from Bustard outputs.
     """
     sum_file = os.path.join(fastq_dir, os.pardir, "BustardSummary.xml")
@@ -249,20 +249,20 @@ def _bustard_stats(lane_num, fastq_dir, fc_date):
             for lane in results:
                 if lane.find("laneNumber").text == str(lane_num):
                     stats = _collect_cluster_stats(lane)
-    read_stats = _calc_fastq_stats(fastq_dir, lane_num, fc_date)
+    read_stats = _calc_fastq_stats(analysis_dir, lane_num, fc_date)
     stats.update(read_stats)
     return stats
 
-def _calc_fastq_stats(fastq_dir, lane_num, fc_date):
+def _calc_fastq_stats(analysis_dir, lane_num, fc_date):
     """Grab read length from fastq; could provide distribution if non-equal.
     """
     stats = dict()
-    fastq_files = glob.glob(os.path.join(fastq_dir, "%s_%s*" % (lane_num,
-        fc_date)))
-    if len(fastq_files) > 0:
-        fastq_file = sorted(fastq_files)[-1]
-        with open(fastq_file) as in_handle:
-            stats["Read length"] = len(in_handle.readline().strip())
+    fastqc_dirs = glob.glob(os.path.join(analysis_dir, "fastqc",
+                                         "%s_%s*" % (lane_num, fc_date)))
+    if len(fastqc_dirs) > 0:
+        parser = FastQCParser(sorted(fastqc_dirs)[-1])
+        fastqc_stats, _ = parser.get_fastqc_summary()
+        stats["Read length"] = fastqc_stats["Sequence length"]
     return stats
 
 def _collect_cluster_stats(lane):
