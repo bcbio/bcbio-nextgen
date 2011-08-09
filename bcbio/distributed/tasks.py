@@ -6,6 +6,7 @@ from celery.task import task
 
 from bcbio.pipeline import sample
 from bcbio.pipeline import lane
+from bcbio.pipeline import toplevel
 
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
@@ -14,10 +15,12 @@ import celeryconfig
 def analyze_and_upload(*args):
     """Run full analysis and upload results to Galaxy instance.
 
-    Workers need to run on the machine with Galaxy, but can be
-    distributed to multiple nodes if needed.
+    Workers need to run on the machine with Galaxy installed for upload,
+    but the actual processing can be distributed to multiple nodes.
     """
-    print celeryconfig.BCBIO_CONFIG_FILE
+    config_file = celeryconfig.BCBIO_CONFIG_FILE
+    remote_info = args[0]
+    toplevel.analyze_and_upload(remote_info, config_file)
 
 @task
 def process_lane(*args):
