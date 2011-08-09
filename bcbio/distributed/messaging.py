@@ -59,10 +59,11 @@ CELERY_TASK_SERIALIZER = "json"
 CELERYD_CONCURRENCY = ${cores}
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
+BCBIO_CONFIG_FILE = "${config_file}"
 """
 
 @contextlib.contextmanager
-def create_celeryconfig(task_module, dirs, config):
+def create_celeryconfig(task_module, dirs, config, config_file):
     amqp_config = utils.read_galaxy_amqp_config(config["galaxy_config"], dirs["config"])
     out_file = os.path.join(dirs["work"], "celeryconfig.py")
     amqp_config["rabbitmq_vhost"] = config["distributed"]["rabbitmq_vhost"]
@@ -71,6 +72,7 @@ def create_celeryconfig(task_module, dirs, config):
         cores = multiprocessing.cpu_count()
     amqp_config["cores"] = cores
     amqp_config["task_import"] = task_module
+    amqp_config["config_file"] = config_file
     with open(out_file, "w") as out_handle:
         out_handle.write(Template(_celeryconfig_tmpl).render(**amqp_config))
     try:

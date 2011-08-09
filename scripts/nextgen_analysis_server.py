@@ -24,7 +24,8 @@ def main(config_file):
         config = yaml.load(in_handle)
     with utils.curdir_tmpdir() as work_dir:
         dirs = {"work": work_dir, "config": os.path.dirname(config_file)}
-        with create_celeryconfig(task_module, dirs, config):
+        with create_celeryconfig(task_module, dirs, config,
+                                 os.path.abspath(config_file)):
             run_celeryd(work_dir)
 
 def run_celeryd(work_dir):
