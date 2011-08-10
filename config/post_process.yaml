@@ -3,7 +3,6 @@ galaxy_api_key: your_galaxy_api_key
 galaxy_config: universe_wsgi.ini
 program:
   bowtie: bowtie
-  samtools: samtools
   bwa: bwa
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
