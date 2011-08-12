@@ -49,7 +49,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml):
         if not item.has_key("lane"):
             item["lane"] = _generate_lane(item["files"], i)
         if not item.has_key("description"):
-            item["description"] = item["lane"]
+            item["description"] = str(item["lane"])
         run_details.append(item)
     lanes = [x["lane"] for x in run_details]
     assert len(lanes) == len(set(lanes)), "Non unique lanes: %s" % lanes

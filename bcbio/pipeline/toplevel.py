@@ -8,8 +8,12 @@ import re
 import subprocess
 
 import yaml
-import fabric.api as fabric
-import fabric.contrib.files as fabric_files
+# Fabric only needed on running side, not on setup and initial import
+try:
+    import fabric.api as fabric
+    import fabric.contrib.files as fabric_files
+except ImportError:
+    fabric, fabric_files = (None, None)
 
 from bcbio.pipeline import log
 from bcbio.log import create_log_handler

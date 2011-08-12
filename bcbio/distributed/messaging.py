@@ -32,7 +32,6 @@ def runner(dirs, config, config_file, wait=True):
         tasks = sys.modules[task_module]
         from celery.task.sets import TaskSet
         def _run(fn_name, xs):
-            print xs
             fn = getattr(tasks, fn_name)
             job = TaskSet(tasks=[apply(fn.subtask, (x,)) for x in xs])
             result = job.apply_async()
@@ -68,6 +67,8 @@ BCBIO_CONFIG_FILE = "${config_file}"
 @contextlib.contextmanager
 def create_celeryconfig(task_module, dirs, config, config_file):
     amqp_config = utils.read_galaxy_amqp_config(config["galaxy_config"], dirs["config"])
+    if not amqp_config.has_key("host") or not amqp_config.has_key("userid"):
+        raise ValueError("universe_wsgi.ini does not have RabbitMQ messaging details set")
     out_file = os.path.join(dirs["work"], "celeryconfig.py")
     amqp_config["rabbitmq_vhost"] = config["distributed"]["rabbitmq_vhost"]
     cores = config["distributed"].get("cores_per_host", 0)
