@@ -34,17 +34,9 @@ store_user: cscshared
 store_host: bricklayer01.partners.org
 
 analysis:
-  # Can specify a remote server to copy analysis files and run
-  # the analysis programs on. This needs a configuration file 
-  # like this with program information for the remote machine.
-  # The default is to run the analysis on the local machine.
-  # You can also specify a different remote host to initiate
+  # Can specify a different remote host to initiate
   # the copy from. This is useful for NFS shared filesystems
   # where you want to manage the copy from the base machine.
-  user:
-  host:
-  login_shell:
-  config_file: /path/to/remote/post_process.yaml
   copy_user:
   copy_host:
   store_dir: /store4/solexadata

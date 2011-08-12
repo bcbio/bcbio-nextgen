@@ -5,7 +5,7 @@ and upload of results back to Galaxy.
 """
 import os
 import re
-import contextlib
+import subprocess
 
 import yaml
 import fabric.api as fabric
@@ -13,6 +13,7 @@ import fabric.contrib.files as fabric_files
 
 from bcbio.pipeline import log
 from bcbio.log import create_log_handler
+from bcbio import utils
 
 def analyze_and_upload(remote_info, config_file):
     """Main entry point for analysis and upload to Galaxy.
@@ -36,7 +37,7 @@ def _copy_from_sequencer(remote_info, config):
         assert os.path.exists(fc_dir)
     else:
         log.debug("Remote host information: %s" % remote_info)
-        _, _, c_host_str = _config_hosts(config)
+        c_host_str = _config_hosts(config)
         with fabric.settings(host_string=c_host_str):
             fc_dir = _remote_copy(remote_info, config)
     return fc_dir
@@ -44,22 +45,13 @@ def _copy_from_sequencer(remote_info, config):
 def _config_hosts(config):
     """Retrieve configured machines to perform analysis and copy on.
     """
-    user = config["analysis"].get("user", None)
-    host = config["analysis"].get("host", None)
-    shell = config["analysis"].get("login_shell", None)
-    if not user or not host:
-        user = os.environ["USER"]
-        host = re.sub(r'\..*', '', os.uname()[1])
-    if not shell:
-        shell = os.environ["SHELL"]
     copy_user = config["analysis"].get("copy_user", None)
     copy_host = config["analysis"].get("copy_host", None)
     if not copy_user or not copy_host:
-        copy_user, copy_host = (user, host)
-    analysis_host_str = "%s@%s" % (user, host)
-    analysis_shell = "%s -i -l -c" % shell
+        copy_user = os.environ["USER"]
+        copy_host = re.sub(r'\..*', '', os.uname()[1])
     copy_host_str = "%s@%s" % (copy_user, copy_host)
-    return analysis_host_str, analysis_shell, copy_host_str
+    return copy_host_str
 
 def _remote_copy(remote_info, config):
     """Securely copy files from remote directory to the processing server.
@@ -92,34 +84,19 @@ def _run_analysis(fc_dir, remote_info, config, config_file):
     run_yaml = _get_run_yaml(remote_info, fc_dir, config)
     analysis_dir = os.path.join(config["analysis"].get("base_dir", os.getcwd()),
                                 os.path.basename(remote_info["directory"]))
-    with analysis_machine_config(config, config_file) as config_file:
-        if not fabric_files.exists(analysis_dir):
-            fabric.run("mkdir %s" % analysis_dir)
-        with fabric.cd(analysis_dir):
-            if config["algorithm"]["num_cores"] == "messaging":
-                prog = config["analysis"].get("distributed_process_program",
-                                              "distributed_nextgen_pipeline.py")
-            else:
-                prog = config["analysis"]["process_program"]
-            cl = [prog, config_file, fc_dir]
-            if run_yaml:
-                cl.append(run_yaml)
-            import subprocess
-            subprocess.check_call(cl)
-            #fabric.run(" ".join(cl))
+    if not os.path.exists(analysis_dir):
+        os.makedirs(analysis_dir)
+    with utils.chdir(analysis_dir):
+        if config["algorithm"]["num_cores"] == "messaging":
+            prog = config["analysis"].get("distributed_process_program",
+                                          "distributed_nextgen_pipeline.py")
+        else:
+            prog = config["analysis"]["process_program"]
+        cl = [prog, config_file, fc_dir]
+        if run_yaml:
+            cl.append(run_yaml)
+        subprocess.check_call(cl)
     return analysis_dir
-
-@contextlib.contextmanager
-def analysis_machine_config(config, config_file):
-    """Details about where to kick off the analysis and upload.
-    """
-    a_host_str, a_shell, _ = _config_hosts(config)
-    if config["analysis"].get("config_file", None):
-        config_file = config["analysis"]["config_file"]
-    else:
-        config_file = os.path.abspath(config_file)
-    with fabric.settings(host_string=a_host_str, shell=a_shell):
-        yield config_file
 
 def _get_run_yaml(remote_info, fc_dir, config):
     """Retrieve YAML specifying run from configured or default location.
@@ -137,9 +114,9 @@ def _upload_to_galaxy(fc_dir, analysis_dir, remote_info, config, config_file):
     """Upload results from analysis directory to Galaxy data libraries.
     """
     run_yaml = _get_run_yaml(remote_info, fc_dir, config)
-    with analysis_machine_config(config, config_file) as config_file:
+    with utils.chdir(analysis_dir):
         cl = [config["analysis"]["upload_program"], config_file, fc_dir,
               analysis_dir]
         if run_yaml:
             cl.append(run_yaml)
-        fabric.run(" ".join(cl))
+        subprocess.check_call(cl)
