@@ -246,7 +246,6 @@ to ease your development needs using the following script:
 * [Picard][3]
 * [GATK][4]
 * [bowtie][5] or [bwa][5b]
-* [samtools][7]
 * [snpEff][16]
 * [FastQC][6]
 
@@ -255,7 +254,6 @@ to ease your development needs using the following script:
 [5]: http://bowtie-bio.sourceforge.net/
 [5b]: http://bio-bwa.sourceforge.net/
 [6]: http://www.bioinformatics.bbsrc.ac.uk/projects/fastqc/
-[7]: http://samtools.sourceforge.net/
 [16]: http://sourceforge.net/projects/snpeff/
 
 ### Processing infrastructure

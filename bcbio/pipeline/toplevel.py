@@ -96,7 +96,12 @@ def _run_analysis(fc_dir, remote_info, config, config_file):
         if not fabric_files.exists(analysis_dir):
             fabric.run("mkdir %s" % analysis_dir)
         with fabric.cd(analysis_dir):
-            cl = [config["analysis"]["process_program"], config_file, fc_dir]
+            if config["algorithm"]["num_cores"] == "messaging":
+                prog = config["analysis"].get("distributed_process_program",
+                                              "distributed_nextgen_pipeline.py")
+            else:
+                prog = config["analysis"]["process_program"]
+            cl = [prog, config_file, fc_dir]
             if run_yaml:
                 cl.append(run_yaml)
             fabric.run(" ".join(cl))
