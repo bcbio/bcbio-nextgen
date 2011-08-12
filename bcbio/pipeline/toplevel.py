@@ -90,7 +90,7 @@ def _run_analysis(fc_dir, remote_info, config, config_file):
     """Run local or distributed analysis, wait to finish.
     """
     run_yaml = _get_run_yaml(remote_info, fc_dir, config)
-    analysis_dir = os.path.join(config["analysis"]["base_dir"],
+    analysis_dir = os.path.join(config["analysis"].get("base_dir", os.getcwd()),
                                 os.path.basename(remote_info["directory"]))
     with analysis_machine_config(config, config_file) as config_file:
         if not fabric_files.exists(analysis_dir):
@@ -104,7 +104,9 @@ def _run_analysis(fc_dir, remote_info, config, config_file):
             cl = [prog, config_file, fc_dir]
             if run_yaml:
                 cl.append(run_yaml)
-            fabric.run(" ".join(cl))
+            import subprocess
+            subprocess.check_call(cl)
+            #fabric.run(" ".join(cl))
     return analysis_dir
 
 @contextlib.contextmanager

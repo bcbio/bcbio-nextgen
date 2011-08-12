@@ -32,6 +32,7 @@ def runner(dirs, config, config_file, wait=True):
         tasks = sys.modules[task_module]
         from celery.task.sets import TaskSet
         def _run(fn_name, xs):
+            print xs
             fn = getattr(tasks, fn_name)
             job = TaskSet(tasks=[apply(fn.subtask, (x,)) for x in xs])
             result = job.apply_async()

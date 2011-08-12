@@ -1,7 +1,6 @@
 galaxy_config: universe_wsgi.ini
 program:
   bowtie: bowtie
-  samtools: samtools
   bwa: bwa
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
@@ -25,6 +24,10 @@ algorithm:
 
 analysis:
   towig_script: bam_to_wiggle.py
+  process_program: automated_initial_analysis.py
+  distributed_process_program: distributed_nextgen_pipeline.py
+  upload_program: upload_to_galaxy.py
+  worker_program: nextgen_analysis_server.py
 distributed:
   rabbitmq_vhost: bionextgen
 # configuration algorithm changes for custom post-processing steps
