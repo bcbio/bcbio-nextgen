@@ -62,6 +62,8 @@ def _generate_lane(fnames, index):
     """
     to_remove = ["s_", "sequence"]
     work_names = []
+    if isinstance(fnames, str):
+        fnames = [fnames]
     for fname in fnames:
         n = os.path.splitext(os.path.basename(fname))[0]
         for r in to_remove:

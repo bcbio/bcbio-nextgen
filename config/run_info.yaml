@@ -1,27 +1,43 @@
 # Example file for specifying run information to automated_initial_analysis.py
 # In a fully Galaxy automated setup this information would be retrieved
 # from the Galaxy server based on user inputs. This allows you to
-# run the automated pipeline separately.
-- lane: 1
-  description: 'Your sample 1'
-  analysis: Standard
-  genome_build: hg19
-- lane: 2
-  description: 'Your sample 2'
-  analysis: Standard
-  genome_build: mm9
-- lane: 3
-  description: 'Multiplex example'
-  analysis: Standard
-  genome_build: hg19
-  multiplex:
-    - barcode_type: Illumina
-      barcode_id: 1
-      name: 'One Barcode Sample'
-      sequence: ATCACG
-    - barcode_type: Illumina
-      barcode_id: 2
-      name: 'Another Barcode Sample'
-      sequence: CGATGT 
+# run the automated pipeline separately or from other external programs
+---
+# If your folder naming is not standard Illumina style
+# (110729_SN728_0036_A81UJUABXX) you should specify the date and a unique name
+# to use for naming the output files.
+fc_date: '110812'
+fc_name: unique_name
+# Information on uploading back into Galaxy. Need the user name to upload as
+# and the Galaxy Data Library to write to. These are not needed if not
+# interoperating with Galaxy.
+galaxy_user: chapmanb@test.com
+galaxy_library: Upload Folder Name
+details:
+  # For each flowcell, you specify either the lane if the files follow standard
+  # naming conventions (1_110729_A81UJUABXX) or the names of the files if they
+  # are differently named. Can specify either one file for single end or two for
+  # paired.
+  - files: [1_1-fastq.txt, 1_2-fastq.txt]
+    description: 'Your sample 1'
+    analysis: Standard
+    genome_build: hg19
+  - lane: 2
+    description: 'Your sample 2'
+    analysis: Standard
+    genome_build: mm9
+  - lane: 3
+    description: 'Multiplex example'
+    analysis: Standard
+    genome_build: hg19
+    multiplex:
+      - barcode_type: Illumina
+        barcode_id: 1
+        name: 'One Barcode Sample'
+        sequence: ATCACG
+      - barcode_type: Illumina
+        barcode_id: 2
+        name: 'Another Barcode Sample'
+        sequence: CGATGT 
 
     

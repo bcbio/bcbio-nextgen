@@ -8,7 +8,10 @@ def get_fastq_files(directory, item, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
     if item.has_key("files"):
-        files = [os.path.join(directory, x) for x in item["files"]]
+        names = item["files"]
+        if isinstance(names, str):
+            names = [names]
+        files = [os.path.join(directory, x) for x in names]
     else:
         assert fc_name is not None
         lane = item["lane"]
