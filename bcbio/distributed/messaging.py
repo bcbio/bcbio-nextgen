@@ -13,8 +13,8 @@ from mako.template import Template
 
 from bcbio import utils
 
-def runner(dirs, config):
-    """Run a set of tasks asynchronously using Celery.
+def runner(dirs, config, config_file, wait=True):
+    """Run a set of tasks using Celery, waiting for results or asynchronously.
 
     This is initialized with the configuration and directory information,
     which is used to prepare a Celery configuration file and imports. It
@@ -27,7 +27,7 @@ def runner(dirs, config):
     ready, returning them.
     """
     task_module = "bcbio.distributed.tasks"
-    with create_celeryconfig(task_module, dirs, config):
+    with create_celeryconfig(task_module, dirs, config, config_file):
         __import__(task_module)
         tasks = sys.modules[task_module]
         from celery.task.sets import TaskSet
@@ -35,12 +35,13 @@ def runner(dirs, config):
             fn = getattr(tasks, fn_name)
             job = TaskSet(tasks=[apply(fn.subtask, (x,)) for x in xs])
             result = job.apply_async()
-            while not result.ready():
-                time.sleep(5)
             out = []
-            for x in result.join():
-                if x:
-                    out.extend(x)
+            if wait:
+                while not result.ready():
+                    time.sleep(5)
+                for x in result.join():
+                    if x:
+                        out.extend(x)
             return out
         return _run
 

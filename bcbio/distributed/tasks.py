@@ -11,7 +11,7 @@ from bcbio.pipeline import toplevel
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
 
-@task
+@task(ignore_results=True)
 def analyze_and_upload(*args):
     """Run full analysis and upload results to Galaxy instance.
 

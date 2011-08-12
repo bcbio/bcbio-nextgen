@@ -58,23 +58,24 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
 
     # process each flowcell lane
     lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
-    lane_items = _run_parallel("process_lane", lanes, dirs, config)
-    align_items = _run_parallel("process_alignment", lane_items, dirs, config)
+    lane_items = _run_parallel("process_lane", lanes, dirs, config, config_file)
+    align_items = _run_parallel("process_alignment", lane_items, dirs, config,
+                                config_file)
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = \
                   organize_samples(dirs, fc_name, fc_date, run_items)
     samples = ((n, sample_fastq[n], sample_info[n], bam_files, dirs, config, config_file)
                for n, bam_files in sample_files)
-    sample_items = _run_parallel("process_sample", samples, dirs, config)
+    sample_items = _run_parallel("process_sample", samples, dirs, config, config_file)
 
     write_metrics(run_info, fc_name, fc_date, dirs)
 
-def _run_parallel(fn_name, items, dirs, config):
+def _run_parallel(fn_name, items, dirs, config, config_file):
     """Process a supplied function: single, multi-processor or distributed.
     """
     parallel = config["algorithm"]["num_cores"]
     if str(parallel).lower() == "messaging":
-        runner = messaging.runner(dirs, config)
+        runner = messaging.runner(dirs, config, config_file)
         return runner(fn_name, items)
     else:
         out = []
