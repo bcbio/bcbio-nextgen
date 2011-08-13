@@ -1,6 +1,7 @@
 """Commandline interaction with SGE cluster schedulers.
 """
 import re
+import time
 import subprocess
 
 _jobid_pat = re.compile('Your job (?P<jobid>\d+) \("')
@@ -20,7 +21,18 @@ def stop_job(jobid):
 def are_running(jobids):
     """Check if submitted job IDs are running.
     """
-    run_info = subprocess.check_output(["qstat"])
+    # handle SGE errors, retrying to get the current status
+    max_retries = 10
+    tried = 0
+    while 1:
+        try:
+            run_info = subprocess.check_output(["qstat"])
+            break
+        except:
+            tried += 1
+            if tried > max_retries:
+                raise
+            time.sleep(5)
     running = []
     for parts in (l.split() for l in run_info.split("\n") if l.strip()):
         if len(parts) >= 5:
