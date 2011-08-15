@@ -29,7 +29,7 @@ def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
     if fastq2:
         cl.append(fastq2)
     cl.append("--workdir=%s" % dirs["work"])
-    cl.append("--input-format=%s" % qual_opts[qual_format])
+    cl.append("--input_format=%s" % qual_opts[qual_format])
     subprocess.check_call(cl)
 
 def _get_dbsnp_file(config, sam_ref):
