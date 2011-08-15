@@ -291,7 +291,7 @@ def _clean_intermediates(bam_file, fastq1, fastq2, report_dir):
     for fastq in (fastq1, fastq2):
         if fastq:
             for fastq_rem in glob.glob("%s.csv*" %
-                    os.path.splitext(fastq)[0]):
+                    os.path.splitext(os.path.basename(fastq))[0]):
                 os.remove(fastq_rem)
     for latex_ext in ["aux", "log"]:
         for latex_rem in glob.glob(os.path.join(report_dir, "%s*.%s" %
