@@ -17,16 +17,19 @@ def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref,
     """
     dbsnp_file = _get_dbsnp_file(config, sam_ref)
     recal_file = gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
-    _analyze_recalibration(recal_file, fastq1, fastq2, dirs)
+    _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config)
     return recal_file
 
-def _analyze_recalibration(recal_file, fastq1, fastq2, dirs):
+def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
     """Provide a pdf report of GATK recalibration of scores.
     """
+    qual_opts = {"illumina": "fastq-illumina", "standard": "fastq"}
+    qual_format = config["algorithm"].get("quality_format", "illumina").lower()
     cl = ["analyze_quality_recal.py", recal_file, fastq1]
     if fastq2:
         cl.append(fastq2)
     cl.append("--workdir=%s" % dirs["work"])
+    cl.append("--input-format=%s" % qual_opts[qual_format])
     subprocess.check_call(cl)
 
 def _get_dbsnp_file(config, sam_ref):
