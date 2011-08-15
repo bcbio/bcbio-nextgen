@@ -10,10 +10,16 @@ galaxy_location_file = "bowtie_indices.loc"
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     """Before a standard or paired end alignment with bowtie.
     """
+    qual_format = config["algorithm"].get("quality_format", None)
+    if qual_format is None or qual_format.lower() == "illumina":
+        qual_flags = ["--phred64-quals"]
+    else:
+        qual_flags = []
     out_file = os.path.join(align_dir, "%s.sam" % out_base)
     if not os.path.exists(out_file):
         cl = [config["program"]["bowtie"]]
-        cl += ["-q", "--phred64-quals",
+        cl += qual_flags
+        cl += ["-q",
                "-v", config["algorithm"]["max_errors"],
                "-k", 1,
                "-X", 1000, # matches bwa sampe default size

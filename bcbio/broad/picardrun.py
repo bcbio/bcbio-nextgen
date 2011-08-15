@@ -56,14 +56,16 @@ def picard_index_ref(picard, ref_file):
     return dict_file
 
 def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir,
-                        platform, sample_name="", rg_name="", pu_name=""):
+                        platform, sample_name="", rg_name="", pu_name="",
+                        qual_format=None):
     """Convert fastq file(s) to BAM, adding sample, run group and platform information.
     """
-    qual_formats = {"illumina" : "Illumina"}
-    try:
-        qual_format = qual_formats[platform.lower()]
-    except KeyError:
-        raise ValueError("Need to specify quality format for %s" % platform)
+    qual_formats = {"illumina": "Illumina"}
+    if qual_format is None:
+        try:
+            qual_format = qual_formats[platform.lower()]
+        except KeyError:
+            raise ValueError("Need to specify quality format for %s" % platform)
     out_bam = os.path.join(out_dir, "%s.bam" %
                            os.path.splitext(os.path.basename(fastq_one))[0])
     if not (os.path.exists(out_bam) and os.path.getsize(out_bam) > 0):
