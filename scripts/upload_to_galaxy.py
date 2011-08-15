@@ -21,10 +21,7 @@ import os
 import glob
 import shutil
 import ConfigParser
-import urllib
-import urllib2
 import time
-import json
 
 import yaml
 
@@ -37,11 +34,11 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     galaxy_api = (GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-                  if run_info_yaml is None else None)
+                  if config.has_key("galaxy_api_key") else None)
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
 
     base_folder_name = "%s_%s" % (fc_date, fc_name)
-    run_details = lims_run_details(run_info, fc_name, base_folder_name)
+    run_details = lims_run_details(run_info, base_folder_name)
     for (library_name, access_role, dbkey, lane, bc_id, name, desc,
             local_name) in run_details:
         library_id = (get_galaxy_library(library_name, galaxy_api)
@@ -62,7 +59,7 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
                 print "Uploading directory of files to Galaxy"
                 print galaxy_api.upload_directory(library_id, folder['id'],
                                                   store_dir, dbkey, access_role)
-    if galaxy_api:
+    if galaxy_api and not run_info_yaml:
         add_run_summary_metrics(analysis_dir, galaxy_api)
 
 # LIMS specific code for retrieving information on what to upload from
@@ -71,7 +68,7 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
 # analysis directories.
 # These should be edited to match a local workflow if adjusting this.
 
-def lims_run_details(run_info, fc_name, base_folder_name):
+def lims_run_details(run_info, base_folder_name):
     """Retrieve run infomation on a flow cell from Next Gen LIMS.
     """
     for lane_info in (l for l in run_info["details"] if l.has_key("researcher")
@@ -80,12 +77,15 @@ def lims_run_details(run_info, fc_name, base_folder_name):
             libname, role = _get_galaxy_libname(lane_info["private_libs"],
                                                 lane_info["lab_association"],
                                                 lane_info["researcher"])
+        elif lane_info.has_key("galaxy_library"):
+            libname = lane_info["galaxy_library"]
+            role = lane_info["galaxy_role"]
         else:
             libname, role = (None, None)
         for barcode in lane_info.get("multiplex", [None]):
-            remote_folder = lane_info.get("name", "")
-            description = "%s: %s" % (lane_info.get("researcher", ""),
-                    lane_info["description"])
+            remote_folder = lane_info.get("name", lane_info["lane"])
+            description = ": ".join([lane_info[n] for n in ["researcher", "description"]
+                                     if lane_info.has_key(n)])
             local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
             if barcode:
                 remote_folder += "_%s" % barcode["barcode_id"]
@@ -96,6 +96,11 @@ def lims_run_details(run_info, fc_name, base_folder_name):
                     remote_folder, description, local_name)
 
 def _get_galaxy_libname(private_libs, lab_association, researcher):
+    """Retrieve most appropriate Galaxy data library.
+
+    Gives preference to private data libraries associated with the user. If not
+    found will create a user specific library.
+    """
     print private_libs, lab_association
     # simple case -- one private library. Upload there
     if len(private_libs) == 1:
