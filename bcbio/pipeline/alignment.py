@@ -49,7 +49,7 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
     picard.run_fn("picard_index_ref", ref_file)
     out_fastq_bam = picard.run_fn("picard_fastq_to_bam", fastq1, fastq2,
                                   base_dir, platform, sample_name, rg_name, lane_name,
-                                  quality_format)
+                                  qual_format)
     out_bam = picard.run_fn("picard_sam_to_bam", sam_file, out_fastq_bam, ref_file,
                             fastq2 is not None)
     sort_bam = picard.run_fn("picard_sort", out_bam)
