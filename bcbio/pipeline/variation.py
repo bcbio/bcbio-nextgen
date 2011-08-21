@@ -67,5 +67,7 @@ def variation_effects(vrn_file, genome_build, config):
     """Calculate effects of variations, associating them with transcripts.
     """
     snpeff_jar = os.path.join(config["program"]["snpEff"], "snpEff.jar")
+    java_memory = config["algorithm"].get("java_memory", None)
     return snpeff_effects(snpeff_jar, vrn_file, genome_build,
-                          config["algorithm"].get("hybrid_target", None))
+                          config["algorithm"].get("hybrid_target", None),
+                          java_memory)

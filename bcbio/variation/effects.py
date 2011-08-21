@@ -20,7 +20,8 @@ SNPEFF_GENOME_REMAP = {
         "araTha_tair10": "athalianaTair10",
         }
 
-def snpeff_effects(snpeff_jar, vcf_in, genome, interval_file=None):
+def snpeff_effects(snpeff_jar, vcf_in, genome, interval_file=None,
+                   java_memory=None):
     """Prepare tab-delimited file for variant effects using snpEff.
     """
     if _vcf_has_items(vcf_in):
@@ -28,19 +29,23 @@ def snpeff_effects(snpeff_jar, vcf_in, genome, interval_file=None):
                        if interval_file else None)
         try:
             genome = SNPEFF_GENOME_REMAP[genome]
-            out_file = _run_snpeff(vcf_in, genome, snpeff_jar, se_interval)
+            out_file = _run_snpeff(vcf_in, genome, snpeff_jar, se_interval,
+                                   java_memory)
         finally:
             for fname in [se_interval]:
                 if fname and os.path.exists(fname):
                     os.remove(fname)
         return out_file
 
-def _run_snpeff(snp_in, genome, snpeff_jar, se_interval):
+def _run_snpeff(snp_in, genome, snpeff_jar, se_interval, java_memory):
     snpeff_config = "%s.config" % os.path.splitext(snpeff_jar)[0]
     out_file = "%s-effects.tsv" % (os.path.splitext(snp_in)[0])
     if not os.path.exists(out_file):
-        cl = ["java", "-jar", snpeff_jar, "-1", "-vcf4", "-pass", "-c", snpeff_config,
-              genome, snp_in]
+        cl = ["java"]
+        if java_memory:
+            cl += ["-Xmx%s" % java_memory]
+        cl += ["-jar", snpeff_jar, "-1", "-vcf4", "-pass", "-c", snpeff_config,
+               genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
         print " ".join(cl)
