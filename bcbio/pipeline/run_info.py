@@ -39,8 +39,8 @@ def _run_info_from_yaml(fc_dir, run_info_yaml):
         pass
     if isinstance(loaded, dict):
         if loaded.has_key("fc_name") and loaded.has_key("fc_date"):
-            fc_name = loaded["fc_name"]
-            fc_date = loaded["fc_date"]
+            fc_name = loaded["fc_name"].replace(" ", "_")
+            fc_date = str(loaded["fc_date"]).replace(" ", "_")
         loaded = loaded["details"]
     if fc_name is None:
         fc_name, fc_date = _unique_flowcell_info()

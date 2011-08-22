@@ -7,7 +7,7 @@ import subprocess
 def get_fastq_files(directory, item, fc_name, bc_name=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    if item.has_key("files"):
+    if item.has_key("files") and bc_name is None:
         names = item["files"]
         if isinstance(names, str):
             names = [names]

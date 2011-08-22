@@ -65,7 +65,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             cl = ["automated_initial_analysis.py",
                   os.path.join(self.data_dir, "post_process.yaml"),
                   os.path.join(self.data_dir, os.pardir, "110221_empty_FC12345AAXX"),
-                  os.path.join(self.data_dir, "run_info.yaml")]
+                  os.path.join(self.data_dir, "run_info-empty.yaml")]
             subprocess.check_call(cl)
 
 
