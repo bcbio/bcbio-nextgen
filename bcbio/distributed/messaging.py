@@ -60,7 +60,8 @@ CELERY_TASK_SERIALIZER = "json"
 CELERYD_CONCURRENCY = ${cores}
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
-CELERY_ROUTES = {"bcbio.distributed.tasks.analyze_and_upload": {"queue": "toplevel"}}
+CELERY_ROUTES = {"bcbio.distributed.tasks.analyze_and_upload": {"queue": "toplevel"},
+                 "bcbio.distributed.tasks.long_term_storage" : {"queue": "storage"}}
 BCBIO_CONFIG_FILE = "${config_file}"
 """
 

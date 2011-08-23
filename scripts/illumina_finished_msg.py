@@ -1,10 +1,11 @@
+#!/usr/bin/env python
 """Script to check for finalized illumina runs and report to messaging server.
 
 This is meant to be run via a cron job on a regular basis, and looks for newly
 dumped output directories that are finished and need to be processed.
 
 Usage:
-    illumina_finished_msg.py <Galaxy config> <YAML local config>
+    illumina_finished_msg.py <YAML local config>
                              [<post-processing config file>]
 
 If a post-processing configuration file is passed, the messaging step will be
@@ -14,10 +15,9 @@ connected to the analysis machine. You will also want to set postprocess_dir in
 the YAML local config to the directory to write fastq and analysis files.
 
 The Galaxy config needs to have information on the messaging server and queues.
+
 The local config should have the following information:
 
-    msg_process_tag, msg_store_tag: tag names to send messages for processing and
-                                    storage
     dump_directories: directories to check for machine output
     msg_db: flat file of output directories that have been reported
 """
@@ -34,29 +34,28 @@ from optparse import OptionParser
 from xml.etree.ElementTree import ElementTree
 
 import yaml
-from amqplib import client_0_8 as amqp
 import logbook
 
 from bcbio.solexa import samplesheet
 from bcbio.log import create_log_handler
 from bcbio import utils
+from bcbio.distributed import messaging
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
-def main(galaxy_config, local_config, post_config_file=None,
+def main(local_config, post_config_file=None,
          process_msg=True, store_msg=True, qseq=True, fastq=True):
-    amqp_config = _read_amqp_config(galaxy_config)
     with open(local_config) as in_handle:
         config = yaml.load(in_handle)
     log_handler = create_log_handler(config, LOG_NAME)
-    
+
     with log_handler.applicationbound():
-        search_for_new(config, amqp_config, post_config_file,
+        search_for_new(config, config_file, post_config_file,
                        process_msg, store_msg, qseq, fastq)
 
-def search_for_new(config, amqp_config, post_config_file,
+def search_for_new(config, config_file, post_config_file,
                    process_msg, store_msg, qseq, fastq):
     """Search for any new directories that have not been reported.
     """
@@ -78,11 +77,11 @@ def search_for_new(config, amqp_config, post_config_file,
                     if fastq:
                         log.info("Generating fastq files for %s" % dname)
                         fastq_dir = _generate_fastq(dname, config)
-                    _post_process_run(dname, config, amqp_config,
+                    _post_process_run(dname, config, config_file,
                                       fastq_dir, post_config_file,
                                       process_msg, store_msg)
 
-def _post_process_run(dname, config, amqp_config, fastq_dir, post_config_file,
+def _post_process_run(dname, config, config_file, fastq_dir, post_config_file,
                       process_msg, store_msg):
     """With a finished directory, send out message or process directly.
     """
@@ -90,11 +89,12 @@ def _post_process_run(dname, config, amqp_config, fastq_dir, post_config_file,
     if post_config_file is None:
         store_files, process_files = _files_to_copy(dname)
         if process_msg:
-            finished_message(config["msg_process_tag"], dname,
-                             process_files, amqp_config)
+            finished_message("analyze_and_upload", dname,
+                             process_files, config, config_file)
         if store_msg:
-            finished_message(config["msg_store_tag"], dname,
-                             store_files, amqp_config)
+            raise NotImplementedError("Storage server needs update.")
+            finished_message("long_term_storage", dname,
+                             store_files, config, config_file)
     # otherwise process locally
     else:
         analyze_locally(dname, config, post_config_file, fastq_dir)
@@ -157,7 +157,8 @@ def _generate_qseq(bc_dir, config):
     if not os.path.exists(os.path.join(bc_dir, "finished.txt")):
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite", "--ignore-missing-stats"]
+        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite",
+              "--ignore-missing-stats"]
         # in OLB version 1.9, the -i flag changed to intensities instead of input
         version_cl = [cmd, "-v"]
         p = subprocess.Popen(version_cl, stdout=subprocess.PIPE)
@@ -240,14 +241,12 @@ def _files_to_copy(directory):
                       glob.glob("Data/Intensities/BaseCalls/*.xml"),
                       glob.glob("Data/Intensities/BaseCalls/*.xsl"),
                       glob.glob("Data/Intensities/BaseCalls/*.htm"),
-                      ["Data/Intensities/BaseCalls/Plots", "Data/reports", 
+                      ["Data/Intensities/BaseCalls/Plots", "Data/reports",
                        "Data/Status.htm", "Data/Status_Files", "InterOp"]])
-        
         run_info = reduce(operator.add,
                         [glob.glob("run_info.yaml"),
                          glob.glob("*.csv"),
                         ])
-        
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
         fastq = ["Data/Intensities/BaseCalls/fastq"]
     return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)
@@ -274,10 +273,10 @@ def _update_reported(msg_db, new_dname):
     with open(msg_db, "a") as out_handle:
         out_handle.write("%s\n" % new_dname)
 
-def finished_message(tag_name, directory, files_to_copy, config):
+def finished_message(fn_name, directory, files_to_copy, config, config_file):
     """Wait for messages with the give tag, passing on to the supplied handler.
     """
-    log.debug("Sending finished message to: %s" % tag_name)
+    log.debug("Calling remote function: %s" % fn_name)
     user = getpass.getuser()
     hostname = socket.gethostbyaddr(socket.gethostname())[0]
     data = dict(
@@ -287,37 +286,10 @@ def finished_message(tag_name, directory, files_to_copy, config):
             directory=directory,
             to_copy=files_to_copy
             )
-    conn = amqp.Connection(host=config['host'] + ":" + config['port'],
-                           userid=config['userid'], password=config['password'],
-                           virtual_host=config['virtual_host'], insist=False)
-    chan = conn.channel()
-    chan.queue_declare(queue=tag_name, exclusive=False, auto_delete=False,
-            durable=True)
-    try:
-        chan.exchange_declare(exchange=config['exchange'], type="fanout", durable=True,
-                auto_delete=False)
-    except amqp.exceptions.AMQPChannelException:
-        chan.exchange_delete(exchange=config['exchange'])
-        chan.exchange_declare(exchange=config['exchange'], type="fanout", durable=True,
-                auto_delete=False)
-    msg = amqp.Message(json.dumps(data),
-                       content_type='application/json',
-                       application_headers={'msg_type': tag_name})
-    msg.properties["delivery_mode"] = 2
-    chan.basic_publish(msg, exchange=config['exchange'],
-                       routing_key=config['routing_key'])
-    chan.close()
-    conn.close()
-
-def _read_amqp_config(galaxy_config):
-    """Read connection information on the RabbitMQ server from Galaxy config.
-    """
-    config = ConfigParser.ConfigParser()
-    config.read(galaxy_config)
-    amqp_config = {}
-    for option in config.options("galaxy_amqp"):
-        amqp_config[option] = config.get("galaxy_amqp", option)
-    return amqp_config
+    dirs = {"work": os.getcwd(),
+            "config": os.path.dirname(config_file)}
+    runner = messaging.runner(dirs, config, config_file, wait=False)
+    runner(fn_name, [[data]])
 
 if __name__ == "__main__":
     parser = OptionParser()

@@ -6,6 +6,11 @@ from an Illumina sequencer, converting them to standard Fastq format,
 aligning to a reference genome, doing SNP calling, and producing a
 summary PDF of results.
 
+The pipeline runs on single multicore machines, in compute clusters
+run by LSF or SGE, or on the Amazon cloud. [This tutorial][o5]
+describes running the pipeline on Amazon with [CloudBioLinux][o6] and
+[CloudMan][o7].
+
 The scripts are tightly integrated with the [Galaxy][o1]
 web-based analysis tool. Samples are entered and tracked through a LIMS
 system and processed results are uploading into Galaxy Data Libraries for
@@ -19,6 +24,9 @@ researcher access and additional analysis. See the
 [o2]: https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
 [o3]: http://bcbio.wordpress.com/2011/01/11/next-generation-sequencing-information-management-and-analysis-system-for-galaxy/
 [o4]: http://chapmanb.github.com/bcbb/nglims_organization.png
+[o5]: http://bcbio.wordpress.com/2011/08/19/distributed-exome-analysis-pipeline-with-cloudbiolinux-and-cloudman/
+[o6]: http://cloudbiolinux.org
+[o7]: http://wiki.g2.bx.psu.edu/Admin/Cloud
 
 ## Code structure
 
@@ -26,16 +34,25 @@ The main scripts that handle automation of the analysis and storage
 are:
 
 * `scripts/illumina_finished_msg.py` -- Sits on a machine where sequencing
-  runs are dumped. Should be run via a cron job every hour or so to
+  runs are dumped. Should be run via a cron job every hour to
   check for new output runs.
 
-* `scripts/analyze_finished_sqn.py` -- Continuously running server script on
-  the Galaxy analysis machine. When new results are reported in the messaging queue,
-  this copies over the relevant fastq files and starts an automated
-  analysis.
+* `scripts/nextgen_analysis_server.py` -- The main server script which
+  is used for several tasks based on a queue name passed on the
+  command line:
 
-* `scripts/store_finished_sqn.py` -- Continuously running server that
-  manages long term storage of larger files, like qseq and images.
+ * Called with `-q toplevel` -- Coordinate analysis of samples. This
+   can be called from `illumina_finished_msg.py` or a Galaxy front end
+   runs the full automated analysis, optionally uploading results to
+   Galaxy.
+
+ * Called with no queue arguments -- Run individual steps in the
+   analysis pipeline. Multiple servers can be started on distributed
+   machines connected with a shared filesystem to allow scaling on a
+   cluster or Amazon.
+
+ * Called with `-q storage` -- Manage long term storage of larger
+    files, like qseq and images.
 
 System specific information is specified in configuration files:
 
@@ -46,9 +63,9 @@ System specific information is specified in configuration files:
   customization for processing algorithms.
 * `config/universe_wsgi.ini` -- Configuration variables that should be
   included on your Galaxy server. RabbitMQ details are specified here
-  for communication between the sequencing and analysis machine.
+  for communication between the sequencing and analysis machines.
 
-The scripts involved in the actual processing:
+Scripts involved in the processing:
 
 * `scripts/automated_initial_analysis.py` -- Drives the high level analysis of
   sequencing lanes based on information specified through the Galaxy LIMS
@@ -130,6 +147,7 @@ processing by hand:
 
 1. Start the processing server, `nextgen_analysis_server.py` on each
    processing machine. This takes one argument, the
+
    `post_process.yaml` file (which references the `universe_wsgi.ini`
    configuration).
 
@@ -199,17 +217,13 @@ machines without passwords, using [ssh public key authentication][i1].
 You want to enable password-less ssh for the following machine
 combinations:
 
-* `analyze_finished_sqn` server to `illumina_finished_msg` machine
-* `store_finished_sqn` server to `illumina_finished_msg` machine
-* `analyze_finished_sqn` to actual analysis machine, if different else
-  localhost
-* `store_finished_sqn` server to actual storage machine, if different
-  else localhost
+* Analysis server to `illumina_finished_msg` machine
+* Storage server to `illumina_finished_msg` machine
 
 ### Sequencing machines
 
 The backend has been developed using Illumina GAII and HiSeq sequencing
-machines. It is designed to be general and support other platforms, and 
+machines. It is designed to be general and support other platforms, and
 we welcome feedback from researchers with different machines at their
 institutions.
 
@@ -276,14 +290,12 @@ to ease your development needs using the following script:
 * [PyYAML][14]
 * [logbook] [17]
 * [celery][18]
-* [amqplib][15]
 
 [10]: http://biopython.org
 [11]: http://rpy.sourceforge.net/rpy2.html
 [12]: http://code.google.com/p/pysam/
 [13]: http://www.makotemplates.org/
 [14]: http://pyyaml.org/
-[15]: http://code.google.com/p/py-amqplib
 [17]: http://packages.python.org/Logbook
 [18]: http://celeryproject.org/
 
