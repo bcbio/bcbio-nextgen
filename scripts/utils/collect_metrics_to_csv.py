@@ -3,17 +3,19 @@
 
 Usage:
     collect_metrics_to_csv.py <comma separated list of lanes>
-
 """
 import sys
 import os
 import csv
 import glob
 import collections
+import contextlib
 
+import yaml
 import pysam
 
-from Mgh.Picard.metrics import PicardMetricsParser
+from bcbio.broad.metrics import PicardMetricsParser, PicardMetrics
+from bcbio import utils, broad
 
 WANT_METRICS = [
 "AL_TOTAL_READS",
@@ -47,14 +49,17 @@ WANT_METRICS = [
 "Lane IC PCT Mean RD2 Err Rate",
 ]
 
-def main(run_name):
-    work_dir = os.getcwd()
+def main(run_name, work_dir=None, config_file=None, ref_file=None,
+         bait_file=None, target_file=None):
+    if work_dir is None:
+        work_dir = os.getcwd()
     parser = PicardMetricsParser()
 
     base_bams = _get_base_bams(work_dir, run_name)
     samples = [_get_sample_name(b) for (_, _, b) in base_bams]
-    metrics = [lane_stats(l, b, run_name, work_dir, parser)
-               for (l, b, _) in base_bams]
+    metrics = [lane_stats(l, b, f, run_name, parser, config_file, ref_file,
+                          bait_file, target_file)
+               for (l, b, f) in base_bams]
     header_counts = _get_header_counts(samples, metrics)
     header = [m for m in WANT_METRICS if header_counts[m] > 0]
     out_file = "%s-summary.csv" % (run_name)
@@ -84,6 +89,11 @@ def _get_sample_name(in_file):
 
 def _get_base_bams(work_dir, run_name):
     bam_files = glob.glob(os.path.join(work_dir, "*_%s*-sort.bam" % run_name))
+    # if not in the current base directory, might be in subdirectory as final results
+    if len(bam_files) == 0:
+        for dname in os.listdir(work_dir):
+            bam_files.extend(glob.glob(os.path.join(work_dir, dname,
+                                                    "*_%s*-gatkrecal.bam" % run_name)))
     lane_info = dict()
     for cur_file in bam_files:
         lane_name = os.path.basename(cur_file).split("-")[0]
@@ -106,13 +116,51 @@ def _get_base_bams(work_dir, run_name):
         final.append((lane, bc, lane_info[key]))
     return final
 
-def lane_stats(lane, bc_id, run_name, work_dir, parser):
+def lane_stats(lane, bc_id, bam_fname, run_name, parser,
+               config_file, ref_file, bait_file, target_file):
     base_name = "%s_%s" % (lane, run_name)
     if bc_id:
         base_name += "_%s-" % bc_id
-    metrics_files = glob.glob(os.path.join(work_dir, "%s*metrics" % base_name))
+    path = os.path.dirname(bam_fname)
+    metrics_files = glob.glob(os.path.join(path, "%s*metrics" % base_name))
+    if len(metrics_files) == 0:
+        assert config_file is not None
+        assert ref_file is not None
+        metrics_dir = _generate_metrics(bam_fname, config_file, ref_file,
+                                        bait_file, target_file)
+        metrics_files = glob.glob(os.path.join(metrics_dir, "%s*metrics" % base_name))
+    print metrics_files
     metrics = parser.extract_metrics(metrics_files)
     return metrics
+
+def _generate_metrics(bam_fname, config_file, ref_file,
+                      bait_file, target_file):
+    """Run Picard commands to generate metrics files when missing.
+    """
+    with open(config_file) as in_handle:
+        config = yaml.load(in_handle)
+    broad_runner = broad.runner_from_config(config)
+    bam_fname = os.path.abspath(bam_fname)
+    path = os.path.dirname(bam_fname)
+    out_dir = os.path.join(path, "metrics")
+    utils.safe_makedir(out_dir)
+    with utils.chdir(out_dir):
+        with utils.curdir_tmpdir() as tmp_dir:
+            cur_bam = os.path.basename(bam_fname)
+            if not os.path.exists(cur_bam):
+                os.symlink(bam_fname, cur_bam)
+            gen_metrics = PicardMetrics(broad_runner, tmp_dir)
+            print _bam_is_paired(bam_fname)
+            gen_metrics.report(cur_bam, ref_file,
+                               _bam_is_paired(bam_fname),
+                               bait_file, target_file)
+    return out_dir
+
+def _bam_is_paired(bam_fname):
+    with contextlib.closing(pysam.Samfile(bam_fname, "rb")) as work_bam:
+        for read in work_bam:
+            if not read.is_unmapped:
+                return read.is_paired
 
 if __name__ == "__main__":
     main(*sys.argv[1:])

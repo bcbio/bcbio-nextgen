@@ -83,7 +83,7 @@ def lims_run_details(run_info, base_folder_name):
         else:
             libname, role = (None, None)
         for barcode in lane_info.get("multiplex", [None]):
-            remote_folder = lane_info.get("name", lane_info["lane"])
+            remote_folder = str(lane_info.get("name", lane_info["lane"]))
             description = ": ".join([lane_info[n] for n in ["researcher", "description"]
                                      if lane_info.has_key(n)])
             local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
