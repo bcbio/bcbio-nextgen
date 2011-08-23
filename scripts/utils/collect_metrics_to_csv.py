@@ -93,7 +93,7 @@ def _get_base_bams(work_dir, run_name):
     if len(bam_files) == 0:
         for dname in os.listdir(work_dir):
             bam_files.extend(glob.glob(os.path.join(work_dir, dname,
-                                                    "*_%s*-gatkrecal.bam" % run_name)))
+                                                    "*_%s*-gatkrecal*.bam" % run_name)))
     lane_info = dict()
     for cur_file in bam_files:
         lane_name = os.path.basename(cur_file).split("-")[0]
@@ -129,7 +129,6 @@ def lane_stats(lane, bc_id, bam_fname, run_name, parser,
         metrics_dir = _generate_metrics(bam_fname, config_file, ref_file,
                                         bait_file, target_file)
         metrics_files = glob.glob(os.path.join(metrics_dir, "%s*metrics" % base_name))
-    print metrics_files
     metrics = parser.extract_metrics(metrics_files)
     return metrics
 
@@ -150,7 +149,6 @@ def _generate_metrics(bam_fname, config_file, ref_file,
             if not os.path.exists(cur_bam):
                 os.symlink(bam_fname, cur_bam)
             gen_metrics = PicardMetrics(broad_runner, tmp_dir)
-            print _bam_is_paired(bam_fname)
             gen_metrics.report(cur_bam, ref_file,
                                _bam_is_paired(bam_fname),
                                bait_file, target_file)
