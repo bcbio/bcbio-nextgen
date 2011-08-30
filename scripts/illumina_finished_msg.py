@@ -22,10 +22,7 @@ The local config should have the following information:
     msg_db: flat file of reported output directories
 """
 import os
-import sys
-import json
 import operator
-import ConfigParser
 import socket
 import glob
 import getpass
@@ -96,9 +93,9 @@ def _post_process_run(dname, config, config_file, fastq_dir, post_config_file,
                              store_files, config, config_file)
     # otherwise process locally
     else:
-        analyze_locally(dname, config, post_config_file, fastq_dir)
+        analyze_locally(dname, post_config_file, fastq_dir)
 
-def analyze_locally(dname, config, post_config_file, fastq_dir):
+def analyze_locally(dname, post_config_file, fastq_dir):
     """Run analysis directly on the local machine.
     """
     assert fastq_dir is not None
@@ -156,7 +153,7 @@ def _generate_qseq(bc_dir, config):
     if not os.path.exists(os.path.join(bc_dir, "finished.txt")):
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite",
+        cl = [cmd, "-L", bcl2qseq_log, "-o", bc_dir, "--in-place", "--overwrite",
               "--ignore-missing-stats"]
         # in OLB version 1.9, the -i flag changed to intensities instead of input
         version_cl = [cmd, "-v"]
@@ -248,7 +245,8 @@ def _files_to_copy(directory):
                         ])
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-    return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)
+    return (sorted(image_redo_files + logs + reports + run_info + qseqs),
+            sorted(reports + fastq + run_info))
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.
@@ -263,8 +261,8 @@ def _read_reported(msg_db):
 def _get_directories(config):
     for directory in config["dump_directories"]:
         for dname in sorted(glob.glob(os.path.join(directory, "*[Aa]*[Xx][Xx]"))):
-             if os.path.isdir(dname):
-                 yield dname
+            if os.path.isdir(dname):
+                yield dname
 
 def _update_reported(msg_db, new_dname):
     """Add a new directory to the database of reported messages.
