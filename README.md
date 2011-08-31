@@ -274,7 +274,6 @@ to ease your development needs using the following script:
 
 * RabbitMQ for communication between machines
 * LaTeX and pdflatex for report generation
-* ps2pdf
 
 ### Optional software for generating report graphs
 
