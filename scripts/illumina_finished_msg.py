@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 """Script to check for finalized illumina runs and report to messaging server.
 
-This is meant to be run via a cron job on a regular basis, and looks for newly
-dumped output directories that are finished and need to be processed.
+Run this script with an hourly cron job; it looks for newly finished output
+directories for processing.
 
 Usage:
     illumina_finished_msg.py <YAML local config>
                              [<post-processing config file>]
 
-If a post-processing configuration file is passed, the messaging step will be
-skipped and we will move directly into analysis on the current machine. Use
+Supplying a post-processing configuration file skips the messaging step and
+we moves directly into analysis processing on the current machine. Use
 this if there is no RabbitMQ messaging server and your dump machine is directly
 connected to the analysis machine. You will also want to set postprocess_dir in
 the YAML local config to the directory to write fastq and analysis files.
@@ -19,13 +19,10 @@ The Galaxy config needs to have information on the messaging server and queues.
 The local config should have the following information:
 
     dump_directories: directories to check for machine output
-    msg_db: flat file of output directories that have been reported
+    msg_db: flat file of reported output directories
 """
 import os
-import sys
-import json
 import operator
-import ConfigParser
 import socket
 import glob
 import getpass
@@ -52,14 +49,13 @@ def main(local_config, post_config_file=None,
     log_handler = create_log_handler(config, LOG_NAME)
 
     with log_handler.applicationbound():
-        search_for_new(config, config_file, post_config_file,
+        search_for_new(config, local_config, post_config_file,
                        process_msg, store_msg, qseq, fastq)
 
 def search_for_new(config, config_file, post_config_file,
                    process_msg, store_msg, qseq, fastq):
-    """Search for any new directories that have not been reported.
+    """Search for any new unreported directories.
     """
-
     reported = _read_reported(config["msg_db"])
     for dname in _get_directories(config):
         if os.path.isdir(dname) and dname not in reported:
@@ -97,9 +93,9 @@ def _post_process_run(dname, config, config_file, fastq_dir, post_config_file,
                              store_files, config, config_file)
     # otherwise process locally
     else:
-        analyze_locally(dname, config, post_config_file, fastq_dir)
+        analyze_locally(dname, post_config_file, fastq_dir)
 
-def analyze_locally(dname, config, post_config_file, fastq_dir):
+def analyze_locally(dname, post_config_file, fastq_dir):
     """Run analysis directly on the local machine.
     """
     assert fastq_dir is not None
@@ -150,14 +146,14 @@ def _generate_fastq(fc_dir, config):
 def _generate_qseq(bc_dir, config):
     """Generate qseq files from illumina bcl files if not present.
 
-    More recent Illumina updates do not produce qseq files. These can be
-    generated from bcl, intensity and filter files with tools from
-    the offline base caller OLB.
+    More recent Illumina updates do not produce qseq files. Illumina's
+    offline base caller (OLB) generates these starting with bcl,
+    intensity and filter files.
     """
     if not os.path.exists(os.path.join(bc_dir, "finished.txt")):
         bcl2qseq_log = os.path.join(config["log_dir"], "setupBclToQseq.log")
         cmd = os.path.join(config["program"]["olb"], "bin", "setupBclToQseq.py")
-        cl = [cmd, "-L", bcl2qseq_log,"-o", bc_dir, "--in-place", "--overwrite",
+        cl = [cmd, "-L", bcl2qseq_log, "-o", bc_dir, "--in-place", "--overwrite",
               "--ignore-missing-stats"]
         # in OLB version 1.9, the -i flag changed to intensities instead of input
         version_cl = [cmd, "-v"]
@@ -249,7 +245,8 @@ def _files_to_copy(directory):
                         ])
         logs = reduce(operator.add, [["Logs", "Recipe", "Diag", "Data/RTALogs", "Data/Log.txt"]])
         fastq = ["Data/Intensities/BaseCalls/fastq"]
-    return sorted(image_redo_files + logs + reports + run_info), sorted(reports + fastq + run_info)
+    return (sorted(image_redo_files + logs + reports + run_info + qseqs),
+            sorted(reports + fastq + run_info))
 
 def _read_reported(msg_db):
     """Retrieve a list of directories previous reported.
@@ -264,8 +261,8 @@ def _read_reported(msg_db):
 def _get_directories(config):
     for directory in config["dump_directories"]:
         for dname in sorted(glob.glob(os.path.join(directory, "*[Aa]*[Xx][Xx]"))):
-             if os.path.isdir(dname):
-                 yield dname
+            if os.path.isdir(dname):
+                yield dname
 
 def _update_reported(msg_db, new_dname):
     """Add a new directory to the database of reported messages.
