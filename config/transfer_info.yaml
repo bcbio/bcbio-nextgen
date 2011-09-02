@@ -1,5 +1,4 @@
-msg_process_tag: sqn_finished_process
-msg_store_tag: sqn_finished_store
+galaxy_config: universe_wsgi.ini
 dump_directories:
   - /array10
   - /array11
@@ -22,3 +21,5 @@ program:
   olb_make: make
 algorithm:
   num_cores: 8
+distributed:
+  rabbitmq_vhost: bionextgen
