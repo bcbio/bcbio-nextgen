@@ -2,9 +2,9 @@ galaxy_config: universe_wsgi.ini
 program:
   bowtie: bowtie
   bwa: bwa
-  ucsc_bigwig: wigToBigWig
-  picard: /usr/share/java/picard
-  gatk: /usr/share/java/gatk
+  ucsc_bigwig: /bubo/home/h10/vale/bin/wigToBigWig
+  picard: /bubo/sw/apps/bioinfo/picard/1.41 
+  gatk: /bubo/sw/apps/bioinfo/GATK/1.0.5909
   snpEff: /usr/share/java/snpeff
   fastqc: fastqc
   pdflatex: pdflatex

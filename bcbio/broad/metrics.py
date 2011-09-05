@@ -85,9 +85,9 @@ class PicardMetricsParser:
             out.append(self._count_percent("Pair duplicates",
                 dup_vals["READ_PAIR_DUPLICATES"], dup_total))
             std = insert_vals.get("STANDARD_DEVIATION", "?")
-            std_dev = "+/- %.1f" % float(std) if (std and std != "?") else ""
+            std_dev = "+/- %.1f" % float(std.replace(",", ".")) if (std and std != "?") else ""
             out.append(("Insert size",
-                "%.1f" % float(insert_vals["MEAN_INSERT_SIZE"]), std_dev))
+                "%.1f" % float(insert_vals["MEAN_INSERT_SIZE"].replace(",", ".")), std_dev))
         if hybrid_vals:
             out.append((None, None, None))
             out.extend(self._tabularize_hybrid(hybrid_vals))
