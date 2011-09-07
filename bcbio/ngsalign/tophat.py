@@ -9,12 +9,12 @@ from contextlib import closing
 import pysam
 import numpy
 
-from bcbio.ngsalin import bowtie
+from bcbio.ngsalign import bowtie
 from bcbio.utils import safe_makedir, file_transaction
 
 galaxy_location_file = "bowtie_indices.loc"
 
-_out_fnames = ["accepted_hits.bam", "junctions.bed", "insertions.bed", "deletions.bed"]
+_out_fnames = ["accepted_hits.sam", "junctions.bed", "insertions.bed", "deletions.bed"]
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     qual_format = config["algorithm"].get("quality_format", None)
@@ -24,23 +24,26 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         qual_flags = []
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     safe_makedir(out_dir)
-    out_file = os.path.join(out_dir, _out_fnames[0]):
+    out_file = os.path.join(out_dir, _out_fnames[0])
+    files = [ref_file, fastq_file]
     if not os.path.exists(out_file):
-        cl = [config["program"]["tophat"]]
+        cl = [config["program"].get("tophat", "tophat")]
         cl += qual_flags
-        cl += ["-m", config["algorithm"].get("max_errors", 0),
-               ref_file,
-               fastq_file]
+        cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
+               "--output-dir", out_dir,
+               "--no-convert-bam"]
         if pair_file:
             d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file, ref_file,
                                                     out_base, out_dir, config)
-            cl += [pair_file,
-                   "--mate-inner-dist", str(d),
+            cl += ["--mate-inner-dist", str(d),
                    "--mate-std-dev", str(d_stdev)]
-        cl += ["-o ", out_dir]
+            files.append(pair_file)
+        cl += files
         with file_transaction([os.path.join(out_dir, f) for f in _out_fnames]):
             child = subprocess.check_call(cl)
-    return out_file
+    out_file_final = os.path.join(out_dir, "%s.sam" % out_base)
+    os.symlink(out_file, out_file_final)
+    return out_file_final
 
 def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
                                out_dir, config):
@@ -55,5 +58,5 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
     with closing(pysam.Samfile(out_sam)) as work_sam:
         for read in work_sam:
             if not read.is_unmapped and read.is_read1:
-                dists.append(read.isize - 2 * read.rlen)
+                dists.append(abs(read.isize) - 2 * read.rlen)
     return int(round(numpy.mean(dists))), int(round(numpy.std(dists)))
