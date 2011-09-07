@@ -4,6 +4,7 @@ galaxy_config: universe_wsgi.ini
 program:
   bowtie: bowtie
   bwa: bwa
+  tophat: tophat
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
   gatk: /usr/share/java/gatk
@@ -59,5 +60,7 @@ custom_algorithms:
     recalibrate: true
     snpcall: true
     dbsnp: variation/dbsnp_132.vcf
+  'RNA-seq':
+    aligner: tophat
   'Minimal':
     aligner: ""

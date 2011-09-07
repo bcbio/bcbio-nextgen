@@ -7,7 +7,8 @@ from bcbio.utils import file_transaction
 
 galaxy_location_file = "bowtie_indices.loc"
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+          extra_args=None):
     """Before a standard or paired end alignment with bowtie.
     """
     qual_format = config["algorithm"].get("quality_format", None)
@@ -22,10 +23,11 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         cl = [config["program"]["bowtie"]]
         cl += qual_flags
         cl += multi_flags
+        cl += extra_args if extra_args is not None else []
         cl += ["-q",
                "-v", config["algorithm"]["max_errors"],
                "-k", 1,
-               "-X", 1000, # matches bwa sampe default size
+               "-X", 2000, # default is too selective for most data
                "--best",
                "--strata",
                "--sam",
