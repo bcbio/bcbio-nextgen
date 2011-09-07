@@ -15,15 +15,17 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         qual_flags = ["--phred64-quals"]
     else:
         qual_flags = []
+    multi_mappers = config["algorithm"].get("multiple_mappers", True)
+    multi_flags = ["-M", 1] if multi_mappers else ["-m", 1]
     out_file = os.path.join(align_dir, "%s.sam" % out_base)
     if not os.path.exists(out_file):
         cl = [config["program"]["bowtie"]]
         cl += qual_flags
+        cl += multi_flags
         cl += ["-q",
                "-v", config["algorithm"]["max_errors"],
                "-k", 1,
                "-X", 1000, # matches bwa sampe default size
-               "-M", 1,
                "--best",
                "--strata",
                "--sam",
