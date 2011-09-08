@@ -28,11 +28,11 @@ import yaml
 def load_config(config_file):
 	with open(config_file) as in_handle:
 		config = yaml.load(in_handle)
+	
+	for field, setting in config.items():
+		config[field] = os.path.expandvars(setting)
 
-	config['galaxy_config'] = os.path.expandvars(config['galaxy_config'])
-	for program, setting in config['program'].items():
-		config['program'][program] = os.path.expandvars(setting)
-
-	config['analysis']['towig_script'] = os.path.expandvars(config['analysis']['towig_script'])
+		for sub_field, sub_setting in config[field].items():
+			config[field][sub_field] = os.path.expandvars(sub_setting)	
 
 	return config
