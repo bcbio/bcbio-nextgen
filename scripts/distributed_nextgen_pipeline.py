@@ -75,7 +75,10 @@ def _monitor_analysis(cluster, jobid):
 
 def stop_workers(cluster, jobids):
     for jobid in jobids:
-        cluster.stop_job(jobid)
+        try:
+            cluster.stop_job(jobid)
+        except:
+            pass
 
 def _needed_workers(run_info):
     """Determine workers needed to run multiplex flowcells in parallel.

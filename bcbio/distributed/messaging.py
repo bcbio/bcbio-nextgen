@@ -16,15 +16,14 @@ from bcbio import utils
 def runner(dirs, config, config_file, wait=True):
     """Run a set of tasks using Celery, waiting for results or asynchronously.
 
-    This is initialized with the configuration and directory information,
-    which is used to prepare a Celery configuration file and imports. It
-    returns a function which acts like standard map, except that the
-    function name is provided instead of the function itself.
+    Initialize with the configuration and directory information,
+    used to prepare a Celery configuration file and imports. It
+    returns a function which acts like standard map; provide the function
+    name instead of the function itself when calling.
 
-    The name is looked up and the function is run in parallel on Celery
-    servers, which can be remotely located but are assumed to have access
-    to the same filesystem. We will poll and wait until all results are
-    ready, returning them.
+    After name lookup, Celery runs the function in parallel; Celery servers
+    can be remote or local but must have access to a shared filesystem. The
+    function polls if wait is True, returning when all results are available.
     """
     task_module = "bcbio.distributed.tasks"
     with create_celeryconfig(task_module, dirs, config, config_file):
@@ -58,7 +57,7 @@ BROKER_VHOST = "${rabbitmq_vhost}"
 CELERY_RESULT_BACKEND= "amqp"
 CELERY_TASK_SERIALIZER = "json"
 CELERYD_CONCURRENCY = ${cores}
-CELERY_ACKS_LATE = True
+CELERY_ACKS_LATE = False
 CELERYD_PREFETCH_MULTIPLIER = 1
 CELERY_ROUTES = {"bcbio.distributed.tasks.analyze_and_upload": {"queue": "toplevel"},
                  "bcbio.distributed.tasks.long_term_storage" : {"queue": "storage"}}
