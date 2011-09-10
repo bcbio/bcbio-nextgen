@@ -42,7 +42,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         with file_transaction([os.path.join(out_dir, f) for f in _out_fnames]):
             child = subprocess.check_call(cl)
     out_file_final = os.path.join(out_dir, "%s.sam" % out_base)
-    os.symlink(out_file, out_file_final)
+    if not os.path.exists(out_file_final):
+        os.symlink(out_file, out_file_final)
     return out_file_final
 
 def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
