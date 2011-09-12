@@ -63,7 +63,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
                                 config_file)
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = \
-                  organize_samples(dirs, fc_name, fc_date, run_items)
+                  organize_samples(dirs, fc_name, fc_date, run_items, align_items)
     samples = ((n, sample_fastq[n], sample_info[n], bam_files, dirs, config, config_file)
                for n, bam_files in sample_files)
     sample_items = _run_parallel("process_sample", samples, dirs, config, config_file)

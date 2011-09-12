@@ -30,9 +30,16 @@ def combine_fastq_files(in_files, work_dir):
                         shutil.copyfileobj(in_handle, out_handle)
         return out1, out2
 
-def organize_samples(dirs, fc_name, fc_date, run_items):
+def _organize_bam_by_lane(align_items):
+    out = {}
+    for a in align_items:
+        out[a["lane"]] = a["out_bam"]
+    return out
+
+def organize_samples(dirs, fc_name, fc_date, run_items, align_items):
     """Organize BAM output files by sample name, handling multiplexing.
     """
+    bams_by_lane = _organize_bam_by_lane(align_items)
     bams_by_sample = collections.defaultdict(list)
     sample_info = dict()
     fastq_by_sample = collections.defaultdict(list)
@@ -44,22 +51,30 @@ def organize_samples(dirs, fc_name, fc_date, run_items):
             for multi in multiplex:
                 name = (lane_info.get("name", ""), lane_info["description"],
                         multi["name"])
-                fname = os.path.join(dirs["align"], "%s_%s_%s_%s-sort.bam" %
-                    (lane_info["lane"], fc_date, fc_name, multi["barcode_id"]))
+                base = "%s_%s_%s" % (lane_info["lane"], fc_date, fc_name, multi["barcode_id"])
+                fname = os.path.join(dirs["align"], "%s-sort.bam" % base)
                 if os.path.exists(fname):
                     bams_by_sample[name].append(fname)
-                    sample_info[name] = lane_info
-                    fastq_by_sample[name].append(get_fastq_files(mfastq_dir, lane_info,
-                                                                 fc_name, multi["barcode_id"]))
+                elif bams_by_lane.has_key(base):
+                    bams_by_sample[name].append(bams_by_lane[base])
+                else:
+                    raise ValueError("Did not find BAM files for %s" % lane_info)
+                sample_info[name] = lane_info
+                fastq_by_sample[name].append(get_fastq_files(mfastq_dir, lane_info,
+                                                             fc_name, multi["barcode_id"]))
         else:
             name = (lane_info.get("name", ""), lane_info["description"])
-            fname = os.path.join(dirs["align"], "%s_%s_%s-sort.bam" %
-                    (lane_info["lane"], fc_date, fc_name))
+            base = "%s_%s_%s" % (lane_info["lane"], fc_date, fc_name)
+            fname = os.path.join(dirs["align"], "%s-sort.bam" % base)
             if os.path.exists(fname):
                 bams_by_sample[name].append(fname)
-                sample_info[name] = lane_info
-                fastq_by_sample[name].append(get_fastq_files(dirs["fastq"],
-                                                             lane_info, fc_name))
+            elif bams_by_lane.has_key(base):
+                bams_by_sample[name].append(bams_by_lane[base])
+            else:
+                raise ValueError("Did not find BAM files for %s" % lane_info)
+            sample_info[name] = lane_info
+            fastq_by_sample[name].append(get_fastq_files(dirs["fastq"],
+                                                         lane_info, fc_name))
     return sorted(bams_by_sample.items()), dict(fastq_by_sample), sample_info
 
 def merge_bam_files(bam_files, work_dir, config):

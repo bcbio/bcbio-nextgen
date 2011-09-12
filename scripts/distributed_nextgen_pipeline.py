@@ -90,4 +90,8 @@ def _needed_workers(run_info):
     return len(set(names))
 
 if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print "Incorrect arguments"
+        print __doc__
+        sys.exit()
     main(*sys.argv[1:])
