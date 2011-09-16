@@ -3,6 +3,7 @@
 http://tophat.cbcb.umd.edu
 """
 import os
+import shutil
 import subprocess
 from contextlib import closing
 
@@ -50,9 +51,21 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
                                out_dir, config):
     """Use Bowtie to estimate the inner distance of paired reads.
     """
+    # skip initial reads for large file, but not for smaller
+    dists = _bowtie_for_innerdist("1000000", fastq_file, pair_file, ref_file,
+                                  out_base, out_dir, config)
+    if len(dists) == 0:
+        dists = _bowtie_for_innerdist("1", fastq_file, pair_file, ref_file,
+                                      out_base, out_dir, config, True)
+    return int(round(numpy.mean(dists))), int(round(numpy.std(dists)))
+
+def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
+                          out_dir, config, remove_workdir=False):
     work_dir = os.path.join(out_dir, "innerdist_estimate")
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir)
     safe_makedir(work_dir)
-    extra_args = ["-s", "1000000", "-u", "250000"]
+    extra_args = ["-s", str(start), "-u", "250000"]
     out_sam = bowtie.align(fastq_file, pair_file, ref_file, out_base,
                            work_dir, config, extra_args)
     dists = []
@@ -60,4 +73,4 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
         for read in work_sam:
             if not read.is_unmapped and read.is_read1:
                 dists.append(abs(read.isize) - 2 * read.rlen)
-    return int(round(numpy.mean(dists))), int(round(numpy.std(dists)))
+    return dists

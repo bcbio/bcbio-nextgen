@@ -62,5 +62,8 @@ custom_algorithms:
     dbsnp: variation/dbsnp_132.vcf
   'RNA-seq':
     aligner: tophat
+    transcript_assemble: true
+    transcripts: rnaseq/ref-transcripts.gtf
+    mask: rnaseq/ref-transcripts-mask.gtf
   'Minimal':
     aligner: ""
