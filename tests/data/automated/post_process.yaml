@@ -41,6 +41,6 @@ custom_algorithms:
     aligner: tophat
     transcript_assemble: true
     transcripts: rnaseq/ref-transcripts.gtf
-    mask: rnaseq/ref-transcripts-mask.gtf
+    transcripts_mask: rnaseq/ref-transcripts-mask.gtf
   'Minimal':
     aligner: ""

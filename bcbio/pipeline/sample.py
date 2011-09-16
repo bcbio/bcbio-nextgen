@@ -14,6 +14,7 @@ from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.pipeline.qcsummary import generate_align_summary
 from bcbio.pipeline.variation import (recalibrate_quality, run_genotyper,
                                       variation_effects)
+from bcbio.rnaseq.cufflinks import assemble_transcripts
 
 def process_sample(sample_name, fastq_files, info, bam_files, dirs,
                    config, config_file):
@@ -37,6 +38,8 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
             vrn_file = run_genotyper(gatk_bam, sam_ref, config)
             log.info("Calculating variation effects for %s" % str(sample_name))
             effects_file = variation_effects(vrn_file, genome_build, config)
+    if config["algorithm"].get("transcript_assemble", False):
+        tx_file = assemble_transcripts(sort_bam, sam_ref, config)
     if sam_ref is not None:
         log.info("Generating summary files: %s" % str(sample_name))
         generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
