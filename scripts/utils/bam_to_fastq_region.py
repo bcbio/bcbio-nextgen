@@ -22,7 +22,7 @@ def main(config_file, in_file, space, start, end):
     runner = broad.runner_from_config(config)
     target_region = (space, int(start), int(end))
     for pair in [1, 2]:
-        out_file = "%s_%s-chr%s.fastq" % (os.path.splitext(os.path.basename(in_file))[0],
+        out_file = "%s_%s-%s.fastq" % (os.path.splitext(os.path.basename(in_file))[0],
                                           pair, target_region[0])
         with open(out_file, "w") as out_handle:
             for name, seq, qual in bam_to_fastq_pair(in_file, target_region, pair):
