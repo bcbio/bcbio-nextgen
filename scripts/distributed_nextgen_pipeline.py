@@ -15,7 +15,6 @@ Usage:
 import sys
 import time
 import math
-import subprocess
 
 import yaml
 
@@ -29,11 +28,16 @@ def main(config_file, fc_dir, run_info_yaml=None):
            "This script is used with configured 'messaging' parallelization"
     cluster = globals()[config["distributed"]["cluster_platform"]]
     workers_needed = _needed_workers(get_run_info(fc_dir, config, run_info_yaml)[-1])
-    print "Starting cluster workers"
-    jobids = start_workers(cluster, workers_needed, config, config_file)
+    jobids = []
     try:
+        print "Starting manager"
+        manager_id = start_analysis_manager(config_file, fc_dir, run_info_yaml,
+                                            cluster, config)
+        print "Starting cluster workers"
+        jobids.extend(start_workers(cluster, workers_needed, config, config_file))
+        jobids.append(manager_id)
         print "Running analysis"
-        run_analysis(config_file, fc_dir, run_info_yaml, cluster, config)
+        monitor_analysis(cluster, manager_id)
     finally:
         print "Cleaning up cluster workers"
         stop_workers(cluster, jobids)
@@ -53,24 +57,23 @@ def start_workers(cluster, workers_needed, config, config_file):
         time.sleep(5)
     return jobids
 
-def run_analysis(config_file, fc_dir, run_info_yaml, cluster, config):
+def start_analysis_manager(config_file, fc_dir, run_info_yaml, cluster, config):
+    """Start analysis manager node on cluster.
+    """
     args = config["distributed"]["platform_args"].split()
     program_cl = [config["analysis"]["process_program"], config_file, fc_dir]
     if run_info_yaml:
         program_cl.append(run_info_yaml)
-    jobid = cluster.submit_job(args, program_cl)
-    try:
-        _monitor_analysis(cluster, jobid)
-    except:
-        stop_workers(cluster, [jobid])
-        raise
-
-def _monitor_analysis(cluster, jobid):
+    job_id = cluster.submit_job(args, program_cl)
     # wait for job to start
-    while not(cluster.are_running([jobid])):
+    while not(cluster.are_running([job_id])):
         time.sleep(5)
-    # wait for job to finish
-    while cluster.are_running([jobid]):
+    return job_id
+
+def monitor_analysis(cluster, job_id):
+    """Wait for manager cluster job to finish
+    """
+    while cluster.are_running([job_id]):
         time.sleep(5)
 
 def stop_workers(cluster, jobids):
