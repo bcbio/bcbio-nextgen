@@ -1,0 +1,7 @@
+details:
+  - analysis: SNP calling
+    algorithm:
+      quality_format: Standard
+    description: Test1
+    genome_build: hg19
+    lane: 7

@@ -19,7 +19,7 @@ algorithm:
   bc_mismatch: 2
   bc_read: 1
   bc_position: 3
-  java_memory: 1g
+  java_memory: 3g
   save_diskspace: true
 
 analysis:
