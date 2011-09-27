@@ -3,6 +3,7 @@
 import os
 import json
 import subprocess
+import collections
 
 from bcbio.variation.recalibrate import gatk_recalibrate
 from bcbio.variation.realign import gatk_realigner
@@ -44,15 +45,20 @@ def _configured_ref_file(name, config, sam_ref):
             ref_file = os.path.join(base_dir, ref_file)
     return ref_file
 
+def _configured_vrn_files(config, sam_ref):
+    names = ["dbsnp", "train_hapmap", "train_1000g_omni", "train_indels"]
+    VrnFiles = collections.namedtuple("VrnFiles", names)
+    return apply(VrnFiles, [_configured_ref_file(n, config, sam_ref) for n in names])
+
 # ## Genotyping
 
 def run_genotyper(bam_file, ref_file, config):
     """Perform SNP genotyping and analysis using GATK.
     """
-    dbsnp_file = _configured_ref_file("dbsnp", config, ref_file)
-    realign_bam = gatk_realigner(bam_file, ref_file, config, dbsnp_file)
-    filter_snp = gatk_genotyper(realign_bam, ref_file, config, dbsnp_file)
-    _eval_genotyper(filter_snp, ref_file, dbsnp_file, config)
+    vrn_files = _configured_vrn_files(config, ref_file)
+    realign_bam = gatk_realigner(bam_file, ref_file, config, vrn_files.dbsnp)
+    filter_snp = gatk_genotyper(realign_bam, ref_file, config, vrn_files)
+    _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp
 
 def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):

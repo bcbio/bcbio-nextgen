@@ -19,15 +19,15 @@ from bcbio.utils import file_transaction
 
 # ## SNP Genotyping
 
-def gatk_genotyper(align_bam, ref_file, config, dbsnp=None):
+def gatk_genotyper(align_bam, ref_file, config, vrn_files):
     """Perform genotyping and filtration on a sorted aligned BAM file.
     """
     picard = broad.runner_from_config(config)
     picard.run_fn("picard_index_ref", ref_file)
     picard.run_fn("picard_index", align_bam)
     snp_file = _unified_genotyper(picard, align_bam, ref_file, config,
-                                  dbsnp)
-    filter_snp = _variant_filtration(picard, snp_file, ref_file)
+                                  vrn_files.dbsnp)
+    filter_snp = _variant_filtration(picard, snp_file, ref_file, vrn_files)
     return filter_snp
 
 def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
@@ -56,7 +56,7 @@ def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
             picard.run_gatk(params)
     return out_file
 
-def _variant_filtration(picard, snp_file, ref_file):
+def _variant_filtration(picard, snp_file, ref_file, vrn_files):
     """Filter out problematic SNP calls.
 
     Recommended Broad hard filtering for deep coverage exomes:
