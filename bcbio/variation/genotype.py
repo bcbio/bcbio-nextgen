@@ -25,30 +25,28 @@ def gatk_genotyper(align_bam, ref_file, config, dbsnp=None):
     picard = broad.runner_from_config(config)
     picard.run_fn("picard_index_ref", ref_file)
     picard.run_fn("picard_index", align_bam)
-    snp_file = _unified_genotyper(picard, align_bam, ref_file, dbsnp)
+    snp_file = _unified_genotyper(picard, align_bam, ref_file, config,
+                                  dbsnp)
     filter_snp = _variant_filtration(picard, snp_file, ref_file)
     return filter_snp
 
-def _unified_genotyper(picard, align_bam, ref_file, dbsnp=None):
+def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
     """Perform SNP genotyping on the given alignment file.
     """
+    coverage_depth = config["algorithm"].get("coverage_depth", "low").lower()
+    if coverage_depth == "low":
+        confidence = "10.0"
+    else:
+        confidence = "30.0"
     out_file = "%s-snp.vcf" % os.path.splitext(align_bam)[0]
     params = ["-T", "UnifiedGenotyper",
               "-I", align_bam,
               "-R", ref_file,
               "-o", out_file,
-              "-A", "DepthOfCoverage",
-              "-A", "AlleleBalance",
-              "-A", "HomopolymerRun",
-              "-A", "QualByDepth",
-              "--genotype_likelihoods_model", "SNP",
-              "-baq", "CALCULATE_AS_NECESSARY",
-              "--standard_min_confidence_threshold_for_calling", "10.0",
-              "--standard_min_confidence_threshold_for_emitting", "10.0",
-              #"--trigger_min_confidence_threshold_for_calling", "10.0",
-              #"--trigger_min_confidence_threshold_for_emitting", "10.0",
-              "--downsample_to_coverage", 10000,
-              "--min_base_quality_score", 20,
+              "--genotype_likelihoods_model", "BOTH",
+              "--standard_min_confidence_threshold_for_calling", confidence,
+              "--standard_min_confidence_threshold_for_emitting", confidence,
+              "--min_mapping_quality_score", "20",
               "-l", "INFO",
               ]
     if dbsnp:
