@@ -19,7 +19,7 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B:dbsnp,VCF", dbsnp]
+        params += ["--known", dbsnp]
     if deep_coverage:
         params += ["--mismatchFraction", "0.30",
                    "--maxIntervalSize", "650"]

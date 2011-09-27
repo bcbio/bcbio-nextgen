@@ -52,7 +52,7 @@ def _unified_genotyper(picard, align_bam, ref_file, dbsnp=None):
               "-l", "INFO",
               ]
     if dbsnp:
-        params += ["-B:dbsnp,VCF", dbsnp]
+        params += ["--dbsnp", dbsnp]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with file_transaction(out_file):
             picard.run_gatk(params)
@@ -68,7 +68,7 @@ def _variant_filtration(picard, snp_file, ref_file):
     params = ["-T", "VariantFiltration",
               "-R", ref_file,
               "-o", out_file,
-              "-B:variant,VCF", snp_file,
+              "--variant", snp_file,
               "--filterName", "QUALFilter",
               "--filterExpression", "QUAL <= 50.0",
               "--filterName", "QDFilter",
@@ -163,8 +163,8 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
     out_file = "%s.eval" % os.path.splitext(vcf_in)[0]
     params = ["-T", "VariantEval",
               "-R", ref_file,
-              "-B:eval,VCF", vcf_in,
-              "-B:dbsnp,VCF", dbsnp,
+              "--eval", vcf_in,
+              "--dbsnp", dbsnp,
               "-ST", "Filter",
               "-o", out_file,
               "-l", "INFO"

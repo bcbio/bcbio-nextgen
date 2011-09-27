@@ -13,9 +13,9 @@ from bcbio.utils import file_transaction
 
 # remap Galaxy genome names to the ones used by snpEff. Not nice code.
 SNPEFF_GENOME_REMAP = {
-        "GRCh37": "hg37.61",
-        "hg19" : "hg37.61",
-        "mm9" : "mm37.61",
+        "GRCh37": "GRCh37.63",
+        "hg19" : "GRCh37.63",
+        "mm9" : "NCBIM37.63",
         "araTha_tair9": "athalianaTair10",
         "araTha_tair10": "athalianaTair10",
         }
@@ -44,7 +44,7 @@ def _run_snpeff(snp_in, genome, snpeff_jar, se_interval, java_memory):
         cl = ["java"]
         if java_memory:
             cl += ["-Xmx%s" % java_memory]
-        cl += ["-jar", snpeff_jar, "-1", "-vcf4", "-pass", "-c", snpeff_config,
+        cl += ["-jar", snpeff_jar, "-1", "-i", "vcf", "-c", snpeff_config,
               genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
