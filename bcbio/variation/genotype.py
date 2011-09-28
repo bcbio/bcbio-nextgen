@@ -90,8 +90,12 @@ def combine_variant_files(broad_runner, orig_files, ref_file):
     params = ["-T", "CombineVariants",
               "-R", ref_file,
               "--out", out_file]
+    priority_order = []
     for orig_file in orig_files:
-        params.extend(["--variant", orig_file])
+        name = os.path.splitext(os.path.basename(orig_file))[0]
+        params.extend(["--variant:{name}".format(name=name), orig_file])
+        priority_order.append(name)
+    params.extend(["--rod_priority_list", ",".join(priority_order)])
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with file_transaction(out_file):
             broad_runner.run_gatk(params)
