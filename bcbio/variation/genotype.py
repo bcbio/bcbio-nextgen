@@ -2,10 +2,8 @@
 
 Genotyping:
 
+http://www.broadinstitute.org/gsa/wiki/index.php/Best_Practice_Variant_Detection_with_the_GATK_v3
 http://www.broadinstitute.org/gsa/wiki/index.php/Unified_genotyper
-http://www.broadinstitute.org/gsa/wiki/index.php/Local_realignment_around_indels
-http://www.broadinstitute.org/gsa/wiki/index.php/IndelGenotyper
-http://www.broadinstitute.org/gsa/wiki/index.php/VariantFiltrationWalker
 
 Variant Evaluation:
 
@@ -27,7 +25,8 @@ def gatk_genotyper(align_bam, ref_file, config, vrn_files):
     picard.run_fn("picard_index", align_bam)
     snp_file = _unified_genotyper(picard, align_bam, ref_file, config,
                                   vrn_files.dbsnp)
-    filter_snp = _variant_filtration(picard, snp_file, ref_file, vrn_files)
+    filter_snp = _variant_filtration(picard, snp_file, ref_file, vrn_files,
+                                     config)
     return filter_snp
 
 def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
@@ -43,6 +42,13 @@ def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
               "-I", align_bam,
               "-R", ref_file,
               "-o", out_file,
+              "--annotation", "QualByDepth",
+              "--annotation", "HaplotypeScore",
+              "--annotation", "MappingQualityRankSumTest",
+              "--annotation", "ReadPosRankSumTest",
+              "--annotation", "FisherStrand",
+              "--annotation", "RMSMappingQuality",
+              "--annotation", "DepthOfCoverage",
               "--genotype_likelihoods_model", "BOTH",
               "--standard_min_confidence_threshold_for_calling", confidence,
               "--standard_min_confidence_threshold_for_emitting", confidence,
@@ -56,32 +62,119 @@ def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
             picard.run_gatk(params)
     return out_file
 
-def _variant_filtration(picard, snp_file, ref_file, vrn_files):
-    """Filter out problematic SNP calls.
-
-    Recommended Broad hard filtering for deep coverage exomes:
-        QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || SB > -0.10
+def _variant_filtration(broad_runner, snp_file, ref_file, vrn_files, config):
+    """Filter variant calls using Variant Quality Score Recalibration.
     """
-    out_file = "%s-filter%s" % os.path.splitext(snp_file)
-    params = ["-T", "VariantFiltration",
+    snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
+                                              vrn_files, config)
+    indel_filter_file = _variant_filtration_indel(broad_runner, snp_filter_file,
+                                                  ref_file, vrn_files, config)
+    return indel_filter_file
+
+def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
+                         tranch_file, filter_type):
+    """Apply recalibration details, returning filtered VCF file.
+    """
+    base, ext = os.path.splitext(snp_file)
+    out_file = "{base}-{filter}filter{ext}".format(base=base, ext=ext,
+                                                   filter=filter_type)
+    params = ["-T", "ApplyRecalibration",
               "-R", ref_file,
-              "-o", out_file,
-              "--variant", snp_file,
-              "--filterName", "QUALFilter",
-              "--filterExpression", "QUAL <= 50.0",
-              "--filterName", "QDFilter",
-              "--filterExpression", "QD < 5.0",
-              "--filterName", "ABFilter",
-              "--filterExpression", "AB > 0.75 && DP > 40",
-              "--filterName", "HRunFilter",
-              "--filterExpression", "HRun > 3.0",
-              "--filterName", "SBFilter",
-              "--filterExpression", "SB > -0.10",
-              "-l", "INFO",
-              ]
+              "--input", snp_file,
+              "--out", out_file,
+              "--tranches_file", tranch_file,
+              "--recal_file", recal_file,
+              "--mode", filter_type]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with file_transaction(out_file):
-            picard.run_gatk(params)
+            broad_runner.run_gatk(params)
+    return out_file
+
+def _shared_variant_filtration(filter_type, snp_file, ref_file, config):
+    """Share functionality for filtering variants.
+    """
+    cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
+    recal_file = "{base}.recal".format(base = os.path.splitext(snp_file)[0])
+    tranches_file = "{base}.tranches".format(base = os.path.splitext(snp_file)[0])
+    params = ["-T", "VariantRecalibrator",
+              "-R", ref_file,
+              "--input", snp_file,
+              "--recal_file", recal_file,
+              "--tranches_file", tranches_file,
+              "--mode", filter_type]
+    return params, recal_file, tranches_file, cov_interval
+
+def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
+                            config):
+    """Filter SNP variant calls using GATK best practice recommendations.
+    """
+    filter_type = "SNP"
+    params, recal_file, tranches_file, cov_interval = _shared_variant_filtration(
+        filter_type, snp_file, ref_file, config)
+    assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
+           "Need HapMap and 1000 genomes training files"
+    params.extend(
+        ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
+         vrn_files.train_hapmap,
+         "-resource:omni,VCF,known=false,training=true,truth=false,prior=12.0",
+         vrn_files.train_1000g_omni,
+         "-resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0",
+         vrn_files.dbsnp,
+          "-an", "QD",
+          "-an", "HaplotypeScore",
+          "-an", "MQRankSum",
+          "-an", "ReadPosRankSum",
+          "-an", "FS",
+          "-an", "MQ"])
+    if cov_interval == "exome":
+        params.extend(["--maxGaussians", "6"])
+    else:
+        params.extend(["-an", "DP"])
+    if not (os.path.exists(recal_file) and os.path.getsize(recal_file) > 0):
+        with file_transaction(recal_file, tranches_file):
+            broad_runner.run_gatk(params)
+    return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
+                                tranches_file, filter_type)
+
+def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
+                              config):
+    """Filter indel variant calls using GATK best practice recommendations.
+    """
+    filter_type = "INDEL"
+    params, recal_file, tranches_file, cov_interval = _shared_variant_filtration(
+        filter_type, snp_file, ref_file, config)
+    if cov_interval == "exome":
+        return _variant_filter_indel_exome(broad_runner, snp_file, ref_file)
+    else:
+        assert vrn_files.train_indels, \
+               "Need indel training file specified"
+        params.extend(
+            ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
+             vrn_files.train_indels,
+             "-an", "QD",
+             "-an", "FS",
+             "-an", "HaplotypeScore",
+             "-an", "ReadPosRankSum"])
+        if not (os.path.exists(recal_file) and os.path.getsize(recal_file) > 0):
+            with file_transaction(recal_file, tranches_file):
+                broad_runner.run_gatk(params)
+        return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
+                                    tranches_file, filter_type)
+
+def _variant_filter_indel_exome(broad_runner, snp_file, ref_file):
+    """Filter exome indels using standard VariantFiltration instead of recalibration.
+    """
+    out_file = "%s-filterINDEL%s" % os.path.splitext(snp_file)
+    params = ["-T", "VariantFiltration",
+              "-R", ref_file,
+              "--out", out_file,
+              "--variant", snp_file,
+              "--filterExpression", '"QD < 2.0 || ReadPosRankSum < -20.0 || '
+                                    'InbreedingCoeff < -0.8 || FS > 200.0"',
+              "--filterName", "GATKStandardIndel"]
+    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
+        with file_transaction(out_file):
+            broad_runner.run_gatk(params)
     return out_file
 
 # ## Variant evaluation

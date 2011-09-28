@@ -28,16 +28,16 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
     fastq1, fastq2 = combine_fastq_files(fastq_files, dirs["work"])
     log.info("Combining and preparing wig file %s" % str(sample_name))
     sort_bam = merge_bam_files(bam_files, dirs["work"], config)
-    (gatk_bam, vrn_file, effects_file) = ("", "", "")
+    (gatk_bam, vrn_file, effects_file) = (sort_bam, "", "")
     if config["algorithm"]["recalibrate"]:
         log.info("Recalibrating %s with GATK" % str(sample_name))
         gatk_bam = recalibrate_quality(sort_bam, fastq1, fastq2, sam_ref,
                                        dirs, config)
-        if config["algorithm"]["snpcall"]:
-            log.info("SNP genotyping %s with GATK" % str(sample_name))
-            vrn_file = run_genotyper(gatk_bam, sam_ref, config)
-            log.info("Calculating variation effects for %s" % str(sample_name))
-            effects_file = variation_effects(vrn_file, genome_build, config)
+    if config["algorithm"]["snpcall"]:
+        log.info("SNP genotyping %s with GATK" % str(sample_name))
+        vrn_file = run_genotyper(gatk_bam, sam_ref, config)
+        log.info("Calculating variation effects for %s" % str(sample_name))
+        effects_file = variation_effects(vrn_file, genome_build, config)
     if config["algorithm"].get("transcript_assemble", False):
         tx_file = assemble_transcripts(sort_bam, sam_ref, config)
     if sam_ref is not None:
