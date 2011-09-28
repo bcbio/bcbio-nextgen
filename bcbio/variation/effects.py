@@ -9,7 +9,7 @@ import subprocess
 
 from bcbio.utils import file_transaction
 
-# ## snpEff support
+# ## snpEff variant effects
 
 # remap Galaxy genome names to the ones used by snpEff. Not nice code.
 SNPEFF_GENOME_REMAP = {
@@ -20,32 +20,37 @@ SNPEFF_GENOME_REMAP = {
         "araTha_tair10": "athalianaTair10",
         }
 
-def snpeff_effects(snpeff_jar, vcf_in, genome, interval_file=None,
-                   java_memory=None):
+def snpeff_effects(vcf_in, genome, config):
     """Prepare tab-delimited file for variant effects using snpEff.
     """
+    interval_file = config["algorithm"].get("hybrid_target", None)
     if _vcf_has_items(vcf_in):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
             genome = SNPEFF_GENOME_REMAP[genome]
-            out_file = _run_snpeff(vcf_in, genome, snpeff_jar, se_interval,
-                                   java_memory)
+            vcf_file = _run_snpeff(vcf_in, genome, se_interval, "vcf", config)
+            effects_file = _run_snpeff(vcf_in, genome, se_interval, "txt", config)
         finally:
             for fname in [se_interval]:
                 if fname and os.path.exists(fname):
                     os.remove(fname)
-        return out_file
+        return vcf_file, effects_file
+    else:
+        return None, None
 
-def _run_snpeff(snp_in, genome, snpeff_jar, se_interval, java_memory):
+def _run_snpeff(snp_in, genome, se_interval, out_format, config):
+    snpeff_jar = os.path.join(config["program"]["snpEff"], "snpEff.jar")
+    java_memory = config["algorithm"].get("java_memory", None)
     snpeff_config = "%s.config" % os.path.splitext(snpeff_jar)[0]
-    out_file = "%s-effects.tsv" % (os.path.splitext(snp_in)[0])
+    ext = "vcf" if out_format == "vcf" else "tsv"
+    out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
     if not os.path.exists(out_file):
         cl = ["java"]
         if java_memory:
             cl += ["-Xmx%s" % java_memory]
         cl += ["-jar", snpeff_jar, "-1", "-i", "vcf", "-c", snpeff_config,
-              genome, snp_in]
+               "-o", out_format, genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
         print " ".join(cl)

@@ -9,6 +9,7 @@ from bcbio.variation.recalibrate import gatk_recalibrate
 from bcbio.variation.realign import gatk_realigner
 from bcbio.variation.genotype import gatk_genotyper, gatk_evaluate_variants
 from bcbio.variation.effects import snpeff_effects
+from bcbio.variation.annotation import annotate_effects
 
 # ## Recalibration
 
@@ -75,11 +76,8 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
 
 # ## Calculate variation effects
 
-def variation_effects(vrn_file, genome_build, config):
+def variation_effects(vrn_file, genome_file, genome_build, config):
     """Calculate effects of variations, associating them with transcripts.
     """
-    snpeff_jar = os.path.join(config["program"]["snpEff"], "snpEff.jar")
-    java_memory = config["algorithm"].get("java_memory", None)
-    return snpeff_effects(snpeff_jar, vrn_file, genome_build,
-                          config["algorithm"].get("hybrid_target", None),
-                          java_memory)
+    snpeff_vcf, snpeff_txt = snpeff_effects(vrn_file, genome_build, config)
+    return annotate_effects(vrn_file, snpeff_vcf, genome_file, config), snpeff_txt

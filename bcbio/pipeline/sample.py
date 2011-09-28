@@ -1,7 +1,7 @@
 """High level entry point for processing a sample.
 
 Samples may include multiple lanes, or barcoded subsections of lanes,
-that should be processed together.
+processed together.
 """
 import os
 import subprocess
@@ -37,7 +37,8 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
         log.info("SNP genotyping %s with GATK" % str(sample_name))
         vrn_file = run_genotyper(gatk_bam, sam_ref, config)
         log.info("Calculating variation effects for %s" % str(sample_name))
-        effects_file = variation_effects(vrn_file, genome_build, config)
+        annotated_vrn_file, effects_file = variation_effects(vrn_file, sam_ref,
+                                                             genome_build, config)
     if config["algorithm"].get("transcript_assemble", False):
         tx_file = assemble_transcripts(sort_bam, sam_ref, config)
     if sam_ref is not None:
@@ -45,7 +46,8 @@ def process_sample(sample_name, fastq_files, info, bam_files, dirs,
         generate_align_summary(sort_bam, fastq2 is not None, sam_ref,
                                sample_name, config, dirs)
     bam_to_wig(sort_bam, config, config_file)
-    return [sample_name, fastq_files, info, sort_bam, gatk_bam, vrn_file,
+    return [sample_name, fastq_files, info, sort_bam, gatk_bam,
+            annotated_vrn_file if annotated_vrn_file else vrn_file,
             effects_file]
 
 def bam_to_wig(bam_file, config, config_file):
