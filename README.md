@@ -258,8 +258,8 @@ to ease your development needs using the following script:
 * [Picard][3]
 * [bowtie][5] or [bwa][5b]
 * [FastQC][6]
-* [GATK][4] (only for variant calling)
-* [snpEff][16] (only for variant calling)
+* [GATK][4] (version 1.2; only for variant calling)
+* [snpEff][16] (version 2.0.2; only for variant calling)
 
 [3]: http://picard.sourceforge.net/
 [4]: http://www.broadinstitute.org/gsa/wiki/index.php/The_Genome_Analysis_Toolkit
@@ -276,8 +276,7 @@ to ease your development needs using the following script:
 ### Optional software for generating report graphs
 
 * R with ggplot2, plyr, sqldf libraries.
-* [rpy2][11]. Your R needs to be built with shared libraries
-  available: `./configure --enable-R-shlib`.
+* [rpy2][11]. Build R with shared libraries available: `./configure --enable-R-shlib`.
 
 ### Python modules installed with the package
 
