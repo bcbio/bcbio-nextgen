@@ -35,6 +35,7 @@ custom_algorithms:
   'SNP calling':
     aligner: bwa
     recalibrate: true
+    recalibration_plots: false
     snpcall: true
     coverage_depth: "low" # other options: high
     coverage_interval: "exome" # other options: genome

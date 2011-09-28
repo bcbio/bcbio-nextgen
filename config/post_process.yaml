@@ -28,11 +28,6 @@ algorithm:
   save_diskspace: true
 
 log_dir: log
-msg_process_tag: sqn_finished_process
-msg_store_tag: sqn_finished_store
-store_dir: /mad/store/clients/cscshared/solexadata
-store_user: cscshared
-store_host: bricklayer01.partners.org
 
 analysis:
   # Can specify a different remote host to initiate
@@ -58,6 +53,7 @@ custom_algorithms:
   'SNP calling':
     aligner: bwa
     recalibrate: true
+    recalibration_plots: false
     snpcall: true
     coverage_depth: "low" # other options: high
     coverage_interval: "exome" # other options: genome

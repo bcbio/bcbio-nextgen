@@ -18,7 +18,8 @@ def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref,
     """
     dbsnp_file = _configured_ref_file("dbsnp", config, sam_ref)
     recal_file = gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
-    _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config)
+    if config["algorithm"].get("recalibration_plots", False):
+        _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config)
     return recal_file
 
 def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
