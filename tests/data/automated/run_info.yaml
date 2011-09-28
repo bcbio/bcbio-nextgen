@@ -1,5 +1,7 @@
 - analysis: SNP calling
   description: Test1
+  algorithm:
+    coverage_interval: regional
   genome_build: hg19
   lane: 1
   multiplex:
@@ -53,6 +55,8 @@
     sequence: CTTGTA
 - analysis: SNP calling
   description: Test2
+  algorithm:
+    coverage_interval: regional
   genome_build: hg19
   lane: 2
   multiplex:
@@ -105,6 +109,8 @@
     name: BAC02
     sequence: CTTGTA
 - analysis: Standard
+  algorithm:
+    coverage_interval: regional
   description: Test3
   genome_build: hg19
   lane: 3

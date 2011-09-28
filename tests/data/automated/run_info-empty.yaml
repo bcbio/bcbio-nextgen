@@ -2,6 +2,8 @@ fc_date: 110221
 fc_name: 'FC withspace'
 details:
   - analysis: SNP calling
+    algorithm:
+      coverage_interval: regional
     description: Test1
     genome_build: hg19
     files: [1_110221_FC12345AAXX_fastq.txt]
@@ -56,6 +58,8 @@ details:
       name: BAC02
       sequence: CTTGTA
   - analysis: SNP calling
+    algorithm:
+      coverage_interval: regional
     description: Test2
     genome_build: hg19
     files: [2_110221_FC12345AAXX_fastq.txt]
@@ -110,6 +114,8 @@ details:
       name: BAC02
       sequence: CTTGTA
   - analysis: Standard
+    algorithm:
+      coverage_interval: regional
     description: Test3
     genome_build: hg19
     lane: 3
