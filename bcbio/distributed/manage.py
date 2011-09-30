@@ -11,13 +11,12 @@ other architectures as well.
 import time
 import math
 
-import bcbio.distributed
-
 def run_and_monitor(config, config_file, args, workers_needed=None,
                     task_module=None, queues=None):
     """Run a distributed analysis in s cluster environment, monitoring outputs.
     """
-    cluster = getattr(bcbio.distributed, config["distributed"]["cluster_platform"])
+    cp = config["distributed"]["cluster_platform"]
+    cluster = __import__("bcbio.distributed.{0}".format(cp), fromlist=[cp])
     jobids = []
     try:
         print "Starting manager"

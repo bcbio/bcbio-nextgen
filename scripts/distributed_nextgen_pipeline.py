@@ -21,7 +21,7 @@ def main(config_file, fc_dir, run_info_yaml=None):
     args = [config_file, fc_dir]
     if run_info_yaml:
         args.append(run_info_yaml)
-    run_and_monitor(config, config_file, workers_needed, args, task_module)
+    run_and_monitor(config, config_file, args, workers_needed, task_module)
 
 def _needed_workers(run_info):
     """Determine workers needed to run multiplex flowcells in parallel.
