@@ -7,12 +7,13 @@ import contextlib
 import itertools
 import functools
 import ConfigParser
-
 try:
     import multiprocessing
     from multiprocessing.pool import IMapIterator
 except ImportError:
     multiprocessing = None
+
+import yaml
 
 @contextlib.contextmanager
 def cpmap(cores=1):
@@ -173,3 +174,22 @@ def add_full_path(dirname, basedir=None):
     if not dirname.startswith("/"):
         dirname = os.path.join(basedir, dirname)
     return dirname
+
+# ## Dealing with configuration files
+
+def merge_config_files(fnames):
+    """Merge configuration files, preferring definitions in latter files.
+    """
+    def _load_yaml(fname):
+        with open(fname) as in_handle:
+            config = yaml.load(in_handle)
+        return config
+    out = _load_yaml(fnames[0])
+    for fname in fnames[1:]:
+        cur = _load_yaml(fname)
+        for k, v in cur.iteritems():
+            if out.has_key(k) and isinstance(out[k], dict):
+                out[k].update(v)
+            else:
+                out[k] = v
+    return out
