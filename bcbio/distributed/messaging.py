@@ -13,7 +13,26 @@ from mako.template import Template
 
 from bcbio import utils
 
-def runner(dirs, config, config_file, wait=True):
+def run_parallel(module, fn_name, items, dirs, config, config_file):
+    """Process a supplied function: single, multi-processor or distributed.
+    """
+    parallel = config["algorithm"]["num_cores"]
+    if str(parallel).lower() == "messaging":
+        task_module = "{base}.tasks".format(base=module)
+        runner_fn = runner(task_module, dirs, config, config_file)
+        return runner_fn(fn_name, items)
+    else:
+        out = []
+        fn = getattr(__import__("{base}.multitasks".format(base=module),
+                                fromlist=["multitasks"]),
+                     fn_name)
+        with utils.cpmap(int(parallel)) as cpmap:
+            for data in cpmap(fn, items):
+                if data:
+                    out.extend(data)
+        return out
+
+def runner(task_module, dirs, config, config_file, wait=True):
     """Run a set of tasks using Celery, waiting for results or asynchronously.
 
     Initialize with the configuration and directory information,
@@ -25,7 +44,6 @@ def runner(dirs, config, config_file, wait=True):
     can be remote or local but must have access to a shared filesystem. The
     function polls if wait is True, returning when all results are available.
     """
-    task_module = "bcbio.distributed.tasks"
     with create_celeryconfig(task_module, dirs, config, config_file):
         __import__(task_module)
         tasks = sys.modules[task_module]
@@ -59,8 +77,6 @@ CELERY_TASK_SERIALIZER = "json"
 CELERYD_CONCURRENCY = ${cores}
 CELERY_ACKS_LATE = False
 CELERYD_PREFETCH_MULTIPLIER = 1
-CELERY_ROUTES = {"bcbio.distributed.tasks.analyze_and_upload": {"queue": "toplevel"},
-                 "bcbio.distributed.tasks.long_term_storage" : {"queue": "storage"}}
 BCBIO_CONFIG_FILE = "${config_file}"
 """
 

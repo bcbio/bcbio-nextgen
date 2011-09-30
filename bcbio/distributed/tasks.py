@@ -9,7 +9,7 @@ from bcbio.pipeline import sample, lane, toplevel, storage
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
 
-@task(ignore_results=True)
+@task(ignore_results=True, queue="toplevel")
 def analyze_and_upload(*args):
     """Run full analysis and upload results to Galaxy instance.
 
@@ -20,7 +20,7 @@ def analyze_and_upload(*args):
     remote_info = args[0]
     toplevel.analyze_and_upload(remote_info, config_file)
 
-@task(ignore_results=True)
+@task(ignore_results=True, queue="storage")
 def long_term_storage(*args):
     config_file = celeryconfig.BCBIO_CONFIG_FILE
     remote_info = args[0]

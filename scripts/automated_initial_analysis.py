@@ -28,7 +28,7 @@ import yaml
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio import utils
 from bcbio.log import create_log_handler
-from bcbio.distributed import messaging
+from bcbio.distributed.messaging import run_parallel
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline import log
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
@@ -47,6 +47,7 @@ def main(config_file, fc_dir, run_info_yaml=None):
 def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     align_dir = os.path.join(work_dir, "alignments")
+    run_module = "bcbio.distributed"
 
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
@@ -58,47 +59,19 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
 
     # process each flowcell lane
     lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
-    lane_items = _run_parallel("process_lane", lanes, dirs, config, config_file)
-    align_items = _run_parallel("process_alignment", lane_items, dirs, config,
-                                config_file)
+    lane_items = run_parallel(run_module, "process_lane", lanes, dirs,
+                              config, config_file)
+    align_items = run_parallel(run_module, "process_alignment", lane_items, dirs,
+                               config, config_file)
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = \
                   organize_samples(dirs, fc_name, fc_date, run_items, align_items)
     samples = ((n, sample_fastq[n], sample_info[n], bam_files, dirs, config, config_file)
                for n, bam_files in sample_files)
-    sample_items = _run_parallel("process_sample", samples, dirs, config, config_file)
+    sample_items = run_parallel(run_module, "process_sample", samples, dirs,
+                                config, config_file)
 
     write_metrics(run_info, fc_name, fc_date, dirs)
-
-def _run_parallel(fn_name, items, dirs, config, config_file):
-    """Process a supplied function: single, multi-processor or distributed.
-    """
-    parallel = config["algorithm"]["num_cores"]
-    if str(parallel).lower() == "messaging":
-        runner = messaging.runner(dirs, config, config_file)
-        return runner(fn_name, items)
-    else:
-        out = []
-        fn = globals()[fn_name]
-        with utils.cpmap(int(parallel)) as cpmap:
-            for data in cpmap(fn, items):
-                if data:
-                    out.extend(data)
-        return out
-
-# ## multiprocessing ready entry points
-
-@utils.map_wrap
-def process_lane(*args):
-    return lane.process_lane(*args)
-
-@utils.map_wrap
-def process_alignment(*args):
-    return lane.process_alignment(*args)
-
-@utils.map_wrap
-def process_sample(*args):
-    return sample.process_sample(*args)
 
 # ## Utility functions
 
