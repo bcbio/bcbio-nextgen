@@ -17,7 +17,7 @@ def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref,
                         dirs, config):
     """Recalibrate alignments with GATK and provide pdf summary.
     """
-    dbsnp_file = _configured_ref_file("dbsnp", config, sam_ref)
+    dbsnp_file = configured_ref_file("dbsnp", config, sam_ref)
     recal_file = gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
     if config["algorithm"].get("recalibration_plots", False):
         _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config)
@@ -35,7 +35,7 @@ def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
     cl.append("--input_format=%s" % qual_opts[qual_format])
     subprocess.check_call(cl)
 
-def _configured_ref_file(name, config, sam_ref):
+def configured_ref_file(name, config, sam_ref):
     """Full path to a reference file specified in the configuration.
 
     Resolves non-absolute paths relative to the base genome reference directory.
@@ -50,7 +50,7 @@ def _configured_ref_file(name, config, sam_ref):
 def _configured_vrn_files(config, sam_ref):
     names = ["dbsnp", "train_hapmap", "train_1000g_omni", "train_indels"]
     VrnFiles = collections.namedtuple("VrnFiles", names)
-    return apply(VrnFiles, [_configured_ref_file(n, config, sam_ref) for n in names])
+    return apply(VrnFiles, [configured_ref_file(n, config, sam_ref) for n in names])
 
 # ## Genotyping
 
@@ -58,8 +58,7 @@ def run_genotyper(bam_file, ref_file, config):
     """Perform SNP genotyping and analysis using GATK.
     """
     vrn_files = _configured_vrn_files(config, ref_file)
-    realign_bam = gatk_realigner(bam_file, ref_file, config, vrn_files.dbsnp)
-    filter_snp = gatk_genotyper(realign_bam, ref_file, config, vrn_files)
+    filter_snp = gatk_genotyper(bam_file, ref_file, config, vrn_files)
     _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp
 

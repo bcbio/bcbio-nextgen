@@ -12,5 +12,17 @@ def process_alignment(*args):
     return lane.process_alignment(*args)
 
 @utils.map_wrap
+def merge_sample(*args):
+    return sample.merge_sample(*args)
+
+@utils.map_wrap
+def recalibrate_sample(*args):
+    return sample.recalibrate_sample(*args)
+
+@utils.map_wrap
+def realign_sample(*args):
+    return sample.realign_sample(*args)
+
+@utils.map_wrap
 def process_sample(*args):
     return sample.process_sample(*args)

@@ -13,24 +13,26 @@ from mako.template import Template
 
 from bcbio import utils
 
-def run_parallel(module, fn_name, items, dirs, config, config_file):
+def parallel_runner(module, dirs, config, config_file):
     """Process a supplied function: single, multi-processor or distributed.
     """
-    parallel = config["algorithm"]["num_cores"]
-    if str(parallel).lower() == "messaging":
-        task_module = "{base}.tasks".format(base=module)
-        runner_fn = runner(task_module, dirs, config, config_file)
-        return runner_fn(fn_name, items)
-    else:
-        out = []
-        fn = getattr(__import__("{base}.multitasks".format(base=module),
-                                fromlist=["multitasks"]),
-                     fn_name)
-        with utils.cpmap(int(parallel)) as cpmap:
-            for data in cpmap(fn, items):
-                if data:
-                    out.extend(data)
+    def run_parallel(fn_name, items):
+        parallel = config["algorithm"]["num_cores"]
+        if str(parallel).lower() == "messaging":
+            task_module = "{base}.tasks".format(base=module)
+            runner_fn = runner(task_module, dirs, config, config_file)
+            return runner_fn(fn_name, items)
+        else:
+            out = []
+            fn = getattr(__import__("{base}.multitasks".format(base=module),
+                                    fromlist=["multitasks"]),
+                         fn_name)
+            with utils.cpmap(int(parallel)) as cpmap:
+                for data in cpmap(fn, items):
+                    if data:
+                        out.extend(data)
         return out
+    return run_parallel
 
 def runner(task_module, dirs, config, config_file, wait=True):
     """Run a set of tasks using Celery, waiting for results or asynchronously.

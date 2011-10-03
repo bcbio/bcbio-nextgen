@@ -35,6 +35,18 @@ def process_alignment(*args):
     return lane.process_alignment(*args)
 
 @task
+def merge_sample(*args):
+    return sample.merge_sample(*args)
+
+@task
+def recalibrate_sample(*args):
+    return sample.recalibrate_sample(*args)
+
+@task
+def realign_sample(*args):
+    return sample.realign_sample(*args)
+
+@task
 def process_sample(*args):
     return sample.process_sample(*args)
 

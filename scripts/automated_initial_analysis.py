@@ -28,7 +28,7 @@ import yaml
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio import utils
 from bcbio.log import create_log_handler
-from bcbio.distributed.messaging import run_parallel
+from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline import log
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
@@ -48,28 +48,28 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
     align_dir = os.path.join(work_dir, "alignments")
     run_module = "bcbio.distributed"
-
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
-    run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)
+    run_parallel = parallel_runner(run_module, dirs, config, config_file)
 
     # process each flowcell lane
+    run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)
     lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
-    lane_items = run_parallel(run_module, "process_lane", lanes, dirs,
-                              config, config_file)
-    align_items = run_parallel(run_module, "process_alignment", lane_items, dirs,
-                               config, config_file)
+    lane_items = run_parallel("process_lane", lanes)
+    align_items = run_parallel("process_alignment", lane_items)
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = \
                   organize_samples(dirs, fc_name, fc_date, run_items, align_items)
     samples = ((n, sample_fastq[n], sample_info[n], bam_files, dirs, config, config_file)
                for n, bam_files in sample_files)
-    sample_items = run_parallel(run_module, "process_sample", samples, dirs,
-                                config, config_file)
+    merge_samples = run_parallel("merge_sample", samples)
+    recal_samples = run_parallel("recalibrate_sample", merge_samples)
+    realign_samples = run_parallel("realign_sample", recal_samples)
+    sample_items = run_parallel("process_sample", realign_samples)
 
     write_metrics(run_info, fc_name, fc_date, dirs)
 
