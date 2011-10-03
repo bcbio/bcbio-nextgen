@@ -51,6 +51,10 @@ def process_sample(*args):
     return sample.process_sample(*args)
 
 @task
+def combine_bam(*args):
+    return sample.combine_bam(*args)
+
+@task
 def test(x):
     print x
     time.sleep(5)

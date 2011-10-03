@@ -8,16 +8,21 @@ from bcbio import broad
 from bcbio.utils import curdir_tmpdir, file_transaction
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
-                           deep_coverage=False):
+                           region=None, out_file=None, deep_coverage=False):
     """Generate a list of interval regions for realignment around indels.
     """
-    out_file = "%s-realign.intervals" % os.path.splitext(align_bam)[0]
+    if out_file:
+        out_file = "%s.intervals" % os.path.splitext(out_file)[0]
+    else:
+        out_file = "%s-realign.intervals" % os.path.splitext(align_bam)[0]
     params = ["-T", "RealignerTargetCreator",
               "-I", align_bam,
               "-R", ref_file,
               "-o", out_file,
               "-l", "INFO",
               ]
+    if region:
+        params += ["-L", region]
     if dbsnp:
         params += ["--known", dbsnp]
     if deep_coverage:
@@ -29,10 +34,11 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
     return out_file
 
 def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
-                           deep_coverage=False):
+                           region=None, out_file=None, deep_coverage=False):
     """Perform realignment of BAM file in specified regions
     """
-    out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
+    if out_file is None:
+        out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
     params = ["-T", "IndelRealigner",
               "-I", align_bam,
               "-R", ref_file,
@@ -40,6 +46,8 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
               "-o", out_file,
               "-l", "INFO",
               ]
+    if region:
+        params += ["-L", region]
     if deep_coverage:
         params += ["--maxReadsInMemory", "300000",
                    "--maxReadsForRealignment", str(int(5e5)),
@@ -51,8 +59,8 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                 runner.run_gatk(params, tmp_dir)
     return out_file
 
-def gatk_realigner(align_bam, ref_file, config, dbsnp=None,
-                   deep_coverage=False):
+def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
+                   out_file=None, deep_coverage=False):
     """Realign a BAM file around indels using GATK, returning sorted BAM.
     """
     runner = broad.runner_from_config(config)
@@ -61,9 +69,11 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None,
     if not os.path.exists("%s.fai" % ref_file):
         pysam.faidx(ref_file)
     realign_target_file = gatk_realigner_targets(runner, align_bam,
-                                                 ref_file, dbsnp, deep_coverage)
+                                                 ref_file, dbsnp, region,
+                                                 out_file, deep_coverage)
     realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
-                                         realign_target_file, deep_coverage)
+                                         realign_target_file, region,
+                                         out_file, deep_coverage)
     # No longer required in recent GATK (> Feb 2011) -- now done on the fly
     # realign_sort_bam = runner.run_fn("picard_fixmate", realign_bam)
     return realign_bam

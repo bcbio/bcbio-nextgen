@@ -26,3 +26,7 @@ def realign_sample(*args):
 @utils.map_wrap
 def process_sample(*args):
     return sample.process_sample(*args)
+
+@utils.map_wrap
+def combine_bam(*args):
+    return sample.combine_bam(*args)

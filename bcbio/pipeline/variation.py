@@ -79,4 +79,6 @@ def variation_effects(vrn_file, genome_file, genome_build, config):
     """Calculate effects of variations, associating them with transcripts.
     """
     snpeff_vcf, snpeff_txt = snpeff_effects(vrn_file, genome_build, config)
-    return annotate_effects(vrn_file, snpeff_vcf, genome_file, config), snpeff_txt
+    annotated_vcf = annotate_effects(vrn_file, snpeff_vcf, genome_file, config) \
+                    if snpeff_vcf else None
+    return annotated_vcf, snpeff_vcf

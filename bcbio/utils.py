@@ -122,6 +122,11 @@ def tmpfile(*args, **kwargs):
         if os.path.exists(fname):
             os.remove(fname)
 
+def file_exists(fname):
+    """Check if a file exists and is non-empty.
+    """
+    return os.path.exists(fname) and os.path.getsize(fname) > 0
+
 @contextlib.contextmanager
 def file_transaction(*rollback_files):
     """Wrap file generation in a transaction, removing partial files on failure.
