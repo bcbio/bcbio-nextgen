@@ -3,13 +3,12 @@
 import os
 import json
 import subprocess
-import collections
 
 from bcbio.variation.recalibrate import gatk_recalibrate
-from bcbio.variation.realign import gatk_realigner
 from bcbio.variation.genotype import gatk_genotyper, gatk_evaluate_variants
 from bcbio.variation.effects import snpeff_effects
 from bcbio.variation.annotation import annotate_effects
+from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
 
 # ## Recalibration
 
@@ -35,29 +34,12 @@ def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
     cl.append("--input_format=%s" % qual_opts[qual_format])
     subprocess.check_call(cl)
 
-def configured_ref_file(name, config, sam_ref):
-    """Full path to a reference file specified in the configuration.
-
-    Resolves non-absolute paths relative to the base genome reference directory.
-    """
-    ref_file = config["algorithm"].get(name, None)
-    if ref_file:
-        if not os.path.isabs(ref_file):
-            base_dir = os.path.dirname(os.path.dirname(sam_ref))
-            ref_file = os.path.join(base_dir, ref_file)
-    return ref_file
-
-def _configured_vrn_files(config, sam_ref):
-    names = ["dbsnp", "train_hapmap", "train_1000g_omni", "train_indels"]
-    VrnFiles = collections.namedtuple("VrnFiles", names)
-    return apply(VrnFiles, [configured_ref_file(n, config, sam_ref) for n in names])
-
 # ## Genotyping
 
 def run_genotyper(bam_file, ref_file, config):
     """Perform SNP genotyping and analysis using GATK.
     """
-    vrn_files = _configured_vrn_files(config, ref_file)
+    vrn_files = configured_vrn_files(config, ref_file)
     filter_snp = gatk_genotyper(bam_file, ref_file, config, vrn_files)
     _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp
@@ -81,4 +63,4 @@ def variation_effects(vrn_file, genome_file, genome_build, config):
     snpeff_vcf, snpeff_txt = snpeff_effects(vrn_file, genome_build, config)
     annotated_vcf = annotate_effects(vrn_file, snpeff_vcf, genome_file, config) \
                     if snpeff_vcf else None
-    return annotated_vcf, snpeff_vcf
+    return annotated_vcf, snpeff_txt

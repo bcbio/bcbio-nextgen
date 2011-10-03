@@ -4,7 +4,8 @@ import time
 
 from celery.task import task
 
-from bcbio.pipeline import sample, lane, toplevel, storage
+from bcbio.pipeline import sample, lane, toplevel, storage, shared
+from bcbio.variation import realign
 
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
@@ -44,7 +45,7 @@ def recalibrate_sample(*args):
 
 @task
 def realign_sample(*args):
-    return sample.realign_sample(*args)
+    return realign.realign_sample(*args)
 
 @task
 def process_sample(*args):
@@ -52,7 +53,7 @@ def process_sample(*args):
 
 @task
 def combine_bam(*args):
-    return sample.combine_bam(*args)
+    return shared.combine_bam(*args)
 
 @task
 def test(x):

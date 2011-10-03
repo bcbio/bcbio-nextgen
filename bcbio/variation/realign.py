@@ -5,7 +5,13 @@ import os
 import pysam
 
 from bcbio import broad
+from bcbio.pipeline import log
 from bcbio.utils import curdir_tmpdir, file_transaction
+from bcbio.distributed.split import parallel_split_combine
+from bcbio.pipeline.shared import (split_bam_by_chromosome, ref_genome_info,
+                                   configured_ref_file)
+
+# ## Realignment runners with GATK specific arguments
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
                            region=None, out_file=None, deep_coverage=False):
@@ -77,3 +83,33 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     # No longer required in recent GATK (> Feb 2011) -- now done on the fly
     # realign_sort_bam = runner.run_fn("picard_fixmate", realign_bam)
     return realign_bam
+
+# ## High level functionality to run realignments in parallel
+
+def parallel_realign_sample(sample_info, parallel_fn, config):
+    """Realign samples, running in parallel over individual chromosomes.
+    """
+    if config["algorithm"]["snpcall"]:
+        file_index = 1
+        split_fn = split_bam_by_chromosome("-realign.bam", file_index)
+        return parallel_split_combine(sample_info, split_fn, parallel_fn,
+                                      "realign_sample", "combine_bam",
+                                      file_index, config)
+    else:
+        return sample_info
+
+def realign_sample(sample_name, bam_file, fastq1, fastq2, info,
+                   dirs, config, config_file,
+                   region=None, out_file=None):
+    """Realign sample BAM file at indels.
+    """
+    log.info("Realigning %s with GATK" % str(sample_name))
+    _, sam_ref = ref_genome_info(info, config, dirs)
+    if config["algorithm"]["snpcall"]:
+        realign_bam = gatk_realigner(bam_file, sam_ref, config,
+                                     configured_ref_file("dbsnp", config, sam_ref),
+                                     region, out_file)
+    else:
+        realign_bam = bam_file
+    return [(sample_name, realign_bam, fastq1, fastq2, info,
+             dirs, config, config_file)]

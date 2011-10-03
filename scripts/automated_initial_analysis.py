@@ -34,8 +34,7 @@ from bcbio.pipeline import log
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics
-from bcbio.pipeline import sample
-from bcbio.pipeline import lane
+from bcbio.variation.realign import parallel_realign_sample
 
 def main(config_file, fc_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
@@ -68,8 +67,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
                      for n, bam_files in sample_files)
     merge_samples = run_parallel("merge_sample", start_samples)
     recal_samples = run_parallel("recalibrate_sample", merge_samples)
-    realign_samples = sample.parallel_realign_sample(recal_samples, run_parallel, config)
-    #realign_samples = run_parallel("realign_sample", recal_samples)
+    realign_samples = parallel_realign_sample(recal_samples, run_parallel, config)
     sample_items = run_parallel("process_sample", realign_samples)
 
     write_metrics(run_info, fc_name, fc_date, dirs)

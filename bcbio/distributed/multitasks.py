@@ -1,7 +1,8 @@
 """Multiprocessing ready entry points for sample analysis.
 """
 from bcbio import utils
-from bcbio.pipeline import sample, lane
+from bcbio.pipeline import sample, lane, shared
+from bcbio.variation import realign
 
 @utils.map_wrap
 def process_lane(*args):
@@ -21,7 +22,7 @@ def recalibrate_sample(*args):
 
 @utils.map_wrap
 def realign_sample(*args):
-    return sample.realign_sample(*args)
+    return realign.realign_sample(*args)
 
 @utils.map_wrap
 def process_sample(*args):
@@ -29,4 +30,4 @@ def process_sample(*args):
 
 @utils.map_wrap
 def combine_bam(*args):
-    return sample.combine_bam(*args)
+    return shared.combine_bam(*args)
