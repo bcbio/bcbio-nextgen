@@ -55,7 +55,7 @@ custom_algorithms:
     recalibrate: true
     recalibration_plots: false
     snpcall: true
-    coverage_depth: "low" # other options: high
+    coverage_depth: "high" # other options: low
     coverage_interval: "exome" # other options: genome, regional
     dbsnp: variation/dbsnp_132.vcf
     train_hapmap: variation/hapmap_3.3.vcf

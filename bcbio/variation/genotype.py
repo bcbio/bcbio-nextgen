@@ -34,9 +34,9 @@ def gatk_genotyper(align_bam, ref_file, config, vrn_files):
 def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
     """Perform SNP genotyping on the given alignment file.
     """
-    coverage_depth = config["algorithm"].get("coverage_depth", "low").lower()
+    coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
     if coverage_depth in ["low"]:
-        confidence = "10.0"
+        confidence = "4.0"
     else:
         confidence = "30.0"
     out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
@@ -198,7 +198,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
               "-an", "FS",
               "-an", "MQ"])
         if cov_interval == "exome":
-            params.extend(["--maxGaussians", "6"])
+            params.extend(["--maxGaussians", "4", "--percentBad", "0.05"])
         else:
             params.extend(["-an", "DP"])
         if not (os.path.exists(recal_file) and os.path.getsize(recal_file) > 0):
