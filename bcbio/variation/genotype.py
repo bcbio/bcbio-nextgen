@@ -20,26 +20,26 @@ from bcbio.utils import file_transaction
 def gatk_genotyper(align_bam, ref_file, config, vrn_files):
     """Perform genotyping and filtration on a sorted aligned BAM file.
     """
-    picard = broad.runner_from_config(config)
-    picard.run_fn("picard_index_ref", ref_file)
-    picard.run_fn("picard_index", align_bam)
-    call_file = _unified_genotyper(picard, align_bam, ref_file, config,
-                                  vrn_files.dbsnp)
-    filter_snp = _variant_filtration(picard, call_file, ref_file, vrn_files,
-                                     config)
+    call_file = unified_genotyper(align_bam, ref_file, config, vrn_files.dbsnp)
+    filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
     return filter_snp
 
 # ## GATK Genotype calling
 
-def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
+def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
+                       region=None, out_file=None):
     """Perform SNP genotyping on the given alignment file.
     """
+    broad_runner = broad.runner_from_config(config)
+    broad_runner.run_fn("picard_index_ref", ref_file)
+    broad_runner.run_fn("picard_index", align_bam)
     coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
     if coverage_depth in ["low"]:
         confidence = "4.0"
     else:
         confidence = "30.0"
-    out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
+    if out_file is None:
+        out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
     params = ["-T", "UnifiedGenotyper",
               "-I", align_bam,
               "-R", ref_file,
@@ -59,9 +59,11 @@ def _unified_genotyper(picard, align_bam, ref_file, config, dbsnp=None):
               ]
     if dbsnp:
         params += ["--dbsnp", dbsnp]
+    if region:
+        params += ["-L", region]
     if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
         with file_transaction(out_file):
-            picard.run_gatk(params)
+            broad_runner.run_gatk(params)
     return out_file
 
 # ## Utility functions for dealing with VCF files
@@ -83,10 +85,10 @@ def split_snps_indels(broad_runner, orig_file, ref_file):
                 broad_runner.run_gatk(cur_params)
     return snp_file, indel_file
 
-def combine_variant_files(broad_runner, orig_files, ref_file):
+def combine_variant_files(orig_files, out_file, ref_file, config):
     """Combine multiple VCF files into a single output file.
     """
-    out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
+    broad_runner = broad.runner_from_config(config)
     params = ["-T", "CombineVariants",
               "-R", ref_file,
               "--out", out_file]
@@ -103,16 +105,18 @@ def combine_variant_files(broad_runner, orig_files, ref_file):
 
 # ## Variant filtration -- shared functionality
 
-def _variant_filtration(broad_runner, call_file, ref_file, vrn_files, config):
+def variant_filtration(call_file, ref_file, vrn_files, config):
     """Filter variant calls using Variant Quality Score Recalibration.
     """
+    broad_runner = broad.runner_from_config(config)
     snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)
     snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
                                               vrn_files, config)
     indel_filter_file = _variant_filtration_indel(broad_runner, indel_file,
                                                   ref_file, vrn_files, config)
-    return combine_variant_files(broad_runner, [snp_filter_file, indel_filter_file],
-                                 ref_file)
+    out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
+    return combine_variant_files([snp_filter_file, indel_filter_file],
+                                 out_file, ref_file, config)
 
 def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                          tranch_file, filter_type):

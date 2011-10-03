@@ -268,7 +268,7 @@ class PicardMetrics:
         """Find metrics for evaluating variant effectiveness.
         """
         base, ext = os.path.splitext(dup_bam)
-        mfiles = glob.glob("%s*eval_metrics" % base)
+        mfiles = glob.glob("%s*eval_metrics" % base.replace("-dup", "").replace("gatkrecal", ""))
         if len(mfiles) > 0:
             with open(mfiles[0]) as in_handle:
                 # pull the metrics as JSON from the last line in the file
