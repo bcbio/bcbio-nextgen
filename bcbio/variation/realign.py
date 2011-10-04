@@ -86,30 +86,27 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
 
 # ## High level functionality to run realignments in parallel
 
-def parallel_realign_sample(sample_info, parallel_fn, config):
+def parallel_realign_sample(sample_info, parallel_fn):
     """Realign samples, running in parallel over individual chromosomes.
     """
-    if config["algorithm"]["snpcall"]:
-        file_index = 1
-        split_fn = split_bam_by_chromosome("-realign.bam", file_index)
+    data = sample_info[0]
+    if data["config"]["algorithm"]["snpcall"]:
+        file_key = "work_bam"
+        split_fn = split_bam_by_chromosome("-realign.bam", file_key)
         return parallel_split_combine(sample_info, split_fn, parallel_fn,
                                       "realign_sample", "combine_bam",
-                                      file_index, [config])
+                                      file_key, ["config"])
     else:
         return sample_info
 
-def realign_sample(sample_name, bam_file, fastq1, fastq2, info,
-                   dirs, config, config_file,
-                   region=None, out_file=None):
+def realign_sample(data, region=None, out_file=None):
     """Realign sample BAM file at indels.
     """
-    log.info("Realigning %s with GATK" % str(sample_name))
-    _, sam_ref = ref_genome_info(info, config, dirs)
-    if config["algorithm"]["snpcall"]:
-        realign_bam = gatk_realigner(bam_file, sam_ref, config,
-                                     configured_ref_file("dbsnp", config, sam_ref),
-                                     region, out_file)
-    else:
-        realign_bam = bam_file
-    return [(sample_name, realign_bam, fastq1, fastq2, info,
-             dirs, config, config_file)]
+    log.info("Realigning %s with GATK" % str(data["name"]))
+    if data["config"]["algorithm"]["snpcall"]:
+        sam_ref = data["sam_ref"]
+        config = data["config"]
+        data["work_bam"] = gatk_realigner(data["work_bam"], sam_ref, config,
+                                          configured_ref_file("dbsnp", config, sam_ref),
+                                          region, out_file)
+    return [data]

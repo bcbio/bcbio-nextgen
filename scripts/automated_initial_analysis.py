@@ -63,12 +63,14 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     # process samples, potentially multiplexed across multiple lanes
     sample_files, sample_fastq, sample_info = \
                   organize_samples(dirs, fc_name, fc_date, run_items, align_items)
-    start_samples = ((n, sample_fastq[n], sample_info[n], bam_files, dirs, config, config_file)
-                     for n, bam_files in sample_files)
-    merge_samples = run_parallel("merge_sample", start_samples)
-    recal_samples = run_parallel("recalibrate_sample", merge_samples)
-    realign_samples = parallel_realign_sample(recal_samples, run_parallel, config)
-    sample_items = run_parallel("process_sample", realign_samples)
+    samples = ({"name": n, "info": sample_info[n],
+                "fastq_files": sample_fastq[n], "bam_files": bam_files,
+                "dirs": dirs, "config": config, "config_file": config_file}
+               for n, bam_files in sample_files)
+    samples = run_parallel("merge_sample", samples)
+    samples = run_parallel("recalibrate_sample", samples)
+    samples = parallel_realign_sample(samples, run_parallel)
+    samples = run_parallel("process_sample", samples)
 
     write_metrics(run_info, fc_name, fc_date, dirs)
 

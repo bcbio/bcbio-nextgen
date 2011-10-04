@@ -19,11 +19,11 @@ def combine_bam(in_files, out_file, config):
     runner.run_fn("picard_merge", in_files, out_file)
     return out_file
 
-def split_bam_by_chromosome(output_ext, file_index):
+def split_bam_by_chromosome(output_ext, file_key):
     """Provide targets to process a BAM file by individual chromosome regions.
     """
-    def _do_work(*args):
-        bam_file = args[file_index]
+    def _do_work(data):
+        bam_file = data[file_key]
         out_file = "{base}{ext}".format(base=os.path.splitext(bam_file)[0],
                                         ext=output_ext)
         part_info = []

@@ -15,7 +15,7 @@ from bcbio.utils import file_transaction, file_exists
 
 def parallel_split_combine(args, split_fn, parallel_fn,
                            parallel_name, combine_name,
-                           file_index, extra_combine_args):
+                           file_key, combine_arg_keys):
     """Split, run split items in parallel then combine to output file.
 
     split_fn: Split an input file into parts for processing. Returns
@@ -27,28 +27,28 @@ def parallel_split_combine(args, split_fn, parallel_fn,
     split_args, combine_map = _get_split_tasks(args, split_fn)
     split_output = parallel_fn(parallel_name, split_args)
     combine_args, final_args = _organize_output(split_output, combine_map,
-                                                file_index, extra_combine_args)
+                                                file_key, combine_arg_keys)
     parallel_fn(combine_name, combine_args)
     return final_args
 
-def _organize_output(output, combine_map, file_index, extra_combine_args):
+def _organize_output(output, combine_map, file_key, combine_arg_keys):
     """Combine output details for parallelization.
 
-    file_index points to the position in the output to find
-    the output file. We should be using dictionaries here
-    instead.
+    file_key is the key name of the output file used in merging. We extract
+    this file from the output data.
     """
     out_map = collections.defaultdict(list)
+    extra_args = {}
     final_args = []
-    for cur in output:
-        cur_file = cur[file_index]
+    for data in output:
+        cur_file = data[file_key]
         cur_out = combine_map[cur_file]
         out_map[cur_out].append(cur_file)
-        cur_arg = list(cur)
-        cur_arg[file_index] = cur_out
-        if cur_arg not in final_args:
-            final_args.append(cur_arg)
-    combine_args = [[v, k] + extra_combine_args for (k, v) in out_map.iteritems()]
+        extra_args[cur_out] = [data[x] for x in combine_arg_keys]
+        data[file_key] = cur_out
+        if data not in final_args:
+            final_args.append(data)
+    combine_args = [[v, k] + extra_args[k] for (k, v) in out_map.iteritems()]
     return combine_args, final_args
 
 def _get_split_tasks(args, split_fn):
@@ -56,10 +56,10 @@ def _get_split_tasks(args, split_fn):
     """
     split_args = []
     combine_map = {}
-    for cur_arg in args:
-        out_final, out_parts = split_fn(*cur_arg)
+    for data in args:
+        out_final, out_parts = split_fn(data)
         for parts in out_parts:
-            split_args.append(cur_arg + parts)
+            split_args.append([data] + list(parts))
         for part_file in [x[-1] for x in out_parts]:
             combine_map[part_file] = out_final
     return split_args, combine_map
