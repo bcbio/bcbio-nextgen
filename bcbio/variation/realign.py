@@ -94,7 +94,7 @@ def parallel_realign_sample(sample_info, parallel_fn, config):
         split_fn = split_bam_by_chromosome("-realign.bam", file_index)
         return parallel_split_combine(sample_info, split_fn, parallel_fn,
                                       "realign_sample", "combine_bam",
-                                      file_index, config)
+                                      file_index, [config])
     else:
         return sample_info
 

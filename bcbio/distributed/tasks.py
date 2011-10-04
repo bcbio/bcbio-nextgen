@@ -5,7 +5,7 @@ import time
 from celery.task import task
 
 from bcbio.pipeline import sample, lane, toplevel, storage, shared
-from bcbio.variation import realign
+from bcbio.variation import realign, genotype
 
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
@@ -54,6 +54,14 @@ def process_sample(*args):
 @task
 def combine_bam(*args):
     return shared.combine_bam(*args)
+
+@task
+def unified_genotyper_sample(*args):
+    return genotype.unified_genotyper_sample(*args)
+
+@task
+def combine_variant_files(*args):
+    return genotype.combine_variant_files(*args)
 
 @task
 def test(x):

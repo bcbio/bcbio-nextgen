@@ -15,7 +15,7 @@ from bcbio.utils import file_transaction, file_exists
 
 def parallel_split_combine(args, split_fn, parallel_fn,
                            parallel_name, combine_name,
-                           file_index, config):
+                           file_index, extra_combine_args):
     """Split, run split items in parallel then combine to output file.
 
     split_fn: Split an input file into parts for processing. Returns
@@ -27,16 +27,16 @@ def parallel_split_combine(args, split_fn, parallel_fn,
     split_args, combine_map = _get_split_tasks(args, split_fn)
     split_output = parallel_fn(parallel_name, split_args)
     combine_args, final_args = _organize_output(split_output, combine_map,
-                                                file_index, config)
+                                                file_index, extra_combine_args)
     parallel_fn(combine_name, combine_args)
     return final_args
 
-def _organize_output(output, combine_map, file_index, config):
+def _organize_output(output, combine_map, file_index, extra_combine_args):
     """Combine output details for parallelization.
 
-    file and config index point to the positions in the output to find
-    the output file and configuration information. We should be using
-    dictionaries here instead.
+    file_index points to the position in the output to find
+    the output file. We should be using dictionaries here
+    instead.
     """
     out_map = collections.defaultdict(list)
     final_args = []
@@ -48,7 +48,7 @@ def _organize_output(output, combine_map, file_index, config):
         cur_arg[file_index] = cur_out
         if cur_arg not in final_args:
             final_args.append(cur_arg)
-    combine_args = [(v, k, config) for (k, v) in out_map.iteritems()]
+    combine_args = [[v, k] + extra_combine_args for (k, v) in out_map.iteritems()]
     return combine_args, final_args
 
 def _get_split_tasks(args, split_fn):

@@ -114,9 +114,9 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
                                               vrn_files, config)
     indel_filter_file = _variant_filtration_indel(broad_runner, indel_file,
                                                   ref_file, vrn_files, config)
+    orig_files = [snp_filter_file, indel_filter_file]
     out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
-    return combine_variant_files([snp_filter_file, indel_filter_file],
-                                 out_file, ref_file, config)
+    return combine_variant_files(orig_files, out_file, ref_file, config)
 
 def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                          tranch_file, filter_type):
@@ -329,3 +329,24 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
         with file_transaction(out_file):
             picard.run_gatk(params)
     return out_file
+
+# ## High level functionality to run genotyping in parallel
+
+def parallel_unified_genotyper(sample_info, parallel_fn, config):
+    """Realign samples, running in parallel over individual chromosomes.
+    """
+    if config["algorithm"]["snpcall"]:
+        file_index = 1
+        split_fn = split_bam_by_chromosome("-variants.vcf", file_index)
+        return parallel_split_combine(sample_info, split_fn, parallel_fn,
+                                      "unified_genotyper_sample",
+                                      "combine_variant_files",
+                                      file_index, [config])
+    else:
+        return sample_info
+
+def unified_genotyper_sample(sample_name, bam_file, fastq1, fastq2, info,
+                             dirs, config, config_file,
+                             region=None, out_file=None):
+    log.info("Realigning %s with GATK" % str(sample_name))
+    _, sam_ref = ref_genome_info(info, config, dirs)
