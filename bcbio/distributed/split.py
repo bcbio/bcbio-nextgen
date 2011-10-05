@@ -58,12 +58,12 @@ def _get_split_tasks(args, split_fn, file_key):
     combine_map = {}
     finished_out = []
     for data in args:
-        out_final, out_parts = split_fn(data)
+        out_final, out_parts = split_fn(*data)
         for parts in out_parts:
             split_args.append(data + list(parts))
         for part_file in [x[-1] for x in out_parts]:
             combine_map[part_file] = out_final
         if len(out_parts) == 0:
-            data[file_key] = out_final
-            finished_out.append([data])
+            data[0][file_key] = out_final
+            finished_out.append(data)
     return split_args, combine_map, finished_out
