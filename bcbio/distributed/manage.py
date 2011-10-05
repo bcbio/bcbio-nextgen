@@ -25,6 +25,8 @@ def run_and_monitor(config, config_file, args, workers_needed=None,
         jobids.extend(start_workers(cluster, config, config_file, workers_needed,
                                     task_module, queues))
         jobids.append(manager_id)
+        while not(cluster.are_running(jobids)):
+            time.sleep(5)
         print "Running analysis"
         monitor_analysis(cluster, manager_id)
     finally:
@@ -50,10 +52,7 @@ def start_workers(cluster, config, config_file, workers_needed=None,
     if queues:
         program_cl.append("--queues={0}".format(queues))
     args = config["distributed"]["platform_args"].split()
-    jobids = [cluster.submit_job(args, program_cl) for _ in range(num_workers)]
-    while not(cluster.are_running(jobids)):
-        time.sleep(5)
-    return jobids
+    return [cluster.submit_job(args, program_cl) for _ in range(num_workers)]
 
 def start_analysis_manager(cluster, args, config):
     """Start analysis manager node on cluster.
