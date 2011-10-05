@@ -23,6 +23,8 @@ def split_bam_by_chromosome(output_ext, file_key):
     """Provide targets to process a BAM file by individual chromosome regions.
     """
     def _do_work(data):
+        assert len(data) == 1
+        data = data[0]
         bam_file = data[file_key]
         out_file = "{base}{ext}".format(base=os.path.splitext(bam_file)[0],
                                         ext=output_ext)

@@ -328,7 +328,7 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
 def parallel_unified_genotyper(sample_info, parallel_fn):
     """Realign samples, running in parallel over individual chromosomes.
     """
-    if len(sample_info) > 0 and sample_info[0]["config"]["algorithm"]["snpcall"]:
+    if len(sample_info) > 0 and sample_info[0][0]["config"]["algorithm"]["snpcall"]:
         split_fn = split_bam_by_chromosome("-variants.vcf", "work_bam")
         return parallel_split_combine(sample_info, split_fn, parallel_fn,
                                       "unified_genotyper_sample",

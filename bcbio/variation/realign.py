@@ -88,7 +88,7 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
 def parallel_realign_sample(sample_info, parallel_fn):
     """Realign samples, running in parallel over individual chromosomes.
     """
-    if len(sample_info) > 0 and sample_info[0]["config"]["algorithm"]["snpcall"]:
+    if len(sample_info) > 0 and sample_info[0][0]["config"]["algorithm"]["snpcall"]:
         file_key = "work_bam"
         split_fn = split_bam_by_chromosome("-realign.bam", file_key)
         return parallel_split_combine(sample_info, split_fn, parallel_fn,

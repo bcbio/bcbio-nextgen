@@ -43,8 +43,6 @@ def map_wrap(f):
     """
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], dict):
-            args = [args]
         return apply(f, *args, **kwargs)
     return wrapper
 

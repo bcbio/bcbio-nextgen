@@ -25,11 +25,11 @@ def merge_sample(data):
     genome_build, sam_ref = ref_genome_info(data["info"], config, data["dirs"])
     fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"])
     sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
-    return [{"name": data["name"],
-             "genome_build": genome_build, "sam_ref": sam_ref,
-             "work_bam": sort_bam, "fastq1": fastq1, "fastq2": fastq2,
-             "dirs": data["dirs"], "config": config,
-             "config_file": data["config_file"]}]
+    return [[{"name": data["name"],
+              "genome_build": genome_build, "sam_ref": sam_ref,
+              "work_bam": sort_bam, "fastq1": fastq1, "fastq2": fastq2,
+              "dirs": data["dirs"], "config": config,
+              "config_file": data["config_file"]}]]
 
 def recalibrate_sample(data):
     """Recalibrate quality values from aligned sample BAM file.
@@ -39,7 +39,7 @@ def recalibrate_sample(data):
         data["work_bam"] = recalibrate_quality(data["work_bam"], data["fastq1"],
                                                data["fastq2"], data["sam_ref"],
                                                data["dirs"], data["config"])
-    return [data]
+    return [[data]]
 
 # ## General processing
 
@@ -69,7 +69,7 @@ def process_sample(data):
     log.info("Preparing BigWig file %s" % str(data["name"]))
     data["bigwig_file"] = bam_to_wig(data["work_bam"], data["config"],
                                      data["config_file"])
-    return [data]
+    return [[data]]
 
 def bam_to_wig(bam_file, config, config_file):
     """Provide a BigWig coverage file of the sorted alignments.
