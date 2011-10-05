@@ -12,7 +12,7 @@ from bcbio.pipeline.lane import _update_config_w_custom
 from bcbio.pipeline import log
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.pipeline.qcsummary import generate_align_summary
-from bcbio.pipeline.variation import (recalibrate_quality, run_genotyper,
+from bcbio.pipeline.variation import (recalibrate_quality, finalize_genotyper,
                                       variation_effects)
 from bcbio.rnaseq.cufflinks import assemble_transcripts
 from bcbio.pipeline.shared import ref_genome_info
@@ -47,9 +47,9 @@ def process_sample(data):
     """Finalize processing for a sample, potentially multiplexed.
     """
     if data["config"]["algorithm"]["snpcall"]:
-        log.info("SNP genotyping %s with GATK" % str(data["name"]))
-        data["vrn_file"] = run_genotyper(data["work_bam"], data["sam_ref"],
-                                         data["config"])
+        log.info("Finalizing variant calls %s with GATK" % str(data["name"]))
+        data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["sam_ref"],
+                                              data["config"])
         log.info("Calculating variation effects for %s" % str(data["name"]))
         ann_vrn_file, effects_file = variation_effects(data["vrn_file"],
                                                        data["sam_ref"],
@@ -60,7 +60,7 @@ def process_sample(data):
             data["effects_file"] = effects_file
     if data["config"]["algorithm"].get("transcript_assemble", False):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
-                                               dart["config"])
+                                               data["config"])
     if data["sam_ref"] is not None:
         log.info("Generating summary files: %s" % str(data["name"]))
         generate_align_summary(data["work_bam"], data["fastq2"] is not None,

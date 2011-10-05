@@ -14,15 +14,8 @@ import itertools
 
 from bcbio import broad
 from bcbio.utils import file_transaction
-
-# ## SNP Genotyping
-
-def gatk_genotyper(align_bam, ref_file, config, vrn_files):
-    """Perform genotyping and filtration on a sorted aligned BAM file.
-    """
-    call_file = unified_genotyper(align_bam, ref_file, config, vrn_files.dbsnp)
-    filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
-    return filter_snp
+from bcbio.distributed.split import parallel_split_combine
+from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file)
 
 # ## GATK Genotype calling
 
@@ -332,21 +325,25 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
 
 # ## High level functionality to run genotyping in parallel
 
-def parallel_unified_genotyper(sample_info, parallel_fn, config):
+def parallel_unified_genotyper(sample_info, parallel_fn):
     """Realign samples, running in parallel over individual chromosomes.
     """
-    if config["algorithm"]["snpcall"]:
-        file_index = 1
-        split_fn = split_bam_by_chromosome("-variants.vcf", file_index)
+    if len(sample_info) > 0 and sample_info[0]["config"]["algorithm"]["snpcall"]:
+        split_fn = split_bam_by_chromosome("-variants.vcf", "work_bam")
         return parallel_split_combine(sample_info, split_fn, parallel_fn,
                                       "unified_genotyper_sample",
                                       "combine_variant_files",
-                                      file_index, [config])
+                                      "vrn_file", ["sam_ref", "config"])
     else:
         return sample_info
 
-def unified_genotyper_sample(sample_name, bam_file, fastq1, fastq2, info,
-                             dirs, config, config_file,
-                             region=None, out_file=None):
-    log.info("Realigning %s with GATK" % str(sample_name))
-    _, sam_ref = ref_genome_info(info, config, dirs)
+def unified_genotyper_sample(data, region=None, out_file=None):
+    """Parallel entry point for doing genotyping of a region of a sample.
+    """
+    if data["config"]["algorithm"]["snpcall"]:
+        sam_ref = data["sam_ref"]
+        config = data["config"]
+        data["vrn_file"] = unified_genotyper(data["work_bam"], sam_ref, config,
+                                             configured_ref_file("dbsnp", config, sam_ref),
+                                             region, out_file)
+    return [data]

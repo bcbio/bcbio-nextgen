@@ -5,7 +5,7 @@ import json
 import subprocess
 
 from bcbio.variation.recalibrate import gatk_recalibrate
-from bcbio.variation.genotype import gatk_genotyper, gatk_evaluate_variants
+from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
 from bcbio.variation.effects import snpeff_effects
 from bcbio.variation.annotation import annotate_effects
 from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
@@ -36,11 +36,11 @@ def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
 
 # ## Genotyping
 
-def run_genotyper(bam_file, ref_file, config):
+def finalize_genotyper(call_file, ref_file, config):
     """Perform SNP genotyping and analysis using GATK.
     """
     vrn_files = configured_vrn_files(config, ref_file)
-    filter_snp = gatk_genotyper(bam_file, ref_file, config, vrn_files)
+    filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
     _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp
 

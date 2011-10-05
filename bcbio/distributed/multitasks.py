@@ -2,7 +2,7 @@
 """
 from bcbio import utils
 from bcbio.pipeline import sample, lane, shared
-from bcbio.variation import realign
+from bcbio.variation import realign, genotype
 
 @utils.map_wrap
 def process_lane(*args):

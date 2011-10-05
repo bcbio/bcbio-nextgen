@@ -35,6 +35,7 @@ from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics
 from bcbio.variation.realign import parallel_realign_sample
+from bcbio.variation.genotype import parallel_unified_genotyper
 
 def main(config_file, fc_dir, run_info_yaml=None):
     with open(config_file) as in_handle:
@@ -70,6 +71,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     samples = run_parallel("merge_sample", samples)
     samples = run_parallel("recalibrate_sample", samples)
     samples = parallel_realign_sample(samples, run_parallel)
+    samples = parallel_unified_genotyper(samples, run_parallel)
     samples = run_parallel("process_sample", samples)
 
     write_metrics(run_info, fc_name, fc_date, dirs)

@@ -30,13 +30,13 @@ def split_bam_by_chromosome(output_ext, file_key):
         if not file_exists(out_file):
             work_dir = safe_makedir(
                 "{base}-split".format(base=os.path.splitext(out_file)[0]))
-        with closing(pysam.Samfile(bam_file, "rb")) as work_bam:
-            for chr_ref in work_bam.references:
-                chr_out = os.path.join(work_dir,
-                                       "{base}-{ref}{ext}".format(
-                                           base=os.path.splitext(os.path.basename(bam_file))[0],
-                                           ref=chr_ref, ext=output_ext))
-                part_info.append((chr_ref, chr_out))
+            with closing(pysam.Samfile(bam_file, "rb")) as work_bam:
+                for chr_ref in work_bam.references:
+                    chr_out = os.path.join(work_dir,
+                                           "{base}-{ref}{ext}".format(
+                                               base=os.path.splitext(os.path.basename(bam_file))[0],
+                                               ref=chr_ref, ext=output_ext))
+                    part_info.append((chr_ref, chr_out))
         return out_file, part_info
     return _do_work
 
