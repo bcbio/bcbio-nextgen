@@ -195,7 +195,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
               "-an", "FS",
               "-an", "MQ"])
         if cov_interval == "exome":
-            params.extend(["--maxGaussians", "4", "--percentBad", "0.05"])
+            params.extend(["--maxGaussians", "4", "--percentBadVariants", "0.05"])
         else:
             params.extend(["-an", "DP"])
         if not (os.path.exists(recal_file) and os.path.getsize(recal_file) > 0):
