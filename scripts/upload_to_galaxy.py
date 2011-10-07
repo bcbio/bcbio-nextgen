@@ -141,24 +141,26 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
                 yield (fname, os.path.basename(fname))
     for summary_file in base_glob("summary.pdf"):
         yield (summary_file, _name_with_ext(summary_file, "-summary.pdf"))
-    for bam_file in base_glob("sort-dup.bam"):
-        yield (bam_file, _name_with_ext(bam_file, ".bam"))
-    for wig_file in base_glob("sort.bigwig"):
+    for wig_file in base_glob(".bigwig"):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
-    # upload any recalibrated BAM files used for SNP calling
+    # upload BAM files, preferring recalibrated and realigned files
     found_recal = False
-    for bam_file in base_glob("gatkrecal-realign-sort.bam"):
+    for bam_file in base_glob("gatkrecal-realign-dup.bam"):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
         for bam_file in base_glob("gatkrecal.bam"):
+            found_recal = True
             yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
+    if not found_recal:
+        for bam_file in base_glob("sort-dup.bam"):
+            yield (bam_file, _name_with_ext(bam_file, ".bam"))
     # Genotype files produced by SNP calling
-    for snp_file in base_glob("snp-filter.vcf"):
-        yield (snp_file, _name_with_ext(bam_file, "-snp-filter.vcf"))
+    for snp_file in base_glob("variants-combined-annotated.vcf"):
+        yield (snp_file, _name_with_ext(bam_file, "-variants.vcf"))
     # Effect information on SNPs
-    for snp_file in base_glob("snp-filter-effects.tsv"):
-        yield (snp_file, _name_with_ext(bam_file, "-snp-effects.tsv"))
+    for snp_file in base_glob("variants-combined-effects.tsv"):
+        yield (snp_file, _name_with_ext(bam_file, "-variants-effects.tsv"))
 
 def _dir_glob(base, work_dir):
     # Allowed characters that can trail the base. This prevents picking up
