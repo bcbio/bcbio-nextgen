@@ -7,12 +7,13 @@ import contextlib
 import itertools
 import functools
 import ConfigParser
-
 try:
     import multiprocessing
     from multiprocessing.pool import IMapIterator
 except ImportError:
     multiprocessing = None
+
+import yaml
 
 @contextlib.contextmanager
 def cpmap(cores=1):
@@ -121,6 +122,11 @@ def tmpfile(*args, **kwargs):
         if os.path.exists(fname):
             os.remove(fname)
 
+def file_exists(fname):
+    """Check if a file exists and is non-empty.
+    """
+    return os.path.exists(fname) and os.path.getsize(fname) > 0
+
 @contextlib.contextmanager
 def file_transaction(*rollback_files):
     """Wrap file generation in a transaction, removing partial files on failure.
@@ -173,3 +179,22 @@ def add_full_path(dirname, basedir=None):
     if not dirname.startswith("/"):
         dirname = os.path.join(basedir, dirname)
     return dirname
+
+# ## Dealing with configuration files
+
+def merge_config_files(fnames):
+    """Merge configuration files, preferring definitions in latter files.
+    """
+    def _load_yaml(fname):
+        with open(fname) as in_handle:
+            config = yaml.load(in_handle)
+        return config
+    out = _load_yaml(fnames[0])
+    for fname in fnames[1:]:
+        cur = _load_yaml(fname)
+        for k, v in cur.iteritems():
+            if out.has_key(k) and isinstance(out[k], dict):
+                out[k].update(v)
+            else:
+                out[k] = v
+    return out

@@ -268,6 +268,8 @@ class PicardMetrics:
         """Find metrics for evaluating variant effectiveness.
         """
         base, ext = os.path.splitext(dup_bam)
+        end_strip = "-dup"
+        base = base[:-len(end_strip)] if base.endswith(end_strip) else base
         mfiles = glob.glob("%s*eval_metrics" % base)
         if len(mfiles) > 0:
             with open(mfiles[0]) as in_handle:

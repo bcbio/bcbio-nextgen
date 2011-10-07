@@ -80,7 +80,7 @@ def _gatk_count_covariates(picard, dup_align_bam, ref_file, platform,
               "--default_platform", platform,
               ]
     if snp_file:
-        params += ["-B:dbsnp,VCF", snp_file]
+        params += ["--knownSites", snp_file]
     if not os.path.exists(out_file):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_file):
