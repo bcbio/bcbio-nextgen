@@ -1,0 +1,28 @@
+# Describe various alternatives to specify run information
+---
+fc_name: tester
+fc_date: 1234
+details:
+  - lane: 1
+    name: "Standard multiplex"
+    genome_build: hg19
+    multiplex:
+      - barcode_id: 1
+        barcode_type: "Illumina"
+        name: "BC1"
+        sequence: ATCACG
+      - barcode_id: 2
+        barcode_type: "Illumina"
+        name: "BC2"
+        sequence: CGATGT
+  - lane: 1
+    name: "Single barcode"
+    genome_build: mm9
+    barcode:
+      barcode_id: 3
+      barcode_type: "Illumina"
+      sequence: TTAGGC
+  - lane: 2
+    name: "No barcode"
+    genome_build: hg18
+    

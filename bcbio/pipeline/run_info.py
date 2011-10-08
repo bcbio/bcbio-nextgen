@@ -5,8 +5,10 @@ next gen LIMS system or an on-file YAML configuration.
 """
 import os
 import time
+import copy
 import string
 import datetime
+import collections
 
 import yaml
 
@@ -26,6 +28,50 @@ def get_run_info(fc_dir, config, run_info_yaml):
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name, fc_date)
     return fc_name, fc_date, run_info
+    #return fc_name, fc_date, _organize_runs_by_lane(run_info)
+
+def _organize_runs_by_lane(run_info):
+    """Organize run information collapsing multiplexed items by lane.
+
+    Lane is the unique identifier in a run and used to combine multiple
+    run items on a fastq lane, separable by barcodes.
+    """
+    items = _normalize_barcodes(run_info["details"])
+    items_by_lane = collections.defaultdict(list)
+    for x in items:
+        items_by_lane[x["lane"]].append(x)
+    out = []
+    for grouped_items in [items_by_lane[x] for x in sorted(items_by_lane.keys())]:
+        bcs = [x["barcode_id"] for x in grouped_items]
+        assert len(bcs) == len(set(bcs)), "Duplicate barcodes {0} in lane {1}".format(
+            bcs, grouped_items[0]["lane"])
+        assert len(bcs) == 1 or None not in bcs, "Barcode and non-barcode in lane {0}".format(
+            grouped_items[0]["lane"])
+        out.append(grouped_items)
+    run_info["details"] = out
+    return run_info
+
+def _normalize_barcodes(items):
+    """Normalize barcode specification methods into individual items.
+    """
+    split_items = []
+    for item in items:
+        if item.has_key("multiplex"):
+            for multi in item["multiplex"]:
+                base = copy.deepcopy(item)
+                base["description"] += ": {0}".format(multi["name"])
+                del multi["name"]
+                del base["multiplex"]
+                base.update(multi)
+                split_items.append(base)
+        elif item.has_key("barcode"):
+            item.update(item["barcode"])
+            del item["barcode"]
+            split_items.append(item)
+        else:
+            item["barcode_id"] = None
+            split_items.append(item)
+    return split_items
 
 def _run_info_from_yaml(fc_dir, run_info_yaml):
     """Read run information from a passed YAML file.
@@ -51,8 +97,6 @@ def _run_info_from_yaml(fc_dir, run_info_yaml):
         if not item.has_key("description"):
             item["description"] = str(item["lane"])
         run_details.append(item)
-    lanes = [x["lane"] for x in run_details]
-    assert len(lanes) == len(set(lanes)), "Non unique lanes: %s" % lanes
     run_info = dict(details=run_details, run_id="")
     return fc_name, fc_date, run_info
 
