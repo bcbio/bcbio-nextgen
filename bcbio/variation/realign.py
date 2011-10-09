@@ -1,6 +1,8 @@
 """Perform realignment of BAM files around indels using the GATK toolkit.
 """
 import os
+import shutil
+from contextlib import closing
 
 import pysam
 
@@ -73,15 +75,33 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     runner.run_fn("picard_index_ref", ref_file)
     if not os.path.exists("%s.fai" % ref_file):
         pysam.faidx(ref_file)
-    realign_target_file = gatk_realigner_targets(runner, align_bam,
-                                                 ref_file, dbsnp, region,
-                                                 out_file, deep_coverage)
-    realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
-                                         realign_target_file, region,
-                                         out_file, deep_coverage)
-    # No longer required in recent GATK (> Feb 2011) -- now done on the fly
-    # realign_sort_bam = runner.run_fn("picard_fixmate", realign_bam)
-    return realign_bam
+    if _has_aligned_reads(align_bam, region):
+        realign_target_file = gatk_realigner_targets(runner, align_bam,
+                                                     ref_file, dbsnp, region,
+                                                     out_file, deep_coverage)
+        realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
+                                             realign_target_file, region,
+                                             out_file, deep_coverage)
+        # No longer required in recent GATK (> Feb 2011) -- now done on the fly
+        # realign_sort_bam = runner.run_fn("picard_fixmate", realign_bam)
+        return realign_bam
+    elif out_file:
+        shutil.copy(align_bam, out_file)
+        return out_file
+    else:
+        return align_bam
+
+def _has_aligned_reads(align_bam, region):
+    """Check if the aligned BAM file has any reads in the region.
+    """
+    has_items = True
+    if region is not None:
+        has_items = False
+        with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
+            for item in cur_bam.fetch(region):
+                has_items = True
+                break
+    return has_items
 
 # ## High level functionality to run realignments in parallel
 
