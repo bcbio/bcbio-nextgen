@@ -195,7 +195,8 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
     tab_out = []
     lane_info = []
     sample_info = []
-    for run in run_info["details"]:
+    for lane_xs in run_info["details"]:
+        run = lane_xs[0]
         tab_out.append([run["lane"], run.get("researcher", ""),
             run.get("name", ""), run.get("description")])
         base_info = dict(
@@ -207,17 +208,16 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
         cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
                                                   fc_date, analysis_dir)
         lane_info.append(cur_lane_info)
-        for barcode in run.get("multiplex", [None]):
+        for lane_x in lane_xs:
             cur_name = "%s_%s_%s" % (run["lane"], fc_date, fc_name)
-            if barcode:
-                cur_name = "%s_%s-" % (cur_name, barcode["barcode_id"])
+            if lane_x["barcode_id"]:
+                cur_name = "%s_%s-" % (cur_name, lane_x["barcode_id"])
             stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
             if stats:
                 cur_run_info = copy.deepcopy(base_info)
                 cur_run_info["metrics"] = stats
-                cur_run_info["barcode_id"] = str(barcode["barcode_id"]) if barcode else ""
-                cur_run_info["barcode_type"] = (str(barcode.get("barcode_type", ""))
-                                                if barcode else "")
+                cur_run_info["barcode_id"] = str(lane_x["barcode_id"])
+                cur_run_info["barcode_type"] = str(lane_x.get("barcode_type", ""))
                 sample_info.append(cur_run_info)
     return lane_info, sample_info, tab_out
 

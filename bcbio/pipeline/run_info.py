@@ -27,8 +27,7 @@ def get_run_info(fc_dir, config, run_info_yaml):
         fc_name, fc_date = get_flowcell_info(fc_dir)
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name, fc_date)
-    return fc_name, fc_date, run_info
-    #return fc_name, fc_date, _organize_runs_by_lane(run_info)
+    return fc_name, fc_date, _organize_runs_by_lane(run_info)
 
 def _organize_runs_by_lane(run_info):
     """Organize run information collapsing multiplexed items by lane.

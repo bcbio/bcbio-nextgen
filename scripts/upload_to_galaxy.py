@@ -71,29 +71,28 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
 def lims_run_details(run_info, base_folder_name):
     """Retrieve run infomation on a flow cell from Next Gen LIMS.
     """
-    for lane_info in (l for l in run_info["details"] if l.has_key("researcher")
-                      or not run_info["run_id"]):
-        if lane_info.get("private_libs", None) is not None:
-            libname, role = _get_galaxy_libname(lane_info["private_libs"],
-                                                lane_info["lab_association"],
-                                                lane_info["researcher"])
-        elif lane_info.has_key("galaxy_library"):
-            libname = lane_info["galaxy_library"]
-            role = lane_info["galaxy_role"]
-        else:
-            libname, role = (None, None)
-        for barcode in lane_info.get("multiplex", [None]):
-            remote_folder = str(lane_info.get("name", lane_info["lane"]))
-            description = ": ".join([lane_info[n] for n in ["researcher", "description"]
-                                     if lane_info.has_key(n)])
-            local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
-            if barcode:
-                remote_folder += "_%s" % barcode["barcode_id"]
-                description += ": %s" % barcode["name"]
-                local_name += "_%s" % barcode["barcode_id"]
-            yield (libname, role, lane_info["genome_build"],
-                    lane_info["lane"], barcode["barcode_id"] if barcode else "",
-                    remote_folder, description, local_name)
+    for lane_items in run_info["details"]:
+        for lane_info in lane_items:
+            if not run_info["run_id"] or lane_info.has_key("researcher"):
+                if lane_info.get("private_libs", None) is not None:
+                    libname, role = _get_galaxy_libname(lane_info["private_libs"],
+                                                        lane_info["lab_association"],
+                                                        lane_info["researcher"])
+                elif lane_info.has_key("galaxy_library"):
+                    libname = lane_info["galaxy_library"]
+                    role = lane_info["galaxy_role"]
+                else:
+                    libname, role = (None, None)
+                remote_folder = str(lane_info.get("name", lane_info["lane"]))
+                description = ": ".join([lane_info[n] for n in ["researcher", "description"]
+                                         if lane_info.has_key(n)])
+                local_name = "%s_%s" % (lane_info["lane"], base_folder_name)
+                if lane_info["barcode_id"] is not None:
+                    remote_folder += "_%s" % lane_info["barcode_id"]
+                    local_name += "_%s" % lane_info["barcode_id"]
+                yield (libname, role, lane_info["genome_build"],
+                       lane_info["lane"], lane_info["barcode_id"],
+                       remote_folder, description, local_name)
 
 def _get_galaxy_libname(private_libs, lab_association, researcher):
     """Retrieve most appropriate Galaxy data library.

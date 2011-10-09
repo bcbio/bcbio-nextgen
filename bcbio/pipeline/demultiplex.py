@@ -12,8 +12,8 @@ from bcbio.pipeline.fastq import get_fastq_files
 def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
     """Split a fastq file into multiplex pieces using barcode details.
     """
-    if not multiplex:
-        return [("", "", fastq1, fastq2)]
+    if len(multiplex) == 1 and multiplex[0]["barcode_id"] is None:
+        return {None: (fastq1, fastq2)}
     bc_dir = os.path.join(dirs["work"], "%s_barcode" % base_name)
     nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
     metrics_file = "%s_bc.metrics" % base_name
@@ -23,7 +23,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
                              (base_name, info["barcode_id"], x))
         bc_file1 = fq_fname("1")
         bc_file2 = fq_fname("2") if fastq2 else None
-        out_files.append((info["barcode_id"], info["name"], bc_file1, bc_file2))
+        out_files.append((info["barcode_id"], bc_file1, bc_file2))
     with utils.chdir(bc_dir):
         if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):
             tag_file = _make_tag_file(multiplex)
@@ -42,8 +42,11 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
                 cl.append("--noindel")
             with utils.file_transaction(out_files + [nomatch_file, metrics_file]):
                 subprocess.check_call(cl)
-    out_files = [(b, n, f1, f2) for (b, n, f1, f2) in out_files if os.path.exists(f1)]
-    return out_files
+    out = {}
+    for b, f1, f2 in out_files:
+        if os.path.exists(f1):
+            out[b] = (f1, f2)
+    return out
 
 def _make_tag_file(barcodes):
     tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
@@ -90,11 +93,11 @@ def add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     fastq_sizes = []
     tag_sizes = []
     has_barcodes = False
-    for item in run_items:
-        if item.get("multiplex", None):
+    for xs in run_items:
+        if len(xs) > 1:
             has_barcodes = True
-            tag_sizes.extend([len(b["sequence"]) for b in item["multiplex"]])
-            fastq_sizes.append(_get_fastq_size(item, fastq_dir, fc_name))
+            tag_sizes.extend([len(x["sequence"]) for x in xs])
+            fastq_sizes.append(_get_fastq_size(xs[0], fastq_dir, fc_name))
     if not has_barcodes: # nothing to worry about
         return run_items
     fastq_sizes = list(set(fastq_sizes))
@@ -106,23 +109,24 @@ def add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
 
     tag_sizes = list(set(tag_sizes))
     final_items = []
-    for item in run_items:
-        if item.get("multiplex", None) is None:
+    for xs in run_items:
+        if len(xs) == 1 and xs[0]["barcode_id"] is None:
             assert len(fastq_sizes) == 1, \
                    "Multi and non-multiplex reads with multiple sizes"
             expected_size = fastq_sizes[0]
             assert len(tag_sizes) == 1, \
                    "Expect identical tag size for a flowcell"
             tag_size = tag_sizes[0]
-            this_size = _get_fastq_size(item, fastq_dir, fc_name)
+            this_size = _get_fastq_size(xs[0], fastq_dir, fc_name)
             if this_size == expected_size:
-                item["multiplex"] = [{"name" : item.get("name", item["description"]),
-                                      "barcode_id": "trim",
-                                      "sequence" : "N" * tag_size}]
+                x = xs[0]
+                x["barcode_id"] = "trim"
+                x["sequence"] = "N" * tag_size
+                xs = [x]
             else:
                 assert this_size == expected_size - tag_size, \
                        "Unexpected non-multiplex sequence"
-        final_items.append(item)
+        final_items.append(xs)
     return final_items
 
 def _get_fastq_size(item, fastq_dir, fc_name):
