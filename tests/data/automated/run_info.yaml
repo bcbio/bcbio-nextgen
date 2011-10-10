@@ -53,6 +53,10 @@
     barcode_type: Illumina
     name: BAC02
     sequence: CTTGTA
+  - barcode_id: 'unmatched'
+    barcode_type: Illumina
+    name: Keep unmatched test
+    sequence: NNNNNN
 - analysis: SNP calling
   description: Test2
   algorithm:

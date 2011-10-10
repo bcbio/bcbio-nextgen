@@ -5,6 +5,7 @@ import copy
 import subprocess
 
 from Bio import SeqIO
+from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils
 from bcbio.pipeline.fastq import get_fastq_files
@@ -12,10 +13,11 @@ from bcbio.pipeline.fastq import get_fastq_files
 def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
     """Split a fastq file into multiplex pieces using barcode details.
     """
+    unmatched_str = "unmatched"
     if len(multiplex) == 1 and multiplex[0]["barcode_id"] is None:
         return {None: (fastq1, fastq2)}
     bc_dir = os.path.join(dirs["work"], "%s_barcode" % base_name)
-    nomatch_file = "%s_unmatched_1_fastq.txt" % base_name
+    nomatch_file = "%s_%s_1_fastq.txt" % (base_name, unmatched_str)
     metrics_file = "%s_bc.metrics" % base_name
     out_files = []
     for info in multiplex:
@@ -25,8 +27,8 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
         bc_file2 = fq_fname("2") if fastq2 else None
         out_files.append((info["barcode_id"], bc_file1, bc_file2))
     with utils.chdir(bc_dir):
+        tag_file, need_trim = _make_tag_file(multiplex, unmatched_str)
         if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):
-            tag_file = _make_tag_file(multiplex)
             cl = [config["program"]["barcode"], tag_file,
                   "%s_--b--_--r--_fastq.txt" % base_name,
                   fastq1]
@@ -45,16 +47,43 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
     out = {}
     for b, f1, f2 in out_files:
         if os.path.exists(f1):
+            if need_trim.has_key(b):
+                f1, f2 = _basic_trim(f1, f2, need_trim[b], config)
             out[b] = (f1, f2)
     return out
 
-def _make_tag_file(barcodes):
+def _basic_trim(f1, f2, trim_seq, config):
+    """Chop off barcodes on sequences based on expected sequence size.
+    """
+    work_file, is_first = ((f2, False) if int(config["algorithm"]["bc_read"]) == 2
+                           else (f1, True))
+    assert work_file is not None and os.path.exists(work_file)
+    trim_file = "%s_trim_fastq.txt" % work_file.split("_fastq.txt")[0]
+    if not os.path.exists(trim_file):
+        if int(config["algorithm"]["bc_position"] == 5):
+            def trimmer(x):
+                return x[len(trim_seq):]
+        else:
+            def trimmer(x):
+                return x[:-len(trim_seq)]
+        with open(trim_file, "w") as out_handle:
+            with open(work_file) as in_handle:
+                for name, seq, qual in FastqGeneralIterator(in_handle):
+                    out_handle.write("@%s\n%s\n+\n%s\n" % (name, trimmer(seq),
+                                                           trimmer(qual)))
+    return (trim_file, f2) if is_first else (f1, trim_file)
+
+def _make_tag_file(barcodes, unmatched_str):
+    need_trim = {}
     tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
     barcodes = _adjust_illumina_tags(barcodes)
     with open(tag_file, "w") as out_handle:
         for bc in barcodes:
-            out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
-    return tag_file
+            if bc["barcode_id"] != unmatched_str:
+                out_handle.write("%s %s\n" % (bc["barcode_id"], bc["sequence"]))
+            else:
+                need_trim[bc["barcode_id"]] = bc["sequence"]
+    return tag_file, need_trim
 
 def _adjust_illumina_tags(barcodes):
     """Handle additional trailing A in Illumina barocdes.
