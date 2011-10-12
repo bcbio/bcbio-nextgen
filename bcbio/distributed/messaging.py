@@ -16,7 +16,8 @@ from bcbio import utils
 def parallel_runner(module, dirs, config, config_file):
     """Process a supplied function: single, multi-processor or distributed.
     """
-    def run_parallel(fn_name, items):
+    def run_parallel(fn_name, items, metadata=None):
+        if metadata is None: metadata = {}
         parallel = config["algorithm"]["num_cores"]
         if str(parallel).lower() == "messaging":
             task_module = "{base}.tasks".format(base=module)

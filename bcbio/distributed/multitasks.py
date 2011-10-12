@@ -29,6 +29,10 @@ def process_sample(*args):
     return sample.process_sample(*args)
 
 @utils.map_wrap
+def generate_bigwig(*args):
+    return sample.generate_bigwig(*args)
+
+@utils.map_wrap
 def combine_bam(*args):
     return shared.combine_bam(*args)
 

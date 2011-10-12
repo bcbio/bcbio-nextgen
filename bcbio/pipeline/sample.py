@@ -66,18 +66,19 @@ def process_sample(data):
         generate_align_summary(data["work_bam"], data["fastq2"] is not None,
                                data["sam_ref"], data["name"],
                                data["config"], data["dirs"])
-    log.info("Preparing BigWig file %s" % str(data["name"]))
-    data["bigwig_file"] = bam_to_wig(data["work_bam"], data["config"],
-                                     data["config_file"])
     return [[data]]
 
-def bam_to_wig(bam_file, config, config_file):
+def generate_bigwig(data):
     """Provide a BigWig coverage file of the sorted alignments.
     """
+    log.info("Preparing BigWig file %s" % str(data["name"]))
+    bam_file = data["work_bam"]
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if not (os.path.exists(wig_file) and os.path.getsize(wig_file) > 0):
-        cl = [config["analysis"]["towig_script"], bam_file, config_file]
+        cl = [data["config"]["analysis"]["towig_script"], bam_file,
+              data["config_file"]]
         with file_transaction(wig_file):
             subprocess.check_call(cl)
-    return wig_file
+    data["bigwig_file"] = wig_file
+    return [[data]]
 

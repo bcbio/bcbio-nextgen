@@ -68,6 +68,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     samples = parallel_realign_sample(samples, run_parallel)
     samples = parallel_unified_genotyper(samples, run_parallel)
     samples = run_parallel("process_sample", samples)
+    samples = run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
 
     write_metrics(run_info, fc_name, fc_date, dirs)
 

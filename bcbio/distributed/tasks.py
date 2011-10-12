@@ -52,6 +52,10 @@ def process_sample(*args):
     return sample.process_sample(*args)
 
 @task
+def generate_bigwig(*args):
+    return sample.generate_bigwig(*args)
+
+@task
 def combine_bam(*args):
     return shared.combine_bam(*args)
 
