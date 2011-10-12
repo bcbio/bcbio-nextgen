@@ -50,3 +50,7 @@ custom_algorithms:
     transcripts_mask: rnaseq/ref-transcripts-mask.gtf
   'Minimal':
     aligner: ""
+# Requirements for memory-bound processes
+resources:
+  ucsc_bigwig:
+    memory: 36g

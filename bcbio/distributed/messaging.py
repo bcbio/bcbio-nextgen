@@ -8,6 +8,7 @@ import sys
 import time
 import contextlib
 import multiprocessing
+import subprocess
 
 from mako.template import Template
 
@@ -17,7 +18,6 @@ def parallel_runner(module, dirs, config, config_file):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):
-        if metadata is None: metadata = {}
         parallel = config["algorithm"]["num_cores"]
         if str(parallel).lower() == "messaging":
             task_module = "{base}.tasks".format(base=module)
@@ -28,7 +28,8 @@ def parallel_runner(module, dirs, config, config_file):
             fn = getattr(__import__("{base}.multitasks".format(base=module),
                                     fromlist=["multitasks"]),
                          fn_name)
-            with utils.cpmap(int(parallel)) as cpmap:
+            cores = cores_including_resources(int(parallel), metadata, config)
+            with utils.cpmap(cores) as cpmap:
                 for data in cpmap(fn, items):
                     if data:
                         out.extend(data)
@@ -64,6 +65,39 @@ def runner(task_module, dirs, config, config_file, wait=True):
                         out.extend(x)
             return out
         return _run
+
+# ## Handle memory bound processes on multi-core machines
+
+def cores_including_resources(cores, metadata, config):
+    """Retrieve number of cores to use, considering program resources.
+    """
+    if metadata is None: metadata = {}
+    required_memory = -1
+    for program in metadata.get("programs", []):
+        presources = config.get("resources", {}).get(program, {})
+        memory = presources.get("memory", None)
+        if memory:
+            if memory.endswith("g"):
+                memory = int(memory[:-1])
+            else:
+                raise NotImplementedError("Unpexpected units on memory: %s", memory)
+            if memory > required_memory:
+                required_memory = memory
+    if required_memory > 0:
+        cur_memory = _machine_memory()
+        cores = int(round(float(cur_memory) / float(required_memory)))
+    if cores < 1:
+        cores = 1
+    return cores
+
+def _machine_memory():
+    """Retrieve available memory on current machine using 'free.'
+    """
+    with contextlib.closing(subprocess.Popen(["free", "-g"],
+                                             stdout=subprocess.PIPE).stdout) as stdout:
+        for line in stdout:
+            if line.startswith("Mem:"):
+                return int(line.split()[1])
 
 # ## Utility functions
 
