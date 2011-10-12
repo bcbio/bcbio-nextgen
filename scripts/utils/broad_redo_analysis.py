@@ -22,11 +22,11 @@ from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
+from bcbio.pipeline.config_loader import load_config
 
 def main(config_file, fc_dir):
     work_dir = os.getcwd()
-    with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+    config = load_config(config_file)
     galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
     fc_name, fc_date = get_flowcell_info(fc_dir)
     run_info = galaxy_api.run_details(fc_name)

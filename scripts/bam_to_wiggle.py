@@ -39,9 +39,7 @@ from bcbio.pipeline.config_loader import load_config
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
          outfile=None, normalize=False, use_tempfile=False):
     if config_file:
-        import yaml
-        with open(config_file) as in_handle:
-            config = yaml.load(in_handle)
+        config = load_config(config_file)
     else:
         config = {"program": {"ucsc_bigwig" : "wigToBigWig"}}
     if outfile is None:

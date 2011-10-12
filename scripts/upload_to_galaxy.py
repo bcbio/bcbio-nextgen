@@ -29,10 +29,10 @@ from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio import utils
+from bcbio.pipeline.config_loader import load_config
 
 def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
-    with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+    config = load_config(config_file)
     galaxy_api = (GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
                   if config.has_key("galaxy_api_key") else None)
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)

@@ -38,14 +38,14 @@ from bcbio.log import create_log_handler
 from bcbio import utils
 from bcbio.distributed import messaging
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
+from bcbio.pipeline.config_loader import load_config
 
 LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
 log = logbook.Logger(LOG_NAME)
 
 def main(local_config, post_config_file=None,
          process_msg=True, store_msg=True, qseq=True, fastq=True):
-    with open(local_config) as in_handle:
-        config = yaml.load(in_handle)
+    config = load_config(local_config)
     log_handler = create_log_handler(config, LOG_NAME)
 
     with log_handler.applicationbound():
@@ -100,8 +100,7 @@ def analyze_locally(dname, post_config_file, fastq_dir):
     """Run analysis directly on the local machine.
     """
     assert fastq_dir is not None
-    with open(post_config_file) as in_handle:
-        post_config = yaml.load(in_handle)
+    post_config = load_config(post_config_file)
     run_yaml = os.path.join(dname, "run_info.yaml")
     analysis_dir = os.path.join(fastq_dir, os.pardir, "analysis")
     utils.safe_makedir(analysis_dir)

@@ -12,10 +12,10 @@ import yaml
 
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed.manage import run_and_monitor
+from bcbio.pipeline.config_loader import load_config
 
 def main(config_file, fc_dir, run_info_yaml=None, num_workers=None):
-    with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+    config = load_config(config_file)
     assert config["algorithm"]["num_cores"] == "messaging", \
            "Use this script only with configured 'messaging' parallelization"
     if num_workers is None:

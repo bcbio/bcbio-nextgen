@@ -20,10 +20,10 @@ from optparse import OptionParser
 import yaml
 
 from bcbio.galaxy.api import GalaxyApiAccess
+from bcbio.pipeline.config_loader import load_config
 
 def main(config_file, month, year):
-    with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+    config = load_config(config_file)
     galaxy_api = GalaxyApiAccess(config["galaxy_url"],
         config["galaxy_api_key"])
     smonth, syear = (month - 1, year) if month > 1 else (12, year - 1)
