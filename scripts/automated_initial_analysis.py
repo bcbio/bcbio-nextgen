@@ -36,10 +36,10 @@ from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_unified_genotyper
+from bcbio.pipeline.config_loader import load_config
 
 def main(config_file, fc_dir, run_info_yaml=None):
-    with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+    config = load_config(config_file)
     log_handler = create_log_handler(config, log.name)
     with log_handler.applicationbound():
         run_main(config, config_file, fc_dir, run_info_yaml)
