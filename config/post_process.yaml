@@ -60,7 +60,7 @@ custom_algorithms:
     dbsnp: variation/dbsnp_132.vcf
     train_hapmap: variation/hapmap_3.3.vcf
     train_1000g_omni: variation/1000G_omni2.5.vcf
-    train_indels: variation/indels_mills_devine.vcf
+    train_indels: variation/Mills_Devine_2hit.indels.vcf
   'RNA-seq':
     aligner: tophat
     transcript_assemble: true

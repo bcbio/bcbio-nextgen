@@ -308,7 +308,7 @@ relevant section from the `post_process.yaml` file is:
     dbsnp: variation/dbsnp_132.vcf
     train_hapmap: variation/hapmap_3.3.vcf
     train_1000g_omni: variation/1000G_omni2.5.vcf
-    train_indels: variation/indels_mills_devine.vcf
+    train_indels: variation/Mills_Devine_2hit.indels.vcf
 
 The dbSNP and training files are from the [GATK resource bundle][v1]. These are
 inputs into the training models for recalibration. The automated
