@@ -29,7 +29,7 @@ from bcbio.pipeline.config_loader import load_config
 def main(config_file, queues=None, task_module=None):
     if task_module is None:
         task_module = "bcbio.distributed.tasks"
-    config = config_loader(config_file)
+    config = load_config(config_file)
     with utils.curdir_tmpdir() as work_dir:
         dirs = {"work": work_dir, "config": os.path.dirname(config_file)}
         with create_celeryconfig(task_module, dirs, config,

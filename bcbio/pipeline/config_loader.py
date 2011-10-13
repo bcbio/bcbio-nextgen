@@ -35,9 +35,11 @@ def load_config(config_file):
         config = yaml.load(in_handle)
 
     for field, setting in config.items():
-        config[field] = expand_path(setting)
-    for sub_field, sub_setting in config[field].items():
-        config[field][sub_field] = expand_path(sub_setting)
+        if isinstance(config[field], dict):
+            for sub_field, sub_setting in config[field].items():
+                config[field][sub_field] = expand_path(sub_setting)
+        else:
+            config[field] = expand_path(setting)
     return config
 
 def expand_path(path):
