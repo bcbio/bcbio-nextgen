@@ -25,7 +25,7 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
             fastq1, fastq2 = bc_files[item["barcode_id"]]
             cur_lane_name = lane_name
             cur_lane_desc = item["description"]
-            if item.get("name", ""):
+            if item.get("name", "") and config["algorithm"].get("include_short_name", True):
                 cur_lane_desc = "%s : %s" % (item["name"], cur_lane_desc)
             if item["barcode_id"] is not None:
                 cur_lane_name += "_%s" % (item["barcode_id"])
