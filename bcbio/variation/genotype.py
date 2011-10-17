@@ -13,7 +13,8 @@ import os
 import itertools
 
 from bcbio import broad
-from bcbio.utils import file_transaction
+from bcbio.utils import file_exists
+from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file)
 
@@ -33,29 +34,29 @@ def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
         confidence = "30.0"
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
-    params = ["-T", "UnifiedGenotyper",
-              "-I", align_bam,
-              "-R", ref_file,
-              "-o", out_file,
-              "--annotation", "QualByDepth",
-              "--annotation", "HaplotypeScore",
-              "--annotation", "MappingQualityRankSumTest",
-              "--annotation", "ReadPosRankSumTest",
-              "--annotation", "FisherStrand",
-              "--annotation", "RMSMappingQuality",
-              "--annotation", "DepthOfCoverage",
-              "--genotype_likelihoods_model", "BOTH",
-              "--standard_min_confidence_threshold_for_calling", confidence,
-              "--standard_min_confidence_threshold_for_emitting", confidence,
-              "--min_mapping_quality_score", "20",
-              "-l", "INFO",
-              ]
-    if dbsnp:
-        params += ["--dbsnp", dbsnp]
-    if region:
-        params += ["-L", region]
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        with file_transaction(out_file):
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "UnifiedGenotyper",
+                      "-I", align_bam,
+                      "-R", ref_file,
+                      "-o", tx_out_file,
+                      "--annotation", "QualByDepth",
+                      "--annotation", "HaplotypeScore",
+                      "--annotation", "MappingQualityRankSumTest",
+                      "--annotation", "ReadPosRankSumTest",
+                      "--annotation", "FisherStrand",
+                      "--annotation", "RMSMappingQuality",
+                      "--annotation", "DepthOfCoverage",
+                      "--genotype_likelihoods_model", "BOTH",
+                      "--standard_min_confidence_threshold_for_calling", confidence,
+                      "--standard_min_confidence_threshold_for_emitting", confidence,
+                      "--min_mapping_quality_score", "20",
+                      "-l", "INFO",
+                      ]
+            if dbsnp:
+                params += ["--dbsnp", dbsnp]
+            if region:
+                params += ["-L", region]
             broad_runner.run_gatk(params)
     return out_file
 
@@ -71,10 +72,10 @@ def split_snps_indels(broad_runner, orig_file, ref_file):
               "-R", ref_file,
               "--variant", orig_file]
     for out_file, select_type in [(snp_file, "SNP"), (indel_file, "INDEL")]:
-        if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-            cur_params = params + ["--out", out_file,
-                                   "--selectTypeToInclude", select_type]
-            with file_transaction(out_file):
+        if not file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                cur_params = params + ["--out", tx_out_file,
+                                       "--selectTypeToInclude", select_type]
                 broad_runner.run_gatk(cur_params)
     return snp_file, indel_file
 
@@ -82,17 +83,17 @@ def combine_variant_files(orig_files, out_file, ref_file, config):
     """Combine multiple VCF files into a single output file.
     """
     broad_runner = broad.runner_from_config(config)
-    params = ["-T", "CombineVariants",
-              "-R", ref_file,
-              "--out", out_file]
-    priority_order = []
-    for orig_file in orig_files:
-        name = os.path.splitext(os.path.basename(orig_file))[0]
-        params.extend(["--variant:{name}".format(name=name), orig_file])
-        priority_order.append(name)
-    params.extend(["--rod_priority_list", ",".join(priority_order)])
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        with file_transaction(out_file):
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "CombineVariants",
+                      "-R", ref_file,
+                      "--out", tx_out_file]
+            priority_order = []
+            for orig_file in orig_files:
+                name = os.path.splitext(os.path.basename(orig_file))[0]
+                params.extend(["--variant:{name}".format(name=name), orig_file])
+                priority_order.append(name)
+            params.extend(["--rod_priority_list", ",".join(priority_order)])
             broad_runner.run_gatk(params)
     return out_file
 
@@ -118,15 +119,15 @@ def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
     base, ext = os.path.splitext(snp_file)
     out_file = "{base}-{filter}filter{ext}".format(base=base, ext=ext,
                                                    filter=filter_type)
-    params = ["-T", "ApplyRecalibration",
-              "-R", ref_file,
-              "--input", snp_file,
-              "--out", out_file,
-              "--tranches_file", tranch_file,
-              "--recal_file", recal_file,
-              "--mode", filter_type]
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        with file_transaction(out_file):
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "ApplyRecalibration",
+                      "-R", ref_file,
+                      "--input", snp_file,
+                      "--out", tx_out_file,
+                      "--tranches_file", tranch_file,
+                      "--recal_file", recal_file,
+                      "--mode", filter_type]
             broad_runner.run_gatk(params)
     return out_file
 
@@ -138,8 +139,6 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file):
     params = ["-T", "VariantRecalibrator",
               "-R", ref_file,
               "--input", snp_file,
-              "--recal_file", recal_file,
-              "--tranches_file", tranches_file,
               "--mode", filter_type]
     return params, recal_file, tranches_file
 
@@ -153,15 +152,15 @@ def _variant_filtration_no_recal(broad_runner, snp_file, ref_file, filter_type,
     base, ext = os.path.splitext(snp_file)
     out_file = "{base}-filter{ftype}{ext}".format(base=base, ext=ext,
                                                   ftype=filter_type)
-    params = ["-T", "VariantFiltration",
-              "-R", ref_file,
-              "--out", out_file,
-              "--variant", snp_file]
-    for exp in expressions:
-        params.extend(["--filterName", "GATKStandard{e}".format(e=exp.split()[0]),
-                       "--filterExpression", exp])
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        with file_transaction(out_file):
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "VariantFiltration",
+                      "-R", ref_file,
+                      "--out", tx_out_file,
+                      "--variant", snp_file]
+            for exp in expressions:
+                params.extend(["--filterName", "GATKStandard{e}".format(e=exp.split()[0]),
+                               "--filterExpression", exp])
             broad_runner.run_gatk(params)
     return out_file
 
@@ -198,8 +197,10 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
             params.extend(["--maxGaussians", "4", "--percentBadVariants", "0.05"])
         else:
             params.extend(["-an", "DP"])
-        if not (os.path.exists(recal_file) and os.path.getsize(recal_file) > 0):
-            with file_transaction(recal_file, tranches_file):
+        if not file_exists(recal_file):
+            with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
+                params.extend(["--recal_file", tx_recal,
+                               "--tranches_file", tx_tranches])
                 broad_runner.run_gatk(params)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
@@ -227,8 +228,10 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
              "-an", "FS",
              "-an", "HaplotypeScore",
              "-an", "ReadPosRankSum"])
-        if not (os.path.exists(recal_file) and os.path.getsize(recal_file) > 0):
-            with file_transaction(recal_file, tranches_file):
+        if not file_exists(recal_file):
+            with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
+                params.extend(["--recal_file", tx_recal,
+                               "--tranches_file", tx_tranches])
                 broad_runner.run_gatk(params)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
@@ -308,18 +311,18 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
     """Evaluate variants in comparison with dbSNP reference.
     """
     out_file = "%s.eval" % os.path.splitext(vcf_in)[0]
-    params = ["-T", "VariantEval",
-              "-R", ref_file,
-              "--eval", vcf_in,
-              "--dbsnp", dbsnp,
-              "-ST", "Filter",
-              "-o", out_file,
-              "-l", "INFO"
-              ]
-    if target_intervals:
-        params.extend(["-L", target_intervals])
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        with file_transaction(out_file):
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "VariantEval",
+                      "-R", ref_file,
+                      "--eval", vcf_in,
+                      "--dbsnp", dbsnp,
+                      "-ST", "Filter",
+                      "-o", tx_out_file,
+                      "-l", "INFO"
+                      ]
+            if target_intervals:
+                params.extend(["-L", target_intervals])
             picard.run_gatk(params)
     return out_file
 

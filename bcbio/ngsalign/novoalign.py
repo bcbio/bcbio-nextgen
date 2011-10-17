@@ -3,7 +3,8 @@
 import os
 import subprocess
 
-from bcbio.utils import (memoize_outfile, file_transaction)
+from bcbio.utils import (memoize_outfile, file_exists)
+from bcbio.distributed.transaction import file_transaction
 
 @memoize_outfile(".ndx")
 def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
@@ -30,14 +31,14 @@ def _get_base_filename(fname):
 
 def align(out_dir, ref_index, fastq1, fastq2=None, qual_format=None):
     out_file = os.path.join(out_dir, "%s.sam" % _get_base_filename(fastq1))
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         cl = ["novoalign", "-o", "SAM", "-r", "None", "-d", ref_index, "-f", fastq1]
         if fastq2:
             cl.append(fastq2)
         if qual_format:
             cl += ["-F", qual_format]
         print " ".join(cl)
-        with file_transaction(out_file):
-            with open(out_file, "w") as out_handle:
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
                 subprocess.check_call(cl, stdout=out_handle)
     return out_file

@@ -3,7 +3,8 @@
 import os
 import subprocess
 
-from bcbio.utils import file_transaction
+from bcbio.utils import file_exists
+from bcbio.distributed.transaction import file_transaction
 
 galaxy_location_file = "bwa_index.loc"
 
@@ -14,13 +15,13 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     sai2_file = (os.path.join(align_dir, "%s_2.sai" % out_base)
                  if pair_file else None)
     sam_file = os.path.join(align_dir, "%s.sam" % out_base)
-    if not os.path.exists(sam_file):
-        if not os.path.exists(sai1_file):
-            with file_transaction(sai1_file):
-                _run_bwa_align(fastq_file, ref_file, sai1_file, config)
-        if sai2_file and not os.path.exists(sai2_file):
-            with file_transaction(sai2_file):
-                _run_bwa_align(pair_file, ref_file, sai2_file, config)
+    if not file_exists(sam_file):
+        if not file_exists(sai1_file):
+            with file_transaction(sai1_file) as tx_sai1_file:
+                _run_bwa_align(fastq_file, ref_file, tx_sai1_file, config)
+        if sai2_file and not file_exists(sai2_file):
+            with file_transaction(sai2_file) as tx_sai2_file:
+                _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
         align_type = "sampe" if sai2_file else "samse"
         sam_cl = [config["program"]["bwa"], align_type, ref_file, sai1_file]
         if sai2_file:
@@ -28,8 +29,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         sam_cl.append(fastq_file)
         if sai2_file:
             sam_cl.append(pair_file)
-        with file_transaction(sam_file):
-            with open(sam_file, "w") as out_handle:
+        with file_transaction(sam_file) as tx_sam_file:
+            with open(tx_sam_file, "w") as out_handle:
                 subprocess.check_call(sam_cl, stdout=out_handle)
     return sam_file
 

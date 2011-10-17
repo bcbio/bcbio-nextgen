@@ -8,7 +8,8 @@ import pysam
 
 from bcbio import broad
 from bcbio.pipeline import log
-from bcbio.utils import curdir_tmpdir, file_transaction
+from bcbio.utils import curdir_tmpdir, file_exists
+from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file)
 
@@ -22,21 +23,21 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
         out_file = "%s.intervals" % os.path.splitext(out_file)[0]
     else:
         out_file = "%s-realign.intervals" % os.path.splitext(align_bam)[0]
-    params = ["-T", "RealignerTargetCreator",
-              "-I", align_bam,
-              "-R", ref_file,
-              "-o", out_file,
-              "-l", "INFO",
-              ]
-    if region:
-        params += ["-L", region]
-    if dbsnp:
-        params += ["--known", dbsnp]
-    if deep_coverage:
-        params += ["--mismatchFraction", "0.30",
-                   "--maxIntervalSize", "650"]
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
-        with file_transaction(out_file):
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "RealignerTargetCreator",
+                      "-I", align_bam,
+                      "-R", ref_file,
+                      "-o", tx_out_file,
+                      "-l", "INFO",
+                      ]
+            if region:
+                params += ["-L", region]
+            if dbsnp:
+                params += ["--known", dbsnp]
+            if deep_coverage:
+                params += ["--mismatchFraction", "0.30",
+                           "--maxIntervalSize", "650"]
             runner.run_gatk(params)
     return out_file
 
@@ -46,23 +47,23 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
     """
     if out_file is None:
         out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
-    params = ["-T", "IndelRealigner",
-              "-I", align_bam,
-              "-R", ref_file,
-              "-targetIntervals", intervals,
-              "-o", out_file,
-              "-l", "INFO",
-              ]
-    if region:
-        params += ["-L", region]
-    if deep_coverage:
-        params += ["--maxReadsInMemory", "300000",
-                   "--maxReadsForRealignment", str(int(5e5)),
-                   "--maxReadsForConsensuses", "500",
-                   "--maxConsensuses", "100"]
-    if not (os.path.exists(out_file) and os.path.getsize(out_file) > 0):
+    if not file_exists(out_file):
         with curdir_tmpdir() as tmp_dir:
-            with file_transaction(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                params = ["-T", "IndelRealigner",
+                          "-I", align_bam,
+                          "-R", ref_file,
+                          "-targetIntervals", intervals,
+                          "-o", tx_out_file,
+                          "-l", "INFO",
+                          ]
+                if region:
+                    params += ["-L", region]
+                if deep_coverage:
+                    params += ["--maxReadsInMemory", "300000",
+                               "--maxReadsForRealignment", str(int(5e5)),
+                               "--maxReadsForConsensuses", "500",
+                               "--maxConsensuses", "100"]
                 runner.run_gatk(params, tmp_dir)
     return out_file
 

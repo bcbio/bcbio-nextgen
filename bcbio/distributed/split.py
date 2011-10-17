@@ -11,8 +11,6 @@ splitting specific code.
 import os
 import collections
 
-from bcbio.utils import file_transaction, file_exists
-
 def parallel_split_combine(args, split_fn, parallel_fn,
                            parallel_name, combine_name,
                            file_key, combine_arg_keys):

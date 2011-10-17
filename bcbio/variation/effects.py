@@ -7,7 +7,8 @@ import os
 import csv
 import subprocess
 
-from bcbio.utils import file_transaction
+from bcbio.utils import file_exists
+from bcbio.distributed.transaction import file_transaction
 
 # ## snpEff variant effects
 
@@ -45,7 +46,7 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
     snpeff_config = "%s.config" % os.path.splitext(snpeff_jar)[0]
     ext = "vcf" if out_format == "vcf" else "tsv"
     out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         cl = ["java"]
         if java_memory:
             cl += ["-Xmx%s" % java_memory]
@@ -54,8 +55,8 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
         print " ".join(cl)
-        with file_transaction(out_file):
-            with open(out_file, "w") as out_handle:
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
                 subprocess.check_call(cl, stdout=out_handle)
     return out_file
 

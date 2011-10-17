@@ -9,7 +9,8 @@ import os
 import shutil
 
 from bcbio import broad
-from bcbio.utils import curdir_tmpdir, file_transaction
+from bcbio.utils import curdir_tmpdir, file_exists
+from bcbio.distributed.transaction import file_transaction
 
 def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
@@ -27,21 +28,21 @@ def _gatk_table_recalibrate(picard, dup_align_bam, ref_file, recal_file, platfor
     """Step 2 of GATK recalibration -- use covariates to re-write output file.
     """
     out_file = "%s-gatkrecal.bam" % os.path.splitext(dup_align_bam)[0]
-    params = ["-T", "TableRecalibration",
-              "-recalFile", recal_file,
-              "-R", ref_file,
-              "-I", dup_align_bam,
-              "--out", out_file,
-              "-baq",  "RECALCULATE",
-              "-l", "INFO",
-              "-U",
-              "-OQ",
-              "--default_platform", platform,
-              ]
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         if _recal_available(recal_file):
             with curdir_tmpdir() as tmp_dir:
-                with file_transaction(out_file):
+                with file_transaction(out_file) as tx_out_file:
+                    params = ["-T", "TableRecalibration",
+                              "-recalFile", recal_file,
+                              "-R", ref_file,
+                              "-I", dup_align_bam,
+                              "--out", tx_out_file,
+                              "-baq",  "RECALCULATE",
+                              "-l", "INFO",
+                              "-U",
+                              "-OQ",
+                              "--default_platform", platform,
+                              ]
                     picard.run_gatk(params, tmp_dir)
         else:
             shutil.copy(dup_align_bam, out_file)
@@ -66,24 +67,24 @@ def _gatk_count_covariates(picard, dup_align_bam, ref_file, platform,
     """Step 1 of GATK recalibration process -- counting covariates.
     """
     out_file = "%s.recal" % os.path.splitext(dup_align_bam)[0]
-    params = ["-T", "CountCovariates",
-              "-cov", "ReadGroupCovariate",
-              "-cov", "QualityScoreCovariate",
-              "-cov", "CycleCovariate",
-              "-cov", "DinucCovariate",
-              "-recalFile", out_file,
-              "-I", dup_align_bam,
-              "-R", ref_file,
-              "-l", "INFO",
-              "-U",
-              "-OQ",
-              "--default_platform", platform,
-              ]
-    if snp_file:
-        params += ["--knownSites", snp_file]
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         with curdir_tmpdir() as tmp_dir:
-            with file_transaction(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                params = ["-T", "CountCovariates",
+                          "-cov", "ReadGroupCovariate",
+                          "-cov", "QualityScoreCovariate",
+                          "-cov", "CycleCovariate",
+                          "-cov", "DinucCovariate",
+                          "-recalFile", tx_out_file,
+                          "-I", dup_align_bam,
+                          "-R", ref_file,
+                          "-l", "INFO",
+                          "-U",
+                          "-OQ",
+                          "--default_platform", platform,
+                          ]
+                if snp_file:
+                    params += ["--knownSites", snp_file]
                 picard.run_gatk(params, tmp_dir)
     return out_file
 

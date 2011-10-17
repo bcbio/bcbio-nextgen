@@ -5,7 +5,8 @@ import glob
 import json
 import contextlib
 
-from bcbio.utils import tmpfile, file_transaction
+from bcbio.utils import tmpfile, file_exists
+from bcbio.distributed.transaction import file_transaction
 
 import pysam
 
@@ -253,14 +254,14 @@ class PicardMetrics:
         """
         base, ext = os.path.splitext(dup_bam)
         metrics = "%s.hs_metrics" % base
-        if not os.path.exists(metrics):
+        if not file_exists(metrics):
             with bed_to_interval(bait_file, dup_bam) as ready_bait:
                 with bed_to_interval(target_file, dup_bam) as ready_target:
-                    opts = [("BAIT_INTERVALS", ready_bait),
-                            ("TARGET_INTERVALS", ready_target),
-                            ("INPUT", dup_bam),
-                            ("OUTPUT", metrics)]
-                    with file_transaction(metrics):
+                    with file_transaction(metrics) as tx_metrics:
+                        opts = [("BAIT_INTERVALS", ready_bait),
+                                ("TARGET_INTERVALS", ready_target),
+                                ("INPUT", dup_bam),
+                                ("OUTPUT", tx_metrics)]
                         self._picard.run("CalculateHsMetrics", opts)
         return metrics
 
@@ -285,12 +286,13 @@ class PicardMetrics:
         base, ext = os.path.splitext(dup_bam)
         gc_metrics = "%s.gc_metrics" % base
         gc_graph = "%s-gc.pdf" % base
-        if not os.path.exists(gc_metrics):
-            opts = [("INPUT", dup_bam),
-                    ("OUTPUT", gc_metrics),
-                    ("CHART", gc_graph),
-                    ("R", ref_file)]
-            with file_transaction(gc_graph, gc_metrics):
+        if not file_exists(gc_metrics):
+            with file_transaction(gc_graph, gc_metrics) as \
+                     (tx_graph, tx_metrics):
+                opts = [("INPUT", dup_bam),
+                        ("OUTPUT", tx_metrics),
+                        ("CHART", tx_graph),
+                        ("R", ref_file)]
                 self._picard.run("CollectGcBiasMetrics", opts)
         return gc_graph, gc_metrics
 
@@ -298,22 +300,23 @@ class PicardMetrics:
         base, ext = os.path.splitext(dup_bam)
         insert_metrics = "%s.insert_metrics" % base
         insert_graph = "%s-insert.pdf" % base
-        if not os.path.exists(insert_metrics):
-            opts = [("INPUT", dup_bam),
-                    ("OUTPUT", insert_metrics),
-                    ("H", insert_graph)]
-            with file_transaction(insert_graph, insert_metrics):
+        if not file_exists(insert_metrics):
+            with file_transaction(insert_graph, insert_metrics) as \
+                     (tx_graph, tx_metrics):
+                opts = [("INPUT", dup_bam),
+                        ("OUTPUT", tx_metrics),
+                        ("H", tx_graph)]
                 self._picard.run("CollectInsertSizeMetrics", opts)
         return insert_graph, insert_metrics
 
     def _collect_align_metrics(self, dup_bam, ref_file):
         base, ext = os.path.splitext(dup_bam)
         align_metrics = "%s.align_metrics" % base
-        if not os.path.exists(align_metrics):
-            opts = [("INPUT", dup_bam),
-                    ("OUTPUT", align_metrics),
-                    ("R", ref_file)]
-            with file_transaction(align_metrics):
+        if not file_exists(align_metrics):
+            with file_transaction(align_metrics) as tx_metrics:
+                opts = [("INPUT", dup_bam),
+                        ("OUTPUT", tx_metrics),
+                        ("R", ref_file)]
                 self._picard.run("CollectAlignmentSummaryMetrics", opts)
         return align_metrics
 

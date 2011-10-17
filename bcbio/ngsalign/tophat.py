@@ -11,7 +11,7 @@ import pysam
 import numpy
 
 from bcbio.ngsalign import bowtie
-from bcbio.utils import safe_makedir, file_transaction
+from bcbio.utils import safe_makedir, file_exists, file_transaction
 
 galaxy_location_file = "bowtie_indices.loc"
 
@@ -27,7 +27,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     safe_makedir(out_dir)
     out_file = os.path.join(out_dir, _out_fnames[0])
     files = [ref_file, fastq_file]
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         cl = [config["program"].get("tophat", "tophat")]
         cl += qual_flags
         cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
