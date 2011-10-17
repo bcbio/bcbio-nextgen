@@ -19,9 +19,13 @@ def file_transaction(*rollback_files):
     safe_names, orig_names = _flatten_plus_safe(rollback_files)
     _remove_files(safe_names) # remove any half-finished transactions
     try:
-        yield safe_names
+        if len(safe_names) == 1:
+            yield safe_names[0]
+        else:
+            yield tuple(safe_names)
     except: # failure -- delete any temporary files
         _remove_files(safe_names)
+        raise
     else: # worked -- move the temporary files to permanent location
         for safe, orig in zip(safe_names, orig_names):
             shutil.move(safe, orig)
