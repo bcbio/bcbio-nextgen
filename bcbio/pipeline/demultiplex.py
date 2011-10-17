@@ -9,6 +9,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils
 from bcbio.pipeline.fastq import get_fastq_files
+from bcbio.distributed.transaction import file_transaction
 
 def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
     """Split a fastq file into multiplex pieces using barcode details.
@@ -26,23 +27,23 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
         bc_file1 = fq_fname("1")
         bc_file2 = fq_fname("2") if fastq2 else None
         out_files.append((info["barcode_id"], bc_file1, bc_file2))
-    with utils.chdir(bc_dir):
-        tag_file, need_trim = _make_tag_file(multiplex, unmatched_str)
-        if not os.path.exists(nomatch_file) and not os.path.exists(metrics_file):
-            cl = [config["program"]["barcode"], tag_file,
-                  "%s_--b--_--r--_fastq.txt" % base_name,
-                  fastq1]
-            if fastq2:
-                cl.append(fastq2)
-            cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
-            cl.append("--metrics=%s" % metrics_file)
-            if int(config["algorithm"]["bc_read"]) == 2:
-                cl.append("--second")
-            if int(config["algorithm"]["bc_position"]) == 5:
-                cl.append("--five")
-            if config["algorithm"].get("bc_allow_indels", True) is False:
-                cl.append("--noindel")
-            with utils.file_transaction(out_files + [nomatch_file, metrics_file]):
+    if not utils.file_exists(bc_dir):
+        with file_transaction(bc_dir) as tx_bc_dir:
+            with utils.chdir(tx_bc_dir):
+                tag_file, need_trim = _make_tag_file(multiplex, unmatched_str)
+                cl = [config["program"]["barcode"], tag_file,
+                      "%s_--b--_--r--_fastq.txt" % base_name,
+                      fastq1]
+                if fastq2:
+                    cl.append(fastq2)
+                cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
+                cl.append("--metrics=%s" % metrics_file)
+                if int(config["algorithm"]["bc_read"]) == 2:
+                    cl.append("--second")
+                if int(config["algorithm"]["bc_position"]) == 5:
+                    cl.append("--five")
+                if config["algorithm"].get("bc_allow_indels", True) is False:
+                    cl.append("--noindel")
                 subprocess.check_call(cl)
     out = {}
     for b, f1, f2 in out_files:

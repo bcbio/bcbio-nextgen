@@ -28,12 +28,16 @@ def file_transaction(*rollback_files):
         raise
     else: # worked -- move the temporary files to permanent location
         for safe, orig in zip(safe_names, orig_names):
-            shutil.move(safe, orig)
+            if os.path.exists(safe):
+                shutil.move(safe, orig)
 
 def _remove_files(fnames):
     for x in fnames:
-        if x and os.path.exists(x) and os.path.isfile(x):
-            os.remove(x)
+        if x and os.path.exists(x):
+            if os.path.isfile(x):
+                os.remove(x)
+            elif os.path.isdir(x):
+                shutil.rmtree(x, ignore_errors=True)
 
 def _flatten_plus_safe(rollback_files):
     """Flatten names of files and create temporary file names.
