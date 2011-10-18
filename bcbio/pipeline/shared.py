@@ -8,7 +8,7 @@ import pysam
 
 from bcbio import broad
 from bcbio.pipeline.alignment import get_genome_ref
-from bcbio.utils import file_exists, safe_makedir
+from bcbio.utils import file_exists, safe_makedir, save_diskspace
 
 # ## Split/Combine helpers
 
@@ -17,6 +17,8 @@ def combine_bam(in_files, out_file, config):
     """
     runner = broad.runner_from_config(config)
     runner.run_fn("picard_merge", in_files, out_file)
+    for in_file in in_files:
+        save_diskspace(in_file, "Merged into {0}".format(out_file), config)
     return out_file
 
 def split_bam_by_chromosome(output_ext, file_key):

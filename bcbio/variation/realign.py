@@ -8,7 +8,7 @@ import pysam
 
 from bcbio import broad
 from bcbio.pipeline import log
-from bcbio.utils import curdir_tmpdir, file_exists
+from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file)
@@ -132,7 +132,10 @@ def realign_sample(data, region=None, out_file=None):
     if data["config"]["algorithm"]["snpcall"]:
         sam_ref = data["sam_ref"]
         config = data["config"]
-        data["work_bam"] = gatk_realigner(data["work_bam"], sam_ref, config,
-                                          configured_ref_file("dbsnp", config, sam_ref),
-                                          region, out_file)
+        realign_bam = gatk_realigner(data["work_bam"], sam_ref, config,
+                                     configured_ref_file("dbsnp", config, sam_ref),
+                                     region, out_file)
+        save_diskspace(data["work_bam"], "Realigned to %s" % realign_bam,
+                       config)
+        data["work_bam"] = realign_bam
     return [data]

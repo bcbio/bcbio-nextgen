@@ -7,7 +7,7 @@ import os
 import subprocess
 
 
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.lane import _update_config_w_custom
 from bcbio.pipeline import log
@@ -37,9 +37,12 @@ def recalibrate_sample(data):
     """
     log.info("Recalibrating %s with GATK" % str(data["name"]))
     if data["config"]["algorithm"]["recalibrate"]:
-        data["work_bam"] = recalibrate_quality(data["work_bam"], data["fastq1"],
-                                               data["fastq2"], data["sam_ref"],
-                                               data["dirs"], data["config"])
+        recal_bam = recalibrate_quality(data["work_bam"], data["fastq1"],
+                                        data["fastq2"], data["sam_ref"],
+                                        data["dirs"], data["config"])
+        save_diskspace(data["work_bam"], "Recalibrated to %s" % recal_bam,
+                       data["config"])
+        data["work_bam"] = recal_bam
     return [[data]]
 
 # ## General processing
