@@ -44,7 +44,7 @@ def _flatten_plus_safe(rollback_files):
     """
     tx_files, orig_files = [], []
     for fnames in rollback_files:
-        if isinstance(fnames, str):
+        if isinstance(fnames, basestring):
             fnames = [fnames]
         for fname in fnames:
             tx_file = os.path.join(os.path.dirname(fname), "tx",

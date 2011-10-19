@@ -45,6 +45,10 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
                 if config["algorithm"].get("bc_allow_indels", True) is False:
                     cl.append("--noindel")
                 subprocess.check_call(cl)
+    else:
+        with utils.curdir_tmpdir() as tmp_dir:
+            with utils.chdir(tmp_dir):
+                _, need_trim = _make_tag_file(multiplex, unmatched_str)
     out = {}
     for b, f1, f2 in out_files:
         if os.path.exists(f1):

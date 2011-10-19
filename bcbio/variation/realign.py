@@ -135,7 +135,8 @@ def realign_sample(data, region=None, out_file=None):
         realign_bam = gatk_realigner(data["work_bam"], sam_ref, config,
                                      configured_ref_file("dbsnp", config, sam_ref),
                                      region, out_file)
-        save_diskspace(data["work_bam"], "Realigned to %s" % realign_bam,
-                       config)
+        if region is None:
+            save_diskspace(data["work_bam"], "Realigned to %s" % realign_bam,
+                           config)
         data["work_bam"] = realign_bam
     return [data]

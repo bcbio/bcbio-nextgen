@@ -24,7 +24,8 @@ def merge_sample(data):
     log.info("Combining fastq and BAM files %s" % str(data["name"]))
     config = _update_config_w_custom(data["config"], data["info"])
     genome_build, sam_ref = ref_genome_info(data["info"], config, data["dirs"])
-    fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"])
+    fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
+                                         config)
     sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
     return [[{"name": data["name"],
               "genome_build": genome_build, "sam_ref": sam_ref,

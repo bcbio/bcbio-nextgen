@@ -35,7 +35,7 @@ def cpmap(cores=1):
             return wrap
         IMapIterator.next = wrapper(IMapIterator.next)
         pool = multiprocessing.Pool(int(cores))
-        yield pool.imap
+        yield pool.imap_unordered
         pool.terminate()
 
 def map_wrap(f):
