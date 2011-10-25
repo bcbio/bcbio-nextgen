@@ -227,7 +227,7 @@ class PicardMetrics:
     def report(self, align_bam, ref_file, is_paired, bait_file, target_file):
         """Produce report metrics using Picard with sorted aligned BAM file.
         """
-        dup_bam, dup_metrics = self._picard.run_fn("picard_mark_duplicates", align_bam)
+        dup_bam, dup_metrics = self._get_current_dup_metrics(align_bam)
         align_metrics = self._collect_align_metrics(dup_bam, ref_file)
         gc_graph, gc_metrics = self._gc_bias(dup_bam, ref_file)
         insert_graph, insert_metrics, hybrid_metrics = (None, None, None)
@@ -249,11 +249,39 @@ class PicardMetrics:
             graphs.append((insert_graph, "Distribution of paired end insert sizes"))
         return summary_info, graphs
 
+    def _get_current_dup_metrics(self, align_bam):
+        """Retrieve existing duplication metrics file, or generate if not present.
+        """
+        dup_fname_pos = align_bam.find("-dup")
+        if dup_fname_pos > 0:
+            base_name = align_bam[:dup_fname_pos]
+            metrics = glob.glob("{0}*.dup_metrics".format(base_name))
+            assert len(metrics) > 0, "Appear to have deduplication but did not find metrics file"
+            return align_bam, metrics[0]
+        else:
+            return self._picard.run_fn("picard_mark_duplicates", align_bam)
+
+    def _check_metrics_file(self, bam_name, metrics_ext):
+        """Check for an existing metrics file for the given BAM.
+        """
+        base, _ = os.path.splitext(bam_name)
+        try:
+            int(base[-1])
+            can_glob = False
+        except ValueError:
+            can_glob = True
+        check_fname = "{base}{maybe_glob}.{ext}".format(
+            base=base, maybe_glob="*" if can_glob else "", ext=metrics_ext)
+        glob_fnames = glob.glob(check_fname)
+        if len(glob_fnames) > 0:
+            return glob_fnames[0]
+        else:
+            return "{base}.{ext}".format(base=base, ext=metrics_ext)
+
     def _hybrid_select_metrics(self, dup_bam, bait_file, target_file):
         """Generate metrics for hybrid selection efficiency.
         """
-        base, ext = os.path.splitext(dup_bam)
-        metrics = "%s.hs_metrics" % base
+        metrics = self._check_metrics_file(dup_bam, "hs_metrics")
         if not file_exists(metrics):
             with bed_to_interval(bait_file, dup_bam) as ready_bait:
                 with bed_to_interval(target_file, dup_bam) as ready_target:
@@ -283,9 +311,8 @@ class PicardMetrics:
             return None
 
     def _gc_bias(self, dup_bam, ref_file):
-        base, ext = os.path.splitext(dup_bam)
-        gc_metrics = "%s.gc_metrics" % base
-        gc_graph = "%s-gc.pdf" % base
+        gc_metrics = self._check_metrics_file(dup_bam, "gc_metrics")
+        gc_graph = "%s-gc.pdf" % os.path.splitext(gc_metrics)[0]
         if not file_exists(gc_metrics):
             with file_transaction(gc_graph, gc_metrics) as \
                      (tx_graph, tx_metrics):
@@ -297,9 +324,8 @@ class PicardMetrics:
         return gc_graph, gc_metrics
 
     def _insert_sizes(self, dup_bam):
-        base, ext = os.path.splitext(dup_bam)
-        insert_metrics = "%s.insert_metrics" % base
-        insert_graph = "%s-insert.pdf" % base
+        insert_metrics = self._check_metrics_file(dup_bam, "insert_metrics")
+        insert_graph = "%s-insert.pdf" % os.path.splitext(insert_metrics)[0]
         if not file_exists(insert_metrics):
             with file_transaction(insert_graph, insert_metrics) as \
                      (tx_graph, tx_metrics):
@@ -310,8 +336,7 @@ class PicardMetrics:
         return insert_graph, insert_metrics
 
     def _collect_align_metrics(self, dup_bam, ref_file):
-        base, ext = os.path.splitext(dup_bam)
-        align_metrics = "%s.align_metrics" % base
+        align_metrics = self._check_metrics_file(dup_bam, "align_metrics")
         if not file_exists(align_metrics):
             with file_transaction(align_metrics) as tx_metrics:
                 opts = [("INPUT", dup_bam),

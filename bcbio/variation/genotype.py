@@ -201,7 +201,14 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
-                broad_runner.run_gatk(params)
+                try:
+                    broad_runner.run_gatk(params)
+                # Can fail to run if not enough values are present to train. Rerun with regional
+                # filtration approach instead
+                except:
+                    config["algorithm"]["coverage_interval"] = "regional"
+                    return _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
+                                                   config)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
 
