@@ -147,6 +147,9 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
     for bam_file in base_glob("gatkrecal-realign-dup.bam"):
         found_recal = True
         yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
+    for bam_file in base_glob("gatkrecal-realign.bam"):
+        found_recal = True
+        yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
     if not found_recal:
         for bam_file in base_glob("gatkrecal.bam"):
             found_recal = True
