@@ -21,9 +21,11 @@ def combine_bam(in_files, out_file, config):
         save_diskspace(in_file, "Merged into {0}".format(out_file), config)
     return out_file
 
-def split_bam_by_chromosome(output_ext, file_key):
+def split_bam_by_chromosome(output_ext, file_key, default_targets=None):
     """Provide targets to process a BAM file by individual chromosome regions.
     """
+    if default_targets is None:
+        default_targets = []
     def _do_work(data):
         bam_file = data[file_key]
         out_file = "{base}{ext}".format(base=os.path.splitext(bam_file)[0],
@@ -33,7 +35,7 @@ def split_bam_by_chromosome(output_ext, file_key):
             work_dir = safe_makedir(
                 "{base}-split".format(base=os.path.splitext(out_file)[0]))
             with closing(pysam.Samfile(bam_file, "rb")) as work_bam:
-                for chr_ref in work_bam.references:
+                for chr_ref in list(work_bam.references) + default_targets:
                     chr_out = os.path.join(work_dir,
                                            "{base}-{ref}{ext}".format(
                                                base=os.path.splitext(os.path.basename(bam_file))[0],
@@ -41,6 +43,20 @@ def split_bam_by_chromosome(output_ext, file_key):
                     part_info.append((chr_ref, chr_out))
         return out_file, part_info
     return _do_work
+
+def write_nochr_reads(in_file, out_file):
+    """Write a BAM file of reads that are not on a reference chromosome.
+
+    This is useful for maintaining non-mapped reads in parallel processes
+    that split processing by chromosome.
+    """
+    if not file_exists(out_file):
+        with closing(pysam.Samfile(in_file, "rb")) as in_bam:
+            with closing(pysam.Samfile(out_file, "wb", template=in_bam)) as out_bam:
+                for read in in_bam:
+                    if read.tid < 0:
+                        out_bam.write(read)
+    return out_file
 
 # ## Retrieving file information from configuration variables
 

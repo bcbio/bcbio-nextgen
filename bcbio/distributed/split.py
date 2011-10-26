@@ -9,6 +9,7 @@ This provides a framework for that process, making it easier to utilize with
 splitting specific code.
 """
 import os
+import copy
 import collections
 
 def parallel_split_combine(args, split_fn, parallel_fn,
@@ -46,7 +47,7 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
         data[file_key] = cur_out
         if data not in final_args:
             final_args.append([data])
-    combine_args = [[v, k] + extra_args[k] for (k, v) in out_map.iteritems()]
+    combine_args = [[list(set(v)), k] + extra_args[k] for (k, v) in out_map.iteritems()]
     return combine_args, final_args
 
 def _get_split_tasks(args, split_fn, file_key):
@@ -58,7 +59,7 @@ def _get_split_tasks(args, split_fn, file_key):
     for data in args:
         out_final, out_parts = split_fn(*data)
         for parts in out_parts:
-            split_args.append(data + list(parts))
+            split_args.append(copy.deepcopy(data) + list(parts))
         for part_file in [x[-1] for x in out_parts]:
             combine_map[part_file] = out_final
         if len(out_parts) == 0:
