@@ -39,15 +39,17 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
     out_map = collections.defaultdict(list)
     extra_args = {}
     final_args = []
+    already_added = []
     for data in output:
         cur_file = data[file_key]
         cur_out = combine_map[cur_file]
         out_map[cur_out].append(cur_file)
         extra_args[cur_out] = [data[x] for x in combine_arg_keys]
         data[file_key] = cur_out
-        if data not in final_args:
+        if cur_out not in already_added:
+            already_added.append(cur_out)
             final_args.append([data])
-    combine_args = [[list(set(v)), k] + extra_args[k] for (k, v) in out_map.iteritems()]
+    combine_args = [[v, k] + extra_args[k] for (k, v) in out_map.iteritems()]
     return combine_args, final_args
 
 def _get_split_tasks(args, split_fn, file_key):
