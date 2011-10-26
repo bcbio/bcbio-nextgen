@@ -252,10 +252,7 @@ def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files,
     existing_files = [os.path.basename(f['name']) for f in cur_galaxy_files]
     need_upload = False
     for orig_file, new_file in select_files:
-        if new_file in existing_files:
-            need_upload = False
-            break
-        else:
+        if new_file not in existing_files:
             new_file = os.path.join(storage_dir, new_file)
             if not os.path.exists(new_file):
                 shutil.copy(orig_file, new_file)
