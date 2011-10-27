@@ -88,7 +88,7 @@ def _get_sample_name(in_file):
     return name
 
 def _get_base_bams(work_dir, run_name):
-    bam_files = glob.glob(os.path.join(work_dir, "*_%s*-sort.bam" % run_name))
+    bam_files = glob.glob(os.path.join(work_dir, "*_%s*-realign.bam" % run_name))
     # if not in the current base directory, might be in subdirectory as final results
     if len(bam_files) == 0:
         for dname in os.listdir(work_dir):
