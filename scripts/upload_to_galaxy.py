@@ -143,20 +143,16 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
     for wig_file in base_glob(".bigwig"):
         yield (wig_file, _name_with_ext(wig_file, "-coverage.bigwig"))
     # upload BAM files, preferring recalibrated and realigned files
-    found_recal = False
-    for bam_file in base_glob("gatkrecal-realign-dup.bam"):
-        found_recal = True
-        yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
-    for bam_file in base_glob("gatkrecal-realign.bam"):
-        found_recal = True
-        yield (bam_file, _name_with_ext(bam_file, "-gatkrecal-realign.bam"))
-    if not found_recal:
-        for bam_file in base_glob("gatkrecal.bam"):
-            found_recal = True
-            yield (bam_file, _name_with_ext(bam_file, "-gatkrecal.bam"))
-    if not found_recal:
-        for bam_file in base_glob("sort-dup.bam"):
-            yield (bam_file, _name_with_ext(bam_file, ".bam"))
+    found_bam = False
+    for orig_ext, new_ext in [("gatkrecal-realign-dup.bam", "-gatkrecal-realign.bam"),
+                              ("gatkrecal-realign.bam", "-gatkrecal-realign.bam"),
+                              ("gatkrecal.bam", "-gatkrecal.bam"),
+                              ("sort-dup.bam", ".bam"),
+                              ("sort.bam", ".bam")]:
+        if not found_bam:
+            for bam_file in base_glob(orig_ext):
+                yield (bam_file, _name_with_ext(bam_file, new_ext))
+                found_bam = True
     # Genotype files produced by SNP calling
     for snp_file in base_glob("variants-combined-annotated.vcf"):
         yield (snp_file, _name_with_ext(bam_file, "-variants.vcf"))
