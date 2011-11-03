@@ -47,6 +47,7 @@ class BroadRunner:
     def run_gatk(self, params, tmp_dir=None):
         gatk_jar = self._get_jar("GenomeAnalysisTK")
         local_args = []
+        params.extend(["--phone_home", "NO_ET"])
         if tmp_dir:
             local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         cl = ["java"] + self._memory_args + local_args + \
