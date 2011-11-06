@@ -103,6 +103,18 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                 picard.run("MergeBamAlignment", opts)
     return out_bam
 
+def picard_formatconverter(picard, align_sam):
+    """Convert aligned SAM file to BAM format.
+    """
+    out_bam = "%s.bam" % os.path.splitext(align_sam)[0]
+    if not file_exists(out_bam):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_bam) as tx_out_bam:
+                opts = [("INPUT", align_sam),
+                        ("OUTPUT", tx_out_bam)]
+                picard.run("SamFormatConverter", opts)
+    return out_bam
+
 def picard_mark_duplicates(picard, align_bam):
     base, ext = os.path.splitext(align_bam)
     base = base.replace(".", "-")
