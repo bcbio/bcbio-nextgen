@@ -19,6 +19,7 @@ def combine_bam(in_files, out_file, config):
     runner.run_fn("picard_merge", in_files, out_file)
     for in_file in in_files:
         save_diskspace(in_file, "Merged into {0}".format(out_file), config)
+    runner.run_fn("picard_index", out_file)
     return out_file
 
 def split_bam_by_chromosome(output_ext, file_key, default_targets=None):
