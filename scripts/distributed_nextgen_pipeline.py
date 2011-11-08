@@ -32,7 +32,7 @@ def _needed_workers(run_info):
     names = []
     for xs in run_info["details"]:
         for x in xs:
-            names.append(lane.get("name", (lane["lane"], lane["barcode_id"])))
+            names.append(x.get("name", (x["lane"], x["barcode_id"])))
     return len(set(names))
 
 if __name__ == "__main__":
