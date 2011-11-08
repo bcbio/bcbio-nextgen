@@ -3,8 +3,6 @@
 import os
 
 import yaml
-import fabric.api as fabric
-import fabric.contrib.files as fabric_files
 
 from bcbio.pipeline import log
 from bcbio.log import create_log_handler
@@ -23,6 +21,9 @@ def _copy_for_storage(remote_info, config):
     is necessary, Fabric is used to manage setting up copies on the remote
     storage server.
     """
+    import fabric.api as fabric
+    import fabric.contrib.files as fabric_files
+ 
     log.info("Copying run data over to remote storage: %s" % config["store_host"])
     log.debug("The contents from AMQP for this dataset are:\n %s" % remote_info)
     base_dir = config["store_dir"]
