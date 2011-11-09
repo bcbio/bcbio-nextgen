@@ -2,6 +2,8 @@ galaxy_config: universe_wsgi.ini
 program:
   bowtie: bowtie
   bwa: bwa
+  tophat: tophat
+  cufflinks: cufflinks
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
   gatk: /usr/share/java/gatk
