@@ -35,10 +35,13 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
     return sam_file
 
 def _run_bwa_align(fastq_file, ref_file, out_file, config):
+    cores = config.get("resources", {}).get("bwa", {}).get("cores", None)
+    core_flags = ["-t", str(cores)] if cores else []
     aln_cl = [config["program"]["bwa"], "aln",
               "-n %s" % config["algorithm"]["max_errors"],
-              "-k %s" % config["algorithm"]["max_errors"],
-              ref_file, fastq_file]
+              "-k %s" % config["algorithm"]["max_errors"]]
+    aln_cl += core_flags
+    aln_cl += [ref_file, fastq_file]
     with open(out_file, "w") as out_handle:
         subprocess.check_call(aln_cl, stdout=out_handle)
 

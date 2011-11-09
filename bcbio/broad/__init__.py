@@ -11,13 +11,17 @@ from bcbio.broad import picardrun
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """
-    def __init__(self, picard_dir, gatk_dir="", max_memory=None):
+    def __init__(self, picard_dir, gatk_dir="", max_memory=None,
+                 config=None):
         self._memory_args = []
         if not max_memory:
             max_memory = "6g"
         self._memory_args.append("-Xmx%s" % max_memory)
         self._picard_dir = picard_dir
         self._gatk_dir = gatk_dir or picard_dir
+        if config is None:
+            config = {}
+        self._config = config
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
@@ -45,9 +49,19 @@ class BroadRunner:
         subprocess.check_call(cl)
 
     def run_gatk(self, params, tmp_dir=None):
+        support_parallel = ["UnifiedGenotyper", "CountCovariates", "VariantEval",
+                            "VariantRecalibrator"]
         gatk_jar = self._get_jar("GenomeAnalysisTK")
         local_args = []
         params.extend(["--phone_home", "NO_ET"])
+        cores = self._config.get("resources", {}).get("gatk", {}).get("cores", None)
+        if cores:
+            do_parallel = False
+            for check in support_parallel:
+                if check in params:
+                    do_parallel = True
+            if do_parallel:
+                params.extend(["-nt", str(cores)])
         if tmp_dir:
             local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         cl = ["java"] + self._memory_args + local_args + \
@@ -75,4 +89,5 @@ class BroadRunner:
 def runner_from_config(config):
     return BroadRunner(config["program"]["picard"],
                        config["program"].get("gatk", ""),
-                       max_memory=config["algorithm"].get("java_memory", ""))
+                       max_memory=config["algorithm"].get("java_memory", ""),
+                       config=config)

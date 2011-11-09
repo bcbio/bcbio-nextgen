@@ -24,6 +24,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         qual_flags = ["--solexa1.3-quals"]
     else:
         qual_flags = []
+    cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
+    core_flags = ["-p", str(cores)] if cores else []
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
     files = [ref_file, fastq_file]
@@ -31,6 +33,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
         with file_transaction(out_dir) as tx_out_dir:
             safe_makedir(tx_out_dir)
             cl = [config["program"].get("tophat", "tophat")]
+            cl += core_flags
             cl += qual_flags
             cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
                    "--output-dir", tx_out_dir,

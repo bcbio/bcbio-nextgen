@@ -69,7 +69,20 @@ custom_algorithms:
     transcripts_mask: rnaseq/ref-transcripts-mask.gtf
   'Minimal':
     aligner: ""
-# Requirements for memory-bound processes
+# Define resources to be used for individual programs on multicore machines.
+# These can be defined specifically for memory and processor availability.
+# Distributed systems 
+# - Specify usage for memory intensive programs
+# - Define cores that can be used for multicore programs.
 resources:
   ucsc_bigwig:
     memory: 36g
+  bowtie:
+    cores:
+  tophat:
+    cores:
+  bwa:
+    cores:
+  gatk:
+    cores:
+  

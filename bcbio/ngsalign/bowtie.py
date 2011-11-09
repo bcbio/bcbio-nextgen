@@ -20,9 +20,12 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     multi_mappers = config["algorithm"].get("multiple_mappers", True)
     multi_flags = ["-M", 1] if multi_mappers else ["-m", 1]
     out_file = os.path.join(align_dir, "%s.sam" % out_base)
+    cores = config.get("resources", {}).get("bowtie", {}).get("cores", None)
+    core_flags = ["-p", str(cores)] if cores else []
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             cl = [config["program"]["bowtie"]]
+            cl += core_flags
             cl += qual_flags
             cl += multi_flags
             cl += extra_args if extra_args is not None else []
