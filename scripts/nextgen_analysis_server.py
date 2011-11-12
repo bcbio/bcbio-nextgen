@@ -14,6 +14,7 @@ Usage:
                              managing the full work process.]
    [--tasks=task.module.import: Specify the module of tasks to make available.
                                 Defaults to bcbio.distributed.tasks if not specified.]
+   [--basedir=<dirname>: Base directory to work in. Defaults to current directory.]
 """
 import os
 import sys
@@ -26,15 +27,18 @@ from bcbio import utils
 from bcbio.distributed.messaging import create_celeryconfig
 from bcbio.pipeline.config_loader import load_config
 
-def main(config_file, queues=None, task_module=None):
+def main(config_file, queues=None, task_module=None, base_dir=None):
+    if base_dir is None:
+        base_dir = os.getcwd()
     if task_module is None:
         task_module = "bcbio.distributed.tasks"
     config = load_config(config_file)
-    with utils.curdir_tmpdir() as work_dir:
-        dirs = {"work": work_dir, "config": os.path.dirname(config_file)}
-        with create_celeryconfig(task_module, dirs, config,
-                                 os.path.abspath(config_file)):
-            run_celeryd(work_dir, queues)
+    with utils.chdir(base_dir):
+        with utils.curdir_tmpdir() as work_dir:
+            dirs = {"work": work_dir, "config": os.path.dirname(config_file)}
+            with create_celeryconfig(task_module, dirs, config,
+                                     os.path.abspath(config_file)):
+                run_celeryd(work_dir, queues)
 
 def run_celeryd(work_dir, queues):
     with utils.chdir(work_dir):
@@ -49,9 +53,11 @@ if __name__ == "__main__":
                       default=None)
     parser.add_option("-t", "--tasks", dest="task_module", action="store",
                       default=None)
+    parser.add_option("-d", "--basedir", dest="basedir", action="store",
+                      default=None)
     (options, args) = parser.parse_args()
     if len(args) != 1:
         print "Incorrect arguments"
         print __doc__
         sys.exit()
-    main(args[0], options.queues, options.task_module)
+    main(args[0], options.queues, options.task_module, options.basedir)

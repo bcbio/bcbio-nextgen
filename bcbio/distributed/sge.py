@@ -41,3 +41,15 @@ def are_running(jobids):
                 running.append(pid)
     want_running = set(running).intersection(set(jobids))
     return len(want_running) == len(jobids)
+
+def available_nodes(scheduler_args):
+    """Retrieve a count of available nodes in the configured queue.
+    """
+    cl = ["qstat", "-f"]
+    info = subprocess.check_output(cl)
+    for line in info.split("\n"):
+        if line.startswith(tuple(scheduler_args)):
+            _, _, counts = line.split()[:3]
+            _, _, total = counts.split("/")
+            return int(total)
+    return None
