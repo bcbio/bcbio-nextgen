@@ -39,7 +39,7 @@ def start_workers(cluster, config, config_file, workers_needed=None,
     """
     # we can manually specify workers or dynamically get as many as needed
     num_workers = config["distributed"].get("num_workers", None)
-    if num_workers is None:
+    if num_workers in [None, "all"]:
         cores_per_host = config["distributed"].get("cores_per_host", 1)
         if cores_per_host == 0:
             raise ValueError("Set num_workers or cores_per_host in YAML config")
