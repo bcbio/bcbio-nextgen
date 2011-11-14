@@ -50,7 +50,6 @@ def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
                       "--genotype_likelihoods_model", "BOTH",
                       "--standard_min_confidence_threshold_for_calling", confidence,
                       "--standard_min_confidence_threshold_for_emitting", confidence,
-                      "--min_mapping_quality_score", "20",
                       "-l", "INFO",
                       ]
             if dbsnp:
