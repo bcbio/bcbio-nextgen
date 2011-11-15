@@ -11,6 +11,9 @@ def assemble_transcripts(align_file, ref_file, config):
     """Create transcript assemblies using Cufflinks.
     """
     work_dir, fname = os.path.split(align_file)
+    cores = config.get("resources", {}).get("cufflinks", {}).get("cores", None)
+    
+    core_flags = ["-p", str(cores)] if cores else []
     out_dir = os.path.join(work_dir,
                            "{base}-cufflinks".format(base=os.path.splitext(fname)[0]))
     cl = [config["program"].get("cufflinks", "cufflinks"),
@@ -18,6 +21,7 @@ def assemble_transcripts(align_file, ref_file, config):
           "-o", out_dir,
           "-b", ref_file,
           "-u"]
+    cl += core_flags
     tx_file = configured_ref_file("transcripts", config, ref_file)
     tx_mask_file = configured_ref_file("transcripts_mask", config, ref_file)
     if tx_file:

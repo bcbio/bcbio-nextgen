@@ -85,4 +85,6 @@ resources:
     cores:
   gatk:
     cores:
+  cufflinks:
+    cores:
   
