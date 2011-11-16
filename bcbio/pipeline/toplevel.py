@@ -12,7 +12,7 @@ import yaml
 try:
     import fabric.api as fabric
     import fabric.contrib.files as fabric_files
-except ImportError:
+except (ImportError, SystemExit):
     fabric, fabric_files = (None, None)
 
 from bcbio.pipeline import log
