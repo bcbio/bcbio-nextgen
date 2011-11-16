@@ -11,6 +11,7 @@ import shutil
 from bcbio import broad
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.variation.realign import has_aligned_reads
 
 def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
@@ -70,23 +71,27 @@ def _gatk_count_covariates(broad_runner, dup_align_bam, ref_file, platform,
     """
     out_file = "%s.recal" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
-            with file_transaction(out_file) as tx_out_file:
-                params = ["-T", "CountCovariates",
-                          "-cov", "ReadGroupCovariate",
-                          "-cov", "QualityScoreCovariate",
-                          "-cov", "CycleCovariate",
-                          "-cov", "DinucCovariate",
-                          "-recalFile", tx_out_file,
-                          "-I", dup_align_bam,
-                          "-R", ref_file,
-                          "-l", "INFO",
-                          "-U",
-                          "-OQ",
-                          "--default_platform", platform,
-                          ]
-                if snp_file:
-                    params += ["--knownSites", snp_file]
-                broad_runner.run_gatk(params, tmp_dir)
+        if has_aligned_reads(dup_align_bam):
+            with curdir_tmpdir() as tmp_dir:
+                with file_transaction(out_file) as tx_out_file:
+                    params = ["-T", "CountCovariates",
+                              "-cov", "ReadGroupCovariate",
+                              "-cov", "QualityScoreCovariate",
+                              "-cov", "CycleCovariate",
+                              "-cov", "DinucCovariate",
+                              "-recalFile", tx_out_file,
+                              "-I", dup_align_bam,
+                              "-R", ref_file,
+                              "-l", "INFO",
+                              "-U",
+                              "-OQ",
+                              "--default_platform", platform,
+                              ]
+                    if snp_file:
+                        params += ["--knownSites", snp_file]
+                    broad_runner.run_gatk(params, tmp_dir)
+        else:
+            with open(out_file, "w") as out_handle:
+                out_handle.write("# No aligned reads")
     return out_file
 

@@ -233,7 +233,7 @@ def _metrics_from_stats(stats):
                 )
         metrics = dict()
         for stat_name, metric_name in s_to_m.iteritems():
-            metrics[metric_name] = stats[stat_name]
+            metrics[metric_name] = stats.get(stat_name, 0)
         return metrics
 
 def _bustard_stats(lane_num, fastq_dir, fc_date, analysis_dir):

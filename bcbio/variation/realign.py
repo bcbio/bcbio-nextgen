@@ -77,7 +77,7 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     runner.run_fn("picard_index_ref", ref_file)
     if not os.path.exists("%s.fai" % ref_file):
         pysam.faidx(ref_file)
-    if _has_aligned_reads(align_bam, region):
+    if has_aligned_reads(align_bam, region):
         realign_target_file = gatk_realigner_targets(runner, align_bam,
                                                      ref_file, dbsnp, region,
                                                      out_file, deep_coverage)
@@ -93,16 +93,20 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     else:
         return align_bam
 
-def _has_aligned_reads(align_bam, region):
+def has_aligned_reads(align_bam, region=None):
     """Check if the aligned BAM file has any reads in the region.
     """
-    has_items = True
-    if region is not None:
-        has_items = False
-        with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
+    has_items = False
+    with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
+        if region is not None:
             for item in cur_bam.fetch(region):
                 has_items = True
                 break
+        else:
+            for item in cur_bam:
+                if not item.is_unmapped:
+                    has_items = True
+                    break
     return has_items
 
 # ## High level functionality to run realignments in parallel
