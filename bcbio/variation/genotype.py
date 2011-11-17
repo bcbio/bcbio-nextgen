@@ -335,9 +335,35 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
                       "-l", "INFO"
                       ]
             if target_intervals:
-                params.extend(["-L", target_intervals])
+                # BED file target intervals are explicit with GATK 1.3
+                # http://getsatisfaction.com/gsa/topics/
+                # gatk_v1_3_and_bed_interval_file_must_be_parsed_through_tribble
+                if _is_bed_file(target_intervals):
+                    flag = "-L:bed"
+                else:
+                    flag = "-L"
+                params.extend([flag, target_intervals])
             picard.run_gatk(params)
     return out_file
+
+def _is_bed_file(fname):
+    """Simple check if a file is in BED format.
+    """
+    if fname.lower().endswith(".bed"):
+        return True
+    with open(fname) as in_handle:
+        for line in in_handle:
+            if not line.startswith("#"):
+                parts = line.split("\t")
+                if len(parts) > 3:
+                    try:
+                        int(parts[1])
+                        int(parts[2])
+                        return True
+                    except ValueError:
+                        pass
+                break
+    return False
 
 # ## High level functionality to run genotyping in parallel
 
