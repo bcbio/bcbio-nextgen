@@ -22,7 +22,7 @@ algorithm:
   bc_read: 1
   bc_position: 3
   java_memory: 3g
-  save_diskspace: true
+  save_diskspace: false
 
 analysis:
   towig_script: bam_to_wiggle.py
@@ -35,7 +35,7 @@ distributed:
 # configuration algorithm changes for custom post-processing steps
 custom_algorithms:
   'SNP calling':
-    aligner: bwa
+    aligner: bowtie2
     recalibrate: true
     recalibration_plots: false
     snpcall: true
