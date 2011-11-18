@@ -35,7 +35,7 @@ distributed:
 # configuration algorithm changes for custom post-processing steps
 custom_algorithms:
   'SNP calling':
-    aligner: bowtie2
+    aligner: bwa
     recalibrate: true
     recalibration_plots: false
     snpcall: true
