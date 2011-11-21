@@ -49,7 +49,7 @@ def available_nodes(scheduler_args):
     info = subprocess.check_output(cl)
     total = 0
     for i, line in enumerate(info.split("\n")):
-        if i > 1 and line.startswith(tuple(scheduler_args)):
+        if i > 1 and not line.startswith("----") and line.startswith(tuple(scheduler_args)):
             _, _, counts = line.split()[:3]
             _, _, avail = counts.split("/")
             total += int(avail)
