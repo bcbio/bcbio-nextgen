@@ -67,7 +67,7 @@ def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir,
             qual_format = qual_formats[platform.lower()]
         except KeyError:
             raise ValueError("Need to specify quality format for %s" % platform)
-    out_bam = os.path.join(out_dir, "%s.bam" %
+    out_bam = os.path.join(out_dir, "%s-fastq.bam" %
                            os.path.splitext(os.path.basename(fastq_one))[0])
     if not file_exists(out_bam):
         with curdir_tmpdir() as tmp_dir:

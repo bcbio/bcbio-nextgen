@@ -14,7 +14,7 @@ galaxy_location_file = bowtie.galaxy_location_file
 def _bowtie2_args_from_config(config):
     """Configurable high level options for bowtie2.
     """
-    qual_format = config["algorithm"].get("quality_format", None)
+    qual_format = config["algorithm"].get("quality_format", "")
     if qual_format.lower() == "illumina":
         qual_flags = ["--phred64-quals"]
     else:
