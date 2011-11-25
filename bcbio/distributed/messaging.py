@@ -90,7 +90,8 @@ def cores_including_resources(cores, metadata, config):
                 required_memory = memory
     if required_memory > 0:
         cur_memory = _machine_memory()
-        cores = int(round(float(cur_memory) / float(required_memory)))
+        cores = min(cores,
+                    int(round(float(cur_memory) / float(required_memory))))
     if cores < 1:
         cores = 1
     return cores
