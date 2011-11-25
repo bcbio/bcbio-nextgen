@@ -9,6 +9,7 @@ import pysam
 from bcbio import broad
 from bcbio.pipeline.alignment import get_genome_ref
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
+from bcbio.distributed.transaction import file_transaction
 
 # ## Split/Combine helpers
 
@@ -53,10 +54,32 @@ def write_nochr_reads(in_file, out_file):
     """
     if not file_exists(out_file):
         with closing(pysam.Samfile(in_file, "rb")) as in_bam:
-            with closing(pysam.Samfile(out_file, "wb", template=in_bam)) as out_bam:
-                for read in in_bam:
-                    if read.tid < 0:
-                        out_bam.write(read)
+            with file_transaction(out_file) as tx_out_file:
+                with closing(pysam.Samfile(tx_out_file, "wb", template=in_bam)) as out_bam:
+                    for read in in_bam:
+                        if read.tid < 0:
+                            out_bam.write(read)
+    return out_file
+
+def subset_bam_by_region(in_file, region, out_file_base = None):
+    """Subset BAM files based on specified chromosome region.
+    """
+    if out_file_base is not None:
+        base, ext = os.path.splitext(out_file_base)
+    else:
+        base, ext = os.path.splitext(in_file)
+    out_file = "%s-subset%s%s" % (base, region, ext)
+    if not file_exists(out_file):
+        with closing(pysam.Samfile(in_file, "rb")) as in_bam:
+            target_tid = in_bam.gettid(region)
+            assert region is not None, \
+                   "Did not find reference region %s in %s" % \
+                   (region, in_file)
+            with file_transaction(out_file) as tx_out_file:
+                with closing(pysam.Samfile(tx_out_file, "wb", template=in_bam)) as out_bam:
+                    for read in in_bam:
+                        if read.tid == target_tid:
+                            out_bam.write(read)
     return out_file
 
 # ## Retrieving file information from configuration variables

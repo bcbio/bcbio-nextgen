@@ -12,7 +12,7 @@ from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file,
-                                   write_nochr_reads)
+                                   write_nochr_reads, subset_bam_by_region)
 
 # ## Realignment runners with GATK specific arguments
 
@@ -77,6 +77,9 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     runner.run_fn("picard_index_ref", ref_file)
     if not os.path.exists("%s.fai" % ref_file):
         pysam.faidx(ref_file)
+    if region:
+        align_bam = subset_bam_by_region(align_bam, region, out_file)
+        runner.run_fn("picard_index", align_bam)
     if has_aligned_reads(align_bam, region):
         realign_target_file = gatk_realigner_targets(runner, align_bam,
                                                      ref_file, dbsnp, region,
