@@ -30,7 +30,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
     if not utils.file_exists(bc_dir):
         with file_transaction(bc_dir) as tx_bc_dir:
             with utils.chdir(tx_bc_dir):
-                tag_file, need_trim = _make_tag_file(multiplex, unmatched_str)
+                tag_file, need_trim = _make_tag_file(multiplex, unmatched_str, config)
                 cl = [config["program"]["barcode"], tag_file,
                       "%s_--b--_--r--_fastq.txt" % base_name,
                       fastq1]
@@ -44,6 +44,8 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
                     cl.append("--five")
                 if config["algorithm"].get("bc_allow_indels", True) is False:
                     cl.append("--noindel")
+                if "bc_offset" in config["algorithm"]:
+                    cl.append("--bc_offset=%s" % config["algorithm"]["bc_offset"])
                 subprocess.check_call(cl)
     else:
         with utils.curdir_tmpdir() as tmp_dir:
@@ -78,10 +80,10 @@ def _basic_trim(f1, f2, trim_seq, config):
                                                            trimmer(qual)))
     return (trim_file, f2) if is_first else (f1, trim_file)
 
-def _make_tag_file(barcodes, unmatched_str):
+def _make_tag_file(barcodes, unmatched_str, config):
     need_trim = {}
     tag_file = "%s-barcodes.cfg" % barcodes[0].get("barcode_type", "barcode")
-    barcodes = _adjust_illumina_tags(barcodes)
+    barcodes = _adjust_illumina_tags(barcodes,config)
     with open(tag_file, "w") as out_handle:
         for bc in barcodes:
             if bc["barcode_id"] != unmatched_str:
@@ -90,12 +92,15 @@ def _make_tag_file(barcodes, unmatched_str):
                 need_trim[bc["barcode_id"]] = bc["sequence"]
     return tag_file, need_trim
 
-def _adjust_illumina_tags(barcodes):
+def _adjust_illumina_tags(barcodes,config):    
     """Handle additional trailing A in Illumina barocdes.
 
     Illumina barcodes are listed as 6bp sequences but have an additional
     A base when coming off on the sequencer. This checks for this case and
-    adjusts the sequences appropriately if needed.
+    adjusts the sequences appropriately if needed. If the configuration 
+    option to disregard the additional A in barcode matching is set, the
+    sequences will be left untouched and the bc_offset parameter will be set
+    in the config.
     """
     illumina_size = 7
     all_illumina = True
@@ -107,6 +112,12 @@ def _adjust_illumina_tags(barcodes):
             len(bc["sequence"]) < illumina_size):
             need_a = True
     if all_illumina and need_a:
+        # If we skip the trailing A in barcode matching, set the bc_offset
+        # parameter and return the barcodes, do not add the extra A.
+        if config["algorithm"].get("bc_illumina_no_trailing",False):
+            if config["algorithm"].get("bc_offset",None) is None:
+                config["algorithm"]["bc_offset"] = 1
+            return barcodes 
         new = []
         for bc in barcodes:
             new_bc = copy.deepcopy(bc)
