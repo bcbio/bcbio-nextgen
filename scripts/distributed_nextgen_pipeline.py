@@ -2,7 +2,7 @@
 """Run an automated analysis pipeline in a distributed cluster architecture.
 
 Usage:
-  run_distributed_job.py <config_file> <fc_dir> [<run_info_yaml>]
+  distributed_nextgen_pipeline.py <config_file> <fc_dir> [<run_info_yaml>]
      -n <number of processes to start>
 """
 import sys
