@@ -37,8 +37,8 @@ def combine_bam(*args):
     return shared.combine_bam(*args)
 
 @utils.map_wrap
-def unified_genotyper_sample(*args):
-    return genotype.unified_genotyper_sample(*args)
+def variantcall_sample(*args):
+    return genotype.variantcall_sample(*args)
 
 @utils.map_wrap
 def combine_variant_files(*args):

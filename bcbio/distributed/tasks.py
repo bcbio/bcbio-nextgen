@@ -60,8 +60,8 @@ def combine_bam(*args):
     return shared.combine_bam(*args)
 
 @task
-def unified_genotyper_sample(*args):
-    return genotype.unified_genotyper_sample(*args)
+def variantcall_sample(*args):
+    return genotype.variantcall_sample(*args)
 
 @task
 def combine_variant_files(*args):

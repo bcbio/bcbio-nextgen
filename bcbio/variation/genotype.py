@@ -367,8 +367,8 @@ def _is_bed_file(fname):
 
 # ## High level functionality to run genotyping in parallel
 
-def parallel_unified_genotyper(sample_info, parallel_fn):
-    """Realign samples, running in parallel over individual chromosomes.
+def parallel_variantcall(sample_info, parallel_fn):
+    """Provide sample genotyping, running in parallel over individual chromosomes.
     """
     to_process = []
     finished = []
@@ -380,19 +380,21 @@ def parallel_unified_genotyper(sample_info, parallel_fn):
     if len(to_process) > 0:
         split_fn = split_bam_by_chromosome("-variants.vcf", "work_bam")
         processed = parallel_split_combine(to_process, split_fn, parallel_fn,
-                                           "unified_genotyper_sample",
+                                           "variantcall_sample",
                                            "combine_variant_files",
                                            "vrn_file", ["sam_ref", "config"])
         finished.extend(processed)
     return finished
 
-def unified_genotyper_sample(data, region=None, out_file=None):
+def variantcall_sample(data, region=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
+    caller_fns = {"gatk": unified_genotyper}
     if data["config"]["algorithm"]["snpcall"]:
         sam_ref = data["sam_ref"]
         config = data["config"]
-        data["vrn_file"] = unified_genotyper(data["work_bam"], sam_ref, config,
-                                             configured_ref_file("dbsnp", config, sam_ref),
-                                             region, out_file)
+        caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
+        data["vrn_file"] = caller_fn(data["work_bam"], sam_ref, config,
+                                     configured_ref_file("dbsnp", config, sam_ref),
+                                     region, out_file)
     return [data]
