@@ -14,6 +14,7 @@ program:
   pdflatex: pdflatex
   barcode: barcode_sort_trim.py
   freebayes: freebayes
+  mosaik: MosaikAligner
 algorithm:
   aligner: bowtie
   max_errors: 2
