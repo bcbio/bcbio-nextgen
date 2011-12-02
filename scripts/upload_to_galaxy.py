@@ -154,8 +154,13 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config):
                 yield (bam_file, _name_with_ext(bam_file, new_ext))
                 found_bam = True
     # Genotype files produced by SNP calling
-    for snp_file in base_glob("variants-combined-annotated.vcf"):
-        yield (snp_file, _name_with_ext(bam_file, "-variants.vcf"))
+    found = False
+    for orig_ext, new_ext in [("variants-combined-annotated.vcf", "-variants.vcf"),
+                              ("variants-annotated.vcf", "-variants.vcf")]:
+        if not found:
+            for snp_file in base_glob(orig_ext):
+                yield (snp_file, _name_with_ext(bam_file, new_ext))
+                found = True
     # Effect information on SNPs
     for snp_file in base_glob("variants-combined-effects.tsv"):
         yield (snp_file, _name_with_ext(bam_file, "-variants-effects.tsv"))

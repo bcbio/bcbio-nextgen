@@ -52,7 +52,7 @@ def process_sample(data):
     """Finalize processing for a sample, potentially multiplexed.
     """
     if data["config"]["algorithm"]["snpcall"]:
-        log.info("Finalizing variant calls %s with GATK" % str(data["name"]))
+        log.info("Finalizing variant calls: %s" % str(data["name"]))
         data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["sam_ref"],
                                               data["config"])
         log.info("Calculating variation effects for %s" % str(data["name"]))

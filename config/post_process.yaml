@@ -13,6 +13,7 @@ program:
   fastqc: fastqc
   pdflatex: pdflatex
   barcode: barcode_sort_trim.py
+  freebayes: freebayes
 algorithm:
   aligner: bowtie
   max_errors: 2

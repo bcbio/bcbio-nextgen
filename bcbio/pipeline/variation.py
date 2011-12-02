@@ -37,10 +37,13 @@ def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
 # ## Genotyping
 
 def finalize_genotyper(call_file, ref_file, config):
-    """Perform SNP genotyping and analysis using GATK.
+    """Perform SNP genotyping and analysis.
     """
     vrn_files = configured_vrn_files(config, ref_file)
-    filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
+    if config["algorithm"].get("variantcaller", "gatk") == "gatk":
+        filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
+    else:
+        filter_snp = call_file
     _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp
 
