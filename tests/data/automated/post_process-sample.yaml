@@ -22,7 +22,8 @@ algorithm:
   bc_read: 1
   bc_position: 3
   java_memory: 3g
-  save_diskspace: false
+  save_diskspace: true
+  upload_fastq: false
 
 analysis:
   towig_script: bam_to_wiggle.py

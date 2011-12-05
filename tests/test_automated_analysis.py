@@ -35,7 +35,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
                          DlInfo("genomes_automated_test.tar.gz", "genomes", 4),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
-                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 1)]
+                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 2)]
         for dl in download_data:
             url = "http://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
             dirname = os.path.join(data_dir, os.pardir,
@@ -111,6 +111,17 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-variantcall.yaml")]
+            subprocess.check_call(cl)
+
+    def test_5_bam(self):
+        """Allow BAM files as input to pipeline.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir():
+            cl = ["automated_initial_analysis.py",
+                  self._get_post_process_yaml(),
+                  os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
+                  os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
 
 

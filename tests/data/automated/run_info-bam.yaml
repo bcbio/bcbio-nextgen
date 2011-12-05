@@ -1,0 +1,8 @@
+details:
+  - algorithm:
+      quality_format: Standard
+      coverage_interval: regional
+    description: Test1
+    genome_build: hg19
+    lane: 7
+    files: [7_100326_FC6107FAAXX.bam]

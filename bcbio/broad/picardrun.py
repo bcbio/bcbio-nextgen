@@ -85,6 +85,20 @@ def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir,
                 picard.run("FastqToSam", opts)
     return out_bam
 
+def picard_bam_to_fastq(picard, in_bam, fastq_one, fastq_two=None):
+    """Convert BAM file to fastq.
+    """
+    if not file_exists(fastq_one):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(fastq_one) as tx_out1:
+                opts = [("INPUT", in_bam),
+                        ("FASTQ", tx_out1),
+                        ("TMP_DIR", tmp_dir)]
+                if fastq_two is not None:
+                    opts += [("SECOND_END_FASTQ", fastq_two)]
+                picard.run("SamToFastq", opts)
+    return (fastq_one, fastq_two)
+
 def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                       is_paired=False):
     """Convert SAM to BAM, including unmapped reads from fastq BAM file.

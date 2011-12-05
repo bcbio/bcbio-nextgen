@@ -90,8 +90,9 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
     utils.save_diskspace(out_fastq_bam, "Combined into output BAM %s" % out_bam, config)
     utils.save_diskspace(out_bam, "Sorted to %s" % sort_bam, config)
     # merge FASTQ files, only if barcoded samples in the work directory
-    if (os.path.commonprefix([fastq1, sort_bam]).startswith(os.path.dirname(sort_bam)) and
-          not config["algorithm"].get("upload_fastq", True)):
+    if (os.path.commonprefix([fastq1, sort_bam]).startswith(
+            os.path.split(os.path.dirname(sort_bam))[0])
+          and not config["algorithm"].get("upload_fastq", True)):
         utils.save_diskspace(fastq1, "Merged into output BAM %s" % out_bam, config)
         if fastq2:
             utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)

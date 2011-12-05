@@ -8,7 +8,6 @@ import shutil
 import collections
 
 from bcbio import utils, broad
-from bcbio.pipeline.fastq import get_fastq_files
 
 def combine_fastq_files(in_files, work_dir, config):
     if len(in_files) == 1:
