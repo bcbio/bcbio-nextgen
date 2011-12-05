@@ -104,14 +104,14 @@ def best_match(end_gen, barcodes, mismatch, allow_indels=True):
 
     # check for best approximate match within mismatch values
     match_info = []
-    if mismatch > 0:
+    if mismatch > 0 or _barcode_has_ambiguous(barcodes):
         for bc_seq, bc_id in barcodes.iteritems():
             test_seq = end_gen(len(bc_seq))
             aligns = pairwise2.align.globalms(bc_seq, test_seq,
                     5.0, -4.0, -9.0, -0.5, one_alignment_only=True)
             (abc_seq, atest_seq) = aligns[0][:2] if len(aligns) == 1 else ("", "")
             matches = sum(1 for i, base in enumerate(abc_seq)
-                          if base == atest_seq[i])
+                          if (base == atest_seq[i] or base == "N"))
             gaps = abc_seq.count("-")
             cur_mismatch = len(test_seq) - matches + gaps
             if cur_mismatch <= mismatch and (allow_indels or gaps == 0):
@@ -122,6 +122,12 @@ def best_match(end_gen, barcodes, mismatch, allow_indels=True):
         return name, bc_seq.replace("-", ""), test_seq.replace("-", "")
     else:
         return "unmatched", "", ""
+
+def _barcode_has_ambiguous(barcodes):
+    for seq in barcodes.keys():
+        if "N" in seq:
+            return True
+    return False
 
 def end_generator(seq1, seq2=None, first_read=True, three_end=True, bc_offset=0):
     """Function which pulls a barcode of a provided size from paired seqs.
@@ -307,6 +313,19 @@ class BarcodeTest(unittest.TestCase):
         assert bc_id == "2"
         assert bc_seq == match_seq
         assert removed == "GATTACA" * 5
+
+    def test_6_ambiguous_barcodes(self):
+        """Allow mismatch N characters in specified barcodes.
+        """
+        bcs = {"CGATGN": "2", "CAGATC": "7"}
+        (bc_id, _, _) = best_match(end_generator("CGATGT"), bcs, 0, False)
+        assert bc_id == "2", bc_id
+        (bc_id, _, _) = best_match(end_generator("CGATGN"), bcs, 0, False)
+        assert bc_id == "2", bc_id
+        (bc_id, _, _) = best_match(end_generator("CGATNT"), bcs, 0, False)
+        assert bc_id == "unmatched", bc_id
+        (bc_id, _, _) = best_match(end_generator("CGATNT"), bcs, 1, False)
+        assert bc_id == "2", bc_id
 
 if __name__ == "__main__":
     parser = OptionParser()
