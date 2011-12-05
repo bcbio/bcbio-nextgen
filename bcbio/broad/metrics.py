@@ -4,6 +4,7 @@ import os
 import glob
 import json
 import contextlib
+import pprint
 
 from bcbio.utils import tmpfile, file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -19,7 +20,7 @@ class PicardMetricsParser:
     def __init__(self):
         pass
 
-    def get_summary_metrics(self, align_metrics, gc_metrics, dup_metrics,
+    def get_summary_metrics(self, align_metrics, dup_metrics,
             insert_metrics=None, hybrid_metrics=None, vrn_vals=None):
         """Retrieve a high level summary of interesting metrics.
         """
@@ -229,7 +230,9 @@ class PicardMetrics:
         """
         dup_bam, dup_metrics = self._get_current_dup_metrics(align_bam)
         align_metrics = self._collect_align_metrics(dup_bam, ref_file)
-        gc_graph, gc_metrics = self._gc_bias(dup_bam, ref_file)
+        # Prefer the GC metrics in FastQC instead of Picard
+        # gc_graph, gc_metrics = self._gc_bias(dup_bam, ref_file)
+        gc_graph = None
         insert_graph, insert_metrics, hybrid_metrics = (None, None, None)
         if is_paired:
             insert_graph, insert_metrics = self._insert_sizes(dup_bam)
@@ -238,9 +241,8 @@ class PicardMetrics:
                     dup_bam, bait_file, target_file)
         vrn_vals = self._variant_eval_metrics(dup_bam)
         summary_info = self._parser.get_summary_metrics(align_metrics,
-                gc_metrics, dup_metrics, insert_metrics, hybrid_metrics,
+                dup_metrics, insert_metrics, hybrid_metrics,
                 vrn_vals)
-        import pprint
         pprint.pprint(summary_info)
         graphs = []
         if gc_graph and os.path.exists(gc_graph):
