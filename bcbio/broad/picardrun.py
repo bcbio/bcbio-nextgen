@@ -5,7 +5,7 @@ import os
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.transaction import file_transaction
 
-def picard_sort(picard, align_bam):
+def picard_sort(picard, align_bam, sort_order="coordinate"):
     """Sort a BAM file by coordinates.
     """
     base, ext = os.path.splitext(align_bam)
@@ -16,7 +16,7 @@ def picard_sort(picard, align_bam):
                 opts = [("INPUT", align_bam),
                         ("OUTPUT", tx_out_file),
                         ("TMP_DIR", tmp_dir),
-                        ("SORT_ORDER", "coordinate")]
+                        ("SORT_ORDER", sort_order)]
                 picard.run("SortSam", opts)
     return out_file
 
@@ -103,7 +103,12 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                       is_paired=False):
     """Convert SAM to BAM, including unmapped reads from fastq BAM file.
     """
-    out_bam = "%s.bam" % os.path.splitext(align_sam)[0]
+    if align_sam.endswith(".sam"):
+        out_bam = "%s.bam" % os.path.splitext(align_sam)[0]
+    elif align_sam.endswith("-align.bam"):
+        out_bam = "%s.bam" % align_sam.replace("-align.bam", "")
+    else:
+        raise NotImplementedError("Input format not recognized")
     if not file_exists(out_bam):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:

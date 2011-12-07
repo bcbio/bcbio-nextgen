@@ -34,14 +34,16 @@ def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
                       lane_name, sample_name, dirs, config):
     """Align to the named genome build, returning a sorted BAM file.
     """
+    rg_name = lane_name.split("_")[0]
     utils.safe_makedir(dirs["align"])
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     align_fn = _tools[aligner].align_fn
-    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, dirs["align"], config)
+    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, dirs["align"], config,
+                        rg_name=rg_name)
     if fastq2 is None and aligner in ["bwa", "bowtie2"]:
         fastq1 = _remove_read_number(fastq1, sam_file)
     return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                           lane_name, config)
+                           rg_name, lane_name, config)
 
 def _remove_read_number(in_file, sam_file):
     """Work around problem with MergeBamAlignment with BWA and single end reads.
@@ -69,10 +71,9 @@ def _remove_read_number(in_file, sam_file):
     return out_file
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-                    lane_name, config):
+                    rg_name, lane_name, config):
     """Convert SAM file to merged and sorted BAM file.
     """
-    rg_name = lane_name.split("_")[0]
     picard = broad.runner_from_config(config)
     platform = config["algorithm"]["platform"]
     qual_format = config["algorithm"].get("quality_format", None)

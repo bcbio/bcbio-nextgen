@@ -24,7 +24,7 @@ def _bowtie2_args_from_config(config):
     return core_flags + qual_flags
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-          extra_args=None):
+          extra_args=None, rg_name=None):
     """Alignment with bowtie2.
     """
     out_file = os.path.join(align_dir, "%s.sam" % out_base)

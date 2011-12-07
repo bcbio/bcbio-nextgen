@@ -8,7 +8,8 @@ from bcbio.distributed.transaction import file_transaction
 
 galaxy_location_file = "bwa_index.loc"
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config):
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+          rg_name=None):
     """Perform a BWA alignment, generating a SAM file.
     """
     sai1_file = os.path.join(align_dir, "%s_1.sai" % out_base)

@@ -20,7 +20,7 @@ def _mosaik_args_from_config(config):
     core_flags = ["-p", str(cores)] if cores else []
     return core_flags + multi_flags + error_flags
 
-def _convert_fastq(fastq_file, pair_file, out_file, config):
+def _convert_fastq(fastq_file, pair_file, rg_name, out_file, config):
     """Convert fastq inputs into internal Mosaik representation.
     """
     out_file = "{0}-fq.mkb".format(os.path.splitext(out_file)[0])
@@ -32,6 +32,8 @@ def _convert_fastq(fastq_file, pair_file, out_file, config):
                    "-st", config["algorithm"].get("platform", "illumina").lower()]
             if pair_file:
                 cl += ["-q2", pair_file]
+            if rg_name:
+                cl += ["-id", rg_name]
             subprocess.check_call(cl)
     return out_file
 
@@ -49,13 +51,14 @@ def _get_mosaik_nn_args(out_file):
     return out
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-          extra_args=None):
+          extra_args=None, rg_name=None):
     """Alignment with MosaikAligner.
     """
-    out_file = os.path.join(align_dir, "%s.bam" % out_base)
+    out_file = os.path.join(align_dir, "%s-align.bam" % out_base)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            built_fastq = _convert_fastq(fastq_file, pair_file, out_file, config)
+            built_fastq = _convert_fastq(fastq_file, pair_file, rg_name,
+                                         out_file, config)
             cl = [config["program"].get("mosaik", "MosaikAligner")]
             cl += _mosaik_args_from_config(config)
             cl += extra_args if extra_args is not None else []
