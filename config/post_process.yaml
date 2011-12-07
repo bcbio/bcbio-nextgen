@@ -24,6 +24,7 @@ algorithm:
   snpcall: false
   bc_mismatch: 2
   bc_allow_indels: true
+  bc_illumina_no_trailing: true
   bc_read: 1
   bc_position: 3
   java_memory: 6g
