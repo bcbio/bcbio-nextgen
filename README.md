@@ -96,7 +96,7 @@ all software used by the pipeline.
 
 Clone a copy of the code from GitHub:
 
-      git clone git://github.com/chapmanb/bcbb.git
+      git clone https://github.com/chapmanb/bcbb.git
 
 Use a recent version of Python 2 (2.6 or 2.7), and install with:
 
