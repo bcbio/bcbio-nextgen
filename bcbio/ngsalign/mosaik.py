@@ -34,7 +34,8 @@ def _convert_fastq(fastq_file, pair_file, rg_name, out_file, config):
                 cl += ["-q2", pair_file]
             if rg_name:
                 cl += ["-id", rg_name]
-            subprocess.check_call(cl)
+            env_set = "export MOSAIK_TMP={0}".format(os.path.dirname(tx_out_file))
+            subprocess.check_call(env_set + " && " + " ".join(cl), shell=True)
     return out_file
 
 def _get_mosaik_nn_args(out_file):
