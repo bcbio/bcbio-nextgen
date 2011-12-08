@@ -75,7 +75,9 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                 if jump_size_gb < 1.0:
                     cl += ["-hs", "13"]
             cl += _get_mosaik_nn_args(out_file)
-            subprocess.check_call([str(x) for x in cl])
+            env_set = "export MOSAIK_TMP={0}".format(os.path.dirname(tx_out_file))
+            subprocess.check_call(env_set + " && "+
+                                  " ".join([str(x) for x in cl]), shell=True)
             os.remove(built_fastq)
     return out_file
 
