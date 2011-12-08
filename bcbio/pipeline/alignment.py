@@ -8,7 +8,7 @@ from collections import namedtuple
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils, broad
-from bcbio.ngsalign import bowtie, bwa, tophat, bowtie2, mosaik
+from bcbio.ngsalign import bowtie, bwa, tophat, bowtie2, mosaik, novoalign
 from bcbio.distributed.transaction import file_transaction
 
 # Define a next-generation sequencing tool to plugin:
@@ -26,6 +26,7 @@ _tools = {
     "bowtie2": NgsTool(bowtie2.align, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align, bwa.galaxy_location_file, None),
     "mosaik": NgsTool(mosaik.align, mosaik.galaxy_location_file, None),
+    "novoalign": NgsTool(novoalign.align, bowtie.galaxy_location_file, novoalign.remap_index_fn),
     "tophat": NgsTool(tophat.align, tophat.galaxy_location_file, None),
     "samtools": NgsTool(None, "sam_fa_indices.loc", None),
     }

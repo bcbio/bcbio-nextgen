@@ -3,6 +3,7 @@
 import os
 import subprocess
 
+from bcbio.pipeline import log
 from bcbio.utils import (memoize_outfile, file_exists)
 from bcbio.distributed.transaction import file_transaction
 
@@ -16,29 +17,37 @@ def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
     cl += [out_file, ref_file]
     subprocess.check_call(cl)
 
-def _get_base_filename(fname):
-    fname = os.path.splitext(os.path.basename(fname))[0]
-    to_replace = ["_fastq", "-unique"]
-    for rep in to_replace:
-        fname = fname.replace(rep, "")
-    test_fname, ext = fname.rsplit("_", 1)
-    try:
-        int(ext)
-        fname = test_fname
-    except ValueError:
-        pass
-    return fname
+def _novoalign_args_from_config(config):
+    """Select novoalign options based on configuration parameters.
+    """
+    qual_format = config["algorithm"].get("quality_format", "").lower()
+    qual_flags = ["-F", "ILMFQ" if qual_format == "illumina" else "STDFQ"]
+    multi_mappers = config["algorithm"].get("multiple_mappers", True)
+    multi_flags = ["-r", "Random" if multi_mappers is True else "None"]
+    return qual_flags + multi_flags
 
-def align(out_dir, ref_index, fastq1, fastq2=None, qual_format=None):
-    out_file = os.path.join(out_dir, "%s.sam" % _get_base_filename(fastq1))
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+          extra_args=None, rg_name=None):
+    """Align with novoalign.
+    """
+    out_file = os.path.join(align_dir, "{0}.sam".format(out_base))
     if not file_exists(out_file):
-        cl = ["novoalign", "-o", "SAM", "-r", "None", "-d", ref_index, "-f", fastq1]
-        if fastq2:
-            cl.append(fastq2)
-        if qual_format:
-            cl += ["-F", qual_format]
-        print " ".join(cl)
+        cl = [config["program"].get("novoalign", "novoalign")]
+        cl += _novoalign_args_from_config(config)
+        cl += extra_args if extra_args is not None else []
+        cl += ["-o", "SAM"]
+        if rg_name:
+            cl.append(r"@RG\tID:{0}".format(rg_name))
+        cl += ["-d", ref_file, "-f", fastq_file]
+        if pair_file:
+            cl.append(pair_file)
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
+                log.info(" ".join(cl))
                 subprocess.check_call(cl, stdout=out_handle)
     return out_file
+
+def remap_index_fn(ref_file):
+    """Map bowtie references to equivalent novoalign indexes.
+    """
+    return ref_file.replace("/bowtie/", "/novoalign/")
