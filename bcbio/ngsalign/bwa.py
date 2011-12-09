@@ -3,6 +3,7 @@
 import os
 import subprocess
 
+from bcbio.pipeline import log
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 
@@ -32,17 +33,24 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             sam_cl.append(pair_file)
         with file_transaction(sam_file) as tx_sam_file:
             with open(tx_sam_file, "w") as out_handle:
+                log.info(" ".join(sam_cl))
                 subprocess.check_call(sam_cl, stdout=out_handle)
     return sam_file
 
-def _run_bwa_align(fastq_file, ref_file, out_file, config):
+def _bwa_args_from_config(config):
     cores = config.get("resources", {}).get("bwa", {}).get("cores", None)
     core_flags = ["-t", str(cores)] if cores else []
+    qual_format = config["algorithm"].get("quality_format", "").lower()
+    qual_flags = ["-I"] if qual_format == "illumina" else []
+    return core_flags + qual_flags
+
+def _run_bwa_align(fastq_file, ref_file, out_file, config):
     aln_cl = [config["program"]["bwa"], "aln",
               "-n %s" % config["algorithm"]["max_errors"],
               "-k %s" % config["algorithm"]["max_errors"]]
-    aln_cl += core_flags
+    aln_cl += _bwa_args_from_config(config)
     aln_cl += [ref_file, fastq_file]
     with open(out_file, "w") as out_handle:
+        log.info(" ".join(aln_cl))
         subprocess.check_call(aln_cl, stdout=out_handle)
 
