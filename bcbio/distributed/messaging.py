@@ -121,6 +121,8 @@ CELERYD_CONCURRENCY = ${cores}
 CELERY_ACKS_LATE = False
 CELERYD_PREFETCH_MULTIPLIER = 1
 BCBIO_CONFIG_FILE = "${config_file}"
+# 4x the default limit; allows 100 concurrent human genomes
+CELERY_MAX_CACHED_RESULTS = 20000
 """
 
 @contextlib.contextmanager

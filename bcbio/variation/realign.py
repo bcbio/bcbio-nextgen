@@ -24,7 +24,9 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
         out_file = "%s.intervals" % os.path.splitext(out_file)[0]
     else:
         out_file = "%s-realign.intervals" % os.path.splitext(align_bam)[0]
-    if not file_exists(out_file):
+    # check only for file existence; interval files can be empty after running
+    # on small chromosomes, so don't rerun in those cases
+    if not os.path.exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "RealignerTargetCreator",
                       "-I", align_bam,
