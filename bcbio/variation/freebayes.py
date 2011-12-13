@@ -22,5 +22,14 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file]
             if region:
                 cl.extend(["-r", region])
-            subprocess.check_call(cl)
+            try:
+                subprocess.check_call(cl)
+            # XXX Temporary, work around freebayes issue; need to recall these regions
+            # later so this is an ugly silent fix. Will need to grep for 'freebayes failed'
+            # https://github.com/ekg/freebayes/issues/22
+            except subprocess.CalledProcessError:
+                with open(tx_out_file, "w") as out_handle:
+                    out_handle.write("##fileformat=VCFv4.1\n"
+                                     "## No variants; freebayes failed\n"
+                                     "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
     return out_file
