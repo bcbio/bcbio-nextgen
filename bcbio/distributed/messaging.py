@@ -63,13 +63,26 @@ def runner(task_module, dirs, config, config_file, wait=True):
             result = job.apply_async()
             out = []
             if wait:
-                while not result.ready():
-                    time.sleep(5)
-                for x in result.join():
-                    if x:
-                        out.extend(x)
+                with _close_taskset(job):
+                    while not result.ready():
+                        time.sleep(5)
+                        if result.failed():
+                            raise ValueError("Failed distributed task; cleaning up")
+                    for x in result.join():
+                        if x:
+                            out.extend(x)
             return out
         return _run
+
+@contextlib.contextmanager
+def _close_taskset(ts):
+    """Revoke existing jobs if a taskset fails.
+    """
+    try:
+        yield None
+    except:
+        ts.revoke()
+        raise
 
 # ## Handle memory bound processes on multi-core machines
 
@@ -121,8 +134,6 @@ CELERYD_CONCURRENCY = ${cores}
 CELERY_ACKS_LATE = False
 CELERYD_PREFETCH_MULTIPLIER = 1
 BCBIO_CONFIG_FILE = "${config_file}"
-# 4x the default limit; allows 100 concurrent human genomes
-CELERY_MAX_CACHED_RESULTS = 20000
 """
 
 @contextlib.contextmanager
