@@ -3,11 +3,32 @@
 http://bioinformatics.bc.edu/marthlab/FreeBayes
 """
 import os
+import shutil
 import subprocess
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import log
+
+def _check_file(vcf_file):
+    """Remove problem lines from Freebayes variant calls.
+
+    Works around:
+    https://github.com/ekg/freebayes/issues/24
+    """
+    def _variantcall_changes(line):
+        parts = line.split("\t")
+        ref, alt = parts[3:5]
+        return ref != alt
+    orig_file = "{0}.orig".format(vcf_file)
+    if not file_exists(orig_file):
+        shutil.move(vcf_file, orig_file)
+        with open(orig_file) as in_handle:
+            with open(vcf_file, "w") as out_handle:
+                for line in in_handle:
+                    if line.startswith("#") or _variantcall_changes(line):
+                        out_handle.write(line)
+    return vcf_file
 
 def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                   out_file=None):
@@ -34,4 +55,4 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                     out_handle.write("##fileformat=VCFv4.1\n"
                                      "## No variants; freebayes failed\n"
                                      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
-    return out_file
+    return _check_file(out_file)
