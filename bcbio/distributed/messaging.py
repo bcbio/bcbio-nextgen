@@ -63,7 +63,7 @@ def runner(task_module, dirs, config, config_file, wait=True):
             result = job.apply_async()
             out = []
             if wait:
-                with _close_taskset(job):
+                with _close_taskset(result):
                     while not result.ready():
                         time.sleep(5)
                         if result.failed():
@@ -76,13 +76,18 @@ def runner(task_module, dirs, config, config_file, wait=True):
 
 @contextlib.contextmanager
 def _close_taskset(ts):
-    """Revoke existing jobs if a taskset fails.
+    """Revoke existing jobs if a taskset fails; raise original error.
     """
     try:
         yield None
     except:
-        ts.revoke()
-        raise
+        try:
+            raise
+        finally:
+            try:
+                ts.revoke()
+            except:
+                pass
 
 # ## Handle memory bound processes on multi-core machines
 
