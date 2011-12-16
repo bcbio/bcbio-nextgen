@@ -149,12 +149,13 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file):
               "--mode", filter_type]
     return params, recal_file, tranches_file
 
-def _variant_filtration_no_recal(broad_runner, snp_file, ref_file, filter_type,
-                                 expressions):
-    """Perform hard filtering if coverage is in limited regions.
+def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
+                                expressions):
+    """Perform hard filtering with GATK using JEXL expressions.
 
     Variant quality score recalibration will not work on some regions; it
-    requires enough positions to train the model.
+    requires enough positions to train the model. This provides a general wrapper
+    around GATK to do cutoff based filtering.
     """
     base, ext = os.path.splitext(snp_file)
     out_file = "{base}-filter{ftype}{ext}".format(base=base, ext=ext,
@@ -184,8 +185,8 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
            "Need HapMap and 1000 genomes training files"
     if cov_interval == "regional":
-        return _variant_filtration_no_recal(broad_runner, snp_file, ref_file, filter_type,
-                                            ["QD < 5.0", "HRun > 5", "FS > 200.0"])
+        return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
+                                           ["QD < 5.0", "HRun > 5", "FS > 200.0"])
     else:
         params.extend(
             ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
@@ -230,8 +231,8 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
     params, recal_file, tranches_file = _shared_variant_filtration(
         filter_type, snp_file, ref_file)
     if cov_interval in ["exome", "regional"]:
-        return _variant_filtration_no_recal(broad_runner, snp_file, ref_file, filter_type,
-                                            ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
+        return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
+                                           ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
     else:
         assert vrn_files.train_indels, \
                "Need indel training file specified"
