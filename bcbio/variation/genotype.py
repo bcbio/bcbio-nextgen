@@ -18,7 +18,6 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import freebayes
 
 # ## GATK Genotype calling
 
@@ -395,6 +394,7 @@ def parallel_variantcall(sample_info, parallel_fn):
 def variantcall_sample(data, region=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
+    from bcbio.variation import freebayes
     caller_fns = {"gatk": unified_genotyper,
                   "freebayes": freebayes.run_freebayes}
     if data["config"]["algorithm"]["snpcall"]:
