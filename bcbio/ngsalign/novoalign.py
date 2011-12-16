@@ -26,6 +26,10 @@ def _novoalign_args_from_config(config):
     multi_flags = ["-r", "Random" if multi_mappers is True else "None"]
     return qual_flags + multi_flags
 
+# Tweaks to add
+# -k -t 200 -K quality calibration metrics
+# paired end sizes
+
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           extra_args=None, rg_name=None):
     """Align with novoalign.
