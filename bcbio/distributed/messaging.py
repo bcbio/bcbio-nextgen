@@ -63,13 +63,31 @@ def runner(task_module, dirs, config, config_file, wait=True):
             result = job.apply_async()
             out = []
             if wait:
-                while not result.ready():
-                    time.sleep(5)
-                for x in result.join():
-                    if x:
-                        out.extend(x)
+                with _close_taskset(result):
+                    while not result.ready():
+                        time.sleep(5)
+                        if result.failed():
+                            raise ValueError("Failed distributed task; cleaning up")
+                    for x in result.join():
+                        if x:
+                            out.extend(x)
             return out
         return _run
+
+@contextlib.contextmanager
+def _close_taskset(ts):
+    """Revoke existing jobs if a taskset fails; raise original error.
+    """
+    try:
+        yield None
+    except:
+        try:
+            raise
+        finally:
+            try:
+                ts.revoke()
+            except:
+                pass
 
 # ## Handle memory bound processes on multi-core machines
 
