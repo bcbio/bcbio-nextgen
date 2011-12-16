@@ -45,7 +45,7 @@ def postcall_filter(in_file, ref_file, vrn_files, config):
     out_file = _check_file_gatk_merge(in_file)
     out_file = annotation.annotate_dbsnp(out_file, vrn_files.dbsnp,
                                          ref_file, config)
-    filters = ["QUAL > 19.9", "DP > 4"]
+    filters = ["QUAL < 20.0", "DP < 5"]
     out_file = genotype.variant_filtration_with_exp(broad.runner_from_config(config),
                                                     out_file, ref_file, "", filters)
     return out_file
