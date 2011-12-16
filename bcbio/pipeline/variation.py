@@ -8,6 +8,7 @@ from bcbio.variation.recalibrate import gatk_recalibrate
 from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
 from bcbio.variation.effects import snpeff_effects
 from bcbio.variation.annotation import annotate_effects
+from bcbio.variation import freebayes
 from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
 
 # ## Recalibration
@@ -40,10 +41,11 @@ def finalize_genotyper(call_file, ref_file, config):
     """Perform SNP genotyping and analysis.
     """
     vrn_files = configured_vrn_files(config, ref_file)
-    if config["algorithm"].get("variantcaller", "gatk") == "gatk":
+    variantcaller = config["algorithm"].get("variantcaller", "gatk")
+    if variantcaller == "gatk":
         filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
-    else:
-        filter_snp = call_file
+    elif variantcaller == "freebayes":
+        filter_snp = freebayes.postcall_filter(call_file, ref_file, vrn_files, config)
     _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp
 
