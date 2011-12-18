@@ -204,6 +204,12 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
             params.extend(["--maxGaussians", "4", "--percentBadVariants", "0.05"])
         else:
             params.extend(["-an", "DP"])
+        # also check if we've failed recal and needed to do strict filtering
+        filter_file = "{base}-filterSNP.vcf".format(base = os.path.splitext(snp_file)[0])
+        if file_exists(filter_file):
+            config["algorithm"]["coverage_interval"] = "regional"
+            return _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
+                                           config)
         if not file_exists(recal_file):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
