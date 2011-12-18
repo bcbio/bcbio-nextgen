@@ -33,7 +33,7 @@ from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline import log
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
-from bcbio.pipeline.qcsummary import write_metrics
+from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall
 from bcbio.pipeline.config_loader import load_config
@@ -69,7 +69,7 @@ def run_main(config, config_file, fc_dir, run_info_yaml):
     samples = parallel_variantcall(samples, run_parallel)
     samples = run_parallel("process_sample", samples)
     samples = run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
-
+    write_project_summary(samples)
     write_metrics(run_info, fc_name, fc_date, dirs)
 
 # ## Utility functions
