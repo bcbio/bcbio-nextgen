@@ -15,7 +15,8 @@ def annotate_effects(orig_file, snpeff_file, genome_file, config):
     """
     broad_runner = broad.runner_from_config(config)
     out_file = "%s-annotated%s" % os.path.splitext(orig_file)
-    snpeff_file = _general_snpeff_version(snpeff_file)
+    # Avoid generalization since 2.0.3 is not working
+    #snpeff_file = _general_snpeff_version(snpeff_file)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "VariantAnnotator",
