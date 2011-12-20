@@ -54,7 +54,8 @@ def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
             else:
                 cur_galaxy_files = []
             store_dir = move_to_storage(lane, bc_id, base_folder_name, upload_files,
-                                        cur_galaxy_files, config, config_file)
+                                        cur_galaxy_files, config, config_file,
+                                        fname_out)
             if store_dir and library_id:
                 print "Uploading directory of files to Galaxy"
                 print galaxy_api.upload_directory(library_id, folder['id'],
@@ -175,13 +176,13 @@ def select_upload_files(base, bc_id, fc_dir, analysis_dir, config, fname_out=Non
     # Genotype files produced by SNP calling
     found = False
     for orig_ext, new_ext in [("variants-combined-annotated.vcf", "-variants.vcf"),
-                              ("variants-annotated.vcf", "-variants.vcf")]:
+                              ("variants-*-annotated.vcf", "-variants.vcf")]:
         if not found:
             for snp_file in base_glob(orig_ext):
                 yield (snp_file, _name_with_ext(bam_file, new_ext))
                 found = True
     # Effect information on SNPs
-    for snp_file in base_glob("variants-combined-effects.tsv"):
+    for snp_file in base_glob("variants-*-effects.tsv"):
         yield (snp_file, _name_with_ext(bam_file, "-variants-effects.tsv"))
 
 def _dir_glob(base, work_dir):
@@ -246,7 +247,7 @@ def _folders_by_name(name, items):
                                 f['name'] == name]
 
 def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files,
-                    config, config_file):
+                    config, config_file, fname_out=None):
     """Create directory for long term storage before linking to Galaxy.
     """
     galaxy_config_file = utils.add_full_path(config["galaxy_config"],
@@ -259,7 +260,7 @@ def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files,
         raise ValueError("Galaxy config %s needs library_import_dir to be set."
                          % galaxy_config_file)
     storage_dir = _get_storage_dir(fc_dir, lane, bc_id, os.path.join(lib_import_dir,
-                                   "storage"))
+                                   "storage"), fname_out)
     existing_files = [os.path.basename(f['name']) for f in cur_galaxy_files]
     need_upload = False
     for orig_file, new_file in select_files:
@@ -270,8 +271,11 @@ def move_to_storage(lane, bc_id, fc_dir, select_files, cur_galaxy_files,
             need_upload = True
     return (storage_dir if need_upload else None)
 
-def _get_storage_dir(cur_folder, lane, bc_id, storage_base):
-    base = "%s_%s" % (lane, bc_id) if bc_id else str(lane)
+def _get_storage_dir(cur_folder, lane, bc_id, storage_base, fname_out=None):
+    if fname_out:
+        base = str(fname_out)
+    else:
+        base = "%s_%s" % (lane, bc_id) if bc_id else str(lane)
     store_dir = os.path.join(storage_base, cur_folder, base)
     utils.safe_makedir(store_dir)
     return store_dir
