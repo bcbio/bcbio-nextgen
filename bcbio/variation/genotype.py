@@ -185,7 +185,10 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
            "Need HapMap and 1000 genomes training files"
     if cov_interval == "regional":
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
-                                           ["QD < 5.0", "HRun > 5", "FS > 200.0"])
+                                           ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
+                                            "HaplotypeScore > 13.0",
+                                            "MQRankSum < -12.5",
+                                            "ReadPosRankSum < -8.0"])
     else:
         params.extend(
             ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
