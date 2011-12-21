@@ -101,7 +101,7 @@ def write_project_summary(samples):
     for name, info in sample_info:
         cur = [name]
         for col, (i, prep_fn) in zip(header, select):
-            val = info.get(col, [("", "")])[i]
+            val = info.get(col, ["", ""])[i]
             if prep_fn and val:
                 val = prep_fn(val)
             cur.append(val)
