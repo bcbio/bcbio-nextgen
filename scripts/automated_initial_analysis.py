@@ -27,7 +27,7 @@ import yaml
 
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio import utils
-from bcbio.log import create_log_handler, logger
+from bcbio.log import logger, setup_logging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
@@ -39,12 +39,13 @@ from bcbio.pipeline.config_loader import load_config
 
 def main(config_file, fc_dir, run_info_yaml=None):
     config = load_config(config_file)
-    log_handler = create_log_handler(config)
-    with log_handler.applicationbound():
-        run_main(config, config_file, fc_dir, run_info_yaml)
-
-def run_main(config, config_file, fc_dir, run_info_yaml):
     work_dir = os.getcwd()
+    if config.get("log_dir", None) is None:
+        config["log_dir"] = os.path.join(work_dir, "log")
+    setup_logging(config)
+    run_main(config, config_file, fc_dir, work_dir, run_info_yaml)
+
+def run_main(config, config_file, fc_dir, work_dir, run_info_yaml):
     align_dir = os.path.join(work_dir, "alignments")
     run_module = "bcbio.distributed"
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)

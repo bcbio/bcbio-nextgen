@@ -34,7 +34,7 @@ import yaml
 import logbook
 
 from bcbio.solexa import samplesheet
-from bcbio.log import create_log_handler, logger
+from bcbio.log import create_log_handler, logger2
 from bcbio import utils
 from bcbio.distributed import messaging
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
@@ -60,15 +60,15 @@ def search_for_new(config, config_file, post_config_file,
                 # Injects run_name on logging calls.
                 # Convenient for run_name on "Subject" for email notifications
                 with logbook.Processor(lambda record: record.extra.__setitem__('run', os.path.basename(dname))):
-                    logger.info("The instrument has finished dumping on directory %s" % dname)
+                    logger2.info("The instrument has finished dumping on directory %s" % dname)
                     _update_reported(config["msg_db"], dname)
                     _process_samplesheets(dname, config)
                     if qseq:
-                        logger.info("Generating qseq files for %s" % dname)
+                        logger2.info("Generating qseq files for %s" % dname)
                         _generate_qseq(get_qseq_dir(dname), config)
                     fastq_dir = None
                     if fastq:
-                        logger.info("Generating fastq files for %s" % dname)
+                        logger2.info("Generating fastq files for %s" % dname)
                         fastq_dir = _generate_fastq(dname, config)
                     _post_process_run(dname, config, config_file,
                                       fastq_dir, post_config_file,
@@ -113,7 +113,7 @@ def _process_samplesheets(dname, config):
     ss_file = samplesheet.run_has_samplesheet(dname, config)
     if ss_file:
         out_file = os.path.join(dname, "run_info.yaml")
-        logger.info("CSV Samplesheet %s found, converting to %s" %
+        logger2.info("CSV Samplesheet %s found, converting to %s" %
                  (ss_file, out_file))
         samplesheet.csv2yaml(ss_file, out_file)
 
@@ -136,7 +136,7 @@ def _generate_fastq(fc_dir, config):
                   ",".join(lanes)]
             if postprocess_dir:
                 cl += ["-o", fastq_dir]
-            logger.debug("Converting qseq to fastq on all lanes.")
+            logger2.debug("Converting qseq to fastq on all lanes.")
             subprocess.check_call(cl)
     return fastq_dir
 
@@ -271,7 +271,7 @@ def finished_message(fn_name, run_module, directory, files_to_copy,
                      config, config_file):
     """Wait for messages with the give tag, passing on to the supplied handler.
     """
-    logger.debug("Calling remote function: %s" % fn_name)
+    logger2.debug("Calling remote function: %s" % fn_name)
     user = getpass.getuser()
     hostname = socket.gethostbyaddr(socket.gethostname())[0]
     data = dict(
