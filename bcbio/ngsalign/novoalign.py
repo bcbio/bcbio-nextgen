@@ -3,7 +3,7 @@
 import os
 import subprocess
 
-from bcbio.pipeline import log
+from bcbio.log import logger
 from bcbio.utils import (memoize_outfile, file_exists)
 from bcbio.distributed.transaction import file_transaction
 
@@ -47,7 +47,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             cl.append(pair_file)
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                log.info(" ".join(cl))
+                logger.info(" ".join(cl))
                 subprocess.check_call(cl, stdout=out_handle)
     return out_file
 

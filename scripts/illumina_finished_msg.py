@@ -34,19 +34,16 @@ import yaml
 import logbook
 
 from bcbio.solexa import samplesheet
-from bcbio.log import create_log_handler
+from bcbio.log import create_log_handler, logger
 from bcbio import utils
 from bcbio.distributed import messaging
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
 from bcbio.pipeline.config_loader import load_config
 
-LOG_NAME = os.path.splitext(os.path.basename(__file__))[0]
-log = logbook.Logger(LOG_NAME)
-
 def main(local_config, post_config_file=None,
          process_msg=True, store_msg=True, qseq=True, fastq=True):
     config = load_config(local_config)
-    log_handler = create_log_handler(config, LOG_NAME)
+    log_handler = create_log_handler(config)
 
     with log_handler.applicationbound():
         search_for_new(config, local_config, post_config_file,
@@ -63,15 +60,15 @@ def search_for_new(config, config_file, post_config_file,
                 # Injects run_name on logging calls.
                 # Convenient for run_name on "Subject" for email notifications
                 with logbook.Processor(lambda record: record.extra.__setitem__('run', os.path.basename(dname))):
-                    log.info("The instrument has finished dumping on directory %s" % dname)
+                    logger.info("The instrument has finished dumping on directory %s" % dname)
                     _update_reported(config["msg_db"], dname)
                     _process_samplesheets(dname, config)
                     if qseq:
-                        log.info("Generating qseq files for %s" % dname)
+                        logger.info("Generating qseq files for %s" % dname)
                         _generate_qseq(get_qseq_dir(dname), config)
                     fastq_dir = None
                     if fastq:
-                        log.info("Generating fastq files for %s" % dname)
+                        logger.info("Generating fastq files for %s" % dname)
                         fastq_dir = _generate_fastq(dname, config)
                     _post_process_run(dname, config, config_file,
                                       fastq_dir, post_config_file,
@@ -116,7 +113,7 @@ def _process_samplesheets(dname, config):
     ss_file = samplesheet.run_has_samplesheet(dname, config)
     if ss_file:
         out_file = os.path.join(dname, "run_info.yaml")
-        log.info("CSV Samplesheet %s found, converting to %s" %
+        logger.info("CSV Samplesheet %s found, converting to %s" %
                  (ss_file, out_file))
         samplesheet.csv2yaml(ss_file, out_file)
 
@@ -139,7 +136,7 @@ def _generate_fastq(fc_dir, config):
                   ",".join(lanes)]
             if postprocess_dir:
                 cl += ["-o", fastq_dir]
-            log.debug("Converting qseq to fastq on all lanes.")
+            logger.debug("Converting qseq to fastq on all lanes.")
             subprocess.check_call(cl)
     return fastq_dir
 
@@ -274,7 +271,7 @@ def finished_message(fn_name, run_module, directory, files_to_copy,
                      config, config_file):
     """Wait for messages with the give tag, passing on to the supplied handler.
     """
-    log.debug("Calling remote function: %s" % fn_name)
+    logger.debug("Calling remote function: %s" % fn_name)
     user = getpass.getuser()
     hostname = socket.gethostbyaddr(socket.gethostname())[0]
     data = dict(

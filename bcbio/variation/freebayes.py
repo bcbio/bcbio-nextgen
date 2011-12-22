@@ -10,7 +10,7 @@ from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import annotation, genotype
-from bcbio.pipeline import log
+from bcbio.log import logger
 
 def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                   out_file=None):
@@ -19,9 +19,8 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
     if not file_exists(out_file):
-        log.info("Genotyping with FreeBayes: {region} {fname}".format(
-            region=region,
-            fname=os.path.basename(align_bam)))
+        logger.info("Genotyping with FreeBayes: {region} {fname}".format(
+            region=region, fname=os.path.basename(align_bam)))
         with file_transaction(out_file) as tx_out_file:
             cl = [config["program"].get("freebayes", "freebayes"),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file]

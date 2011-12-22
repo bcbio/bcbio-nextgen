@@ -7,7 +7,7 @@ from contextlib import closing
 import pysam
 
 from bcbio import broad
-from bcbio.pipeline import log
+from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
@@ -139,7 +139,7 @@ def parallel_realign_sample(sample_info, parallel_fn):
 def realign_sample(data, region=None, out_file=None):
     """Realign sample BAM file at indels.
     """
-    log.info("Realigning %s with GATK" % str(data["name"]))
+    logger.info("Realigning %s with GATK" % str(data["name"]))
     if data["config"]["algorithm"]["snpcall"]:
         sam_ref = data["sam_ref"]
         config = data["config"]

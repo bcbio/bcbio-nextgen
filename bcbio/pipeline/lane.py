@@ -3,7 +3,7 @@
 import os
 import copy
 
-from bcbio.pipeline import log
+from bcbio.log import logger
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
@@ -12,7 +12,7 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
     """Prepare lanes, potentially splitting based on barcodes.
     """
     lane_name = "%s_%s_%s" % (lane_items[0]['lane'], fc_date, fc_name)
-    log.debug("Demulitplexing %s" % lane_name)
+    logger.info("Demulitplexing %s" % lane_name)
     full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"], dirs["work"],
                                                lane_items[0], fc_name, config=config)
     bc_files = split_by_barcode(full_fastq1, full_fastq2, lane_items,
@@ -41,7 +41,7 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
     aligner = config["algorithm"].get("aligner", None)
     out_bam = ""
     if os.path.exists(fastq1) and aligner:
-        log.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
+        logger.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
         out_bam = align_to_sort_bam(fastq1, fastq2, info["genome_build"], aligner,
                                     lane_name, lane_desc, dirs, config)
     return [{"fastq": [fastq1, fastq2], "out_bam": out_bam, "info": info,

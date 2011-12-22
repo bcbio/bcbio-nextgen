@@ -10,7 +10,7 @@ import subprocess
 from bcbio.utils import file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.lane import _update_config_w_custom
-from bcbio.pipeline import log
+from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.pipeline.qcsummary import generate_align_summary
 from bcbio.pipeline.variation import (recalibrate_quality, finalize_genotyper,
@@ -21,7 +21,7 @@ from bcbio.pipeline.shared import ref_genome_info
 def merge_sample(data):
     """Merge fastq and BAM files for multiple samples.
     """
-    log.info("Combining fastq and BAM files %s" % str(data["name"]))
+    logger.info("Combining fastq and BAM files %s" % str(data["name"]))
     config = _update_config_w_custom(data["config"], data["info"])
     genome_build, sam_ref = ref_genome_info(data["info"], config, data["dirs"])
     fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
@@ -36,7 +36,7 @@ def merge_sample(data):
 def recalibrate_sample(data):
     """Recalibrate quality values from aligned sample BAM file.
     """
-    log.info("Recalibrating %s with GATK" % str(data["name"]))
+    logger.info("Recalibrating %s with GATK" % str(data["name"]))
     if data["config"]["algorithm"]["recalibrate"]:
         recal_bam = recalibrate_quality(data["work_bam"], data["fastq1"],
                                         data["fastq2"], data["sam_ref"],
@@ -52,10 +52,10 @@ def process_sample(data):
     """Finalize processing for a sample, potentially multiplexed.
     """
     if data["config"]["algorithm"]["snpcall"]:
-        log.info("Finalizing variant calls: %s" % str(data["name"]))
+        logger.info("Finalizing variant calls: %s" % str(data["name"]))
         data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
                                               data["sam_ref"], data["config"])
-        log.info("Calculating variation effects for %s" % str(data["name"]))
+        logger.info("Calculating variation effects for %s" % str(data["name"]))
         ann_vrn_file, effects_file = variation_effects(data["vrn_file"],
                                                        data["sam_ref"],
                                                        data["genome_build"],
@@ -67,7 +67,7 @@ def process_sample(data):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
                                                data["config"])
     if data["sam_ref"] is not None:
-        log.info("Generating summary files: %s" % str(data["name"]))
+        logger.info("Generating summary files: %s" % str(data["name"]))
         generate_align_summary(data["work_bam"], data["fastq2"] is not None,
                                data["sam_ref"], data["name"],
                                data["config"], data["dirs"])
@@ -76,7 +76,7 @@ def process_sample(data):
 def generate_bigwig(data):
     """Provide a BigWig coverage file of the sorted alignments.
     """
-    log.info("Preparing BigWig file %s" % str(data["name"]))
+    logger.info("Preparing BigWig file %s" % str(data["name"]))
     bam_file = data["work_bam"]
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if not file_exists(wig_file):

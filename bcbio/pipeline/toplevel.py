@@ -15,8 +15,7 @@ try:
 except (ImportError, SystemExit):
     fabric, fabric_files = (None, None)
 
-from bcbio.pipeline import log
-from bcbio.log import create_log_handler
+from bcbio.log import create_log_handler, logger
 from bcbio import utils
 
 def analyze_and_upload(remote_info, config_file):
@@ -24,7 +23,7 @@ def analyze_and_upload(remote_info, config_file):
     """
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    log_handler = create_log_handler(config, log.name)
+    log_handler = create_log_handler(config)
     with log_handler.applicationbound():
         fc_dir = _copy_from_sequencer(remote_info, config)
         analysis_dir = _run_analysis(fc_dir, remote_info, config, config_file)
@@ -40,7 +39,7 @@ def _copy_from_sequencer(remote_info, config):
         fc_dir = remote_info["fc_dir"]
         assert os.path.exists(fc_dir)
     else:
-        log.debug("Remote host information: %s" % remote_info)
+        logger.debug("Remote host information: %s" % remote_info)
         c_host_str = _config_hosts(config)
         with fabric.settings(host_string=c_host_str):
             fc_dir = _remote_copy(remote_info, config)
@@ -65,7 +64,7 @@ def _remote_copy(remote_info, config):
     """
     fc_dir = os.path.join(config["analysis"]["store_dir"],
                           os.path.basename(remote_info['directory']))
-    log.info("Copying analysis files to %s" % fc_dir)
+    logger.info("Copying analysis files to %s" % fc_dir)
     if not fabric_files.exists(fc_dir):
         fabric.run("mkdir %s" % fc_dir)
     for fcopy in remote_info['to_copy']:
@@ -79,7 +78,7 @@ def _remote_copy(remote_info, config):
                    remote_info["directory"], fcopy),
                   target_loc]
             fabric.run(" ".join(cl))
-    log.info("Analysis files copied")
+    logger.info("Analysis files copied")
     return fc_dir
 
 def _run_analysis(fc_dir, remote_info, config, config_file):
