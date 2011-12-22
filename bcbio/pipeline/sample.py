@@ -53,8 +53,8 @@ def process_sample(data):
     """
     if data["config"]["algorithm"]["snpcall"]:
         log.info("Finalizing variant calls: %s" % str(data["name"]))
-        data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["sam_ref"],
-                                              data["config"])
+        data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
+                                              data["sam_ref"], data["config"])
         log.info("Calculating variation effects for %s" % str(data["name"]))
         ann_vrn_file, effects_file = variation_effects(data["vrn_file"],
                                                        data["sam_ref"],

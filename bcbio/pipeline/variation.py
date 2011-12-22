@@ -8,7 +8,7 @@ from bcbio.variation.recalibrate import gatk_recalibrate
 from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
 from bcbio.variation.effects import snpeff_effects
 from bcbio.variation.annotation import annotate_effects
-from bcbio.variation import freebayes
+from bcbio.variation import freebayes, phasing
 from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
 
 # ## Recalibration
@@ -37,7 +37,7 @@ def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
 
 # ## Genotyping
 
-def finalize_genotyper(call_file, ref_file, config):
+def finalize_genotyper(call_file, bam_file, ref_file, config):
     """Perform SNP genotyping and analysis.
     """
     vrn_files = configured_vrn_files(config, ref_file)
@@ -46,8 +46,9 @@ def finalize_genotyper(call_file, ref_file, config):
         filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
     elif variantcaller == "freebayes":
         filter_snp = freebayes.postcall_filter(call_file, ref_file, vrn_files, config)
-    _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
-    return filter_snp
+    phase_snp = phasing.read_backed_phasing(filter_snp, bam_file, ref_file, config)
+    _eval_genotyper(phase_snp, ref_file, vrn_files.dbsnp, config)
+    return phase_snp
 
 def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.
