@@ -15,7 +15,7 @@ try:
 except (ImportError, SystemExit):
     fabric, fabric_files = (None, None)
 
-from bcbio.log import create_log_handler, logger
+from bcbio.log import logger
 from bcbio import utils
 
 def analyze_and_upload(remote_info, config_file):
@@ -23,12 +23,10 @@ def analyze_and_upload(remote_info, config_file):
     """
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-    log_handler = create_log_handler(config)
-    with log_handler.applicationbound():
-        fc_dir = _copy_from_sequencer(remote_info, config)
-        analysis_dir = _run_analysis(fc_dir, remote_info, config, config_file)
-        _upload_to_galaxy(fc_dir, analysis_dir, remote_info,
-                          config, config_file)
+    fc_dir = _copy_from_sequencer(remote_info, config)
+    analysis_dir = _run_analysis(fc_dir, remote_info, config, config_file)
+    _upload_to_galaxy(fc_dir, analysis_dir, remote_info,
+                      config, config_file)
 
 # ## Copying over files from sequencer, if necessary
 
