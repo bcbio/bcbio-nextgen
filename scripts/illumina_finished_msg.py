@@ -98,11 +98,15 @@ def analyze_locally(dname, post_config_file, fastq_dir):
     """
     assert fastq_dir is not None
     post_config = load_config(post_config_file)
-    run_yaml = os.path.join(dname, "run_info.yaml")
     analysis_dir = os.path.join(fastq_dir, os.pardir, "analysis")
     utils.safe_makedir(analysis_dir)
     with utils.chdir(analysis_dir):
-        cl = [post_config["analysis"]["process_program"], post_config_file, fastq_dir]
+        if post_config["algorithm"]["num_cores"] == "messaging":
+            prog = post_config["analysis"]["distributed_process_program"]
+        else:
+            prog = post_config["analysis"]["process_program"]
+        cl = [prog, post_config_file, dname]
+        run_yaml = os.path.join(dname, "run_info.yaml")
         if os.path.exists(run_yaml):
             cl.append(run_yaml)
         subprocess.check_call(cl)
