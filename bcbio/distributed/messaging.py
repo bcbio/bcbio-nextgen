@@ -30,15 +30,11 @@ def parallel_runner(module, dirs, config, config_file):
                                     fromlist=["multitasks"]),
                          fn_name)
             cores = cores_including_resources(int(parallel), metadata, config)
-            # group items in blocks; multiprocessing seems to lose processors
-            # over time so this keeps refreshing the pool
-            n = cores * 5
-            for group_items in itertools.izip_longest(*[iter(items)]*n):
-                with utils.cpmap(cores) as cpmap:
-                    for data in cpmap(fn, filter(lambda x: x is not None, group_items)):
-                        if data:
-                            out.extend(data)
-        return out
+            with utils.cpmap(cores) as cpmap:
+                for data in cpmap(fn, filter(lambda x: x is not None, items)):
+                    if data:
+                        out.extend(data)
+            return out
     return run_parallel
 
 def runner(task_module, dirs, config, config_file, wait=True):

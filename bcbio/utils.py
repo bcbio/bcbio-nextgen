@@ -36,7 +36,7 @@ def cpmap(cores=1):
         IMapIterator.next = wrapper(IMapIterator.next)
         # recycle threads on Python 2.7; remain compatible with Python 2.6
         try:
-            pool = multiprocessing.Pool(int(cores), maxtasksperchild=5)
+            pool = multiprocessing.Pool(int(cores), maxtasksperchild=1)
         except TypeError:
             pool = multiprocessing.Pool(int(cores))
         yield pool.imap_unordered

@@ -28,6 +28,8 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
     # on small chromosomes, so don't rerun in those cases
     if not os.path.exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            logger.info("GATK RealignerTargetCreator: %s %s" %
+                        (os.path.basename(align_bam), region))
             params = ["-T", "RealignerTargetCreator",
                       "-I", align_bam,
                       "-R", ref_file,
@@ -53,6 +55,8 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
     if not file_exists(out_file):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
+                logger.info("GATK IndelRealigner: %s %s" %
+                            (os.path.basename(align_bam), region))
                 params = ["-T", "IndelRealigner",
                           "-I", align_bam,
                           "-R", ref_file,
@@ -139,7 +143,9 @@ def parallel_realign_sample(sample_info, parallel_fn):
 def realign_sample(data, region=None, out_file=None):
     """Realign sample BAM file at indels.
     """
-    logger.info("Realigning %s with GATK" % str(data["name"]))
+    logger.info("Realigning %s with GATK: %s %s" % (data["name"],
+                                                    os.path.basename(data["work_bam"]),
+                                                    region))
     if data["config"]["algorithm"]["snpcall"]:
         sam_ref = data["sam_ref"]
         config = data["config"]
