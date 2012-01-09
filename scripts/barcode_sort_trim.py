@@ -327,6 +327,14 @@ class BarcodeTest(unittest.TestCase):
         (bc_id, _, _) = best_match(end_generator("CGATNT"), bcs, 1, False)
         assert bc_id == "2", bc_id
 
+    def test_7_very_ambiguous_barcodes(self):
+        """Matching with highly ambiguous barcodes used for sorting."""
+        bcs = {"ANNNNNN": "A", "CNNNNNN": "C", "GNNNNNN": "G", "TNNNNNN": "T"}
+        (bc_id, _, _) = best_match(end_generator("CGGGAGA", bc_offset=0), bcs, 2, True)
+        assert bc_id == "C", bc_id
+        (bc_id, _, _) = best_match(end_generator("CGGGAGA", bc_offset=1), bcs, 2, True)
+        assert bc_id == "unmatched", bc_id
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-s", "--second", dest="first_read",
