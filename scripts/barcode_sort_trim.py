@@ -79,7 +79,6 @@ def main(barcode_file, out_format, in1, in2, mismatch, bc_offset,
             for bc in sort_bcs:
                 writer.writerow([bc, stats[bc]])
 
-
 def best_match(end_gen, barcodes, mismatch, allow_indels=True):
     """Identify barcode best matching to the test sequence, with mismatch.
 
@@ -107,8 +106,12 @@ def best_match(end_gen, barcodes, mismatch, allow_indels=True):
     if mismatch > 0 or _barcode_has_ambiguous(barcodes):
         for bc_seq, bc_id in barcodes.iteritems():
             test_seq = end_gen(len(bc_seq))
+            if _barcode_very_ambiguous(barcodes):
+                gapopen_penalty = -18.0
+            else:
+                gapopen_penalty = -9.0
             aligns = pairwise2.align.globalms(bc_seq, test_seq,
-                    5.0, -4.0, -9.0, -0.5, one_alignment_only=True)
+                    5.0, -4.0, gapopen_penalty, -0.5, one_alignment_only=True)
             (abc_seq, atest_seq) = aligns[0][:2] if len(aligns) == 1 else ("", "")
             matches = sum(1 for i, base in enumerate(abc_seq)
                           if (base == atest_seq[i] or base == "N"))
@@ -122,6 +125,11 @@ def best_match(end_gen, barcodes, mismatch, allow_indels=True):
         return name, bc_seq.replace("-", ""), test_seq.replace("-", "")
     else:
         return "unmatched", "", ""
+
+def _barcode_very_ambiguous(barcodes):
+    max_size = max(len(x) for x in barcodes.keys())
+    max_ns = max(x.count("N") for x in barcodes.keys())
+    return float(max_ns) / float(max_size) > 0.5
 
 def _barcode_has_ambiguous(barcodes):
     for seq in barcodes.keys():
@@ -332,8 +340,8 @@ class BarcodeTest(unittest.TestCase):
         bcs = {"ANNNNNN": "A", "CNNNNNN": "C", "GNNNNNN": "G", "TNNNNNN": "T"}
         (bc_id, _, _) = best_match(end_generator("CGGGAGA", bc_offset=0), bcs, 2, True)
         assert bc_id == "C", bc_id
-        (bc_id, _, _) = best_match(end_generator("CGGGAGA", bc_offset=1), bcs, 2, True)
-        assert bc_id == "unmatched", bc_id
+        (bc_id, _, _) = best_match(end_generator("GCGGGAG", bc_offset=0), bcs, 0, False)
+        assert bc_id == "G", bc_id
 
 if __name__ == "__main__":
     parser = OptionParser()
