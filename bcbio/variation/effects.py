@@ -14,11 +14,11 @@ from bcbio.distributed.transaction import file_transaction
 
 # remap Galaxy genome names to the ones used by snpEff. Not nice code.
 SNPEFF_GENOME_REMAP = {
-        "GRCh37": "GRCh37.63",
-        "hg19" : "GRCh37.63",
-        "mm9" : "NCBIM37.63",
-        "araTha_tair9": "athalianaTair10",
-        "araTha_tair10": "athalianaTair10",
+        "GRCh37": ["GRCh37.64", "GRCh37.63"],
+        "hg19" : ["GRCh37.64", "GRCh37.63"],
+        "mm9" : ["NCBIM37.64", "NCBIM37.63"],
+        "araTha_tair9": ["athalianaTair10"],
+        "araTha_tair10": ["athalianaTair10"],
         }
 
 def snpeff_effects(vcf_in, genome, config):
@@ -29,9 +29,12 @@ def snpeff_effects(vcf_in, genome, config):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
-            genome = SNPEFF_GENOME_REMAP[genome]
-            vcf_file = _run_snpeff(vcf_in, genome, se_interval, "vcf", config)
-            effects_file = _run_snpeff(vcf_in, genome, se_interval, "txt", config)
+            snpeff_data_dir = os.path.join(config["program"]["snpEff"], "data")
+            for snpeff_genome in SNPEFF_GENOME_REMAP[genome]:
+                if os.path.exists(os.path.join(snpeff_data_dir, snpeff_genome)):
+                    break
+            vcf_file = _run_snpeff(vcf_in, snpeff_genome, se_interval, "vcf", config)
+            effects_file = _run_snpeff(vcf_in, snpeff_genome, se_interval, "txt", config)
         finally:
             for fname in [se_interval]:
                 if fname and os.path.exists(fname):
