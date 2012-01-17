@@ -71,7 +71,12 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                                "--maxReadsForRealignment", str(int(5e5)),
                                "--maxReadsForConsensuses", "500",
                                "--maxConsensuses", "100"]
-                runner.run_gatk(params, tmp_dir)
+                try:
+                    runner.run_gatk(params, tmp_dir)
+                except:
+                    logger.exception("Running GATK IndelRealigner failed: {} {}".format(
+                        os.path.basename(align_bam), region))
+                    raise
     return out_file
 
 def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
