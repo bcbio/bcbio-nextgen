@@ -14,7 +14,7 @@ program:
 algorithm:
   aligner: bowtie
   max_errors: 2
-  num_cores: 2
+  num_cores: 1
   platform: illumina
   recalibrate: false
   snpcall: false

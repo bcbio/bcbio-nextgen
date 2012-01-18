@@ -42,10 +42,9 @@ def finalize_genotyper(call_file, bam_file, ref_file, config):
     """
     vrn_files = configured_vrn_files(config, ref_file)
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
-    if variantcaller == "gatk":
-        filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
-    elif variantcaller == "freebayes":
-        filter_snp = freebayes.postcall_filter(call_file, ref_file, vrn_files, config)
+    if variantcaller == "freebayes":
+        call_file = freebayes.postcall_annotate(call_file, ref_file, vrn_files, config)
+    filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
     phase_snp = phasing.read_backed_phasing(filter_snp, bam_file, ref_file, config)
     _eval_genotyper(phase_snp, ref_file, vrn_files.dbsnp, config)
     return phase_snp

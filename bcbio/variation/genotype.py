@@ -77,11 +77,14 @@ def split_snps_indels(broad_runner, orig_file, ref_file):
     params = ["-T", "SelectVariants",
               "-R", ref_file,
               "--variant", orig_file]
-    for out_file, select_type in [(snp_file, "SNP"), (indel_file, "INDEL")]:
+    for out_file, select_type in [(snp_file, ["SNP"]),
+                                  (indel_file, ["INDEL", "MIXED", "MNP",
+                                                "SYMBOLIC", "NO_VARIATION"])]:
         if not file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
-                cur_params = params + ["--out", tx_out_file,
-                                       "--selectTypeToInclude", select_type]
+                cur_params = params + ["--out", tx_out_file]
+                for x in select_type:
+                    cur_params += ["--selectTypeToInclude", x]
                 broad_runner.run_gatk(cur_params)
     return snp_file, indel_file
 
@@ -179,11 +182,12 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     """
     filter_type = "SNP"
     cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
+    variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
         filter_type, snp_file, ref_file)
     assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
            "Need HapMap and 1000 genomes training files"
-    if cov_interval == "regional":
+    if cov_interval == "regional" or variantcaller == "freebayes":
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
                                             "HaplotypeScore > 13.0",
@@ -346,8 +350,14 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
                       "--dbsnp", dbsnp,
                       "-ST", "Filter",
                       "-o", tx_out_file,
-                      "-l", "INFO"
-                      ]
+                      "-l", "INFO",
+                      "--doNotUseAllStandardModules",
+                      "--evalModule", "CompOverlap",
+                      "--evalModule", "CountVariants",
+                      "--evalModule", "GenotypeConcordance",
+                      "--evalModule", "TiTvVariantEvaluator",
+                      "--evalModule", "ValidationReport",
+                      "--stratificationModule", "Filter"]
             if target_intervals:
                 # BED file target intervals are explicit with GATK 1.3
                 # http://getsatisfaction.com/gsa/topics/

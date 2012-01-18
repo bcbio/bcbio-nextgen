@@ -1,6 +1,8 @@
 details:
   - analysis: SNP calling
     algorithm:
+      #aligner: mosaik
+      #variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
     description: Test1
