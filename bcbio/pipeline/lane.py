@@ -7,6 +7,7 @@ from bcbio.log import logger
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
+from bcbio.bam.trim import brun_trim_fastq
 
 def process_lane(lane_items, fc_name, fc_date, dirs, config):
     """Prepare lanes, potentially splitting based on barcodes.
@@ -30,6 +31,12 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
                 cur_lane_desc = "%s : %s" % (item["name"], cur_lane_desc)
             if item["barcode_id"] is not None:
                 cur_lane_name += "_%s" % (item["barcode_id"])
+            if config["algorithm"].get("trim_reads", False):
+                trim_info = brun_trim_fastq([x for x in [fastq1, fastq2] if x is not None],
+                                            dirs, config)
+                fastq1 = trim_info[0]
+                if fastq2 is not None:
+                    fastq2 = trim_info[1]
             out.append((fastq1, fastq2, item, cur_lane_name, cur_lane_desc,
                         dirs, config))
     return out

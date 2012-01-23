@@ -5,6 +5,7 @@ details:
       #variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
+      trim_reads: true 
     description: Test1
     genome_build: hg19
     lane: 7
