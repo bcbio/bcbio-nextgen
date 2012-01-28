@@ -67,6 +67,7 @@ def run_main(config, config_file, fc_dir, work_dir, run_info_yaml):
     samples = run_parallel("recalibrate_sample", samples)
     samples = parallel_realign_sample(samples, run_parallel)
     samples = parallel_variantcall(samples, run_parallel)
+    samples = run_parallel("detect_sv", samples)
     samples = run_parallel("process_sample", samples)
     samples = run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
     write_project_summary(samples)

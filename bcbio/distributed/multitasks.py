@@ -1,7 +1,7 @@
 """Multiprocessing ready entry points for sample analysis.
 """
 from bcbio import utils
-from bcbio.pipeline import sample, lane, shared
+from bcbio.pipeline import sample, lane, shared, variation
 from bcbio.variation import realign, genotype
 
 @utils.map_wrap
@@ -43,3 +43,7 @@ def variantcall_sample(*args):
 @utils.map_wrap
 def combine_variant_files(*args):
     return genotype.combine_variant_files(*args)
+
+@utils.map_wrap
+def detect_sv(*args):
+    return variation.detect_sv(*args)

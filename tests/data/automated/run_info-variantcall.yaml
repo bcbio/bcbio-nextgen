@@ -3,9 +3,10 @@ details:
     algorithm:
       #aligner: mosaik
       #variantcaller: freebayes
+      sv_detection: hydra
       quality_format: Standard
       coverage_interval: regional
-      trim_reads: true 
+      trim_reads: true
     description: Test1
     genome_build: hg19
     lane: 7

@@ -4,7 +4,7 @@ import time
 
 from celery.task import task
 
-from bcbio.pipeline import sample, lane, toplevel, storage, shared
+from bcbio.pipeline import sample, lane, toplevel, storage, shared, variation
 from bcbio.variation import realign, genotype
 
 # Global configuration for tasks in the main celeryconfig module
@@ -66,6 +66,10 @@ def variantcall_sample(*args):
 @task
 def combine_variant_files(*args):
     return genotype.combine_variant_files(*args)
+
+@task
+def detect_sv(*args):
+    return variation.detect_sv(*args)
 
 @task
 def test(x):
