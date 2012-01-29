@@ -3,7 +3,7 @@ details:
     algorithm:
       #aligner: mosaik
       #variantcaller: freebayes
-      sv_detection: hydra
+      #sv_detection: hydra
       quality_format: Standard
       coverage_interval: regional
       trim_reads: true

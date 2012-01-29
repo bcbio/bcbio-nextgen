@@ -15,6 +15,9 @@ from Bio.Seq import Seq
 
 from bcbio import utils, broad
 from bcbio.pipeline.alignment import align_to_sort_bam
+from bcbio.distributed.transaction import file_transaction
+
+## Prepare alignments to identify discordant pair mappings
 
 def select_unaligned_read_pairs(in_bam, extra, out_dir, config):
     """Retrieve unaligned read pairs from input alignment BAM, as two fastq files.
@@ -48,7 +51,8 @@ def calc_paired_insert_stats(in_bam):
         for read in in_pysam:
             if read.is_proper_pair and read.is_read1:
                 dists.append(read.isize)
-    return {"mean": numpy.mean(dists), "std": numpy.std(dists)}
+    return {"mean": numpy.mean(dists), "std": numpy.std(dists),
+            "median": numpy.median(dists)}
 
 def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                      genome_build, pair_stats,
@@ -69,6 +73,57 @@ def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                              base_name, base_name,
                              dirs, config)
 
+## Run hydra to identify structural variation breakpoints
+
+@utils.memoize_outfile(".bed")
+def convert_bam_to_bed(in_bam, out_file):
+    """Convert BAM to bed file using BEDTools.
+    """
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            subprocess.check_call(["bamToBed", "-i", in_bam, "-tag", "NM"],
+                                  stdout=out_handle)
+    return out_file
+
+@utils.memoize_outfile("-pair.bed")
+def pair_discordants(in_bed, out_file):
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            subprocess.check_call(["pairDiscordants.py", "-i", in_bed,
+                                   "-m", "hydra", "-z", "800"],
+                                  stdout=out_handle)
+    return out_file
+
+@utils.memoize_outfile("-dedup.bed")
+def dedup_discordants(in_bed, out_file):
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            subprocess.check_call(["dedupDiscordants.py", "-i", in_bed, "-s", "3"],
+                                  stdout=out_handle)
+    return out_file
+
+@utils.memoize_outfile("-hydra.breaks")
+def run_hydra(in_bed, pair_stats, out_file):
+    with file_transaction(out_file) as tx_out_file:
+        subprocess.check_call(["hydra", "-i", in_bed, "-out", tx_out_file,
+                               "-mld", str(int(pair_stats["median"])),
+                               "-mno", str(int(pair_stats["median"]) +
+                                           20 * int(pair_stats["std"]))])
+    return out_file
+
+def hydra_breakpoints(in_bam, pair_stats):
+    """Detect structural variation breakpoints with hydra.
+    """
+    in_bed = convert_bam_to_bed(in_bam)
+    if os.path.getsize(in_bed) > 0:
+        pair_bed = pair_discordants(in_bed)
+        dedup_bed = dedup_discordants(pair_bed, pair_stats)
+        return run_hydra(dedup_bed, pair_stats)
+    else:
+        return None
+
+## Top level organizational code
+
 def detect_sv(align_bam, genome_build, dirs, config):
     """Detect structural variation from discordant aligned pairs.
     """
@@ -80,4 +135,4 @@ def detect_sv(align_bam, genome_build, dirs, config):
     tier3_align = tiered_alignment(tier2_align, "3", "Ex 1100", ["-t", "300"],
                                    genome_build, pair_stats,
                                    work_dir, dirs, config)
-    print tier3_align
+    hydra_bps = hydra_breakpoints(tier3_align, pair_stats)
