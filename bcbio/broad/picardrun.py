@@ -5,11 +5,13 @@ import os
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.transaction import file_transaction
 
-def picard_sort(picard, align_bam, sort_order="coordinate"):
+def picard_sort(picard, align_bam, sort_order="coordinate",
+                out_file=None):
     """Sort a BAM file by coordinates.
     """
     base, ext = os.path.splitext(align_bam)
-    out_file = "%s-sort%s" % (base, ext)
+    if out_file is None:
+        out_file = "%s-sort%s" % (base, ext)
     if not file_exists(out_file):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_file) as tx_out_file:

@@ -23,8 +23,15 @@ def _novoalign_args_from_config(config):
     qual_format = config["algorithm"].get("quality_format", "").lower()
     qual_flags = ["-F", "ILMFQ" if qual_format == "illumina" else "STDFQ"]
     multi_mappers = config["algorithm"].get("multiple_mappers", True)
-    multi_flags = ["-r", "Random" if multi_mappers is True else "None"]
-    return qual_flags + multi_flags
+    if multi_mappers is True:
+        multi_flag = "Random"
+    elif isinstance(multi_mappers, basestring):
+        multi_flag = multi_mappers
+    else:
+        multi_flag = "None"
+    multi_flags = ["-r"] + multi_flag.split()
+    extra_args = config["algorithm"].get("extra_align_args", [])
+    return qual_flags + multi_flags + extra_args
 
 # Tweaks to add
 # -k -t 200 -K quality calibration metrics
@@ -47,8 +54,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             cl.append(pair_file)
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                logger.info(" ".join(cl))
-                subprocess.check_call(cl, stdout=out_handle)
+                logger.info(" ".join([str(x) for x in cl]))
+                subprocess.check_call([str(x) for x in cl], stdout=out_handle)
     return out_file
 
 def remap_index_fn(ref_file):
