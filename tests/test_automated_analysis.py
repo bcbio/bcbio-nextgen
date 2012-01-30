@@ -11,10 +11,12 @@ import collections
 
 @contextlib.contextmanager
 def make_workdir():
+    remove_old_dir = True
     dirname = os.path.join(os.path.dirname(__file__), "test_automated_output")
-    if os.path.exists(dirname):
-        shutil.rmtree(dirname)
-    os.makedirs(dirname)
+    if remove_old_dir:
+        if os.path.exists(dirname):
+            shutil.rmtree(dirname)
+        os.makedirs(dirname)
     orig_dir = os.getcwd()
     try:
         os.chdir(dirname)

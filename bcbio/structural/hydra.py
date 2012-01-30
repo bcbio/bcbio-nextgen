@@ -26,10 +26,9 @@ def select_unaligned_read_pairs(in_bam, extra, out_dir, config):
     runner = broad.runner_from_config(config)
     base, ext = os.path.splitext(os.path.basename(in_bam))
     nomap_bam = os.path.join(out_dir, "{}-{}{}".format(base, extra, ext))
-    sort_bam = runner.run_fn("picard_sort", in_bam, "queryname")
     if not utils.file_exists(nomap_bam):
         with file_transaction(nomap_bam) as tx_out:
-            runner.run("FilterSamReads", [("INPUT", sort_bam),
+            runner.run("FilterSamReads", [("INPUT", in_bam),
                                           ("OUTPUT", tx_out),
                                           ("EXCLUDE_ALIGNED", "true"),
                                           ("WRITE_READS_FILES", "false"),
@@ -47,9 +46,10 @@ def select_unaligned_read_pairs(in_bam, extra, out_dir, config):
     else:
         return None, None
 
-def remove_nopairs(in_bam, out_dir):
+def remove_nopairs(in_bam, out_dir, config):
     """Remove any reads without both pairs present in the file.
     """
+    runner = broad.runner_from_config(config)
     out_bam = os.path.join(out_dir, apply("{}-safepair{}".format,
                                           os.path.splitext(os.path.basename(in_bam))))
     if not utils.file_exists(out_bam):
@@ -64,7 +64,7 @@ def remove_nopairs(in_bam, out_dir):
                     for read in in_pysam:
                         if read_counts[read.qname] == 2:
                             out_pysam.write(read)
-    return out_bam
+    return runner.run_fn("picard_sort", out_bam, "queryname")
 
 def calc_paired_insert_stats(in_bam):
     """Retrieve statistics for paired end read insert distances.
@@ -92,6 +92,7 @@ def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                                           tier_num)
         config = copy.deepcopy(config)
         dirs = copy.deepcopy(dirs)
+        config["algorithm"]["bam_sort"] = "queryname"
         config["algorithm"]["multiple_mappers"] = multi_mappers
         config["algorithm"]["extra_align_args"] = ["-i", int(pair_stats["mean"]),
                                                int(pair_stats["std"])] + extra_args
@@ -158,7 +159,7 @@ def detect_sv(align_bam, genome_build, dirs, config):
     """
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "structural"))
     pair_stats = calc_paired_insert_stats(align_bam)
-    fix_bam = remove_nopairs(align_bam, work_dir)
+    fix_bam = remove_nopairs(align_bam, work_dir, config)
     tier2_align = tiered_alignment(fix_bam, "2", True, [],
                                    genome_build, pair_stats,
                                    work_dir, dirs, config)
