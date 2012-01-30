@@ -20,7 +20,7 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
         names = item["files"]
         if isinstance(names, basestring):
             names = [names]
-        files = [os.path.join(directory, x) for x in names]
+        files = [x if os.path.isabs(x) else os.path.join(directory, x) for x in names]
     else:
         assert fc_name is not None
         lane = item["lane"]
