@@ -68,6 +68,8 @@ def remove_nopairs(in_bam, out_dir, config):
 
 def calc_paired_insert_stats(in_bam):
     """Retrieve statistics for paired end read insert distances.
+
+    MAD is the Median Absolute Deviation: http://en.wikipedia.org/wiki/Median_absolute_deviation
     """
     dists = []
     with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
@@ -77,8 +79,10 @@ def calc_paired_insert_stats(in_bam):
     # remove outliers
     med = numpy.median(dists)
     filter_dists = filter(lambda x: x < med + 10 * med, dists)
+    median = numpy.median(filter_dists)
     return {"mean": numpy.mean(filter_dists), "std": numpy.std(filter_dists),
-            "median": numpy.median(filter_dists)}
+            "median": median,
+            "mad": numpy.median([abs(x - median) for x in filter_dists])}
 
 def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                      genome_build, pair_stats,
@@ -116,11 +120,13 @@ def convert_bam_to_bed(in_bam, out_file):
     return out_file
 
 @utils.memoize_outfile("-pair.bed")
-def pair_discordants(in_bed, out_file):
+def pair_discordants(in_bed, pair_stats, out_file):
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
             subprocess.check_call(["pairDiscordants.py", "-i", in_bed,
-                                   "-m", "hydra", "-z", "800"],
+                                   "-m", "hydra",
+                                   "-z", str(int(pair_stats["median"]) +
+                                             10 * int(pair_stats["mad"]))],
                                   stdout=out_handle)
     return out_file
 
@@ -132,22 +138,24 @@ def dedup_discordants(in_bed, out_file):
                                   stdout=out_handle)
     return out_file
 
-@utils.memoize_outfile("-hydra.breaks")
-def run_hydra(in_bed, pair_stats, out_file):
-    with file_transaction(out_file) as tx_out_file:
-        subprocess.check_call(["hydra", "-i", in_bed, "-out", tx_out_file,
-                               "-mld", str(int(pair_stats["median"])),
+def run_hydra(in_bed, pair_stats):
+    base_out = "{}-hydra.breaks".format(os.path.splitext(in_bed)[0])
+    final_file = "{}.final".format(base_out)
+    if not utils.file_exists(final_file):
+        subprocess.check_call(["hydra", "-in", in_bed, "-out", base_out,
+                               "-ms", "1", "-li",
+                               "-mld", str(int(pair_stats["mad"]) * 10),
                                "-mno", str(int(pair_stats["median"]) +
-                                           20 * int(pair_stats["std"]))])
-    return out_file
+                                           20 * int(pair_stats["mad"]))])
+    return final_file
 
 def hydra_breakpoints(in_bam, pair_stats):
     """Detect structural variation breakpoints with hydra.
     """
     in_bed = convert_bam_to_bed(in_bam)
     if os.path.getsize(in_bed) > 0:
-        pair_bed = pair_discordants(in_bed)
-        dedup_bed = dedup_discordants(pair_bed, pair_stats)
+        pair_bed = pair_discordants(in_bed, pair_stats)
+        dedup_bed = dedup_discordants(pair_bed)
         return run_hydra(dedup_bed, pair_stats)
     else:
         return None
