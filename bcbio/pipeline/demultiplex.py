@@ -38,8 +38,8 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
                     cl.append(fastq2)
                 cl.append("--mismatch=%s" % config["algorithm"]["bc_mismatch"])
                 cl.append("--metrics=%s" % metrics_file)
-                if int(config["algorithm"]["bc_read"]) == 2:
-                    cl.append("--second")
+                if int(config["algorithm"]["bc_read"]) > 1:
+                    cl.append("--read=%s" % config["algorithm"]["bc_read"])
                 if int(config["algorithm"]["bc_position"]) == 5:
                     cl.append("--five")
                 if config["algorithm"].get("bc_allow_indels", True) is False:
