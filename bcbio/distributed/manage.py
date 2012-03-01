@@ -61,8 +61,9 @@ def start_analysis_manager(cluster, args, config):
     program_cl = [config["analysis"]["process_program"]] + args
     job_id = cluster.submit_job(cluster_args, program_cl)
     # wait for job to start
-    while not(cluster.are_running([job_id])):
-        time.sleep(5)
+    # Avoid this for systems where everything queues as batches
+    #while not(cluster.are_running([job_id])):
+    #    time.sleep(5)
     return job_id
 
 def monitor_analysis(cluster, job_id):
