@@ -19,6 +19,7 @@ import csv
 import sys
 import unittest
 from collections import namedtuple
+from operator import attrgetter
 
 from bx.seq import twobit
 
@@ -131,13 +132,25 @@ def _write_vcf_breakend(brend, out_handle):
         [brend.chrom, brend.pos + 1, brend.id, brend.ref, brend.alt,
          ".", "PASS", brend.info])))
 
-def hydra_to_vcf_writer(hydra_file, genome_2bit, out_handle):
-    """Write hydra output as non-sorted VCF file.
+def _get_vcf_breakends(hydra_file, genome_2bit):
+    """Parse BEDPE input, yielding VCF ready breakends.
     """
-    _write_vcf_header(out_handle)
     for feature in hydra_parser(hydra_file):
         for brend in build_vcf_parts(feature, genome_2bit):
-            _write_vcf_breakend(brend, out_handle)
+            yield brend
+
+def hydra_to_vcf_writer(hydra_file, genome_2bit, out_handle):
+    """Write hydra output as sorted VCF file.
+
+    Requires loading the hydra file into memory to perform sorting
+    on output VCF. Could generalize this to no sorting or by-chromosome
+    approach if this proves too memory intensive.
+    """
+    _write_vcf_header(out_handle)
+    brends = list(_get_vcf_breakends(hydra_file, genome_2bit))
+    brends.sort(key=attrgetter("chrom", "pos"))
+    for brend in brends:
+        _write_vcf_breakend(brend, out_handle)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
