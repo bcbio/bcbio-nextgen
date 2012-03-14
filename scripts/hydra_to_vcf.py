@@ -36,17 +36,39 @@ def _vcf_info(start, end, mate_id):
     return "SVTYPE=BND;MATEID={mate};IMPRECISE;CIPOS=0,{size}".format(
         mate=mate_id, size=end-start)
 
-def _vcf_alt(base, other_chr, other_pos, other_isrc, is_first):
+def _vcf_alt(base, other_chr, other_pos, isrc, is_first):
     """Create ALT allele line in VCF 4.1 format associating with other paired end.
     """
     if is_first:
-        pipe = "]" if other_isrc else "["
+        pipe = "[" if isrc else "]"
         out_str = "{base}{pipe}{chr}:{pos}{pipe}"
     else:
-        pipe = "[" if other_isrc else "]"
+        pipe = "]" if isrc else "["
         out_str = "{pipe}{chr}:{pos}{pipe}{base}"
     return out_str.format(pipe=pipe, chr=other_chr, pos=other_pos + 1,
                           base=base)
+
+def _breakend_orientation(strand1, strand2):
+    """Convert BEDPE strand representation of breakpoints into VCF.
+
+    | strand1  |  strand2 |     VCF      |
+    +----------+----------+--------------+
+    |   +      |     +    | t[p[ ]p]t    |
+    |   +      |     -    | t]p] t]p]    |
+    |   -      |     +    | [p[t [p[t    |
+    |   -      |     -    | Not possible |
+    """
+    EndOrientation = namedtuple("EndOrientation",
+                                ["is_first1", "is_rc1", "is_first2", "is_rc2"])
+    if strand1 == "+" and strand2 == "+":
+        return EndOrientation(True, True, False, True)
+    elif strand1 == "+" and strand2 == "-":
+        return EndOrientation(True, False, True, False)
+    elif strand1 == "-" and strand2 == "+":
+        return EndOrientation(False, False, False, False)
+    else:
+        raise ValueError("Unexpected strand pairing: {0} {1}".format(
+            strand1, strand2))
 
 def build_vcf_parts(feature, genome_2bit):
     """Convert BedPe feature information into VCF part representation.
@@ -61,13 +83,14 @@ def build_vcf_parts(feature, genome_2bit):
     base2 = genome_2bit[feature.chrom2].get(
         feature.start2, feature.start2 + 1).upper()
     id2 = "hydra{0}b".format(feature.name)
+    orientation = _breakend_orientation(feature.strand1, feature.strand2)
     return (VcfBreakend(feature.chrom1, feature.start1, id1, base1,
                         _vcf_alt(base1, feature.chrom2, feature.start2,
-                                 feature.strand2 == "-", True),
+                                 orientation.is_rc1, orientation.is_first1),
                         _vcf_info(feature.start1, feature.end1, id2)),
             VcfBreakend(feature.chrom2, feature.start2, id2, base2,
                         _vcf_alt(base2, feature.chrom1, feature.start1,
-                                 feature.strand1 == "-", False),
+                                 orientation.is_rc2, orientation.is_first2),
                         _vcf_info(feature.start2, feature.end2, id1)))
 
 # ## Parse Hydra output into BedPe tuple representation
@@ -149,7 +172,14 @@ class HydraConvertTest(unittest.TestCase):
         """Convert BEDPE input line into VCF output parts.
         """
         genome_2bit = twobit.TwoBitFile(open(self.genome_file))
-        breakend = hydra_parser(self.in_file).next()
-        brend1, brend2 = build_vcf_parts(breakend, genome_2bit)
+        breakends = hydra_parser(self.in_file)
+        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
         assert brend1.alt == "G]chr22:10112]"
+        assert brend2.alt == "C]chr22:9764]"
         assert brend2.info == "SVTYPE=BND;MATEID=hydra2a;IMPRECISE;CIPOS=0,102"
+        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
+        assert brend1.alt == "A[chr22:12112["
+        assert brend2.alt == "]chr22:7764]G"
+        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
+        assert brend1.alt == "[chr22:11112[A"
+        assert brend2.alt == "[chr22:8764[T"
