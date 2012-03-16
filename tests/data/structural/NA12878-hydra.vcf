@@ -1,0 +1,13 @@
+##fileformat=VCFv4.1
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">
+##source=hydra
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chr22	7764	hydra3a	A	A[chr22:12112[	.	PASS	SVTYPE=BND;MATEID=hydra3b;IMPRECISE;CIPOS=0,171
+chr22	8764	hydra4a	A	[chr22:11112[A	.	PASS	SVTYPE=BND;MATEID=hydra4b;IMPRECISE;CIPOS=0,171
+chr22	9764	hydra2a	G	G]chr22:10112]	.	PASS	SVTYPE=BND;MATEID=hydra2b;IMPRECISE;CIPOS=0,171
+chr22	10112	hydra2b	C	C]chr22:9764]	.	PASS	SVTYPE=BND;MATEID=hydra2a;IMPRECISE;CIPOS=0,102
+chr22	11112	hydra4b	T	[chr22:8764[T	.	PASS	SVTYPE=BND;MATEID=hydra4a;IMPRECISE;CIPOS=0,102
+chr22	12112	hydra3b	G	]chr22:7764]G	.	PASS	SVTYPE=BND;MATEID=hydra3a;IMPRECISE;CIPOS=0,102
