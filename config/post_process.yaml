@@ -61,10 +61,10 @@ custom_algorithms:
     snpcall: true
     coverage_depth: "high" # other options: low
     coverage_interval: "exome" # other options: genome, regional
-    dbsnp: variation/dbsnp_132.vcf
+    dbsnp: variation/dbsnp_135.vcf
     train_hapmap: variation/hapmap_3.3.vcf
     train_1000g_omni: variation/1000G_omni2.5.vcf
-    train_indels: variation/Mills_Devine_2hit.indels.vcf
+    train_indels: variation/Mills_and_1000G_gold_standard.indels.vcf
   'RNA-seq':
     aligner: tophat
     transcript_assemble: true
