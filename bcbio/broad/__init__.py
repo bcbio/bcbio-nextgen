@@ -53,7 +53,6 @@ class BroadRunner:
                             "VariantRecalibrator"]
         gatk_jar = self._get_jar("GenomeAnalysisTK")
         local_args = []
-        params.extend(["--phone_home", "NO_ET"])
         cores = self._config.get("resources", {}).get("gatk", {}).get("cores", None)
         if cores:
             do_parallel = False
