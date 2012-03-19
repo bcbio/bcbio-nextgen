@@ -28,13 +28,21 @@ def generate_align_summary(bam_file, is_paired, sam_ref, sample_name,
         return _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
                              dirs, config)
 
+def _safe_latex(to_fix):
+    """Escape characters that make LaTeX unhappy.
+    """
+    chars = ["%", "_", "&", "#"]
+    for char in chars:
+        to_fix = to_fix.replace(char, "\\%s" % char)
+    return to_fix
+
 def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
                   dirs, config):
     base = os.path.splitext(os.path.basename(bam_file))[0]
     sample_name = base if sample_name is None else " : ".join(sample_name)
     tmpl = Template(_section_template)
-    sample_name = "%s (%s)" % (sample_name.replace("_", "\_"),
-                               base.replace("_", "\_"))
+    sample_name = "%s (%s)" % (_safe_latex(sample_name),
+                               _safe_latex(base))
     recal_plots = sorted(glob.glob(os.path.join(dirs["work"], "reports", "images",
                                                 "%s*-plot.pdf" % base)))
     section = tmpl.render(name=sample_name, summary=None,
@@ -161,11 +169,11 @@ class FastQCParser:
     def get_fastqc_summary(self):
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
-            k, v = [self._safe_latex(x) for x in stat_line.split("\t")[:2]]
+            k, v = [_safe_latex(x) for x in stat_line.split("\t")[:2]]
             stats[k] = v
         over_rep = []
         for line in self._fastqc_data_section("Overrepresented sequences")[1:]:
-            parts = [self._safe_latex(x) for x in line.split("\t")]
+            parts = [_safe_latex(x) for x in line.split("\t")]
             over_rep.append(parts)
             over_rep[-1][0] = self._splitseq(over_rep[-1][0])
         return stats, over_rep[:self._max_overrep]
@@ -196,13 +204,6 @@ class FastQCParser:
                         out.append(line.rstrip("\r\n"))
         return out
 
-    def _safe_latex(self, to_fix):
-        """Escape characters that make LaTeX unhappy.
-        """
-        chars = ["%", "_", "&"]
-        for char in chars:
-            to_fix = to_fix.replace(char, "\\%s" % char)
-        return to_fix
 
 def _run_fastqc(bam_file, config):
     out_base = "fastqc"
