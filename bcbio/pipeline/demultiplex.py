@@ -92,21 +92,25 @@ def _make_tag_file(barcodes, unmatched_str, config):
                 need_trim[bc["barcode_id"]] = bc["sequence"]
     return tag_file, need_trim
 
-def _adjust_illumina_tags(barcodes,config):
-    """Handle additional trailing A in Illumina barocdes.
+def _adjust_illumina_tags(barcodes, config):
+    """Handle additional trailing A in Illumina barcodes.
 
     Illumina barcodes are listed as 6bp sequences but have an additional
     A base when coming off on the sequencer. This checks for this case and
     adjusts the sequences appropriately if needed. When the configuration 
     option to disregard the additional A in barcode matching is set, the
     added base is an ambigous N to avoid an additional mismatch.
+    If the configuration uses bc_offset to adjust the comparison location,
+    we do not add trailing base and rely on the configuration setting.
     """
     illumina_size = 7
     all_illumina = True
     need_a = False
     for bc in barcodes:
-        if bc.get("barcode_type", "illumina").lower().find("illumina") == -1:
+        if (bc.get("barcode_type", "illumina").lower().find("illumina") == -1 or
+            int(config["algorithm"].get("bc_offset", 0)) == 1):
             all_illumina = False
+            break
         if (not bc["sequence"].upper().endswith("A") or
             len(bc["sequence"]) < illumina_size):
             need_a = True
