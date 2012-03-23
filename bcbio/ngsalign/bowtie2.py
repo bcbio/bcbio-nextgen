@@ -34,6 +34,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             cl += _bowtie2_args_from_config(config)
             cl += extra_args if extra_args is not None else []
             cl += ["-q",
+                   "-M", "1",
                    "--sensitive",
                    "-X", 2000, # default is too selective for most data
                    "-x", ref_file]
