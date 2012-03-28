@@ -23,6 +23,7 @@ bx-python: https://bitbucket.org/james_taylor/bx-python/wiki/Home
 
 Usage:
   hydra_to_vcf.py <hydra output file> <Genome in UCSC 2bit format>
+                  [--minsupport Minimum weighted support to include breakends]
 """
 import os
 import csv
@@ -30,14 +31,16 @@ import sys
 import unittest
 from collections import namedtuple
 from operator import attrgetter
+from optparse import OptionParser
 
 from bx.seq import twobit
 
-def main(hydra_file, genome_file):
+def main(hydra_file, genome_file, min_support=0):
+    options = {"min_support": min_support}
     out_file = "{0}.vcf".format(os.path.splitext(hydra_file)[0])
     genome_2bit = twobit.TwoBitFile(open(genome_file))
     with open(out_file, "w") as out_handle:
-        hydra_to_vcf_writer(hydra_file, genome_2bit, out_handle)
+        hydra_to_vcf_writer(hydra_file, genome_2bit, options, out_handle)
 
 # ## Build VCF representation from Hydra BedPe format
 
@@ -108,18 +111,22 @@ def build_vcf_parts(feature, genome_2bit):
 
 # ## Parse Hydra output into BedPe tuple representation
 
-def hydra_parser(in_file):
+def hydra_parser(in_file, options):
     """Parse hydra input file into namedtuple of values.
     """
     BedPe = namedtuple('BedPe', ["chrom1", "start1", "end1",
                                  "chrom2", "start2", "end2",
-                                 "name", "strand1", "strand2"])
+                                 "name", "strand1", "strand2",
+                                 "support"])
     with open(in_file) as in_handle:
         reader = csv.reader(in_handle, dialect="excel-tab")
         for line in reader:
-            yield BedPe(line[0], int(line[1]), int(line[2]),
+            cur = BedPe(line[0], int(line[1]), int(line[2]),
                         line[3], int(line[4]), int(line[5]),
-                        line[6], line[8], line[9])
+                        line[6], line[8], line[9],
+                        float(line[18]))
+            if cur.support >= options["min_support"]:
+                yield cur
 
 # ## Write VCF output
 
@@ -144,14 +151,14 @@ def _write_vcf_breakend(brend, out_handle):
         [brend.chrom, brend.pos + 1, brend.id, brend.ref, brend.alt,
          ".", "PASS", brend.info])))
 
-def _get_vcf_breakends(hydra_file, genome_2bit):
+def _get_vcf_breakends(hydra_file, genome_2bit, options):
     """Parse BEDPE input, yielding VCF ready breakends.
     """
-    for feature in hydra_parser(hydra_file):
+    for feature in hydra_parser(hydra_file, options):
         for brend in build_vcf_parts(feature, genome_2bit):
             yield brend
 
-def hydra_to_vcf_writer(hydra_file, genome_2bit, out_handle):
+def hydra_to_vcf_writer(hydra_file, genome_2bit, options, out_handle):
     """Write hydra output as sorted VCF file.
 
     Requires loading the hydra file into memory to perform sorting
@@ -159,17 +166,20 @@ def hydra_to_vcf_writer(hydra_file, genome_2bit, out_handle):
     approach if this proves too memory intensive.
     """
     _write_vcf_header(out_handle)
-    brends = list(_get_vcf_breakends(hydra_file, genome_2bit))
+    brends = list(_get_vcf_breakends(hydra_file, genome_2bit, options))
     brends.sort(key=attrgetter("chrom", "pos"))
     for brend in brends:
         _write_vcf_breakend(brend, out_handle)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    parser = OptionParser()
+    parser.add_option("-s", "--minsupport", dest="minsupport", default=0)
+    (options, args) = parser.parse_args()
+    if len(args) != 2:
         print "Incorrect arguments"
         print __doc__
         sys.exist()
-    main(*sys.argv[1:])
+    main(args[0], args[1], int(options.minsupport))
 
 # ## Test code
 
@@ -192,6 +202,7 @@ class HydraConvertTest(unittest.TestCase):
         assert breakend.start1 == 9763 
         assert breakend.strand2 == "+"
         assert breakend.name == "2"
+        assert breakend.support == 4.0
 
     def test_2_vcf_parts(self):
         """Convert BEDPE input line into VCF output parts.
