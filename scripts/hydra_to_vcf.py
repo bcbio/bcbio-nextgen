@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 """Convert Hydra BEDPE output into VCF 4.1 format.
 
@@ -6,6 +7,15 @@ File format definitions:
 http://code.google.com/p/hydra-sv/wiki/FileFormats
 http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/
 vcf-variant-call-format-version-41
+
+Figure 2 of this review:
+
+Quinlan, AR and IM Hall. 2011. Characterizing complex structural variation
+in germline and somatic genomes. Trends in Genetics.
+http://download.cell.com/trends/genetics/pdf/PIIS0168952511001685.pdf
+
+Is a great overview of different structural variations and their breakpoint
+representation.
 
 Requirements:
 
@@ -54,19 +64,21 @@ def _breakend_orientation(strand1, strand2):
 
     | strand1  |  strand2 |     VCF      |
     +----------+----------+--------------+
-    |   +      |     +    | t[p[ ]p]t    |
-    |   +      |     -    | t]p] t]p]    |
-    |   -      |     +    | [p[t [p[t    |
-    |   -      |     -    | Not possible |
+    |   +      |     -    | t[p[ ]p]t    |
+    |   +      |     +    | t]p] t]p]    |
+    |   -      |     -    | [p[t [p[t    |
+    |   -      |     +    | ]p]t t[p[    |
     """
     EndOrientation = namedtuple("EndOrientation",
                                 ["is_first1", "is_rc1", "is_first2", "is_rc2"])
-    if strand1 == "+" and strand2 == "+":
+    if strand1 == "+" and strand2 == "-":
         return EndOrientation(True, True, False, True)
-    elif strand1 == "+" and strand2 == "-":
+    elif strand1 == "+" and strand2 == "+":
         return EndOrientation(True, False, True, False)
-    elif strand1 == "-" and strand2 == "+":
+    elif strand1 == "-" and strand2 == "-":
         return EndOrientation(False, False, False, False)
+    elif strand1 == "-" and strand2 == "+":
+        return EndOrientation(False, True, True, True)
     else:
         raise ValueError("Unexpected strand pairing: {0} {1}".format(
             strand1, strand2))
@@ -178,7 +190,7 @@ class HydraConvertTest(unittest.TestCase):
         breakend = hydra_parser(self.in_file).next()
         assert breakend.chrom1 == "chr22"
         assert breakend.start1 == 9763 
-        assert breakend.strand2 == "-"
+        assert breakend.strand2 == "+"
         assert breakend.name == "2"
 
     def test_2_vcf_parts(self):
@@ -196,3 +208,6 @@ class HydraConvertTest(unittest.TestCase):
         brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
         assert brend1.alt == "[chr22:11112[A"
         assert brend2.alt == "[chr22:8764[T"
+        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
+        assert brend1.alt == "]chr22:13112]G", brend1.alt
+        assert brend2.alt == "A[chr22:9764[", brend2.alt
