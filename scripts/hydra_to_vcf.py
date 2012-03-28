@@ -29,11 +29,12 @@ import os
 import csv
 import sys
 import unittest
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from operator import attrgetter
 from optparse import OptionParser
 
 from bx.seq import twobit
+from bx.intervals.cluster import ClusterTree
 
 def main(hydra_file, genome_file, min_support=0):
     options = {"min_support": min_support}
@@ -132,12 +133,39 @@ def build_vcf_deletion(x, genome_2bit):
                                              length=x.start1 - x.start2)
     return VcfLine(x.chrom1, x.start1, id1, base1, "<DEL>", info)
 
+def is_inversion(x1, x2):
+    strand1 = ["+", "+"]
+    strand2 = ["-", "-"]
+    if (x1.chrom1 == x1.chrom2 and x1.chrom1 == x2.chrom1 and
+        [x1.strand1, x1.strand2] == strand1 and
+        [x2.strand1, x2.strand2] == strand2):
+        return True
+    return False
+
+def build_vcf_inversion(x1, x2, genome_2bit):
+    """Provide representation of inversion from BedPE breakpoints.
+    """
+    id1 = "hydra{0}".format(x1.name)
+    start_coords = sorted([x1.start1, x1.end1, x2.start1, x2.end1])
+    end_coords = sorted([x1.start2, x1.end2, x2.start2, x2.start2])
+    start_pos = (start_coords[1] + start_coords[2]) // 2
+    end_pos = (end_coords[1] + end_coords[2]) // 2
+    base1 = genome_2bit[x1.chrom1].get(start_pos, start_pos + 1).upper()
+    info = "SVTYPE=INV;IMPRECISE;CIPOS={cip1},{cip2};CIEND={cie1},{cie2};" \
+           "END={end};SVLEN={length}".format(cip1=start_pos - start_coords[0],
+                                             cip2=start_coords[-1] - start_pos,
+                                             cie1=end_pos - end_coords[0],
+                                             cie2=end_coords[-1] - end_pos,
+                                             end=end_pos,
+                                             length=end_pos-start_pos)
+    return VcfLine(x1.chrom1, start_pos, id1, base1, "<INV>", info)
+
 # ## Parse Hydra output into BedPe tuple representation
 
 def hydra_parser(in_file, options=None):
-    if options is None: options = {}
     """Parse hydra input file into namedtuple of values.
     """
+    if options is None: options = {}
     BedPe = namedtuple('BedPe', ["chrom1", "start1", "end1",
                                  "chrom2", "start2", "end2",
                                  "name", "strand1", "strand2",
@@ -151,6 +179,44 @@ def hydra_parser(in_file, options=None):
                         float(line[18]))
             if cur.support >= options.get("min_support", 0):
                 yield cur
+
+def _cluster_by(end_iter, attr1, attr2, cluster_distance):
+    """Cluster breakends by specified attributes.
+    """
+    ClusterInfo = namedtuple("ClusterInfo", ["chroms", "clusters", "lookup"])
+    chr_clusters = {}
+    chroms = []
+    brends_by_id = {}
+    for brend in end_iter:
+        if not chr_clusters.has_key(brend.chrom1):
+            chroms.append(brend.chrom1)
+            chr_clusters[brend.chrom1] = ClusterTree(cluster_distance, 1)
+        brends_by_id[int(brend.name)] = brend
+        chr_clusters[brend.chrom1].insert(getattr(brend, attr1),
+                                          getattr(brend, attr2),
+                                          int(brend.name))
+    return ClusterInfo(chroms, chr_clusters, brends_by_id)
+
+def group_hydra_breakends(end_iter):
+    """Group together hydra breakends with overlapping ends.
+
+    This provides a way to identify inversions, translocations
+    and insertions present in hydra break point ends. We cluster together the
+    endpoints and return together any items with closely oriented pairs.
+    This helps in describing more complex rearrangement events.
+    """
+    cluster_distance = 100
+    first_cluster = _cluster_by(end_iter, "start1", "end1", cluster_distance)
+    for chrom in first_cluster.chroms:
+        for _, _, brends in first_cluster.clusters[chrom].getregions():
+            if len(brends) == 1:
+                yield [first_cluster.lookup[brends[0]]]
+            else:
+                second_cluster = _cluster_by([first_cluster.lookup[x] for x in brends],
+                                             "start2", "end2", cluster_distance)
+                for chrom2 in second_cluster.chroms:
+                    for _, _, brends in second_cluster.clusters[chrom].getregions():
+                        yield [second_cluster.lookup[x] for x in brends]
 
 # ## Write VCF output
 
@@ -188,12 +254,20 @@ def _write_vcf_breakend(brend, out_handle):
 def _get_vcf_breakends(hydra_file, genome_2bit, options=None):
     """Parse BEDPE input, yielding VCF ready breakends.
     """
-    for feature in hydra_parser(hydra_file, options):
-        if is_deletion(feature):
-            yield build_vcf_deletion(feature, genome_2bit)
+    for features in group_hydra_breakends(hydra_parser(hydra_file, options)):
+        if len(features) == 1 and is_deletion(features[0]):
+            yield build_vcf_deletion(features[0], genome_2bit)
+        elif len(features) == 2:
+            if is_inversion(*features):
+                yield build_vcf_inversion(features[0], features[1], genome_2bit)
+            else:
+                for feature in features:
+                    for brend in build_vcf_parts(feature, genome_2bit):
+                        yield brend
         else:
-            for brend in build_vcf_parts(feature, genome_2bit):
-                yield brend
+            for feature in features:
+                for brend in build_vcf_parts(feature, genome_2bit):
+                    yield brend
 
 def hydra_to_vcf_writer(hydra_file, genome_2bit, options, out_handle):
     """Write hydra output as sorted VCF file.
@@ -238,7 +312,7 @@ class HydraConvertTest(unittest.TestCase):
         assert breakend.chrom1 == "chr22"
         assert breakend.start1 == 9763 
         assert breakend.strand2 == "+"
-        assert breakend.name == "2"
+        assert breakend.name == "1"
         assert breakend.support == 4.0
 
     def test_2_vcf_parts(self):
@@ -249,7 +323,7 @@ class HydraConvertTest(unittest.TestCase):
         brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
         assert brend1.alt == "G]chr22:10112]"
         assert brend2.alt == "C]chr22:9764]"
-        assert brend2.info == "SVTYPE=BND;MATEID=hydra2a;IMPRECISE;CIPOS=0,102"
+        assert brend2.info == "SVTYPE=BND;MATEID=hydra1a;IMPRECISE;CIPOS=0,102", brend2.info
         brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
         assert brend1.alt == "A[chr22:12112["
         assert brend2.alt == "]chr22:7764]G"
@@ -265,8 +339,6 @@ class HydraConvertTest(unittest.TestCase):
         """
         genome_2bit = twobit.TwoBitFile(open(self.genome_file))
         parts = _get_vcf_breakends(self.in_file, genome_2bit)
-        parts.next()
-        parts.next()
         deletion = parts.next()
         assert deletion.alt == "<DEL>"
         assert "SVLEN=-4348" in deletion.info
