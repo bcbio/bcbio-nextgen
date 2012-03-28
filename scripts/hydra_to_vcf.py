@@ -42,7 +42,7 @@ def main(hydra_file, genome_file, min_support=0):
     with open(out_file, "w") as out_handle:
         hydra_to_vcf_writer(hydra_file, genome_2bit, options, out_handle)
 
-# ## Build VCF representation from Hydra BedPe format
+# ## Build VCF breakend representation from Hydra BedPe format
 
 def _vcf_info(start, end, mate_id):
     """Return breakend information line with mate and imprecise location.
@@ -86,13 +86,13 @@ def _breakend_orientation(strand1, strand2):
         raise ValueError("Unexpected strand pairing: {0} {1}".format(
             strand1, strand2))
 
+VcfLine = namedtuple('VcfLine', ["chrom", "pos", "id", "ref", "alt", "info"])
+
 def build_vcf_parts(feature, genome_2bit):
     """Convert BedPe feature information into VCF part representation.
 
     Each feature will have two VCF lines for each side of the breakpoint.
     """
-    VcfBreakend = namedtuple('VcfBreakend', ["chrom", "pos", "id", "ref", "alt",
-                                             "info"])
     base1 = genome_2bit[feature.chrom1].get(
         feature.start1, feature.start1 + 1).upper()
     id1 = "hydra{0}a".format(feature.name)
@@ -100,18 +100,42 @@ def build_vcf_parts(feature, genome_2bit):
         feature.start2, feature.start2 + 1).upper()
     id2 = "hydra{0}b".format(feature.name)
     orientation = _breakend_orientation(feature.strand1, feature.strand2)
-    return (VcfBreakend(feature.chrom1, feature.start1, id1, base1,
-                        _vcf_alt(base1, feature.chrom2, feature.start2,
-                                 orientation.is_rc1, orientation.is_first1),
-                        _vcf_info(feature.start1, feature.end1, id2)),
-            VcfBreakend(feature.chrom2, feature.start2, id2, base2,
-                        _vcf_alt(base2, feature.chrom1, feature.start1,
-                                 orientation.is_rc2, orientation.is_first2),
-                        _vcf_info(feature.start2, feature.end2, id1)))
+    return (VcfLine(feature.chrom1, feature.start1, id1, base1,
+                    _vcf_alt(base1, feature.chrom2, feature.start2,
+                             orientation.is_rc1, orientation.is_first1),
+                    _vcf_info(feature.start1, feature.end1, id2)),
+            VcfLine(feature.chrom2, feature.start2, id2, base2,
+                    _vcf_alt(base2, feature.chrom1, feature.start1,
+                             orientation.is_rc2, orientation.is_first2),
+                    _vcf_info(feature.start2, feature.end2, id1)))
+
+# ## Represent standard variants types
+# Convert breakends into deletions, tandem duplications and inversions
+
+def is_deletion(x):
+    max_deletion_size = 20000
+    strand_orientation = ["+", "-"]
+    if (x.chrom1 == x.chrom2 and [x.strand1, x.strand2] == strand_orientation
+        and (x.start2 - x.start1) < max_deletion_size):
+        return True
+    return False
+
+def build_vcf_deletion(x, genome_2bit):
+    """Provide representation of deletion from BedPE breakpoints.
+    """
+    base1 = genome_2bit[x.chrom1].get(x.start1, x.start1 + 1).upper()
+    id1 = "hydra{0}".format(x.name)
+    info = "SVTYPE=DEL;IMPRECISE;CIPOS=0,{size1};CIEND=0,{size2};" \
+           "END={end};SVLEN={length}".format(size1=x.end1 - x.start1,
+                                             size2=x.end2 - x.start2,
+                                             end=x.start2,
+                                             length=x.start1 - x.start2)
+    return VcfLine(x.chrom1, x.start1, id1, base1, "<DEL>", info)
 
 # ## Parse Hydra output into BedPe tuple representation
 
-def hydra_parser(in_file, options):
+def hydra_parser(in_file, options=None):
+    if options is None: options = {}
     """Parse hydra input file into namedtuple of values.
     """
     BedPe = namedtuple('BedPe', ["chrom1", "start1", "end1",
@@ -125,7 +149,7 @@ def hydra_parser(in_file, options):
                         line[3], int(line[4]), int(line[5]),
                         line[6], line[8], line[9],
                         float(line[18]))
-            if cur.support >= options["min_support"]:
+            if cur.support >= options.get("min_support", 0):
                 yield cur
 
 # ## Write VCF output
@@ -136,11 +160,21 @@ def _write_vcf_header(out_handle):
     def w(line):
         out_handle.write("{0}\n".format(line))
     w('##fileformat=VCFv4.1')
+    w('##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">')
+    w('##INFO=<ID=END,Number=1,Type=Integer,'
+      'Description="End position of the variant described in this record">')
     w('##INFO=<ID=CIPOS,Number=2,Type=Integer,'
       'Description="Confidence interval around POS for imprecise variants">')
-    w('##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">')
+    w('##INFO=<ID=CIEND,Number=2,Type=Integer,'
+      'Description="Confidence interval around END for imprecise variants">')
+    w('##INFO=<ID=SVLEN,Number=.,Type=Integer,'
+      'Description="Difference in length between REF and ALT alleles">')
     w('##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">')
     w('##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">')
+    w('##ALT=<ID=DEL,Description="Deletion">')
+    w('##ALT=<ID=INV,Description="Inversion">')
+    w('##ALT=<ID=DUP,Description="Duplication">')
+    w('##ALT=<ID=DUP:TANDEM,Description="Tandem Duplication">')
     w('##source=hydra')
     w("#" + "\t".join(["CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO"]))
 
@@ -151,12 +185,15 @@ def _write_vcf_breakend(brend, out_handle):
         [brend.chrom, brend.pos + 1, brend.id, brend.ref, brend.alt,
          ".", "PASS", brend.info])))
 
-def _get_vcf_breakends(hydra_file, genome_2bit, options):
+def _get_vcf_breakends(hydra_file, genome_2bit, options=None):
     """Parse BEDPE input, yielding VCF ready breakends.
     """
     for feature in hydra_parser(hydra_file, options):
-        for brend in build_vcf_parts(feature, genome_2bit):
-            yield brend
+        if is_deletion(feature):
+            yield build_vcf_deletion(feature, genome_2bit)
+        else:
+            for brend in build_vcf_parts(feature, genome_2bit):
+                yield brend
 
 def hydra_to_vcf_writer(hydra_file, genome_2bit, options, out_handle):
     """Write hydra output as sorted VCF file.
@@ -222,3 +259,14 @@ class HydraConvertTest(unittest.TestCase):
         brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
         assert brend1.alt == "]chr22:13112]G", brend1.alt
         assert brend2.alt == "A[chr22:9764[", brend2.alt
+
+    def test_3_deletions(self):
+        """Convert BEDPE breakends that form a deletion.
+        """
+        genome_2bit = twobit.TwoBitFile(open(self.genome_file))
+        parts = _get_vcf_breakends(self.in_file, genome_2bit)
+        parts.next()
+        parts.next()
+        deletion = parts.next()
+        assert deletion.alt == "<DEL>"
+        assert "SVLEN=-4348" in deletion.info
