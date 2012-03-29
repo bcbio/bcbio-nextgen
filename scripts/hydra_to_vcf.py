@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 """Convert Hydra BEDPE output into VCF 4.1 format.
 
@@ -37,7 +36,7 @@ from bx.seq import twobit
 from bx.intervals.cluster import ClusterTree
 
 def main(hydra_file, genome_file, min_support=0):
-    options = {"min_support": min_support}
+    options = {"min_support": min_support, "max_single_size": 10000}
     out_file = "{0}.vcf".format(os.path.splitext(hydra_file)[0])
     genome_2bit = twobit.TwoBitFile(open(genome_file))
     with open(out_file, "w") as out_handle:
@@ -45,11 +44,15 @@ def main(hydra_file, genome_file, min_support=0):
 
 # ## Build VCF breakend representation from Hydra BedPe format
 
-def _vcf_info(start, end, mate_id):
+def _vcf_info(start, end, mate_id, info=None):
     """Return breakend information line with mate and imprecise location.
     """
-    return "SVTYPE=BND;MATEID={mate};IMPRECISE;CIPOS=0,{size}".format(
+    out = "SVTYPE=BND;MATEID={mate};IMPRECISE;CIPOS=0,{size}".format(
         mate=mate_id, size=end-start)
+    if info is not None:
+        extra_info = ";".join("{0}={1}".format(k, v) for k, v in info.iteritems())
+        out = "{0};{1}".format(out, extra_info)
+    return out
 
 def _vcf_alt(base, other_chr, other_pos, isrc, is_first):
     """Create ALT allele line in VCF 4.1 format associating with other paired end.
@@ -89,7 +92,7 @@ def _breakend_orientation(strand1, strand2):
 
 VcfLine = namedtuple('VcfLine', ["chrom", "pos", "id", "ref", "alt", "info"])
 
-def build_vcf_parts(feature, genome_2bit):
+def build_vcf_parts(feature, genome_2bit, info=None):
     """Convert BedPe feature information into VCF part representation.
 
     Each feature will have two VCF lines for each side of the breakpoint.
@@ -104,43 +107,61 @@ def build_vcf_parts(feature, genome_2bit):
     return (VcfLine(feature.chrom1, feature.start1, id1, base1,
                     _vcf_alt(base1, feature.chrom2, feature.start2,
                              orientation.is_rc1, orientation.is_first1),
-                    _vcf_info(feature.start1, feature.end1, id2)),
+                    _vcf_info(feature.start1, feature.end1, id2, info)),
             VcfLine(feature.chrom2, feature.start2, id2, base2,
                     _vcf_alt(base2, feature.chrom1, feature.start1,
                              orientation.is_rc2, orientation.is_first2),
-                    _vcf_info(feature.start2, feature.end2, id1)))
+                    _vcf_info(feature.start2, feature.end2, id1, info)))
 
 # ## Represent standard variants types
 # Convert breakends into deletions, tandem duplications and inversions
 
-def is_deletion(x):
-    max_deletion_size = 20000
+def is_deletion(x, options):
     strand_orientation = ["+", "-"]
-    if (x.chrom1 == x.chrom2 and [x.strand1, x.strand2] == strand_orientation
-        and (x.start2 - x.start1) < max_deletion_size):
-        return True
-    return False
+    return (x.chrom1 == x.chrom2 and [x.strand1, x.strand2] == strand_orientation
+            and (x.start2 - x.start1) < options.get("max_single_size", 0))
+
+def _vcf_single_end_info(x, svtype, is_removal=False):
+    if is_removal:
+        length = x.start1 - x.start2
+    else:
+        length = x.start2 - x.start1
+    return "SVTYPE={type};IMPRECISE;CIPOS=0,{size1};CIEND=0,{size2};" \
+           "END={end};SVLEN={length}".format(size1=x.end1 - x.start1,
+                                             size2=x.end2 - x.start2,
+                                             end=x.start2,
+                                             type=svtype,
+                                             length=length)
 
 def build_vcf_deletion(x, genome_2bit):
     """Provide representation of deletion from BedPE breakpoints.
     """
     base1 = genome_2bit[x.chrom1].get(x.start1, x.start1 + 1).upper()
     id1 = "hydra{0}".format(x.name)
-    info = "SVTYPE=DEL;IMPRECISE;CIPOS=0,{size1};CIEND=0,{size2};" \
-           "END={end};SVLEN={length}".format(size1=x.end1 - x.start1,
-                                             size2=x.end2 - x.start2,
-                                             end=x.start2,
-                                             length=x.start1 - x.start2)
-    return VcfLine(x.chrom1, x.start1, id1, base1, "<DEL>", info)
+    return VcfLine(x.chrom1, x.start1, id1, base1, "<DEL>",
+                   _vcf_single_end_info(x, "DEL", True))
+
+def is_tandem_dup(x, options):
+    strand_orientation = ["-", "+"]
+    return (x.chrom1 == x.chrom2 and [x.strand1, x.strand2] == strand_orientation
+            and (x.start2 - x.start1) < options.get("max_single_size", 0))
+
+def build_tandem_deletion(x, genome_2bit):
+    """Provide representation of tandem duplication.
+    """
+    base1 = genome_2bit[x.chrom1].get(x.start1, x.start1 + 1).upper()
+    id1 = "hydra{0}".format(x.name)
+    return VcfLine(x.chrom1, x.start1, id1, base1, "<DUP:TANDEM>",
+                   _vcf_single_end_info(x, "DUP"))
 
 def is_inversion(x1, x2):
     strand1 = ["+", "+"]
     strand2 = ["-", "-"]
-    if (x1.chrom1 == x1.chrom2 and x1.chrom1 == x2.chrom1 and
-        [x1.strand1, x1.strand2] == strand1 and
-        [x2.strand1, x2.strand2] == strand2):
-        return True
-    return False
+    return (x1.chrom1 == x1.chrom2 and x1.chrom1 == x2.chrom1 and
+            (([x1.strand1, x1.strand2] == strand1 and
+              [x2.strand1, x2.strand2] == strand2) or
+             ([x1.strand1, x1.strand2] == strand2 and
+              [x2.strand1, x2.strand2] == strand1)))
 
 def build_vcf_inversion(x1, x2, genome_2bit):
     """Provide representation of inversion from BedPE breakpoints.
@@ -159,6 +180,18 @@ def build_vcf_inversion(x1, x2, genome_2bit):
                                              end=end_pos,
                                              length=end_pos-start_pos)
     return VcfLine(x1.chrom1, start_pos, id1, base1, "<INV>", info)
+
+def is_translocation(x1, x2):
+    strand1 = ["+", "-"]
+    strand2 = ["-", "+"]
+    return (x1.chrom1 != x1.chrom2 and
+            ([x1.strand1, x1.strand2] == strand1 and
+             [x2.strand1, x2.strand2] == strand2) or
+            ([x1.strand1, x1.strand2] == strand2 and
+             [x2.strand1, x2.strand2] == strand1))
+
+def get_translocation_info(x1, x2):
+    return {"EVENT": "translocation_{0}_{1}".format(x1.name, x2.name)}
 
 # ## Parse Hydra output into BedPe tuple representation
 
@@ -197,6 +230,18 @@ def _cluster_by(end_iter, attr1, attr2, cluster_distance):
                                           int(brend.name))
     return ClusterInfo(chroms, chr_clusters, brends_by_id)
 
+def _calculate_cluster_distance(end_iter):
+    """Compute allowed distance for clustering based on end confidence intervals.
+    """
+    out = []
+    sizes = []
+    for x in end_iter:
+        out.append(x)
+        sizes.append(x.end1 - x.start1)
+        sizes.append(x.end2 - x.start2)
+    distance = sum(sizes) // len(sizes)
+    return distance, out
+
 def group_hydra_breakends(end_iter):
     """Group together hydra breakends with overlapping ends.
 
@@ -205,8 +250,8 @@ def group_hydra_breakends(end_iter):
     endpoints and return together any items with closely oriented pairs.
     This helps in describing more complex rearrangement events.
     """
-    cluster_distance = 100
-    first_cluster = _cluster_by(end_iter, "start1", "end1", cluster_distance)
+    cluster_distance, all_ends = _calculate_cluster_distance(end_iter)
+    first_cluster = _cluster_by(all_ends, "start1", "end1", cluster_distance)
     for chrom in first_cluster.chroms:
         for _, _, brends in first_cluster.clusters[chrom].getregions():
             if len(brends) == 1:
@@ -237,6 +282,7 @@ def _write_vcf_header(out_handle):
       'Description="Difference in length between REF and ALT alleles">')
     w('##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">')
     w('##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">')
+    w('##INFO=<ID=EVENT,Number=1,Type=String,Description="ID of event associated to breakend">')
     w('##ALT=<ID=DEL,Description="Deletion">')
     w('##ALT=<ID=INV,Description="Inversion">')
     w('##ALT=<ID=DUP,Description="Duplication">')
@@ -254,16 +300,19 @@ def _write_vcf_breakend(brend, out_handle):
 def _get_vcf_breakends(hydra_file, genome_2bit, options=None):
     """Parse BEDPE input, yielding VCF ready breakends.
     """
+    if options is None: options = {}
     for features in group_hydra_breakends(hydra_parser(hydra_file, options)):
-        if len(features) == 1 and is_deletion(features[0]):
+        if len(features) == 1 and is_deletion(features[0], options):
             yield build_vcf_deletion(features[0], genome_2bit)
-        elif len(features) == 2:
-            if is_inversion(*features):
-                yield build_vcf_inversion(features[0], features[1], genome_2bit)
-            else:
-                for feature in features:
-                    for brend in build_vcf_parts(feature, genome_2bit):
-                        yield brend
+        elif len(features) == 1 and is_tandem_dup(features[0], options):
+            yield build_tandem_deletion(features[0], genome_2bit)
+        elif len(features) == 2 and is_inversion(*features):
+            yield build_vcf_inversion(features[0], features[1], genome_2bit)
+        elif len(features) == 2 and is_translocation(*features):
+            info = get_translocation_info(features[0], features[1])
+            for feature in features:
+                for brend in build_vcf_parts(feature, genome_2bit, info):
+                    yield brend
         else:
             for feature in features:
                 for brend in build_vcf_parts(feature, genome_2bit):
@@ -338,7 +387,7 @@ class HydraConvertTest(unittest.TestCase):
         """Convert BEDPE breakends that form a deletion.
         """
         genome_2bit = twobit.TwoBitFile(open(self.genome_file))
-        parts = _get_vcf_breakends(self.in_file, genome_2bit)
+        parts = _get_vcf_breakends(self.in_file, genome_2bit, {"max_single_size": 5000})
         deletion = parts.next()
-        assert deletion.alt == "<DEL>"
+        assert deletion.alt == "<DEL>", deletion
         assert "SVLEN=-4348" in deletion.info
