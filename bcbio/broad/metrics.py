@@ -11,6 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 
 import pysam
 
+
 class PicardMetricsParser:
     """Read metrics files produced by Picard analyses.
 
@@ -43,10 +44,10 @@ class PicardMetricsParser:
         """Return summary information for a lane of metrics files.
         """
         extension_maps = dict(
-                align_metrics = (self._parse_align_metrics, "AL"),
-                dup_metrics = (self._parse_dup_metrics, "DUP"),
-                hs_metrics = (self._parse_hybrid_metrics, "HS"),
-                insert_metrics = (self._parse_insert_metrics, "INS"),
+                align_metrics=(self._parse_align_metrics, "AL"),
+                dup_metrics=(self._parse_dup_metrics, "DUP"),
+                hs_metrics=(self._parse_hybrid_metrics, "HS"),
+                insert_metrics=(self._parse_insert_metrics, "INS"),
                 )
         all_metrics = dict()
         for fname in metrics_files:
@@ -68,7 +69,6 @@ class PicardMetricsParser:
         out = []
         # handle high level alignment for paired values
         paired = insert_vals is not None
-
 
         total = align_vals["TOTAL_READS"]
         dup_total = int(dup_vals["READ_PAIRS_EXAMINED"])
@@ -112,25 +112,37 @@ class PicardMetricsParser:
 
     def _tabularize_hybrid(self, hybrid_vals):
         out = []
+
+        def try_float_format(in_string, float_format, multiplier=1.):
+            in_string = in_string.replace(",", ".")
+            try:
+                out_string = float_format % (float(in_string) * multiplier)
+            except ValueError:
+                out_string = in_string
+
+            return out_string
+
         total = hybrid_vals["PF_UQ_BASES_ALIGNED"]
+
         out.append(self._count_percent("On bait bases",
             hybrid_vals["ON_BAIT_BASES"], total))
         out.append(self._count_percent("Near bait bases",
             hybrid_vals["NEAR_BAIT_BASES"], total))
         out.append(self._count_percent("Off bait bases",
             hybrid_vals["OFF_BAIT_BASES"], total))
-        out.append(("Mean bait coverage", "%.1f" %
-            float(hybrid_vals["MEAN_BAIT_COVERAGE"]), ""))
+        out.append(("Mean bait coverage", "%s" %
+            try_float_format(hybrid_vals["MEAN_BAIT_COVERAGE"], "%.1f"), ""))
         out.append(self._count_percent("On target bases",
             hybrid_vals["ON_TARGET_BASES"], total))
-        out.append(("Mean target coverage", "%dx" %
-            float(hybrid_vals["MEAN_TARGET_COVERAGE"]), ""))
-        out.append(("10x coverage targets", "%.1f\%%" %
-            (float(hybrid_vals["PCT_TARGET_BASES_10X"]) * 100.0), ""))
-        out.append(("Zero coverage targets", "%.1f\%%" %
-            (float(hybrid_vals["ZERO_CVG_TARGETS_PCT"]) * 100.0), ""))
-        out.append(("Fold enrichment", "%dx" %
-            float(hybrid_vals["FOLD_ENRICHMENT"]), ""))
+        out.append(("Mean target coverage", "%sx" %
+            try_float_format(hybrid_vals["MEAN_TARGET_COVERAGE"], "%d"), ""))
+        out.append(("10x coverage targets", "%s\%%" %
+            try_float_format(hybrid_vals["PCT_TARGET_BASES_10X"], "%.1f", 100.0), ""))
+        out.append(("Zero coverage targets", "%s\%%" %
+            try_float_format(hybrid_vals["ZERO_CVG_TARGETS_PCT"], "%.1f", 100.0), ""))
+        out.append(("Fold enrichment", "%sx" %
+            try_float_format(hybrid_vals["FOLD_ENRICHMENT"], "%d"), ""))
+
         return out
 
     def _count_percent(self, text, count, total):
@@ -216,6 +228,7 @@ class PicardMetricsParser:
             if line.startswith("## METRICS"):
                 break
         return in_handle.readline().rstrip("\n").split("\t")
+
 
 class PicardMetrics:
     """Run reports using Picard, returning parsed metrics and files.
@@ -347,13 +360,17 @@ class PicardMetrics:
                 self._picard.run("CollectAlignmentSummaryMetrics", opts)
         return align_metrics
 
+
 def _add_commas(s, sep=','):
     """Add commas to output counts.
 
     From: http://code.activestate.com/recipes/498181
     """
-    if len(s) <= 3: return s
+    if len(s) <= 3:
+        return s
+
     return _add_commas(s[:-3], sep) + sep + s[-3:]
+
 
 @contextlib.contextmanager
 def bed_to_interval(orig_bed, bam_file):
