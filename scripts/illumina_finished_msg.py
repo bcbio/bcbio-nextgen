@@ -162,6 +162,7 @@ def _generate_qseq(bc_dir, config):
         (out, _) = p.communicate()
         olb_version = float(out.strip().split()[-1].rsplit(".", 1)[0])
         if olb_version > 1.8:
+            cl += ["-P", ".clocs"]
             cl += ["-b", bc_dir]
         else:
             cl += ["-i", bc_dir, "-p", os.path.split(bc_dir)[0]]
