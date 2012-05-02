@@ -1,8 +1,8 @@
 details:
   - analysis: SNP calling
     algorithm:
-      #aligner: mosaik
-      #variantcaller: freebayes
+      aligner: mosaik
+      variantcaller: freebayes
       #sv_detection: hydra
       quality_format: Standard
       coverage_interval: regional

@@ -12,6 +12,17 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import annotation, genotype
 from bcbio.log import logger
 
+def _freebayes_options_from_config(aconfig):
+    opts = []
+    opts += ["--ploidy", str(aconfig.get("ploidy", 2))]
+    regions = aconfig.get("variant_regions", None)
+    if regions:
+        opts += ["--targets", regions]
+    background = aconfig.get("call_background", None)
+    if background:
+        opts += ["--variant-input", background]
+    return opts
+
 def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                   out_file=None):
     """Detect small polymorphisms with FreeBayes.
@@ -23,7 +34,9 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
             region=region, fname=os.path.basename(align_bam)))
         with file_transaction(out_file) as tx_out_file:
             cl = [config["program"].get("freebayes", "freebayes"),
-                  "-b", align_bam, "-v", tx_out_file, "-f", ref_file]
+                  "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
+                  "--left-align-indels"]
+            cl += _freebayes_options_from_config(config["algorithm"])
             if region:
                 cl.extend(["-r", region])
             subprocess.check_call(cl)
