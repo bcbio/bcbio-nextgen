@@ -19,7 +19,7 @@ def _freebayes_options_from_config(aconfig):
     if regions:
         opts += ["--targets", regions]
     background = aconfig.get("call_background", None)
-    if background:
+    if background and os.path.exists(background):
         opts += ["--variant-input", background]
     return opts
 

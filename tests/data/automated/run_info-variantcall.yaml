@@ -1,7 +1,7 @@
 details:
   - analysis: SNP calling
     algorithm:
-      aligner: mosaik
+      aligner: novoalign
       variantcaller: freebayes
       #sv_detection: hydra
       quality_format: Standard

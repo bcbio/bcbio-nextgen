@@ -336,8 +336,11 @@ Place these under the `analysis` keyword. For variant calling:
 - `aligner` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign]
 - `trim_reads` Whether to trim off 3' B-only ends from fastq reads [false, true]
 - `variantcaller` Variant calling algorithm [gatk, freebayes]
-- `quality_format` Quality format of fastq inputs [Illumina, Standard]
-- `coverage_interval` Regions covered by sequencing. This influences filtra
+- `quality_format` Quality format of fastq inputs [illumina, standard]
+- `coverage_interval` Regions covered by sequencing. Influences GATK
+  options for filtering [exome, genome, regional]
+- `coverage_depth` Depth of sequencing coverage. Influences GATK variant
+  calling [high, low]
 - `hybrid_target` BED file with target regions for hybrid selection experiments.
 - `variant_regions` BED file of regions to call variants in.
 - `ploidy` Ploidy of called reads. Defaults to 2 (diploid).
