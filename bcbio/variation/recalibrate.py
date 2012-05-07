@@ -19,7 +19,7 @@ def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     broad_runner = broad.runner_from_config(config)
     platform = config["algorithm"]["platform"]
     broad_runner.run_fn("picard_index_ref", ref_file)
-    (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", align_bam)
+    (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", align_bam, remove_dups=True)
     recal_file = _gatk_count_covariates(broad_runner, dup_align_bam, ref_file, platform,
             snp_file)
     recal_bam = _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,

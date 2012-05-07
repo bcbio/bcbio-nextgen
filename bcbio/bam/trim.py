@@ -63,9 +63,9 @@ def _trim_by_read(in_handles, to_trim, min_length):
 def _save_diskspace(in_file, out_file, config):
     """Potentially remove input file to save space if configured and in work directory.
     """
-    if (os.path.commonprefix([in_file, out_file]) ==
+    if (os.path.commonprefix([in_file, out_file]).rstrip("/") ==
         os.path.split(os.path.dirname(out_file))[0]):
-        utils.save_diskspace(in_file, "Trimmed to {}".format(out_file), config)
+        save_diskspace(in_file, "Trimmed to {}".format(out_file), config)
 
 def brun_trim_fastq(fastq_files, dirs, config):
     """Trim FASTQ files, removing low quality B-runs.

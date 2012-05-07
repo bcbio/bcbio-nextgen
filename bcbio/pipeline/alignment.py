@@ -3,6 +3,7 @@
 This works as part of the lane/flowcell process step of the pipeline.
 """
 import os
+import re
 from collections import namedtuple
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
@@ -47,8 +48,13 @@ def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
     if sort_method == "queryname":
         return sam_to_querysort_bam(sam_file, config)
     else:
+        # remove split information if present for platform unit
+        if re.search(r"_s\d+$", lane_name) is not None:
+            pu = lane_name.rsplit("_", 1)[0]
+        else:
+            pu = lane_name
         return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                               rg_name, lane_name, config)
+                               rg_name, pu, config)
 
 def _remove_read_number(in_file, sam_file):
     """Work around problem with MergeBamAlignment with BWA and single end reads.

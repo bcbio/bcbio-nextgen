@@ -61,7 +61,7 @@ def merge_bam_files(bam_files, work_dir, config):
     """Merge multiple BAM files from a sample into a single BAM for processing.
     """
     bam_files.sort()
-    out_file = os.path.join(work_dir, os.path.basename(bam_files[0]))
+    out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
     picard = broad.runner_from_config(config)
     picard.run_fn("picard_merge", bam_files, out_file)
     for b in bam_files:
