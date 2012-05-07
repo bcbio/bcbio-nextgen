@@ -335,6 +335,8 @@ Place these under the `analysis` keyword. For variant calling:
 
 - `aligner` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign]
 - `trim_reads` Whether to trim off 3' B-only ends from fastq reads [false, true]
+- `align_split_size`: Split FASTQ files into specified number of records per
+  file. Allows parallelization at the cost of increased temporary disk space usage.
 - `variantcaller` Variant calling algorithm [gatk, freebayes]
 - `quality_format` Quality format of fastq inputs [illumina, standard]
 - `coverage_interval` Regions covered by sequencing. Influences GATK
