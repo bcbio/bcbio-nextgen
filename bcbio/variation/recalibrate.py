@@ -20,14 +20,17 @@ def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     platform = config["algorithm"]["platform"]
     broad_runner.run_fn("picard_index_ref", ref_file)
     (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", align_bam, remove_dups=True)
+    broad_runner.run_fn("picard_index", dup_align_bam)
+    intervals = config["algorithm"].get("variant_regions", None)
     recal_file = _gatk_count_covariates(broad_runner, dup_align_bam, ref_file, platform,
-            snp_file)
+            snp_file, intervals)
     recal_bam = _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,
-                                        platform)
+                                        platform, intervals)
     broad_runner.run_fn("picard_index", recal_bam)
     return recal_bam
 
-def _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file, platform):
+def _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,
+                            platform, intervals):
     """Step 2 of GATK recalibration -- use covariates to re-write output file.
     """
     out_file = "%s-gatkrecal.bam" % os.path.splitext(dup_align_bam)[0]
@@ -46,6 +49,8 @@ def _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file, p
                               "-OQ",
                               "--default_platform", platform,
                               ]
+                    if intervals:
+                        params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
                     broad_runner.run_gatk(params, tmp_dir)
         else:
             shutil.copy(dup_align_bam, out_file)
@@ -66,7 +71,7 @@ def _recal_available(recal_file):
     return False
 
 def _gatk_count_covariates(broad_runner, dup_align_bam, ref_file, platform,
-        snp_file):
+        snp_file, intervals):
     """Step 1 of GATK recalibration process -- counting covariates.
     """
     out_file = "%s.recal" % os.path.splitext(dup_align_bam)[0]
@@ -89,6 +94,8 @@ def _gatk_count_covariates(broad_runner, dup_align_bam, ref_file, platform,
                               ]
                     if snp_file:
                         params += ["--knownSites", snp_file]
+                    if intervals:
+                        params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
                     broad_runner.run_gatk(params, tmp_dir)
         else:
             with open(out_file, "w") as out_handle:

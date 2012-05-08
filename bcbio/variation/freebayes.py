@@ -12,12 +12,28 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import annotation, genotype
 from bcbio.log import logger
 
-def _freebayes_options_from_config(aconfig):
+def _subset_variant_regions(variant_regions, region, out_file):
+    if region is None:
+        return variant_regions
+    elif region.find(":") > 0:
+        raise ValueError("Partial chromosome regions not supported")
+    else:
+        subset_file = "{0}-regions.bed".format(os.path.splitext(out_file)[0])
+        with open(subset_file, "w") as out_handle:
+            with open(variant_regions) as in_handle:
+                for line in in_handle:
+                    if line.startswith(region):
+                        out_handle.write(line)
+        return subset_file
+
+def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
     opts += ["--ploidy", str(aconfig.get("ploidy", 2))]
-    regions = aconfig.get("variant_regions", None)
-    if regions:
-        opts += ["--targets", regions]
+    variant_regions = aconfig.get("variant_regions", None)
+    if variant_regions:
+        opts += ["--targets", _subset_variant_regions(variant_regions, region, out_file)]
+    elif region:
+        opts += ["--region", region]
     background = aconfig.get("call_background", None)
     if background and os.path.exists(background):
         opts += ["--variant-input", background]
@@ -36,9 +52,7 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
             cl = [config["program"].get("freebayes", "freebayes"),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
                   "--left-align-indels"]
-            cl += _freebayes_options_from_config(config["algorithm"])
-            if region:
-                cl.extend(["-r", region])
+            cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
     return out_file
 

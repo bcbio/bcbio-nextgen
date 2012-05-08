@@ -17,6 +17,7 @@ def annotate_effects(orig_file, snpeff_file, genome_file, config):
     out_file = "%s-annotated%s" % os.path.splitext(orig_file)
     # Avoid generalization since 2.0.3 is not working
     #snpeff_file = _general_snpeff_version(snpeff_file)
+    variant_regions = config["algorithm"].get("variant_regions", None)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "VariantAnnotator",
@@ -26,6 +27,8 @@ def annotate_effects(orig_file, snpeff_file, genome_file, config):
                       "--snpEffFile", snpeff_file,
                       "--out", tx_out_file]
             broad_runner.run_gatk(params)
+            if variant_regions:
+                params += ["-L", variant_regions, "--interval_set_rule", "INTERSECTION"]
     return out_file
 
 def _fix_snpeff_version_line(line, supported_versions):
@@ -67,6 +70,7 @@ def annotate_nongatk_vcf(orig_file, dbsnp_file, ref_file, config):
                    "GCContent", "HaplotypeScore", "HomopolymerRun",
                    "MappingQualityRankSumTest", "MappingQualityZero",
                    "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality"]
+    variant_regions = config["algorithm"].get("variant_regions", None)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "VariantAnnotator",
@@ -76,5 +80,7 @@ def annotate_nongatk_vcf(orig_file, dbsnp_file, ref_file, config):
                       "--out", tx_out_file]
             for x in annotations:
                 params += ["-A", x]
+            if variant_regions:
+                params += ["-L", variant_regions, "--interval_set_rule", "INTERSECTION"]
             broad_runner.run_gatk(params)
     return out_file

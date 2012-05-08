@@ -17,7 +17,8 @@ from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file,
 # ## Realignment runners with GATK specific arguments
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
-                           region=None, out_file=None, deep_coverage=False):
+                           region=None, out_file=None, deep_coverage=False,
+                           variant_regions=None):
     """Generate a list of interval regions for realignment around indels.
     """
     if out_file:
@@ -38,6 +39,8 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
                       ]
             if region:
                 params += ["-L", region]
+            if variant_regions:
+                params += ["-L", variant_regions, "--interval_set_rule", "INTERSECTION"]
             if dbsnp:
                 params += ["--known", dbsnp]
             if deep_coverage:
@@ -92,9 +95,11 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
         align_bam = subset_bam_by_region(align_bam, region, out_file)
         runner.run_fn("picard_index", align_bam)
     if has_aligned_reads(align_bam, region):
+        variant_regions = config["algorithm"].get("variant_regions", None)
         realign_target_file = gatk_realigner_targets(runner, align_bam,
                                                      ref_file, dbsnp, region,
-                                                     out_file, deep_coverage)
+                                                     out_file, deep_coverage,
+                                                     variant_regions)
         realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
                                              realign_target_file, region,
                                              out_file, deep_coverage)

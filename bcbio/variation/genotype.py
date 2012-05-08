@@ -29,6 +29,7 @@ def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
     broad_runner.run_fn("picard_index_ref", ref_file)
     broad_runner.run_fn("picard_index", align_bam)
     coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
+    variant_regions = config["algorithm"].get("variant_regions", None)
     if coverage_depth in ["low"]:
         confidence = "4.0"
     else:
@@ -58,6 +59,8 @@ def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
                     params += ["--dbsnp", dbsnp]
                 if region:
                     params += ["-L", region]
+                if variant_regions:
+                    params += ["-L", variant_regions, "--interval_set_rule", "INTERSECTION"]
                 broad_runner.run_gatk(params)
         else:
             with open(out_file, "w") as out_handle:
