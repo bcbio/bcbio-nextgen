@@ -37,11 +37,13 @@ from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall
 from bcbio.pipeline.config_loader import load_config
 
-def main(config_file, fc_dir, run_info_yaml=None):
+def main(config_file, fc_dir, run_info_yaml=None, num_cores=None):
     config = load_config(config_file)
     work_dir = os.getcwd()
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(work_dir, "log")
+    if num_cores:
+        config["algorithm"]["num_cores"] = int(num_cores)
     setup_logging(config)
     run_main(config, config_file, fc_dir, work_dir, run_info_yaml)
 
@@ -85,10 +87,11 @@ def _get_full_paths(fastq_dir, config, config_file):
 
 if __name__ == "__main__":
     parser = OptionParser()
+    parser.add_option("-n", "--numcores", dest="num_cores", default=None)
     (options, args) = parser.parse_args()
     if len(args) < 2:
         print "Incorrect arguments"
         print __doc__
         sys.exit()
-    kwargs = dict()
+    kwargs = {"num_cores": options.num_cores}
     main(*args, **kwargs)
