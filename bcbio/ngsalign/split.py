@@ -14,7 +14,13 @@ def _find_current_split(in_fastq, out_dir):
     """
     base = os.path.join(out_dir,
                         os.path.splitext(os.path.basename(in_fastq))[0])
-    return sorted(glob.glob("{0}*".format(base)))
+    def get_splitnum(fname):
+        """Number from filename like: NA12878-E2-XPR855_2_69.fastq
+        """
+        base = os.path.splitext(os.path.basename(fname))[0]
+        _, num = base.rsplit("_", 1)
+        return int(num)
+    return sorted(glob.glob("{0}*".format(base)), key=get_splitnum)
 
 def _split_by_size(in_fastq, split_size, out_dir):
     """Split FASTQ files by a specified number of records.
