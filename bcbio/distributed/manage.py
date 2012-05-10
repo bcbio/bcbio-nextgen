@@ -21,6 +21,7 @@ def run_and_monitor(config, config_file, args, workers_needed=None,
     try:
         print "Starting manager"
         manager_id = start_analysis_manager(cluster, args, config)
+        time.sleep(60)
         print "Starting cluster workers"
         jobids.extend(start_workers(cluster, config, config_file, workers_needed,
                                     task_module, queues))
