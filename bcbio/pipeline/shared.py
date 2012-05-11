@@ -89,6 +89,8 @@ def subset_variant_regions(variant_regions, region, out_file):
     """
     if region is None:
         return variant_regions
+    elif variant_regions is None:
+        return region
     elif region.find(":") > 0:
         raise ValueError("Partial chromosome regions not supported")
     else:

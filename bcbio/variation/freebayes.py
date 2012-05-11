@@ -17,10 +17,9 @@ def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
     opts += ["--ploidy", str(aconfig.get("ploidy", 2))]
     variant_regions = aconfig.get("variant_regions", None)
-    if variant_regions:
-        opts += ["--targets", subset_variant_regions(variant_regions, region, out_file)]
-    elif region:
-        opts += ["--region", region]
+    target = subset_variant_regions(variant_regions, region, out_file)
+    if target:
+        opts += ["--region" if target == region else "--targets", target]
     background = aconfig.get("call_background", None)
     if background and os.path.exists(background):
         opts += ["--variant-input", background]
