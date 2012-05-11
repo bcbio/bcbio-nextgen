@@ -11,27 +11,14 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import annotation, genotype
 from bcbio.log import logger
-
-def _subset_variant_regions(variant_regions, region, out_file):
-    if region is None:
-        return variant_regions
-    elif region.find(":") > 0:
-        raise ValueError("Partial chromosome regions not supported")
-    else:
-        subset_file = "{0}-regions.bed".format(os.path.splitext(out_file)[0])
-        with open(subset_file, "w") as out_handle:
-            with open(variant_regions) as in_handle:
-                for line in in_handle:
-                    if line.startswith(region):
-                        out_handle.write(line)
-        return subset_file
+from bcbio.pipeline.shared import subset_variant_regions
 
 def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
     opts += ["--ploidy", str(aconfig.get("ploidy", 2))]
     variant_regions = aconfig.get("variant_regions", None)
     if variant_regions:
-        opts += ["--targets", _subset_variant_regions(variant_regions, region, out_file)]
+        opts += ["--targets", subset_variant_regions(variant_regions, region, out_file)]
     elif region:
         opts += ["--region", region]
     background = aconfig.get("call_background", None)

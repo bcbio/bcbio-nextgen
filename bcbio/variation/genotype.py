@@ -16,7 +16,8 @@ from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
-from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file)
+from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file,
+                                   subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
 
 # ## GATK Genotype calling
@@ -57,10 +58,9 @@ def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
                           ]
                 if dbsnp:
                     params += ["--dbsnp", dbsnp]
+                region = subset_variant_regions(variant_regions, region, tx_out_file)
                 if region:
-                    params += ["-L", region]
-                if variant_regions:
-                    params += ["-L", variant_regions, "--interval_set_rule", "INTERSECTION"]
+                    params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
                 broad_runner.run_gatk(params)
         else:
             with open(out_file, "w") as out_handle:

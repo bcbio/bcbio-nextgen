@@ -12,7 +12,8 @@ from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file,
-                                   write_nochr_reads, subset_bam_by_region)
+                                   write_nochr_reads, subset_bam_by_region,
+                                   subset_variant_regions)
 
 # ## Realignment runners with GATK specific arguments
 
@@ -37,10 +38,9 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
                       "-o", tx_out_file,
                       "-l", "INFO",
                       ]
+            region = subset_variant_regions(variant_regions, region, tx_out_file)
             if region:
-                params += ["-L", region]
-            if variant_regions:
-                params += ["-L", variant_regions, "--interval_set_rule", "INTERSECTION"]
+                params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
             if dbsnp:
                 params += ["--known", dbsnp]
             if deep_coverage:
