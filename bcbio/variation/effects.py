@@ -21,6 +21,12 @@ SNPEFF_GENOME_REMAP = {
         "araTha_tair10": ["athalianaTair10"],
         }
 
+def _get_snpeff_genome(genome):
+    try:
+        return SNPEFF_GENOME_REMAP[genome]
+    except KeyError:
+        return SNPEFF_GENOME_REMAP[genome.split("-")[0]]
+
 def snpeff_effects(vcf_in, genome, config):
     """Prepare tab-delimited file for variant effects using snpEff.
     """
@@ -30,7 +36,7 @@ def snpeff_effects(vcf_in, genome, config):
                        if interval_file else None)
         try:
             snpeff_data_dir = os.path.join(config["program"]["snpEff"], "data")
-            for snpeff_genome in SNPEFF_GENOME_REMAP[genome]:
+            for snpeff_genome in _get_snpeff_genome(genome):
                 if os.path.exists(os.path.join(snpeff_data_dir, snpeff_genome)):
                     break
             vcf_file = _run_snpeff(vcf_in, snpeff_genome, se_interval, "vcf", config)
