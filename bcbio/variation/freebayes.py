@@ -37,7 +37,7 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
         with file_transaction(out_file) as tx_out_file:
             cl = [config["program"].get("freebayes", "freebayes"),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
-                  "--left-align-indels"]
+                  "--left-align-indels", " --no-filters", "--use-mapping-quality"]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
     return out_file
