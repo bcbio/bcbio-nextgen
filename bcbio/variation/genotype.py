@@ -321,12 +321,12 @@ def _extract_eval_stats(eval_file):
 def _eval_analysis_type(in_file, analysis_name):
     """Retrieve data lines associated with a particular analysis.
     """
-    supported_versions = ["v0.2"]
+    supported_versions = ["v0.2", "v1.0"]
     with open(in_file) as in_handle:
         # read until we reach the analysis
         for line in in_handle:
-            if line.startswith("##:GATKReport"):
-                version = line.split()[0].split(".", 1)[-1]
+            if line.startswith(("##:GATKReport", "#:GATKReport")):
+                version = line.split()[0].split(".", 1)[-1].split(":")[0]
                 assert version in supported_versions, \
                        "Unexpected GATKReport version: {0}".format(version)
                 if line.find(analysis_name) > 0:
