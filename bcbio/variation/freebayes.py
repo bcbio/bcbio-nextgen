@@ -29,6 +29,8 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                   out_file=None):
     """Detect small polymorphisms with FreeBayes.
     """
+    broad_runner = broad.runner_from_config(config)
+    broad_runner.run_fn("picard_index", align_bam)
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
     if not file_exists(out_file):

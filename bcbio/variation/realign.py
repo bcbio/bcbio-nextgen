@@ -136,7 +136,8 @@ def parallel_realign_sample(sample_info, parallel_fn):
     to_process = []
     finished = []
     for x in sample_info:
-        if x[0]["config"]["algorithm"]["snpcall"]:
+        if (x[0]["config"]["algorithm"]["snpcall"] and
+            x[0]["config"]["algorithm"].get("realign", True)):
             to_process.append(x)
         else:
             finished.append(x)

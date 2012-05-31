@@ -122,11 +122,14 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
 def get_genome_ref(genome_build, aligner, galaxy_base):
     """Retrieve the reference genome file location from galaxy configuration.
     """
-    if not aligner or not genome_build:
+    if not genome_build:
         return (None, None)
     ref_dir = os.path.join(galaxy_base, "tool-data")
     out_info = []
     for ref_get in [aligner, "samtools"]:
+        if not ref_get:
+            out_info.append(None)
+            continue
         ref_file = os.path.join(ref_dir, _tools[ref_get].galaxy_loc_file)
         cur_ref = None
         with open(ref_file) as in_handle:
