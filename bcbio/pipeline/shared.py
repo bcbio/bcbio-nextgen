@@ -94,15 +94,19 @@ def subset_variant_regions(variant_regions, region, out_file):
     elif region.find(":") > 0:
         raise ValueError("Partial chromosome regions not supported")
     else:
+        # create an ordered subset file for processing
         subset_file = "{0}-regions.bed".format(os.path.splitext(out_file)[0])
-        has_items = False
-        with open(subset_file, "w") as out_handle:
-            with open(variant_regions) as in_handle:
-                for line in in_handle:
-                    if line.startswith(region) and line.split("\t")[0] == region:
-                        has_items = True
-                        out_handle.write(line)
-        if has_items:
+        items = []
+        with open(variant_regions) as in_handle:
+            for line in in_handle:
+                if line.startswith(region) and line.split("\t")[0] == region:
+                    start = int(line.split("\t")[1])
+                    items.append((start, line))
+        if len(items) > 0:
+            with open(subset_file, "w") as out_handle:
+                items.sort()
+                for _, line in items:
+                    out_handle.write(line)
             return subset_file
         else:
             return region
