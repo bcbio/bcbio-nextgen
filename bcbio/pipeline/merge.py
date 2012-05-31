@@ -64,7 +64,8 @@ def merge_bam_files(bam_files, work_dir, config):
     out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
     picard = broad.runner_from_config(config)
     if len(bam_files) == 1:
-        os.symlink(bam_files[0], out_file)
+        if not os.path.exists(out_file):
+            os.symlink(bam_files[0], out_file)
     else:
         picard.run_fn("picard_merge", bam_files, out_file)
         for b in bam_files:
