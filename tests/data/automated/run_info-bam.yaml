@@ -1,5 +1,9 @@
 details:
   - algorithm:
+      #aligner: false
+      #recalibrate: false
+      #realign: false
+      #variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
     description: Test1

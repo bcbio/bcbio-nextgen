@@ -333,7 +333,7 @@ depth:
 The YAML configuration file provides a number of hooks to customize analysis.
 Place these under the `analysis` keyword. For variant calling:
 
-- `aligner` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign]
+- `aligner` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign, false]
 - `trim_reads` Whether to trim off 3' B-only ends from fastq reads [false, true]
 - `align_split_size`: Split FASTQ files into specified number of records per
   file. Allows parallelization at the cost of increased temporary disk space usage.
@@ -346,6 +346,8 @@ Place these under the `analysis` keyword. For variant calling:
 - `hybrid_target` BED file with target regions for hybrid selection experiments.
 - `variant_regions` BED file of regions to call variants in.
 - `ploidy` Ploidy of called reads. Defaults to 2 (diploid).
+- `recalibrate` Perform variant recalibration [true, false]
+- `realign` Do variant realignment [true, false]
 
 Global reference files for variant calling and assessment:
 

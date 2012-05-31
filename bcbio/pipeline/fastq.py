@@ -40,7 +40,12 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
             subprocess.check_call(cl)
             ready_files.append(os.path.splitext(fname)[0])
         elif fname.endswith(".bam"):
-            ready_files = convert_bam_to_fastq(fname, work_dir, config)
+            print config["algorithm"]["aligner"]
+            if (config["algorithm"].get("aligner", None) and
+                item["algorithm"].get("aligner", True)):
+                ready_files = convert_bam_to_fastq(fname, work_dir, config)
+            else:
+                ready_files = [fname]
         else:
             assert os.path.exists(fname), fname
             ready_files.append(fname)

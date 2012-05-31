@@ -67,6 +67,8 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
         logger.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
         out_bam = align_to_sort_bam(fastq1, fastq2, info["genome_build"], aligner,
                                     lane_name, lane_desc, dirs, config)
+    elif os.path.exists(fastq1) and fastq1.endswith(".bam"):
+        out_bam = fastq1
     return [{"fastq": [fastq1, fastq2], "out_bam": out_bam, "info": info,
              "config": config}]
 

@@ -156,7 +156,8 @@ def realign_sample(data, region=None, out_file=None):
     logger.info("Realigning %s with GATK: %s %s" % (data["name"],
                                                     os.path.basename(data["work_bam"]),
                                                     region))
-    if data["config"]["algorithm"]["snpcall"]:
+    if (data["config"]["algorithm"]["snpcall"] and
+        data["config"]["algorithm"].get("realign", True)):
         sam_ref = data["sam_ref"]
         config = data["config"]
         if region == "nochr":
