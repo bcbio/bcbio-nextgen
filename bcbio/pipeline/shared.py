@@ -103,10 +103,11 @@ def subset_variant_regions(variant_regions, region, out_file):
                     start = int(line.split("\t")[1])
                     items.append((start, line))
         if len(items) > 0:
-            with open(subset_file, "w") as out_handle:
-                items.sort()
-                for _, line in items:
-                    out_handle.write(line)
+            if not os.path.exists(subset_file):
+                with open(subset_file, "w") as out_handle:
+                    items.sort()
+                    for _, line in items:
+                        out_handle.write(line)
             return subset_file
         else:
             return region
