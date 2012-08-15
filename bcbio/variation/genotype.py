@@ -321,7 +321,7 @@ def _extract_eval_stats(eval_file):
 def _eval_analysis_type(in_file, analysis_name):
     """Retrieve data lines associated with a particular analysis.
     """
-    supported_versions = ["v0.2", "v1.0"]
+    supported_versions = ["v0.2", "v1.0", "v1.1"]
     with open(in_file) as in_handle:
         # read until we reach the analysis
         for line in in_handle:
