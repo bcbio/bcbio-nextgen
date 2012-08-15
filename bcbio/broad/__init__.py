@@ -51,7 +51,7 @@ class BroadRunner:
     def run_gatk(self, params, tmp_dir=None):
         support_parallel = ["UnifiedGenotyper", "CountCovariates", "VariantEval",
                             "VariantRecalibrator"]
-        gatk_jar = self._get_jar("GenomeAnalysisTK")
+        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
         cores = self._config.get("resources", {}).get("gatk", {}).get("cores", None)
         if cores:
@@ -68,7 +68,7 @@ class BroadRunner:
         #print " ".join(cl)
         subprocess.check_call(cl)
 
-    def _get_jar(self, command):
+    def _get_jar(self, command, alts=None):
         """Retrieve the jar for running the specified command.
         """
         dirs = []
@@ -79,10 +79,12 @@ class BroadRunner:
                          os.path.join(bdir, "GATK"),
                          os.path.join(bdir, "GATK", "dist"),
                          os.path.join(bdir, "Picard-private", "dist")])
-        for dir_check in dirs:
-            check_file = os.path.join(dir_check, "%s.jar" % command)
-            if os.path.exists(check_file):
-                return check_file
+        if alts is None: alts = []
+        for check_cmd in [command] + alts:
+            for dir_check in dirs:
+                check_file = os.path.join(dir_check, "%s.jar" % check_cmd)
+                if os.path.exists(check_file):
+                    return check_file
         raise ValueError("Could not find jar %s in %s" % (command, self._picard_dir))
 
 def runner_from_config(config):
