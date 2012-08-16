@@ -5,6 +5,27 @@ import os
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.transaction import file_transaction
 
+
+def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
+    """ Collect RNASeq metrics for a bam file """
+    base, ext = os.path.splitext(align_bam)
+    if out_file is None:
+        out_file = "%s.metrics" % (base)
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", align_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("TMP_DIR", tmp_dir),
+                        ("REF_FLAT", ref),
+                        ("STRAND_SPECIFICITY", "NONE"),
+                        ("ASSUME_SORTED", "True"),
+                        ("RIBOSOMAL_INTERVALS", ribo)]
+
+                picard.run("CollectRnaSeqMetrics", opts)
+    return out_file
+
+
 def picard_sort(picard, align_bam, sort_order="coordinate",
                 out_file=None):
     """Sort a BAM file by coordinates.
