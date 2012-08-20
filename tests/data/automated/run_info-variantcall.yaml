@@ -2,7 +2,8 @@ details:
   - analysis: SNP calling
     algorithm:
       aligner: novoalign
-      variantcaller: freebayes
+      #variantcaller: freebayes
+      variantcaller: cortex
       #sv_detection: hydra
       quality_format: Standard
       coverage_interval: regional
