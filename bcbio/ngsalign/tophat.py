@@ -16,15 +16,25 @@ from bcbio.distributed.transaction import file_transaction
 
 galaxy_location_file = "bowtie_indices.loc"
 
-_out_fnames = ["accepted_hits.sam", "junctions.bed", "insertions.bed", "deletions.bed"]
+_out_fnames = ["accepted_hits.sam", "junctions.bed",
+               "insertions.bed", "deletions.bed"]
+
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           rg_name=None):
     qual_format = config["algorithm"].get("quality_format", None)
+
     if qual_format is None or qual_format.lower() == "illumina":
         qual_flags = ["--solexa1.3-quals"]
     else:
         qual_flags = []
+
+    gtf_file = config.get("gtf", None)
+    if gtf_file is not None:
+        gtf_flags = ["--GFF", gtf_file]
+    else:
+        gtf_flags = []
+
     cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
     core_flags = ["-p", str(cores)] if cores else []
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
@@ -36,6 +46,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             cl = [config["program"].get("tophat", "tophat")]
             cl += core_flags
             cl += qual_flags
+            cl += gtf_flags
             cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
                    "--output-dir", tx_out_dir,
                    "--no-convert-bam"]
