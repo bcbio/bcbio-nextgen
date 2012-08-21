@@ -19,6 +19,7 @@ from bcbio import broad
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.utils import file_exists, safe_makedir
+from bcbio.variation.genotype import combine_variant_files, write_empty_vcf
 
 def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
                out_file=None):
@@ -35,6 +36,7 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
             regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
                                                    ref_file, out_file, config)
                              for x in in_handle]
+        combine_variant_files(regional_vcfs, out_file, ref_file, config)
     return out_file
 
 def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
@@ -50,16 +52,41 @@ def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     base_dir = safe_makedir(os.path.join(os.path.dirname(out_file_base), region_str))
     out_vcf_base = os.path.join(base_dir, "{0}-{1}".format(
             os.path.splitext(os.path.basename(out_file_base))[0], region_str))
-    fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
-    local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
-    indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
-    _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size,
-                                 "sample": _get_sample_name(align_bam)},
-                out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
-                               "vcftools": vcftools_dir},
-                config)
-    print region, align_bam, fastq, indexes
-    raise NotImplementedError
+    out_file = "{0}.vcf".format(out_vcf_base)
+    if not file_exists(out_file):
+        fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
+        if os.path.getsize(fastq) == 0:
+            write_empty_vcf(out_file)
+        else:
+            local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
+            indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
+            cortex_out = _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size,
+                                                      "sample": _get_sample_name(align_bam)},
+                                     out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
+                                                    "vcftools": vcftools_dir},
+                                     config)
+            _remap_cortex_out(cortex_out, region, out_file)
+    return out_file
+
+def _remap_cortex_out(cortex_out, region, out_file):
+    """Remap coordinates in local cortex variant calls to the original global region.
+    """
+    def _remap_vcf_line(line, contig, start):
+        parts = line.split("\t")
+        parts[0] = contig
+        parts[1] = str(int(parts[1]) + start)
+        return "\t".join(parts)
+    contig, start, _ = region
+    start = int(start) - 1
+    with open(cortex_out) as in_handle:
+        with open(out_file, "w") as out_handle:
+            for line in in_handle:
+                if line.startswith("##fileDate"):
+                    pass
+                elif line.startswith("#"):
+                    out_handle.write(line)
+                else:
+                    out_handle.write(_remap_vcf_line(line, contig, start))
 
 def _run_cortex(fastq, indexes, params, out_base, dirs, config):
     """Run cortex_var run_calls.pl, producing a VCF variant file.
@@ -77,7 +104,7 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
         out_handle.write("{0}\t{1}\t{2}\t{2}\n".format(params["sample"], se_fastq_index,
                                                        pe_fastq_index))
     with open(reffasta_index, "w") as out_handle:
-        for x in indexes["cortex"]:
+        for x in indexes["fasta"]:
             out_handle.write(x + "\n")
     os.environ["PERL5LIB"] = "{0}:{1}:{2}".format(
         os.path.join(dirs["cortex"], "scripts/calling"),
@@ -99,6 +126,8 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--ref", "CoordinatesAndInCalling", "--workflow", "independent",
                            "--vcftools_dir", dirs["vcftools"],
                            "--logfile", "{0}.logfile,f".format(out_base)])
+    return glob.glob(os.path.join(os.path.dirname(out_base), "vcfs",
+                                  "{0}*FINAL*raw.vcf".format(os.path.basename(out_base))))[0]
 
 def _get_cortex_binary(kmer, cortex_dir):
     cortex_bin = None
@@ -134,7 +163,8 @@ def _index_local_ref(fasta_file, cortex_dir, stampy_dir, kmers):
         subprocess.check_call([os.path.join(stampy_dir, "stampy.py"), "-g",
                                base_out, "-H", base_out])
     return {"stampy": base_out,
-            "cortex": cindexes}
+            "cortex": cindexes,
+            "fasta": [fasta_file]}
 
 def _get_local_ref(region, ref_file, out_vcf_base):
     """Retrieve a local FASTA file corresponding to the specified region.

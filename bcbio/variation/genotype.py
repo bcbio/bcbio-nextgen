@@ -63,11 +63,14 @@ def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
                     params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
                 broad_runner.run_gatk(params)
         else:
-            with open(out_file, "w") as out_handle:
-                out_handle.write("##fileformat=VCFv4.1\n"
-                                 "## No variants; no reads aligned in region\n"
-                                 "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+            write_empty_vcf(out_file)
     return out_file
+
+def write_empty_vcf(out_file):
+    with open(out_file, "w") as out_handle:
+        out_handle.write("##fileformat=VCFv4.1\n"
+                         "## No variants; no reads aligned in region\n"
+                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
 
 # ## Utility functions for dealing with VCF files
 
@@ -91,7 +94,8 @@ def split_snps_indels(broad_runner, orig_file, ref_file):
                 broad_runner.run_gatk(cur_params)
     return snp_file, indel_file
 
-def combine_variant_files(orig_files, out_file, ref_file, config):
+def combine_variant_files(orig_files, out_file, ref_file, config,
+                          quiet_out=True):
     """Combine multiple VCF files into a single output file.
     """
     broad_runner = broad.runner_from_config(config)
@@ -106,6 +110,8 @@ def combine_variant_files(orig_files, out_file, ref_file, config):
                 params.extend(["--variant:{name}".format(name=name), orig_file])
                 priority_order.append(name)
             params.extend(["--rod_priority_list", ",".join(priority_order)])
+            if quiet_out:
+                params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
             broad_runner.run_gatk(params)
     return out_file
 

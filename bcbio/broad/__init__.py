@@ -61,6 +61,8 @@ class BroadRunner:
                     do_parallel = True
             if do_parallel:
                 params.extend(["-nt", str(cores)])
+        if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
+            params.extend(["-U", "LENIENT_VCF_PROCESSING"])
         if tmp_dir:
             local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         cl = ["java"] + self._memory_args + local_args + \
