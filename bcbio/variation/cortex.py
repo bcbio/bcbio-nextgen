@@ -18,7 +18,7 @@ from Bio import Seq
 from bcbio import broad
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, safe_makedir
 
 def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
                out_file=None):
@@ -46,15 +46,18 @@ def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     vcftools_dir = config["program"].get("vcftools")
     if cortex_dir is None or stampy_dir is None:
         raise ValueError("cortex_var requires path to pre-built cortex and stampy")
-    out_vcf_base = apply("{0}-{1}-{2}-{3}".format, [os.path.splitext(out_file_base)[0]] + region)
+    region_str = apply("{0}-{1}-{2}".format, region)
+    base_dir = safe_makedir(os.path.join(os.path.dirname(out_file_base), region_str))
+    out_vcf_base = os.path.join(base_dir, "{0}-{1}".format(
+            os.path.splitext(os.path.basename(out_file_base))[0], region_str))
     fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
     local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
     indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
-    _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size},
+    _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size,
+                                 "sample": _get_sample_name(align_bam)},
                 out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
                                "vcftools": vcftools_dir},
                 config)
-    
     print region, align_bam, fastq, indexes
     raise NotImplementedError
 
@@ -71,10 +74,15 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
     with open(pe_fastq_index, "w") as out_handle:
         out_handle.write("")
     with open(fastaq_index, "w") as out_handle:
-        out_handle.write("{0}\t{1}\t{2}\t{2}\n".format(os.path.basename(out_base), se_fastq_index, pe_fastq_index))
+        out_handle.write("{0}\t{1}\t{2}\t{2}\n".format(params["sample"], se_fastq_index,
+                                                       pe_fastq_index))
     with open(reffasta_index, "w") as out_handle:
         for x in indexes["cortex"]:
             out_handle.write(x + "\n")
+    os.environ["PERL5LIB"] = "{0}:{1}:{2}".format(
+        os.path.join(dirs["cortex"], "scripts/calling"),
+        os.path.join(dirs["cortex"], "scripts/analyse_variants/bioinf-perl/lib"),
+        os.environ.get("PERL5LIB", ""))
     subprocess.check_call(["perl", os.path.join(dirs["cortex"], "scripts", "calling", "run_calls.pl"),
                            "--first_kmer", str(params["kmers"][0]), "--fastaq_index", fastaq_index,
                            "--auto_cleaning", "yes", "--bc", "yes", "--pd", "yes",
@@ -164,3 +172,7 @@ def _get_fastq_in_region(region, align_bam, out_base):
                         out_handle.write("@{name}\n{seq}\n+\n{qual}\n".format(
                                 name=read.qname, seq=str(seq), qual="".join(qual)))
     return out_file
+
+def _get_sample_name(align_bam):
+    with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
+        return in_pysam.header["RG"][0]["SM"]
