@@ -31,7 +31,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
 
     gtf_file = config.get("gtf", None)
     if gtf_file is not None:
-        gtf_flags = ["--GFF", gtf_file]
+        gtf_flags = ["--GTF", gtf_file]
     else:
         gtf_flags = []
 
