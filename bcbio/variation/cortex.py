@@ -10,10 +10,12 @@ http://cortexassembler.sourceforge.net/index_cortex_var.html
 import os
 import glob
 import subprocess
+import itertools
 from contextlib import closing
 
 import pysam
 from Bio import Seq
+from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import broad
 from bcbio.distributed.transaction import file_transaction
@@ -25,9 +27,11 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
                out_file=None):
     """Top level entry to regional de-novo based variant calling with cortex_var.
     """
+    broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-cortex.vcf" % os.path.splitext(align_bam)[0]
     if not file_exists(out_file):
+        broad_runner.run_fn("picard_index", align_bam)
         variant_regions = config["algorithm"].get("variant_regions", None)
         if not variant_regions:
             raise ValueError("Only regional variant calling with cortex_var is supported. Set variant_regions")
@@ -43,6 +47,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     """Run cortex on a specified chromosome start/end region.
     """
     kmers = [31]
+    min_reads = 700
     cortex_dir = config["program"].get("cortex")
     stampy_dir = config["program"].get("stampy")
     vcftools_dir = config["program"].get("vcftools")
@@ -55,7 +60,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     out_file = "{0}.vcf".format(out_vcf_base)
     if not file_exists(out_file):
         fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
-        if os.path.getsize(fastq) == 0:
+        if _count_fastq_reads(fastq, min_reads) < min_reads:
             write_empty_vcf(out_file)
         else:
             local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
@@ -65,7 +70,10 @@ def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
                                      out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
                                                     "vcftools": vcftools_dir},
                                      config)
-            _remap_cortex_out(cortex_out, region, out_file)
+            if cortex_out:
+                _remap_cortex_out(cortex_out, region, out_file)
+            else:
+                write_empty_vcf(out_file)
     return out_file
 
 def _remap_cortex_out(cortex_out, region, out_file):
@@ -91,6 +99,7 @@ def _remap_cortex_out(cortex_out, region, out_file):
 def _run_cortex(fastq, indexes, params, out_base, dirs, config):
     """Run cortex_var run_calls.pl, producing a VCF variant file.
     """
+    print out_base
     assert len(params["kmers"]) == 1, "Currently only support single kmer workflow"
     fastaq_index = "{0}.fastaq_index".format(out_base)
     se_fastq_index = "{0}.se_fastq".format(out_base)
@@ -126,8 +135,14 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--ref", "CoordinatesAndInCalling", "--workflow", "independent",
                            "--vcftools_dir", dirs["vcftools"],
                            "--logfile", "{0}.logfile,f".format(out_base)])
-    return glob.glob(os.path.join(os.path.dirname(out_base), "vcfs",
-                                  "{0}*FINAL*raw.vcf".format(os.path.basename(out_base))))[0]
+    final = glob.glob(os.path.join(os.path.dirname(out_base), "vcfs",
+                                  "{0}*FINAL*raw.vcf".format(os.path.basename(out_base))))
+    # No calls, need to setup an empty file
+    if len(final) != 1:
+        print "Did not find output VCF file for {0}".format(out_base)
+        return None
+    else:
+        return final[0]
 
 def _get_cortex_binary(kmer, cortex_dir):
     cortex_bin = None
@@ -202,6 +217,16 @@ def _get_fastq_in_region(region, align_bam, out_base):
                         out_handle.write("@{name}\n{seq}\n+\n{qual}\n".format(
                                 name=read.qname, seq=str(seq), qual="".join(qual)))
     return out_file
+
+## Utility functions
+
+def _count_fastq_reads(in_fastq, min_reads):
+    """Count the number of fastq reads in a file, stopping after reaching min_reads.
+    """
+    with open(in_fastq) as in_handle:
+        items = list(itertools.takewhile(lambda i : i <= min_reads,
+                                         (i for i, _ in enumerate(FastqGeneralIterator(in_handle)))))
+    return len(items)
 
 def _get_sample_name(align_bam):
     with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:

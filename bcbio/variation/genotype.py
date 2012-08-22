@@ -38,6 +38,7 @@ def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
     if not file_exists(out_file):
+        broad_runner.run_fn("picard_index", align_bam)
         if has_aligned_reads(align_bam, region):
             with file_transaction(out_file) as tx_out_file:
                 params = ["-T", "UnifiedGenotyper",
