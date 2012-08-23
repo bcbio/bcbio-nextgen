@@ -11,6 +11,9 @@ program:
   fastqc: fastqc
   pdflatex: pdflatex
   barcode: barcode_sort_trim.py
+  stampy: ~/install/stampy-1.0.18
+  cortex: ~/install/CORTEX_release_v1.0.5.10
+  vcftools: ~/install/vcftools_0.1.9
 algorithm:
   aligner: bowtie
   max_errors: 2

@@ -22,15 +22,15 @@ def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", align_bam, remove_dups=True)
     broad_runner.run_fn("picard_index", dup_align_bam)
     intervals = config["algorithm"].get("variant_regions", None)
-    recal_file = _gatk_count_covariates(broad_runner, dup_align_bam, ref_file, platform,
-            snp_file, intervals)
-    recal_bam = _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,
-                                        platform, intervals)
+    recal_file = _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
+                                         snp_file, intervals)
+    recal_bam = _gatk_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,
+                                  platform, intervals)
     broad_runner.run_fn("picard_index", recal_bam)
     return recal_bam
 
-def _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,
-                            platform, intervals):
+def _gatk_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,
+                      platform, intervals):
     """Step 2 of GATK recalibration -- use covariates to re-write output file.
     """
     out_file = "%s-gatkrecal.bam" % os.path.splitext(dup_align_bam)[0]
@@ -38,16 +38,11 @@ def _gatk_table_recalibrate(broad_runner, dup_align_bam, ref_file, recal_file,
         if _recal_available(recal_file):
             with curdir_tmpdir() as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
-                    params = ["-T", "TableRecalibration",
-                              "-recalFile", recal_file,
+                    params = ["-T", "PrintReads",
+                              "-BQSR", recal_file,
                               "-R", ref_file,
                               "-I", dup_align_bam,
                               "--out", tx_out_file,
-                              "-baq",  "RECALCULATE",
-                              "-l", "INFO",
-                              "-U",
-                              "-OQ",
-                              "--default_platform", platform,
                               ]
                     if intervals:
                         params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
@@ -70,28 +65,24 @@ def _recal_available(recal_file):
                 return True
     return False
 
-def _gatk_count_covariates(broad_runner, dup_align_bam, ref_file, platform,
+def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
         snp_file, intervals):
-    """Step 1 of GATK recalibration process -- counting covariates.
+    """Step 1 of GATK recalibration process, producing table of covariates.
     """
-    out_file = "%s.recal" % os.path.splitext(dup_align_bam)[0]
+    out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
         if has_aligned_reads(dup_align_bam):
             with curdir_tmpdir() as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
-                    params = ["-T", "CountCovariates",
-                              "-cov", "ReadGroupCovariate",
-                              "-cov", "QualityScoreCovariate",
-                              "-cov", "CycleCovariate",
-                              "-cov", "DinucCovariate",
-                              "-recalFile", tx_out_file,
+                    params = ["-T", "BaseRecalibrator",
+                              "-o", tx_out_file,
                               "-I", dup_align_bam,
                               "-R", ref_file,
-                              "-l", "INFO",
-                              "-U",
-                              "-OQ",
-                              "--default_platform", platform,
                               ]
+                    # GATK-lite does not have support for
+                    # insertion/deletion quality modeling
+                    if not broad_runner.has_gatk_full():
+                        params += ["--disable_indel_quals"]
                     if snp_file:
                         params += ["--knownSites", snp_file]
                     if intervals:

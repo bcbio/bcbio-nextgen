@@ -22,52 +22,81 @@ from bcbio.variation.realign import has_aligned_reads
 
 # ## GATK Genotype calling
 
-def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
-                       region=None, out_file=None):
-    """Perform SNP genotyping on the given alignment file.
+def _shared_gatk_call_prep(align_bam, ref_file, config, dbsnp, region, out_file):
+    """Shared preparation work for GATK variant calling.
     """
     broad_runner = broad.runner_from_config(config)
     broad_runner.run_fn("picard_index_ref", ref_file)
     broad_runner.run_fn("picard_index", align_bam)
     coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
     variant_regions = config["algorithm"].get("variant_regions", None)
-    if coverage_depth in ["low"]:
-        confidence = "4.0"
-    else:
-        confidence = "30.0"
+    confidence = "4.0" if coverage_depth in ["low"] else "30.0"
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
+    region = subset_variant_regions(variant_regions, region, out_file)
+
+    params = ["-I", align_bam,
+              "-R", ref_file,
+              "--annotation", "QualByDepth",
+              "--annotation", "HaplotypeScore",
+              "--annotation", "MappingQualityRankSumTest",
+              "--annotation", "ReadPosRankSumTest",
+              "--annotation", "FisherStrand",
+              "--annotation", "RMSMappingQuality",
+              "--annotation", "DepthOfCoverage",
+              "--standard_min_confidence_threshold_for_calling", confidence,
+              "--standard_min_confidence_threshold_for_emitting", confidence,
+              ]
+    if dbsnp:
+        params += ["--dbsnp", dbsnp]
+    if region:
+        params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
+    return broad_runner, params, out_file
+
+def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
+                       region=None, out_file=None):
+    """Perform SNP genotyping on the given alignment file.
+    """
+    broad_runner, params, out_file = \
+        _shared_gatk_call_prep(align_bam, ref_file, config, dbsnp,
+                               region, out_file)
     if not file_exists(out_file):
-        if has_aligned_reads(align_bam, region):
-            with file_transaction(out_file) as tx_out_file:
-                params = ["-T", "UnifiedGenotyper",
-                          "-I", align_bam,
-                          "-R", ref_file,
-                          "-o", tx_out_file,
-                          "--annotation", "QualByDepth",
-                          "--annotation", "HaplotypeScore",
-                          "--annotation", "MappingQualityRankSumTest",
-                          "--annotation", "ReadPosRankSumTest",
-                          "--annotation", "FisherStrand",
-                          "--annotation", "RMSMappingQuality",
-                          "--annotation", "DepthOfCoverage",
-                          "--genotype_likelihoods_model", "BOTH",
-                          "--standard_min_confidence_threshold_for_calling", confidence,
-                          "--standard_min_confidence_threshold_for_emitting", confidence,
-                          "-l", "INFO",
-                          ]
-                if dbsnp:
-                    params += ["--dbsnp", dbsnp]
-                region = subset_variant_regions(variant_regions, region, tx_out_file)
-                if region:
-                    params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
-                broad_runner.run_gatk(params)
+        if not has_aligned_reads(align_bam, region):
+            write_empty_vcf(out_file)
         else:
-            with open(out_file, "w") as out_handle:
-                out_handle.write("##fileformat=VCFv4.1\n"
-                                 "## No variants; no reads aligned in region\n"
-                                 "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+            with file_transaction(out_file) as tx_out_file:
+                params += ["-T", "UnifiedGenotyper",
+                           "-o", tx_out_file,
+                           "--genotype_likelihoods_model", "BOTH"]
+                broad_runner.run_gatk(params)
     return out_file
+
+def haplotype_caller(align_bam, ref_file, config, dbsnp=None,
+                       region=None, out_file=None):
+    """Call variation with GATK's HaplotypeCaller.
+
+    This requires the full non open-source version of GATK.
+    """
+    broad_runner, params, out_file = \
+        _shared_gatk_call_prep(align_bam, ref_file, config, dbsnp,
+                               region, out_file)
+    assert broad_runner.has_gatk_full(), \
+        "Require full version of GATK 2.0 for haplotype based calling"
+    if not file_exists(out_file):
+        if not has_aligned_reads(align_bam, region):
+            write_empty_vcf(out_file)
+        else:
+            with file_transaction(out_file) as tx_out_file:
+                params += ["-T", "HaplotypeCaller",
+                           "-o", tx_out_file]
+                broad_runner.run_gatk(params)
+    return out_file
+
+def write_empty_vcf(out_file):
+    with open(out_file, "w") as out_handle:
+        out_handle.write("##fileformat=VCFv4.1\n"
+                         "## No variants; no reads aligned in region\n"
+                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
 
 # ## Utility functions for dealing with VCF files
 
@@ -91,7 +120,8 @@ def split_snps_indels(broad_runner, orig_file, ref_file):
                 broad_runner.run_gatk(cur_params)
     return snp_file, indel_file
 
-def combine_variant_files(orig_files, out_file, ref_file, config):
+def combine_variant_files(orig_files, out_file, ref_file, config,
+                          quiet_out=True):
     """Combine multiple VCF files into a single output file.
     """
     broad_runner = broad.runner_from_config(config)
@@ -106,6 +136,8 @@ def combine_variant_files(orig_files, out_file, ref_file, config):
                 params.extend(["--variant:{name}".format(name=name), orig_file])
                 priority_order.append(name)
             params.extend(["--rod_priority_list", ",".join(priority_order)])
+            if quiet_out:
+                params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
             broad_runner.run_gatk(params)
     return out_file
 
@@ -113,16 +145,24 @@ def combine_variant_files(orig_files, out_file, ref_file, config):
 
 def variant_filtration(call_file, ref_file, vrn_files, config):
     """Filter variant calls using Variant Quality Score Recalibration.
+
+    Newer GATK with Haplotype calling has
     """
     broad_runner = broad.runner_from_config(config)
-    snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)
-    snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
-                                              vrn_files, config)
-    indel_filter_file = _variant_filtration_indel(broad_runner, indel_file,
-                                                  ref_file, vrn_files, config)
-    orig_files = [snp_filter_file, indel_filter_file]
-    out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
-    return combine_variant_files(orig_files, out_file, ref_file, config)
+    caller = config["algorithm"].get("variantcaller")
+    cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
+    if caller in ["gatk-haplotype"] and cov_interval not in ["regional"]:
+        return _variant_filtration_both(broad_runner, call_file, ref_file, vrn_files,
+                                        config)
+    else:
+        snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)
+        snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
+                                                  vrn_files, config)
+        indel_filter_file = _variant_filtration_indel(broad_runner, indel_file,
+                                                      ref_file, vrn_files, config)
+        orig_files = [snp_filter_file, indel_filter_file]
+        out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
+        return combine_variant_files(orig_files, out_file, ref_file, config)
 
 def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                          tranch_file, filter_type):
@@ -143,7 +183,8 @@ def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
             broad_runner.run_gatk(params)
     return out_file
 
-def _shared_variant_filtration(filter_type, snp_file, ref_file):
+def _shared_variant_filtration(filter_type, cov_interval, snp_file,
+                               ref_file, vrn_files):
     """Share functionality for filtering variants.
     """
     recal_file = "{base}.recal".format(base = os.path.splitext(snp_file)[0])
@@ -151,7 +192,31 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file):
     params = ["-T", "VariantRecalibrator",
               "-R", ref_file,
               "--input", snp_file,
-              "--mode", filter_type]
+              "--mode", filter_type,
+              "-an", "QD",
+              "-an", "FS",
+              "-an", "HaplotypeScore",
+              "-an", "ReadPosRankSum"]
+    if filter_type in ["SNP", "BOTH"]:
+        params.extend(
+            ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
+             vrn_files.train_hapmap,
+             "-resource:omni,VCF,known=false,training=true,truth=false,prior=12.0",
+             vrn_files.train_1000g_omni,
+             "-resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0",
+             vrn_files.dbsnp,
+              "-an", "MQRankSum",
+              "-an", "MQ"])
+    if filter_type in ["INDEL", "BOTH"]:
+        assert vrn_files.train_indels, \
+               "Need indel training file specified"
+        params.extend(
+            ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
+             vrn_files.train_indels,])
+    if cov_interval == "exome":
+        params.extend(["--maxGaussians", "4", "--percentBadVariants", "0.05"])
+    else:
+        params.extend(["-an", "DP"])
     return params, recal_file, tranches_file
 
 def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
@@ -187,7 +252,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file)
+        filter_type, cov_interval, snp_file, ref_file, vrn_files)
     assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
            "Need HapMap and 1000 genomes training files"
     if cov_interval == "regional" or variantcaller == "freebayes":
@@ -197,23 +262,6 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
                                             "MQRankSum < -12.5",
                                             "ReadPosRankSum < -8.0"])
     else:
-        params.extend(
-            ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
-             vrn_files.train_hapmap,
-             "-resource:omni,VCF,known=false,training=true,truth=false,prior=12.0",
-             vrn_files.train_1000g_omni,
-             "-resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0",
-             vrn_files.dbsnp,
-              "-an", "QD",
-              "-an", "HaplotypeScore",
-              "-an", "MQRankSum",
-              "-an", "ReadPosRankSum",
-              "-an", "FS",
-              "-an", "MQ"])
-        if cov_interval == "exome":
-            params.extend(["--maxGaussians", "4", "--percentBadVariants", "0.05"])
-        else:
-            params.extend(["-an", "DP"])
         # also check if we've failed recal and needed to do strict filtering
         filter_file = "{base}-filterSNP.vcf".format(base = os.path.splitext(snp_file)[0])
         if file_exists(filter_file):
@@ -244,20 +292,11 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
     filter_type = "INDEL"
     cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file)
+        filter_type, cov_interval, snp_file, ref_file, vrn_files)
     if cov_interval in ["exome", "regional"]:
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
     else:
-        assert vrn_files.train_indels, \
-               "Need indel training file specified"
-        params.extend(
-            ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
-             vrn_files.train_indels,
-             "-an", "QD",
-             "-an", "FS",
-             "-an", "HaplotypeScore",
-             "-an", "ReadPosRankSum"])
         if not file_exists(recal_file):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
@@ -265,6 +304,24 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
                 broad_runner.run_gatk(params)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
+
+# ## Variant filtration for combined indels and SNPs
+
+def _variant_filtration_both(broad_runner, snp_file, ref_file, vrn_files,
+                              config):
+    """Filter SNP and indel variant calls using GATK best practice recommendations.
+    """
+    filter_type = "BOTH"
+    cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
+    params, recal_file, tranches_file = _shared_variant_filtration(
+        filter_type, cov_interval, snp_file, ref_file, vrn_files)
+    if not file_exists(recal_file):
+        with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
+            params.extend(["--recal_file", tx_recal,
+                           "--tranches_file", tx_tranches])
+            broad_runner.run_gatk(params)
+    return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
+                                tranches_file, filter_type)
 
 # ## Variant evaluation
 
@@ -321,7 +378,7 @@ def _extract_eval_stats(eval_file):
 def _eval_analysis_type(in_file, analysis_name):
     """Retrieve data lines associated with a particular analysis.
     """
-    supported_versions = ["v0.2", "v1.0"]
+    supported_versions = ["v0.2", "v1.0", "v1.1"]
     with open(in_file) as in_handle:
         # read until we reach the analysis
         for line in in_handle:
@@ -416,9 +473,11 @@ def parallel_variantcall(sample_info, parallel_fn):
 def variantcall_sample(data, region=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
-    from bcbio.variation import freebayes
+    from bcbio.variation import freebayes, cortex
     caller_fns = {"gatk": unified_genotyper,
-                  "freebayes": freebayes.run_freebayes}
+                  "gatk-haplotype": haplotype_caller,
+                  "freebayes": freebayes.run_freebayes,
+                  "cortex": cortex.run_cortex}
     if data["config"]["algorithm"]["snpcall"]:
         sam_ref = data["sam_ref"]
         config = data["config"]

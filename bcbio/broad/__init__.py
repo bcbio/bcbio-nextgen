@@ -5,6 +5,7 @@
 """
 import os
 import subprocess
+from contextlib import closing
 
 from bcbio.broad import picardrun
 
@@ -51,7 +52,7 @@ class BroadRunner:
     def run_gatk(self, params, tmp_dir=None):
         support_parallel = ["UnifiedGenotyper", "CountCovariates", "VariantEval",
                             "VariantRecalibrator"]
-        gatk_jar = self._get_jar("GenomeAnalysisTK")
+        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
         cores = self._config.get("resources", {}).get("gatk", {}).get("cores", None)
         if cores:
@@ -61,6 +62,8 @@ class BroadRunner:
                     do_parallel = True
             if do_parallel:
                 params.extend(["-nt", str(cores)])
+        if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
+            params.extend(["-U", "LENIENT_VCF_PROCESSING"])
         if tmp_dir:
             local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         cl = ["java"] + self._memory_args + local_args + \
@@ -68,7 +71,18 @@ class BroadRunner:
         #print " ".join(cl)
         subprocess.check_call(cl)
 
-    def _get_jar(self, command):
+    def has_gatk_full(self):
+        """Check if we have the full GATK jar, including non-open source parts.
+        """
+        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+        cl = ["java", "-jar", gatk_jar, "-h"]
+        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE).stdout) as stdout:
+            for line in stdout:
+                if line.strip().startswith("HaplotypeCaller"):
+                    return True
+        return False
+
+    def _get_jar(self, command, alts=None):
         """Retrieve the jar for running the specified command.
         """
         dirs = []
@@ -79,10 +93,12 @@ class BroadRunner:
                          os.path.join(bdir, "GATK"),
                          os.path.join(bdir, "GATK", "dist"),
                          os.path.join(bdir, "Picard-private", "dist")])
-        for dir_check in dirs:
-            check_file = os.path.join(dir_check, "%s.jar" % command)
-            if os.path.exists(check_file):
-                return check_file
+        if alts is None: alts = []
+        for check_cmd in [command] + alts:
+            for dir_check in dirs:
+                check_file = os.path.join(dir_check, "%s.jar" % check_cmd)
+                if os.path.exists(check_file):
+                    return check_file
         raise ValueError("Could not find jar %s in %s" % (command, self._picard_dir))
 
 def runner_from_config(config):
