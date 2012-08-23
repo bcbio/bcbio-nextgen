@@ -137,7 +137,7 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--refbindir", os.path.dirname(indexes["cortex"][0]),
                            "--list_ref_fasta",  reffasta_index,
                            "--genome_size", str(params["genome_size"]),
-                           "--max_read_len", "250", "--max_var_len", "1000",
+                           "--max_read_len", "1000", "--max_var_len", "1000",
                            "--format", "FASTQ", "--qthresh", "5", "--do_union", "yes",
                            "--mem_height", "17", "--mem_width", "100",
                            "--ref", "CoordinatesAndInCalling", "--workflow", "independent",
@@ -177,7 +177,7 @@ def _index_local_ref(fasta_file, cortex_dir, stampy_dir, kmers):
             subprocess.check_call([_get_cortex_binary(kmer, cortex_dir),
                                    "--kmer_size", str(kmer), "--mem_height", "17",
                                    "--se_list", file_list, "--format", "FASTA",
-                                   "--max_read_len", "250", "--sample_id", base_out,
+                                   "--max_read_len", "1000", "--sample_id", base_out,
                                    "--dump_binary", out_file])
         cindexes.append(out_file)
     if not file_exists("{0}.stidx".format(base_out)):
