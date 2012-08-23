@@ -68,10 +68,6 @@ def _recal_available(recal_file):
 def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
         snp_file, intervals):
     """Step 1 of GATK recalibration process, producing table of covariates.
-
-    XXX Currently setup for GATKLite, which requires disable_indel_quals
-    since it is not supported. When supporting full GATK, need to reenable
-    this.
     """
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
@@ -82,8 +78,11 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                               "-o", tx_out_file,
                               "-I", dup_align_bam,
                               "-R", ref_file,
-                              "--disable_indel_quals",
                               ]
+                    # GATK-lite does not have support for
+                    # insertion/deletion quality modeling
+                    if not broad_runner.has_gatk_full():
+                        params += ["--disable_indel_quals"]
                     if snp_file:
                         params += ["--knownSites", snp_file]
                     if intervals:

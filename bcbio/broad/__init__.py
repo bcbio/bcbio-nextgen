@@ -5,6 +5,7 @@
 """
 import os
 import subprocess
+from contextlib import closing
 
 from bcbio.broad import picardrun
 
@@ -69,6 +70,17 @@ class BroadRunner:
                 ["-jar", gatk_jar] + [str(x) for x in params]
         #print " ".join(cl)
         subprocess.check_call(cl)
+
+    def has_gatk_full(self):
+        """Check if we have the full GATK jar, including non-open source parts.
+        """
+        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+        cl = ["java", "-jar", gatk_jar, "-h"]
+        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE).stdout) as stdout:
+            for line in stdout:
+                if line.strip().startswith("HaplotypeCaller"):
+                    return True
+        return False
 
     def _get_jar(self, command, alts=None):
         """Retrieve the jar for running the specified command.
