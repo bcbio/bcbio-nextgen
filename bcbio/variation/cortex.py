@@ -136,7 +136,7 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--stampy_bin", os.path.join(dirs["stampy"], "stampy.py"),
                            "--refbindir", os.path.dirname(indexes["cortex"][0]),
                            "--list_ref_fasta",  reffasta_index,
-                           "--genome_size", str(params["genome_size"])
+                           "--genome_size", str(params["genome_size"]),
                            "--max_read_len", "250", "--max_var_len", "1000",
                            "--format", "FASTQ", "--qthresh", "5", "--do_union", "yes",
                            "--mem_height", "17", "--mem_width", "100",

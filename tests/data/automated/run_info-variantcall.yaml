@@ -4,7 +4,7 @@ details:
       aligner: novoalign
       #variantcaller: gatk-haplotype
       #variantcaller: freebayes
-      variantcaller: cortex
+      #variantcaller: cortex
       #sv_detection: hydra
       quality_format: Standard
       coverage_interval: regional
