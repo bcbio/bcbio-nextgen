@@ -81,8 +81,14 @@ def _remap_cortex_out(cortex_out, region, out_file):
     """
     def _remap_vcf_line(line, contig, start):
         parts = line.split("\t")
+        if parts[0] == "" or parts[1] == "":
+            return None
         parts[0] = contig
-        parts[1] = str(int(parts[1]) + start)
+        try:
+            parts[1] = str(int(parts[1]) + start)
+        except ValueError:
+            raise ValueError("Problem in {0} with \n{1}".format(
+                    cortex_out, parts))
         return "\t".join(parts)
     contig, start, _ = region
     start = int(start) - 1
@@ -94,7 +100,9 @@ def _remap_cortex_out(cortex_out, region, out_file):
                 elif line.startswith("#"):
                     out_handle.write(line)
                 else:
-                    out_handle.write(_remap_vcf_line(line, contig, start))
+                    update_line = _remap_vcf_line(line, contig, start)
+                    if update_line:
+                        out_handle.write(update_line)
 
 def _run_cortex(fastq, indexes, params, out_base, dirs, config):
     """Run cortex_var run_calls.pl, producing a VCF variant file.
@@ -136,7 +144,7 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--vcftools_dir", dirs["vcftools"],
                            "--logfile", "{0}.logfile,f".format(out_base)])
     final = glob.glob(os.path.join(os.path.dirname(out_base), "vcfs",
-                                  "{0}*FINAL*raw.vcf".format(os.path.basename(out_base))))
+                                   "{0}*FINALcombined_PD*decomp.vcf".format(os.path.basename(out_base))))
     # No calls, need to setup an empty file
     if len(final) != 1:
         print "Did not find output VCF file for {0}".format(out_base)
