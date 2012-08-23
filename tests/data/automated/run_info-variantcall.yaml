@@ -2,6 +2,7 @@ details:
   - analysis: SNP calling
     algorithm:
       aligner: novoalign
+      #variantcaller: gatk-haplotype
       #variantcaller: freebayes
       #variantcaller: cortex
       #sv_detection: hydra
