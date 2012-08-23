@@ -11,7 +11,7 @@ import collections
 
 @contextlib.contextmanager
 def make_workdir():
-    remove_old_dir = True
+    remove_old_dir = False
     dirname = os.path.join(os.path.dirname(__file__), "test_automated_output")
     if remove_old_dir:
         if os.path.exists(dirname):
