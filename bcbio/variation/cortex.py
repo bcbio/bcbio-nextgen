@@ -36,18 +36,21 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
         if not variant_regions:
             raise ValueError("Only regional variant calling with cortex_var is supported. Set variant_regions")
         target_regions = subset_variant_regions(variant_regions, region, out_file)
-        with open(target_regions) as in_handle:
-            regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
-                                                   ref_file, out_file, config)
-                             for x in in_handle]
-        combine_variant_files(regional_vcfs, out_file, ref_file, config)
+        if os.path.isfile(target_regions):
+            with open(target_regions) as in_handle:
+                regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
+                                                       ref_file, out_file, config)
+                                 for x in in_handle]
+            combine_variant_files(regional_vcfs, out_file, ref_file, config)
+        else:
+            write_empty_vcf(out_file)
     return out_file
 
 def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     """Run cortex on a specified chromosome start/end region.
     """
     kmers = [31]
-    min_reads = 700
+    min_reads = 750
     cortex_dir = config["program"].get("cortex")
     stampy_dir = config["program"].get("stampy")
     vcftools_dir = config["program"].get("vcftools")
@@ -137,7 +140,7 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--refbindir", os.path.dirname(indexes["cortex"][0]),
                            "--list_ref_fasta",  reffasta_index,
                            "--genome_size", str(params["genome_size"]),
-                           "--max_read_len", "1000", "--max_var_len", "1000",
+                           "--max_read_len", "2000", "--max_var_len", "1000",
                            "--format", "FASTQ", "--qthresh", "5", "--do_union", "yes",
                            "--mem_height", "17", "--mem_width", "100",
                            "--ref", "CoordinatesAndInCalling", "--workflow", "independent",
@@ -177,7 +180,7 @@ def _index_local_ref(fasta_file, cortex_dir, stampy_dir, kmers):
             subprocess.check_call([_get_cortex_binary(kmer, cortex_dir),
                                    "--kmer_size", str(kmer), "--mem_height", "17",
                                    "--se_list", file_list, "--format", "FASTA",
-                                   "--max_read_len", "1000", "--sample_id", base_out,
+                                   "--max_read_len", "2000", "--sample_id", base_out,
                                    "--dump_binary", out_file])
         cindexes.append(out_file)
     if not file_exists("{0}.stidx".format(base_out)):
@@ -196,7 +199,7 @@ def _get_local_ref(region, ref_file, out_vcf_base):
     if not file_exists(out_file):
         with closing(pysam.Fastafile(ref_file)) as in_pysam:
             contig, start, end = region
-            seq = in_pysam.fetch(contig, int(start) - 1, int(end))
+            seq = in_pysam.fetch(contig, max(0, int(start) - 1), int(end))
             with open(out_file, "w") as out_handle:
                 out_handle.write(">{0}-{1}-{2}\n{3}".format(contig, start, end,
                                                               str(seq)))
@@ -216,7 +219,7 @@ def _get_fastq_in_region(region, align_bam, out_base):
             with file_transaction(out_file) as tx_out_file:
                 with open(out_file, "w") as out_handle:
                     contig, start, end = region
-                    for read in in_pysam.fetch(contig, int(start) - 1, int(end)):
+                    for read in in_pysam.fetch(contig, max(0, int(start) - 1), int(end)):
                         seq = Seq.Seq(read.seq)
                         qual = list(read.qual)
                         if read.is_reverse:
