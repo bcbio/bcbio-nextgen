@@ -49,7 +49,7 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
 def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     """Run cortex on a specified chromosome start/end region.
     """
-    kmers = [31]
+    kmers = [31, 51, 71]
     min_reads = 750
     cortex_dir = config["program"].get("cortex")
     stampy_dir = config["program"].get("stampy")
@@ -111,7 +111,6 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
     """Run cortex_var run_calls.pl, producing a VCF variant file.
     """
     print out_base
-    assert len(params["kmers"]) == 1, "Currently only support single kmer workflow"
     fastaq_index = "{0}.fastaq_index".format(out_base)
     se_fastq_index = "{0}.se_fastq".format(out_base)
     pe_fastq_index = "{0}.pe_fastq".format(out_base)
@@ -130,8 +129,13 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
         os.path.join(dirs["cortex"], "scripts/calling"),
         os.path.join(dirs["cortex"], "scripts/analyse_variants/bioinf-perl/lib"),
         os.environ.get("PERL5LIB", ""))
+    kmers = sorted(params["kmers"])
+    kmer_info = ["--first_kmer", str(kmers[0])]
+    if len(kmers) > 1:
+        kmer_info += ["--last_kmer", str(kmers[-1]),
+                      "--kmer_step", str(kmers[1] - kmers[0])]
     subprocess.check_call(["perl", os.path.join(dirs["cortex"], "scripts", "calling", "run_calls.pl"),
-                           "--first_kmer", str(params["kmers"][0]), "--fastaq_index", fastaq_index,
+                           "--fastaq_index", fastaq_index,
                            "--auto_cleaning", "yes", "--bc", "yes", "--pd", "yes",
                            "--outdir", os.path.dirname(out_base), "--outvcf", os.path.basename(out_base),
                            "--ploidy", str(config["algorithm"].get("ploidy", 2)),
@@ -145,9 +149,10 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--mem_height", "17", "--mem_width", "100",
                            "--ref", "CoordinatesAndInCalling", "--workflow", "independent",
                            "--vcftools_dir", dirs["vcftools"],
-                           "--logfile", "{0}.logfile,f".format(out_base)])
+                           "--logfile", "{0}.logfile,f".format(out_base)]
+                          + kmer_info)
     final = glob.glob(os.path.join(os.path.dirname(out_base), "vcfs",
-                                   "{0}*FINALcombined_PD*decomp.vcf".format(os.path.basename(out_base))))
+                                   "{0}*FINALcombined_BC*decomp.vcf".format(os.path.basename(out_base))))
     # No calls, need to setup an empty file
     if len(final) != 1:
         print "Did not find output VCF file for {0}".format(out_base)

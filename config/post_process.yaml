@@ -16,7 +16,7 @@ program:
   freebayes: freebayes
   mosaik: MosaikAligner
   stampy: ~/install/stampy-1.0.18
-  cortex: ~/install/CORTEX_release_v1.0.5.10/
+  cortex: ~/install/CORTEX_release_v1.0.5.11/
   vcftools: ~/install/vcftools_0.1.9
 algorithm:
   aligner: bowtie
