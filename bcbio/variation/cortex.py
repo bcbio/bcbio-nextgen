@@ -50,7 +50,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     """Run cortex on a specified chromosome start/end region.
     """
     kmers = [31, 51, 71]
-    min_reads = 750
+    min_reads = 1750
     cortex_dir = config["program"].get("cortex")
     stampy_dir = config["program"].get("stampy")
     vcftools_dir = config["program"].get("vcftools")
@@ -93,6 +93,9 @@ def _remap_cortex_out(cortex_out, region, out_file):
             raise ValueError("Problem in {0} with \n{1}".format(
                     cortex_out, parts))
         return "\t".join(parts)
+    def _not_filtered(line):
+        parts = line.split("\t")
+        return parts[6] == "PASS"
     contig, start, _ = region
     start = int(start) - 1
     with open(cortex_out) as in_handle:
@@ -102,7 +105,7 @@ def _remap_cortex_out(cortex_out, region, out_file):
                     pass
                 elif line.startswith("#"):
                     out_handle.write(line)
-                else:
+                elif _not_filtered(line):
                     update_line = _remap_vcf_line(line, contig, start)
                     if update_line:
                         out_handle.write(update_line)
@@ -144,7 +147,7 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--refbindir", os.path.dirname(indexes["cortex"][0]),
                            "--list_ref_fasta",  reffasta_index,
                            "--genome_size", str(params["genome_size"]),
-                           "--max_read_len", "2000", "--max_var_len", "1000",
+                           "--max_read_len", "10000", "--max_var_len", "2000",
                            "--format", "FASTQ", "--qthresh", "5", "--do_union", "yes",
                            "--mem_height", "17", "--mem_width", "100",
                            "--ref", "CoordinatesAndInCalling", "--workflow", "independent",
@@ -185,7 +188,7 @@ def _index_local_ref(fasta_file, cortex_dir, stampy_dir, kmers):
             subprocess.check_call([_get_cortex_binary(kmer, cortex_dir),
                                    "--kmer_size", str(kmer), "--mem_height", "17",
                                    "--se_list", file_list, "--format", "FASTA",
-                                   "--max_read_len", "2000", "--sample_id", base_out,
+                                   "--max_read_len", "10000", "--sample_id", base_out,
                                    "--dump_binary", out_file])
         cindexes.append(out_file)
     if not file_exists("{0}.stidx".format(base_out)):
