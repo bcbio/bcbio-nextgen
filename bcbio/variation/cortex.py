@@ -97,7 +97,7 @@ def _remap_cortex_out(cortex_out, region, out_file):
         parts = line.split("\t")
         return parts[6] == "PASS"
     contig, start, _ = region
-    start = int(start) - 1
+    start = int(start)
     with open(cortex_out) as in_handle:
         with open(out_file, "w") as out_handle:
             for line in in_handle:
@@ -207,7 +207,7 @@ def _get_local_ref(region, ref_file, out_vcf_base):
     if not file_exists(out_file):
         with closing(pysam.Fastafile(ref_file)) as in_pysam:
             contig, start, end = region
-            seq = in_pysam.fetch(contig, max(0, int(start) - 1), int(end))
+            seq = in_pysam.fetch(contig, int(start), int(end))
             with open(out_file, "w") as out_handle:
                 out_handle.write(">{0}-{1}-{2}\n{3}".format(contig, start, end,
                                                               str(seq)))
@@ -227,7 +227,7 @@ def _get_fastq_in_region(region, align_bam, out_base):
             with file_transaction(out_file) as tx_out_file:
                 with open(out_file, "w") as out_handle:
                     contig, start, end = region
-                    for read in in_pysam.fetch(contig, max(0, int(start) - 1), int(end)):
+                    for read in in_pysam.fetch(contig, int(start), int(end)):
                         seq = Seq.Seq(read.seq)
                         qual = list(read.qual)
                         if read.is_reverse:
