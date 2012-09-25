@@ -163,9 +163,16 @@ processing by hand:
 
 The test suite exercises the scripts driving the analysis, so
 are a good starting point to ensure correct installation.
-Run tests from the main code directory using [nose][i7]:
+Run tests from the main code directory using [nose][i7]. To test the main
+variant calling pipeline:
 
-      nosetest -v -s
+     $ cd tests
+     $ nosetests -v -s test_automated_analysis.py:AutomatedAnalysisTest.test_1_variantcall
+
+
+To run the full test suite:
+
+     $ nosetest -v -s
 
 `tests/test_automated_analysis.py` exercises the full framework using
 an automatically downloaded test dataset. It runs through barcode
