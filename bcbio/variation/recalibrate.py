@@ -19,7 +19,11 @@ def gatk_recalibrate(align_bam, ref_file, config, snp_file=None):
     broad_runner = broad.runner_from_config(config)
     platform = config["algorithm"]["platform"]
     broad_runner.run_fn("picard_index_ref", ref_file)
-    (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", align_bam, remove_dups=True)
+    if config["algorithm"].get("mark_duplicates", True):
+        (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", align_bam,
+                                                 remove_dups=True)
+    else:
+        dup_align_bam = align_bam
     broad_runner.run_fn("picard_index", dup_align_bam)
     intervals = config["algorithm"].get("variant_regions", None)
     recal_file = _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,

@@ -354,6 +354,7 @@ Place these under the `analysis` keyword. For variant calling:
 - `variant_regions` BED file of regions to call variants in.
 - `ploidy` Ploidy of called reads. Defaults to 2 (diploid).
 - `recalibrate` Perform variant recalibration [true, false]
+- `mark_duplicates` Identify and remove variants [false, true]
 - `realign` Do variant realignment [true, false]
 
 Global reference files for variant calling and assessment:
