@@ -356,6 +356,7 @@ Place these under the `analysis` keyword. For variant calling:
 - `recalibrate` Perform variant recalibration [true, false]
 - `mark_duplicates` Identify and remove variants [false, true]
 - `realign` Do variant realignment [true, false]
+- `write_summary` Write a PDF summary of results [true, false]
 
 Global reference files for variant calling and assessment:
 
