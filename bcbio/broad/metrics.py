@@ -8,11 +8,12 @@ import pprint
 
 from bcbio.utils import tmpfile, file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.broad.picardrun import picard_rnaseq_metrics
 
 import pysam
 
 
-class PicardMetricsParser:
+class PicardMetricsParser(object):
     """Read metrics files produced by Picard analyses.
 
     Metrics info:
@@ -22,33 +23,37 @@ class PicardMetricsParser:
         pass
 
     def get_summary_metrics(self, align_metrics, dup_metrics,
-            insert_metrics=None, hybrid_metrics=None, vrn_vals=None):
+            insert_metrics=None, hybrid_metrics=None, vrn_vals=None,
+            rnaseq_metrics=None):
         """Retrieve a high level summary of interesting metrics.
         """
         with open(align_metrics) as in_handle:
             align_vals = self._parse_align_metrics(in_handle)
         with open(dup_metrics) as in_handle:
             dup_vals = self._parse_dup_metrics(in_handle)
-        (insert_vals, hybrid_vals) = (None, None)
-        if insert_metrics and os.path.exists(insert_metrics):
+        (insert_vals, hybrid_vals, rnaseq_vals) = (None, None, None)
+        if insert_metrics and file_exists(insert_metrics):
             with open(insert_metrics) as in_handle:
                 insert_vals = self._parse_insert_metrics(in_handle)
-        if hybrid_metrics and os.path.exists(hybrid_metrics):
+        if hybrid_metrics and file_exists(hybrid_metrics):
             with open(hybrid_metrics) as in_handle:
                 hybrid_vals = self._parse_hybrid_metrics(in_handle)
+        if rnaseq_metrics and file_exists(rnaseq_metrics):
+            with open(rnaseq_metrics) as in_handle:
+                rnaseq_vals = self._parse_rnaseq_metrics(in_handle)
 
         return self._tabularize_metrics(align_vals, dup_vals, insert_vals,
-                hybrid_vals, vrn_vals)
+                hybrid_vals, vrn_vals, rnaseq_vals)
 
     def extract_metrics(self, metrics_files):
         """Return summary information for a lane of metrics files.
         """
         extension_maps = dict(
-                align_metrics=(self._parse_align_metrics, "AL"),
-                dup_metrics=(self._parse_dup_metrics, "DUP"),
-                hs_metrics=(self._parse_hybrid_metrics, "HS"),
-                insert_metrics=(self._parse_insert_metrics, "INS"),
-                )
+            align_metrics=(self._parse_align_metrics, "AL"),
+            dup_metrics=(self._parse_dup_metrics, "DUP"),
+            hs_metrics=(self._parse_hybrid_metrics, "HS"),
+            insert_metrics=(self._parse_insert_metrics, "INS"),
+            rnaseq_metrics=(self._parse_rnaseq_metrics, "RNA"))
         all_metrics = dict()
         for fname in metrics_files:
             ext = os.path.splitext(fname)[-1][1:]
@@ -65,7 +70,7 @@ class PicardMetricsParser:
         return all_metrics
 
     def _tabularize_metrics(self, align_vals, dup_vals, insert_vals,
-            hybrid_vals, vrn_vals):
+                            hybrid_vals, vrn_vals, rnaseq_vals):
         out = []
         # handle high level alignment for paired values
         paired = insert_vals is not None
@@ -74,18 +79,20 @@ class PicardMetricsParser:
         dup_total = int(dup_vals["READ_PAIRS_EXAMINED"])
         align_total = int(align_vals["PF_READS_ALIGNED"])
         out.append(("Total", _add_commas(str(total)),
-            ("paired" if paired else "")))
+                    ("paired" if paired else "")))
         out.append(self._count_percent("Aligned",
-            align_vals["PF_READS_ALIGNED"], total))
+                                       align_vals["PF_READS_ALIGNED"], total))
         if paired:
             out.append(self._count_percent("Pairs aligned",
-                align_vals["READS_ALIGNED_IN_PAIRS"], total))
+                                           align_vals["READS_ALIGNED_IN_PAIRS"],
+                                           total))
             align_total = int(align_vals["READS_ALIGNED_IN_PAIRS"])
             if align_total != dup_total:
-                out.append(("Alignment combinations", _add_commas(str(dup_total)),
-                    ""))
+                out.append(("Alignment combinations",
+                            _add_commas(str(dup_total)), ""))
             out.append(self._count_percent("Pair duplicates",
-                dup_vals["READ_PAIR_DUPLICATES"], dup_total))
+                                           dup_vals["READ_PAIR_DUPLICATES"],
+                                           dup_total))
             std = insert_vals.get("STANDARD_DEVIATION", "?")
             std_dev = "+/- %.1f" % float(std.replace(",", ".")) if (std and std != "?") else ""
             out.append(("Insert size",
@@ -96,6 +103,9 @@ class PicardMetricsParser:
         if vrn_vals:
             out.append((None, None, None))
             out.extend(self._tabularize_variant(vrn_vals))
+        if rnaseq_vals:
+            out.append((None, None, None))
+            out.extend(self._tabularize_rnaseq(rnaseq_vals))
         return out
 
     def _tabularize_variant(self, vrn_vals):
@@ -109,6 +119,25 @@ class PicardMetricsParser:
         out.append(("Transition/Transversion (novel)", "%.2f" %
             vrn_vals["titv_novel"], ""))
         return out
+
+    def _tabularize_rnaseq(self, rnaseq_vals):
+        out = []
+        out.append(("5' to 3' bias",
+                    rnaseq_vals["MEDIAN_5PRIME_TO_3PRIME_BIAS"], ""))
+        out.append(("Percent of bases in coding regions",
+                    rnaseq_vals["PCT_CODING_BASES"], ""))
+        out.append(("Percent of bases in intergenic regions",
+                    rnaseq_vals["PCT_INTERGENIC_BASES"], ""))
+        out.append(("Percent of bases in introns",
+                    rnaseq_vals["PCT_INTRONIC_BASES"], ""))
+        out.append(("Percent of bases in mRNA",
+                    rnaseq_vals["PCT_MRNA_BASES"], ""))
+        out.append(("Percent of bases in rRNA",
+                    rnaseq_vals["PCT_RIBOSOMAL_BASES"], ""))
+        out.append(("Percent of bases in UTRs",
+                    rnaseq_vals["PCT_UTR_BASES"], ""))
+        return out
+
 
     def _tabularize_hybrid(self, hybrid_vals):
         out = []
@@ -215,6 +244,16 @@ class PicardMetricsParser:
         vals = self._read_vals_of_interest(want_stats, header, info)
         return vals
 
+    def _parse_rnaseq_metrics(self, in_handle):
+        want_stats = ["PCT_RIBOSOMAL_BASES", "PCT_CODING_BASES", "PCT_UTR_BASES",
+                      "PCT_INTRONIC_BASES", "PCT_INTERGENIC_BASES",
+                      "PCT_MRNA_BASES", "PCT_USABLE_BASES", "MEDIAN_5PRIME_BIAS",
+                      "MEDIAN_3PRIME_BIAS", "MEDIAN_5PRIME_TO_3PRIME_BIAS"]
+        header = self._read_off_header(in_handle)
+        info = in_handle.readline().rstrip("\n").split("\t")
+        vals = self._read_vals_of_interest(want_stats, header, info)
+        return vals
+
     def _read_vals_of_interest(self, want, header, info):
         want_indexes = [header.index(w) for w in want]
         vals = dict()
@@ -230,7 +269,7 @@ class PicardMetricsParser:
         return in_handle.readline().rstrip("\n").split("\t")
 
 
-class PicardMetrics:
+class PicardMetrics(object):
     """Run reports using Picard, returning parsed metrics and files.
     """
     def __init__(self, picard, tmp_dir):
@@ -250,8 +289,9 @@ class PicardMetrics:
         if is_paired:
             insert_graph, insert_metrics = self._insert_sizes(dup_bam)
         if bait_file and target_file:
-            hybrid_metrics = self._hybrid_select_metrics(
-                    dup_bam, bait_file, target_file)
+            hybrid_metrics = self._hybrid_select_metrics(dup_bam,
+                                                         bait_file, target_file)
+
         vrn_vals = self._variant_eval_metrics(dup_bam)
         summary_info = self._parser.get_summary_metrics(align_metrics,
                 dup_metrics, insert_metrics, hybrid_metrics,
@@ -395,3 +435,42 @@ def bed_to_interval(orig_bed, bam_file):
                             parts.append("a")
                         out_handle.write("\t".join(parts) + "\n")
             yield tmp_bed
+
+
+class RNASeqPicardMetrics(PicardMetrics):
+
+    def report(self, align_bam, ref_file, gtf_file, is_paired=False,
+               rrna_file="null"):
+        """Produce report metrics for a RNASeq experiment using Picard
+        with a sorted aligned BAM file.
+
+        """
+
+        # collect duplication metrics
+        dup_bam, dup_metrics = self._get_current_dup_metrics(align_bam)
+        align_metrics = self._collect_align_metrics(align_bam, ref_file)
+        insert_graph, insert_metrics = (None, None)
+        if is_paired:
+            insert_graph, insert_metrics = self._insert_sizes(align_bam)
+
+        rnaseq_metrics = self._rnaseq_metrics(align_bam, gtf_file, rrna_file)
+
+        summary_info = self._parser.get_summary_metrics(align_metrics,
+                                                dup_metrics,
+                                                insert_metrics=insert_metrics,
+                                                rnaseq_metrics=rnaseq_metrics)
+        pprint.pprint(summary_info)
+        graphs = []
+        if insert_graph and file_exists(insert_graph):
+            graphs.append((insert_graph,
+                           "Distribution of paired end insert sizes"))
+        return summary_info, graphs
+
+    def _rnaseq_metrics(self, align_bam, gtf_file, rrna_file):
+        metrics = self._check_metrics_file(align_bam, "rnaseq_metrics")
+        if not file_exists(metrics):
+            with file_transaction(metrics) as tx_metrics:
+                picard_rnaseq_metrics(self._picard, align_bam, gtf_file,
+                                      rrna_file, tx_metrics)
+
+        return metrics
