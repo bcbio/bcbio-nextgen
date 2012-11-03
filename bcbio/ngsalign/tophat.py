@@ -26,12 +26,14 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
 
     if qual_format is None or qual_format.lower() == "illumina":
         qual_flags = ["--solexa1.3-quals"]
+    elif qual_format == "solexa":
+        qual_flags = ["--solexa-quals"]
     else:
         qual_flags = []
 
     gtf_file = config.get("gtf", None)
     if gtf_file is not None:
-        gtf_flags = ["--GFF", gtf_file]
+        gtf_flags = ["--GTF", gtf_file]
     else:
         gtf_flags = []
 
