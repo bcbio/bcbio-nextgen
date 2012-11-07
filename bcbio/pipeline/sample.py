@@ -48,8 +48,8 @@ def recalibrate_sample(data):
 
 # ## General processing
 
-def process_sample(data):
-    """Finalize processing for a sample, potentially multiplexed.
+def postprocess_variants(data):
+    """Provide post-processing of variant calls.
     """
     if data["config"]["algorithm"]["snpcall"]:
         logger.info("Finalizing variant calls: %s" % str(data["name"]))
@@ -63,6 +63,11 @@ def process_sample(data):
         if ann_vrn_file:
             data["vrn_file"] = ann_vrn_file
             data["effects_file"] = effects_file
+    return [[data]]
+
+def process_sample(data):
+    """Finalize processing for a sample, potentially multiplexed.
+    """
     if data["config"]["algorithm"].get("transcript_assemble", False):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
                                                data["config"])
@@ -84,6 +89,5 @@ def generate_bigwig(data):
             cl = [data["config"]["analysis"]["towig_script"], bam_file,
                   data["config_file"], "--outfile=%s" % tx_file]
             subprocess.check_call(cl)
-    data["bigwig_file"] = wig_file
     return [[data]]
 

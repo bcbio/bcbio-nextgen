@@ -11,7 +11,7 @@ from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
-from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file,
+from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    write_nochr_reads, subset_bam_by_region,
                                    subset_variant_regions)
 
@@ -143,7 +143,7 @@ def parallel_realign_sample(sample_info, parallel_fn):
             finished.append(x)
     if len(to_process) > 0:
         file_key = "work_bam"
-        split_fn = split_bam_by_chromosome("-realign.bam", file_key,
+        split_fn = process_bam_by_chromosome("-realign.bam", file_key,
                                            default_targets=["nochr"])
         processed = parallel_split_combine(to_process, split_fn, parallel_fn,
                                            "realign_sample", "combine_bam",

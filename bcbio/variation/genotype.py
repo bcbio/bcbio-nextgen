@@ -10,13 +10,14 @@ Variant Evaluation:
 http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval
 """
 import os
+import copy
 import itertools
 
 from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
-from bcbio.pipeline.shared import (split_bam_by_chromosome, configured_ref_file,
+from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
 
@@ -451,22 +452,37 @@ def _is_bed_file(fname):
 
 # ## High level functionality to run genotyping in parallel
 
+def _get_variantcaller(data):
+    return data["config"]["algorithm"].get("variantcaller", "gatk")
+
+def _handle_multiple_variantcallers(data):
+    """Split samples that potentially require multiple variant calling approaches.
+    """
+    assert len(data) == 1
+    callers = _get_variantcaller(data[0])
+    if isinstance(callers, basestring):
+        return [data]
+    else:
+        out = []
+        for caller in callers:
+            base = copy.deepcopy(data[0])
+            base["config"]["algorithm"]["variantcaller"] = caller
+            out.append([base])
+        return out
 
 def parallel_variantcall(sample_info, parallel_fn):
     """Provide sample genotyping, running in parallel over individual chromosomes.
     """
-    def _get_variantcaller(data):
-        return data["config"]["algorithm"].get("variantcaller", "gatk")
     to_process = []
     finished = []
     for x in sample_info:
         if x[0]["config"]["algorithm"]["snpcall"]:
-            to_process.append(x)
+            to_process.extend(_handle_multiple_variantcallers(x))
         else:
             finished.append(x)
     if len(to_process) > 0:
-        split_fn = split_bam_by_chromosome("-variants.vcf", "work_bam",
-                                           dir_ext_fn = _get_variantcaller)
+        split_fn = process_bam_by_chromosome("-variants.vcf", "work_bam",
+                                             dir_ext_fn = _get_variantcaller)
         processed = parallel_split_combine(to_process, split_fn, parallel_fn,
                                            "variantcall_sample",
                                            "combine_variant_files",

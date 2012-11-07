@@ -23,7 +23,7 @@ def combine_bam(in_files, out_file, config):
     runner.run_fn("picard_index", out_file)
     return out_file
 
-def split_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ext_fn=None):
+def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ext_fn=None):
     """Provide targets to process a BAM file by individual chromosome regions.
 
     output_ext: extension to supply to output files
