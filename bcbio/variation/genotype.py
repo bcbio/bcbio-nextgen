@@ -451,9 +451,12 @@ def _is_bed_file(fname):
 
 # ## High level functionality to run genotyping in parallel
 
+
 def parallel_variantcall(sample_info, parallel_fn):
     """Provide sample genotyping, running in parallel over individual chromosomes.
     """
+    def _get_variantcaller(data):
+        return data["config"]["algorithm"].get("variantcaller", "gatk")
     to_process = []
     finished = []
     for x in sample_info:
@@ -462,7 +465,8 @@ def parallel_variantcall(sample_info, parallel_fn):
         else:
             finished.append(x)
     if len(to_process) > 0:
-        split_fn = split_bam_by_chromosome("-variants.vcf", "work_bam")
+        split_fn = split_bam_by_chromosome("-variants.vcf", "work_bam",
+                                           dir_ext_fn = _get_variantcaller)
         processed = parallel_split_combine(to_process, split_fn, parallel_fn,
                                            "variantcall_sample",
                                            "combine_variant_files",
