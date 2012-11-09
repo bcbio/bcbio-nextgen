@@ -4,6 +4,7 @@ import os
 
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.transaction import file_transaction
+import sh
 
 
 def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
@@ -189,4 +190,36 @@ def picard_fixmate(picard, align_bam):
                         ("TMP_DIR", tmp_dir),
                         ("SORT_ORDER", "coordinate")]
                 picard.run("FixMateInformation", opts)
+    return out_file
+
+def bed2interval(align_file, bed, out_file=None):
+    """Converts a bed file to an interval file for use with some of the
+    Picard tools by grabbing the header from the alignment file, reording
+    the bed file columns and gluing them together.
+
+    """
+
+    base, ext = os.path.splitext(align_file)
+    if out_file is None:
+        out_file = base + ".interval"
+
+    if ext == ".bam":
+        header = str(sh.samtools("view", "-H", align_file))
+    elif ext == ".sam":
+        header = str(sh.samtools("view", "-H", "-S", align_file))
+    else:
+        raise ValueError("%s is not a BAM or SAM file." % (align_file))
+
+    def reorder_line(line):
+        splitline = line.strip().split("\t")
+        reordered = "\t".join([splitline[0], splitline[1], splitline[2],
+                               splitline[5], splitline[3]])
+        return reordered + "\n"
+
+    with open(bed) as bed_handle, open(out_file, "w") as out_handle:
+        out_handle.write(header)
+
+        for line in bed_handle:
+            out_handle.write(reorder_line(line))
+
     return out_file
