@@ -12,6 +12,7 @@ http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval
 import os
 import copy
 import itertools
+import collections
 
 from bcbio import broad
 from bcbio.utils import file_exists
@@ -454,6 +455,22 @@ def _is_bed_file(fname):
 
 def _get_variantcaller(data):
     return data["config"]["algorithm"].get("variantcaller", "gatk")
+
+def combine_multiple_callers(data):
+    """Collapse together variant calls from multiple approaches into variants
+    """
+    by_bam = collections.defaultdict(list)
+    for x in data:
+        by_bam[x[0]["work_bam"]].append(x[0])
+    out = []
+    for grouped_calls in by_bam.itervalues():
+        ready_calls = [{"variantcaller": _get_variantcaller(x),
+                        "vrn_file": x["vrn_file"]}
+                       for x in grouped_calls]
+        final = grouped_calls[0]
+        final["variants"] = ready_calls
+        out.append([final])
+    return out
 
 def _handle_multiple_variantcallers(data):
     """Split samples that potentially require multiple variant calling approaches.

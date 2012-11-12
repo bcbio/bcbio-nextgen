@@ -34,7 +34,7 @@ from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
 from bcbio.variation.realign import parallel_realign_sample
-from bcbio.variation.genotype import parallel_variantcall
+from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.pipeline.config_loader import load_config
 
 def main(config_file, fc_dir, run_info_yaml=None, num_cores=None):
@@ -70,6 +70,7 @@ def run_main(config, config_file, fc_dir, work_dir, run_info_yaml):
     samples = parallel_realign_sample(samples, run_parallel)
     samples = parallel_variantcall(samples, run_parallel)
     samples = run_parallel("postprocess_variants", samples)
+    samples = combine_multiple_callers(samples)
     samples = run_parallel("detect_sv", samples)
     run_parallel("process_sample", samples)
     run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
