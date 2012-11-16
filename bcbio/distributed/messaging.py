@@ -50,6 +50,7 @@ def runner(task_module, dirs, config, config_file, wait=True):
     function polls if wait is True, returning when all results are available.
     """
     with create_celeryconfig(task_module, dirs, config, config_file):
+        sys.path.append(dirs["work"])
         __import__(task_module)
         tasks = sys.modules[task_module]
         from celery.task.sets import TaskSet
@@ -124,11 +125,7 @@ def _machine_memory():
 _celeryconfig_tmpl = """
 CELERY_IMPORTS = ("${task_import}", )
 
-BROKER_HOST = "${host}"
-BROKER_PORT = "${port}"
-BROKER_USER = "${userid}"
-BROKER_PASSWORD = "${password}"
-BROKER_VHOST = "${rabbitmq_vhost}"
+BROKER_URL = "amqp://${userid}:${password}@${host}:${port}/${rabbitmq_vhost}"
 CELERY_RESULT_BACKEND= "amqp"
 CELERY_TASK_SERIALIZER = "json"
 CELERYD_CONCURRENCY = ${cores}
