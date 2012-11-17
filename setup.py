@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(name = "bcbio-nextgen",
-      version = "0.4a",
+      version = "0.5a",
       author = "Brad Chapman",
       author_email = "chapmanb@50mail.com",
       description = "Automated, distributed next-gen sequencing pipeline; includes Galaxy interaction",
@@ -24,13 +24,14 @@ setup(name = "bcbio-nextgen",
                  'scripts/variant_effects.py',
                  ],
       install_requires = [
-          "numpy >= 1.5.1",
-          "biopython >= 1.58",
+          "numpy >= 1.6.2",
+          "biopython >= 1.60",
           "Mako >= 0.3.6",
           "PyYAML >= 3.09",
           "Logbook >= 0.3",
           "pysam >= 0.4.1",
-          "fabric >= 1.2",
+          "fabric >= 1.5",
+          "ipython >= 0.13.1",
           "paramiko >= 1.7.7.1",
           "celery >= 2.2.7",
           #"rpy2 >= 2.0.7"

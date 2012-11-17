@@ -2,9 +2,9 @@
 # build a GATK jar without embedded dependencies from current git
 mkdir -p ~/tmp/gatkbuild
 cd ~/tmp/gatkbuild
-#git clone https://github.com/broadgsa/gatk.git
+git clone https://github.com/broadgsa/gatk.git
 cd gatk
-#ant
+ant
 cd dist
 mkdir -p nodeps
 for x in GenomeAnalysisTK.jar Aligner.jar Queue.jar StingUtils.jar vcf.jar picard-private-parts*jar 
