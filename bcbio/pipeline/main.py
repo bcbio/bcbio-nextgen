@@ -63,6 +63,7 @@ def parse_cl_args(in_args):
     parser = argparse.ArgumentParser()
     parser.add_argument("inputs", nargs="+")
     parser.add_argument("-n", "--numcores", type=int, default=0)
+    parser.add_argument("-p", "--paralleltype")
     args = parser.parse_args(in_args)
     config_file = args.inputs[0]
     kwargs = {"num_cores": args.numcores if args.numcores > 0 else None}
