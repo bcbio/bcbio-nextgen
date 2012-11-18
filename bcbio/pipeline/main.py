@@ -16,7 +16,8 @@ from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 
-def run_main(config, config_file, work_dir, fc_dir=None, run_info_yaml=None):
+def run_main(config, config_file, work_dir, parallel,
+             fc_dir=None, run_info_yaml=None):
     """Run toplevel analysis, processing a set of input files.
 
     config_file -- Main YAML configuration file with system parameters
@@ -25,14 +26,13 @@ def run_main(config, config_file, work_dir, fc_dir=None, run_info_yaml=None):
     """
     setup_logging(config)
     align_dir = os.path.join(work_dir, "alignments")
-    run_module = "bcbio.distributed"
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
-    run_parallel = parallel_runner(run_module, dirs, config, config_file)
+    run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
     run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)

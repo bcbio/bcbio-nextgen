@@ -44,17 +44,17 @@ def _is_up(client, n):
         else:
             return True
 
-def run_and_monitor(config, config_file, args, workers_needed=None):
+def run_and_monitor(config, config_file, run_info, parallel):
     """Run a distributed analysis after starting an Ipython parallel environment.
     """
     delay = 10
     max_delay = 300
     profile = "default"
-    _start(workers_needed, profile, delay)
+    _start(parallel["cores"], profile, delay)
     client = Client(profile=profile)
     try:
         slept = 0
-        while not _is_up(client, workers_needed):
+        while not _is_up(client, parallel["cores"]):
             time.sleep(delay)
             slept += delay
             if slept > max_delay:

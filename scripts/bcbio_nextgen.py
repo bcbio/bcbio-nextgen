@@ -28,7 +28,8 @@ import os
 import sys
 
 from bcbio.pipeline.run_info import get_run_info
-from bcbio.distributed.manage import run_and_monitor
+from bcbio.distributed import manage as messaging
+from bcbio.distributed import ipython
 from bcbio.pipeline.config_loader import load_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 
@@ -40,20 +41,25 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
         config["log_dir"] = os.path.join(work_dir, "log")
     paralleltype, numcores = _get_cores_and_type(config, fc_dir, run_info_yaml,
                                                  numcores, paralleltype)
-    if paralleltype == "local":
+    parallel = {"type": paralleltype, "cores": numcores,
+                "module": "bcbio.distributed"}
+    if parallel["type"] in ["local", "messaging-main"]:
         if numcores is None:
             config["algorithm"]["num_cores"] = numcores
-        run_main(config, config_file, work_dir, fc_dir, run_info_yaml)
-    elif paralleltype == "messaging":
-        task_module = "bcbio.distributed.tasks"
+        run_main(config, config_file, work_dir, parallel,
+                 fc_dir, run_info_yaml)
+    elif parallel["type"] == "messaging":
+        parallel["task_module"] = "bcbio.distributed.tasks"
         args = [config_file, fc_dir]
         if run_info_yaml:
             args.append(run_info_yaml)
-        run_and_monitor(config, config_file, args, numcores, task_module)
-    elif paralleltype == "ipython":
-        raise NotImplementedError
+        messaging.run_and_monitor(config, config_file, args, parallel) 
+    elif parallel["type"] == "ipython":
+        ipython.run_and_monitor(config, config_file,
+                                {"fc_dir": fc_dir, "run_info_yaml": run_info_yaml},
+                                parallel)
     else:
-        raise ValueError("Unexpected type of parallel run: %s" % paralleltype)
+        raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
 
 def _get_cores_and_type(config, fc_dir, run_info_yaml,
                         numcores=None, paralleltype=None):

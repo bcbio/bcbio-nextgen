@@ -9,27 +9,25 @@ import time
 import contextlib
 import multiprocessing
 import subprocess
-import itertools
 
 from mako.template import Template
 
 from bcbio import utils
 
-def parallel_runner(module, dirs, config, config_file):
+def parallel_runner(parallel, dirs, config, config_file):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):
-        parallel = config["algorithm"]["num_cores"]
-        if str(parallel).lower() == "messaging":
-            task_module = "{base}.tasks".format(base=module)
+        if parallel["type"].startswith("messaging"):
+            task_module = "{base}.tasks".format(base=parallel["module"])
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
         else:
             out = []
-            fn = getattr(__import__("{base}.multitasks".format(base=module),
+            fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
                                     fromlist=["multitasks"]),
                          fn_name)
-            cores = cores_including_resources(int(parallel), metadata, config)
+            cores = cores_including_resources(int(parallel["cores"]), metadata, config)
             with utils.cpmap(cores) as cpmap:
                 for data in cpmap(fn, filter(lambda x: x is not None, items)):
                     if data:
