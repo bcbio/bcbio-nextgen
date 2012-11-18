@@ -2,7 +2,7 @@
 """Redo post-processing of Broad alignments with updated pipeline.
 
 Usage:
-    automated_initial_analysis.py <YAML config file> <flow cell dir>
+    broad_redo_analysis.py <YAML config file> <flow cell dir>
 """
 import os
 import sys

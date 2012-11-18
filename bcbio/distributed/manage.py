@@ -59,7 +59,7 @@ def start_analysis_manager(cluster, args, config):
     """Start analysis manager node on cluster.
     """
     cluster_args = config["distributed"]["platform_args"].split()
-    program_cl = [config["analysis"]["process_program"]] + args
+    program_cl = ["bcbio_nextgen.py"] + args
     job_id = cluster.submit_job(cluster_args, program_cl)
     # wait for job to start
     # Avoid this for systems where everything queues as batches

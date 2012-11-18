@@ -17,7 +17,7 @@ configuration file is located in 'config/run_info.yaml' This allows running
 on files in arbitrary locations with no connection to Galaxy required.
 
 Usage:
-  distributed_nextgen_pipeline.py <config_file> [<fc_dir>] [<run_info_yaml>]
+  bcbio_nextgen.py <config_file> [<fc_dir>] [<run_info_yaml>]
      -t type of parallelization to use:
           - local: Non-distributed, possibly multiple if n > 1
           - messaging: RabbitMQ distributed messaging queue

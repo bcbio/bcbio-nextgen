@@ -1,4 +1,4 @@
-# Example file for specifying run information to automated_initial_analysis.py
+# Example file for specifying run information to bcbio_nextgen.py
 # In a fully Galaxy automated setup this information would be retrieved
 # from the Galaxy server based on user inputs. This allows you to
 # run the automated pipeline separately or from other external programs

@@ -101,10 +101,7 @@ def analyze_locally(dname, post_config_file, fastq_dir):
     analysis_dir = os.path.join(fastq_dir, os.pardir, "analysis")
     utils.safe_makedir(analysis_dir)
     with utils.chdir(analysis_dir):
-        if post_config["algorithm"]["num_cores"] == "messaging":
-            prog = post_config["analysis"]["distributed_process_program"]
-        else:
-            prog = post_config["analysis"]["process_program"]
+        prog = "bcbio_nextgen.py"
         cl = [prog, post_config_file, dname]
         run_yaml = os.path.join(dname, "run_info.yaml")
         if os.path.exists(run_yaml):

@@ -77,7 +77,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         with make_workdir():
-            cl = ["automated_initial_analysis.py",
+            cl = ["bcbio_nextgen.py",
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "110106_FC70BUKAAXX"),
                   os.path.join(self.data_dir, "run_info.yaml")]
@@ -87,7 +87,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """Handle analysis of empty fastq inputs from failed runs.
         """
         with make_workdir():
-            cl = ["automated_initial_analysis.py",
+            cl = ["bcbio_nextgen.py",
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "110221_empty_FC12345AAXX"),
                   os.path.join(self.data_dir, "run_info-empty.yaml")]
@@ -98,7 +98,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         with make_workdir():
-            cl = ["automated_initial_analysis.py",
+            cl = ["bcbio_nextgen.py",
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
@@ -109,7 +109,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         with make_workdir():
-            cl = ["automated_initial_analysis.py",
+            cl = ["bcbio_nextgen.py",
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-variantcall.yaml")]
@@ -120,7 +120,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         with make_workdir():
-            cl = ["automated_initial_analysis.py",
+            cl = ["bcbio_nextgen.py",
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]

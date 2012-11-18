@@ -66,7 +66,7 @@ def parse_cl_args(in_args):
     parser.add_argument("-p", "--paralleltype")
     args = parser.parse_args(in_args)
     config_file = args.inputs[0]
-    kwargs = {"num_cores": args.numcores if args.numcores > 0 else None}
+    kwargs = {"numcores": args.numcores if args.numcores > 0 else None}
     if len(args.inputs) == 3:
         kwargs["fc_dir"] = args.inputs[1]
         kwargs["run_info_yaml"] = args.inputs[2]
