@@ -78,10 +78,11 @@ def _run_info_from_yaml(fc_dir, run_info_yaml):
     with open(run_info_yaml) as in_handle:
         loaded = yaml.load(in_handle)
     fc_name = None
-    try:
-        fc_name, fc_date = get_flowcell_info(fc_dir)
-    except ValueError:
-        pass
+    if fc_dir:
+        try:
+            fc_name, fc_date = get_flowcell_info(fc_dir)
+        except ValueError:
+            pass
     global_config = {}
     if isinstance(loaded, dict):
         if loaded.has_key("fc_name") and loaded.has_key("fc_date"):

@@ -27,7 +27,7 @@ def run_main(config, config_file, work_dir, parallel,
     setup_logging(config)
     align_dir = os.path.join(work_dir, "alignments")
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
-    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir),
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir) if fc_dir else None,
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir,
@@ -87,7 +87,8 @@ def parse_cl_args(in_args):
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.
     """
-    fastq_dir = utils.add_full_path(fastq_dir)
+    if fastq_dir:
+        fastq_dir = utils.add_full_path(fastq_dir)
     config_dir = utils.add_full_path(os.path.dirname(config_file))
     galaxy_config_file = utils.add_full_path(config["galaxy_config"], config_dir)
     return fastq_dir, os.path.dirname(galaxy_config_file), config_dir

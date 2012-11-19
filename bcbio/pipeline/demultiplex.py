@@ -133,7 +133,8 @@ def add_multiplex_across_lanes(run_items, fastq_dir, fc_name):
     control, when run on a multiplexed flow cell. This checks for this
     situation and adds details to trim off the extra bases.
     """
-    fastq_dir = utils.add_full_path(fastq_dir)
+    if fastq_dir:
+        fastq_dir = utils.add_full_path(fastq_dir)
     # determine if we have multiplexes and collect expected size
     fastq_sizes = []
     tag_sizes = []
