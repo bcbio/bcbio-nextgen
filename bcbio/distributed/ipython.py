@@ -25,7 +25,7 @@ def _start(workers_needed, profile, delay):
     doesn't support this"""
     subprocess.check_call(["ipcluster", "start",
                            "--daemonize=True",
-                           #"--delay=%s" % delay, 
+                           "--delay=%s" % delay, 
                            "--log-level=%s" % 30,
                            "--n=%s" % workers_needed,
                            "--profile=%s" % profile])
@@ -53,18 +53,17 @@ def run_and_monitor(config, config_file, run_info, parallel):
     """
     delay = 10
     max_delay = 300
-    profile = "default"
     # need at least two processes to run main and workers
-    _start(parallel["cores"], profile, delay)
-    atexit.register(_stop, profile)
+    _start(parallel["cores"], parallel["profile"], delay)
+    atexit.register(_stop, parallel["profile"])
     
     slept = 0
-    while not _is_up(profile, parallel["cores"]):
+    while not _is_up(parallel["profile"], parallel["cores"]):
         time.sleep(delay)
         slept += delay
         if slept > max_delay:
             raise IOError("Cluster startup timed out.")
-    client = Client(profile=profile)
-    parallel["view"] = client[:] #.load_balanced_view()
+    client = Client(profile=parallel["profile"])
+    parallel["view"] = client.load_balanced_view()
     run_main(config, config_file, run_info["work_dir"],
              parallel, run_info["fc_dir"], run_info["run_info_yaml"])

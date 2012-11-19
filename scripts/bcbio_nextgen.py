@@ -19,10 +19,11 @@ on files in arbitrary locations with no connection to Galaxy required.
 Usage:
   bcbio_nextgen.py <config_file> [<fc_dir>] [<run_info_yaml>]
      -t type of parallelization to use:
-          - local: Non-distributed, possibly multiple if n > 1
-          - messaging: RabbitMQ distributed messaging queue
+          - local: Non-distributed, possibly multiple if n > 1 (default)
           - ipython: IPython distributed processing
-     -n <number of processes to start>
+          - messaging: RabbitMQ distributed messaging queue
+     -n number of processes to start
+     -p profile name for ipython parallelization
 """
 import os
 import sys
@@ -34,7 +35,7 @@ from bcbio.pipeline.config_loader import load_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
-         paralleltype=None):
+         paralleltype=None, profile="default"):
     work_dir = os.getcwd()
     config = load_config(config_file)
     if config.get("log_dir", None) is None:
@@ -42,6 +43,7 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
     paralleltype, numcores = _get_cores_and_type(config, fc_dir, run_info_yaml,
                                                  numcores, paralleltype)
     parallel = {"type": paralleltype, "cores": numcores,
+                "profile": profile,
                 "module": "bcbio.distributed"}
     if parallel["type"] in ["local", "messaging-main"]:
         if numcores is None:

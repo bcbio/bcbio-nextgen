@@ -27,9 +27,11 @@ def parallel_runner(parallel, dirs, config, config_file):
             fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
                                     fromlist=["ipythontasks"]),
                          fn_name)
-            for data in parallel["view"].map_sync(fn, [x for x in items if x is not None]):
-                if data:
-                    out.extend(data)
+            xs = [x for x in items if x is not None]
+            if len(xs) > 0:
+                for data in parallel["view"].map_sync(fn, xs):
+                    if data:
+                        out.extend(data)
             return out
         else:
             out = []
