@@ -14,6 +14,7 @@ import math
 def run_and_monitor(config, config_file, args, parallel):
     """Run a distributed analysis in s cluster environment, monitoring outputs.
     """
+    args = [x for x in args if x is not None]
     cp = config["distributed"]["cluster_platform"]
     cluster = __import__("bcbio.distributed.{0}".format(cp), fromlist=[cp])
     jobids = []
@@ -45,9 +46,9 @@ def start_workers(cluster, config, config_file, parallel):
                "Supply workers needed if not configured in YAML"
         num_workers = int(math.ceil(float(parallel["cores"]) / cores_per_host))
     program_cl = [config["analysis"]["worker_program"], config_file]
-    if parallel["task_module"]:
+    if parallel.get("task_module", None):
         program_cl.append("--tasks={0}".format(parallel["task_module"]))
-    if parallel["queues"]:
+    if parallel.get("queues", None):
         program_cl.append("--queues={0}".format(parallel["queues"]))
     args = config["distributed"]["platform_args"].split()
     return [cluster.submit_job(args, program_cl) for _ in range(num_workers)]
