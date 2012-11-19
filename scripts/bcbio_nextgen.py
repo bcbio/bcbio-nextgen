@@ -56,7 +56,8 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
         messaging.run_and_monitor(config, config_file, args, parallel) 
     elif parallel["type"] == "ipython":
         ipython.run_and_monitor(config, config_file,
-                                {"fc_dir": fc_dir, "run_info_yaml": run_info_yaml},
+                                {"fc_dir": fc_dir, "run_info_yaml": run_info_yaml,
+                                 "work_dir": work_dir},
                                 parallel)
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
@@ -77,7 +78,7 @@ def _get_cores_and_type(config, fc_dir, run_info_yaml,
             config_cores = int(config_cores)
             if numcores is None:
                 numcores = config_cores
-        except IndexError:
+        except ValueError:
             if paralleltype is None:
                 paralleltype = config_cores
     if paralleltype is None:

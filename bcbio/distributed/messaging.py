@@ -22,6 +22,15 @@ def parallel_runner(parallel, dirs, config, config_file):
             task_module = "{base}.tasks".format(base=parallel["module"])
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
+        elif parallel["type"] == "ipython":
+            out = []
+            fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
+                                    fromlist=["ipythontasks"]),
+                         fn_name)
+            for data in parallel["view"].map_sync(fn, [x for x in items if x is not None]):
+                if data:
+                    out.extend(data)
+            return out
         else:
             out = []
             fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),

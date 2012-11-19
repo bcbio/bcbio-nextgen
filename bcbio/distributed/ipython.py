@@ -9,9 +9,12 @@ Borrowed from Rory Kirchner's Bipy cluster implementation:
 https://github.com/roryk/bipy/blob/master/bipy/cluster/__init__.py
 """
 import time
+import atexit
 import subprocess
 
 from IPython.parallel import Client
+
+from bcbio.pipeline.main import run_main
 
 def _start(workers_needed, profile, delay):
     """Starts cluster from commandline.
@@ -22,7 +25,7 @@ def _start(workers_needed, profile, delay):
     doesn't support this"""
     subprocess.check_call(["ipcluster", "start",
                            "--daemonize=True",
-                           "--delay=%s" % delay, 
+                           #"--delay=%s" % delay, 
                            "--log-level=%s" % 30,
                            "--n=%s" % workers_needed,
                            "--profile=%s" % profile])
@@ -32,8 +35,9 @@ def _stop(profile):
     # this gets fixed in iPython
     subprocess.check_call(["ipcluster", "stop", "--profile=%s" % profile])
 
-def _is_up(client, n):
+def _is_up(profile, n):
     try:
+        client = Client(profile=profile)
         up = len(client.ids)
     except IOError:
         return False
@@ -50,15 +54,17 @@ def run_and_monitor(config, config_file, run_info, parallel):
     delay = 10
     max_delay = 300
     profile = "default"
+    # need at least two processes to run main and workers
     _start(parallel["cores"], profile, delay)
+    atexit.register(_stop, profile)
+    
+    slept = 0
+    while not _is_up(profile, parallel["cores"]):
+        time.sleep(delay)
+        slept += delay
+        if slept > max_delay:
+            raise IOError("Cluster startup timed out.")
     client = Client(profile=profile)
-    try:
-        slept = 0
-        while not _is_up(client, parallel["cores"]):
-            time.sleep(delay)
-            slept += delay
-            if slept > max_delay:
-                raise IOError("Cluster startup timed out.")
-        cluster_view = client.load_balanced_view()
-    finally:
-        _stop(profile)
+    parallel["view"] = client[:] #.load_balanced_view()
+    run_main(config, config_file, run_info["work_dir"],
+             parallel, run_info["fc_dir"], run_info["run_info_yaml"])
