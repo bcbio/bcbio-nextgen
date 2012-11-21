@@ -7,6 +7,7 @@ interruption.
 """
 import os
 import shutil
+import tempfile
 
 import contextlib
 
@@ -25,11 +26,19 @@ def file_transaction(*rollback_files):
             yield tuple(safe_names)
     except: # failure -- delete any temporary files
         _remove_files(safe_names)
+        _remove_tmpdirs(safe_names)
         raise
     else: # worked -- move the temporary files to permanent location
         for safe, orig in zip(safe_names, orig_names):
             if os.path.exists(safe):
                 shutil.move(safe, orig)
+        _remove_tmpdirs(safe_names)
+
+def _remove_tmpdirs(fnames):
+    for x in fnames:
+        xdir = os.path.dirname(os.path.abspath(x))
+        if xdir and os.path.exists(xdir):
+            shutil.rmtree(xdir, ignore_errors=True)
 
 def _remove_files(fnames):
     for x in fnames:
@@ -47,9 +56,9 @@ def _flatten_plus_safe(rollback_files):
         if isinstance(fnames, basestring):
             fnames = [fnames]
         for fname in fnames:
-            tx_file = os.path.join(os.path.dirname(fname), "tx",
-                                   os.path.basename(fname))
-            utils.safe_makedir(os.path.dirname(tx_file))
+            basedir = utils.safe_makedir(os.path.join(os.path.dirname(fname), "tx"))
+            tmpdir = utils.safe_makedir(tempfile.mkdtemp(dir=basedir))
+            tx_file = os.path.join(tmpdir, os.path.basename(fname))
             tx_files.append(tx_file)
             orig_files.append(fname)
     return tx_files, orig_files
