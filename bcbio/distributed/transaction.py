@@ -17,6 +17,7 @@ from bcbio import utils
 def file_transaction(*rollback_files):
     """Wrap file generation in a transaction, moving to output if finishes.
     """
+    exts = {".vcf": ".idx", ".bam": ".bai"}
     safe_names, orig_names = _flatten_plus_safe(rollback_files)
     _remove_files(safe_names) # remove any half-finished transactions
     try:
@@ -32,6 +33,11 @@ def file_transaction(*rollback_files):
         for safe, orig in zip(safe_names, orig_names):
             if os.path.exists(safe):
                 shutil.move(safe, orig)
+                for check_ext, check_idx in exts.iteritems():
+                    if safe.endswith(check_ext):
+                        safe_idx = safe + check_idx
+                        if os.path.exists(safe_idx):
+                            shutil.move(safe_idx, orig + check_idx)
         _remove_tmpdirs(safe_names)
 
 def _remove_tmpdirs(fnames):
