@@ -45,11 +45,46 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
                 regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
                                                        ref_file, out_file, config)
                                  for x in in_handle]
-                
-            _combine_variants(regional_vcfs, out_file, ref_file, config)
+
+            combine_file = apply("{0}-raw{1}".format, os.path.splitext(out_file))
+            _combine_variants(regional_vcfs, combine_file, ref_file, config)
+            _select_final_variants(combine_file, out_file, config)
         else:
             write_empty_vcf(out_file)
     return out_file
+
+def _passes_cortex_depth(line, min_depth):
+    """Do any genotypes in the cortex_var VCF line passes the minimum depth requirement?
+    """
+    parts = line.split("\t")
+    cov_index = parts[8].split(":").index("COV")
+    passes_depth = False
+    for gt in parts[9:]:
+        cur_cov = gt.split(":")[cov_index]
+        cur_depth = sum(int(x) for x in cur_cov.split(","))
+        if cur_depth >= min_depth:
+            passes_depth = True
+    return passes_depth
+
+def _select_final_variants(base_vcf, out_vcf, config):
+    """Filter input file, removing items with low depth of support.
+
+    cortex_var calls are tricky to filter by depth. Count information is in
+    the COV FORMAT field grouped by alleles, so we need to sum up values and
+    compare.
+    """
+    min_depth = int(config["algorithm"].get("min_depth", 4))
+    with file_transaction(out_vcf) as tx_out_file:
+        with open(base_vcf) as in_handle:
+            with open(tx_out_file, "w") as out_handle:
+                for line in in_handle:
+                    if line.startswith("#"):
+                        passes = True
+                    else:
+                        passes = _passes_cortex_depth(line, min_depth)
+                    if passes:
+                        out_handle.write(line)
+    return out_vcf
 
 def _combine_variants(in_vcfs, out_file, ref_file, config):
     """Combine variant files, batching to avoid problematic large commandlines.
