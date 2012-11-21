@@ -52,6 +52,10 @@ def process_sample(*args):
     return sample.process_sample(*args)
 
 @task
+def postprocess_variants(*args):
+    return sample.postprocess_variants(*args)
+
+@task
 def generate_bigwig(*args):
     return sample.generate_bigwig(*args)
 

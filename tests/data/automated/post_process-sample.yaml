@@ -12,7 +12,7 @@ program:
   pdflatex: pdflatex
   barcode: barcode_sort_trim.py
   stampy: ~/install/stampy-1.0.18
-  cortex: ~/install/CORTEX_release_v1.0.5.10
+  cortex: ~/install/CORTEX_release_v1.0.5.11
   vcftools: ~/install/vcftools_0.1.9
 algorithm:
   aligner: bowtie
@@ -31,8 +31,6 @@ algorithm:
 
 analysis:
   towig_script: bam_to_wiggle.py
-  process_program: automated_initial_analysis.py
-  distributed_process_program: distributed_nextgen_pipeline.py
   upload_program: upload_to_galaxy.py
   worker_program: nextgen_analysis_server.py
 distributed:

@@ -42,7 +42,28 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                   "--left-align-indels", "--use-mapping-quality"]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
+    _remove_freebayes_refalt_dups(out_file)
     return out_file
+
+def _remove_freebayes_refalt_dups(in_file):
+    """Remove lines from FreeBayes outputs where REF/ALT are identical.
+    2       22816178        .       G       G       0.0339196
+    """
+    out_file = apply("{0}-nodups{1}".format, os.path.splitext(in_file))
+    if not file_exists(out_file):
+        with open(in_file) as in_handle:
+            with open(out_file, "w") as out_handle:
+                for line in in_handle:
+                    if line.startswith("#"):
+                        out_handle.write(line)
+                    else:
+                        parts = line.split("\t")
+                        if parts[3] != parts[4]:
+                            out_handle.write(line)
+        shutil.move(in_file, "{0}.orig".format(in_file))
+        shutil.move(out_file, in_file)
+        with open(out_file, "w") as out_handle:
+            out_handle.write("Moved to {0}".format(in_file))
 
 def postcall_annotate(in_file, ref_file, vrn_files, config):
     """Perform post-call annotation of FreeBayes calls in preparation for filtering.

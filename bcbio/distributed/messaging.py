@@ -9,27 +9,36 @@ import time
 import contextlib
 import multiprocessing
 import subprocess
-import itertools
 
 from mako.template import Template
 
 from bcbio import utils
 
-def parallel_runner(module, dirs, config, config_file):
+def parallel_runner(parallel, dirs, config, config_file):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):
-        parallel = config["algorithm"]["num_cores"]
-        if str(parallel).lower() == "messaging":
-            task_module = "{base}.tasks".format(base=module)
+        if parallel["type"].startswith("messaging"):
+            task_module = "{base}.tasks".format(base=parallel["module"])
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
+        elif parallel["type"] == "ipython":
+            out = []
+            fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
+                                    fromlist=["ipythontasks"]),
+                         fn_name)
+            xs = [x for x in items if x is not None]
+            if len(xs) > 0:
+                for data in parallel["view"].map_sync(fn, xs):
+                    if data:
+                        out.extend(data)
+            return out
         else:
             out = []
-            fn = getattr(__import__("{base}.multitasks".format(base=module),
+            fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
                                     fromlist=["multitasks"]),
                          fn_name)
-            cores = cores_including_resources(int(parallel), metadata, config)
+            cores = cores_including_resources(int(parallel["cores"]), metadata, config)
             with utils.cpmap(cores) as cpmap:
                 for data in cpmap(fn, filter(lambda x: x is not None, items)):
                     if data:
@@ -50,6 +59,7 @@ def runner(task_module, dirs, config, config_file, wait=True):
     function polls if wait is True, returning when all results are available.
     """
     with create_celeryconfig(task_module, dirs, config, config_file):
+        sys.path.append(dirs["work"])
         __import__(task_module)
         tasks = sys.modules[task_module]
         from celery.task.sets import TaskSet
@@ -124,11 +134,7 @@ def _machine_memory():
 _celeryconfig_tmpl = """
 CELERY_IMPORTS = ("${task_import}", )
 
-BROKER_HOST = "${host}"
-BROKER_PORT = "${port}"
-BROKER_USER = "${userid}"
-BROKER_PASSWORD = "${password}"
-BROKER_VHOST = "${rabbitmq_vhost}"
+BROKER_URL = "amqp://${userid}:${password}@${host}:${port}/${rabbitmq_vhost}"
 CELERY_RESULT_BACKEND= "amqp"
 CELERY_TASK_SERIALIZER = "json"
 CELERYD_CONCURRENCY = ${cores}

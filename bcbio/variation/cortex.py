@@ -36,18 +36,21 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
         if not variant_regions:
             raise ValueError("Only regional variant calling with cortex_var is supported. Set variant_regions")
         target_regions = subset_variant_regions(variant_regions, region, out_file)
-        with open(target_regions) as in_handle:
-            regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
-                                                   ref_file, out_file, config)
-                             for x in in_handle]
-        combine_variant_files(regional_vcfs, out_file, ref_file, config)
+        if os.path.isfile(target_regions):
+            with open(target_regions) as in_handle:
+                regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
+                                                       ref_file, out_file, config)
+                                 for x in in_handle]
+            combine_variant_files(regional_vcfs, out_file, ref_file, config)
+        else:
+            write_empty_vcf(out_file)
     return out_file
 
 def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     """Run cortex on a specified chromosome start/end region.
     """
-    kmers = [31]
-    min_reads = 700
+    kmers = [31, 51, 71]
+    min_reads = 1750
     cortex_dir = config["program"].get("cortex")
     stampy_dir = config["program"].get("stampy")
     vcftools_dir = config["program"].get("vcftools")
@@ -90,8 +93,11 @@ def _remap_cortex_out(cortex_out, region, out_file):
             raise ValueError("Problem in {0} with \n{1}".format(
                     cortex_out, parts))
         return "\t".join(parts)
+    def _not_filtered(line):
+        parts = line.split("\t")
+        return parts[6] == "PASS"
     contig, start, _ = region
-    start = int(start) - 1
+    start = int(start)
     with open(cortex_out) as in_handle:
         with open(out_file, "w") as out_handle:
             for line in in_handle:
@@ -99,7 +105,7 @@ def _remap_cortex_out(cortex_out, region, out_file):
                     pass
                 elif line.startswith("#"):
                     out_handle.write(line)
-                else:
+                elif _not_filtered(line):
                     update_line = _remap_vcf_line(line, contig, start)
                     if update_line:
                         out_handle.write(update_line)
@@ -108,7 +114,6 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
     """Run cortex_var run_calls.pl, producing a VCF variant file.
     """
     print out_base
-    assert len(params["kmers"]) == 1, "Currently only support single kmer workflow"
     fastaq_index = "{0}.fastaq_index".format(out_base)
     se_fastq_index = "{0}.se_fastq".format(out_base)
     pe_fastq_index = "{0}.pe_fastq".format(out_base)
@@ -127,8 +132,13 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
         os.path.join(dirs["cortex"], "scripts/calling"),
         os.path.join(dirs["cortex"], "scripts/analyse_variants/bioinf-perl/lib"),
         os.environ.get("PERL5LIB", ""))
+    kmers = sorted(params["kmers"])
+    kmer_info = ["--first_kmer", str(kmers[0])]
+    if len(kmers) > 1:
+        kmer_info += ["--last_kmer", str(kmers[-1]),
+                      "--kmer_step", str(kmers[1] - kmers[0])]
     subprocess.check_call(["perl", os.path.join(dirs["cortex"], "scripts", "calling", "run_calls.pl"),
-                           "--first_kmer", str(params["kmers"][0]), "--fastaq_index", fastaq_index,
+                           "--fastaq_index", fastaq_index,
                            "--auto_cleaning", "yes", "--bc", "yes", "--pd", "yes",
                            "--outdir", os.path.dirname(out_base), "--outvcf", os.path.basename(out_base),
                            "--ploidy", str(config["algorithm"].get("ploidy", 2)),
@@ -137,14 +147,16 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--refbindir", os.path.dirname(indexes["cortex"][0]),
                            "--list_ref_fasta",  reffasta_index,
                            "--genome_size", str(params["genome_size"]),
-                           "--max_read_len", "250", "--max_var_len", "1000",
+                           "--max_read_len", "20000",
+                           #"--max_var_len", "4000",
                            "--format", "FASTQ", "--qthresh", "5", "--do_union", "yes",
                            "--mem_height", "17", "--mem_width", "100",
                            "--ref", "CoordinatesAndInCalling", "--workflow", "independent",
                            "--vcftools_dir", dirs["vcftools"],
-                           "--logfile", "{0}.logfile,f".format(out_base)])
+                           "--logfile", "{0}.logfile,f".format(out_base)]
+                          + kmer_info)
     final = glob.glob(os.path.join(os.path.dirname(out_base), "vcfs",
-                                   "{0}*FINALcombined_PD*decomp.vcf".format(os.path.basename(out_base))))
+                                   "{0}*FINALcombined_BC*decomp.vcf".format(os.path.basename(out_base))))
     # No calls, need to setup an empty file
     if len(final) != 1:
         print "Did not find output VCF file for {0}".format(out_base)
@@ -177,7 +189,8 @@ def _index_local_ref(fasta_file, cortex_dir, stampy_dir, kmers):
             subprocess.check_call([_get_cortex_binary(kmer, cortex_dir),
                                    "--kmer_size", str(kmer), "--mem_height", "17",
                                    "--se_list", file_list, "--format", "FASTA",
-                                   "--max_read_len", "250", "--sample_id", base_out,
+                                   "--max_read_len", "20000", 
+			           "--sample_id", base_out,
                                    "--dump_binary", out_file])
         cindexes.append(out_file)
     if not file_exists("{0}.stidx".format(base_out)):
@@ -196,7 +209,7 @@ def _get_local_ref(region, ref_file, out_vcf_base):
     if not file_exists(out_file):
         with closing(pysam.Fastafile(ref_file)) as in_pysam:
             contig, start, end = region
-            seq = in_pysam.fetch(contig, int(start) - 1, int(end))
+            seq = in_pysam.fetch(contig, int(start), int(end))
             with open(out_file, "w") as out_handle:
                 out_handle.write(">{0}-{1}-{2}\n{3}".format(contig, start, end,
                                                               str(seq)))
@@ -216,7 +229,7 @@ def _get_fastq_in_region(region, align_bam, out_base):
             with file_transaction(out_file) as tx_out_file:
                 with open(out_file, "w") as out_handle:
                     contig, start, end = region
-                    for read in in_pysam.fetch(contig, int(start) - 1, int(end)):
+                    for read in in_pysam.fetch(contig, int(start), int(end)):
                         seq = Seq.Seq(read.seq)
                         qual = list(read.qual)
                         if read.is_reverse:

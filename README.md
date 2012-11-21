@@ -68,7 +68,7 @@ Specify system specific information in configuration files:
 
 Scripts involved in the processing:
 
-* `scripts/automated_initial_analysis.py` -- Drives the high level analysis of
+* `scripts/bcbio_nextgen.py` -- Drives the high level analysis of
   sequencing lanes based on information specified through the Galaxy LIMS
   system or in a YAML configuration file. Also produces a PDF summary file with
   statistics on alignments, duplicates, GC distribution, quality scores,
@@ -129,43 +129,31 @@ To enable parallel messaging:
    machines can talk to the RabbitMQ server on port 5672. Update
    `universe_wsgi.ini` to contain the server details.
 
-2. Change `num_cores` in `post_process.yaml` to `messaging`
-
-The `distributed_nextgen_pipeline.py` helper script runs pipelines in a
-distributed cluster environment. It takes care of starting worker
-nodes, running the processing, and then cleaning up after jobs:
-
-1. Edit your `post_process.yaml` file to set parameters in the
+2. Edit your `post_process.yaml` file to set parameters in the
   `distributed` section corresponding to your environment: this
-  includes the type of cluster management, arguments to start jobs,
-  and the number of workers to start.
+  includes the type of cluster management and arguments to start jobs.
 
-2. Execute `distributed_nextgen_pipeline.py` using the same arguments as
-   `automated_initial_analysis.py`: the `post_process.yaml`
-   configuration file, the directory of fastq files, and a
-   `run_info.yaml` file specifying the fastq details, barcodes,
-   and the types of analyses to run.
+3. Run `bcbio_nextgen.py` with parameters for a distributed cluster environment.
+   It takes care of starting worker nodes, running the processing, and then
+   cleaning up after jobs:
 
-If you have a different architecture you can run the distributed
-processing by hand:
-
-1. Start the processing server, `nextgen_analysis_server.py` on each
-   processing machine. This takes one argument, the
-   `post_process.yaml` file (which references the `universe_wsgi.ini`
-   configuration).
-
-2. Run the analysis script `automated_initial_analysis.py`. This will
-   offload parallel work to the workers started in step 3 but also
-   does processing itself, so is also submitted as a job in cluster
-   environments.
+       bcbio_nextgen.py post_process.yaml flowcell_dir run_info.yaml
+                        -t messaging -n 20
 
 ### Testing
 
 The test suite exercises the scripts driving the analysis, so
 are a good starting point to ensure correct installation.
-Run tests from the main code directory using [nose][i7]:
+Run tests from the main code directory using [nose][i7]. To test the main
+variant calling pipeline:
 
-      nosetest -v -s
+     $ cd tests
+     $ nosetests -v -s test_automated_analysis.py:AutomatedAnalysisTest.test_1_variantcall
+
+
+To run the full test suite:
+
+     $ nosetest -v -s
 
 `tests/test_automated_analysis.py` exercises the full framework using
 an automatically downloaded test dataset. It runs through barcode
@@ -347,7 +335,9 @@ Place these under the `analysis` keyword. For variant calling:
 - `variant_regions` BED file of regions to call variants in.
 - `ploidy` Ploidy of called reads. Defaults to 2 (diploid).
 - `recalibrate` Perform variant recalibration [true, false]
+- `mark_duplicates` Identify and remove variants [false, true]
 - `realign` Do variant realignment [true, false]
+- `write_summary` Write a PDF summary of results [true, false]
 
 Global reference files for variant calling and assessment:
 

@@ -166,6 +166,19 @@ def add_full_path(dirname, basedir=None):
         dirname = os.path.join(basedir, dirname)
     return dirname
 
+# ## Functional programming
+
+def partition_all(n, iterable):
+    """Partition a list into equally sized pieces, including last smaller parts
+    http://stackoverflow.com/questions/5129102/python-equivalent-to-clojures-partition-all
+    """
+    it = iter(iterable)
+    while True:
+        chunk = list(itertools.islice(it, n))
+        if not chunk:
+            break
+        yield chunk
+
 # ## Dealing with configuration files
 
 def merge_config_files(fnames):

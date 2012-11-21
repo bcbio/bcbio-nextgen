@@ -24,8 +24,11 @@ def merge_sample(data):
     logger.info("Combining fastq and BAM files %s" % str(data["name"]))
     config = _update_config_w_custom(data["config"], data["info"])
     genome_build, sam_ref = ref_genome_info(data["info"], config, data["dirs"])
-    fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
-                                         config)
+    if config["algorithm"].get("upload_fastq", False):
+        fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
+                                             config)
+    else:
+        fastq1, fastq2 = None, None
     sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
     return [[{"name": data["name"],
               "genome_build": genome_build, "sam_ref": sam_ref,
@@ -48,8 +51,8 @@ def recalibrate_sample(data):
 
 # ## General processing
 
-def process_sample(data):
-    """Finalize processing for a sample, potentially multiplexed.
+def postprocess_variants(data):
+    """Provide post-processing of variant calls.
     """
     if data["config"]["algorithm"]["snpcall"]:
         logger.info("Finalizing variant calls: %s" % str(data["name"]))
@@ -63,6 +66,11 @@ def process_sample(data):
         if ann_vrn_file:
             data["vrn_file"] = ann_vrn_file
             data["effects_file"] = effects_file
+    return [[data]]
+
+def process_sample(data):
+    """Finalize processing for a sample, potentially multiplexed.
+    """
     if data["config"]["algorithm"].get("transcript_assemble", False):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
                                                data["config"])
@@ -84,6 +92,5 @@ def generate_bigwig(data):
             cl = [data["config"]["analysis"]["towig_script"], bam_file,
                   data["config_file"], "--outfile=%s" % tx_file]
             subprocess.check_call(cl)
-    data["bigwig_file"] = wig_file
     return [[data]]
 

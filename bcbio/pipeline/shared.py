@@ -23,15 +23,26 @@ def combine_bam(in_files, out_file, config):
     runner.run_fn("picard_index", out_file)
     return out_file
 
-def split_bam_by_chromosome(output_ext, file_key, default_targets=None):
+def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ext_fn=None):
     """Provide targets to process a BAM file by individual chromosome regions.
+
+    output_ext: extension to supply to output files
+    file_key: the key of the BAM file in the input data map
+    default_targets: a list of extra chromosome targets to process, beyond those specified
+                     in the BAM file. Useful for retrieval of non-mapped reads.
+    dir_ext_fn: A function to retrieve a directory naming extension from input data map.
     """
     if default_targets is None:
         default_targets = []
     def _do_work(data):
         bam_file = data[file_key]
-        out_file = "{base}{ext}".format(base=os.path.splitext(bam_file)[0],
-                                        ext=output_ext)
+        out_dir = os.path.dirname(bam_file)
+        if dir_ext_fn:
+            out_dir = os.path.join(out_dir, dir_ext_fn(data))
+            
+        out_file = os.path.join(out_dir, "{base}{ext}".format(
+                base=os.path.splitext(os.path.basename(bam_file))[0],
+                ext=output_ext))
         part_info = []
         if not file_exists(out_file):
             work_dir = safe_makedir(

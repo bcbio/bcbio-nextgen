@@ -25,6 +25,10 @@ def realign_sample(*args):
     return realign.realign_sample(*args)
 
 @utils.map_wrap
+def postprocess_variants(*args):
+    return sample.postprocess_variants(*args)
+
+@utils.map_wrap
 def process_sample(*args):
     return sample.process_sample(*args)
 
