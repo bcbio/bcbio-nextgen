@@ -20,7 +20,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from bcbio import broad
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.utils import file_exists, safe_makedir
+from bcbio.utils import file_exists, safe_makedir, partition_all
 from bcbio.variation.genotype import combine_variant_files, write_empty_vcf
 
 def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
@@ -30,21 +30,41 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
     broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-cortex.vcf" % os.path.splitext(align_bam)[0]
+        if region is not None:
+            out_file = os.path.join(os.path.dirname(out_file), region.replace(".", "_"),
+                                    os.path.basename(out_file))
+            safe_makedir(os.path.dirname(out_file))
     if not file_exists(out_file):
         broad_runner.run_fn("picard_index", align_bam)
         variant_regions = config["algorithm"].get("variant_regions", None)
         if not variant_regions:
-            raise ValueError("Only regional variant calling with cortex_var is supported. Set variant_regions")
+            raise ValueError("Only support regional variant calling with cortex_var: set variant_regions")
         target_regions = subset_variant_regions(variant_regions, region, out_file)
         if os.path.isfile(target_regions):
             with open(target_regions) as in_handle:
                 regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
                                                        ref_file, out_file, config)
                                  for x in in_handle]
-            combine_variant_files(regional_vcfs, out_file, ref_file, config)
+                
+            _combine_variants(regional_vcfs, out_file, ref_file, config)
         else:
             write_empty_vcf(out_file)
     return out_file
+
+def _combine_variants(in_vcfs, out_file, ref_file, config):
+    """Combine variant files, batching to avoid problematic large commandlines.
+    """
+    max_batch = 500
+    if len(in_vcfs) > max_batch:
+        new_vcfs = []
+        for i, batch_vcfs in enumerate(partition_all(max_batch, in_vcfs)):
+            base, ext = os.path.splitext(out_file)
+            cur_out = "{0}-batch{1}{2}".format(base, i, ext)
+            combine_variant_files(batch_vcfs, cur_out, ref_file, config)
+            new_vcfs.append(cur_out)
+        in_vcfs = new_vcfs
+    assert len(in_vcfs) <= max_batch
+    combine_variant_files(in_vcfs, out_file, ref_file, config)
 
 def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     """Run cortex on a specified chromosome start/end region.
@@ -147,7 +167,7 @@ def _run_cortex(fastq, indexes, params, out_base, dirs, config):
                            "--refbindir", os.path.dirname(indexes["cortex"][0]),
                            "--list_ref_fasta",  reffasta_index,
                            "--genome_size", str(params["genome_size"]),
-                           "--max_read_len", "20000",
+                           "--max_read_len", "30000",
                            #"--max_var_len", "4000",
                            "--format", "FASTQ", "--qthresh", "5", "--do_union", "yes",
                            "--mem_height", "17", "--mem_width", "100",
@@ -189,7 +209,7 @@ def _index_local_ref(fasta_file, cortex_dir, stampy_dir, kmers):
             subprocess.check_call([_get_cortex_binary(kmer, cortex_dir),
                                    "--kmer_size", str(kmer), "--mem_height", "17",
                                    "--se_list", file_list, "--format", "FASTA",
-                                   "--max_read_len", "20000", 
+                                   "--max_read_len", "30000", 
 			           "--sample_id", base_out,
                                    "--dump_binary", out_file])
         cindexes.append(out_file)

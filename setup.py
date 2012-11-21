@@ -32,7 +32,7 @@ setup(name = "bcbio-nextgen",
           "fabric >= 1.5",
           "pyzmq >= 2.2.0.1",
           "ipython >= 0.13.1",
-          "paramiko >= 1.7.7.1",
+          "paramiko >= 1.9.0",
           "celery >= 2.2.7",
           #"rpy2 >= 2.0.7"
       ])
