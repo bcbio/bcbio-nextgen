@@ -30,10 +30,11 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
     broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-cortex.vcf" % os.path.splitext(align_bam)[0]
-        if region is not None:
-            out_file = os.path.join(os.path.dirname(out_file), region.replace(".", "_"),
-                                    os.path.basename(out_file))
-            safe_makedir(os.path.dirname(out_file))
+    if region is not None:
+        work_dir = safe_makedir(os.path.join(os.path.dirname(out_file),
+                                             region.replace(".", "_")))
+    else:
+        work_dir = os.path.dirname(out_file)
     if not file_exists(out_file):
         broad_runner.run_fn("picard_index", align_bam)
         variant_regions = config["algorithm"].get("variant_regions", None)
@@ -43,7 +44,7 @@ def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
         if os.path.isfile(target_regions):
             with open(target_regions) as in_handle:
                 regional_vcfs = [_run_cortex_on_region(x.strip().split("\t")[:3], align_bam,
-                                                       ref_file, out_file, config)
+                                                       ref_file, work_dir, out_file, config)
                                  for x in in_handle]
 
             combine_file = apply("{0}-raw{1}".format, os.path.splitext(out_file))
@@ -101,7 +102,7 @@ def _combine_variants(in_vcfs, out_file, ref_file, config):
     assert len(in_vcfs) <= max_batch
     combine_variant_files(in_vcfs, out_file, ref_file, config)
 
-def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
+def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, config):
     """Run cortex on a specified chromosome start/end region.
     """
     kmers = [31, 51, 71]
@@ -112,7 +113,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, out_file_base, config):
     if cortex_dir is None or stampy_dir is None:
         raise ValueError("cortex_var requires path to pre-built cortex and stampy")
     region_str = apply("{0}-{1}-{2}".format, region)
-    base_dir = safe_makedir(os.path.join(os.path.dirname(out_file_base), region_str))
+    base_dir = safe_makedir(os.path.join(work_dir, region_str))
     out_vcf_base = os.path.join(base_dir, "{0}-{1}".format(
             os.path.splitext(os.path.basename(out_file_base))[0], region_str))
     out_file = "{0}.vcf".format(out_vcf_base)
