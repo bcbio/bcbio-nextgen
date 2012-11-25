@@ -34,16 +34,13 @@ def _stop(profile, cluster_id):
 
 def _is_up(profile, cluster_id, n):
     try:
-        client = Client(profile=profile, cluster_id=cluster_id)
+        #client = Client(profile=profile, cluster_id=cluster_id)
+        client = Client(profile=profile)
         up = len(client.ids)
     except IOError, msg:
         return False
     else:
-        not_up = n - up
-        if not_up > 0:
-            return False
-        else:
-            return True
+        return up >= n
 
 @contextlib.contextmanager
 def cluster_view(parallel):
@@ -67,12 +64,15 @@ def cluster_view(parallel):
     _start(parallel["cores"], profile, cluster_id, delay)
     try:
         slept = 0
-        while not _is_up(profile, cluster_id, parallel["cores"]):
+        target_cores = 1 if parallel.get("queue_type", None) == "multicore" \
+                       else parallel["cores"]
+        while not _is_up(profile, cluster_id, target_cores):
             time.sleep(delay)
             slept += delay
             if slept > max_delay:
                 raise IOError("Cluster startup timed out.")
-        client = Client(profile=profile, cluster_id=cluster_id)
+        #client = Client(profile=profile, cluster_id=cluster_id)
+        client = Client(profile=profile)
         yield client.load_balanced_view()
     finally:
         _stop(profile, cluster_id)
@@ -116,7 +116,7 @@ def runner(parallel, fn_name, items):
                 if args:
                     data = view.apply_sync(fn, args)
                     if data:
-                        out.extend(data)
+                        out.append(data)
     else:
         xs = [x for x in items if x is not None]
         if len(xs) > 0:

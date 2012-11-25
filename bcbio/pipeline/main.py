@@ -61,6 +61,8 @@ def _set_resources(parallel, config):
     Updates allowed core usage for different situations.
     Currently handles GATK for local, multicore and ipython processing.
     """
+    if not config["resources"].has_key("gatk"):
+        config["resources"]["gatk"] = {}
     if parallel["type"] == "ipython":
         config["resources"]["gatk"]["cores"] = parallel["cores"]
     elif parallel["type"] == "local":
