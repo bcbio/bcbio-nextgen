@@ -79,9 +79,15 @@ def cluster_view(parallel):
 
 def dictadd(orig, k, v):
     """Imitates immutability by adding a key/value to a new dictionary.
+    Works around not being able to deepcopy view objects; can remove this
+    once we create views on demand.
     """
+    view = orig.pop("view", None)
     new = copy.deepcopy(orig)
     new[k] = v
+    if view:
+        orig["view"] = view
+        new["view"] = view
     return new
 
 def _get_queue_type(fn):
@@ -106,7 +112,7 @@ def runner(parallel, fn_name, items):
         parallel = dictadd(parallel, "queue_type", queue_type)
     if queue_type == "multicore":
         with cluster_view(parallel) as view:
-            for args in xs:
+            for args in items:
                 if args:
                     data = view.apply_sync(fn, args)
                     if data:
