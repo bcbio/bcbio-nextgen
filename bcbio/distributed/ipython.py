@@ -8,38 +8,37 @@ Borrowed from Rory Kirchner's Bipy cluster implementation:
 
 https://github.com/roryk/bipy/blob/master/bipy/cluster/__init__.py
 """
+import copy
 import time
-import atexit
+import uuid
 import subprocess
+import contextlib
 
 from IPython.parallel import Client
 
 from bcbio.pipeline.main import run_main
 
-def _start(workers_needed, profile, delay):
+def _start(workers_needed, profile, cluster_id, delay):
     """Starts cluster from commandline.
-
-    XXX: in the future, add "--cluster-id=" + self._cluster_id to
-    this, to run each new cluster with a different ID, so we can
-    reuse the same profile. right now there is a bug in ipython that
-    doesn't support this"""
+    """
     subprocess.check_call(["ipcluster", "start",
                            "--daemonize=True",
                            "--delay=%s" % delay, 
                            "--log-level=%s" % 30,
+                           #"--cluster-id=%s" % cluster_id,
                            "--n=%s" % workers_needed,
                            "--profile=%s" % profile])
 
-def _stop(profile):
-    # add carg = "--cluster-id=%s" % (self._cluster_id) when
-    # this gets fixed in iPython
-    subprocess.check_call(["ipcluster", "stop", "--profile=%s" % profile])
+def _stop(profile, cluster_id):
+    subprocess.check_call(["ipcluster", "stop", "--profile=%s" % profile,
+                           #"--cluster-id=%s" % cluster_id
+                           ])
 
-def _is_up(profile, n):
+def _is_up(profile, cluster_id, n):
     try:
-        client = Client(profile=profile)
+        client = Client(profile=profile, cluster_id=cluster_id)
         up = len(client.ids)
-    except IOError:
+    except IOError, msg:
         return False
     else:
         not_up = n - up
@@ -48,22 +47,49 @@ def _is_up(profile, n):
         else:
             return True
 
-def run_and_monitor(config, config_file, run_info, parallel):
-    """Run a distributed analysis after starting an Ipython parallel environment.
+@contextlib.contextmanager
+def cluster_view(parallel):
+    """Provide a view on an ipython cluster for processing.
+
+    parallel is a dictionary with:
+      - profile: The name of the ipython profile to use
+      - cores: The number of cores to start for processing.
+      - queue_type: Optionally, the type of parallel queue
+        to start. Defaults to a standard parallel queue, can
+        also specify 'multicore' for a multiple core machine
+        and 'io' for an I/O intensive queue.
     """
     delay = 10
     max_delay = 300
+    profile = parallel["profile"]
+    if parallel.get("queue_type", None):
+        profile = "%s_%s" % (profile, parallel["queue_type"])
+    cluster_id = str(uuid.uuid1())
     # need at least two processes to run main and workers
-    _start(parallel["cores"], parallel["profile"], delay)
-    atexit.register(_stop, parallel["profile"])
-    
-    slept = 0
-    while not _is_up(parallel["profile"], parallel["cores"]):
-        time.sleep(delay)
-        slept += delay
-        if slept > max_delay:
-            raise IOError("Cluster startup timed out.")
-    client = Client(profile=parallel["profile"])
-    parallel["view"] = client.load_balanced_view()
-    run_main(config, config_file, run_info["work_dir"],
-             parallel, run_info["fc_dir"], run_info["run_info_yaml"])
+    _start(parallel["cores"], profile, cluster_id, delay)
+    try:
+        slept = 0
+        while not _is_up(profile, cluster_id, parallel["cores"]):
+            time.sleep(delay)
+            slept += delay
+            if slept > max_delay:
+                raise IOError("Cluster startup timed out.")
+        client = Client(profile=profile, cluster_id=cluster_id)
+        yield client.load_balanced_view()
+    finally:
+        _stop(profile, cluster_id)
+
+def idict(orig, k, v):
+    """Imitates immutability by adding a key/value to a new dictionary.
+    """
+    new = copy.deepcopy(orig)
+    new[k] = v
+    return new
+
+def run_and_monitor(config, config_file, run_info, parallel):
+    """Run a distributed analysis after starting an Ipython parallel environment.
+    """
+    with cluster_view(parallel) as view:
+        parallel["view"] = view
+        run_main(config, config_file, run_info["work_dir"],
+                 parallel, run_info["fc_dir"], run_info["run_info_yaml"])
