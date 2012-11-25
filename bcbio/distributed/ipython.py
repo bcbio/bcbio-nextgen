@@ -16,15 +16,13 @@ import contextlib
 
 from IPython.parallel import Client
 
-from bcbio.pipeline.main import run_main
-
 def _start(workers_needed, profile, cluster_id, delay):
     """Starts cluster from commandline.
     """
     subprocess.check_call(["ipcluster", "start",
                            "--daemonize=True",
                            "--delay=%s" % delay, 
-                           "--log-level=%s" % 30,
+                           "--log-level=%s" % "WARN",
                            #"--cluster-id=%s" % cluster_id,
                            "--n=%s" % workers_needed,
                            "--profile=%s" % profile])
@@ -79,17 +77,44 @@ def cluster_view(parallel):
     finally:
         _stop(profile, cluster_id)
 
-def idict(orig, k, v):
+def dictadd(orig, k, v):
     """Imitates immutability by adding a key/value to a new dictionary.
     """
     new = copy.deepcopy(orig)
     new[k] = v
     return new
 
-def run_and_monitor(config, config_file, run_info, parallel):
-    """Run a distributed analysis after starting an Ipython parallel environment.
+def _get_queue_type(fn):
+    if hasattr(fn, "metadata"):
+        return fn.metadata.get("queue_type", None)
+    else:
+        return None
+
+def runner(parallel, fn_name, items):
+    """Run a task on an ipython parallel cluster, allowing alternative queue types.
+
+    This will spawn clusters for custom queue types like multicore and high I/O
+    tasks on demand.
+    TODO: spawn standard queues on demand as well.
     """
-    with cluster_view(parallel) as view:
-        parallel["view"] = view
-        run_main(config, config_file, run_info["work_dir"],
-                 parallel, run_info["fc_dir"], run_info["run_info_yaml"])
+    out = []
+    fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
+                            fromlist=["ipythontasks"]),
+                 fn_name)
+    queue_type = _get_queue_type(fn)
+    if queue_type:
+        parallel = dictadd(parallel, "queue_type", queue_type)
+    if queue_type == "multicore":
+        with cluster_view(parallel) as view:
+            for args in xs:
+                if args:
+                    data = view.apply_sync(fn, args)
+                    if data:
+                        out.extend(data)
+    else:
+        xs = [x for x in items if x is not None]
+        if len(xs) > 0:
+            for data in parallel["view"].map_sync(fn, xs):
+                if data:
+                    out.extend(data)
+    return out

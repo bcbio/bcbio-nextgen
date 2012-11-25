@@ -40,6 +40,7 @@ def merge_sample(*args):
 def recalibrate_sample(*args):
     with _setup_logging(args):
         return apply(sample.recalibrate_sample, *args)
+recalibrate_sample.metadata = {"queue_type": "multicore"}
 
 @require(realign)
 def realign_sample(*args):
