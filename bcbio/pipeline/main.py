@@ -3,6 +3,7 @@
 Handles running the full pipeline based on instructions
 """
 import os
+import math
 import argparse
 
 from bcbio.solexa.flowcell import get_fastq_dir
@@ -32,6 +33,7 @@ def run_main(config, config_file, work_dir, parallel,
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+    config = _set_resources(parallel, config)
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
@@ -52,6 +54,28 @@ def run_main(config, config_file, work_dir, parallel,
     run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
     write_project_summary(samples)
     write_metrics(run_info, fc_name, fc_date, dirs)
+
+def _set_resources(parallel, config):
+    """Set resource availability for programs based on parallel approach.
+
+    Updates allowed core usage for different situations.
+    Currently handles GATK for local, multicore and ipython processing.
+    """
+    if parallel["type"] == "ipython":
+        config["resources"]["gatk"]["cores"] = parallel["cores"]
+    elif parallel["type"] == "local":
+        if parallel["cores"] == 1:
+            config["resources"]["gatk"]["cores"] = 1
+        else:
+            import multiprocessing
+            extra_cores = float(multiprocessing.cpu_count() - parallel["cores"])
+            cores_per = max(1, int(math.floor(extra_cores / parallel["cores"])))
+            current_cores = config["resources"]["gatk"].get("cores", 0)
+            if cores_per < current_cores:
+                config["resources"]["gatk"]["cores"] = cores_per
+    else:
+        pass
+    return config
 
 # ## Utility functions
 
