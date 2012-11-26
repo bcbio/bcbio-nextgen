@@ -38,13 +38,14 @@ def run_samtools(align_bam, ref_file, config, dbsnp=None, region=None,
 def _call_variants_samtools(align_bam, ref_file, config, target_regions, out_file):
     """Call variants with samtools in target_regions.
     """
+    max_read_depth = 1000
     with open(out_file, "w") as out_handle:
         mpileup = sh.samtools.mpileup.bake(align_bam,
-                                           f=ref_file, d=1000, L=1000,
+                                           f=ref_file, d=max_read_depth, L=max_read_depth,
                                            m=3, F=0.0002, D=True, S=True, u=True)
         if target_regions:
             mpileup=mpileup.bake(l=target_regions)
-        bcftools = sh.bcftools.view.bake("-", v=True, c=True, g=True,
-                                         _out=out_handle)
-        bcftools(mpileup())
+        bcftools = sh.bcftools.view.bake("-", v=True, c=True, g=True)
+        varfilter = sh.Command("vcfutils.pl").varFilter.bake(D=max_read_depth, _out=out_handle)
+        varfilter(bcftools(mpileup()))
     
