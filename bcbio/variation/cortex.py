@@ -11,6 +11,7 @@ import os
 import glob
 import subprocess
 import itertools
+import shutil
 from contextlib import closing
 
 import pysam
@@ -94,8 +95,10 @@ def _combine_variants(in_vcfs, out_file, ref_file, config):
     if len(in_vcfs) > max_batch:
         new_vcfs = []
         for i, batch_vcfs in enumerate(partition_all(max_batch, in_vcfs)):
-            base, ext = os.path.splitext(out_file)
-            cur_out = "{0}-batch{1}{2}".format(base, i, ext)
+            path, fname = os.path.split(out_file)
+            batch_path = utils.safe_makedir(os.path.join(path, "batch"))
+            base, ext = os.path.splitext(fname)
+            cur_out = os.path.join(batch_path, "{0}-batch{1}{2}".format(base, i, ext))
             combine_variant_files(batch_vcfs, cur_out, ref_file, config)
             new_vcfs.append(cur_out)
         in_vcfs = new_vcfs
@@ -115,8 +118,8 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
     region_str = apply("{0}-{1}-{2}".format, region)
     base_dir = safe_makedir(os.path.join(work_dir, region_str))
     out_vcf_base = os.path.join(base_dir, "{0}-{1}".format(
-            os.path.splitext(os.path.basename(out_file_base))[0], region_str))
-    out_file = "{0}.vcf".format(out_vcf_base)
+                os.path.splitext(os.path.basename(out_file_base))[0], region_str))
+    out_file = os.path.join(work_dir, os.path.basename("{0}.vcf".format(out_vcf_base)))
     if not file_exists(out_file):
         fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
         if _count_fastq_reads(fastq, min_reads) < min_reads:
@@ -133,6 +136,8 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
                 _remap_cortex_out(cortex_out, region, out_file)
             else:
                 write_empty_vcf(out_file)
+    if os.path.exists(base_dir):
+        shutil.rmtree(base_dir)
     return out_file
 
 def _remap_cortex_out(cortex_out, region, out_file):
