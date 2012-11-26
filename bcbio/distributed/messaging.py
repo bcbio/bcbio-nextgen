@@ -24,7 +24,7 @@ def parallel_runner(parallel, dirs, config, config_file):
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
         elif parallel["type"] == "ipython":
-            return ipython.runner(parallel, fn_name, items)
+            return ipython.runner(parallel, fn_name, items, dirs["work"], config)
         else:
             out = []
             fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),

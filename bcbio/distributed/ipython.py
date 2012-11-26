@@ -8,11 +8,15 @@ Borrowed from Rory Kirchner's Bipy cluster implementation:
 
 https://github.com/roryk/bipy/blob/master/bipy/cluster/__init__.py
 """
+import os
 import copy
 import time
 import uuid
 import subprocess
 import contextlib
+
+from bcbio import utils
+from bcbio.log import setup_logging, logger
 
 from IPython.parallel import Client
 
@@ -56,12 +60,21 @@ def cluster_view(parallel):
     """
     delay = 10
     max_delay = 300
+    max_tries = 5
     profile = parallel["profile"]
     if parallel.get("queue_type", None):
         profile = "%s_%s" % (profile, parallel["queue_type"])
     cluster_id = str(uuid.uuid1())
-    # need at least two processes to run main and workers
-    _start(parallel["cores"], profile, cluster_id, delay)
+    num_tries = 0
+    while 1:
+        try:
+            _start(parallel["cores"], profile, cluster_id, delay)
+            break
+        except subprocess.CalledProcessError:
+            if num_tries > max_tries:
+                raise
+            num_tries += 1
+            time.sleep(delay)
     try:
         slept = 0
         target_cores = 1 if parallel.get("queue_type", None) == "multicore" \
@@ -96,31 +109,51 @@ def _get_queue_type(fn):
     else:
         return None
 
-def runner(parallel, fn_name, items):
+def runner(parallel, fn_name, items, work_dir, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
 
-    This will spawn clusters for custom queue types like multicore and high I/O
-    tasks on demand.
-    TODO: spawn standard queues on demand as well.
+    This will spawn clusters for parallel and custom queue types like multicore
+    and high I/O tasks on demand.
+
+    A checkpoint directory keeps track of finished tasks, avoiding spinning up clusters
+    for sections that have been previous processed.
     """
+    setup_logging(config)
     out = []
+    checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
+    checkpoint_file = os.path.join(checkpoint_dir, "%s.done" % fn_name)
     fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
                             fromlist=["ipythontasks"]),
                  fn_name)
     queue_type = _get_queue_type(fn)
     if queue_type:
         parallel = dictadd(parallel, "queue_type", queue_type)
-    if queue_type == "multicore":
+    # already finished, run locally on current machine to collect details
+    if os.path.exists(checkpoint_file):
+        logger.info("ipython: %s -- local; checkpoint passed" % fn_name)
+        for args in items:
+            if args:
+                data = fn(args)
+                if data:
+                    out.extend(data)
+    # Run on a multicore queue with available cores on the same machine
+    elif queue_type == "multicore":
+        logger.info("ipython: %s -- multicore" % fn_name)
         with cluster_view(parallel) as view:
             for args in items:
                 if args:
                     data = view.apply_sync(fn, args)
                     if data:
-                        out.append(data)
+                        out.extend(data)
+    # Run on a standard parallel queue
     else:
-        xs = [x for x in items if x is not None]
-        if len(xs) > 0:
-            for data in parallel["view"].map_sync(fn, xs):
-                if data:
-                    out.extend(data)
+        logger.info("ipython: %s -- parallel" % fn_name)
+        with cluster_view(parallel) as view:
+            xs = [x for x in items if x is not None]
+            if len(xs) > 0:
+                for data in view.map_sync(fn, xs):
+                    if data:
+                        out.extend(data)
+    with open(checkpoint_file, "w") as out_handle:
+        out_handle.write("done\n")
     return out

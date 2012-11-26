@@ -30,7 +30,6 @@ import sys
 
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
-from bcbio.distributed import ipython
 from bcbio.pipeline.config_loader import load_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 
@@ -57,10 +56,8 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
             args.append(run_info_yaml)
         messaging.run_and_monitor(config, config_file, args, parallel) 
     elif parallel["type"] == "ipython":
-        with ipython.cluster_view(parallel) as view:
-            parallel = ipython.dictadd(parallel, "view", view)
-            run_main(config, config_file, work_dir, parallel,
-                     fc_dir, run_info_yaml)
+        run_main(config, config_file, work_dir, parallel,
+                 fc_dir, run_info_yaml)
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
 
