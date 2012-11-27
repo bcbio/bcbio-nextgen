@@ -96,7 +96,7 @@ def _combine_variants(in_vcfs, out_file, ref_file, config):
         new_vcfs = []
         for i, batch_vcfs in enumerate(partition_all(max_batch, in_vcfs)):
             path, fname = os.path.split(out_file)
-            batch_path = utils.safe_makedir(os.path.join(path, "batch"))
+            batch_path = safe_makedir(os.path.join(path, "batch"))
             base, ext = os.path.splitext(fname)
             cur_out = os.path.join(batch_path, "{0}-batch{1}{2}".format(base, i, ext))
             combine_variant_files(batch_vcfs, cur_out, ref_file, config)
