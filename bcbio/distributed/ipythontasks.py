@@ -11,9 +11,15 @@ from bcbio.log import setup_logging, logger
 @contextlib.contextmanager
 def _setup_logging(args):
     if len(args) > 0:
-        config = args[0][-1]
-        if isinstance(config, dict) and config.has_key("config"):
-            config = config["config"]
+        for check_i in [0, -1]:
+            config = args[0][check_i]
+            if isinstance(config, dict) and config.has_key("config"):
+                config = config["config"]
+                break
+            elif isinstance(config, dict) and config.has_key("algorithm"):
+                break
+            else:
+                config = None
         setup_logging(config)
     try:
         yield None
@@ -22,9 +28,9 @@ def _setup_logging(args):
         raise
 
 @require(lane)
-def process_lane(*args, **kwargs):
+def process_lane(*args):
     with _setup_logging(args):
-        return apply(lane.process_lane, *args, **kwargs)
+        return apply(lane.process_lane, *args)
 
 @require(lane)
 def process_alignment(*args):
@@ -40,6 +46,7 @@ def merge_sample(*args):
 def recalibrate_sample(*args):
     with _setup_logging(args):
         return apply(sample.recalibrate_sample, *args)
+recalibrate_sample.metadata = {"queue_type": "multicore"}
 
 @require(realign)
 def realign_sample(*args):

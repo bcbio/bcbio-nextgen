@@ -50,18 +50,19 @@ class BroadRunner:
         subprocess.check_call(cl)
 
     def run_gatk(self, params, tmp_dir=None):
-        support_parallel = ["UnifiedGenotyper", "CountCovariates", "VariantEval",
-                            "VariantRecalibrator"]
+        support_nt = set(["UnifiedGenotyper", "CountCovariates", "VariantEval"])
+        support_nct = set(["BaseRecalibrator"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
         cores = self._config.get("resources", {}).get("gatk", {}).get("cores", None)
-        if cores:
-            do_parallel = False
-            for check in support_parallel:
-                if check in params:
-                    do_parallel = True
-            if do_parallel:
+        if cores and cores > 1:
+            atype_index = params.index("-T") if params.count("-T") > 0 \
+                          else params.index("--analysis_type")
+            prog = params[atype_index + 1]
+            if prog in support_nt:
                 params.extend(["-nt", str(cores)])
+            elif prog in support_nct:
+                params.extend(["-nct", str(cores)])
         if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
             params.extend(["-U", "LENIENT_VCF_PROCESSING"])
         if tmp_dir:

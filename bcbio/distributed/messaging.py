@@ -13,6 +13,7 @@ import subprocess
 from mako.template import Template
 
 from bcbio import utils
+from bcbio.distributed import ipython
 
 def parallel_runner(parallel, dirs, config, config_file):
     """Process a supplied function: single, multi-processor or distributed.
@@ -23,16 +24,7 @@ def parallel_runner(parallel, dirs, config, config_file):
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
         elif parallel["type"] == "ipython":
-            out = []
-            fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
-                                    fromlist=["ipythontasks"]),
-                         fn_name)
-            xs = [x for x in items if x is not None]
-            if len(xs) > 0:
-                for data in parallel["view"].map_sync(fn, xs):
-                    if data:
-                        out.extend(data)
-            return out
+            return ipython.runner(parallel, fn_name, items, dirs["work"], config)
         else:
             out = []
             fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),

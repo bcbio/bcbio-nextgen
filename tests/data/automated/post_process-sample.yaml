@@ -12,7 +12,7 @@ program:
   pdflatex: pdflatex
   barcode: barcode_sort_trim.py
   stampy: ~/install/stampy-1.0.18
-  cortex: ~/install/CORTEX_release_v1.0.5.11
+  cortex: ~/install/CORTEX_release_v1.0.5.14
   vcftools: ~/install/vcftools_0.1.9
 algorithm:
   aligner: bowtie
