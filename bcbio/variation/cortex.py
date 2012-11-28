@@ -99,6 +99,10 @@ def _combine_variants(in_vcfs, out_file, ref_file, config):
             batch_path = safe_makedir(os.path.join(path, "batch"))
             base, ext = os.path.splitext(fname)
             cur_out = os.path.join(batch_path, "{0}-batch{1}{2}".format(base, i, ext))
+            for x in batch_vcfs:
+                with open(x) as in_handle:
+                    if not in_handle.readline().startswith("##fileformat=VCFv4"):
+                        raise ValueError("Unexpected VCF file: %s" % x)
             combine_variant_files(batch_vcfs, cur_out, ref_file, config)
             new_vcfs.append(cur_out)
         in_vcfs = new_vcfs
@@ -117,27 +121,29 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
         raise ValueError("cortex_var requires path to pre-built cortex and stampy")
     region_str = apply("{0}-{1}-{2}".format, region)
     base_dir = safe_makedir(os.path.join(work_dir, region_str))
-    out_vcf_base = os.path.join(base_dir, "{0}-{1}".format(
-                os.path.splitext(os.path.basename(out_file_base))[0], region_str))
-    out_file = os.path.join(work_dir, os.path.basename("{0}.vcf".format(out_vcf_base)))
-    if not file_exists(out_file):
-        fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
-        if _count_fastq_reads(fastq, min_reads) < min_reads:
-            write_empty_vcf(out_file)
-        else:
-            local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
-            indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
-            cortex_out = _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size,
-                                                      "sample": _get_sample_name(align_bam)},
-                                     out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
-                                                    "vcftools": vcftools_dir},
-                                     config)
-            if cortex_out:
-                _remap_cortex_out(cortex_out, region, out_file)
-            else:
+    try:
+        out_vcf_base = os.path.join(base_dir, "{0}-{1}".format(
+                    os.path.splitext(os.path.basename(out_file_base))[0], region_str))
+        out_file = os.path.join(work_dir, os.path.basename("{0}.vcf".format(out_vcf_base)))
+        if not file_exists(out_file):
+            fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
+            if _count_fastq_reads(fastq, min_reads) < min_reads:
                 write_empty_vcf(out_file)
-    if os.path.exists(base_dir):
-        shutil.rmtree(base_dir)
+            else:
+                local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
+                indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
+                cortex_out = _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size,
+                                                          "sample": _get_sample_name(align_bam)},
+                                         out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
+                                                        "vcftools": vcftools_dir},
+                                         config)
+                if cortex_out:
+                    _remap_cortex_out(cortex_out, region, out_file)
+                else:
+                    write_empty_vcf(out_file)
+    finally:
+        if os.path.exists(base_dir):
+            shutil.rmtree(base_dir)
     return out_file
 
 def _remap_cortex_out(cortex_out, region, out_file):
