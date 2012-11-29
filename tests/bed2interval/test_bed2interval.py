@@ -22,7 +22,3 @@ class TestBed2interval(unittest.TestCase):
         out_file = bed2interval(self.in_file, self.bed,
                                 out_file=tmpfile.name)
         self.assertTrue(filecmp.cmp(self.correct_file, out_file))
-
-        #if __name__ == "__main__":
-        #    suite = unittest.TestLoader().loadTestsFromTestCase(TestBed2interval)
-        #    unittest.TextTestRunner(verbosity=2).run(suite)

@@ -1,5 +1,5 @@
-input: tests/data/organisms/mouse/mouse_chr17.bam
-correct: tests/bed2interval/mouse_chr17.interval
+input: tests/data/organisms/mouse/mouse.bam
+correct: tests/bed2interval/mouse.interval
 
 annotation:
-  bed: tests/data/organisms/mouse/mouse_chr17.bed
+  bed: tests/data/organisms/mouse/mouse.bed
