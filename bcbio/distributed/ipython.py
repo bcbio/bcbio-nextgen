@@ -25,7 +25,7 @@ def _start(workers_needed, profile, cluster_id, delay):
     """
     subprocess.check_call(["ipcluster", "start",
                            "--daemonize=True",
-                           "--delay=%s" % delay, 
+                           "--delay=%s" % delay,
                            "--log-level=%s" % "WARN",
                            #"--cluster-id=%s" % cluster_id,
                            "--n=%s" % workers_needed,
@@ -47,7 +47,7 @@ def _is_up(profile, cluster_id, n):
         return up >= n
 
 @contextlib.contextmanager
-def cluster_view(parallel):
+def cluster_view(parallel, config):
     """Provide a view on an ipython cluster for processing.
 
     parallel is a dictionary with:
@@ -86,6 +86,11 @@ def cluster_view(parallel):
                 raise IOError("Cluster startup timed out.")
         #client = Client(profile=profile, cluster_id=cluster_id)
         client = Client(profile=profile)
+        # push config to all engines and force them to set up logging
+        client[:]['config'] = config
+        client[:].execute('from bcbio.log import setup_logging')
+        client[:].execute('setup_logging(config)')
+        client[:].execute('from bcbio.log import logger')
         yield client.load_balanced_view()
     finally:
         _stop(profile, cluster_id)
@@ -139,7 +144,7 @@ def runner(parallel, fn_name, items, work_dir, config):
     # Run on a multicore queue with available cores on the same machine
     elif queue_type == "multicore":
         logger.info("ipython: %s -- multicore" % fn_name)
-        with cluster_view(parallel) as view:
+        with cluster_view(parallel, config) as view:
             for args in items:
                 if args:
                     data = view.apply_sync(fn, args)
@@ -148,7 +153,7 @@ def runner(parallel, fn_name, items, work_dir, config):
     # Run on a standard parallel queue
     else:
         logger.info("ipython: %s -- parallel" % fn_name)
-        with cluster_view(parallel) as view:
+        with cluster_view(parallel, config) as view:
             xs = [x for x in items if x is not None]
             if len(xs) > 0:
                 for data in view.map_sync(fn, xs):
