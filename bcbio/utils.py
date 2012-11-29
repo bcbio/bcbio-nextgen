@@ -166,6 +166,28 @@ def add_full_path(dirname, basedir=None):
         dirname = os.path.join(basedir, dirname)
     return dirname
 
+
+def append_stem(filename, word, delim="_"):
+    """
+    returns a filename with 'word' appended to the stem
+    example: append_stem("/path/to/test.sam", "filtered") ->
+    "/path/to/test_filtered.sam"
+
+    """
+    (base, ext) = os.path.splitext(filename)
+    return "".join([base, delim, word, ext])
+
+
+def replace_suffix(filename, suffix):
+    """
+    replace the suffix of filename with suffix
+    example: replace_suffix("/path/to/test.sam", ".bam") ->
+    "/path/to/test.bam"
+
+    """
+    (base, _) = os.path.splitext(filename)
+    return base + suffix
+
 # ## Functional programming
 
 def partition_all(n, iterable):
@@ -197,3 +219,18 @@ def merge_config_files(fnames):
             else:
                 out[k] = v
     return out
+
+
+def get_in(d, t, default=None):
+    """
+    look up if you can get a tuple of values from a nested dictionary,
+    each item in the tuple a deeper layer
+
+    example: get_in({1: {2: 3}}, (1, 2)) -> 3
+    example: get_in({1: {2: 3}}, (2, 3)) -> {}
+    """
+    result = reduce(lambda d, t: d.get(t, {}), t, d)
+    if not result:
+        return default
+    else:
+        return result
