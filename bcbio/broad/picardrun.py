@@ -197,6 +197,10 @@ def bed2interval(align_file, bed, out_file=None):
     Picard tools by grabbing the header from the alignment file, reording
     the bed file columns and gluing them together.
 
+    align_file can be in BAM or SAM format.
+    bed needs to be in bed12 format:
+    http://genome.ucsc.edu/FAQ/FAQformat.html#format1.5
+
     """
 
     base, ext = os.path.splitext(align_file)
