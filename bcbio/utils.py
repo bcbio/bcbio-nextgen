@@ -12,7 +12,7 @@ try:
     from multiprocessing.pool import IMapIterator
 except ImportError:
     multiprocessing = None
-
+import collections
 import yaml
 
 @contextlib.contextmanager
@@ -234,3 +234,40 @@ def get_in(d, t, default=None):
         return default
     else:
         return result
+
+
+def flatten(l):
+    """
+    flatten an irregular list of lists
+    example: flatten([[[1, 2, 3], [4, 5]], 6]) -> [1, 2, 3, 4, 5, 6]
+    lifted from: http://stackoverflow.com/questions/2158395/
+
+    """
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el,
+                                                                   basestring):
+            for sub in flatten(el):
+                yield sub
+        else:
+            yield el
+
+
+def is_sequence(arg):
+    """
+    check if 'arg' is a sequence
+
+    example: arg([]) -> True
+    example: arg("lol") -> False
+
+    """
+    return (not hasattr(arg, "strip") and
+            hasattr(arg, "__getitem__") or
+            hasattr(arg, "__iter__"))
+
+
+def is_pair(arg):
+    """
+    check if 'arg' is a two-item sequence
+
+    """
+    return is_sequence(arg) and len(arg) == 2
