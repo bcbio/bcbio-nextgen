@@ -219,10 +219,9 @@ def bed2interval(align_file, bed, out_file=None):
         return reordered + "\n"
 
     with file_transaction(out_file) as tx_out_file:
-        with open(bed) as bed_handle, open(tx_out_file, "w") as out_handle:
-            out_handle.write(header)
-
-            for line in bed_handle:
-                out_handle.write(reorder_line(line))
-
+        with open(bed) as bed_handle:
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write(header)
+                for line in bed_handle:
+                    out_handle.write(reorder_line(line))
     return out_file
