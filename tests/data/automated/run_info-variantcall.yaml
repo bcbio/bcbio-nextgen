@@ -8,6 +8,7 @@ details:
       #variantcaller: freebayes
       #variantcaller: cortex
       #sv_detection: hydra
+      #ensemble: true
       quality_format: Standard
       coverage_interval: regional
       trim_reads: true

@@ -2,7 +2,7 @@
 """
 from bcbio import utils
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype
+from bcbio.variation import realign, genotype, ensemble
 
 @utils.map_wrap
 def process_lane(*args):
@@ -51,3 +51,7 @@ def combine_variant_files(*args):
 @utils.map_wrap
 def detect_sv(*args):
     return variation.detect_sv(*args)
+
+@utils.map_wrap
+def combine_calls(*args):
+    return ensemble.combine_calls(*args)
