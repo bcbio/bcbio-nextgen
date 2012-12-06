@@ -61,6 +61,8 @@ custom_algorithms:
 # - Specify usage for memory intensive programs
 # - Define cores that can be used for multicore programs.
 resources:
+  bcbio_variation:
+    dir: /usr/share/java/bcbio_variation
   ucsc_bigwig:
     memory: 36g
   bowtie:
