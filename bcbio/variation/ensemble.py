@@ -21,15 +21,15 @@ def combine_calls(data):
     if len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble"):
         logger.info("Ensemble consensus calls for {0}: {1}".format(
             ",".join(x["variantcaller"] for x in data["variants"]), data["work_bam"]))
+        sample = data["name"][-1].replace(" ", "_")
         base_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "ensemble"))
-        config_file = _write_config_file(data, base_dir)
-        callinfo = _run_bcbio_variation(config_file, base_dir, data)
+        config_file = _write_config_file(data, sample, base_dir)
+        callinfo = _run_bcbio_variation(config_file, base_dir, sample, data)
         print callinfo
         data["variants"] = data["variants"].insert(0, callinfo)
     return [[data]]
 
-def _run_bcbio_variation(config_file, base_dir, data):
-    sample = data["name"][-1]
+def _run_bcbio_variation(config_file, base_dir, sample, data):
     out_vcf_file = os.path.join(base_dir, "{0}-ensembl.vcf".format(sample))
     out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(sample))
     if not utils.file_exists(out_vcf_file):
@@ -37,8 +37,8 @@ def _run_bcbio_variation(config_file, base_dir, data):
                                       config_utils.get_program("bcbio_variation",
                                                                data["config"], "dir"))
         subprocess.check_call(["java", "-jar", bv_jar, "variant-compare", config_file])
-        base_vcf = glob.glob(os.path.join(base_dir, "work", "prep", "*-cfilter.vcf"))[0]
-        base_bed = glob.glob(os.path.join(base_dir, "work", "prep", "*-multicombine.bed"))[0]
+        base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep", "*-cfilter.vcf"))[0]
+        base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep", "*-multicombine.bed"))[0]
         os.symlink(base_vcf, out_vcf_file)
         os.symlink(base_bed, out_bed_file)
 
@@ -46,11 +46,12 @@ def _run_bcbio_variation(config_file, base_dir, data):
             "vrn_file": out_vcf_file,
             "bed_file": out_bed_file}
 
-def _write_config_file(data, base_dir):
-    config_dir = utils.safe_makedir(os.path.join(base_dir, "config"))
+def _write_config_file(data, sample, base_dir):
+    sample_dir = os.path.join(base_dir, sample)
+    config_dir = utils.safe_makedir(os.path.join(sample_dir, "config"))
     config_file = os.path.join(config_dir, "ensemble.yaml")
-    econfig = _prep_ensemble_config(data["name"][-1], data["variants"],
-                                    data["work_bam"], data["sam_ref"], base_dir,
+    econfig = _prep_ensemble_config(sample, data["variants"],
+                                    data["work_bam"], data["sam_ref"], sample_dir,
                                     data["config"]["algorithm"].get("variant_regions", None),
                                     data["config"]["algorithm"])
     with open(config_file, "w") as out_handle:

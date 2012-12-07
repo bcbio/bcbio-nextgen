@@ -9,6 +9,8 @@ import shutil
 import contextlib
 import collections
 
+from nose.plugins.attrib import attr
+
 @contextlib.contextmanager
 def make_workdir():
     remove_old_dir = True
@@ -72,6 +74,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         else:
             return sample
 
+    @attr(speed=3)
     def test_3_full_pipeline(self):
         """Run full automated analysis pipeline with multiplexing.
         """
@@ -83,6 +86,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info.yaml")]
             subprocess.check_call(cl)
 
+    @attr(speed=3)
     def test_4_empty_fastq(self):
         """Handle analysis of empty fastq inputs from failed runs.
         """
@@ -93,6 +97,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-empty.yaml")]
             subprocess.check_call(cl)
 
+    @attr(speed=2)
     def test_2_rnaseq(self):
         """Run an RNA-seq analysis with TopHat and Cufflinks.
         """
@@ -104,6 +109,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
             subprocess.check_call(cl)
 
+    @attr(speed=1)
     def test_1_variantcall(self):
         """Test variant calling with GATK pipeline.
         """
@@ -115,6 +121,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-variantcall.yaml")]
             subprocess.check_call(cl)
 
+    @attr(speed=2)
     def test_5_bam(self):
         """Allow BAM files as input to pipeline.
         """
