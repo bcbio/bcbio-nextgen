@@ -8,10 +8,10 @@ details:
       #variantcaller: freebayes
       #variantcaller: cortex
       #sv_detection: hydra
-      ensemble:
-        format-filters: [DP < 4]
-        classifiers: [DP, QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, Entropy, HRun, MFE, NBQ, MQ]
-        trusted_pct: 0.65
+      # ensemble:
+      #   format-filters: [DP < 4]
+      #   classifiers: [DP, QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, Entropy, HRun, MFE, NBQ, MQ]
+      #   trusted_pct: 0.65
       quality_format: Standard
       coverage_interval: regional
       trim_reads: true
