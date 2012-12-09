@@ -15,6 +15,7 @@ import itertools
 import collections
 
 from bcbio import broad
+from bcbio.log import logger
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
@@ -233,6 +234,7 @@ def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
     out_file = "{base}-filter{ftype}{ext}".format(base=base, ext=ext,
                                                   ftype=filter_type)
     if not file_exists(out_file):
+        logger.info("Hard filtering %s with %s" % (snp_file, expressions))
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "VariantFiltration",
                       "-R", ref_file,
