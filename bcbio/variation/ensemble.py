@@ -98,7 +98,7 @@ def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
         exp["intervals"] = os.path.abspath(intervals)
     for i, v in enumerate(variants):
         cur = {"name": v["variantcaller"], "file": v["vrn_file"],
-               "annotate": do_combo}
+               "annotate": do_combo, "remove-refcalls": True}
         if algorithm.get("ploidy", 2) == 1:
             cur["make-haploid"] = True
         # add a recall variant for the first sample which will combine all calls
