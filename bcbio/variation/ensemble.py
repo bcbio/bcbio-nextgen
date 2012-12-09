@@ -23,14 +23,15 @@ def combine_calls(data):
             ",".join(x["variantcaller"] for x in data["variants"]), data["work_bam"]))
         sample = data["name"][-1].replace(" ", "_")
         base_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "ensemble"))
-        config_file = _write_config_file(data, sample, base_dir)
+        config_file = _write_config_file(data, sample, base_dir, "ensemble")
         callinfo = _run_bcbio_variation(config_file, base_dir, sample, data)
-        print callinfo
-        data["variants"] = data["variants"].insert(0, callinfo)
+        data = copy.deepcopy(data)
+        data["variants"].insert(0, callinfo)
+        _write_config_file(data, sample, base_dir, "compare")
     return [[data]]
 
 def _run_bcbio_variation(config_file, base_dir, sample, data):
-    out_vcf_file = os.path.join(base_dir, "{0}-ensembl.vcf".format(sample))
+    out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(sample))
     out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(sample))
     if not utils.file_exists(out_vcf_file):
         bv_jar = config_utils.get_jar("bcbio.variation",
@@ -46,11 +47,15 @@ def _run_bcbio_variation(config_file, base_dir, sample, data):
             "vrn_file": out_vcf_file,
             "bed_file": out_bed_file}
 
-def _write_config_file(data, sample, base_dir):
+def _write_config_file(data, sample, base_dir, config_name):
+    """Write YAML configuration to generate an ensemble set of combined calls.
+    """
     sample_dir = os.path.join(base_dir, sample)
     config_dir = utils.safe_makedir(os.path.join(sample_dir, "config"))
-    config_file = os.path.join(config_dir, "ensemble.yaml")
-    econfig = _prep_ensemble_config(sample, data["variants"],
+    config_file = os.path.join(config_dir, "{0}.yaml".format(config_name))
+    prep_fns = {"ensemble": _prep_config_ensemble, "compare": _prep_config_compare}
+
+    econfig = prep_fns[config_name](sample, data["variants"],
                                     data["work_bam"], data["sam_ref"], sample_dir,
                                     data["config"]["algorithm"].get("variant_regions", None),
                                     data["config"]["algorithm"])
@@ -58,30 +63,46 @@ def _write_config_file(data, sample, base_dir):
         yaml.dump(econfig, out_handle, allow_unicode=False, default_flow_style=False)
     return config_file
 
-def _prep_ensemble_config(sample, variants, align_bam, ref_file, base_dir,
+def _prep_config_compare(sample, variants, align_bam, ref_file, base_dir,
+                         intervals, algorithm):
+    """Write YAML bcbio.variation configuration input for results comparison.
+
+    Preps a config file making it easy to compare finalized combined calls
+    to individual inputs.
+    """
+    return _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
+                               intervals, algorithm, "compare", False)
+
+def _prep_config_ensemble(sample, variants, align_bam, ref_file, base_dir,
                           intervals, algorithm):
     """Prepare a YAML configuration file describing the sample inputs.
     """
+    return _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
+                               intervals, algorithm, "work", True)
+
+def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
+                          intervals, algorithm, work_dir, do_combo):
     combo_name = "combo"
-    exp = {"sample": sample, "ref": ref_file, "align": align_bam, "calls": [],
-           "finalize": [{"method": "multiple",
-                         "target": combo_name},
-                        {"method": "recal-filter",
-                         "target": [combo_name, variants[1]["variantcaller"]],
-                         "params": {"support": combo_name,
-                                    "classifiers": algorithm["ensemble"]["classifiers"],
-                                    "xspecific": True,
-                                     "trusted":
-                                     {"total": algorithm["ensemble"].get("trusted_pct", 0.65)}}}]}
+    exp = {"sample": sample, "ref": ref_file, "align": align_bam, "calls": []}
+    if do_combo:
+        exp["finalize"] = [{"method": "multiple",
+                            "target": combo_name},
+                            {"method": "recal-filter",
+                             "target": [combo_name, variants[1]["variantcaller"]],
+                             "params": {"support": combo_name,
+                                        "classifiers": algorithm["ensemble"]["classifiers"],
+                                        "xspecific": True,
+                                        "trusted":
+                                        {"total": algorithm["ensemble"].get("trusted_pct", 0.65)}}}]
     if intervals:
         exp["intervals"] = os.path.abspath(intervals)
     for i, v in enumerate(variants):
         cur = {"name": v["variantcaller"], "file": v["vrn_file"],
-               "annotate": True}
+               "annotate": do_combo}
         if algorithm.get("ploidy", 2) == 1:
             cur["make-haploid"] = True
         # add a recall variant for the first sample which will combine all calls
-        if i == 0:
+        if i == 0 and do_combo:
             recall = copy.deepcopy(cur)
             recall["name"] = combo_name
             recall["recall"] = True
@@ -89,5 +110,5 @@ def _prep_ensemble_config(sample, variants, align_bam, ref_file, base_dir,
                 recall["format-filters"] = algorithm["ensemble"]["format-filters"]
             exp["calls"].append(recall)
         exp["calls"].append(cur)
-    return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
+    return {"dir": {"base": base_dir, "out": work_dir, "prep": os.path.join(work_dir, "prep")},
             "experiments": [exp]}
