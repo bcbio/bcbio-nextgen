@@ -1,0 +1,21 @@
+##fileformat=VCFv4.1
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END for imprecise variants">
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=DUP:TANDEM,Description="Tandem Duplication">
+##source=hydra
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chr22	7764	hydra2	A	<DEL>	.	PASS	SVTYPE=DEL;IMPRECISE;CIPOS=0,171;CIEND=0,102;END=12111;SVLEN=-4348
+chr22	8764	hydra3a	A	[chr22:11112[A	.	PASS	SVTYPE=BND;MATEID=hydra3b;IMPRECISE;CIPOS=0,171
+chr22	9764	hydra1a	G	G]chr22:10112]	.	PASS	SVTYPE=BND;MATEID=hydra1b;IMPRECISE;CIPOS=0,171
+chr22	9764	hydra4a	G	]chr22:13112]G	.	PASS	SVTYPE=BND;MATEID=hydra4b;IMPRECISE;CIPOS=0,171
+chr22	10112	hydra1b	C	C]chr22:9764]	.	PASS	SVTYPE=BND;MATEID=hydra1a;IMPRECISE;CIPOS=0,102
+chr22	11112	hydra3b	T	[chr22:8764[T	.	PASS	SVTYPE=BND;MATEID=hydra3a;IMPRECISE;CIPOS=0,102
+chr22	13112	hydra4b	A	A[chr22:9764[	.	PASS	SVTYPE=BND;MATEID=hydra4a;IMPRECISE;CIPOS=0,102
