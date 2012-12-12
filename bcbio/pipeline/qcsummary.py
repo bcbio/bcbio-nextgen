@@ -231,16 +231,17 @@ def write_metrics(run_info, fc_name, fc_date, dirs):
     with open(out_file, "w") as out_handle:
         metrics = dict(lanes=lane_stats, samples=sample_stats)
         yaml.dump(metrics, out_handle, default_flow_style=False)
-    tab_out_file = os.path.join(dirs["flowcell"], "run_summary.tsv")
-    try:
-        with open(tab_out_file, "w") as out_handle:
-            writer = csv.writer(out_handle, dialect="excel-tab")
-            for info in tab_metrics:
-                writer.writerow(info)
-    # If on NFS mounted directory can fail due to filesystem or permissions
-    # errors. That's okay, we'll just not write the file.
-    except IOError:
-        pass
+    if dirs["flowcell"]:
+        tab_out_file = os.path.join(dirs["flowcell"], "run_summary.tsv")
+        try:
+            with open(tab_out_file, "w") as out_handle:
+                writer = csv.writer(out_handle, dialect="excel-tab")
+                for info in tab_metrics:
+                    writer.writerow(info)
+        # If on NFS mounted directory can fail due to filesystem or permissions
+        # errors. That's okay, we'll just not write the file.
+        except IOError:
+            pass
     return out_file
 
 def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
@@ -293,16 +294,17 @@ def _metrics_from_stats(stats):
 def _bustard_stats(lane_num, fastq_dir, fc_date, analysis_dir):
     """Extract statistics about the flow cell from Bustard outputs.
     """
-    sum_file = os.path.join(fastq_dir, os.pardir, "BustardSummary.xml")
-    #sum_file = os.path.join(fc_dir, "Data", "Intensities", "BaseCalls",
-    #        "BustardSummary.xml")
     stats = dict()
-    if os.path.exists(sum_file):
-        with open(sum_file) as in_handle:
-            results = ET.parse(in_handle).getroot().find("TileResultsByLane")
-            for lane in results:
-                if lane.find("laneNumber").text == str(lane_num):
-                    stats = _collect_cluster_stats(lane)
+    if fastq_dir:
+        sum_file = os.path.join(fastq_dir, os.pardir, "BustardSummary.xml")
+        #sum_file = os.path.join(fc_dir, "Data", "Intensities", "BaseCalls",
+        #        "BustardSummary.xml")
+        if os.path.exists(sum_file):
+            with open(sum_file) as in_handle:
+                results = ET.parse(in_handle).getroot().find("TileResultsByLane")
+                for lane in results:
+                    if lane.find("laneNumber").text == str(lane_num):
+                        stats = _collect_cluster_stats(lane)
     read_stats = _calc_fastq_stats(analysis_dir, lane_num, fc_date)
     stats.update(read_stats)
     return stats
@@ -348,7 +350,7 @@ _section_template = r"""
     \hline
     % for label, val, extra in summary_table:
         %if label is not None:
-            ${label} & ${val} & ${extra} \\ 
+            ${label} & ${val} & ${extra} \\%
         %else:
             \hline
         %endif
@@ -378,10 +380,10 @@ _section_template = r"""
     \centering
     \begin{tabular}{|p{8cm}rrp{4cm}|}
     \hline
-    Sequence & Count & Percent & Match \\ 
+    Sequence & Count & Percent & Match \\%
     \hline
     % for seq, count, percent, match in overrep:
-        \texttt{${seq}} & ${count} & ${"%.2f" % float(percent)} & ${match} \\ 
+        \texttt{${seq}} & ${count} & ${"%.2f" % float(percent)} & ${match} \\%
     % endfor
     \hline
     \end{tabular}

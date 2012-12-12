@@ -16,6 +16,7 @@ from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
+from bcbio.variation import ensemble
 
 def run_main(config, config_file, work_dir, parallel,
              fc_dir=None, run_info_yaml=None):
@@ -50,6 +51,7 @@ def run_main(config, config_file, work_dir, parallel,
     samples = run_parallel("postprocess_variants", samples)
     samples = combine_multiple_callers(samples)
     samples = run_parallel("detect_sv", samples)
+    samples = run_parallel("combine_calls", samples)
     run_parallel("process_sample", samples)
     run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
     write_project_summary(samples)
@@ -91,7 +93,7 @@ def parse_cl_args(in_args):
     parser.add_argument("-n", "--numcores", type=int, default=0)
     parser.add_argument("-t", "--paralleltype")
     parser.add_argument("-p", "--profile", default="default")
-    
+
     args = parser.parse_args(in_args)
     config_file = args.inputs[0]
     kwargs = {"numcores": args.numcores if args.numcores > 0 else None,

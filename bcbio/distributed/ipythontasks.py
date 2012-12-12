@@ -5,7 +5,7 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype
+from bcbio.variation import realign, genotype, ensemble
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
@@ -87,3 +87,10 @@ def combine_variant_files(*args):
 def detect_sv(*args):
     with _setup_logging(args):
         return apply(variation.detect_sv, *args)
+
+@require(ensemble)
+def combine_calls(*args):
+    with _setup_logging(args):
+        return apply(ensemble.combine_calls, *args)
+
+    

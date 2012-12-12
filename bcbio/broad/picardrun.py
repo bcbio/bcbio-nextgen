@@ -1,10 +1,12 @@
 """Convenience functions for running common Picard utilities.
 """
 import os
+from contextlib import closing
+
+import pysam
 
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.transaction import file_transaction
-import sh
 
 
 def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
@@ -207,12 +209,8 @@ def bed2interval(align_file, bed, out_file=None):
     if out_file is None:
         out_file = base + ".interval"
 
-    if ext == ".bam":
-        header = str(sh.samtools("view", "-H", align_file))
-    elif ext == ".sam":
-        header = str(sh.samtools("view", "-H", "-S", align_file))
-    else:
-        raise ValueError("%s is not a BAM or SAM file." % (align_file))
+    with closing(pysam.Samfile(align_file, "r" if ext.endswith(".sam") else "rb")) as in_bam:
+        header = in_bam.text
 
     def reorder_line(line):
         splitline = line.strip().split("\t")
@@ -221,10 +219,9 @@ def bed2interval(align_file, bed, out_file=None):
         return reordered + "\n"
 
     with file_transaction(out_file) as tx_out_file:
-        with open(bed) as bed_handle, open(tx_out_file, "w") as out_handle:
-            out_handle.write(header)
-
-            for line in bed_handle:
-                out_handle.write(reorder_line(line))
-
+        with open(bed) as bed_handle:
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write(header)
+                for line in bed_handle:
+                    out_handle.write(reorder_line(line))
     return out_file
