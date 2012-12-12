@@ -46,8 +46,10 @@ def _prep_ensemble_config(sample, variants, align_bam, ref_file, base_dir,
                          "target": [combo_name, variants[1]["variantcaller"]],
                          "params": {"support": combo_name,
                                     "classifiers": algorithm["ensemble"]["classifiers"],
+                                    "classifier-type": algorithm["ensemble"].get("classifier-type", "svm"),
+                                    "normalize": algorithm["ensemble"].get("normalize", "default"),
                                     "xspecific": True,
-                                     "trusted": {"total": algorithm["ensemble"].get("trusted_pct", 0.65)}}}]}
+                                     "trusted": {"total": algorithm["ensemble"].get("trusted-pct", 0.65)}}}]}
     if intervals:
         exp["intervals"] = os.path.abspath(intervals)
     for i, v in enumerate(variants):
