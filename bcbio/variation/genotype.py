@@ -473,7 +473,9 @@ def combine_multiple_callers(data):
                         "vrn_file": x["vrn_file"]}
                        for x in grouped_calls]
         final = grouped_calls[0]
-        final["variants"] = ready_calls
+        def orig_variantcaller_order(x):
+            return final["config"]["algorithm"]["orig_variantcaller"].index(x["variantcaller"])
+        final["variants"] = sorted(ready_calls, key=orig_variantcaller_order)
         out.append([final])
     return out
 
@@ -488,6 +490,8 @@ def _handle_multiple_variantcallers(data):
         out = []
         for caller in callers:
             base = copy.deepcopy(data[0])
+            base["config"]["algorithm"]["orig_variantcaller"] = \
+              base["config"]["algorithm"]["variantcaller"]
             base["config"]["algorithm"]["variantcaller"] = caller
             out.append([base])
         return out
