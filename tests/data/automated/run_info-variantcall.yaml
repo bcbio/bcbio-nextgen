@@ -10,7 +10,7 @@ details:
       #sv_detection: hydra
       # ensemble:
       #   format-filters: [DP < 4]
-      #   classifiers: [QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, Entropy, HRun, MFE, NBQ, MQ]
+      #   classifiers: [DP, QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, Entropy, HRun, MFE, NBQ, MQ]
       #   trusted_pct: 0.65
       quality_format: Standard
       coverage_interval: regional

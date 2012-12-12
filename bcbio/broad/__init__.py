@@ -50,7 +50,8 @@ class BroadRunner:
         subprocess.check_call(cl)
 
     def run_gatk(self, params, tmp_dir=None):
-        support_nt = set(["UnifiedGenotyper", "CountCovariates", "VariantEval"])
+        #support_nt = set(["UnifiedGenotyper", "VariantEval"])
+        support_nt = set()
         support_nct = set(["BaseRecalibrator"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []

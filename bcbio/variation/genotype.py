@@ -15,6 +15,7 @@ import itertools
 import collections
 
 from bcbio import broad
+from bcbio.log import logger
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
@@ -148,7 +149,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
 def variant_filtration(call_file, ref_file, vrn_files, config):
     """Filter variant calls using Variant Quality Score Recalibration.
 
-    Newer GATK with Haplotype calling has
+    Newer GATK with Haplotype calling has combined SNP/indel filtering.
     """
     broad_runner = broad.runner_from_config(config)
     caller = config["algorithm"].get("variantcaller")
@@ -233,6 +234,7 @@ def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
     out_file = "{base}-filter{ftype}{ext}".format(base=base, ext=ext,
                                                   ftype=filter_type)
     if not file_exists(out_file):
+        logger.info("Hard filtering %s with %s" % (snp_file, expressions))
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "VariantFiltration",
                       "-R", ref_file,
@@ -257,12 +259,15 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
         filter_type, cov_interval, snp_file, ref_file, vrn_files)
     assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
            "Need HapMap and 1000 genomes training files"
+    filters = ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
+               "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
+    # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
+    # resulting in excessive filtering, so avoid this metric
+    if variantcaller not in ["gatk-haplotype"]:
+        filters.append("HaplotypeScore > 13.0")
     if cov_interval == "regional" or variantcaller == "freebayes":
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
-                                           ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
-                                            "HaplotypeScore > 13.0",
-                                            "MQRankSum < -12.5",
-                                            "ReadPosRankSum < -8.0"])
+                                           filters)
     else:
         # also check if we've failed recal and needed to do strict filtering
         filter_file = "{base}-filterSNP.vcf".format(base = os.path.splitext(snp_file)[0])

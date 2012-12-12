@@ -3,12 +3,15 @@
 import os
 import unittest
 
+from nose.plugins.attrib import attr
+
 from bcbio.pipeline.run_info import _generate_lane, get_run_info
 
 class RunInfoTest(unittest.TestCase):
     def setUp(self):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data")
 
+    @attr(speed="std")
     def test_lanename(self):
         """Generate lane names from supplied filenames.
         """
@@ -17,6 +20,7 @@ class RunInfoTest(unittest.TestCase):
         assert _generate_lane(["s_1_1-sequence.txt", "s_1_2-sequence.txt"], 2) == "1"
         assert _generate_lane(["one.txt", "two.txt"], 2) == "3"
 
+    @attr(speed=1)
     def test_run_info_combine(self):
         """Combine multiple lanes in a test run into a single combined lane.
         """

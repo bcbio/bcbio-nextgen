@@ -42,8 +42,27 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
                   "--left-align-indels", "--use-mapping-quality"]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
-    _remove_freebayes_refalt_dups(out_file)
+        _remove_freebayes_refalt_dups(out_file)
+        _post_filter_freebayes(out_file, ref_file, broad_runner)
     return out_file
+
+def _move_vcf(orig_file, new_file):
+    """Move a VCF file with associated index.
+    """
+    for ext in ["", ".idx"]:
+        to_move = orig_file + ext
+        if os.path.exists(to_move):
+            shutil.move(to_move, new_file + ext)
+
+def _post_filter_freebayes(orig_file, ref_file, broad_runner):
+    """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
+    """
+    in_file = apply("{0}-raw{1}".format, os.path.splitext(orig_file))
+    _move_vcf(orig_file, in_file)
+    filters = ["QUAL < 20.0", "DP < 5"]
+    filter_file = genotype.variant_filtration_with_exp(broad_runner,
+                                                       in_file, ref_file, "", filters)
+    _move_vcf(filter_file, orig_file)
 
 def _remove_freebayes_refalt_dups(in_file):
     """Remove lines from FreeBayes outputs where REF/ALT are identical.
@@ -60,8 +79,8 @@ def _remove_freebayes_refalt_dups(in_file):
                         parts = line.split("\t")
                         if parts[3] != parts[4]:
                             out_handle.write(line)
-        shutil.move(in_file, "{0}.orig".format(in_file))
-        shutil.move(out_file, in_file)
+        _move_vcf(in_file, "{0}.orig".format(in_file))
+        _move_vcf(out_file, in_file)
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(in_file))
 
@@ -71,9 +90,6 @@ def postcall_annotate(in_file, ref_file, vrn_files, config):
     #out_file = _check_file_gatk_merge(in_file)
     out_file = annotation.annotate_nongatk_vcf(in_file, vrn_files.dbsnp,
                                                ref_file, config)
-    #filters = ["QUAL < 20.0", "DP < 5"]
-    #out_file = genotype.variant_filtration_with_exp(broad.runner_from_config(config),
-    #                                                out_file, ref_file, "", filters)
     return out_file
 
 def _check_file_gatk_merge(vcf_file):
