@@ -38,8 +38,10 @@ def _run_bcbio_variation(config_file, base_dir, sample, data):
                                       config_utils.get_program("bcbio_variation",
                                                                data["config"], "dir"))
         subprocess.check_call(["java", "-jar", bv_jar, "variant-compare", config_file])
-        base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep", "*-cfilter.vcf"))[0]
-        base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep", "*-multicombine.bed"))[0]
+        base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
+                                          "*-cfilter.vcf"))[0]
+        base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep",
+                                          "*-multicombine.bed"))[0]
         os.symlink(base_vcf, out_vcf_file)
         os.symlink(base_bed, out_bed_file)
 
@@ -83,18 +85,20 @@ def _prep_config_ensemble(sample, variants, align_bam, ref_file, base_dir,
 def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
                           intervals, algorithm, work_dir, do_combo):
     combo_name = "combo"
-    exp = {"sample": sample, "ref": ref_file, "align": align_bam, "calls": [],
-           "finalize": [{"method": "multiple",
-                         "target": combo_name},
-                        {"method": "recal-filter",
-                         "target": [combo_name, variants[0]["variantcaller"]],
-                         "params": {"support": combo_name,
-                                    "classifiers": algorithm["ensemble"]["classifiers"],
-                                    "classifier-type": algorithm["ensemble"].get("classifier-type", "svm"),
-                                    "normalize": algorithm["ensemble"].get("normalize", "default"),
-                                    "xspecific": True,
-                                     "trusted":
-                                     {"total": algorithm["ensemble"].get("trusted-pct", 0.65)}}}]}
+    exp = {"sample": sample, "ref": ref_file, "align": align_bam, "calls": []}
+    if do_combo:
+        exp["finalize"] = \
+          [{"method": "multiple",
+            "target": combo_name},
+            {"method": "recal-filter",
+             "target": [combo_name, variants[0]["variantcaller"]],
+             "params": {"support": combo_name,
+                        "classifiers": algorithm["ensemble"]["classifiers"],
+                        "classifier-type": algorithm["ensemble"].get("classifier-type", "svm"),
+                        "normalize": algorithm["ensemble"].get("normalize", "default"),
+                        "xspecific": True,
+                        "trusted":
+                        {"total": algorithm["ensemble"].get("trusted-pct", 0.65)}}}]
     if intervals:
         exp["intervals"] = os.path.abspath(intervals)
     for i, v in enumerate(variants):
