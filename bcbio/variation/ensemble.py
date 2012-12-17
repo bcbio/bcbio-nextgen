@@ -87,6 +87,7 @@ def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
     combo_name = "combo"
     exp = {"sample": sample, "ref": ref_file, "align": align_bam, "calls": []}
     if do_combo:
+        cparams = algorithm["ensemble"].get("classifier-params", {})
         exp["finalize"] = \
           [{"method": "multiple",
             "target": combo_name},
@@ -94,8 +95,9 @@ def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
              "target": [combo_name, variants[0]["variantcaller"]],
              "params": {"support": combo_name,
                         "classifiers": algorithm["ensemble"]["classifiers"],
-                        "classifier-type": algorithm["ensemble"].get("classifier-type", "svm"),
-                        "normalize": algorithm["ensemble"].get("normalize", "default"),
+                        "classifier-type": cparams.get("type", "svm"),
+                        "normalize": cparams.get("normalize", "default"),
+                        "log-attrs": cparams.get("log-attrs", []),
                         "xspecific": True,
                         "trusted":
                         {"total": algorithm["ensemble"].get("trusted-pct", 0.65)}}}]
