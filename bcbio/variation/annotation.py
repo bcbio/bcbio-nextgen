@@ -61,7 +61,7 @@ def _general_snpeff_version(snpeff_file):
                         out_handle.write(line)
     return safe_snpeff
 
-def annotate_nongatk_vcf(orig_file, dbsnp_file, ref_file, config):
+def annotate_nongatk_vcf(orig_file, bam_file, dbsnp_file, ref_file, config):
     """Annotate a VCF file with dbSNP and standard GATK called annotations.
     """
     broad_runner = broad.runner_from_config(config)
@@ -69,18 +69,18 @@ def annotate_nongatk_vcf(orig_file, dbsnp_file, ref_file, config):
     annotations = ["BaseQualityRankSumTest", "DepthOfCoverage", "FisherStrand",
                    "GCContent", "HaplotypeScore", "HomopolymerRun",
                    "MappingQualityRankSumTest", "MappingQualityZero",
-                   "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality"]
-    variant_regions = config["algorithm"].get("variant_regions", None)
+                   "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality",
+                   "DepthPerAlleleBySample"]
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "VariantAnnotator",
                       "-R", ref_file,
+                      "-I", bam_file,
                       "--variant", orig_file,
                       "--dbsnp", dbsnp_file,
-                      "--out", tx_out_file]
+                      "--out", tx_out_file,
+                      "-L", orig_file]
             for x in annotations:
                 params += ["-A", x]
-            if variant_regions:
-                params += ["-L", variant_regions, "--interval_set_rule", "INTERSECTION"]
             broad_runner.run_gatk(params)
     return out_file

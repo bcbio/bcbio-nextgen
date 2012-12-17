@@ -86,11 +86,11 @@ def _remove_freebayes_refalt_dups(in_file):
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(in_file))
 
-def postcall_annotate(in_file, ref_file, vrn_files, config):
+def postcall_annotate(in_file, bam_file, ref_file, vrn_files, config):
     """Perform post-call annotation of FreeBayes calls in preparation for filtering.
     """
     #out_file = _check_file_gatk_merge(in_file)
-    out_file = annotation.annotate_nongatk_vcf(in_file, vrn_files.dbsnp,
+    out_file = annotation.annotate_nongatk_vcf(in_file, bam_file, vrn_files.dbsnp,
                                                ref_file, config)
     return out_file
 
