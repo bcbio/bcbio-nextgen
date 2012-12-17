@@ -105,7 +105,7 @@ def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
         exp["intervals"] = os.path.abspath(intervals)
     for i, v in enumerate(variants):
         cur = {"name": v["variantcaller"], "file": v["vrn_file"],
-               "annotate": do_combo, "remove-refcalls": True}
+               "remove-refcalls": True}
         if algorithm.get("ploidy", 2) == 1:
             cur["make-haploid"] = True
         # add a recall variant for the first sample which will combine all calls
@@ -113,6 +113,7 @@ def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
             recall = copy.deepcopy(cur)
             recall["name"] = combo_name
             recall["recall"] = True
+            recall["annotate"] = True
             if algorithm["ensemble"].get("format-filters"):
                 recall["format-filters"] = algorithm["ensemble"]["format-filters"]
             exp["calls"].append(recall)
