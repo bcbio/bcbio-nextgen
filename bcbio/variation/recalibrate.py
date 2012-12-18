@@ -7,6 +7,9 @@ http://www.broadinstitute.org/gsa/wiki/index.php/Base_quality_score_recalibratio
 """
 import os
 import shutil
+from contextlib import closing
+
+import pysam
 
 from bcbio import broad
 from bcbio.utils import curdir_tmpdir, file_exists
@@ -69,6 +72,25 @@ def _recal_available(recal_file):
                 return True
     return False
 
+def _get_downsample_pct(in_bam):
+    """Calculate a downsampling percent to use for large BAM files.
+
+    Large whole genome BAM files take an excessively long time to recalibrate and
+    the extra inputs don't help much beyond a certain point. See the 'Downsampling analysis'
+    plots in the GATK documentation:
+
+    http://gatkforums.broadinstitute.org/discussion/44/base-quality-score-recalibrator#latest
+
+    This identifies large files and calculates the fraction to downsample to.
+    """
+    target_counts = 5e7 # 50 million reads per read group, 10x the plotted max
+    total = sum([int(x.split("\t")[2]) for x in pysam.idxstats(in_bam)])
+    with closing(pysam.Samfile(in_bam, "rb")) as work_bam:
+        n_rgs = max(1, len(work_bam.header["RG"]))
+    rg_target = n_rgs * target_counts
+    if total > rg_target:
+        return float(rg_target) / float(total)
+
 def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
         snp_file, intervals):
     """Step 1 of GATK recalibration process, producing table of covariates.
@@ -83,6 +105,10 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                               "-I", dup_align_bam,
                               "-R", ref_file,
                               ]
+                    downsample_pct = _get_downsample_pct(dup_align_bam)
+                    if downsample_pct:
+                        params += ["--downsample_to_fraction", str(downsample_pct),
+                                   "--downsampling_type", "ALL_READS"]
                     # GATK-lite does not have support for
                     # insertion/deletion quality modeling
                     if not broad_runner.has_gatk_full():
@@ -96,4 +122,3 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
             with open(out_file, "w") as out_handle:
                 out_handle.write("# No aligned reads")
     return out_file
-
