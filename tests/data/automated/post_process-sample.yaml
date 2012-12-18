@@ -6,7 +6,6 @@ program:
   cufflinks: cufflinks
   ucsc_bigwig: wigToBigWig
   picard: /usr/share/java/picard
-  gatk: /usr/share/java/gatk
   snpEff: /usr/share/java/snpeff
   fastqc: fastqc
   pdflatex: pdflatex
@@ -73,3 +72,4 @@ resources:
     cores: 5
   gatk:
     cores: 5
+    dir: /usr/share/java/gatk

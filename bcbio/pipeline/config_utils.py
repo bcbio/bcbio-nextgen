@@ -50,6 +50,16 @@ def expand_path(path):
     except AttributeError:
         return path
 
+def get_resources(name, config):
+    """Retrieve resources for a program, pulling from multiple config sources.
+    """
+    resources = config.get("resources", {}).get(name, {})
+    if "jvm_opts" not in resources:
+        java_memory = config["algorithm"].get("java_memory", None)
+        if java_memory:
+            resources["jvm_opts"] = ["-Xms%s" % java_memory, "-Xmx%s" % java_memory]
+    return resources
+
 def get_program(name, config, ptype="cmd"):
     """Retrieve program information from the configuration.
 
@@ -60,7 +70,7 @@ def get_program(name, config, ptype="cmd"):
     try:
         pconfig = config.get("resources", {})[name]
     except KeyError:
-        pconfig = config.get("program", {}).get("name", None)
+        pconfig = config.get("program", {}).get(name, None)
     if ptype == "cmd":
         return _get_program_cmd(name, pconfig)
     elif ptype == "dir":
@@ -71,20 +81,24 @@ def get_program(name, config, ptype="cmd"):
 def _get_program_cmd(name, config):
     """Retrieve commandline of a program.
     """
-    if config.has_key("cmd"):
-        return config["cmd"]
+    if config is None:
+        return name
     elif isinstance(config, basestring):
         return config
+    elif config.has_key("cmd"):
+        return config["cmd"]
     else:
         return name
 
 def _get_program_dir(name, config):
     """Retrieve directory for a program (local installs/java jars).
     """
-    if config.has_key("dir"):
-        return config["dir"]
+    if config is None:
+        raise ValueError("Could not find directory in config for %s" % name)
     elif isinstance(config, basestring):
         return config
+    elif config.has_key("dir"):
+        return config["dir"]
     else:
         raise ValueError("Could not find directory in config for %s" % name)
 

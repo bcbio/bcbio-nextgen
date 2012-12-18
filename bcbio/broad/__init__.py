@@ -8,21 +8,16 @@ import subprocess
 from contextlib import closing
 
 from bcbio.broad import picardrun
+from bcbio.pipeline import config_utils
 
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """
-    def __init__(self, picard_dir, gatk_dir="", max_memory=None,
-                 config=None):
-        self._memory_args = []
-        if not max_memory:
-            max_memory = "6g"
-        self._memory_args.append("-Xmx%s" % max_memory)
+    def __init__(self, picard_dir, gatk_dir, resources):
+        self._jvm_opts = resources.get("jvm_opts", ["-Xmx6g", "-Xms6g"])
+        self._resources = resources
         self._picard_dir = picard_dir
         self._gatk_dir = gatk_dir or picard_dir
-        if config is None:
-            config = {}
-        self._config = config
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
@@ -46,7 +41,7 @@ class BroadRunner:
         options = ["%s=%s" % (x, y) for x, y in options]
         options.append("VALIDATION_STRINGENCY=SILENT")
         dist_file = self._get_jar(command)
-        cl = ["java"] + self._memory_args +["-jar", dist_file] + options
+        cl = ["java"] + self._jvm_opts + ["-jar", dist_file] + options
         subprocess.check_call(cl)
 
     def run_gatk(self, params, tmp_dir=None):
@@ -55,7 +50,7 @@ class BroadRunner:
         support_nct = set(["BaseRecalibrator"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
-        cores = self._config.get("resources", {}).get("gatk", {}).get("cores", None)
+        cores = self._resources.get("cores", None)
         if cores and cores > 1:
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
@@ -68,7 +63,7 @@ class BroadRunner:
             params.extend(["-U", "LENIENT_VCF_PROCESSING"])
         if tmp_dir:
             local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-        cl = ["java"] + self._memory_args + local_args + \
+        cl = ["java"] + self._jvm_opts + local_args + \
                 ["-jar", gatk_jar] + [str(x) for x in params]
         #print " ".join(cl)
         subprocess.check_call(cl)
@@ -104,7 +99,6 @@ class BroadRunner:
         raise ValueError("Could not find jar %s in %s" % (command, self._picard_dir))
 
 def runner_from_config(config):
-    return BroadRunner(config["program"]["picard"],
-                       config["program"].get("gatk", ""),
-                       max_memory=config["algorithm"].get("java_memory", ""),
-                       config=config)
+    return BroadRunner(config_utils.get_program("picard", config, "dir"),
+                       config_utils.get_program("gatk", config, "dir"),
+                       config_utils.get_resources("gatk", config))

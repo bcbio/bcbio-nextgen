@@ -11,6 +11,7 @@ import collections
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 
 # ## snpEff variant effects
 
@@ -28,12 +29,8 @@ def _find_snpeff_datadir(config_file):
     with open(config_file) as in_handle:
         for line in in_handle:
             if line.startswith("data_dir"):
-                data_dir = line.split("=")[-1].strip()
-                if data_dir.startswith("/"):
-                    pass
-                elif data_dir.startswith("~"):
-                    data_dir = data_dir.replace("~", os.environ["HOME"])
-                else:
+                data_dir = config_utils.expand_path(line.split("=")[-1].strip())
+                if not data_dir.startswith("/"):
                     data_dir = os.path.join(os.path.dirname(config_file, data_dir))
                 return data_dir
     raise ValueError("Did not find data directory in snpEff config file: %s" % config_file)
@@ -57,8 +54,9 @@ def _get_snpeff_genome(gname, config):
     try:
         ginfo = SNPEFF_GENOME_REMAP[gname]
     except KeyError:
-        ginfo = SNPEFF_GENOME_REMAP[genome.split("-")[0]]
-    snpeff_config_file = os.path.join(config["program"]["snpEff"], "snpEff.config")
+        ginfo = SNPEFF_GENOME_REMAP[gname.split("-")[0]]
+    snpeff_config_file = os.path.join(config_utils.get_program("snpEff", config, "dir"),
+                                      "snpEff.config")
     if os.path.exists(snpeff_config_file):
         return _installed_snpeff_genome(snpeff_config_file, ginfo.base)
     else:
@@ -81,19 +79,17 @@ def snpeff_effects(vcf_in, genome, config):
         return vcf_file
 
 def _run_snpeff(snp_in, genome, se_interval, out_format, config):
-    print genome
-    raise NotImplementedError
-    snpeff_jar = os.path.join(config["program"]["snpEff"], "snpEff.jar")
-    java_memory = config["algorithm"].get("java_memory", None)
-    snpeff_config = "%s.config" % os.path.splitext(snpeff_jar)[0]
+    snpeff_jar = config_utils.get_jar("snpEff",
+                                      config_utils.get_program("snpEff", config, "dir"))
+    config_file = "%s.config" % os.path.splitext(snpeff_jar)[0]
+    resources = config_utils.get_resources("snpEff", config)
     ext = "vcf" if out_format == "vcf" else "tsv"
     out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
     if not file_exists(out_file):
         cl = ["java"]
-        if java_memory:
-            cl += ["-Xmx%s" % java_memory]
-        cl += ["-jar", snpeff_jar, "-1", "-i", "vcf", "-c", snpeff_config,
-               "-o", out_format, genome, snp_in]
+        cl += resources.get("jvm_opts", [])
+        cl += ["-jar", snpeff_jar, "-c", config_file,
+               "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
         print " ".join(cl)
