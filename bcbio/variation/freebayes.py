@@ -15,7 +15,11 @@ from bcbio.pipeline.shared import subset_variant_regions
 
 def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
-    opts += ["--ploidy", str(aconfig.get("ploidy", 2))]
+    ploidy = aconfig.get("ploidy", 2)
+    opts += ["--ploidy", str(ploidy)]
+    if ploidy == 2:
+        opts += ["--min-alternate-fraction", "0.2"]
+
     variant_regions = aconfig.get("variant_regions", None)
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
@@ -40,8 +44,7 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
             cl = [config["program"].get("freebayes", "freebayes"),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
                   "--left-align-indels", "--use-mapping-quality",
-                  "--min-alternate-count", "2",
-                  "--min-alternate-fraction", "0.2"]
+                  "--min-alternate-count", "2"]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
         _remove_freebayes_refalt_dups(out_file)
