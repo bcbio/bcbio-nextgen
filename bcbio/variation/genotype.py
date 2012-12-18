@@ -157,6 +157,9 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
     if caller in ["gatk-haplotype"] and cov_interval not in ["regional"]:
         return _variant_filtration_both(broad_runner, call_file, ref_file, vrn_files,
                                         config)
+    # no additional filtration for callers that filter as part of call process
+    elif caller in ["samtools"]:
+        return call_file
     else:
         snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)
         snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
