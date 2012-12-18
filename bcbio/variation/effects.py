@@ -28,7 +28,7 @@ def _get_snpeff_genome(genome):
         return SNPEFF_GENOME_REMAP[genome.split("-")[0]]
 
 def snpeff_effects(vcf_in, genome, config):
-    """Prepare tab-delimited file for variant effects using snpEff.
+    """Annotate input VCF file with effects calculated by snpEff.
     """
     interval_file = config["algorithm"].get("hybrid_target", None)
     if _vcf_has_items(vcf_in):
@@ -40,14 +40,11 @@ def snpeff_effects(vcf_in, genome, config):
                 if os.path.exists(os.path.join(snpeff_data_dir, snpeff_genome)):
                     break
             vcf_file = _run_snpeff(vcf_in, snpeff_genome, se_interval, "vcf", config)
-            effects_file = _run_snpeff(vcf_in, snpeff_genome, se_interval, "txt", config)
         finally:
             for fname in [se_interval]:
                 if fname and os.path.exists(fname):
                     os.remove(fname)
-        return vcf_file, effects_file
-    else:
-        return None, None
+        return vcf_file
 
 def _run_snpeff(snp_in, genome, se_interval, out_format, config):
     snpeff_jar = os.path.join(config["program"]["snpEff"], "snpEff.jar")

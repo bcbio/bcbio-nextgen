@@ -65,11 +65,11 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
 
 def variation_effects(vrn_file, genome_file, genome_build, config):
     """Calculate effects of variations, associating them with transcripts.
+
+    Runs snpEff, returning the resulting effects file. No longer runs the GATK
+    annotator, since it requires an old version of snpEff.
     """
-    snpeff_vcf, snpeff_txt = snpeff_effects(vrn_file, genome_build, config)
-    annotated_vcf = annotate_effects(vrn_file, snpeff_vcf, genome_file, config) \
-                    if snpeff_vcf else None
-    return annotated_vcf, snpeff_txt
+    return snpeff_effects(vrn_file, genome_build, config)
 
 # ## Structural variation
 

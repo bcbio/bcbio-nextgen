@@ -59,13 +59,10 @@ def postprocess_variants(data):
         data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
                                               data["sam_ref"], data["config"])
         logger.info("Calculating variation effects for %s" % str(data["name"]))
-        ann_vrn_file, effects_file = variation_effects(data["vrn_file"],
-                                                       data["sam_ref"],
-                                                       data["genome_build"],
-                                                       data["config"])
+        ann_vrn_file = variation_effects(data["vrn_file"], data["sam_ref"],
+                                         data["genome_build"], data["config"])
         if ann_vrn_file:
             data["vrn_file"] = ann_vrn_file
-            data["effects_file"] = effects_file
     return [[data]]
 
 def process_sample(data):
