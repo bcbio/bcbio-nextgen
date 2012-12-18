@@ -38,7 +38,7 @@ from bcbio.log import create_log_handler, logger2
 from bcbio import utils
 from bcbio.distributed import messaging
 from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir, get_qseq_dir)
-from bcbio.pipeline.config_loader import load_config
+from bcbio.pipeline.config_utils import load_config
 
 def main(local_config, post_config_file=None,
          process_msg=True, store_msg=True, qseq=True, fastq=True):

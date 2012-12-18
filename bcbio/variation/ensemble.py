@@ -13,7 +13,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.log import logger
-from bcbio.pipeline import config_loader as config_utils
+from bcbio.pipeline import config_utils
 
 def combine_calls(data):
     """Combine multiple callsets into a final set of merged calls.

@@ -34,7 +34,7 @@ from contextlib import contextmanager, closing
 
 import pysam
 
-from bcbio.pipeline.config_loader import load_config
+from bcbio.pipeline.config_utils import load_config
 
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
          outfile=None, normalize=False, use_tempfile=False):

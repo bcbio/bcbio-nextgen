@@ -30,7 +30,7 @@ import sys
 
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
-from bcbio.pipeline.config_loader import load_config
+from bcbio.pipeline.config_utils import load_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,

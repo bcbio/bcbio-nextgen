@@ -22,7 +22,7 @@ from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
-from bcbio.pipeline.config_loader import load_config
+from bcbio.pipeline.config_utils import load_config
 
 def main(config_file, fc_dir):
     work_dir = os.getcwd()
