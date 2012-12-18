@@ -5,7 +5,9 @@ Supported:
 """
 import os
 import csv
+import glob
 import subprocess
+import collections
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -13,19 +15,54 @@ from bcbio.distributed.transaction import file_transaction
 # ## snpEff variant effects
 
 # remap Galaxy genome names to the ones used by snpEff. Not nice code.
+SnpEffGenome = collections.namedtuple("SnpEffGenome", ["base", "default_version"])
 SNPEFF_GENOME_REMAP = {
-        "GRCh37": ["GRCh37.64", "GRCh37.63"],
-        "hg19" : ["GRCh37.64", "GRCh37.63"],
-        "mm9" : ["NCBIM37.64", "NCBIM37.63"],
-        "araTha_tair9": ["athalianaTair10"],
-        "araTha_tair10": ["athalianaTair10"],
+        "GRCh37": SnpEffGenome("GRCh37.", "68"),
+        "hg19" : SnpEffGenome("hg19", ""),
+        "mm9" : SnpEffGenome("NCBIM37.", "68"),
+        "araTha_tair9": SnpEffGenome("athalianaTair9", ""),
+        "araTha_tair10": SnpEffGenome("athalianaTair10", ""),
         }
 
-def _get_snpeff_genome(genome):
+def _find_snpeff_datadir(config_file):
+    with open(config_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("data_dir"):
+                data_dir = line.split("=")[-1].strip()
+                if data_dir.startswith("/"):
+                    pass
+                elif data_dir.startswith("~"):
+                    data_dir = data_dir.replace("~", os.environ["HOME"])
+                else:
+                    data_dir = os.path.join(os.path.dirname(config_file, data_dir))
+                return data_dir
+    raise ValueError("Did not find data directory in snpEff config file: %s" % config_file)
+
+def _installed_snpeff_genome(config_file, base_name):
+    """Find the most recent installed genome for snpEff with the given name.
+    """
+    data_dir = _find_snpeff_datadir(config_file)
+    dbs = sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+    if len(dbs) == 0:
+        raise ValueError("No database found in %s for %s" % (data_dir, base_name))
+    else:
+        return os.path.split(dbs[0])[-1]
+
+def _get_snpeff_genome(gname, config):
+    """Generalize retrieval of the snpEff genome to use for an input name.
+
+    This tries to find the snpEff configuration file and identify the
+    installed genome corresponding to the input genome name.
+    """
     try:
-        return SNPEFF_GENOME_REMAP[genome]
+        ginfo = SNPEFF_GENOME_REMAP[gname]
     except KeyError:
-        return SNPEFF_GENOME_REMAP[genome.split("-")[0]]
+        ginfo = SNPEFF_GENOME_REMAP[genome.split("-")[0]]
+    snpeff_config_file = os.path.join(config["program"]["snpEff"], "snpEff.config")
+    if os.path.exists(snpeff_config_file):
+        return _installed_snpeff_genome(snpeff_config_file, ginfo.base)
+    else:
+        return "%s%s" % (ginfo.base, ginfo.default_version)
 
 def snpeff_effects(vcf_in, genome, config):
     """Annotate input VCF file with effects calculated by snpEff.
@@ -35,11 +72,8 @@ def snpeff_effects(vcf_in, genome, config):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
-            snpeff_data_dir = os.path.join(config["program"]["snpEff"], "data")
-            for snpeff_genome in _get_snpeff_genome(genome):
-                if os.path.exists(os.path.join(snpeff_data_dir, snpeff_genome)):
-                    break
-            vcf_file = _run_snpeff(vcf_in, snpeff_genome, se_interval, "vcf", config)
+            vcf_file = _run_snpeff(vcf_in, _get_snpeff_genome(genome, config),
+                                   se_interval, "vcf", config)
         finally:
             for fname in [se_interval]:
                 if fname and os.path.exists(fname):
@@ -47,6 +81,8 @@ def snpeff_effects(vcf_in, genome, config):
         return vcf_file
 
 def _run_snpeff(snp_in, genome, se_interval, out_format, config):
+    print genome
+    raise NotImplementedError
     snpeff_jar = os.path.join(config["program"]["snpEff"], "snpEff.jar")
     java_memory = config["algorithm"].get("java_memory", None)
     snpeff_config = "%s.config" % os.path.splitext(snpeff_jar)[0]
