@@ -31,13 +31,15 @@ def combine_calls(data):
     return [[data]]
 
 def _run_bcbio_variation(config_file, base_dir, sample, data):
+    tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))
     out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(sample))
     out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(sample))
     if not utils.file_exists(out_vcf_file):
         bv_jar = config_utils.get_jar("bcbio.variation",
                                       config_utils.get_program("bcbio_variation",
                                                                data["config"], "dir"))
-        subprocess.check_call(["java", "-jar", bv_jar, "variant-compare", config_file])
+        java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
+        subprocess.check_call(["java"] + java_args + ["-jar", bv_jar, "variant-compare", config_file])
         base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
                                           "*-cfilter.vcf"))[0]
         base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep",
