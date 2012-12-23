@@ -35,14 +35,17 @@ class BroadRunner:
         assert fn is not None, "Could not find function %s in %s" % (name, to_check)
         return fn(self, *args, **kwds)
 
-    def run(self, command, options):
+    def run(self, command, options, pipe=False):
         """Run a Picard command with the provided option pairs.
         """
         options = ["%s=%s" % (x, y) for x, y in options]
         options.append("VALIDATION_STRINGENCY=SILENT")
         dist_file = self._get_jar(command)
         cl = ["java"] + self._jvm_opts + ["-jar", dist_file] + options
-        subprocess.check_call(cl)
+        if pipe:
+            subprocess.Popen(cl)
+        else:
+            subprocess.check_call(cl)
 
     def run_gatk(self, params, tmp_dir=None):
         #support_nt = set(["UnifiedGenotyper", "VariantEval"])

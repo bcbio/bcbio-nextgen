@@ -30,7 +30,7 @@ def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
 
 
 def picard_sort(picard, align_bam, sort_order="coordinate",
-                out_file=None):
+                out_file=None, compression_level=None, pipe=False):
     """Sort a BAM file by coordinates.
     """
     base, ext = os.path.splitext(align_bam)
@@ -40,10 +40,12 @@ def picard_sort(picard, align_bam, sort_order="coordinate",
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", align_bam),
-                        ("OUTPUT", tx_out_file),
+                        ("OUTPUT", out_file if pipe else tx_out_file),
                         ("TMP_DIR", tmp_dir),
                         ("SORT_ORDER", sort_order)]
-                picard.run("SortSam", opts)
+                if compression_level:
+                    opts.append(("COMPRESSION_LEVEL", compression_level))
+                picard.run("SortSam", opts, pipe=pipe)
     return out_file
 
 def picard_merge(picard, in_files, out_file=None,

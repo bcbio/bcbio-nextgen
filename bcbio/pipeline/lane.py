@@ -7,7 +7,7 @@ from bcbio.log import logger
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
-from bcbio.ngsalign.split import split_fastq_files
+from bcbio.ngsalign.split import split_read_files
 from bcbio.bam.trim import brun_trim_fastq
 
 def _prep_fastq_files(item, bc_files, dirs, config):
@@ -18,7 +18,7 @@ def _prep_fastq_files(item, bc_files, dirs, config):
                                            config["algorithm"].get("align_split_size", None))
     if split_size:
         split_dir = os.path.join(dirs["align"], "split")
-        return split_fastq_files(fastq1, fastq2, split_size, split_dir, config)
+        return split_read_files(fastq1, fastq2, split_size, split_dir, config)
     else:
         return [[fastq1, fastq2, None]]
 

@@ -25,7 +25,7 @@ algorithm:
   bc_position: 3
   bc_illumina_no_trailing: true
   java_memory: 3g
-  save_diskspace: true
+  save_diskspace: false
   upload_fastq: false
 
 analysis:
