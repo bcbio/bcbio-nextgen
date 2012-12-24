@@ -110,6 +110,7 @@ def split_bam_file(bam_file, split_size, out_dir, config):
     existing = _find_current_bam_split(bam_file, out_dir)
     if len(existing) > 0:
         return existing
+    pipe = False
 
     utils.safe_makedir(out_dir)
     broad_runner = broad.runner_from_config(config)
@@ -122,11 +123,17 @@ def split_bam_file(bam_file, split_size, out_dir, config):
             out += [fname, open(fname, "w")]
         return out
     with utils.curdir_tmpdir() as tmp_dir:
-        sort_file = os.path.join(tmp_dir, "%s-sort.bam" %
-                                 os.path.splitext(os.path.basename(bam_file))[0])
-        os.mkfifo(sort_file)
-        broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file,
-                            compression_level=0, pipe=True)
+        if pipe:
+            sort_file = os.path.join(tmp_dir, "%s-sort.bam" %
+                                     os.path.splitext(os.path.basename(bam_file))[0])
+            os.mkfifo(sort_file)
+            broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file,
+                                compression_level=0, pipe=True)
+        else:
+            sort_file = os.path.join(out_dir, "%s-sort.bam" %
+                                     os.path.splitext(os.path.basename(bam_file))[0])
+            broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file,
+                                compression_level=1)
 
         samfile = pysam.Samfile(sort_file, "rb")
         i = 0
@@ -147,7 +154,10 @@ def split_bam_file(bam_file, split_size, out_dir, config):
                 out_files.append([f1, f2, num])
         out_handle1.close()
         out_handle2.close()
-        os.unlink(sort_file)
+        if pipe:
+            os.unlink(sort_file)
+        else:
+            utils.save_diskspace(sort_file, "Split to {}".format(out_files[0][0]), config)
     return out_files
 
 def split_read_files(fastq1, fastq2, split_size, out_dir, config):
