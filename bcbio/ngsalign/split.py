@@ -96,9 +96,9 @@ def _find_current_bam_split(bam_file, out_dir):
         num, pair = get_pair_and_splitnum(fname)
         xs.append((num, pair, fname))
     out = []
-    for _, g in itertools.groupby(sorted(xs), operator.itemgetter(0)):
+    for num, g in itertools.groupby(sorted(xs), operator.itemgetter(0)):
         f1, f2 = [x[-1] for x in sorted(g)]
-        split = x[0][0] if x[0][0] > 0 else None
+        split = num if num > 0 else None
         out.append((f1, f2, split))
     return out
 
@@ -110,7 +110,7 @@ def split_bam_file(bam_file, split_size, out_dir, config):
     existing = _find_current_bam_split(bam_file, out_dir)
     if len(existing) > 0:
         return existing
-    pipe = False
+    pipe = True
 
     utils.safe_makedir(out_dir)
     broad_runner = broad.runner_from_config(config)
