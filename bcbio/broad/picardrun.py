@@ -61,6 +61,7 @@ def picard_merge(picard, in_files, out_file=None,
                         ("SORT_ORDER", "coordinate"),
                         ("MERGE_SEQUENCE_DICTIONARIES",
                          "true" if merge_seq_dicts else "false"),
+                        ("USE_THREADING", "true"),
                         ("TMP_DIR", tmp_dir)]
                 for in_file in in_files:
                     opts.append(("INPUT", in_file))
