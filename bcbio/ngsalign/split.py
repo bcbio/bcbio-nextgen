@@ -132,8 +132,7 @@ def split_bam_file(bam_file, split_size, out_dir, config):
         else:
             sort_file = os.path.join(out_dir, "%s-sort.bam" %
                                      os.path.splitext(os.path.basename(bam_file))[0])
-            broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file,
-                                compression_level=1)
+            broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file)
 
         samfile = pysam.Samfile(sort_file, "rb")
         i = 0
@@ -154,6 +153,7 @@ def split_bam_file(bam_file, split_size, out_dir, config):
                 out_files.append([f1, f2, num])
         out_handle1.close()
         out_handle2.close()
+        samfile.close()
         if pipe:
             os.unlink(sort_file)
         else:

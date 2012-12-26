@@ -176,9 +176,10 @@ def picard_mark_duplicates(picard, align_bam, remove_dups=False):
                 opts = [("INPUT", align_bam),
                         ("OUTPUT", tx_dup_bam),
                         ("TMP_DIR", tmp_dir),
-                        ("PROGRAM_RECORD_ID", "null"),
                         ("REMOVE_DUPLICATES", "true" if remove_dups else "false"),
                         ("METRICS_FILE", tx_dup_metrics)]
+                if picard.get_picard_version("MarkDuplicates") >= 1.82:
+                    opts += [("PROGRAM_RECORD_ID", "null")]
                 picard.run("MarkDuplicates", opts)
     return dup_bam, dup_metrics
 

@@ -47,6 +47,14 @@ class BroadRunner:
         else:
             subprocess.check_call(cl)
 
+    def get_picard_version(self, command):
+        dist_file = self._get_jar(command)
+        cl = ["java", "-jar", dist_file, "--version"]
+        p = subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        version = float(p.stdout.read().split("(")[0])
+        p.wait()
+        return version
+
     def run_gatk(self, params, tmp_dir=None):
         #support_nt = set(["UnifiedGenotyper", "VariantEval"])
         support_nt = set()
