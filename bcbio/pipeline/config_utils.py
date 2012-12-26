@@ -1,28 +1,4 @@
 """Loads configurations from .yaml files and expands environment variables.
-
-The configuration yaml has the structure
-
-galaxy_config:
-program:
-	program1:
-	program2:
-algorithm:
-	setting1:
-	setting2:
-log_dir:
-store_dir:
-store_host:
-analysis:
-	config_file:
-	towig_script:
-distributed:
-	rabbitmq_vhost:
-custom_algorithms:
-	setting1:
-	setting2:
-
-galaxy_config, program and analysis supports
-environment variables.
 """
 import os
 import glob
@@ -69,8 +45,14 @@ def get_program(name, config, ptype="cmd"):
     """
     try:
         pconfig = config.get("resources", {})[name]
+        # If have leftover old
     except KeyError:
-        pconfig = config.get("program", {}).get(name, None)
+        pconfig = {}
+    old_config = config.get("program", {}).get(name, None)
+    if old_config:
+        for key in ["dir", "cmd"]:
+            if not pconfig.has_key(key):
+                pconfig[key] = old_config
     if ptype == "cmd":
         return _get_program_cmd(name, pconfig)
     elif ptype == "dir":

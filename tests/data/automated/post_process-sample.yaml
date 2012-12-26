@@ -73,3 +73,5 @@ resources:
   gatk:
     cores: 5
     dir: /usr/share/java/gatk
+  picard:
+    cores: 1
