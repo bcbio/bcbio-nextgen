@@ -7,9 +7,6 @@ program:
   tophat: tophat
   cufflinks: cufflinks
   ucsc_bigwig: wigToBigWig
-  picard: /usr/share/java/picard
-  gatk: /usr/share/java/gatk
-  snpEff: /usr/share/java/snpeff
   fastqc: fastqc
   pdflatex: pdflatex
   barcode: barcode_sort_trim.py
@@ -58,7 +55,6 @@ custom_algorithms:
   'SNP calling':
     aligner: bwa
     recalibrate: true
-    recalibration_plots: false
     snpcall: true
     coverage_depth: "high" # other options: low
     coverage_interval: "exome" # other options: genome, regional
@@ -90,6 +86,11 @@ resources:
     cores:
   gatk:
     cores:
+    dir: /usr/share/java/gatk
+  picard:
+    dir: /usr/share/java/picard
+  snpEff:
+    dir: /usr/share/java/snpeff
   cufflinks:
     cores:
   
