@@ -86,10 +86,13 @@ resources:
     cores:
   gatk:
     cores:
+    jvm_opts: ["-Xms=2g", "-Xmx=4g"]
     dir: /usr/share/java/gatk
   picard:
+    jvm_opts: ["-Xms=2g", "-Xmx=4g"]
     dir: /usr/share/java/picard
   snpEff:
+    jvm_opts: ["-Xms=2g", "-Xmx=4g"]
     dir: /usr/share/java/snpeff
   cufflinks:
     cores:
