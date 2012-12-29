@@ -72,7 +72,7 @@ def _recal_available(recal_file):
                 return True
     return False
 
-def _get_downsample_pct(in_bam):
+def _get_downsample_pct(runner, in_bam):
     """Calculate a downsampling percent to use for large BAM files.
 
     Large whole genome BAM files take an excessively long time to recalibrate and
@@ -84,7 +84,7 @@ def _get_downsample_pct(in_bam):
     This identifies large files and calculates the fraction to downsample to.
     """
     target_counts = 5e7 # 50 million reads per read group, 10x the plotted max
-    total = sum([int(x.split("\t")[2]) for x in pysam.idxstats(in_bam)])
+    total = sum(x.aligned for x in runner.run_fn("picard_idxstats", in_bam))
     with closing(pysam.Samfile(in_bam, "rb")) as work_bam:
         n_rgs = max(1, len(work_bam.header["RG"]))
     rg_target = n_rgs * target_counts
@@ -107,7 +107,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                               "-I", dup_align_bam,
                               "-R", ref_file,
                               ]
-                    downsample_pct = _get_downsample_pct(dup_align_bam)
+                    downsample_pct = _get_downsample_pct(broad_runner, dup_align_bam)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
                                    "--downsampling_type", "ALL_READS"]

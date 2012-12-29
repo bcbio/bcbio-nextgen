@@ -35,7 +35,7 @@ class BroadRunner:
         assert fn is not None, "Could not find function %s in %s" % (name, to_check)
         return fn(self, *args, **kwds)
 
-    def run(self, command, options, pipe=False):
+    def run(self, command, options, pipe=False, get_stdout=False):
         """Run a Picard command with the provided option pairs.
         """
         options = ["%s=%s" % (x, y) for x, y in options]
@@ -44,6 +44,11 @@ class BroadRunner:
         cl = ["java"] + self._jvm_opts + ["-jar", dist_file] + options
         if pipe:
             subprocess.Popen(cl)
+        elif get_stdout:
+            p = subprocess.Popen(cl, stdout=subprocess.PIPE)
+            stdout = p.stdout.read()
+            p.wait()
+            return stdout
         else:
             subprocess.check_call(cl)
 

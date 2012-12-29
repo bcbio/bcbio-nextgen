@@ -1,6 +1,7 @@
 """Convenience functions for running common Picard utilities.
 """
 import os
+import collections
 from contextlib import closing
 
 import pysam
@@ -198,6 +199,24 @@ def picard_fixmate(picard, align_bam):
                         ("SORT_ORDER", "coordinate")]
                 picard.run("FixMateInformation", opts)
     return out_file
+
+def picard_idxstats(picard, align_bam):
+    """Retrieve alignment stats from picard using BamIndexStats.
+    """
+    opts = [("INPUT", align_bam)]
+    stdout = picard.run("BamIndexStats", opts, get_stdout=True)
+    out = []
+    AlignInfo = collections.namedtuple("AlignInfo", ["contig", "length", "aligned", "unaligned"])
+    for line in stdout.split("\n"):
+        if line:
+            parts = line.split()
+            if len(parts) == 2:
+                _, unaligned = parts
+                out.append(AlignInfo("nocontig", 0, 0, int(unaligned)))
+            else:
+                contig, _, length, _, aligned, _, unaligned = parts
+                out.append(AlignInfo(contig, int(length), int(aligned), int(unaligned)))
+    return out
 
 def bed2interval(align_file, bed, out_file=None):
     """Converts a bed file to an interval file for use with some of the
