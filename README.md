@@ -11,20 +11,22 @@ of sequencing analysis, allowing us to focus on the downstream biology.
 
 1. Install `bcbio-nextgen` and Python dependencies:
 
-       pip install --upgrade bcbio-nextgen
+          pip install --upgrade bcbio-nextgen
     
 2. Edit a [system configuration file][q2] and [sample configuration file][q1]
 
 3. Run analysis, distributed across 8 local cores:
 
-       bcbio_nextgen.py post_process.yaml run_info.yaml -n 8
+          bcbio_nextgen.py post_process.yaml run_info.yaml -n 8
 
 [q1]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/run_info.yaml
 [q2]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/post_process.yaml
 
 ## Documentation
 
-Full documentation is available from ReadTheDocs.
+See the [full documentation at ReadTheDocs][d1].
+
+[d1]: https://bcbio-nextgen.readthedocs.org
 
 ## Pipelines
 
