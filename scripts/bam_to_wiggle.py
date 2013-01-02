@@ -111,7 +111,7 @@ def convert_to_bigwig(wig_file, chr_sizes, config, bw_file=None):
         for chrom, size in chr_sizes:
             out_handle.write("%s\t%s\n" % (chrom, size))
     try:
-        cl = [get_program("ucsc_bigwig", config), wig_file, size_file, bw_file]
+        cl = [get_program("ucsc_bigwig", config, default="wigToBigWig"), wig_file, size_file, bw_file]
         subprocess.check_call(cl)
     finally:
         os.remove(size_file)

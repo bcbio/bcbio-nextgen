@@ -2,7 +2,7 @@ Configuration
 -------------
 
 Analysis
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
 
 The YAML configuration file provides a number of hooks to customize
 analysis. Place these under the ``analysis`` keyword. For variant
@@ -40,7 +40,7 @@ Global reference files for variant calling and assessment:
 Variant calling
 ~~~~~~~~~~~~~~~
 
-Broad's `GATK`_ pipeline drives variant (SNPs and Indels) analysis.
+Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
 This requires some associated data files, and also has some configurable
 options. The relevant section from the ``post_process.yaml`` file is:
 
@@ -55,7 +55,7 @@ options. The relevant section from the ``post_process.yaml`` file is:
 
 The dbSNP and training files are from the `GATK resource bundle`_. These
 are inputs into the training models for recalibration. The automated
-[CloudBioLinux][o6] data scripts will download and install these in the
+`CloudBioLinux`_ data scripts will download and install these in the
 variation subdirectory relative to the genome files.
 
 The ``coverage_depth`` and ``coverage_interval`` are adjustable from the
@@ -65,12 +65,13 @@ coverage and high sequencing depth:
 
 ::
 
-    - analysis: SNP calling
+    - analysis: variant
       algorithm:
         quality_format: Standard
         coverage_interval: genome
         coverage_depth: high
 
+.. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
 .. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
 .. _GATK: http://www.broadinstitute.org/gatk/
 

@@ -21,7 +21,7 @@ algorithm:
 
 # Configuration algorithm changes for specific pipelines.
 custom_algorithms:
-  'SNP calling':
+  variant:
     aligner: bwa
     recalibrate: true
     snpcall: true

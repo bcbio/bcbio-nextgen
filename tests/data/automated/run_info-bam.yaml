@@ -8,7 +8,7 @@ details:
       quality_format: Standard
       coverage_interval: regional
       align_split_size: 9000
-    analysis: SNP calling
+    analysis: variant
     description: Test1
     genome_build: hg19
     lane: 7

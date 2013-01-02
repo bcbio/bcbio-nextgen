@@ -86,8 +86,7 @@ def generate_bigwig(data):
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if not file_exists(wig_file):
         with file_transaction(wig_file) as tx_file:
-            cl = [data["config"]["analysis"]["towig_script"], bam_file,
+            cl = ["bam_to_wiggle.py", bam_file,
                   data["config_file"], "--outfile=%s" % tx_file]
             subprocess.check_call(cl)
     return [[data]]
-

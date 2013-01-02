@@ -1,5 +1,5 @@
 details:
-  - analysis: SNP calling
+  - analysis: variant
     algorithm:
       #aligner: bwa
       aligner: novoalign

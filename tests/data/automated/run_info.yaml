@@ -1,4 +1,4 @@
-- analysis: SNP calling
+- analysis: variant 
   description: Test1
   algorithm:
     coverage_interval: regional
@@ -57,7 +57,7 @@
     barcode_type: Illumina
     name: Keep unmatched test
     sequence: NNNNNN
-- analysis: SNP calling
+- analysis: variant 
   description: Test2
   algorithm:
     coverage_interval: regional
