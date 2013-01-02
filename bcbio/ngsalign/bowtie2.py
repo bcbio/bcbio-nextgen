@@ -5,6 +5,7 @@ http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 import os
 import subprocess
 
+from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import bowtie
@@ -30,7 +31,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     out_file = os.path.join(align_dir, "%s.sam" % out_base)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            cl = [config["program"].get("bowtie2", "bowtie2")]
+            cl = [config_utils.get_program("bowtie2", config)]
             cl += _bowtie2_args_from_config(config)
             cl += extra_args if extra_args is not None else []
             cl += ["-q",

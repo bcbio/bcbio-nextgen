@@ -5,6 +5,7 @@ http://cufflinks.cbcb.umd.edu/manual.html
 import os
 import subprocess
 
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.variation import configured_ref_file
 
 def assemble_transcripts(align_file, ref_file, config):
@@ -12,11 +13,11 @@ def assemble_transcripts(align_file, ref_file, config):
     """
     work_dir, fname = os.path.split(align_file)
     cores = config.get("resources", {}).get("cufflinks", {}).get("cores", None)
-    
+
     core_flags = ["-p", str(cores)] if cores else []
     out_dir = os.path.join(work_dir,
                            "{base}-cufflinks".format(base=os.path.splitext(fname)[0]))
-    cl = [config["program"].get("cufflinks", "cufflinks"),
+    cl = [config_utils.get_program("cufflinks", config),
           align_file,
           "-o", out_dir,
           "-b", ref_file,

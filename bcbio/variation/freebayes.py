@@ -11,6 +11,7 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import annotation, genotype
 from bcbio.log import logger
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 
 def _freebayes_options_from_config(aconfig, out_file, region=None):
@@ -41,7 +42,7 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
         logger.info("Genotyping with FreeBayes: {region} {fname}".format(
             region=region, fname=os.path.basename(align_bam)))
         with file_transaction(out_file) as tx_out_file:
-            cl = [config["program"].get("freebayes", "freebayes"),
+            cl = [config_utils.get_program("freebayes", config),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
                   "--left-align-indels", "--use-mapping-quality",
                   "--min-alternate-count", "2"]

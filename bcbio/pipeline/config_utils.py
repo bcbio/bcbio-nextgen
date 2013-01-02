@@ -36,7 +36,7 @@ def get_resources(name, config):
             resources["jvm_opts"] = ["-Xms%s" % java_memory, "-Xmx%s" % java_memory]
     return resources
 
-def get_program(name, config, ptype="cmd"):
+def get_program(name, config, ptype="cmd", default=None):
     """Retrieve program information from the configuration.
 
     This handles back compatible location specification in input
@@ -54,13 +54,13 @@ def get_program(name, config, ptype="cmd"):
             if not pconfig.has_key(key):
                 pconfig[key] = old_config
     if ptype == "cmd":
-        return _get_program_cmd(name, pconfig)
+        return _get_program_cmd(name, pconfig, default)
     elif ptype == "dir":
         return _get_program_dir(name, pconfig)
     else:
         raise ValueError("Don't understand program type: %s" % ptype)
 
-def _get_program_cmd(name, config):
+def _get_program_cmd(name, config, default):
     """Retrieve commandline of a program.
     """
     if config is None:
@@ -69,6 +69,8 @@ def _get_program_cmd(name, config):
         return config
     elif config.has_key("cmd"):
         return config["cmd"]
+    elif default is not None:
+        return default
     else:
         return name
 

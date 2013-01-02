@@ -13,6 +13,7 @@ from mako.template import Template
 from bcbio.broad import runner_from_config
 from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser
 from bcbio import utils
+from bcbio.pipeline import config_utils
 
 # ## High level functions to generate summary PDF
 
@@ -55,7 +56,7 @@ def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
     with open(out_file, "w") as out_handle:
         out_handle.write(out_tmpl.render(parts=[section]))
     if config["algorithm"].get("write_summary", True):
-        cl = [config.get("program", {}).get("pdflatex", "pdflatex"), out_file]
+        cl = [config_utils.get_program("pdflatex", config), out_file]
         subprocess.check_call(cl)
     return "%s.pdf" % os.path.splitext(out_file)[0]
 
@@ -212,7 +213,7 @@ def _run_fastqc(bam_file, config):
     fastqc_out = os.path.join(out_base, "%s_fastqc" %
                               os.path.splitext(os.path.basename(bam_file))[0])
     if not os.path.exists(fastqc_out):
-        cl = [config.get("program", {}).get("fastqc", "fastqc"),
+        cl = [config_utils.get_program("fastqc", config),
               "-o", out_base, "-f", "bam", bam_file]
         subprocess.check_call(cl)
     if os.path.exists("%s.zip" % fastqc_out):

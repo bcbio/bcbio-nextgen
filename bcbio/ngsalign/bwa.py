@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from bcbio.log import logger
+from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 
@@ -25,7 +26,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             with file_transaction(sai2_file) as tx_sai2_file:
                 _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
         align_type = "sampe" if sai2_file else "samse"
-        sam_cl = [config["program"]["bwa"], align_type, ref_file, sai1_file]
+        sam_cl = [config_utils.get_program("bwa", config), align_type, ref_file, sai1_file]
         if sai2_file:
             sam_cl.append(sai2_file)
         sam_cl.append(fastq_file)
@@ -45,7 +46,7 @@ def _bwa_args_from_config(config):
     return core_flags + qual_flags
 
 def _run_bwa_align(fastq_file, ref_file, out_file, config):
-    aln_cl = [config["program"]["bwa"], "aln",
+    aln_cl = [config_utils.get_program("bwa", config), "aln",
               "-n %s" % config["algorithm"]["max_errors"],
               "-k %s" % config["algorithm"]["max_errors"]]
     aln_cl += _bwa_args_from_config(config)
