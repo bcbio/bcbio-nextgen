@@ -1,12 +1,28 @@
 Configuration
 -------------
 
-Analysis
-~~~~~~~~
+Two configuration files, in easy to write `YAML format`_, specify
+details about your system and samples to run:
+
+- ``bcbio_system.yaml`` High level information about the system,
+  including locations of installed programs like Picard and GATK.
+  These apply across multiple runs.
+
+- ``bcbio_sample.yaml`` Details about a set of samples to process,
+  including input files and analysis options. You configure these for
+  each set of samples to process.
+
+Commented example files are available in the ``config`` directory:
+
+- `example system config`_
+- `example sample config`_
+
+Options
+~~~~~~~
 
 The YAML configuration file provides a number of hooks to customize
-analysis. Place these under the ``analysis`` keyword. For variant
-calling:
+analysis in the sample configuration file. Place these under the
+``analysis`` keyword. For variant calling:
 
 -  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign,
    false]
@@ -31,23 +47,10 @@ calling:
 -  ``realign`` Do variant realignment [true, false]
 -  ``write_summary`` Write a PDF summary of results [true, false]
 
-Global reference files for variant calling and assessment:
-
--  ``train_hapmap``, ``train_1000g_omni``, ``train_indels`` Training
-   files for GATK variant recalibration.
--  ``call_background`` Background VCF to use for calling.
-
-Variant calling
-~~~~~~~~~~~~~~~
-
 Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
 This requires some associated data files, and also has some configurable
-options. The relevant section from the ``post_process.yaml`` file is:
+options. The relevant section from the ``bcbio_system.yaml`` file is::
 
-::
-
-    coverage_depth: "low" # other options: high
-    coverage_interval: "exome" # other options: genome, regional
     dbsnp: variation/dbsnp_132.vcf
     train_hapmap: variation/hapmap_3.3.vcf
     train_1000g_omni: variation/1000G_omni2.5.vcf
@@ -58,20 +61,10 @@ are inputs into the training models for recalibration. The automated
 `CloudBioLinux`_ data scripts will download and install these in the
 variation subdirectory relative to the genome files.
 
-The ``coverage_depth`` and ``coverage_interval`` are adjustable from the
-defaults within individual ``run_info.yaml`` files describing the
-sample; a fastq file with standard phred quality scores, full genome
-coverage and high sequencing depth:
-
-::
-
-    - analysis: variant
-      algorithm:
-        quality_format: Standard
-        coverage_interval: genome
-        coverage_depth: high
-
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
+.. _YAML format: https://en.wikipedia.org/wiki/YAML#Examples
 .. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
 .. _GATK: http://www.broadinstitute.org/gatk/
+.. _example system config: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_system.yaml
+.. _example sample config: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_sample.yaml
 

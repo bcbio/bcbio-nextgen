@@ -18,10 +18,10 @@ allowing us to focus on the downstream biology.
 
 3. Run analysis, distributed across 8 local cores:
 
-          bcbio_nextgen.py post_process.yaml run_info.yaml -n 8
+          bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -n 8
 
-[q1]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/run_info.yaml
-[q2]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/post_process.yaml
+[q1]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_sample.yaml
+[q2]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_system.yaml
 
 ## Documentation
 
