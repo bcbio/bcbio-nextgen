@@ -19,8 +19,6 @@ algorithm:
   upload_fastq: false
   save_diskspace: true
 
-log_dir: log
-
 # Configuration algorithm changes for specific pipelines.
 custom_algorithms:
   'SNP calling':
@@ -47,10 +45,12 @@ custom_algorithms:
 # - memory: Specify usage for memory intensive programs
 # - cores: Define cores that can be used for multicore programs.
 # - jvm_opts: specify details
-# - cmd:
+# - cmd: Command to launch the program, if not located on PATH.
 # - dir: Directory containing program associated data. Especially useful for
 #        java jars
 resources:
+  log:
+    dir: log
   ucsc_bigwig:
     memory: 36g
   bwa:
