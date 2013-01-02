@@ -1,11 +1,12 @@
 ## bcbio-nextgen
 
-A python toolkit providing fully automated high throughput sequencing analysis.
-You write a high level configuration file specifying your inputs and analysis
-parameters. This input drives a parallelized pipeline handling distributed
-execution, idempotent processing restarts and safe transactional steps. The goal
-is to provide a shared community resource that handles the data processing part
-of sequencing analysis, allowing us to focus on the downstream biology.
+A python toolkit providing best-practice pipelines for fully automated high
+throughput sequencing analysis. You write a high level configuration file
+specifying your inputs and analysis parameters. This input drives a parallel
+pipeline that handles distributed execution, idempotent processing restarts and
+safe transactional steps. The goal is to provide a shared community resource
+that handles the front end data processing component of sequencing analysis,
+allowing us to focus on the downstream biology.
 
 ## Quick start
 
