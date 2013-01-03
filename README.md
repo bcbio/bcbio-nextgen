@@ -62,10 +62,10 @@ calling, which includes:
 
 ### Distributed
 
-The pipeline runs on single multicore machines, in compute clusters
-managed by LSF or SGE, or on the Amazon cloud. [This tutorial][o5]
-describes running the pipeline on Amazon with [CloudBioLinux][o6] and
-[CloudMan][o7].
+The pipeline runs on single multicore machines, in compute clusters managed by
+LSF or SGE using [IPython parallel][o8], or on the Amazon cloud.
+[This tutorial][o5] describes running the pipeline on Amazon with
+[CloudBioLinux][o6] and [CloudMan][o7].
 
 ### Galaxy integration
 
@@ -82,3 +82,4 @@ researcher access and additional analysis. See the
 [o5]: http://bcbio.wordpress.com/2011/08/19/distributed-exome-analysis-pipeline-with-cloudbiolinux-and-cloudman/
 [o6]: http://cloudbiolinux.org
 [o7]: http://wiki.g2.bx.psu.edu/Admin/Cloud
+[o8]: http://ipython.org/ipython-doc/dev/index.html

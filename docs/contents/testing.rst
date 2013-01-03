@@ -26,11 +26,8 @@ for the tests for your environment:
    point to installed software in non-standard locations. Change the
    num\_cores parameter to test multiple processor and parallel
    execution.
--  ``tests/data/automated/universe_wsgi.ini`` -- Defines the location of
-   the RabbitMQ server for messaging based parallel execution during
-   tests.
 -  ``tests/data/automated/run_info.yaml`` -- Change the ``analysis``
-   variable can to 'Standard' if SNP calling is not required in your
+   variable can to 'Standard' if variant calling is not required in your
    environment. This will run a smaller pipeline of alignment and
    analysis.
 

@@ -6,7 +6,8 @@
 bcbio-nextgen
 =============
 
-A python toolkit providing fully automated high throughput sequencing analysis.
+A python toolkit providing best-practice pipelines for fully automated
+high throughput sequencing analysis.
 
 Contents:
 
@@ -16,7 +17,7 @@ Contents:
    contents/installation
    contents/testing
    contents/configuration
-   contents/rabbitmq
+   contents/parallel
    contents/internals
 
 
