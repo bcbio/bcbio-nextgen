@@ -11,11 +11,16 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import annotation, genotype
 from bcbio.log import logger
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 
 def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
-    opts += ["--ploidy", str(aconfig.get("ploidy", 2))]
+    ploidy = aconfig.get("ploidy", 2)
+    opts += ["--ploidy", str(ploidy)]
+    if ploidy == 2:
+        opts += ["--min-alternate-fraction", "0.2"]
+
     variant_regions = aconfig.get("variant_regions", None)
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
@@ -37,9 +42,10 @@ def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
         logger.info("Genotyping with FreeBayes: {region} {fname}".format(
             region=region, fname=os.path.basename(align_bam)))
         with file_transaction(out_file) as tx_out_file:
-            cl = [config["program"].get("freebayes", "freebayes"),
+            cl = [config_utils.get_program("freebayes", config),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
-                  "--left-align-indels", "--use-mapping-quality"]
+                  "--left-align-indels", "--use-mapping-quality",
+                  "--min-alternate-count", "2"]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
         _remove_freebayes_refalt_dups(out_file)
@@ -84,11 +90,11 @@ def _remove_freebayes_refalt_dups(in_file):
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(in_file))
 
-def postcall_annotate(in_file, ref_file, vrn_files, config):
+def postcall_annotate(in_file, bam_file, ref_file, vrn_files, config):
     """Perform post-call annotation of FreeBayes calls in preparation for filtering.
     """
     #out_file = _check_file_gatk_merge(in_file)
-    out_file = annotation.annotate_nongatk_vcf(in_file, vrn_files.dbsnp,
+    out_file = annotation.annotate_nongatk_vcf(in_file, bam_file, vrn_files.dbsnp,
                                                ref_file, config)
     return out_file
 

@@ -19,22 +19,7 @@ def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref,
     """Recalibrate alignments with GATK and provide pdf summary.
     """
     dbsnp_file = configured_ref_file("dbsnp", config, sam_ref)
-    recal_file = gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
-    if config["algorithm"].get("recalibration_plots", False):
-        _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config)
-    return recal_file
-
-def _analyze_recalibration(recal_file, fastq1, fastq2, dirs, config):
-    """Provide a pdf report of GATK recalibration of scores.
-    """
-    qual_opts = {"illumina": "fastq-illumina", "standard": "fastq"}
-    qual_format = config["algorithm"].get("quality_format", "illumina").lower()
-    cl = ["analyze_quality_recal.py", recal_file, fastq1]
-    if fastq2:
-        cl.append(fastq2)
-    cl.append("--workdir=%s" % dirs["work"])
-    cl.append("--input_format=%s" % qual_opts[qual_format])
-    subprocess.check_call(cl)
+    return gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
 
 # ## Genotyping
 
@@ -43,8 +28,8 @@ def finalize_genotyper(call_file, bam_file, ref_file, config):
     """
     vrn_files = configured_vrn_files(config, ref_file)
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
-    if variantcaller in ["freebayes", "cortex", "samtools"]:
-        call_file = freebayes.postcall_annotate(call_file, ref_file, vrn_files, config)
+    if variantcaller in ["freebayes", "cortex", "samtools", "gatk-haplotype"]:
+        call_file = freebayes.postcall_annotate(call_file, bam_file, ref_file, vrn_files, config)
     filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
     phase_snp = phasing.read_backed_phasing(filter_snp, bam_file, ref_file, config)
     _eval_genotyper(phase_snp, ref_file, vrn_files.dbsnp, config)
@@ -65,11 +50,11 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
 
 def variation_effects(vrn_file, genome_file, genome_build, config):
     """Calculate effects of variations, associating them with transcripts.
+
+    Runs snpEff, returning the resulting effects file. No longer runs the GATK
+    annotator, since it requires an old version of snpEff.
     """
-    snpeff_vcf, snpeff_txt = snpeff_effects(vrn_file, genome_build, config)
-    annotated_vcf = annotate_effects(vrn_file, snpeff_vcf, genome_file, config) \
-                    if snpeff_vcf else None
-    return annotated_vcf, snpeff_txt
+    return snpeff_effects(vrn_file, genome_build, config)
 
 # ## Structural variation
 

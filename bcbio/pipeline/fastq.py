@@ -40,9 +40,7 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
             subprocess.check_call(cl)
             ready_files.append(os.path.splitext(fname)[0])
         elif fname.endswith(".bam"):
-            print config["algorithm"]["aligner"]
-            if (config["algorithm"].get("aligner", None) and
-                item["algorithm"].get("aligner", True)):
+            if _pipeline_needs_fastq(config, item):
                 ready_files = convert_bam_to_fastq(fname, work_dir, config)
             else:
                 ready_files = [fname]
@@ -51,6 +49,13 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
+
+def _pipeline_needs_fastq(config, item):
+    do_align = (config["algorithm"].get("aligner", None) and
+                item["algorithm"].get("aligner", True))
+    has_multiplex = item.get("multiplex") is not None
+    do_split = item["algorithm"].get("align_split_size") is not None
+    return has_multiplex or (do_align and not do_split)
 
 def convert_bam_to_fastq(in_file, work_dir, config):
     """Convert BAM input file into FASTQ files.

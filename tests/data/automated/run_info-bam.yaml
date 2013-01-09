@@ -3,9 +3,12 @@ details:
       #aligner: false
       #recalibrate: false
       #realign: false
-      #variantcaller: freebayes
+      aligner: novoalign
+      variantcaller: gatk
       quality_format: Standard
       coverage_interval: regional
+      align_split_size: 9000
+    analysis: variant
     description: Test1
     genome_build: hg19
     lane: 7

@@ -13,7 +13,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.log import logger
-from bcbio.pipeline import config_loader as config_utils
+from bcbio.pipeline import config_utils
 
 def combine_calls(data):
     """Combine multiple callsets into a final set of merged calls.
@@ -31,15 +31,19 @@ def combine_calls(data):
     return [[data]]
 
 def _run_bcbio_variation(config_file, base_dir, sample, data):
+    tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))
     out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(sample))
     out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(sample))
     if not utils.file_exists(out_vcf_file):
         bv_jar = config_utils.get_jar("bcbio.variation",
                                       config_utils.get_program("bcbio_variation",
                                                                data["config"], "dir"))
-        subprocess.check_call(["java", "-jar", bv_jar, "variant-compare", config_file])
-        base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep", "*-cfilter.vcf"))[0]
-        base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep", "*-multicombine.bed"))[0]
+        java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
+        subprocess.check_call(["java"] + java_args + ["-jar", bv_jar, "variant-compare", config_file])
+        base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
+                                          "*-cfilter.vcf"))[0]
+        base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep",
+                                          "*-multicombine.bed"))[0]
         os.symlink(base_vcf, out_vcf_file)
         os.symlink(base_bed, out_bed_file)
 
@@ -85,20 +89,25 @@ def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
     combo_name = "combo"
     exp = {"sample": sample, "ref": ref_file, "align": align_bam, "calls": []}
     if do_combo:
-        exp["finalize"] = [{"method": "multiple",
-                            "target": combo_name},
-                            {"method": "recal-filter",
-                             "target": [combo_name, variants[1]["variantcaller"]],
-                             "params": {"support": combo_name,
-                                        "classifiers": algorithm["ensemble"]["classifiers"],
-                                        "xspecific": True,
-                                        "trusted":
-                                        {"total": algorithm["ensemble"].get("trusted_pct", 0.65)}}}]
+        cparams = algorithm["ensemble"].get("classifier-params", {})
+        exp["finalize"] = \
+          [{"method": "multiple",
+            "target": combo_name},
+            {"method": "recal-filter",
+             "target": [combo_name, variants[0]["variantcaller"]],
+             "params": {"support": combo_name,
+                        "classifiers": algorithm["ensemble"]["classifiers"],
+                        "classifier-type": cparams.get("type", "svm"),
+                        "normalize": cparams.get("normalize", "default"),
+                        "log-attrs": cparams.get("log-attrs", []),
+                        "xspecific": True,
+                        "trusted":
+                        {"total": algorithm["ensemble"].get("trusted-pct", 0.65)}}}]
     if intervals:
         exp["intervals"] = os.path.abspath(intervals)
     for i, v in enumerate(variants):
         cur = {"name": v["variantcaller"], "file": v["vrn_file"],
-               "annotate": do_combo, "remove-refcalls": True}
+               "remove-refcalls": True}
         if algorithm.get("ploidy", 2) == 1:
             cur["make-haploid"] = True
         # add a recall variant for the first sample which will combine all calls
@@ -106,6 +115,7 @@ def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
             recall = copy.deepcopy(cur)
             recall["name"] = combo_name
             recall["recall"] = True
+            recall["annotate"] = True
             if algorithm["ensemble"].get("format-filters"):
                 recall["format-filters"] = algorithm["ensemble"]["format-filters"]
             exp["calls"].append(recall)

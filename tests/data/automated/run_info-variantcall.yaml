@@ -1,9 +1,9 @@
 details:
-  - analysis: SNP calling
+  - analysis: variant
     algorithm:
       #aligner: bwa
       aligner: novoalign
-      variantcaller: [gatk, samtools]
+      variantcaller: [gatk, samtools, freebayes]
       #variantcaller: gatk-haplotype
       #variantcaller: freebayes
       #variantcaller: cortex

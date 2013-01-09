@@ -10,6 +10,7 @@ from contextlib import closing
 import pysam
 import numpy
 
+from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie
 from bcbio.utils import safe_makedir, file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -45,7 +46,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
             safe_makedir(tx_out_dir)
-            cl = [config["program"].get("tophat", "tophat")]
+            cl = [config_utils.get_program("tophat", config)]
             cl += core_flags
             cl += qual_flags
             cl += gtf_flags

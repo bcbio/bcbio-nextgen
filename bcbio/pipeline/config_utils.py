@@ -1,28 +1,4 @@
 """Loads configurations from .yaml files and expands environment variables.
-
-The configuration yaml has the structure
-
-galaxy_config:
-program:
-	program1:
-	program2:
-algorithm:
-	setting1:
-	setting2:
-log_dir:
-store_dir:
-store_host:
-analysis:
-	config_file:
-	towig_script:
-distributed:
-	rabbitmq_vhost:
-custom_algorithms:
-	setting1:
-	setting2:
-
-galaxy_config, program and analysis supports
-environment variables.
 """
 import os
 import glob
@@ -50,7 +26,17 @@ def expand_path(path):
     except AttributeError:
         return path
 
-def get_program(name, config, ptype="cmd"):
+def get_resources(name, config):
+    """Retrieve resources for a program, pulling from multiple config sources.
+    """
+    resources = config.get("resources", {}).get(name, {})
+    if "jvm_opts" not in resources:
+        java_memory = config["algorithm"].get("java_memory", None)
+        if java_memory:
+            resources["jvm_opts"] = ["-Xms%s" % java_memory, "-Xmx%s" % java_memory]
+    return resources
+
+def get_program(name, config, ptype="cmd", default=None):
     """Retrieve program information from the configuration.
 
     This handles back compatible location specification in input
@@ -59,32 +45,44 @@ def get_program(name, config, ptype="cmd"):
     """
     try:
         pconfig = config.get("resources", {})[name]
+        # If have leftover old
     except KeyError:
-        pconfig = config.get("program", {}).get("name", None)
+        pconfig = {}
+    old_config = config.get("program", {}).get(name, None)
+    if old_config:
+        for key in ["dir", "cmd"]:
+            if not pconfig.has_key(key):
+                pconfig[key] = old_config
     if ptype == "cmd":
-        return _get_program_cmd(name, pconfig)
+        return _get_program_cmd(name, pconfig, default)
     elif ptype == "dir":
         return _get_program_dir(name, pconfig)
     else:
         raise ValueError("Don't understand program type: %s" % ptype)
 
-def _get_program_cmd(name, config):
+def _get_program_cmd(name, config, default):
     """Retrieve commandline of a program.
     """
-    if config.has_key("cmd"):
-        return config["cmd"]
+    if config is None:
+        return name
     elif isinstance(config, basestring):
         return config
+    elif config.has_key("cmd"):
+        return config["cmd"]
+    elif default is not None:
+        return default
     else:
         return name
 
 def _get_program_dir(name, config):
     """Retrieve directory for a program (local installs/java jars).
     """
-    if config.has_key("dir"):
-        return config["dir"]
+    if config is None:
+        raise ValueError("Could not find directory in config for %s" % name)
     elif isinstance(config, basestring):
         return config
+    elif config.has_key("dir"):
+        return config["dir"]
     else:
         raise ValueError("Could not find directory in config for %s" % name)
 

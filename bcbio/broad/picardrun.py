@@ -1,6 +1,7 @@
 """Convenience functions for running common Picard utilities.
 """
 import os
+import collections
 from contextlib import closing
 
 import pysam
@@ -30,7 +31,7 @@ def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
 
 
 def picard_sort(picard, align_bam, sort_order="coordinate",
-                out_file=None):
+                out_file=None, compression_level=None, pipe=False):
     """Sort a BAM file by coordinates.
     """
     base, ext = os.path.splitext(align_bam)
@@ -40,10 +41,12 @@ def picard_sort(picard, align_bam, sort_order="coordinate",
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", align_bam),
-                        ("OUTPUT", tx_out_file),
+                        ("OUTPUT", out_file if pipe else tx_out_file),
                         ("TMP_DIR", tmp_dir),
                         ("SORT_ORDER", sort_order)]
-                picard.run("SortSam", opts)
+                if compression_level:
+                    opts.append(("COMPRESSION_LEVEL", compression_level))
+                picard.run("SortSam", opts, pipe=pipe)
     return out_file
 
 def picard_merge(picard, in_files, out_file=None,
@@ -59,6 +62,7 @@ def picard_merge(picard, in_files, out_file=None,
                         ("SORT_ORDER", "coordinate"),
                         ("MERGE_SEQUENCE_DICTIONARIES",
                          "true" if merge_seq_dicts else "false"),
+                        ("USE_THREADING", "true"),
                         ("TMP_DIR", tmp_dir)]
                 for in_file in in_files:
                     opts.append(("INPUT", in_file))
@@ -176,6 +180,8 @@ def picard_mark_duplicates(picard, align_bam, remove_dups=False):
                         ("TMP_DIR", tmp_dir),
                         ("REMOVE_DUPLICATES", "true" if remove_dups else "false"),
                         ("METRICS_FILE", tx_dup_metrics)]
+                if picard.get_picard_version("MarkDuplicates") >= 1.82:
+                    opts += [("PROGRAM_RECORD_ID", "null")]
                 picard.run("MarkDuplicates", opts)
     return dup_bam, dup_metrics
 
@@ -193,6 +199,24 @@ def picard_fixmate(picard, align_bam):
                         ("SORT_ORDER", "coordinate")]
                 picard.run("FixMateInformation", opts)
     return out_file
+
+def picard_idxstats(picard, align_bam):
+    """Retrieve alignment stats from picard using BamIndexStats.
+    """
+    opts = [("INPUT", align_bam)]
+    stdout = picard.run("BamIndexStats", opts, get_stdout=True)
+    out = []
+    AlignInfo = collections.namedtuple("AlignInfo", ["contig", "length", "aligned", "unaligned"])
+    for line in stdout.split("\n"):
+        if line:
+            parts = line.split()
+            if len(parts) == 2:
+                _, unaligned = parts
+                out.append(AlignInfo("nocontig", 0, 0, int(unaligned)))
+            else:
+                contig, _, length, _, aligned, _, unaligned = parts
+                out.append(AlignInfo(contig, int(length), int(aligned), int(unaligned)))
+    return out
 
 def bed2interval(align_file, bed, out_file=None):
     """Converts a bed file to an interval file for use with some of the

@@ -96,7 +96,12 @@ def _run_info_from_yaml(fc_dir, run_info_yaml):
     run_details = []
     for i, item in enumerate(loaded):
         if not item.has_key("lane"):
-            item["lane"] = _generate_lane(item["files"], i)
+            if item.has_key("description"):
+                item["lane"] = item["description"]
+            elif item.has_key("files"):
+                item["lane"] = _generate_lane(item["files"], i)
+            else:
+                raise ValueError("Unable to generate lane info for input %s" % item)
         if not item.has_key("description"):
             item["description"] = str(item["lane"])
         item["description_filenames"] = global_config.get("description_filenames", False)

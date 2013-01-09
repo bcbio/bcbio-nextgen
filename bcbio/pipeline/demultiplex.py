@@ -31,7 +31,7 @@ def split_by_barcode(fastq1, fastq2, multiplex, base_name, dirs, config):
         with file_transaction(bc_dir) as tx_bc_dir:
             with utils.chdir(tx_bc_dir):
                 tag_file, need_trim = _make_tag_file(multiplex, unmatched_str, config)
-                cl = [config["program"]["barcode"], tag_file,
+                cl = ["barcode_sort_trim.py", tag_file,
                       "%s_--b--_--r--_fastq.txt" % base_name,
                       fastq1]
                 if fastq2:

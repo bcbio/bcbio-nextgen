@@ -5,6 +5,7 @@ http://bioinformatics.bc.edu/marthlab/Mosaik
 import os
 import subprocess
 
+from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 
@@ -26,7 +27,8 @@ def _convert_fastq(fastq_file, pair_file, rg_name, out_file, config):
     out_file = "{0}-fq.mkb".format(os.path.splitext(out_file)[0])
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            cl = [config["program"].get("mosaik", "MosaikAligner").replace("Aligner", "Build")]
+            cl = [config_utils.get_program("mosaik", config,
+                                           default="MosaikAligner").replace("Aligner", "Build")]
             cl += ["-q", fastq_file,
                    "-out", tx_out_file,
                    "-st", config["algorithm"].get("platform", "illumina").lower()]
@@ -60,7 +62,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         with file_transaction(out_file) as tx_out_file:
             built_fastq = _convert_fastq(fastq_file, pair_file, rg_name,
                                          out_file, config)
-            cl = [config["program"].get("mosaik", "MosaikAligner")]
+            cl = [config_utils.get_program("mosaik", config, default="MosaikAligner")]
             cl += _mosaik_args_from_config(config)
             cl += extra_args if extra_args is not None else []
             cl += ["-ia", ref_file,

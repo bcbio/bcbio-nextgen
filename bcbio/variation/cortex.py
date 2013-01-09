@@ -20,6 +20,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import broad
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.utils import file_exists, safe_makedir, partition_all
 from bcbio.variation.genotype import combine_variant_files, write_empty_vcf
@@ -118,9 +119,9 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
     """
     kmers = [31, 51, 71]
     min_reads = 1750
-    cortex_dir = config["program"].get("cortex")
-    stampy_dir = config["program"].get("stampy")
-    vcftools_dir = config["program"].get("vcftools")
+    cortex_dir = config_utils.get_program("cortex", config, "dir")
+    stampy_dir = config_utils.get_program("stampy", config, "dir")
+    vcftools_dir = config_utils.get_program("vcftools", config, "dir")
     if cortex_dir is None or stampy_dir is None:
         raise ValueError("cortex_var requires path to pre-built cortex and stampy")
     region_str = apply("{0}-{1}-{2}".format, region)

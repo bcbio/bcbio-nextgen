@@ -34,7 +34,7 @@ from contextlib import contextmanager, closing
 
 import pysam
 
-from bcbio.pipeline.config_loader import load_config
+from bcbio.pipeline.config_utils import load_config, get_program
 
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
          outfile=None, normalize=False, use_tempfile=False):
@@ -111,7 +111,7 @@ def convert_to_bigwig(wig_file, chr_sizes, config, bw_file=None):
         for chrom, size in chr_sizes:
             out_handle.write("%s\t%s\n" % (chrom, size))
     try:
-        cl = [config["program"]["ucsc_bigwig"], wig_file, size_file, bw_file]
+        cl = [get_program("ucsc_bigwig", config, default="wigToBigWig"), wig_file, size_file, bw_file]
         subprocess.check_call(cl)
     finally:
         os.remove(size_file)

@@ -5,9 +5,15 @@ temporary increased disk usage.
 """
 import os
 import glob
-from bcbio.bam.trim import _save_diskspace
+import itertools
+import operator
 
+import pysam
+from Bio import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
+
+from bcbio.bam.trim import _save_diskspace
+from bcbio import utils, broad
 
 def _find_current_split(in_fastq, out_dir):
     """Check for existing split files to avoid re-splitting.
@@ -64,3 +70,100 @@ def split_fastq_files(fastq1, fastq2, split_size, out_dir, config):
     else:
         split_fastq2 = [None] * len(split_fastq1)
     return zip(split_fastq1, split_fastq2, [None] + [x+1 for x in range(len(split_fastq1) - 1)])
+
+def _get_seq_qual(read):
+    if read.is_reverse:
+        seq = str(Seq.Seq(read.seq).reverse_complement())
+        tmp = list(read.qual)
+        tmp.reverse()
+        qual = "".join(tmp)
+    else:
+        seq = read.seq
+        qual = read.qual
+    return seq, qual
+
+def _find_current_bam_split(bam_file, out_dir):
+    """Check for existing split files from BAM inputs, to avoid re-splitting.
+    """
+    base = os.path.join(out_dir,
+                        os.path.splitext(os.path.basename(bam_file))[0])
+    def get_pair_and_splitnum(fname):
+        base = os.path.splitext(os.path.basename(fname))[0]
+        _, pair, num = base.rsplit("_", 2)
+        return int(num), int(pair)
+    xs = []
+    for fname in glob.glob("{0}_*".format(base)):
+        num, pair = get_pair_and_splitnum(fname)
+        xs.append((num, pair, fname))
+    out = []
+    for num, g in itertools.groupby(sorted(xs), operator.itemgetter(0)):
+        f1, f2 = [x[-1] for x in sorted(g)]
+        split = num if num > 0 else None
+        out.append((f1, f2, split))
+    return out
+
+def split_bam_file(bam_file, split_size, out_dir, config):
+    """Split a BAM file into paired end fastq splits based on split size.
+
+    XXX Need to generalize for non-paired end inputs.
+    """
+    existing = _find_current_bam_split(bam_file, out_dir)
+    if len(existing) > 0:
+        return existing
+    pipe = True
+
+    utils.safe_makedir(out_dir)
+    broad_runner = broad.runner_from_config(config)
+    out_files = []
+    def new_handle(num):
+        out = []
+        for pair in [1, 2]:
+            fname = os.path.join(out_dir, "{base}_{pair}_{num}.fastq".format(
+                base=os.path.splitext(os.path.basename(bam_file))[0], pair=pair, num=num))
+            out += [fname, open(fname, "w")]
+        return out
+    with utils.curdir_tmpdir() as tmp_dir:
+        if pipe:
+            sort_file = os.path.join(tmp_dir, "%s-sort.bam" %
+                                     os.path.splitext(os.path.basename(bam_file))[0])
+            os.mkfifo(sort_file)
+            broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file,
+                                compression_level=0, pipe=True)
+        else:
+            sort_file = os.path.join(out_dir, "%s-sort.bam" %
+                                     os.path.splitext(os.path.basename(bam_file))[0])
+            broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file)
+
+        samfile = pysam.Samfile(sort_file, "rb")
+        i = 0
+        num = 0
+        f1, out_handle1, f2, out_handle2 = new_handle(num)
+        out_files.append([f1, f2, None])
+        for x1, x2 in utils.partition_all(2, samfile):
+            x1_seq, x1_qual = _get_seq_qual(x1)
+            out_handle1.write("@%s/1\n%s\n+\n%s\n" % (i, x1_seq, x1_qual))
+            x2_seq, x2_qual = _get_seq_qual(x2)
+            out_handle2.write("@%s/2\n%s\n+\n%s\n" % (i, x2_seq, x2_qual))
+            i += 1
+            if i % split_size == 0:
+                num += 1
+                out_handle1.close()
+                out_handle2.close()
+                f1, out_handle1, f2, out_handle2 = new_handle(num)
+                out_files.append([f1, f2, num])
+        out_handle1.close()
+        out_handle2.close()
+        samfile.close()
+        if pipe:
+            os.unlink(sort_file)
+        else:
+            utils.save_diskspace(sort_file, "Split to {}".format(out_files[0][0]), config)
+    return out_files
+
+def split_read_files(fastq1, fastq2, split_size, out_dir, config):
+    """Split input reads for parallel processing, dispatching on input type.
+    """
+    if fastq1.endswith(".bam") and fastq2 is None:
+        return split_bam_file(fastq1, split_size, out_dir, config)
+    else:
+        return split_fastq_files(fastq1, fastq2, split_size, out_dir, config)

@@ -158,6 +158,9 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
     if caller in ["gatk-haplotype"] and cov_interval not in ["regional"]:
         return _variant_filtration_both(broad_runner, call_file, ref_file, vrn_files,
                                         config)
+    # no additional filtration for callers that filter as part of call process
+    elif caller in ["samtools"]:
+        return call_file
     else:
         snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)
         snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
@@ -474,7 +477,12 @@ def combine_multiple_callers(data):
                         "vrn_file": x["vrn_file"]}
                        for x in grouped_calls]
         final = grouped_calls[0]
-        final["variants"] = ready_calls
+        def orig_variantcaller_order(x):
+            return final["config"]["algorithm"]["orig_variantcaller"].index(x["variantcaller"])
+        if len(ready_calls) > 1:
+            final["variants"] = sorted(ready_calls, key=orig_variantcaller_order)
+        else:
+            final["variants"] = ready_calls
         out.append([final])
     return out
 
@@ -489,6 +497,8 @@ def _handle_multiple_variantcallers(data):
         out = []
         for caller in callers:
             base = copy.deepcopy(data[0])
+            base["config"]["algorithm"]["orig_variantcaller"] = \
+              base["config"]["algorithm"]["variantcaller"]
             base["config"]["algorithm"]["variantcaller"] = caller
             out.append([base])
         return out

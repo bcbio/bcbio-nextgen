@@ -59,13 +59,10 @@ def postprocess_variants(data):
         data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
                                               data["sam_ref"], data["config"])
         logger.info("Calculating variation effects for %s" % str(data["name"]))
-        ann_vrn_file, effects_file = variation_effects(data["vrn_file"],
-                                                       data["sam_ref"],
-                                                       data["genome_build"],
-                                                       data["config"])
+        ann_vrn_file = variation_effects(data["vrn_file"], data["sam_ref"],
+                                         data["genome_build"], data["config"])
         if ann_vrn_file:
             data["vrn_file"] = ann_vrn_file
-            data["effects_file"] = effects_file
     return [[data]]
 
 def process_sample(data):
@@ -89,8 +86,7 @@ def generate_bigwig(data):
     wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if not file_exists(wig_file):
         with file_transaction(wig_file) as tx_file:
-            cl = [data["config"]["analysis"]["towig_script"], bam_file,
+            cl = ["bam_to_wiggle.py", bam_file,
                   data["config_file"], "--outfile=%s" % tx_file]
             subprocess.check_call(cl)
     return [[data]]
-

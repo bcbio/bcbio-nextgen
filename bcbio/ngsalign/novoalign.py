@@ -3,6 +3,7 @@
 import os
 import subprocess
 
+from bcbio.pipeline import config_utils
 from bcbio.log import logger
 from bcbio.utils import (memoize_outfile, file_exists)
 from bcbio.distributed.transaction import file_transaction
@@ -43,7 +44,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     """
     out_file = os.path.join(align_dir, "{0}.sam".format(out_base))
     if not file_exists(out_file):
-        cl = [config["program"].get("novoalign", "novoalign")]
+        cl = [config_utils.get_program("novoalign", config)]
         cl += _novoalign_args_from_config(config)
         cl += extra_args if extra_args is not None else []
         cl += ["-o", "SAM"]

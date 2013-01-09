@@ -29,7 +29,7 @@ from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio import utils
-from bcbio.pipeline.config_loader import load_config
+from bcbio.pipeline.config_utils import load_config
 
 def main(config_file, fc_dir, analysis_dir, run_info_yaml=None):
     config = load_config(config_file)

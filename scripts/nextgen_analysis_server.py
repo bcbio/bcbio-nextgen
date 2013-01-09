@@ -26,7 +26,7 @@ from celery import signals
 
 from bcbio import utils
 from bcbio.distributed.messaging import create_celeryconfig
-from bcbio.pipeline.config_loader import load_config
+from bcbio.pipeline.config_utils import load_config
 from bcbio.log import logger, setup_logging
 
 def main(config_file, queues=None, task_module=None, base_dir=None):

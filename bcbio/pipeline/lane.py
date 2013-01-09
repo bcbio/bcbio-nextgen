@@ -7,18 +7,18 @@ from bcbio.log import logger
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
-from bcbio.ngsalign.split import split_fastq_files
+from bcbio.ngsalign.split import split_read_files
 from bcbio.bam.trim import brun_trim_fastq
 
 def _prep_fastq_files(item, bc_files, dirs, config):
     """Potentially prepare input FASTQ files for processing.
     """
     fastq1, fastq2 = bc_files[item["barcode_id"]]
-    split_size = config["distributed"].get("align_split_size",
-                                           config["algorithm"].get("align_split_size", None))
+    split_size = config.get("distributed", {}).get("align_split_size",
+                                                   config["algorithm"].get("align_split_size", None))
     if split_size:
         split_dir = os.path.join(dirs["align"], "split")
-        return split_fastq_files(fastq1, fastq2, split_size, split_dir, config)
+        return split_read_files(fastq1, fastq2, split_size, split_dir, config)
     else:
         return [[fastq1, fastq2, None]]
 
@@ -75,14 +75,16 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
 def _update_config_w_custom(config, lane_info):
     """Update the configuration for this lane if a custom analysis is specified.
     """
+    name_remaps = {"variant": ["SNP calling", "variant"],
+                   "SNP calling": ["SNP calling", "variant"]}
     config = copy.deepcopy(config)
-    analysis_type = lane_info.get("analysis", "")
-    custom = config["custom_algorithms"].get(analysis_type, None)
-    if custom:
-        for key, val in custom.iteritems():
-            config["algorithm"][key] = val
+    base_name = lane_info.get("analysis")
+    for analysis_type in name_remaps.get(base_name, [base_name]):
+        custom = config["custom_algorithms"].get(analysis_type, None)
+        if custom:
+            for key, val in custom.iteritems():
+                config["algorithm"][key] = val
     # apply any algorithm details specified with the lane
     for key, val in lane_info.get("algorithm", {}).iteritems():
         config["algorithm"][key] = val
     return config
-
