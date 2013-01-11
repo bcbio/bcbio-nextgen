@@ -16,6 +16,7 @@ from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 
 
 galaxy_location_file = "bowtie_indices.loc"
@@ -30,9 +31,10 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     run alignment using Tophat v1
     """
     if _ref_version(ref_file) != 1:
-        raise ValueError("Tophat v1 needs Bowtie version 1 libraries "
-                         "(the extension should be .ebwt). Download "
-                         "v1 libraries or build new ones with bowtie-build.")
+        logger.error("Tophat v1 needs Bowtie version 1 libraries "
+                     "(the extension should be .ebwt). Download "
+                     "v1 libraries or build new ones with bowtie-build.")
+        exit(1)
 
     qual_format = config["algorithm"].get("quality_format", None)
 
@@ -148,12 +150,13 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         return out_file
 
     if not _bowtie_ref_match(ref_file, config):
-        raise ValueError("Bowtie version %d was detected but the reference "
-                         "file %s is built for version %d. Download version "
-                         "%d or build it with bowtie-build."
-                         % (_bowtie_major_version(config), ref_file,
-                            _ref_version(ref_file),
-                            _bowtie_major_version(config)))
+        logger.error("Bowtie version %d was detected but the reference "
+                     "file %s is built for version %d. Download version "
+                     "%d or build it with bowtie-build."
+                     % (_bowtie_major_version(config), ref_file,
+                        _ref_version(ref_file),
+                        _bowtie_major_version(config)))
+        exit(1)
 
     tophat_version = _tophat_major_version(config)
     if tophat_version == 1:
@@ -247,6 +250,7 @@ def _ref_version(ref_file):
     elif ext == ".bt2":
         return 2
     else:
-        raise ValueError("Cannot detect which reference version %s is. "
-                         "Should end in either .ebwt (bowtie) or .bt2 "
-                         "(bowtie2)." % (ref_file))
+        logger.error("Cannot detect which reference version %s is. "
+                     "Should end in either .ebwt (bowtie) or .bt2 "
+                     "(bowtie2)." % (ref_file))
+        exit(1)
