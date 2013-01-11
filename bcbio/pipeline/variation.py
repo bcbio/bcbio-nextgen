@@ -4,22 +4,12 @@ import os
 import json
 import subprocess
 
-from bcbio.variation.recalibrate import gatk_recalibrate
 from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
 from bcbio.variation.effects import snpeff_effects
 from bcbio.variation.annotation import annotate_effects
 from bcbio.variation import freebayes, phasing
 from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
 from bcbio.structural import hydra
-
-# ## Recalibration
-
-def recalibrate_quality(sort_bam_file, fastq1, fastq2, sam_ref,
-                        dirs, config):
-    """Recalibrate alignments with GATK and provide pdf summary.
-    """
-    dbsnp_file = configured_ref_file("dbsnp", config, sam_ref)
-    return gatk_recalibrate(sort_bam_file, sam_ref, config, dbsnp_file)
 
 # ## Genotyping
 

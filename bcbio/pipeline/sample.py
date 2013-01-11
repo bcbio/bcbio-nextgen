@@ -13,8 +13,7 @@ from bcbio.pipeline.lane import _update_config_w_custom
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.pipeline.qcsummary import generate_align_summary
-from bcbio.pipeline.variation import (recalibrate_quality, finalize_genotyper,
-                                      variation_effects)
+from bcbio.pipeline.variation import (finalize_genotyper, variation_effects)
 from bcbio.rnaseq.cufflinks import assemble_transcripts
 from bcbio.pipeline.shared import ref_genome_info
 
@@ -35,19 +34,6 @@ def merge_sample(data):
               "work_bam": sort_bam, "fastq1": fastq1, "fastq2": fastq2,
               "dirs": data["dirs"], "config": config,
               "config_file": data["config_file"]}]]
-
-def recalibrate_sample(data):
-    """Recalibrate quality values from aligned sample BAM file.
-    """
-    logger.info("Recalibrating %s with GATK" % str(data["name"]))
-    if data["config"]["algorithm"]["recalibrate"]:
-        recal_bam = recalibrate_quality(data["work_bam"], data["fastq1"],
-                                        data["fastq2"], data["sam_ref"],
-                                        data["dirs"], data["config"])
-        save_diskspace(data["work_bam"], "Recalibrated to %s" % recal_bam,
-                       data["config"])
-        data["work_bam"] = recal_bam
-    return [[data]]
 
 # ## General processing
 

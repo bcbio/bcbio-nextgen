@@ -5,7 +5,7 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype, ensemble
+from bcbio.variation import realign, genotype, ensemble, recalibrate
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
@@ -46,7 +46,17 @@ def merge_sample(*args):
 def recalibrate_sample(*args):
     with _setup_logging(args):
         return apply(sample.recalibrate_sample, *args)
-recalibrate_sample.metadata = {"queue_type": "multicore"}
+
+@require(recalibrate)
+def prep_recal(*args):
+    with _setup_logging(args):
+        return apply(recalibrate.prep_recal, *args)
+prep_recal.metadata = {"queue_type": "multicore"}
+
+@require(recalibrate)
+def write_recal_bam(*args):
+    with _setup_logging(args):
+        return apply(recalibrate.write_recal_bam, *args)
 
 @require(realign)
 def realign_sample(*args):
@@ -92,5 +102,3 @@ def detect_sv(*args):
 def combine_calls(*args):
     with _setup_logging(args):
         return apply(ensemble.combine_calls, *args)
-
-    

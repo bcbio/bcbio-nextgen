@@ -16,7 +16,7 @@ from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
-from bcbio.variation import ensemble
+from bcbio.variation import ensemble, recalibrate
 
 def run_main(config, config_file, work_dir, parallel,
              fc_dir=None, run_info_yaml=None):
@@ -45,7 +45,8 @@ def run_main(config, config_file, work_dir, parallel,
     # process samples, potentially multiplexed across multiple lanes
     samples = organize_samples(align_items, dirs, config_file)
     samples = run_parallel("merge_sample", samples)
-    samples = run_parallel("recalibrate_sample", samples)
+    samples = run_parallel("prep_recal", samples)
+    samples = recalibrate.parallel_write_recal_bam(samples, run_parallel)
     samples = parallel_realign_sample(samples, run_parallel)
     samples = parallel_variantcall(samples, run_parallel)
     samples = run_parallel("postprocess_variants", samples)
