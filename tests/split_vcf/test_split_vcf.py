@@ -1,6 +1,6 @@
 import yaml
 import unittest
-from bcbio.variation.genotype import split_vcf
+from bcbio.variation.split import split_vcf
 import filecmp
 import shutil
 import os
