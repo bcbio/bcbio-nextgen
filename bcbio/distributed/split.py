@@ -12,6 +12,46 @@ import os
 import copy
 import collections
 
+def grouped_parallel_split_combine(args, split_fn, group_fn, parallel_fn,
+                                   parallel_name, ungroup_name, combine_name,
+                                   file_key, combine_arg_keys):
+    """Parallel split runner that allows grouping of samples during processing.
+
+    This builds on parallel_split_combine to provide the additional ability to
+    group samples and subsequently split them back apart. This allows analysis
+    of related samples together. In addition to the arguments documented in
+    parallel_split_combine, this takes:
+
+    group_fn: A function that groups samples together given their configuration
+      details.
+    ungroup_name: Name of a parallelizable function, defined in distributed.tasks,
+      that will pull apart results from grouped analysis into individual sample
+      results to combine via `combine_name`
+    """
+    split_args, combine_map, finished_out = _get_split_tasks(args, split_fn, file_key)
+    grouped_args, grouped_info = group_fn(split_args)
+    split_output = parallel_fn(parallel_name, grouped_args)
+    ready_output, grouped_output = _check_group_status(split_output, grouped_info)
+    ungrouped_output = parallel_fn(ungroup_name, grouped_output)
+    final_output = ready_output + ungrouped_output
+    combine_args, final_args = _organize_output(final_output, combine_map,
+                                                file_key, combine_arg_keys)
+    parallel_fn(combine_name, combine_args)
+    return finished_out + final_args
+
+def _check_group_status(xs, grouped_info):
+    """Identify grouped items that need ungrouping to continue.
+    """
+    ready = []
+    grouped = []
+    for x in xs:
+        if x.has_key("group"):
+            x["group_orig"] = grouped_info[x["group"]]
+            grouped.append([x])
+        else:
+            ready.append(x)
+    return ready, grouped
+
 def parallel_split_combine(args, split_fn, parallel_fn,
                            parallel_name, combine_name,
                            file_key, combine_arg_keys):
@@ -22,6 +62,10 @@ def parallel_split_combine(args, split_fn, parallel_fn,
       split output names and arguments for the parallel function.
     parallel_fn: Reference to run_parallel function that will run
       single core, multicore, or distributed as needed.
+    parallel_name: The name of the function, defined in
+      bcbio.distributed.tasks/multitasks/ipythontasks to run in parallel.
+    combine_name: The name of the function, also from tasks, that combines
+      the split output files into a final ready to run file.
     """
     split_args, combine_map, finished_out = _get_split_tasks(args, split_fn, file_key)
     split_output = parallel_fn(parallel_name, split_args)

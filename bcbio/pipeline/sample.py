@@ -29,7 +29,7 @@ def merge_sample(data):
     else:
         fastq1, fastq2 = None, None
     sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
-    return [[{"name": data["name"],
+    return [[{"name": data["name"], "metadata": data["info"].get("metadata", {}),
               "genome_build": genome_build, "sam_ref": sam_ref,
               "work_bam": sort_bam, "fastq1": fastq1, "fastq2": fastq2,
               "dirs": data["dirs"], "config": config,

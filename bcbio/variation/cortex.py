@@ -25,10 +25,14 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.utils import file_exists, safe_makedir, partition_all
 from bcbio.variation.genotype import combine_variant_files, write_empty_vcf
 
-def run_cortex(align_bam, ref_file, config, dbsnp=None, region=None,
+def run_cortex(align_bams, ref_file, config, dbsnp=None, region=None,
                out_file=None):
     """Top level entry to regional de-novo based variant calling with cortex_var.
     """
+    if len(align_bams) == 1:
+        align_bam = align_bams[0]
+    else:
+        raise NotImplementedError("Need to add multisample calling for cortex_var")
     broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-cortex.vcf" % os.path.splitext(align_bam)[0]

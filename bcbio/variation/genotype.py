@@ -18,28 +18,30 @@ from bcbio import broad
 from bcbio.log import logger
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
-from bcbio.distributed.split import parallel_split_combine
+from bcbio.distributed.split import (parallel_split_combine,
+                                     grouped_parallel_split_combine)
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
+from bcbio.variation import multi
 
 # ## GATK Genotype calling
 
-def _shared_gatk_call_prep(align_bam, ref_file, config, dbsnp, region, out_file):
+def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file):
     """Shared preparation work for GATK variant calling.
     """
     broad_runner = broad.runner_from_config(config)
     broad_runner.run_fn("picard_index_ref", ref_file)
-    broad_runner.run_fn("picard_index", align_bam)
+    for x in align_bams:
+        broad_runner.run_fn("picard_index", x)
     coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
     variant_regions = config["algorithm"].get("variant_regions", None)
     confidence = "4.0" if coverage_depth in ["low"] else "30.0"
     if out_file is None:
-        out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
+        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     region = subset_variant_regions(variant_regions, region, out_file)
 
-    params = ["-I", align_bam,
-              "-R", ref_file,
+    params = ["-R", ref_file,
               "--annotation", "QualByDepth",
               "--annotation", "HaplotypeScore",
               "--annotation", "MappingQualityRankSumTest",
@@ -50,21 +52,23 @@ def _shared_gatk_call_prep(align_bam, ref_file, config, dbsnp, region, out_file)
               "--standard_min_confidence_threshold_for_calling", confidence,
               "--standard_min_confidence_threshold_for_emitting", confidence,
               ]
+    for x in align_bams:
+        params += ["-I", x]
     if dbsnp:
         params += ["--dbsnp", dbsnp]
     if region:
         params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
     return broad_runner, params, out_file
 
-def unified_genotyper(align_bam, ref_file, config, dbsnp=None,
+def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
                        region=None, out_file=None):
     """Perform SNP genotyping on the given alignment file.
     """
     broad_runner, params, out_file = \
-        _shared_gatk_call_prep(align_bam, ref_file, config, dbsnp,
+        _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
                                region, out_file)
     if not file_exists(out_file):
-        if not has_aligned_reads(align_bam, region):
+        if not all(has_aligned_reads(x, region) for x in align_bams):
             write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:
@@ -81,12 +85,12 @@ def haplotype_caller(align_bam, ref_file, config, dbsnp=None,
     This requires the full non open-source version of GATK.
     """
     broad_runner, params, out_file = \
-        _shared_gatk_call_prep(align_bam, ref_file, config, dbsnp,
+        _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
                                region, out_file)
     assert broad_runner.has_gatk_full(), \
         "Require full version of GATK 2.0 for haplotype based calling"
     if not file_exists(out_file):
-        if not has_aligned_reads(align_bam, region):
+        if not all(has_aligned_reads(x, region) for x in align_bams):
             write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:
@@ -515,10 +519,10 @@ def parallel_variantcall(sample_info, parallel_fn):
     if len(to_process) > 0:
         split_fn = process_bam_by_chromosome("-variants.vcf", "work_bam",
                                              dir_ext_fn = _get_variantcaller)
-        processed = parallel_split_combine(to_process, split_fn, parallel_fn,
-                                           "variantcall_sample",
-                                           "combine_variant_files",
-                                           "vrn_file", ["sam_ref", "config"])
+        processed = grouped_parallel_split_combine(
+            to_process, split_fn, multi.group_families, parallel_fn,
+            "variantcall_sample", "split_variants_by_sample", "combine_variant_files",
+            "vrn_file", ["sam_ref", "config"])
         finished.extend(processed)
     return finished
 
@@ -535,7 +539,11 @@ def variantcall_sample(data, region=None, out_file=None):
         sam_ref = data["sam_ref"]
         config = data["config"]
         caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
-        data["vrn_file"] = caller_fn(data["work_bam"], sam_ref, config,
+        if isinstance(data["work_bam"], basestring):
+            align_bams = [data["work_bam"]]
+        else:
+            align_bams = data["work_bam"]
+        data["vrn_file"] = caller_fn(align_bams, sam_ref, config,
                                      configured_ref_file("dbsnp", config, sam_ref),
                                      region, out_file)
     return [data]

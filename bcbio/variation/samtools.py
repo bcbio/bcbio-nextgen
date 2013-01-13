@@ -14,10 +14,14 @@ from bcbio.log import logger
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation.genotype import write_empty_vcf
 
-def run_samtools(align_bam, ref_file, config, dbsnp=None, region=None,
+def run_samtools(align_bams, ref_file, config, dbsnp=None, region=None,
                  out_file=None):
     """Detect SNPs and indels with samtools mpileup and bcftools.
     """
+    if len(align_bams) == 1:
+        align_bam = align_bams[0]
+    else:
+        raise NotImplementedError("Need to add multisample calling for samtools")
     broad_runner = broad.runner_from_config(config)
     broad_runner.run_fn("picard_index", align_bam)
     if out_file is None:

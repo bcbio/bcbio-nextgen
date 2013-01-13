@@ -83,4 +83,3 @@ def merge_bam_files(bam_files, work_dir, config, batch=0):
         for b in bam_files:
             utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
     return out_file
-

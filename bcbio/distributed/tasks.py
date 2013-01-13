@@ -5,7 +5,7 @@ import time
 from celery.task import task
 
 from bcbio.pipeline import sample, lane, toplevel, storage, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate
+from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
 
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
@@ -54,6 +54,10 @@ def realign_sample(*args):
 @task
 def process_sample(*args):
     return sample.process_sample(*args)
+
+@task
+def split_variants_by_sample(*args):
+    return multi.split_variants_by_sample(*args)
 
 @task
 def postprocess_variants(*args):

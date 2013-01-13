@@ -18,5 +18,7 @@ details:
       align_split_size: 9000
       variant_regions: ../data/automated/variant_regions-variantcall.bed
     description: Test1
+    metadata:
+      family: TestFamily1
     genome_build: hg19
     lane: 7

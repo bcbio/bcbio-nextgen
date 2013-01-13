@@ -2,7 +2,7 @@
 """
 from bcbio import utils
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate
+from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
 
 @utils.map_wrap
 def process_lane(*args):
@@ -27,6 +27,10 @@ def write_recal_bam(*args):
 @utils.map_wrap
 def realign_sample(*args):
     return realign.realign_sample(*args)
+
+@utils.map_wrap
+def split_variants_by_sample(*args):
+    return multi.split_variants_by_sample(*args)
 
 @utils.map_wrap
 def postprocess_variants(*args):

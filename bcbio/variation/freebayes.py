@@ -30,10 +30,14 @@ def _freebayes_options_from_config(aconfig, out_file, region=None):
         opts += ["--variant-input", background]
     return opts
 
-def run_freebayes(align_bam, ref_file, config, dbsnp=None, region=None,
+def run_freebayes(align_bams, ref_file, config, dbsnp=None, region=None,
                   out_file=None):
     """Detect small polymorphisms with FreeBayes.
     """
+    if len(align_bams) == 1:
+        align_bam = align_bams[0]
+    else:
+        raise NotImplementedError("Need to add multisample calling for freebayes")
     broad_runner = broad.runner_from_config(config)
     broad_runner.run_fn("picard_index", align_bam)
     if out_file is None:

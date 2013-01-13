@@ -63,6 +63,11 @@ def realign_sample(*args):
     with _setup_logging(args):
         return apply(realign.realign_sample, *args)
 
+@require(multi)
+def split_variants_by_sample(*args):
+    with _setup_logging(args):
+        return apply(multi.split_variants_by_sample, *args)
+
 @require(sample)
 def postprocess_variants(*args):
     with _setup_logging(args):
