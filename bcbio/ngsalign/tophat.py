@@ -8,13 +8,11 @@ import shutil
 import subprocess
 from contextlib import closing
 import glob
-
 import pysam
 import numpy
-
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
-from bcbio.utils import safe_makedir, file_exists
+from bcbio.utils import safe_makedir, file_exists, get_in, flatten
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 
@@ -51,7 +49,8 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     else:
         gtf_flags = []
 
-    cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
+    cores = get_in(config, ("resources", "tophat", "cores"), {})
+    options = list(flatten(get_in(config, ("resources", "tophat", "options"), {}).items()))
     core_flags = ["-p", str(cores)] if cores else []
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
@@ -63,6 +62,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             cl += core_flags
             cl += qual_flags
             cl += gtf_flags
+            cl += options
             cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
                    "--output-dir", tx_out_dir,
                    "--no-convert-bam"]
@@ -114,6 +114,7 @@ def tophat2_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     core_flags = ["-p", str(cores)] if cores else []
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
+    options = list(flatten(get_in(config, ("resources", "tophat", "options"), {}).items()))
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
@@ -123,6 +124,7 @@ def tophat2_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             cl += qual_flags
             cl += gtf_flags
             cl += ref_flags
+            cl += options
             cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
                    "--output-dir", tx_out_dir,
                    "--no-convert-bam"]
