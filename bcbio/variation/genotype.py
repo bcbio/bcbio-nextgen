@@ -520,7 +520,7 @@ def parallel_variantcall(sample_info, parallel_fn):
         split_fn = process_bam_by_chromosome("-variants.vcf", "work_bam",
                                              dir_ext_fn = _get_variantcaller)
         processed = grouped_parallel_split_combine(
-            to_process, split_fn, multi.group_families, parallel_fn,
+            to_process, split_fn, multi.group_batches, parallel_fn,
             "variantcall_sample", "split_variants_by_sample", "combine_variant_files",
             "vrn_file", ["sam_ref", "config"])
         finished.extend(processed)

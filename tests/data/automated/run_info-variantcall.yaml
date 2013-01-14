@@ -19,6 +19,6 @@ details:
       variant_regions: ../data/automated/variant_regions-variantcall.bed
     description: Test1
     metadata:
-      family: TestFamily1
+      batch: TestBatch1
     genome_build: hg19
     lane: 7

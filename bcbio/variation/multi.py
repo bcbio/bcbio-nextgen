@@ -10,35 +10,35 @@ import os
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 
-def group_families(xs):
-    """Group samples into families for simultaneous variant calling.
+def group_batches(xs):
+    """Group samples into batches for simultaneous variant calling.
 
-    Identify all samples to call together: those in the same family,
+    Identify all samples to call together: those in the same batch,
     variant caller and genomic region.
-    Pull together all BAM files from this family and process together,
+    Pull together all BAM files from this batch and process together,
     Provide details to pull these finalized files back into individual
     expected files.
     """
     singles = []
-    family_groups = collections.defaultdict(list)
+    batch_groups = collections.defaultdict(list)
     for data, region, out_fname in xs:
-        family = data.get("metadata", {}).get("family")
+        batch = data.get("metadata", {}).get("batch")
         caller = data["config"]["algorithm"]["variantcaller"]
-        if family is not None:
-            family_groups[(family, region, caller)].append((data, out_fname))
+        if batch is not None:
+            batch_groups[(batch, region, caller)].append((data, out_fname))
         else:
             singles.append((data, region, out_fname))
-    families = []
-    remap_families = {}
-    for (family, region, _), xs in family_groups.iteritems():
+    batches = []
+    remap_batches = {}
+    for (batch, region, _), xs in batch_groups.iteritems():
         cur_data, cur_fname = xs[0]
-        family_fname = utils.append_stem(cur_fname, family, "-")
-        family_data = copy.deepcopy(cur_data)
-        family_data["work_bam"] = [x[0]["work_bam"] for x in xs]
-        family_data["group"] = family_fname
-        families.append((family_data, region, family_fname))
-        remap_families[family_fname] = xs
-    return singles + families, remap_families
+        batch_fname = utils.append_stem(cur_fname, batch, "-")
+        batch_data = copy.deepcopy(cur_data)
+        batch_data["work_bam"] = [x[0]["work_bam"] for x in xs]
+        batch_data["group"] = batch_fname
+        batches.append((batch_data, region, batch_fname))
+        remap_batches[batch_fname] = xs
+    return singles + batches, remap_batches
 
 def split_variants_by_sample(data):
     """Split a multi-sample call file into inputs for individual samples.
