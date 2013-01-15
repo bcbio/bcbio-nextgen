@@ -8,13 +8,11 @@ import shutil
 import subprocess
 from contextlib import closing
 import glob
-
 import pysam
 import numpy
-
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
-from bcbio.utils import safe_makedir, file_exists
+from bcbio.utils import safe_makedir, file_exists, get_in, flatten
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 
@@ -25,118 +23,65 @@ _out_fnames = ["accepted_hits.sam", "junctions.bed",
                "insertions.bed", "deletions.bed"]
 
 
-def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-                 rg_name=None):
-    """
-    run alignment using Tophat v1
-    """
-    if _ref_version(ref_file) != 1:
-        logger.error("Tophat v1 needs Bowtie version 1 libraries "
-                     "(the extension should be .ebwt). Download "
-                     "v1 libraries or build new ones with bowtie-build.")
-        exit(1)
-
+def _set_quality_flag(options, config):
     qual_format = config["algorithm"].get("quality_format", None)
-
     if qual_format is None or qual_format.lower() == "illumina":
-        qual_flags = ["--solexa1.3-quals"]
+        options["solexa1.3-quals"] = True
     elif qual_format == "solexa":
-        qual_flags = ["--solexa-quals"]
-    else:
-        qual_flags = []
+        options["solexa-quals"] = True
+    return options
 
+
+def _set_gtf(options, config):
     gtf_file = config.get("gtf", None)
     if gtf_file is not None:
-        gtf_flags = ["--GTF", gtf_file]
-    else:
-        gtf_flags = []
+        options["GTF"] = gtf_file
+    return options
 
+
+def _set_cores(options, config):
     cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
-    core_flags = ["-p", str(cores)] if cores else []
-    out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
-    out_file = os.path.join(out_dir, _out_fnames[0])
-    files = [ref_file, fastq_file]
-    if not file_exists(out_file):
-        with file_transaction(out_dir) as tx_out_dir:
-            safe_makedir(tx_out_dir)
-            cl = [config_utils.get_program("tophat", config)]
-            cl += core_flags
-            cl += qual_flags
-            cl += gtf_flags
-            cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
-                   "--output-dir", tx_out_dir,
-                   "--no-convert-bam"]
-            if pair_file:
-                d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file, ref_file,
-                                                        out_base, tx_out_dir, config)
-                cl += ["--mate-inner-dist", str(d),
-                       "--mate-std-dev", str(d_stdev)]
-                files.append(pair_file)
-            cl += files
-            child = subprocess.check_call(cl)
-    out_file_final = os.path.join(out_dir, "%s.sam" % out_base)
-    if not os.path.exists(out_file_final):
-        os.symlink(out_file, out_file_final)
-    return out_file_final
+    if cores and "num-threads" not in options:
+        options["num-threads"] = cores
+    return options
 
 
-def tophat2_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                  rg_name=None):
     """
     run alignment using Tophat v2
     """
+    options = get_in(config, ("resources", "tophat", "options"), {})
+    options = _set_quality_flag(options, config)
+    options = _set_gtf(options, config)
+    options = _set_cores(options, config)
 
-    """
-    select the correct bowtie to run based on the reference version
-    """
+    # select the correct bowtie option to use; tophat2 is ignoring this option
+    if _tophat_major_version(config) == 2 and _ref_version(ref_file) == 1:
+        options["bowtie1"] = True
 
-    qual_format = config["algorithm"].get("quality_format", None)
-
-    if qual_format is None or qual_format.lower() == "illumina":
-        qual_flags = ["--solexa1.3-quals"]
-    elif qual_format == "solexa":
-        qual_flags = ["--solexa-quals"]
-    else:
-        qual_flags = []
-
-    gtf_file = config.get("gtf", None)
-    if gtf_file is not None:
-        gtf_flags = ["--GTF", gtf_file]
-    else:
-        gtf_flags = []
-
-    if _ref_version(ref_file) == 1:
-        ref_flags = ["--bowtie1"]
-    else:
-        ref_flags = []
-
-    cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
-    core_flags = ["-p", str(cores)] if cores else []
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
+    if file_exists(out_file):
+        return out_file
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
             safe_makedir(tx_out_dir)
-            cl = [config_utils.get_program("tophat", config)]
-            cl += core_flags
-            cl += qual_flags
-            cl += gtf_flags
-            cl += ref_flags
-            cl += ["-m", str(config["algorithm"].get("max_errors", 0)),
-                   "--output-dir", tx_out_dir,
-                   "--no-convert-bam"]
             if pair_file:
-                d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file, ref_file,
-                                                        out_base, tx_out_dir, config)
-                cl += ["--mate-inner-dist", str(d),
-                       "--mate-std-dev", str(d_stdev)]
+                d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file,
+                                                        ref_file, out_base,
+                                                        tx_out_dir, config)
+                options["mate-inner-dist"] = d
+                options["mate-std-dev"] = d_stdev
                 files.append(pair_file)
-            cl += files
-            child = subprocess.check_call(cl)
+            options["output-dir"] = tx_out_dir
+            options["no-convert-bam"] = True
+            tophat_runner = sh.Command(config_utils.get_program("tophat",
+                                                                config))
+            tophat_runner(options, files)
     out_file_final = os.path.join(out_dir, "%s.sam" % out_base)
-    if not os.path.exists(out_file_final):
-        os.symlink(out_file, out_file_final)
+    os.symlink(os.path.basename(out_file), out_file_final)
     return out_file_final
 
 
@@ -158,16 +103,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                         _bowtie_major_version(config)))
         exit(1)
 
-    tophat_version = _tophat_major_version(config)
-    if tophat_version == 1:
-        out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
-                                 align_dir, config, rg_name=None)
-    elif tophat_version == 2:
-        out_files = tophat2_align(fastq_file, pair_file, ref_file, out_base,
-                                  align_dir, config, rg_name=None)
-    else:
-        raise ValueError("Tophat major version %d is not supported yet."
-                         % (tophat_version))
+    out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
+                             align_dir, config, rg_name=None)
 
     return out_files
 
