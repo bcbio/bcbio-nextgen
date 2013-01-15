@@ -23,8 +23,7 @@ _out_fnames = ["accepted_hits.sam", "junctions.bed",
                "insertions.bed", "deletions.bed"]
 
 
-def _determine_quality(options, config):
-
+def _set_quality_flag(options, config):
     qual_format = config["algorithm"].get("quality_format", None)
     if qual_format is None or qual_format.lower() == "illumina":
         options["solexa1.3-quals"] = True
@@ -33,34 +32,38 @@ def _determine_quality(options, config):
     return options
 
 
-def tophat2_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def _set_gtf(options, config):
+    gtf_file = config.get("gtf", None)
+    if gtf_file is not None:
+        options["GTF"] = gtf_file
+    return options
+
+
+def _set_cores(options, config):
+    cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
+    if cores and "num-threads" not in options:
+        options["num-threads"] = cores
+    return options
+
+
+def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                  rg_name=None):
     """
     run alignment using Tophat v2
     """
     options = get_in(config, ("resources", "tophat", "options"), {})
-    options = _determine_quality(options, config)
-
-    qual_format = config["algorithm"].get("quality_format", None)
-
-    if qual_format is None or qual_format.lower() == "illumina":
-        options["solexa1.3-quals"] = True
-    elif qual_format == "solexa":
-        options["solexa-quals"] = True
-
-    gtf_file = config.get("gtf", None)
-    if gtf_file is not None:
-        options["GTF"] = gtf_file
+    options = _set_quality_flag(options, config)
+    options = _set_gtf(options, config)
+    options = _set_cores(options, config)
 
     # select the correct bowtie option to use; tophat2 is ignoring this option
     if _tophat_major_version(config) == 2 and _ref_version(ref_file) == 1:
         options["bowtie1"] = True
 
-    cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
-    if cores:
-        options["num-threads"] = cores
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
+    if file_exists(out_file):
+        return out_file
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
@@ -78,8 +81,7 @@ def tophat2_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                                                                 config))
             tophat_runner(options, files)
     out_file_final = os.path.join(out_dir, "%s.sam" % out_base)
-    if not os.path.exists(out_file_final):
-        os.symlink(out_file, out_file_final)
+    os.symlink(os.path.basename(out_file), out_file_final)
     return out_file_final
 
 
@@ -101,9 +103,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                         _bowtie_major_version(config)))
         exit(1)
 
-    tophat_version = _tophat_major_version(config)
-    out_files = tophat2_align(fastq_file, pair_file, ref_file, out_base,
-                              align_dir, config, rg_name=None)
+    out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
+                             align_dir, config, rg_name=None)
 
     return out_files
 
