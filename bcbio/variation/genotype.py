@@ -529,12 +529,13 @@ def parallel_variantcall(sample_info, parallel_fn):
 def variantcall_sample(data, region=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
-    from bcbio.variation import freebayes, cortex, samtools
+    from bcbio.variation import freebayes, cortex, samtools, varscan
     caller_fns = {"gatk": unified_genotyper,
                   "gatk-haplotype": haplotype_caller,
                   "freebayes": freebayes.run_freebayes,
                   "cortex": cortex.run_cortex,
-                  "samtools": samtools.run_samtools}
+                  "samtools": samtools.run_samtools,
+                  "varscan": varscan.run_varscan}
     if data["config"]["algorithm"]["snpcall"]:
         sam_ref = data["sam_ref"]
         config = data["config"]
