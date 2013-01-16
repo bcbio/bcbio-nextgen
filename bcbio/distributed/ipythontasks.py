@@ -5,7 +5,7 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate
+from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
