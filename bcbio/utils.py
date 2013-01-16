@@ -50,28 +50,102 @@ def map_wrap(f):
         return apply(f, *args, **kwargs)
     return wrapper
 
-def memoize_outfile(ext):
-    """Creates outfile from input file and ext, running if outfile not present.
 
-    This requires a standard function usage. The first arg, or kwarg 'in_file', needs
-    to be the input file that is being processed. The output name is created with the
-    provided ext relative to the input. The function is only run if the created
-    out_file is not present.
+def transform_to(ext):
     """
+    Decorator to create an output filename from an output filename with
+    the specified extension. Changes the extension, in_file is transformed
+    to a new type.
+
+    Takes functions like this to decorate:
+    f(in_file, out_dir=None, out_file=None) or,
+    f(in_file=in_file, out_dir=None, out_file=None)
+
+    examples:
+    @transform("bam")
+    f("the/input/path/file.sam") ->
+        f("the/input/path/file.sam", out_file="the/input/path/file.bam")
+
+    @transform("bam")
+    f("the/input/path/file.sam", out_dir="results") ->
+        f("the/input/path/file.sam", out_file="results/file.bam")
+
+    """
+
     def decor(f):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            if len(args) > 0:
-                in_file = args[0]
-            else:
-                in_file = kwargs['in_file']
-            out_file = "%s%s" % (os.path.splitext(in_file)[0], ext)
-            if not os.path.exists(out_file) or os.path.getsize(out_file) == 0:
-                kwargs['out_file'] = out_file
-                f(*args, **kwargs)
+            if "out_file" in kwargs:
+                return kwargs.get("out_file")
+            in_path = kwargs.get("in_file", args[0])
+            out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
+            out_name = replace_suffix(os.path.basename(in_path), "." + ext)
+            out_file = os.path.join(out_dir, out_name)
+            kwargs["out_file"] = out_file
+            f(*args, **kwargs)
             return out_file
         return wrapper
     return decor
+
+
+def filter_to(word):
+    """
+    Decorator to create an output filename from an input filename by
+    adding a word onto the stem. in_file is filtered by the function
+    and the results are written to out_file. You would want to use
+    this over transform_to if you don't know the extension of the file
+    going in.
+
+    Takes functions like this to decorate:
+    f(in_file, out_dir=None, out_file=None) or,
+    f(in_file=in_file, out_dir=None, out_file=None)
+
+    examples:
+    @filter_to("foo")
+    f("the/input/path/file.sam") ->
+        f("the/input/path/file.sam", out_file="the/input/path/file-foo.bam")
+
+    @filter_to("foo")
+    f("the/input/path/file.sam", out_dir="results") ->
+        f("the/input/path/file.sam", out_file="results/file-foo.bam")
+
+    """
+
+    def decor(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            if "out_file" in kwargs:
+                return kwargs.get("out_file")
+            in_path = kwargs.get("in_file", args[0])
+            out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
+            out_name = append_stem(os.path.basename(in_path), word, "-")
+            out_file = os.path.join(out_dir, out_name)
+            kwargs["out_file"] = out_file
+            f(*args, **kwargs)
+            return out_file
+        return wrapper
+    return decor
+
+
+def memoize_outfile(f):
+    """
+    Checks to see if out_file in the function call exists. If it does,
+    it returns the out_file name without rerunning the function. Requires
+    that out_file is set in the function call as a kwarg.
+
+    """
+    def wrapper(*args, **kwargs):
+        out_file = kwargs.get("out_file", None)
+        if not out_file:
+            raise ValueError("memoize_outfile needs out_file to be set in the "
+                             "function call. Maybe you forgot to decorate "
+                             "with @transform_to  or @filter_to first?")
+        if not file_exists(out_file):
+            print "file did not exist previously"
+            f(*args, **kwargs)
+        return out_file
+    return wrapper
+
 
 def safe_makedir(dname):
     """Make a directory if it doesn't exist, handling concurrent race conditions.
@@ -271,3 +345,8 @@ def is_pair(arg):
 
     """
     return is_sequence(arg) and len(arg) == 2
+
+@transform_to("bam")
+@memoize_outfile
+def foo(in_file,  out_file=None):
+    return out_file

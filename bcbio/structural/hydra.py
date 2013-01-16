@@ -109,7 +109,8 @@ def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
 
 ## Run hydra to identify structural variation breakpoints
 
-@utils.memoize_outfile(".bed")
+@utils.transform_to("bed")
+@utils.memoize_outfile
 def convert_bam_to_bed(in_bam, out_file):
     """Convert BAM to bed file using BEDTools.
     """
@@ -119,7 +120,8 @@ def convert_bam_to_bed(in_bam, out_file):
                                   stdout=out_handle)
     return out_file
 
-@utils.memoize_outfile("-pair.bed")
+@utils.transform_to("-pair.bed")
+@utils.memoize_outfile
 def pair_discordants(in_bed, pair_stats, out_file):
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
@@ -130,7 +132,8 @@ def pair_discordants(in_bed, pair_stats, out_file):
                                   stdout=out_handle)
     return out_file
 
-@utils.memoize_outfile("-dedup.bed")
+@utils.transform_to("-dedup.bed")
+@utils.memoize_outfile
 def dedup_discordants(in_bed, out_file):
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
