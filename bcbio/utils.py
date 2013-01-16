@@ -141,8 +141,7 @@ def memoize_outfile(f):
                              "function call. Maybe you forgot to decorate "
                              "with @transform_to  or @filter_to first?")
         if not file_exists(out_file):
-            print "file did not exist previously"
-            f(*args, **kwargs)
+            out_file = f(*args, **kwargs)
         return out_file
     return wrapper
 
