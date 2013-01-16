@@ -8,7 +8,7 @@ from bcbio.log import logger
 from bcbio.utils import (memoize_outfile, file_exists, transform_to)
 from bcbio.distributed.transaction import file_transaction
 
-@transform_to("ndx")
+@transform_to(".ndx")
 @memoize_outfile
 def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
     cl = ["novoindex"]

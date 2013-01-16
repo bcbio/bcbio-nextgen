@@ -62,11 +62,11 @@ def transform_to(ext):
     f(in_file=in_file, out_dir=None, out_file=None)
 
     examples:
-    @transform("bam")
+    @transform(".bam")
     f("the/input/path/file.sam") ->
         f("the/input/path/file.sam", out_file="the/input/path/file.bam")
 
-    @transform("bam")
+    @transform(".bam")
     f("the/input/path/file.sam", out_dir="results") ->
         f("the/input/path/file.sam", out_file="results/file.bam")
 
@@ -79,7 +79,7 @@ def transform_to(ext):
                 return kwargs.get("out_file")
             in_path = kwargs.get("in_file", args[0])
             out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
-            out_name = replace_suffix(os.path.basename(in_path), "." + ext)
+            out_name = replace_suffix(os.path.basename(in_path), ext)
             out_file = os.path.join(out_dir, out_name)
             kwargs["out_file"] = out_file
             f(*args, **kwargs)
@@ -103,11 +103,11 @@ def filter_to(word):
     examples:
     @filter_to("foo")
     f("the/input/path/file.sam") ->
-        f("the/input/path/file.sam", out_file="the/input/path/file-foo.bam")
+        f("the/input/path/file.sam", out_file="the/input/path/file_foo.bam")
 
     @filter_to("foo")
     f("the/input/path/file.sam", out_dir="results") ->
-        f("the/input/path/file.sam", out_file="results/file-foo.bam")
+        f("the/input/path/file.sam", out_file="results/file_foo.bam")
 
     """
 
@@ -118,7 +118,7 @@ def filter_to(word):
                 return kwargs.get("out_file")
             in_path = kwargs.get("in_file", args[0])
             out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
-            out_name = append_stem(os.path.basename(in_path), word, "-")
+            out_name = append_stem(os.path.basename(in_path), word, "_")
             out_file = os.path.join(out_dir, out_name)
             kwargs["out_file"] = out_file
             f(*args, **kwargs)

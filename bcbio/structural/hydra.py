@@ -109,7 +109,7 @@ def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
 
 ## Run hydra to identify structural variation breakpoints
 
-@utils.transform_to("bed")
+@utils.transform_to(".bed")
 @utils.memoize_outfile
 def convert_bam_to_bed(in_bam, out_file):
     """Convert BAM to bed file using BEDTools.
