@@ -56,7 +56,7 @@ def _get_downsample_pct(runner, in_bam):
 
     This identifies large files and calculates the fraction to downsample to.
     """
-    target_counts = 5e7 # 50 million reads per read group, 10x the plotted max
+    target_counts = 1e8 # 100 million reads per read group, 20x the plotted max
     total = sum(x.aligned for x in runner.run_fn("picard_idxstats", in_bam))
     with closing(pysam.Samfile(in_bam, "rb")) as work_bam:
         n_rgs = max(1, len(work_bam.header["RG"]))
