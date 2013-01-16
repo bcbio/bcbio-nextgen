@@ -9,6 +9,7 @@ from contextlib import closing
 
 from bcbio.broad import picardrun
 from bcbio.pipeline import config_utils
+from bcbio.utils import curdir_tmpdir
 
 class BroadRunner:
     """Simplify running Broad commandline tools.
@@ -75,12 +76,14 @@ class BroadRunner:
                 params.extend(["-nct", str(cores)])
         if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
             params.extend(["-U", "LENIENT_VCF_PROCESSING"])
-        if tmp_dir:
+        with curdir_tmpdir() as local_tmp_dir:
+            if tmp_dir is None:
+                tmp_dir = local_tmp_dir
             local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-        cl = ["java"] + self._jvm_opts + local_args + \
-                ["-jar", gatk_jar] + [str(x) for x in params]
-        #print " ".join(cl)
-        subprocess.check_call(cl)
+            cl = ["java"] + self._jvm_opts + local_args + \
+                    ["-jar", gatk_jar] + [str(x) for x in params]
+            #print " ".join(cl)
+            subprocess.check_call(cl)
 
     def has_gatk_full(self):
         """Check if we have the full GATK jar, including non-open source parts.

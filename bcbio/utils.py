@@ -98,7 +98,10 @@ def curdir_tmpdir(remove=True):
         yield tmp_dir
     finally :
         if remove:
-            shutil.rmtree(tmp_dir)
+            try:
+                shutil.rmtree(tmp_dir)
+            except:
+                pass
 
 @contextlib.contextmanager
 def chdir(new_dir):

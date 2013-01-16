@@ -18,11 +18,14 @@ def run_varscan(align_bams, ref_file, config,
                 dbsnp=None, region=None, out_file=None):
     call_file = samtools.shared_variantcall(_varscan_work, "varscan", align_bams,
                                             ref_file, config, dbsnp, region, out_file)
-    _fix_sample_names(call_file, align_bams)
+    _fix_varscan_vcf(call_file, align_bams)
     return call_file
 
-def _fix_sample_names(orig_file, in_bams):
-    """Remap sample names back to those defined in the input BAM file.
+def _fix_varscan_vcf(orig_file, in_bams):
+    """Fixes issues with the standard VarScan VCF output.
+
+    - Remap sample names back to those defined in the input BAM file.
+    - Convert indels into correct VCF representation.
     """
     tmp_file = utils.append_stem(orig_file, "origsample", "-")
     if not utils.file_exists(tmp_file):
@@ -31,9 +34,29 @@ def _fix_sample_names(orig_file, in_bams):
             with open(tmp_file) as in_handle:
                 with open(orig_file, "w") as out_handle:
                     for line in in_handle:
+                        parts = line.split("\t")
                         if line.startswith("#CHROM"):
                             line = _fix_sample_line(line, in_bams)
+                        elif not line.startswith("#") and parts[4].startswith(("+", "-")):
+                            line = _fix_indel_line(parts)
                         out_handle.write(line)
+
+def _fix_indel_line(parts):
+    """Convert VarScan indel representations into standard VCF.
+    """
+    ref = parts[3]
+    alt = parts[4]
+    mod_alt = alt[0]
+    seq_alt = alt[1:]
+    if mod_alt == "+":
+        new_ref = ref
+        new_alt = ref + seq_alt
+    elif mod_alt == "-":
+        new_ref = ref + seq_alt
+        new_alt = ref
+    parts[3] = new_ref
+    parts[4] = new_alt
+    return "\t".join(parts)
 
 def _fix_sample_line(line, in_bams):
     """Pull sample names from input BAMs and replace VCF file header.
