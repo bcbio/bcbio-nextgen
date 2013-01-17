@@ -86,6 +86,6 @@ def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
                                         want_bcf=False)
         varscan = sh.Command("java").bake("-jar", varscan_jar, "mpileup2cns",
                                           "--min-coverage", "5",
-                                          "--p-value", "0.01",
+                                          "--p-value", "0.98",
                                           "--output-vcf", "--variants", _out=out_handle)
         varscan(mpileup())
