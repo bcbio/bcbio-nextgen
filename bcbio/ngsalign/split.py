@@ -15,6 +15,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio.bam.trim import _save_diskspace
 from bcbio import utils, broad
+from bcbio.pipeline import config_utils
 
 def _find_current_split(in_fastq, out_dir):
     """Check for existing split files to avoid re-splitting.
@@ -123,7 +124,7 @@ def split_bam_file(bam_file, split_size, out_dir, config):
                 base=os.path.splitext(os.path.basename(bam_file))[0], pair=pair, num=num))
             out += [fname, open(fname, "w")]
         return out
-    with utils.curdir_tmpdir() as tmp_dir:
+    with utils.curdir_tmpdir(base_dir=config_utils.get_resources("tmp", config).get("dir")) as tmp_dir:
         if pipe:
             sort_file = os.path.join(tmp_dir, "%s-sort.bam" %
                                      os.path.splitext(os.path.basename(bam_file))[0])
@@ -134,18 +135,8 @@ def split_bam_file(bam_file, split_size, out_dir, config):
             sort_file = os.path.join(out_dir, "%s-sort.bam" %
                                      os.path.splitext(os.path.basename(bam_file))[0])
             broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file)
-        max_tries = 20
-        num_tries = 0
-        while 1:
-            try:
-                samfile = pysam.Samfile(sort_file, "rb")
-                break
-            # Avoid intermittent pipe failures by waiting for sorting to start.
-            except ValueError:
-                if num_tries > max_tries:
-                    raise
-                num_tries += 1
-                time.sleep(10)
+
+        samfile = pysam.Samfile(sort_file, "rb")
         i = 0
         num = 0
         f1, out_handle1, f2, out_handle2 = new_handle(num)

@@ -87,10 +87,15 @@ def safe_makedir(dname):
     return dname
 
 @contextlib.contextmanager
-def curdir_tmpdir(remove=True):
+def curdir_tmpdir(remove=True, base_dir=None):
     """Context manager to create and remove a temporary directory.
+
+    This can also handle a configured temporary directory to use.
     """
-    tmp_dir_base = os.path.join(os.getcwd(), "tmp")
+    if base_dir is not None:
+        tmp_dir_base = os.path.join(base_dir, "bcbiotmp")
+    else:
+        tmp_dir_base = os.path.join(os.getcwd(), "tmp")
     safe_makedir(tmp_dir_base)
     tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
     safe_makedir(tmp_dir)
