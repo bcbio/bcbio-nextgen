@@ -4,6 +4,7 @@ import os
 import copy
 
 from bcbio.log import logger
+from bcbio import utils
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
@@ -17,7 +18,7 @@ def _prep_fastq_files(item, bc_files, dirs, config):
     split_size = config.get("distributed", {}).get("align_split_size",
                                                    config["algorithm"].get("align_split_size", None))
     if split_size:
-        split_dir = os.path.join(dirs["align"], "split")
+        split_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_splitprep", item["description"]))
         return split_read_files(fastq1, fastq2, split_size, split_dir, config)
     else:
         return [[fastq1, fastq2, None]]

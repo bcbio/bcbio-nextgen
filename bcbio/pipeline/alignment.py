@@ -33,14 +33,14 @@ _tools = {
     }
 
 def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
-                      lane_name, sample_name, dirs, config):
+                      lane_name, sample_name, dirs, config, dir_ext=""):
     """Align to the named genome build, returning a sorted BAM file.
     """
     rg_name = lane_name.split("_")[0]
-    utils.safe_makedir(dirs["align"])
+    align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", sample_name, dir_ext))
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     align_fn = _tools[aligner].align_fn
-    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, dirs["align"], config,
+    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, align_dir, config,
                         rg_name=rg_name)
     if fastq2 is None and aligner in ["bwa", "bowtie2"]:
         fastq1 = _remove_read_number(fastq1, sam_file)
@@ -154,4 +154,3 @@ def get_genome_ref(genome_build, aligner, galaxy_base):
                 (genome_build, aligner))
     else:
         return tuple(out_info)
-

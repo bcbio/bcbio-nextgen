@@ -100,10 +100,9 @@ def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
         config["algorithm"]["multiple_mappers"] = multi_mappers
         config["algorithm"]["extra_align_args"] = ["-i", int(pair_stats["mean"]),
                                                int(pair_stats["std"])] + extra_args
-        dirs["align"] = os.path.split(nomap_fq1)[0]
         return align_to_sort_bam(nomap_fq1, nomap_fq2, genome_build, "novoalign",
                                  base_name, base_name,
-                                 dirs, config)
+                                 dirs, config, dir_ext=os.path.join("hydra", os.path.split(nomap_fq1)[0]))
     else:
         return None
 

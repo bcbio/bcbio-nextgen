@@ -27,12 +27,11 @@ def run_main(config, config_file, work_dir, parallel,
     run_info_yaml -- YAML configuration file specifying inputs to process
     """
     setup_logging(config)
-    align_dir = os.path.join(work_dir, "alignments")
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir) if fc_dir else None,
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
-    dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir, "align": align_dir,
+    dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
     config = _set_resources(parallel, config)
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
