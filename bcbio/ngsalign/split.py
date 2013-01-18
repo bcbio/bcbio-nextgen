@@ -112,7 +112,7 @@ def split_bam_file(bam_file, split_size, out_dir, config):
     existing = _find_current_bam_split(bam_file, out_dir)
     if len(existing) > 0:
         return existing
-    pipe = True
+    pipe = False
 
     utils.safe_makedir(out_dir)
     broad_runner = broad.runner_from_config(config)
