@@ -58,7 +58,7 @@ def cluster_view(parallel, config):
         also specify 'multicore' for a multiple core machine
         and 'io' for an I/O intensive queue.
     """
-    delay = 20
+    delay = 10
     max_delay = 300
     max_tries = 5
     profile = parallel["profile"]
