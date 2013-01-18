@@ -7,6 +7,7 @@ import os
 import glob
 import itertools
 import operator
+import time
 
 import pysam
 from Bio import Seq
@@ -133,6 +134,9 @@ def split_bam_file(bam_file, split_size, out_dir, config):
             sort_file = os.path.join(out_dir, "%s-sort.bam" %
                                      os.path.splitext(os.path.basename(bam_file))[0])
             broad_runner.run_fn("picard_sort", bam_file, "queryname", sort_file)
+        # Avoid intermittent pipe failures by waiting for sorting to start.
+        # Need a better way to detect and retry instead of this hack.
+        time.sleep(20)
 
         samfile = pysam.Samfile(sort_file, "rb")
         i = 0
