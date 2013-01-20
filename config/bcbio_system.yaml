@@ -57,13 +57,13 @@ resources:
     cores:
     cmd: bwa
   gatk:
-    jvm_opts: ["-Xms=2g", "-Xmx=4g"]
+    jvm_opts: ["-Xms2g", "-Xmx4g"]
     dir: /usr/share/java/gatk
   picard:
-    jvm_opts: ["-Xms=2g", "-Xmx=4g"]
+    jvm_opts: ["-Xms2g", "-Xmx4g"]
     dir: /usr/share/java/picard
   snpEff:
-    jvm_opts: ["-Xms=2g", "-Xmx=4g"]
+    jvm_opts: ["-Xms2g", "-Xmx4g"]
     dir: /usr/share/java/snpeff
 
 # Galaxy integration. Required for upload/download from a Galaxy instance.
