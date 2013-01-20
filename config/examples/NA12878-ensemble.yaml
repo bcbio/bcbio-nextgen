@@ -1,0 +1,68 @@
+---
+fc_date: '121119'
+fc_name: cliacmp
+details:
+  - files: [/usr/local/projects/CLIA-Validation/secondary/NA12878-AGXT2-LAB1368-A/alignment/NA12878-AGXT2-LAB1368-A.bam]
+    lane: NA12878-AGXT2-LAB1368-A
+    description: NA12878-AGXT2-LAB1368-A
+    analysis: variant
+    genome_build: GRCh37
+    algorithm:
+      aligner: false
+      recalibrate: false
+      realign: false
+      variantcaller: [gatk, freebayes, samtools, gatk-haplotype, varscan]
+      ensemble:
+        format-filters: [DP < 4]
+        classifiers: 
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        classifier-params:
+          type: svm
+        trusted-pct: 0.65
+      quality_format: Standard
+      coverage_interval: regional
+      variant_regions: /usr/local/projects/CLIA-Validation/secondary/NA12878-AGXT2-LAB1368-A/enrichment/padded_targets_200.bed
+  - files: [/usr/local/projects/CLIA-Validation/secondary/NA12878-NGv3-LAB1360-A/alignment/NA12878-NGv3-LAB1360-A.bam]
+    lane: NA12878-NGv3-LAB1360-A
+    description: NA12878-NGv3-LAB1360-A
+    analysis: variant
+    genome_build: GRCh37
+    algorithm:
+      aligner: false
+      recalibrate: false
+      realign: false
+      variantcaller: [gatk, freebayes, samtools, gatk-haplotype, varscan]
+      ensemble:
+        format-filters: [DP < 4]
+        classifiers: 
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        classifier-params:
+          type: svm
+        classifier-type: svm
+        trusted-pct: 0.65
+      quality_format: Standard
+      coverage_interval: regional
+      variant_regions: /usr/local/projects/CLIA-Validation/secondary/NA12878-NGv3-LAB1360-A/enrichment/padded_targets_200.bed
+  - files: [/usr/local/projects/CLIA-Validation/secondary/NA12878-NGv3-LAB1363-A/alignment/NA12878-NGv3-LAB1363-A.bam]
+    lane: NA12878-NGv3-LAB1363-A
+    description: NA12878-NGv3-LAB1363-A
+    analysis: variant
+    genome_build: GRCh37
+    algorithm:
+      aligner: false
+      recalibrate: false
+      realign: false
+      variantcaller: [gatk, freebayes, samtools, gatk-haplotype, varscan]
+      ensemble:
+        format-filters: [DP < 4]
+        classifiers: 
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        classifier-params:
+          type: svm
+        trusted-pct: 0.65
+      quality_format: Standard
+      coverage_interval: regional
+      variant_regions: /usr/local/projects/CLIA-Validation/secondary/NA12878-NGv3-LAB1363-A/enrichment/padded_targets_200.bed
