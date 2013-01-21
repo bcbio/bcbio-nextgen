@@ -1,6 +1,6 @@
 import unittest
 import tempfile
-from bcbio.fastq import groom
+from bcbio.bam.fastq import groom
 from bcbio.utils import locate, file_exists
 import os
 import tempfile
