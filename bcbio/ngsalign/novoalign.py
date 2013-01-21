@@ -5,10 +5,11 @@ import subprocess
 
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
-from bcbio.utils import (memoize_outfile, file_exists)
+from bcbio.utils import (memoize_outfile, file_exists, transform_to)
 from bcbio.distributed.transaction import file_transaction
 
-@memoize_outfile(".ndx")
+
+@memoize_outfile(ext=".ndx")
 def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
     cl = ["novoindex"]
     if kmer_size:

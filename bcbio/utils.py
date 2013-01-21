@@ -15,6 +15,8 @@ except ImportError:
     multiprocessing = None
 import collections
 import yaml
+import fnmatch
+
 
 @contextlib.contextmanager
 def cpmap(cores=1):
@@ -43,6 +45,7 @@ def cpmap(cores=1):
         yield pool.imap_unordered
         pool.terminate()
 
+
 def map_wrap(f):
     """Wrap standard function to easily pass into 'map' processing.
     """
@@ -51,28 +54,104 @@ def map_wrap(f):
         return apply(f, *args, **kwargs)
     return wrapper
 
-def memoize_outfile(ext):
-    """Creates outfile from input file and ext, running if outfile not present.
 
-    This requires a standard function usage. The first arg, or kwarg 'in_file', needs
-    to be the input file that is being processed. The output name is created with the
-    provided ext relative to the input. The function is only run if the created
-    out_file is not present.
+def transform_to(ext):
     """
+    Decorator to create an output filename from an output filename with
+    the specified extension. Changes the extension, in_file is transformed
+    to a new type.
+
+    Takes functions like this to decorate:
+    f(in_file, out_dir=None, out_file=None) or,
+    f(in_file=in_file, out_dir=None, out_file=None)
+
+    examples:
+    @transform(".bam")
+    f("the/input/path/file.sam") ->
+        f("the/input/path/file.sam", out_file="the/input/path/file.bam")
+
+    @transform(".bam")
+    f("the/input/path/file.sam", out_dir="results") ->
+        f("the/input/path/file.sam", out_file="results/file.bam")
+
+    """
+
     def decor(f):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            if len(args) > 0:
-                in_file = args[0]
-            else:
-                in_file = kwargs['in_file']
-            out_file = "%s%s" % (os.path.splitext(in_file)[0], ext)
-            if not os.path.exists(out_file) or os.path.getsize(out_file) == 0:
-                kwargs['out_file'] = out_file
-                f(*args, **kwargs)
+            out_file = kwargs.get("out_file", None)
+            if not out_file:
+                in_path = kwargs.get("in_file", args[0])
+                out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
+                if out_dir is None:
+                    out_dir = os.path.dirname(in_path)
+                if out_dir:
+                    safe_makedir(out_dir)
+                out_name = replace_suffix(os.path.basename(in_path), ext)
+                out_file = os.path.join(out_dir, out_name)
+            kwargs["out_file"] = out_file
+            if not file_exists(out_file):
+                out_file = f(*args, **kwargs)
             return out_file
         return wrapper
     return decor
+
+
+def filter_to(word):
+    """
+    Decorator to create an output filename from an input filename by
+    adding a word onto the stem. in_file is filtered by the function
+    and the results are written to out_file. You would want to use
+    this over transform_to if you don't know the extension of the file
+    going in. This also memoizes the output file.
+
+    Takes functions like this to decorate:
+    f(in_file, out_dir=None, out_file=None) or,
+    f(in_file=in_file, out_dir=None, out_file=None)
+
+    examples:
+    @filter_to("foo")
+    f("the/input/path/file.sam") ->
+        f("the/input/path/file.sam", out_file="the/input/path/file_foo.bam")
+
+    @filter_to("foo")
+    f("the/input/path/file.sam", out_dir="results") ->
+        f("the/input/path/file.sam", out_file="results/file_foo.bam")
+
+    """
+
+    def decor(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            out_file = kwargs.get("out_file", None)
+            if not out_file:
+                in_path = kwargs.get("in_file", args[0])
+                out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
+                if out_dir is None:
+                    out_dir = os.path.dirname(in_path)
+                if out_dir:
+                    safe_makedir(out_dir)
+                out_name = append_stem(os.path.basename(in_path), word, "_")
+                out_file = os.path.join(out_dir, out_name)
+            kwargs["out_file"] = out_file
+            if not file_exists(out_file):
+                out_file = f(*args, **kwargs)
+            return out_file
+        return wrapper
+    return decor
+
+
+def memoize_outfile(ext=None, stem=None):
+    """
+    Memoization decorator.
+
+    See docstring for transform_to and filter_to for details.
+    """
+    if ext:
+        return transform_to(ext)
+    if stem:
+        return filter_to(stem)
+
 
 def safe_makedir(dname):
     """Make a directory if it doesn't exist, handling concurrent race conditions.
@@ -284,3 +363,11 @@ def is_pair(arg):
 
     """
     return is_sequence(arg) and len(arg) == 2
+
+
+def locate(pattern, root=os.curdir):
+    '''Locate all files matching supplied filename pattern in and below
+    supplied root directory.'''
+    for path, dirs, files in os.walk(os.path.abspath(root)):
+        for filename in fnmatch.filter(files, pattern):
+            yield os.path.join(path, filename)
