@@ -16,14 +16,19 @@ programs and libraries locally instead of globally, `virtualenv`_
 creates an isolated, local Python installation that does not require
 system install privileges.
 
-Requirements
-~~~~~~~~~~~~
+Tool Requirements
+~~~~~~~~~~~~~~~~~
 
 The code drives a number of next-generation sequencing analysis tools
 that you need to install on any machines involved in the processing. The
-`CloudBioLinux`_ provides automated scripts to help with installation
-for both software and associated data files. You can also install them
-manually.
+`CloudBioLinux`_ toolkit provides automated scripts to help with installation
+for both software and associated data files::
+
+    fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline
+
+You can also install them manually, adjusting locations in the
+``resources`` section of your ``bcbio_system.yaml`` configuration file
+as needed.
 
 -  An aligner: we support multiple aligners, including `bwa`_,
    `novoalign`_ and `bowtie2`_
@@ -63,3 +68,39 @@ The code uses a number of Python modules, installed with the code:
 .. _virtualenv: http://www.virtualenv.org/en/latest/
 .. _ipython: http://ipython.org/
 .. _sh: http://amoffat.github.com/sh/
+
+Data requirements
+~~~~~~~~~~~~~~~~~
+
+In addition to existing bioinformatics software the pipeline requires
+associated data files for reference genomes, including pre-built indexes
+for aligners. The `CloudBioLinux`_ toolkit again provides an automated
+way to download and prepare these reference genomes::
+
+    fab -f data_fabfile.py -H localhost -c your_fabricrc.txt install_data_s3:your_biodata.yaml
+
+The `biodata.yaml`_ file contains information about what genomes to
+download. The `fabricrc.txt`_ describes where to install the genomes
+by adjusting the ``data_files`` variable. This creates a tree
+structure that includes a set of Galaxy-style location files to
+describe locations of indexes::
+
+    ├── galaxy
+    │   ├── tool-data
+    │   │   ├── alignseq.loc
+    │   │   ├── bowtie_indices.loc
+    │   │   ├── bwa_index.loc
+    │   │   ├── sam_fa_indices.loc
+    │   │   └── twobit.loc
+    │   └── tool_data_table_conf.xml
+    ├── genomes
+    │   ├── Hsapiens
+    │   │   ├── GRCh37
+    │   │   └── hg19
+    │   └── phiX174
+    │       └── phix
+    └── liftOver
+    
+.. _fabricrc.txt: https://github.com/chapmanb/cloudbiolinux/blob/master/config/fabricrc.txt
+.. _biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
+    
