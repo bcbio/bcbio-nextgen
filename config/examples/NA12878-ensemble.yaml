@@ -22,7 +22,6 @@ details:
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
         classifier-params:
           type: svm
-        classifier-type: svm
         trusted-pct: 0.65
       quality_format: Standard
       coverage_interval: regional

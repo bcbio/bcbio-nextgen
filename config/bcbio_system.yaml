@@ -3,6 +3,8 @@
 # These pipeline apply generally across multiple projects. Adjust them in sample
 # specific configuration files when needed.
 
+# -- Base setup
+
 # General attributes that apply across multiple pipelines.
 algorithm:
   aligner: bowtie
@@ -65,6 +67,10 @@ resources:
   snpEff:
     jvm_opts: ["-Xms2g", "-Xmx4g"]
     dir: /usr/share/java/snpeff
+  bcbio_variation:
+    dir: /usr/share/java/bcbio_variation
+
+# -- Additional options for specific integration, not required for standalone usage.
 
 # Galaxy integration. Required for upload/download from a Galaxy instance.
 galaxy_url: http://your/galaxy/url
@@ -92,4 +98,3 @@ analysis:
   base_dir: /array0/projects/Sequencing
   upload_program: upload_to_galaxy.py
   worker_program: nextgen_analysis_server.py
-
