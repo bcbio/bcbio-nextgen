@@ -28,7 +28,7 @@ _tools = {
     "bwa": NgsTool(bwa.align, bwa.galaxy_location_file, None),
     "mosaik": NgsTool(mosaik.align, mosaik.galaxy_location_file, None),
     "novoalign": NgsTool(novoalign.align, bowtie.galaxy_location_file, novoalign.remap_index_fn),
-    "tophat": NgsTool(tophat.align, tophat.galaxy_location_file, None),
+    "tophat": NgsTool(tophat.align, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "samtools": NgsTool(None, "sam_fa_indices.loc", None),
     }
 

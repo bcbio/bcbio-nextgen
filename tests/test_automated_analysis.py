@@ -14,6 +14,7 @@ from nose.plugins.attrib import attr
 @contextlib.contextmanager
 def make_workdir():
     remove_old_dir = True
+    #remove_old_dir = False
     dirname = os.path.join(os.path.dirname(__file__), "test_automated_output")
     if remove_old_dir:
         if os.path.exists(dirname):
@@ -37,7 +38,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-                         DlInfo("genomes_automated_test.tar.gz", "genomes", 7),
+                         DlInfo("genomes_automated_test.tar.gz", "genomes", 8),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 3)]
         for dl in download_data:

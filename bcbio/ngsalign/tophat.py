@@ -17,8 +17,6 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 
 
-galaxy_location_file = "bowtie_indices.loc"
-
 _out_fnames = ["accepted_hits.sam", "junctions.bed",
                "insertions.bed", "deletions.bed"]
 
@@ -79,11 +77,16 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             options["no-convert-bam"] = True
             tophat_runner = sh.Command(config_utils.get_program("tophat",
                                                                 config))
-            tophat_runner(options, files)
+            ready_options = {}
+            for k, v in options.iteritems():
+                ready_options[k.replace("-", "_")] = v
+            # tophat requires options before arguments,
+            # otherwise it silently ignores them
+            tophat_ready = tophat_runner.bake(**ready_options)
+            tophat_ready(*files)
     out_file_final = os.path.join(out_dir, "%s.sam" % out_base)
     os.symlink(os.path.basename(out_file), out_file_final)
     return out_file_final
-
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           rg_name=None):
@@ -142,7 +145,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
 
 def _bowtie_major_version(config):
     bowtie_runner = sh.Command(config_utils.get_program("bowtie", config,
-                                                        default="tophat"))
+                                                        default="bowtie2"))
     """
     bowtie --version returns strings like this:
     bowtie version 0.12.7
