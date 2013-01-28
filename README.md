@@ -10,11 +10,15 @@ allowing us to focus on the downstream biology.
 
 ## Quick start
 
-1. Install `bcbio-nextgen` and Python dependencies:
+1. Install `bcbio-nextgen` with all tool dependencies and data files:
 
-          pip install --upgrade bcbio-nextgen
+          wget https://raw.github.com/chapmanb/bcbb/master/nextgen/scripts/bcbio_nextgen_install.py
+          python bcbio_nextgen_install.py install_directory data_directory
+          
+   producing a [system configuration file][q2] referencing 
+   the installed software and data.
     
-2. Edit a [system configuration file][q2] and [sample configuration file][q1]
+2. Edit a [sample configuration file][q1] to describe your samples.
 
 3. Run analysis, distributed across 8 local cores:
 

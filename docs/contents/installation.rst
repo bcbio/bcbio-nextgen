@@ -1,6 +1,25 @@
 Installation
 ------------
 
+We provide an automated script that installs 3rd party analysis tools,
+required genome data, python library dependencies bundled into a
+virtual environment, and produces a ready to use system configuration
+file::
+
+     wget https://raw.github.com/chapmanb/bcbb/master/nextgen/scripts/bcbio_nextgen_install.py
+     python bcbio_nextgen_install.py install_directory data_directory
+
+By default the script downloads genomes, indexes and associated data
+files for human variant and RNA-seq analysis. Run
+``python bcbio_nextgen_install.py`` with no arguments to see options
+for configuring the installation process.
+
+If you'd prefer more control over installation, follow the manual
+steps for installing each component detailed below.
+
+Python code
+~~~~~~~~~~~
+
 You can install the latest release code with::
 
       pip install --upgrade bcbio-nextgen

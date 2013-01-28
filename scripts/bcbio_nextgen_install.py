@@ -12,6 +12,7 @@ import contextlib
 import datetime
 import os
 import urllib2
+import shutil
 import subprocess
 import sys
 
@@ -37,22 +38,33 @@ def main(args):
     print "Installing data..."
     install_data(cbl["data_fabfile"], fabricrc, biodata)
     print "Installing bcbio-nextgen..."
-    install_bcbio_nextgen(bcbio_remotes["requirements"], args.datadir)
+    install_bcbio_nextgen(bcbio_remotes["requirements"], args.datadir, args.tooldir,
+                          args.sudo)
     system_config = write_system_config(bcbio_remotes["system_config"], args.datadir,
                                         args.tooldir)
+    print "Finished: bcbio-nextgen, tools and data installed"
     print " Ready to use system configuration at:\n  %s" % system_config
     print " Tools installed in:\n  %s" % args.tooldir
     print " Genome data installed in:\n  %s" % args.datadir
+    shutil.rmtree(work_dir)
 
-def install_bcbio_nextgen(requirements, datadir):
+def install_bcbio_nextgen(requirements, datadir, tooldir, use_sudo):
     """Install a virtualenv containing bcbio_nextgen depdencies.
     """
-    virtualenv_dir = os.path.join(datadir, "virtualenv-bcbio-nextgen")
+    virtualenv_dir = os.path.join(datadir, "bcbio-nextgen-virtualenv")
     if not os.path.exists(virtualenv_dir):
         subprocess.check_call(["virtualenv", virtualenv_dir])
     subprocess.check_call(["wget", requirements])
     subprocess.check_call([os.path.join(virtualenv_dir, "bin", "pip"), "install",
-                           os.path.basename(requirments)])
+                           "-r", os.path.basename(requirements)])
+    for script in ["bcbio_nextgen.py", "bam_to_wiggle.py"]:
+        final_script = os.path.join(tooldir, "bin", script)
+        ve_script = os.path.join(virtualenv_dir, "bin", script)
+        if not os.path.exists(final_script):
+            cmd = ["ln", "-s", ve_script, final_script]
+            if use_sudo:
+                cmd = ["sudo"] + cmd
+            subprocess.check_call(cmd)
 
 def install_tools(fabfile, fabricrc):
     subprocess.check_call(["fab", "-f", fabfile, "-H", "localhost",
