@@ -28,22 +28,32 @@ from IPython.utils import traitlets
 class BcbioLSFEngineSetLauncher(launcher.LSFEngineSetLauncher):
     """Custom launcher handling heterogeneous clusters on LSF.
     """
-    cores = traitlets.Integer()
+    cores = traitlets.Integer(1, config=True)
     default_template = traitlets.Unicode("""#!/bin/sh
-    #BSUB -q {queue}
-    #BSUB -J bcbio-ipengine[1-{n}]
-    #BSUB -oo bcbio-ipengine.bsub.%%J
-    #BSUB -n {cores}
-    #BSUB -R "span[hosts=1]"
-    %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+#BSUB -q {queue}
+#BSUB -J bcbio-ipengine[1-{n}]
+#BSUB -oo bcbio-ipengine.bsub.%%J
+#BSUB -n {cores}
+#BSUB -R "span[hosts=1]"
+%s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
     """%(' '.join(map(pipes.quote, launcher.ipengine_cmd_argv))))
     def start(self, n):
+        self.context["cores"] = self.cores
         return super(BcbioLSFEngineSetLauncher, self).start(n)
+
+class BcbioLSFControllerLauncher(launcher.LSFControllerLauncher):
+    default_template = traitlets.Unicode("""#!/bin/sh
+#BSUB -J bcbio-ipcontroller
+#BSUB -oo bcbio-ipcontroller.bsub.%%J
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+    """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
+    def start(self):
+        return super(BcbioLSFControllerLauncher, self).start()
 
 class BcbioSGEEngineSetLauncher(launcher.SGEEngineSetLauncher):
     """Custom launcher handling heterogeneous clusters on SGE.
     """
-    cores = traitlets.Integer()
+    cores = traitlets.Integer(1, config=True)
     default_template = traitlets.Unicode("""#$ -V
 #$ -cwd
 #$ -b y
@@ -57,7 +67,17 @@ class BcbioSGEEngineSetLauncher(launcher.SGEEngineSetLauncher):
 """%(' '.join(map(pipes.quote, launcher.ipengine_cmd_argv))))
 
     def start(self, n):
+        self.context["cores"] = self.cores
         return super(BcbioSGEEngineSetLauncher, self).start(n)
+
+class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
+    default_template = traitlets.Unicode(u"""#$ -V
+#$ -S /bin/sh
+#$ -N ipcontroller
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+"""%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
+    def start(self):
+        return super(SGEControllerLauncher, self).start()
 
 # ## Control clusters
 
@@ -65,7 +85,9 @@ def _start(parallel, profile, cluster_id, delay):
     """Starts cluster from commandline.
     """
     scheduler = parallel["scheduler"].upper()
-    engine_class = "bcbio.distributed.ipython.Bcbio%sEngineSetLauncher" % scheduler
+    ns = "bcbio.distributed.ipython"
+    engine_class="Bcbio%sEngineSetLauncher" % scheduler
+    controller_class = "Bcbio%sControllerLauncher" % scheduler
     subprocess.check_call(
         ["ipcluster", "start",
          "--daemonize=True",
@@ -75,9 +97,8 @@ def _start(parallel, profile, cluster_id, delay):
          #"--cluster-id=%s" % cluster_id,
          "--n=%s" % parallel["num_jobs"],
          "--%s.cores=%s" % (engine_class, parallel["cores_per_job"]),
-         "--HubFactory.ip=*",
-         "--IPClusterStart.controller_launcher_class=%s" % scheduler,
-         "--IPClusterStart.engine_launcher_class=%s" % engine_class,
+         "--IPClusterStart.controller_launcher_class=%s.%s" % (ns, controller_class),
+         "--IPClusterStart.engine_launcher_class=%s.%s" % (ns, engine_class),
          "--%sLauncher.queue=%s" % (scheduler, parallel["queue"]),
          ])
 
@@ -154,10 +175,11 @@ def dictadd(orig, k, v):
 def _find_cores_per_job(fn, parallel, config):
     """Determine cores and workers to use for this stage based on function metadata.
 
-    TODO: Generalize. Currently handles single core jobs.
+    TODO: Generalize. Currently uses a single core per job.
     """
     total = parallel["cores"]
-    return total, 1
+    cores_per_job = 1
+    return total // cores_per_job, cores_per_job
 
 def runner(parallel, fn_name, items, work_dir, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
