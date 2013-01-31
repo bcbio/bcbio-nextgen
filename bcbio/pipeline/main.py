@@ -92,13 +92,15 @@ def parse_cl_args(in_args):
     parser.add_argument("inputs", nargs="+")
     parser.add_argument("-n", "--numcores", type=int, default=0)
     parser.add_argument("-t", "--paralleltype")
-    parser.add_argument("-p", "--profile", default="default")
+    parser.add_argument("-s", "--scheduler")
+    parser.add_argument("-q", "--queue")
 
     args = parser.parse_args(in_args)
     config_file = args.inputs[0]
     kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
               "paralleltype": args.paralleltype,
-              "profile": args.profile}
+              "scheduler": args.scheduler,
+              "queue": args.queue}
     if len(args.inputs) == 3:
         kwargs["fc_dir"] = args.inputs[1]
         kwargs["run_info_yaml"] = args.inputs[2]

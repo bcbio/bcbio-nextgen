@@ -28,20 +28,13 @@ parallel computation in standard cluster environments. The
 bcbio-nextgen setup script installs both IPython and `pyzmq`_, which
 provides Python bindings for the `ZeroMQ`_ messaging library.
 
-We also provide a setup script that correctly configures IPython for
-different cluster environments. Run this once on new machines::
+Run an analysis using ipython for parallel execution::
 
-    bcbio_nextgen_setup.py -s lsf -q your_queue_name
+    bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
 The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge)``.
-The ``-q`` flag specifies the queue to submit jobs to. The
-setup script will create IPython configurations for parallel and
-multicore jobs.
-
-When setup, run an analysis specifying ipython for parallel execution::
-
-    bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t ipython -n 12
-
+The ``-q`` flag specifies the queue to submit jobs to.
+  
 Celery and RabbitMQ
 ~~~~~~~~~~~~~~~~~~~
 

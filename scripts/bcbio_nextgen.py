@@ -22,8 +22,9 @@ Usage:
           - local: Non-distributed, possibly multiple if n > 1 (default)
           - ipython: IPython distributed processing
           - messaging: RabbitMQ distributed messaging queue
-     -n number of processes to start
-     -p profile name for ipython parallelization
+     -n total number of processes to use
+     -s scheduler for ipython parallelization (lsf, sge)
+     -q queue to submit jobs for ipython parallelization
 """
 import os
 import sys
@@ -34,7 +35,7 @@ from bcbio.pipeline.config_utils import load_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
-         paralleltype=None, profile="default"):
+         paralleltype=None, queue=None, scheduler=None):
     work_dir = os.getcwd()
     config = load_config(config_file)
     if config.get("log_dir", None) is None:
@@ -42,7 +43,7 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
     paralleltype, numcores = _get_cores_and_type(config, fc_dir, run_info_yaml,
                                                  numcores, paralleltype)
     parallel = {"type": paralleltype, "cores": numcores,
-                "profile": profile,
+                "scheduler": scheduler, "queue": queue,
                 "module": "bcbio.distributed"}
     if parallel["type"] in ["local", "messaging-main"]:
         if numcores is None:
@@ -54,8 +55,9 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
         args = [config_file, fc_dir]
         if run_info_yaml:
             args.append(run_info_yaml)
-        messaging.run_and_monitor(config, config_file, args, parallel) 
+        messaging.run_and_monitor(config, config_file, args, parallel)
     elif parallel["type"] == "ipython":
+        assert parallel["queue"] is not None, "Ipython parallel requires a specified queue (-q)"
         run_main(config, config_file, work_dir, parallel,
                  fc_dir, run_info_yaml)
     else:
@@ -82,7 +84,7 @@ def _get_cores_and_type(config, fc_dir, run_info_yaml,
                 paralleltype = config_cores
     if paralleltype is None:
         paralleltype = "local"
-        
+
     if numcores is None:
         if config["distributed"].get("num_workers", "") == "all":
             cp = config["distributed"]["cluster_platform"]

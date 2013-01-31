@@ -10,6 +10,7 @@ https://github.com/roryk/bipy/blob/master/bipy/cluster/__init__.py
 """
 import os
 import copy
+import pipes
 import time
 import uuid
 import subprocess
@@ -19,17 +20,66 @@ from bcbio import utils
 from bcbio.log import setup_logging, logger
 
 from IPython.parallel import Client
+from IPython.parallel.apps import launcher
+from IPython.utils import traitlets
 
-def _start(workers_needed, profile, cluster_id, delay):
+# ## Custom launchers
+
+class BcbioLSFEngineSetLauncher(launcher.LSFEngineSetLauncher):
+    """Custom launcher handling heterogeneous clusters on LSF.
+    """
+    cores = traitlets.Integer()
+    default_template = traitlets.Unicode("""#!/bin/sh
+    #BSUB -q {queue}
+    #BSUB -J bcbio-ipengine[1-{n}]
+    #BSUB -oo bcbio-ipengine.bsub.%%J
+    #BSUB -n {cores}
+    #BSUB -R "span[hosts=1]"
+    %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+    """%(' '.join(map(pipes.quote, launcher.ipengine_cmd_argv))))
+    def start(self, n):
+        return super(BcbioLSFEngineSetLauncher, self).start(n)
+
+class BcbioSGEEngineSetLauncher(launcher.SGEEngineSetLauncher):
+    """Custom launcher handling heterogeneous clusters on SGE.
+    """
+    cores = traitlets.Integer()
+    default_template = traitlets.Unicode("""#$ -V
+#$ -cwd
+#$ -b y
+#$ -j y
+#$ -S /bin/sh
+#$ -q {queue}
+#$ -N bcbio-ipengine
+#$ -t 1-{n}
+#$ -pe threaded {cores}
+%s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+"""%(' '.join(map(pipes.quote, launcher.ipengine_cmd_argv))))
+
+    def start(self, n):
+        return super(BcbioSGEEngineSetLauncher, self).start(n)
+
+# ## Control clusters
+
+def _start(parallel, profile, cluster_id, delay):
     """Starts cluster from commandline.
     """
-    subprocess.check_call(["ipcluster", "start",
-                           "--daemonize=True",
-                           "--delay=%s" % delay,
-                           "--log-level=%s" % "WARN",
-                           #"--cluster-id=%s" % cluster_id,
-                           "--n=%s" % workers_needed,
-                           "--profile=%s" % profile])
+    scheduler = parallel["scheduler"].upper()
+    engine_class = "bcbio.distributed.ipython.Bcbio%sEngineSetLauncher" % scheduler
+    subprocess.check_call(
+        ["ipcluster", "start",
+         "--daemonize=True",
+         "--delay=%s" % delay,
+         "--log-level=%s" % "WARN",
+         "--profile=%s" % profile,
+         #"--cluster-id=%s" % cluster_id,
+         "--n=%s" % parallel["num_jobs"],
+         "--%s.cores=%s" % (engine_class, parallel["cores_per_job"]),
+         "--HubFactory.ip=*",
+         "--IPClusterStart.controller_launcher_class=%s" % scheduler,
+         "--IPClusterStart.engine_launcher_class=%s" % engine_class,
+         "--%sLauncher.queue=%s" % (scheduler, parallel["queue"]),
+         ])
 
 def _stop(profile, cluster_id):
     subprocess.check_call(["ipcluster", "stop", "--profile=%s" % profile,
@@ -51,24 +101,19 @@ def cluster_view(parallel, config):
     """Provide a view on an ipython cluster for processing.
 
     parallel is a dictionary with:
-      - profile: The name of the ipython profile to use
-      - cores: The number of cores to start for processing.
-      - queue_type: Optionally, the type of parallel queue
-        to start. Defaults to a standard parallel queue, can
-        also specify 'multicore' for a multiple core machine
-        and 'io' for an I/O intensive queue.
+      - scheduler: The type of cluster to start (lsf, sge).
+      - num_jobs: Number of jobs to start.
+      - cores_per_job: The number of cores to use for each job.
     """
     delay = 5
     max_delay = 300
     max_tries = 10
-    profile = parallel["profile"]
-    if parallel.get("queue_type", None):
-        profile = "%s_%s" % (profile, parallel["queue_type"])
+    profile = "bcbio_nextgen"
     cluster_id = str(uuid.uuid1())
     num_tries = 0
     while 1:
         try:
-            _start(parallel["cores"], profile, cluster_id, delay)
+            _start(parallel, profile, cluster_id, delay)
             break
         except subprocess.CalledProcessError:
             if num_tries > max_tries:
@@ -77,9 +122,7 @@ def cluster_view(parallel, config):
             time.sleep(delay)
     try:
         slept = 0
-        target_cores = 1 if parallel.get("queue_type", None) == "multicore" \
-                       else parallel["cores"]
-        while not _is_up(profile, cluster_id, target_cores):
+        while not _is_up(profile, cluster_id, parallel["num_jobs"]):
             time.sleep(delay)
             slept += delay
             if slept > max_delay:
@@ -108,11 +151,13 @@ def dictadd(orig, k, v):
         new["view"] = view
     return new
 
-def _get_queue_type(fn):
-    if hasattr(fn, "metadata"):
-        return fn.metadata.get("queue_type", None)
-    else:
-        return None
+def _find_cores_per_job(fn, parallel, config):
+    """Determine cores and workers to use for this stage based on function metadata.
+
+    TODO: Generalize. Currently handles single core jobs.
+    """
+    total = parallel["cores"]
+    return total, 1
 
 def runner(parallel, fn_name, items, work_dir, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -130,9 +175,9 @@ def runner(parallel, fn_name, items, work_dir, config):
     fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
                             fromlist=["ipythontasks"]),
                  fn_name)
-    queue_type = _get_queue_type(fn)
-    if queue_type:
-        parallel = dictadd(parallel, "queue_type", queue_type)
+    num_jobs, cores_per_job = _find_cores_per_job(fn, parallel, config)
+    parallel = dictadd(parallel, "cores_per_job", cores_per_job)
+    parallel = dictadd(parallel, "num_jobs", num_jobs)
     # already finished, run locally on current machine to collect details
     if os.path.exists(checkpoint_file):
         logger.info("ipython: %s -- local; checkpoint passed" % fn_name)
@@ -141,18 +186,9 @@ def runner(parallel, fn_name, items, work_dir, config):
                 data = fn(args)
                 if data:
                     out.extend(data)
-    # Run on a multicore queue with available cores on the same machine
-    elif queue_type == "multicore":
-        logger.info("ipython: %s -- multicore" % fn_name)
-        with cluster_view(parallel, config) as view:
-            for args in items:
-                if args:
-                    data = view.apply_sync(fn, args)
-                    if data:
-                        out.extend(data)
     # Run on a standard parallel queue
     else:
-        logger.info("ipython: %s -- parallel" % fn_name)
+        logger.info("ipython: %s" % fn_name)
         with cluster_view(parallel, config) as view:
             xs = [x for x in items if x is not None]
             if len(xs) > 0:
