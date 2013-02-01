@@ -12,18 +12,37 @@ import sh
 
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
-from bcbio.utils import (memoize_outfile, file_exists, transform_to)
+from bcbio.utils import (memoize_outfile, file_exists, transform_to, curdir_tmpdir)
 from bcbio.distributed.transaction import file_transaction
 
 # ## BAM realignment
 
-def align_bam(orig_bam, ref_file, names, align_dir, config):
+def align_bam(in_bam, ref_file, names, align_dir, config):
     """Perform realignment of input BAM file, handling sorting of input/output with novosort.
+
+    Uses unix pipes for avoid IO writing between steps:
+      - novosort of input BAM to coordinates
+      - alignment with novoalign
+      - conversion to BAM with samtools
+      - coordinate sorting with novosort
     """
-    out_file = os.path.join(align_dir, "{0}.bam".format(names["lane"]))
-    rg_info = r"@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}".format(**names)
+    out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
     if not file_exists(out_file):
-        raise NotImplementedError
+        with curdir_tmpdir(base_dir=align_dir) as work_dir:
+            resources = config_utils.get_resources("novoalign", config)
+            num_cores = resources["cores"]
+            max_mem = resources.get("memory", "4G")
+            read_sort = sh.novosort.bake(in_bam, c=num_cores, m=max_mem,
+                                         compression=0, n=True, t=work_dir,
+                                         _piped=True)
+            rg_info = r"SAM '@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}'".format(**names)
+            align = sh.novoalign.bake(o=rg_info, d=ref_file, f="/dev/stdin", F="BAMPE",
+                                      c=num_cores, _piped=True)
+            to_bam = sh.samtools.view.bake("-", b=True, u=True, S=True, _piped=True)
+            coord_sort = sh.novosort.bake("/dev/stdin", c=num_cores, m=max_mem,
+                                          o=out_file, t=work_dir)
+            subprocess.check_call("%s | %s | %s | %s" % (read_sort, align, to_bam, coord_sort),
+                                  shell=True)
     return out_file
 
 # ## Fastq to BAM alignment
