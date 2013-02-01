@@ -36,6 +36,7 @@ def process_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
+process_alignment.metadata = {"resources": ["novoalign"]}
 
 @require(sample)
 def merge_sample(*args):

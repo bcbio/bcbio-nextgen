@@ -18,6 +18,7 @@ import contextlib
 
 from bcbio import utils
 from bcbio.log import setup_logging, logger
+from bcbio.pipeline import config_utils
 
 from IPython.parallel import Client
 from IPython.parallel.apps import launcher
@@ -172,14 +173,21 @@ def dictadd(orig, k, v):
         new["view"] = view
     return new
 
-def _find_cores_per_job(fn, parallel, config):
+def _find_cores_per_job(fn, parallel, item_count, config):
     """Determine cores and workers to use for this stage based on function metadata.
-
-    TODO: Generalize. Currently uses a single core per job.
     """
+    all_cores = [1]
+    for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
+        resources = config_utils.get_resources(prog, config)
+        cores = resources.get("cores")
+        if cores:
+            all_cores.append(cores)
+    cores_per_job = max(all_cores)
     total = parallel["cores"]
-    cores_per_job = 1
-    return total // cores_per_job, cores_per_job
+    if total > cores_per_job:
+        return max(total // cores_per_job, item_count), cores_per_job
+    else:
+        return 1, total
 
 def runner(parallel, fn_name, items, work_dir, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -197,7 +205,8 @@ def runner(parallel, fn_name, items, work_dir, config):
     fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
                             fromlist=["ipythontasks"]),
                  fn_name)
-    num_jobs, cores_per_job = _find_cores_per_job(fn, parallel, config)
+    items = [x for x in items if x is not None]
+    num_jobs, cores_per_job = _find_cores_per_job(fn, parallel, len(items), config)
     parallel = dictadd(parallel, "cores_per_job", cores_per_job)
     parallel = dictadd(parallel, "num_jobs", num_jobs)
     # already finished, run locally on current machine to collect details
@@ -211,10 +220,9 @@ def runner(parallel, fn_name, items, work_dir, config):
     # Run on a standard parallel queue
     else:
         logger.info("ipython: %s" % fn_name)
-        with cluster_view(parallel, config) as view:
-            xs = [x for x in items if x is not None]
-            if len(xs) > 0:
-                for data in view.map_sync(fn, xs):
+        if len(items) > 0:
+            with cluster_view(parallel, config) as view:
+                for data in view.map_sync(fn, items):
                     if data:
                         out.extend(data)
     with open(checkpoint_file, "w") as out_handle:

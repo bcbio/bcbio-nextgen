@@ -58,9 +58,13 @@ resources:
   bwa:
     cores:
     cmd: bwa
+  novoalign:
+    cores: 16
+    memory: 4G
   gatk:
     jvm_opts: ["-Xms2g", "-Xmx4g"]
     dir: /usr/share/java/gatk
+    cores: 12
   picard:
     jvm_opts: ["-Xms2g", "-Xmx4g"]
     dir: /usr/share/java/picard
