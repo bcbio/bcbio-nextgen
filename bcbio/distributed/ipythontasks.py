@@ -51,7 +51,7 @@ def recalibrate_sample(*args):
 def prep_recal(*args):
     with _setup_logging(args):
         return apply(recalibrate.prep_recal, *args)
-prep_recal.metadata = {"queue_type": "multicore"}
+prep_recal.metadata = {"resources": ["gatk"]}
 
 @require(recalibrate)
 def write_recal_bam(*args):

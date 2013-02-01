@@ -9,8 +9,9 @@ import collections
 import pysam
 
 from bcbio import broad
-from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import alignment
+from bcbio.utils import file_exists, safe_makedir
 
 def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
                     config=None):
@@ -51,11 +52,14 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
     return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
 
 def _pipeline_needs_fastq(config, item):
-    do_align = (config["algorithm"].get("aligner", None) and
-                item["algorithm"].get("aligner", True))
+    """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
+    """
+    aligner = item["algorithm"].get("aligner")
     has_multiplex = item.get("multiplex") is not None
     do_split = item["algorithm"].get("align_split_size") is not None
-    return has_multiplex or (do_align and not do_split)
+    support_bam = aligner in alignment.metadata.get("support_bam", [])
+    return (has_multiplex or
+            (aligner and not do_split and not support_bam))
 
 def convert_bam_to_fastq(in_file, work_dir, config):
     """Convert BAM input file into FASTQ files.

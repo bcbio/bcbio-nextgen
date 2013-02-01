@@ -20,28 +20,50 @@ from bcbio.distributed.transaction import file_transaction
 #  from galaxy_loc_file and find the actual location of the index file.
 #  This is useful for indexes that don't have an associated location file
 #  but are stored in the same directory structure.
-NgsTool = namedtuple("NgsTool", ["align_fn", "galaxy_loc_file",
+NgsTool = namedtuple("NgsTool", ["align_fn", "bam_align_fn", "galaxy_loc_file",
                                  "remap_index_fn"])
 _tools = {
-    "bowtie": NgsTool(bowtie.align, bowtie.galaxy_location_file, None),
-    "bowtie2": NgsTool(bowtie2.align, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
-    "bwa": NgsTool(bwa.align, bwa.galaxy_location_file, None),
-    "mosaik": NgsTool(mosaik.align, mosaik.galaxy_location_file, None),
-    "novoalign": NgsTool(novoalign.align, bowtie.galaxy_location_file, novoalign.remap_index_fn),
-    "tophat": NgsTool(tophat.align, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
-    "samtools": NgsTool(None, "sam_fa_indices.loc", None),
+    "bowtie": NgsTool(bowtie.align, None, bowtie.galaxy_location_file, None),
+    "bowtie2": NgsTool(bowtie2.align, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
+    "bwa": NgsTool(bwa.align, None, bwa.galaxy_location_file, None),
+    "mosaik": NgsTool(mosaik.align, None, mosaik.galaxy_location_file, None),
+    "novoalign": NgsTool(novoalign.align, novoalign.align_bam, bowtie.galaxy_location_file, novoalign.remap_index_fn),
+    "tophat": NgsTool(tophat.align, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
+    "samtools": NgsTool(None, None, "sam_fa_indices.loc", None),
     }
+
+metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}
 
 def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
                       lane_name, sample_name, dirs, config, dir_ext=""):
     """Align to the named genome build, returning a sorted BAM file.
     """
-    rg_name = lane_name.split("_")[0]
+    names = {"rg": lane_name.split("_")[0],
+             "sample": sample_name,
+             "lane": lane_name,
+             "pl": config["algorithm"]["platform"].lower(),
+             "pu": (lane_name.rsplit("_", 1)[0]
+                    if re.search(r"_s\d+$", lane_name) is not None
+                    else lane_name)}
     align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", sample_name, dir_ext))
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
+    if fastq1.endswith(".bam"):
+        return _align_from_bam(fastq1, aligner, align_ref, names, align_dir, config)
+    else:
+        return _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
+                                 align_dir, config)
+
+def _align_from_bam(fastq1, aligner, align_ref, names, align_dir, config):
+    align_fn = _tools[aligner].bam_align_fn
+    return align_fn(fastq1, align_ref, names, align_dir, config)
+
+def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
+                      align_dir, config):
+    """Align from fastq inputs, producing sorted BAM output.
+    """
     align_fn = _tools[aligner].align_fn
-    sam_file = align_fn(fastq1, fastq2, align_ref, lane_name, align_dir, config,
-                        rg_name=rg_name)
+    sam_file = align_fn(fastq1, fastq2, align_ref, names["lane"], align_dir, config,
+                        rg_name=names["rg"])
     if fastq2 is None and aligner in ["bwa", "bowtie2"]:
         fastq1 = _remove_read_number(fastq1, sam_file)
     sort_method = config["algorithm"].get("bam_sort", "coordinate")
@@ -49,12 +71,8 @@ def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
         return sam_to_querysort_bam(sam_file, config)
     else:
         # remove split information if present for platform unit
-        if re.search(r"_s\d+$", lane_name) is not None:
-            pu = lane_name.rsplit("_", 1)[0]
-        else:
-            pu = lane_name
-        return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, sample_name,
-                               rg_name, pu, config)
+        return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, names["sample"],
+                               names["rg"], names["pu"], config)
 
 def _remove_read_number(in_file, sam_file):
     """Work around problem with MergeBamAlignment with BWA and single end reads.

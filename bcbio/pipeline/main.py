@@ -58,27 +58,15 @@ def run_main(config, config_file, work_dir, parallel,
     write_metrics(run_info, fc_name, fc_date, dirs)
 
 def _set_resources(parallel, config):
-    """Set resource availability for programs based on parallel approach.
-
-    Updates allowed core usage for different situations.
-    Currently handles GATK for local, multicore and ipython processing.
+    """Set resource availability for programs, downsizing to local runs.
     """
-    if not config["resources"].has_key("gatk"):
-        config["resources"]["gatk"] = {}
-    if parallel["type"] == "ipython":
-        config["resources"]["gatk"]["cores"] = parallel["cores"]
-    elif parallel["type"] == "local":
-        if parallel["cores"] == 1:
-            config["resources"]["gatk"]["cores"] = 1
-        else:
+    for program in ["gatk", "novoalign"]:
+        if not config["resources"].has_key(program):
+            config["resources"][program] = {}
+        if parallel["type"] == "local":
             import multiprocessing
-            extra_cores = float(multiprocessing.cpu_count() - parallel["cores"])
-            cores_per = max(1, int(math.floor(extra_cores / parallel["cores"])))
-            current_cores = config["resources"]["gatk"].get("cores", 0)
-            if cores_per < current_cores:
-                config["resources"]["gatk"]["cores"] = cores_per
-    else:
-        pass
+            cores = min(parallel["cores"], multiprocessing.cpu_count())
+            config["resources"][program]["cores"] = cores
     return config
 
 # ## Utility functions

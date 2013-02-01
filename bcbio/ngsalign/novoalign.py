@@ -1,23 +1,32 @@
 """Next-gen sequencing alignment with Novoalign: http://www.novocraft.com
+
+For BAM input handling this requires:
+  novoalign (with license for multicore)
+  novosort (also with license for multicore)
+  samtools
 """
 import os
 import subprocess
+
+import sh
 
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
 from bcbio.utils import (memoize_outfile, file_exists, transform_to)
 from bcbio.distributed.transaction import file_transaction
 
+# ## BAM realignment
 
-@memoize_outfile(ext=".ndx")
-def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
-    cl = ["novoindex"]
-    if kmer_size:
-        cl += ["-k", str(kmer_size)]
-    if step_size:
-        cl += ["-s", str(step_size)]
-    cl += [out_file, ref_file]
-    subprocess.check_call(cl)
+def align_bam(orig_bam, ref_file, names, align_dir, config):
+    """Perform realignment of input BAM file, handling sorting of input/output with novosort.
+    """
+    out_file = os.path.join(align_dir, "{0}.bam".format(names["lane"]))
+    rg_info = r"@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}".format(**names)
+    if not file_exists(out_file):
+        raise NotImplementedError
+    return out_file
+
+# ## Fastq to BAM alignment
 
 def _novoalign_args_from_config(config):
     """Select novoalign options based on configuration parameters.
@@ -59,6 +68,19 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                 logger.info(" ".join([str(x) for x in cl]))
                 subprocess.check_call([str(x) for x in cl], stdout=out_handle)
     return out_file
+
+# ## Indexing
+
+@memoize_outfile(ext=".ndx")
+def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
+    cl = ["novoindex"]
+    if kmer_size:
+        cl += ["-k", str(kmer_size)]
+    if step_size:
+        cl += ["-s", str(step_size)]
+    cl += [out_file, ref_file]
+    subprocess.check_call(cl)
+
 
 def remap_index_fn(ref_file):
     """Map bowtie references to equivalent novoalign indexes.
