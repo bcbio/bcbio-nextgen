@@ -10,6 +10,7 @@ https://github.com/roryk/bipy/blob/master/bipy/cluster/__init__.py
 """
 import os
 import copy
+import glob
 import pipes
 import time
 import uuid
@@ -78,7 +79,7 @@ class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
 %s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
-        return super(SGEControllerLauncher, self).start()
+        return super(BcbioSGEControllerLauncher, self).start()
 
 # ## Control clusters
 
@@ -87,7 +88,7 @@ def _start(parallel, profile, cluster_id, delay):
     """
     scheduler = parallel["scheduler"].upper()
     ns = "bcbio.distributed.ipython"
-    engine_class="Bcbio%sEngineSetLauncher" % scheduler
+    engine_class = "Bcbio%sEngineSetLauncher" % scheduler
     controller_class = "Bcbio%sControllerLauncher" % scheduler
     subprocess.check_call(
         ["ipcluster", "start",
@@ -185,9 +186,22 @@ def _find_cores_per_job(fn, parallel, item_count, config):
     cores_per_job = max(all_cores)
     total = parallel["cores"]
     if total > cores_per_job:
-        return max(total // cores_per_job, item_count), cores_per_job
+        return min(total // cores_per_job, item_count), cores_per_job
     else:
         return 1, total
+
+def _get_checkpoint_file(cdir, fn_name):
+    """Retrieve checkpoint file for this step, with step number and function name.
+    """
+    cur_nums = [-1]
+    for fname in glob.glob(os.path.join(cdir, "*.done")):
+        num = os.path.basename(fname).split("-", 1)[0]
+        try:
+            cur_nums.append(int(num))
+        except ValueError:
+            pass
+    new_num = max(cur_nums) + 1
+    return os.path.join(cdir, "%s-%s.done" % (new_num, fn_name))
 
 def runner(parallel, fn_name, items, work_dir, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -201,7 +215,7 @@ def runner(parallel, fn_name, items, work_dir, config):
     setup_logging(config)
     out = []
     checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
-    checkpoint_file = os.path.join(checkpoint_dir, "%s.done" % fn_name)
+    checkpoint_file = _get_checkpoint_file(checkpoint_dir, fn_name)
     fn = getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
                             fromlist=["ipythontasks"]),
                  fn_name)
