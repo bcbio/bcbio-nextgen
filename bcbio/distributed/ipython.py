@@ -27,6 +27,8 @@ from IPython.utils import traitlets
 
 # ## Custom launchers
 
+timeout_params = ["--timeout=30", "--IPEngineApp.wait_for_url_file=120"]
+
 class BcbioLSFEngineSetLauncher(launcher.LSFEngineSetLauncher):
     """Custom launcher handling heterogeneous clusters on LSF.
     """
@@ -37,8 +39,10 @@ class BcbioLSFEngineSetLauncher(launcher.LSFEngineSetLauncher):
 #BSUB -oo bcbio-ipengine.bsub.%%J
 #BSUB -n {cores}
 #BSUB -R "span[hosts=1]"
-%s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-    """%(' '.join(map(pipes.quote, launcher.ipengine_cmd_argv))))
+%s %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+    """ % (' '.join(map(pipes.quote, launcher.ipengine_cmd_argv)),
+           ' '.join(timeout_params)))
+
     def start(self, n):
         self.context["cores"] = self.cores
         return super(BcbioLSFEngineSetLauncher, self).start(n)
@@ -65,8 +69,9 @@ class BcbioSGEEngineSetLauncher(launcher.SGEEngineSetLauncher):
 #$ -N bcbio-ipengine
 #$ -t 1-{n}
 #$ -pe threaded {cores}
-%s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-"""%(' '.join(map(pipes.quote, launcher.ipengine_cmd_argv))))
+%s %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+"""% (' '.join(map(pipes.quote, launcher.ipengine_cmd_argv)),
+      ' '.join(timeout_params)))
 
     def start(self, n):
         self.context["cores"] = self.cores
@@ -83,7 +88,7 @@ class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
 
 # ## Control clusters
 
-def _start(parallel, profile, cluster_id, delay):
+def _start(parallel, profile, cluster_id):
     """Starts cluster from commandline.
     """
     scheduler = parallel["scheduler"].upper()
@@ -93,7 +98,8 @@ def _start(parallel, profile, cluster_id, delay):
     subprocess.check_call(
         ["ipcluster", "start",
          "--daemonize=True",
-         "--delay=%s" % delay,
+         "--IPClusterEngines.early_shutdown=180",
+         "--delay=60",
          "--log-level=%s" % "WARN",
          "--profile=%s" % profile,
          #"--cluster-id=%s" % cluster_id,
@@ -136,7 +142,7 @@ def cluster_view(parallel, config):
     num_tries = 0
     while 1:
         try:
-            _start(parallel, profile, cluster_id, delay)
+            _start(parallel, profile, cluster_id)
             break
         except subprocess.CalledProcessError:
             if num_tries > max_tries:
