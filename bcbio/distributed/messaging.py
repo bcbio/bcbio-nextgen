@@ -8,7 +8,7 @@ import sys
 import time
 import contextlib
 import multiprocessing
-import subprocess
+import psutil
 
 from mako.template import Template
 
@@ -112,14 +112,11 @@ def cores_including_resources(cores, metadata, config):
         cores = 1
     return cores
 
+
 def _machine_memory():
-    """Retrieve available memory on current machine using 'free.'
-    """
-    with contextlib.closing(subprocess.Popen(["free", "-g"],
-                                             stdout=subprocess.PIPE).stdout) as stdout:
-        for line in stdout:
-            if line.startswith("Mem:"):
-                return int(line.split()[1])
+    BYTES_IN_GIG = 1073741824
+    free_bytes = psutil.virtual_memory().available
+    return free_bytes / BYTES_IN_GIG
 
 # ## Utility functions
 

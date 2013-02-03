@@ -138,7 +138,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
     dists = []
     with closing(pysam.Samfile(out_sam)) as work_sam:
         for read in work_sam:
-            if not read.is_unmapped and read.is_read1:
+            if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize) - 2 * read.rlen)
     return dists
 

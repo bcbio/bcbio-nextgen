@@ -21,6 +21,7 @@ setup(name = "bcbio-nextgen",
                  'scripts/upload_to_galaxy.py',
                  ],
       install_requires = [
+          "psutil == 0.6.1",
           "numpy >= 1.6.2",
           "biopython >= 1.60",
           "Mako >= 0.3.6",
