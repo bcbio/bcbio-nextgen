@@ -1,4 +1,5 @@
 bcbio-nextgen==0.5a
+psutil == 0.6.1
 numpy==1.6.2
 biopython==1.60
 Mako==0.7.3
