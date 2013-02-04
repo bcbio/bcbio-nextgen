@@ -28,6 +28,7 @@ Usage:
 """
 import os
 import sys
+import subprocess
 
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
@@ -106,6 +107,22 @@ def _needed_workers(run_info):
             names.append(x.get("name", (x["lane"], x["barcode_id"])))
     return len(set(names))
 
+def _upgrade_bcbio(method):
+    """Perform upgrade of bcbio to latest release from GitHub.
+    """
+    url = "https://raw.github.com/chapmanb/bcbb/master/nextgen/requirements.txt"
+    pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
+    if method in ["stable", "system"]:
+        sudo_cmd = [] if method == "stable" else ["sudo"]
+        subprocess.check_call(sudo_cmd + [pip_bin, "install", "--upgrade", "distribute"])
+        subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", url])
+    else:
+        raise NotImplementedError("Development upgrade")
+
 if __name__ == "__main__":
+    from bcbio.pipeline import main
     config_file, kwargs = parse_cl_args(sys.argv[1:])
-    main(config_file, **kwargs)
+    if kwargs["upgrade"] and config_file is None:
+        _upgrade_bcbio(kwargs["upgrade"])
+    else:
+        main(config_file, **kwargs)

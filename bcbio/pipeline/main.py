@@ -3,6 +3,7 @@
 Handles running the full pipeline based on instructions
 """
 import os
+import sys
 import math
 import argparse
 
@@ -76,19 +77,23 @@ def parse_cl_args(in_args):
 
     Returns the main config file and set of kwargs.
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("inputs", nargs="+")
+    parser = argparse.ArgumentParser(
+        description="Best-practice pipelines for fully automated high throughput sequencing analysis")
+    parser.add_argument("inputs", nargs="*")
     parser.add_argument("-n", "--numcores", type=int, default=0)
     parser.add_argument("-t", "--paralleltype")
     parser.add_argument("-s", "--scheduler")
     parser.add_argument("-q", "--queue")
+    parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
+                        choices = ["stable", "development", "system"])
 
     args = parser.parse_args(in_args)
-    config_file = args.inputs[0]
+    config_file = args.inputs[0] if len(args.inputs) > 0 else None
     kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
               "paralleltype": args.paralleltype,
               "scheduler": args.scheduler,
-              "queue": args.queue}
+              "queue": args.queue,
+              "upgrade": args.upgrade}
     if len(args.inputs) == 3:
         kwargs["fc_dir"] = args.inputs[1]
         kwargs["run_info_yaml"] = args.inputs[2]
@@ -98,8 +103,9 @@ def parse_cl_args(in_args):
             kwargs["run_info_yaml"] = extra
         else:
             kwargs["fc_dir"] = extra
-    else:
-        raise ValueError("Unexpected arguments: %s" % args.inputs)
+    elif args.upgrade is None:
+        parser.print_help()
+        sys.exit()
     return config_file, kwargs
 
 def _get_full_paths(fastq_dir, config, config_file):
