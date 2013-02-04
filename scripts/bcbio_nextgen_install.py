@@ -53,18 +53,17 @@ def install_bcbio_nextgen(requirements, datadir, tooldir, use_sudo):
     """
     virtualenv_dir = os.path.join(datadir, "bcbio-nextgen-virtualenv")
     if not os.path.exists(virtualenv_dir):
-        subprocess.check_call(["virtualenv", virtualenv_dir])
-    subprocess.check_call(["wget", "--no-check-certificate", requirements])
+        subprocess.check_call(["virtualenv", "--no-site-packages", "--distribute", virtualenv_dir])
+    sudo_cmd = ["sudo"] if use_sudo else []
+    subprocess.check_call(sudo_cmd + ["pip", "install", "--upgrade", "distribute"])
     subprocess.check_call([os.path.join(virtualenv_dir, "bin", "pip"), "install",
-                           "-r", os.path.basename(requirements)])
+                           "-r", requirements])
     for script in ["bcbio_nextgen.py", "bam_to_wiggle.py"]:
         final_script = os.path.join(tooldir, "bin", script)
         ve_script = os.path.join(virtualenv_dir, "bin", script)
         if not os.path.exists(final_script):
             cmd = ["ln", "-s", ve_script, final_script]
-            if use_sudo:
-                cmd = ["sudo"] + cmd
-            subprocess.check_call(cmd)
+            subprocess.check_call(sudo_cmd + cmd)
 
 def install_tools(fabfile, fabricrc):
     subprocess.check_call(["fab", "-f", fabfile, "-H", "localhost",
