@@ -36,7 +36,7 @@ from bcbio.pipeline.config_utils import load_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
-         paralleltype=None, queue=None, scheduler=None):
+         paralleltype=None, queue=None, scheduler=None, upgrade=None):
     work_dir = os.getcwd()
     config = load_config(config_file)
     if config.get("log_dir", None) is None:
@@ -120,7 +120,6 @@ def _upgrade_bcbio(method):
         raise NotImplementedError("Development upgrade")
 
 if __name__ == "__main__":
-    from bcbio.pipeline import main
     config_file, kwargs = parse_cl_args(sys.argv[1:])
     if kwargs["upgrade"] and config_file is None:
         _upgrade_bcbio(kwargs["upgrade"])

@@ -22,14 +22,16 @@ from bcbio.distributed.transaction import file_transaction
 #  but are stored in the same directory structure.
 NgsTool = namedtuple("NgsTool", ["align_fn", "bam_align_fn", "galaxy_loc_file",
                                  "remap_index_fn"])
+
+base_location_file = "sam_fa_indices.loc"
 _tools = {
     "bowtie": NgsTool(bowtie.align, None, bowtie.galaxy_location_file, None),
-    "bowtie2": NgsTool(bowtie2.align, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
+    "bowtie2": NgsTool(bowtie2.align, None, base_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align, None, bwa.galaxy_location_file, None),
     "mosaik": NgsTool(mosaik.align, None, mosaik.galaxy_location_file, None),
-    "novoalign": NgsTool(novoalign.align, novoalign.align_bam, bowtie.galaxy_location_file, novoalign.remap_index_fn),
-    "tophat": NgsTool(tophat.align, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
-    "samtools": NgsTool(None, None, "sam_fa_indices.loc", None),
+    "novoalign": NgsTool(novoalign.align, novoalign.align_bam, base_location_file, novoalign.remap_index_fn),
+    "tophat": NgsTool(tophat.align, None, base_location_file, bowtie2.remap_index_fn),
+    "samtools": NgsTool(None, None, base_location_file, None),
     }
 
 metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}

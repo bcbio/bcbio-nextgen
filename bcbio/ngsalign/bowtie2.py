@@ -10,8 +10,6 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import bowtie
 
-galaxy_location_file = bowtie.galaxy_location_file
-
 def _bowtie2_args_from_config(config):
     """Configurable high level options for bowtie2.
     """
@@ -48,6 +46,6 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     return out_file
 
 def remap_index_fn(ref_file):
-    """Map bowtie references to equivalent bowtie2 indexes.
+    """Map sequence references to equivalent bowtie2 indexes.
     """
-    return ref_file.replace("/bowtie/", "/bowtie2/")
+    return os.path.splitext(ref_file)[0].replace("/seq/", "/bowtie2/")

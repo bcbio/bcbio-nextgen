@@ -102,6 +102,6 @@ def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
 
 
 def remap_index_fn(ref_file):
-    """Map bowtie references to equivalent novoalign indexes.
+    """Map sequence references to equivalent novoalign indexes.
     """
-    return ref_file.replace("/bowtie/", "/novoalign/")
+    return os.path.splitext(ref_file)[0].replace("/seq/", "/novoalign/")
