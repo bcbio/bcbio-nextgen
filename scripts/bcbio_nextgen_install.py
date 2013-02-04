@@ -54,7 +54,7 @@ def install_bcbio_nextgen(requirements, datadir, tooldir, use_sudo):
     virtualenv_dir = os.path.join(datadir, "bcbio-nextgen-virtualenv")
     if not os.path.exists(virtualenv_dir):
         subprocess.check_call(["virtualenv", virtualenv_dir])
-    subprocess.check_call(["wget", requirements])
+    subprocess.check_call(["wget", "--no-check-certificate", requirements])
     subprocess.check_call([os.path.join(virtualenv_dir, "bin", "pip"), "install",
                            "-r", os.path.basename(requirements)])
     for script in ["bcbio_nextgen.py", "bam_to_wiggle.py"]:

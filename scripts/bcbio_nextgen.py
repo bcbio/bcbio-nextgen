@@ -108,7 +108,7 @@ def _needed_workers(run_info):
     return len(set(names))
 
 def _upgrade_bcbio(method):
-    """Perform upgrade of bcbio to latest release from GitHub.
+    """Perform upgrade of bcbio to latest release, or from GitHub development version.
     """
     url = "https://raw.github.com/chapmanb/bcbb/master/nextgen/requirements.txt"
     pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")

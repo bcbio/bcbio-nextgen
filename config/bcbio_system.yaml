@@ -29,7 +29,7 @@ custom_algorithms:
     snpcall: true
     coverage_depth: "high" # other options: low
     coverage_interval: "exome" # other options: genome, regional
-    dbsnp: variation/dbsnp_135.vcf
+    dbsnp: variation/dbsnp_137.vcf
     train_hapmap: variation/hapmap_3.3.vcf
     train_1000g_omni: variation/1000G_omni2.5.vcf
     train_indels: variation/Mills_and_1000G_gold_standard.indels.vcf
@@ -69,7 +69,7 @@ resources:
     jvm_opts: ["-Xms2g", "-Xmx4g"]
     dir: /usr/share/java/picard
   snpEff:
-    jvm_opts: ["-Xms2g", "-Xmx4g"]
+    jvm_opts: ["-Xms2g", "-Xmx6g"]
     dir: /usr/share/java/snpeff
   bcbio_variation:
     dir: /usr/share/java/bcbio_variation
