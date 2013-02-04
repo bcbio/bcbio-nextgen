@@ -1,4 +1,4 @@
-bcbio-nextgen==0.5a
+distribute==0.6.34
 psutil == 0.6.1
 numpy==1.6.2
 biopython==1.60
@@ -13,3 +13,4 @@ pyzmq==2.2.0.1
 ipython==0.13.1
 paramiko==1.9.0
 celery==2.2.7
+bcbio-nextgen==0.5a

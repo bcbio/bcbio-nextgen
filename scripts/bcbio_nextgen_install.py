@@ -114,6 +114,8 @@ def write_fabricrc(base_file, tooldir, datadir, distribution, use_sudo):
             for line in in_handle:
                 if line.startswith("system_install"):
                     line = "system_install = %s\n" % tooldir
+                elif line.startswith("local_install"):
+                    line = "local_install = %s/install\n" % tooldir
                 elif line.startswith("data_files"):
                     line = "data_files = %s\n" % datadir
                 elif line.startswith("distribution"):
