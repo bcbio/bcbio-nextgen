@@ -12,7 +12,15 @@ file::
 By default the script downloads genomes, indexes and associated data
 files for human variant and RNA-seq analysis. Run
 ``python bcbio_nextgen_install.py`` with no arguments to see options
-for configuring the installation process.
+for configuring the installation process. There is a ``--nosudo``
+argument for running in environments where you lack administrator
+privileges. 
+
+This script requires that you can do a ``ssh localhost`` to your
+installation machine. If you'd like to do this without any passwords
+you can setup your ssh keys with::
+
+    $ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
 If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
@@ -119,6 +127,45 @@ describe locations of indexes::
     │   └── phiX174
     │       └── phix
     └── liftOver
+
+Individual genome directories contain indexes for aligners in
+individual sub-directories prefixed by the aligner name. This
+structured scheme helps manage aligners that don't have native Galaxy
+`.loc` files. The automated installer will download and set this up
+automatically::
+
+    `-- phix
+        |-- bowtie
+        |   |-- phix.1.ebwt
+        |   |-- phix.2.ebwt
+        |   |-- phix.3.ebwt
+        |   |-- phix.4.ebwt
+        |   |-- phix.rev.1.ebwt
+        |   `-- phix.rev.2.ebwt
+        |-- bowtie2
+        |   |-- phix.1.bt2
+        |   |-- phix.2.bt2
+        |   |-- phix.3.bt2
+        |   |-- phix.4.bt2
+        |   |-- phix.rev.1.bt2
+        |   `-- phix.rev.2.bt2
+        |-- bwa
+        |   |-- phix.fa.amb
+        |   |-- phix.fa.ann
+        |   |-- phix.fa.bwt
+        |   |-- phix.fa.pac
+        |   |-- phix.fa.rbwt
+        |   |-- phix.fa.rpac
+        |   |-- phix.fa.rsa
+        |   `-- phix.fa.sa
+        |-- novoalign
+        |   `-- phix
+        |-- seq
+        |   |-- phix.dict
+        |   |-- phix.fa
+        |   `-- phix.fa.fai
+        `-- ucsc
+            `-- phix.2bit
     
 .. _fabricrc.txt: https://github.com/chapmanb/cloudbiolinux/blob/master/config/fabricrc.txt
 .. _biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
