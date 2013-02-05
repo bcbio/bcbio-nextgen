@@ -96,10 +96,11 @@ def _start(parallel, profile, cluster_id):
     engine_class = "Bcbio%sEngineSetLauncher" % scheduler
     controller_class = "Bcbio%sControllerLauncher" % scheduler
     subprocess.check_call(
-        ["ipcluster", "start",
+        launcher.ipcluster_cmd_argv +
+        ["start",
          "--daemonize=True",
          "--IPClusterEngines.early_shutdown=180",
-         "--delay=60",
+         "--delay=30",
          "--log-level=%s" % "WARN",
          "--profile=%s" % profile,
          #"--cluster-id=%s" % cluster_id,
@@ -111,9 +112,10 @@ def _start(parallel, profile, cluster_id):
          ])
 
 def _stop(profile, cluster_id):
-    subprocess.check_call(["ipcluster", "stop", "--profile=%s" % profile,
+    subprocess.check_call(launcher.ipcluster_cmd_argv +
+                          ["stop", "--profile=%s" % profile,
                            #"--cluster-id=%s" % cluster_id
-                           ])
+                          ])
 
 def _is_up(profile, cluster_id, n):
     try:
@@ -196,18 +198,14 @@ def _find_cores_per_job(fn, parallel, item_count, config):
     else:
         return 1, total
 
+cur_num = 0
 def _get_checkpoint_file(cdir, fn_name):
     """Retrieve checkpoint file for this step, with step number and function name.
     """
-    cur_nums = [-1]
-    for fname in glob.glob(os.path.join(cdir, "*.done")):
-        num = os.path.basename(fname).split("-", 1)[0]
-        try:
-            cur_nums.append(int(num))
-        except ValueError:
-            pass
-    new_num = max(cur_nums) + 1
-    return os.path.join(cdir, "%s-%s.done" % (new_num, fn_name))
+    global cur_num
+    fname = os.path.join(cdir, "%s-%s.done" % (cur_num, fn_name))
+    cur_num += 1
+    return fname
 
 def runner(parallel, fn_name, items, work_dir, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
