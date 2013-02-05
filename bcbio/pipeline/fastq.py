@@ -54,9 +54,9 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
 def _pipeline_needs_fastq(config, item):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
     """
-    aligner = item["algorithm"].get("aligner")
+    aligner = config["algorithm"].get("aligner")
     has_multiplex = item.get("multiplex") is not None
-    do_split = item["algorithm"].get("align_split_size") is not None
+    do_split = config["algorithm"].get("align_split_size") is not None
     support_bam = aligner in alignment.metadata.get("support_bam", [])
     return (has_multiplex or
             (aligner and not do_split and not support_bam))

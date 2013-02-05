@@ -29,7 +29,8 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
     lane_name = "%s_%s_%s" % (lane_items[0]['lane'], fc_date, fc_name)
     logger.info("Demulitplexing %s" % lane_name)
     full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"], dirs["work"],
-                                               lane_items[0], fc_name, config=config)
+                                               lane_items[0], fc_name,
+                                               config=_update_config_w_custom(config, lane_items[0]))
     bc_files = split_by_barcode(full_fastq1, full_fastq2, lane_items,
                                 lane_name, dirs, config)
     out = []
