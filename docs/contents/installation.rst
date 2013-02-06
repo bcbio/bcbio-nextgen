@@ -6,7 +6,7 @@ required genome data, python library dependencies bundled into a
 virtual environment, and produces a ready to use system configuration
 file::
 
-     wget https://raw.github.com/chapmanb/bcbb/master/nextgen/scripts/bcbio_nextgen_install.py
+     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
      python bcbio_nextgen_install.py install_directory data_directory
 
 By default the script downloads genomes, indexes and associated data
@@ -34,8 +34,8 @@ You can install the latest release code with::
 
 Or the latest development version from GitHub::
 
-      git clone https://github.com/chapmanb/bcbb.git
-      cd bcbb/nextgen && python setup.py build && sudo python setup.py install
+      git clone https://github.com/chapmanb/bcbio-nextgen.git
+      cd bcbio-nextgen && python setup.py build && sudo python setup.py install
 
 This requires either Python 2.6 or 2.7. The setup script installs
 required Python library dependencies. If you'd like to install the

@@ -163,6 +163,5 @@ usage.
 .. _YAML format: https://en.wikipedia.org/wiki/YAML#Examples
 .. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
 .. _GATK: http://www.broadinstitute.org/gatk/
-.. _example system config: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_system.yaml
-.. _example sample config: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_sample.yaml
-
+.. _example system config: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
+.. _example sample config: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml

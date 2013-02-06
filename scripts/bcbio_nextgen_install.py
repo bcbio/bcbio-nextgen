@@ -19,9 +19,9 @@ import sys
 import yaml
 
 bcbio_remotes = {"system_config":
-                 "https://raw.github.com/chapmanb/bcbb/master/nextgen/config/bcbio_system.yaml",
+                 "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
                  "requirements":
-                 "https://raw.github.com/chapmanb/bcbb/master/nextgen/requirements.txt"}
+                 "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt"}
 
 def main(args):
     work_dir = os.path.join(os.getcwd(), "tmpbcbio-install")

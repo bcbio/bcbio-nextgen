@@ -12,7 +12,7 @@ allowing us to focus on the downstream biology.
 
 1. Install `bcbio-nextgen` with all tool dependencies and data files:
 
-          wget https://raw.github.com/chapmanb/bcbb/master/nextgen/scripts/bcbio_nextgen_install.py
+          wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
           python bcbio_nextgen_install.py install_directory data_directory
           
    producing a [system configuration file][q2] referencing 
@@ -24,8 +24,8 @@ allowing us to focus on the downstream biology.
 
           bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -n 8
 
-[q1]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_sample.yaml
-[q2]: https://github.com/chapmanb/bcbb/blob/master/nextgen/config/bcbio_system.yaml
+[q1]: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+[q2]: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 
 ## Documentation
 

@@ -216,4 +216,4 @@ demultiplexing is performed by the `barcode\_sort\_trim.py`_ script.
 
 .. _SAM: http://bioinformatics.oxfordjournals.org/content/early/2009/06/08/bioinformatics.btp352.short
 .. _GitHub discussion: https://github.com/chapmanb/mgh_projects/commit/3387d82f3496025ad13b69e8d9cbb47cf6ee2af9#nglims_paper/nglims_galaxy.tex-P57
-.. _barcode\_sort\_trim.py: https://github.com/brainstorm/bcbb/blob/master/nextgen/scripts/barcode_sort_trim.py
+.. _barcode\_sort\_trim.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/barcode_sort_trim.py
