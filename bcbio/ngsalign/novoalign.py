@@ -39,9 +39,8 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                 rg_info = r"SAM '@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}'".format(**names)
                 align = sh.novoalign.bake(o=rg_info, d=ref_file, f="/dev/stdin", F="BAMPE",
                                           c=num_cores, _piped=True)
-                # work around for bug in sh not handling a bare "-" argument
-                # correctly
-                to_bam = sh.samtools.view.bake("-b -S -u -", _piped=True)
+                to_bam = sh.samtools.view.bake(b=True, S=True, u=True,
+                                               _piped=True).bake("-")
                 coord_sort = sh.novosort.bake("/dev/stdin", c=num_cores, m=max_mem,
                                               o=tx_out_file, t=work_dir)
                 subprocess.check_call("%s | %s | %s | %s" % (read_sort, align, to_bam, coord_sort),
