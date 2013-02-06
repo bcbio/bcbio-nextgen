@@ -13,4 +13,4 @@ pyzmq==2.2.0.1
 ipython==0.13.1
 paramiko==1.9.0
 celery==2.2.7
-bcbio-nextgen==0.5a
+bcbio-nextgen==0.6.0
