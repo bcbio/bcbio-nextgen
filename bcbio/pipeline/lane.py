@@ -65,12 +65,18 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
     """
     aligner = config["algorithm"].get("aligner", None)
     out_bam = ""
-    if os.path.exists(fastq1) and aligner:
+    if aligner:
+        if not os.path.exists(fastq1):
+            raise ValueError("Could not find input fastq file for alignment: %s" % fastq1)
         logger.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
         out_bam = align_to_sort_bam(fastq1, fastq2, info["genome_build"], aligner,
                                     lane_name, lane_desc, dirs, config)
-    elif os.path.exists(fastq1) and fastq1.endswith(".bam"):
+    elif fastq1.endswith(".bam"):
+        if not os.path.exists(fastq1):
+            raise ValueError("Could not find pre-aligned BAM file: %s" % fastq1)
         out_bam = fastq1
+    else:
+        raise ValueError("No aligner specified and no method to process %s" % fastq1)
     return [{"fastq": [fastq1, fastq2], "out_bam": out_bam, "info": info,
              "config": config}]
 
