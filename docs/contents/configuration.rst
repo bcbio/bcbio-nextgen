@@ -52,6 +52,11 @@ Alignment
 
 -  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign,
    false]
+-  ``bam_sort`` Allow sorting of input BAMs when skipping alignment
+   step (``aligner`` set to false). Options are coordinate or
+   queryname. For additional processing through standard pipelines
+   requires coordinate sorted inputs. The default is to not do
+   additional sorting and assume pre-sorted BAMs.
 -  ``trim_reads`` Whether to trim off 3' B-only ends from fastq reads
    [false, true]
 -  ``align_split_size``: Split FASTQ files into specified number of

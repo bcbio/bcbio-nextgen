@@ -4,7 +4,7 @@ import os
 import copy
 
 from bcbio.log import logger
-from bcbio import utils
+from bcbio import utils, broad
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
@@ -65,18 +65,19 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
     """
     aligner = config["algorithm"].get("aligner", None)
     out_bam = ""
-    if aligner:
-        if not os.path.exists(fastq1):
-            raise ValueError("Could not find input fastq file for alignment: %s" % fastq1)
+    if os.path.exists(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
         out_bam = align_to_sort_bam(fastq1, fastq2, info["genome_build"], aligner,
                                     lane_name, lane_desc, dirs, config)
-    elif fastq1.endswith(".bam"):
-        if not os.path.exists(fastq1):
-            raise ValueError("Could not find pre-aligned BAM file: %s" % fastq1)
-        out_bam = fastq1
-    else:
-        raise ValueError("No aligner specified and no method to process %s" % fastq1)
+    elif os.path.exists(fastq1) and fastq1.endswith(".bam"):
+        sort_method = config["algorithm"].get("bam_sort")
+        if sort_method:
+            runner = broad.runner_from_config(config)
+            out_file = os.path.join(dirs["work"], "{}-sort.bam".format(
+                os.path.splitext(os.path.basename(fastq1))[0]))
+            out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
+        else:
+            out_bam = fastq1
     return [{"fastq": [fastq1, fastq2], "out_bam": out_bam, "info": info,
              "config": config}]
 
