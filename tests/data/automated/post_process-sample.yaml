@@ -62,6 +62,8 @@ resources:
     dir: /usr/share/java/snpeff
   varscan:
     dir: /usr/share/java/varscan
+  cram:
+    dir: /usr/share/java/cram
   stampy:
     dir: ~/install/stampy-1.0.18
   cortex:

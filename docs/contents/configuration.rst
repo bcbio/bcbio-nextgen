@@ -62,6 +62,9 @@ Alignment
 -  ``align_split_size``: Split FASTQ files into specified number of
    records per file. Allows parallelization at the cost of increased
    temporary disk space usage.
+-  ``quality_bin``: Perform binning of quality scores with CRAM to
+   reduce file sizes. Uses the Illumina 8-bin approach. Supply a list
+   of times to perform binning: [prealignment, postrecal]
 -  ``quality_format`` Quality format of fastq inputs [illumina,
    standard]
 -  ``write_summary`` Write a PDF summary of results [true, false]

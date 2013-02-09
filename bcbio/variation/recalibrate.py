@@ -11,7 +11,8 @@ from contextlib import closing
 
 import pysam
 
-from bcbio import broad
+from bcbio import broad, utils
+from bcbio.bam import cram
 from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.split import parallel_split_combine
@@ -135,6 +136,16 @@ def write_recal_bam(data, region=None, out_file=None):
     else:
         out_bam = _run_recal_bam(data["work_bam"], data["prep_recal"],
                                  region, data["sam_ref"], out_file, config)
+    qual_bin = config["algorithm"].get("quality_bin", None)
+    if ((qual_bin is True or qual_bin == "postrecal" or
+         isinstance(qual_bin, list) and "postrecal" in qual_bin)
+         and has_aligned_reads(out_bam)):
+        binned_bam = cram.illumina_qual_bin(out_bam, data["sam_ref"],
+                                         os.path.dirname(out_bam), config)
+        shutil.move(out_bam, out_bam + ".binned")
+        shutil.move(binned_bam, out_bam)
+        utils.save_diskspace(out_bam + ".binned",
+                             "Quality binned to %s" % out_bam, config)
     data["work_bam"] = out_bam
     return [data]
 

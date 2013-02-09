@@ -9,6 +9,7 @@ from collections import namedtuple
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils, broad
+from bcbio.bam import cram
 from bcbio.ngsalign import bowtie, bwa, tophat, bowtie2, mosaik, novoalign
 from bcbio.distributed.transaction import file_transaction
 
@@ -50,12 +51,15 @@ def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
     align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", sample_name, dir_ext))
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     if fastq1.endswith(".bam"):
-        return _align_from_bam(fastq1, aligner, align_ref, names, align_dir, config)
+        return _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)
     else:
         return _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
                                  align_dir, config)
 
-def _align_from_bam(fastq1, aligner, align_ref, names, align_dir, config):
+def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config):
+    if "prealignment" in config["algorithm"].get("quality_bin", []):
+        out_dir = utils.safe_makedir(os.path.join(align_dir, "qualbin"))
+        fastq1 = cram.illumina_qual_bin(fastq1, sam_ref, out_dir, config)
     align_fn = _tools[aligner].bam_align_fn
     return align_fn(fastq1, align_ref, names, align_dir, config)
 

@@ -1,0 +1,10 @@
+*.pyc
+bcbio_nextgen.egg-info/
+build/
+dist/
+tests/data/100326*
+tests/data/110106*
+tests/data/110221*
+tests/data/110907*
+tests/data/genomes*
+tests/test_automated_output/

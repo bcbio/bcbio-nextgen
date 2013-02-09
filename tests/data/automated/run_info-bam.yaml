@@ -3,6 +3,7 @@ details:
       #aligner: false
       #recalibrate: false
       #realign: false
+      #quality_bin: [prealignment, postrecal]
       aligner: novoalign
       variantcaller: gatk
       quality_format: Standard
