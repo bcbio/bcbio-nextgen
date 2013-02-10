@@ -14,8 +14,9 @@ from Bio import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio.bam.trim import _save_diskspace
+from bcbio.bam import cram
 from bcbio import utils, broad
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, alignment
 
 def _find_current_split(in_fastq, out_dir):
     """Check for existing split files to avoid re-splitting.
@@ -162,10 +163,16 @@ def split_bam_file(bam_file, split_size, out_dir, config):
             utils.save_diskspace(sort_file, "Split to {}".format(out_files[0][0]), config)
     return out_files
 
-def split_read_files(fastq1, fastq2, split_size, out_dir, config):
+def split_read_files(fastq1, fastq2, item, split_size, out_dir, dirs, config):
     """Split input reads for parallel processing, dispatching on input type.
     """
     if fastq1.endswith(".bam") and fastq2 is None:
+        qual_bin_method = config["algorithm"].get("quality_bin")
+        if (qual_bin_method == "prealignment" or
+             (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
+            _, sam_ref = alignment.get_genome_ref(item["genome_build"], None, dirs["galaxy"])
+            out_bindir = utils.safe_makedir(os.path.join(out_dir, "qualbin"))
+            fastq1 = cram.illumina_qual_bin(fastq1, sam_ref, out_bindir, config)
         return split_bam_file(fastq1, split_size, out_dir, config)
     else:
         return split_fastq_files(fastq1, fastq2, split_size, out_dir, config)

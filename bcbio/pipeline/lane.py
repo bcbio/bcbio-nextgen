@@ -19,7 +19,7 @@ def _prep_fastq_files(item, bc_files, dirs, config):
                                                    config["algorithm"].get("align_split_size", None))
     if split_size:
         split_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_splitprep", item["description"]))
-        return split_read_files(fastq1, fastq2, split_size, split_dir, config)
+        return split_read_files(fastq1, fastq2, item, split_size, split_dir, dirs, config)
     else:
         return [[fastq1, fastq2, None]]
 
@@ -30,6 +30,7 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
     logger.info("Demulitplexing %s" % lane_name)
     full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"], dirs["work"],
                                                lane_items[0], fc_name,
+                                               dirs=dirs,
                                                config=_update_config_w_custom(config, lane_items[0]))
     bc_files = split_by_barcode(full_fastq1, full_fastq2, lane_items,
                                 lane_name, dirs, config)

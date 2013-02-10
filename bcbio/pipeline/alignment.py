@@ -57,7 +57,9 @@ def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
                                  align_dir, config)
 
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config):
-    if "prealignment" in config["algorithm"].get("quality_bin", []):
+    qual_bin_method = config["algorithm"].get("quality_bin")
+    if (qual_bin_method == "prealignment" or
+         (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
         out_dir = utils.safe_makedir(os.path.join(align_dir, "qualbin"))
         fastq1 = cram.illumina_qual_bin(fastq1, sam_ref, out_dir, config)
     align_fn = _tools[aligner].bam_align_fn

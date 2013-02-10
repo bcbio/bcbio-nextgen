@@ -7,6 +7,7 @@ import subprocess
 
 import sh
 
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -18,7 +19,6 @@ def illumina_qual_bin(in_file, ref_file, out_dir, config):
 
     http://www.illumina.com/Documents/products/whitepapers/whitepaper_datacompression.pdf
 
-    and removes read names to reduce BAM file size.
     Also fixes output header to remove extra run groups added by CRAM during conversion.
     """
     index_file = ref_file + ".fai"
@@ -34,13 +34,16 @@ def illumina_qual_bin(in_file, ref_file, out_dir, config):
             to_cram = sh.Command("java").bake("-jar", cram_jar, "cram",
                                               "--input-bam-file", in_file,
                                               "--reference-fasta-file", ref_file,
+                                              "--preserve-read-names",
                                               "--capture-all-tags",
-                                              "--lossy-quality-score-spec", "*8")
+                                              "--lossy-quality-score-spec", "'*8'")
             to_bam = sh.Command("java").bake("-jar", cram_jar, "bam",
                                              "--output-bam-format",
                                              "--reference-fasta-file", ref_file)
             reheader = sh.Command("samtools").bake("reheader", orig_header, "-")
             make_header()
-            subprocess.check_call("%s | %s | %s > %s" % (to_cram, to_bam, reheader, tx_out_file),
-                                  shell=True)
+            cmd = "%s | %s | %s > %s" % (to_cram, to_bam, reheader, tx_out_file)
+            logger.info("Quality binning with CRAM")
+            logger.info(cmd)
+            subprocess.check_call(cmd, shell=True)
     return out_file

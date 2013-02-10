@@ -102,8 +102,14 @@ def refindex(ref_file, kmer_size=None, step_size=None, out_file=None):
     cl += [out_file, ref_file]
     subprocess.check_call(cl)
 
-
 def remap_index_fn(ref_file):
     """Map sequence references to equivalent novoalign indexes.
     """
-    return os.path.splitext(ref_file)[0].replace("/seq/", "/novoalign/")
+    checks = [os.path.splitext(ref_file)[0].replace("/seq/", "/novoalign/"),
+              os.path.splitext(ref_file)[0] + ".ndx",
+              ref_file + ".bs.ndx",
+              ref_file + ".ndx"]
+    for check in checks:
+        if os.path.exists(check):
+            return check
+    return checks[0]
