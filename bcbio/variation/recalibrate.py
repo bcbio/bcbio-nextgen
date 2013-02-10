@@ -18,7 +18,8 @@ from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.shared import (configured_ref_file, process_bam_by_chromosome,
-                                   subset_bam_by_region, write_nochr_reads)
+                                   subset_bam_by_region, write_nochr_reads,
+                                   subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
 
 def prep_recal(data):
@@ -155,7 +156,6 @@ def _run_recal_bam(dup_align_bam, recal_file, region, ref_file, out_file, config
     if not file_exists(out_file):
         if _recal_available(recal_file):
             broad_runner = broad.runner_from_config(config)
-            intervals = config["algorithm"].get("variant_regions", None)
             with curdir_tmpdir() as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
                     params = ["-T", "PrintReads",
@@ -164,12 +164,12 @@ def _run_recal_bam(dup_align_bam, recal_file, region, ref_file, out_file, config
                               "-I", dup_align_bam,
                               "--out", tx_out_file,
                               ]
-                    if region:
-                        params += ["-L", region]
-                    if intervals:
-                        params += ["-L", intervals]
-                    if params and intervals:
-                        params += ["--interval_set_rule", "INTERSECTION"]
+                    base_bed = config["algorithm"].get("variant_regions", None)
+                    region_bed = subset_variant_regions(base_bed, region, tx_out_file)
+                    if region_bed:
+                        params += ["-L", region_bed, "--interval_set_rule", "INTERSECTION"]
+                    elif region:
+                        params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
                     broad_runner.run_gatk(params, tmp_dir)
         elif region:
             subset_bam_by_region(dup_align_bam, region, out_file)
