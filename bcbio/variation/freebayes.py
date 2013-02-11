@@ -48,8 +48,7 @@ def run_freebayes(align_bams, ref_file, config, dbsnp=None, region=None,
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("freebayes", config),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
-                  "--left-align-indels", "--use-mapping-quality",
-                  "--min-alternate-count", "2"]
+                  "--use-mapping-quality", "--min-alternate-count", "2"]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
         _remove_freebayes_refalt_dups(out_file)
