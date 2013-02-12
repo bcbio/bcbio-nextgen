@@ -60,6 +60,6 @@ def _call_variants_samtools(align_bams, ref_file, config, target_regions, out_fi
     max_read_depth = 1000
     with open(out_file, "w") as out_handle:
         mpileup = prep_mpileup(align_bams, ref_file, max_read_depth, target_regions)
-        bcftools = sh.bcftools.view.bake("-", v=True, c=True, g=True)
+        bcftools = sh.bcftools.view.bake(v=True, c=True, g=True).bake("-")
         varfilter = sh.Command("vcfutils.pl").varFilter.bake(D=max_read_depth, _out=out_handle)
         varfilter(bcftools(mpileup()))
