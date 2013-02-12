@@ -45,7 +45,7 @@ Algorithm parameters
 
 The YAML configuration file provides a number of hooks to customize
 analysis in the sample configuration file. Place these under the
-``analysis`` keyword.
+``algorithm`` keyword.
 
 Alignment
 =========
