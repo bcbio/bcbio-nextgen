@@ -3,14 +3,12 @@
 http://www.ebi.ac.uk/ena/about/cram_toolkit
 """
 import os
-import subprocess
-
 import sh
-
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+
 
 def illumina_qual_bin(in_file, ref_file, out_dir, config):
     """Uses CRAM to perform Illumina 8-bin approaches to existing BAM files.
@@ -29,21 +27,17 @@ def illumina_qual_bin(in_file, ref_file, out_dir, config):
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             orig_header = "%s-header.sam" % os.path.splitext(out_file)[0]
-            make_header = sh.Command("samtools").bake("view", "-H", "-o", orig_header,
-                                                      in_file)
-            to_cram = sh.Command("java").bake("-jar", cram_jar, "cram",
-                                              "--input-bam-file", in_file,
-                                              "--reference-fasta-file", ref_file,
-                                              "--preserve-read-names",
-                                              "--capture-all-tags",
-                                              "--lossy-quality-score-spec", "'*8'")
-            to_bam = sh.Command("java").bake("-jar", cram_jar, "bam",
-                                             "--output-bam-format",
-                                             "--reference-fasta-file", ref_file)
-            reheader = sh.Command("samtools").bake("reheader", orig_header, "-")
-            make_header()
-            cmd = "%s | %s | %s > %s" % (to_cram, to_bam, reheader, tx_out_file)
+            java_cmd = sh.Command("java").bake("-jar", cram_jar, _long_sep=" ")
+            to_cram = java_cmd.bake("cram", input_bam_file=in_file,
+                                    reference_fasta_file=ref_file,
+                                    preserve_read_names=True,
+                                    capture_all_tags=True,
+                                    lossy_quality_score_spec="'*8'")
+            to_bam = java_cmd.bake("bam", output_bam_format=True,
+                                   reference_fasta_file=ref_file)
+            make_header = sh.samtools.view.bake(H=True, o=orig_header)
+            make_header(in_file)
+            reheader = sh.samtools.reheader.bake(orig_header, "-")
             logger.info("Quality binning with CRAM")
-            logger.info(cmd)
-            subprocess.check_call(cmd, shell=True)
+            reheader(to_bam(to_cram()), _out=tx_out_file)
     return out_file
