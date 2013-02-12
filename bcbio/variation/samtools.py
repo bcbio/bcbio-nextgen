@@ -46,14 +46,13 @@ def run_samtools(align_bams, ref_file, config, dbsnp=None, region=None,
                               config, dbsnp, region, out_file)
 
 def prep_mpileup(align_bams, ref_file, max_read_depth, target_regions=None, want_bcf=True):
-    mpileup = sh.samtools.mpileup.bake(*align_bams,
-                                       f=ref_file, d=max_read_depth, L=max_read_depth,
+    mpileup = sh.samtools.mpileup.bake(f=ref_file, d=max_read_depth, L=max_read_depth,
                                        m=3, F=0.0002)
     if want_bcf:
         mpileup = mpileup.bake(D=True, S=True, u=True)
     if target_regions:
         mpileup = mpileup.bake(l=target_regions)
-    return mpileup
+    return mpileup.bake(*align_bams)
 
 def _call_variants_samtools(align_bams, ref_file, config, target_regions, out_file):
     """Call variants with samtools in target_regions.
