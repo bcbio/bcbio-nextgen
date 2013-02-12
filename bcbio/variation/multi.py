@@ -23,7 +23,7 @@ def group_batches(xs):
     batch_groups = collections.defaultdict(list)
     for data, region, out_fname in xs:
         batch = data.get("metadata", {}).get("batch")
-        caller = data["config"]["algorithm"]["variantcaller"]
+        caller = data["config"]["algorithm"].get("variantcaller", "gatk")
         if batch is not None:
             batch_groups[(batch, region, caller)].append((data, out_fname))
         else:
