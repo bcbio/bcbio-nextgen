@@ -2,10 +2,12 @@
 
 Handles running the full pipeline based on instructions
 """
+import abc
 import os
 import sys
 import math
 import argparse
+from collections import defaultdict
 
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio import utils
@@ -20,16 +22,18 @@ from bcbio.variation.genotype import parallel_variantcall, combine_multiple_call
 from bcbio.variation import ensemble, recalibrate
 
 def run_main(config, config_file, work_dir, parallel,
-             fc_dir=None, run_info_yaml=None):
-    """Run toplevel analysis, processing a set of input files.
-
+         fc_dir=None, run_info_yaml=None):
+    """
+    Run toplevel analysis, processing a set of input files.
     config_file -- Main YAML configuration file with system parameters
     fc_dir -- Directory of fastq files to process
     run_info_yaml -- YAML configuration file specifying inputs to process
     """
+
     setup_logging(config)
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
-    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir) if fc_dir else None,
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir)
+                                                        if fc_dir else None,
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
@@ -38,24 +42,13 @@ def run_main(config, config_file, work_dir, parallel,
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
-    run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"], fc_name)
+    run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"],
+                                           fc_name)
     lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
     lane_items = run_parallel("process_lane", lanes)
-    align_items = run_parallel("process_alignment", lane_items)
-    # process samples, potentially multiplexed across multiple lanes
-    samples = organize_samples(align_items, dirs, config_file)
-    samples = run_parallel("merge_sample", samples)
-    samples = run_parallel("prep_recal", samples)
-    samples = recalibrate.parallel_write_recal_bam(samples, run_parallel)
-    samples = parallel_realign_sample(samples, run_parallel)
-    samples = parallel_variantcall(samples, run_parallel)
-    samples = run_parallel("postprocess_variants", samples)
-    samples = combine_multiple_callers(samples)
-    samples = run_parallel("detect_sv", samples)
-    samples = run_parallel("combine_calls", samples)
-    run_parallel("process_sample", samples)
-    run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
-    write_project_summary(samples)
+    pipelines = _pair_lanes_with_pipelines(lane_items)
+    for pipeline, pipeline_items in pipelines.items():
+        pipeline.run(config, config_file, run_parallel, dirs, pipeline_items)
     write_metrics(run_info, fc_name, fc_date, dirs)
 
 def _set_resources(parallel, config):
@@ -117,3 +110,94 @@ def _get_full_paths(fastq_dir, config, config_file):
     galaxy_config_file = utils.add_full_path(config.get("galaxy_config", "universe_wsgi.ini"),
                                              config_dir)
     return fastq_dir, os.path.dirname(galaxy_config_file), config_dir
+
+
+class AbstractPipeline:
+    """
+    Implement this class to participate in the Pipeline abstraction.
+    name: the analysis name in the run_info.yaml file:
+        design:
+            - analysis: name
+    run: the steps run to perform the analyses
+
+    """
+
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractproperty
+    def name(self):
+        return
+
+    @abc.abstractmethod
+    def run(self, config, config_file, run_parallel, dirs, lanes):
+        return
+
+
+class VariantPipeline(AbstractPipeline):
+
+    name = "variant"
+
+    @classmethod
+    def run(self, config, config_file, run_parallel, dirs, lane_items):
+        align_items = run_parallel("process_alignment", lane_items)
+        # process samples, potentially multiplexed across multiple lanes
+        samples = organize_samples(align_items, dirs, config_file)
+        samples = run_parallel("merge_sample", samples)
+        samples = run_parallel("prep_recal", samples)
+        samples = recalibrate.parallel_write_recal_bam(samples, run_parallel)
+        samples = parallel_realign_sample(samples, run_parallel)
+        samples = parallel_variantcall(samples, run_parallel)
+        samples = run_parallel("postprocess_variants", samples)
+        samples = combine_multiple_callers(samples)
+        samples = run_parallel("detect_sv", samples)
+        samples = run_parallel("combine_calls", samples)
+        run_parallel("process_sample", samples)
+        run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
+        write_project_summary(samples)
+
+
+class MinimalPipeline(VariantPipeline):
+
+    name = "Minimal"
+
+
+class StandardPipeline(VariantPipeline):
+
+    name = "Standard"
+
+
+class RnaseqPipeline(AbstractPipeline):
+
+    name = "RNA-seq"
+
+    @classmethod
+    def run(self, config, config_file, run_parallel, dirs, lane_items):
+        align_items = run_parallel("process_alignment", lane_items)
+        # process samples, potentially multiplexed across multiple lanes
+        samples = organize_samples(align_items, dirs, config_file)
+        samples = run_parallel("merge_sample", samples)
+        run_parallel("process_sample", samples)
+        run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
+        write_project_summary(samples)
+
+
+def _get_pipeline(lane_item):
+    from bcbio.log import logger
+    SUPPORTED_PIPELINES = {x.name: x for x in
+                           utils.itersubclasses(AbstractPipeline)}
+    analysis_type = lane_item[2].get("analysis")
+    print "ANALYSIS TYPE:" + analysis_type
+    if analysis_type not in SUPPORTED_PIPELINES:
+        logger.error("Cannot determine which type of analysis to run, "
+                      "set in the run_info under details.")
+        sys.exit(1)
+    else:
+        return SUPPORTED_PIPELINES[analysis_type]
+
+
+def _pair_lanes_with_pipelines(lane_items):
+    paired = [(x, _get_pipeline(x)) for x in lane_items]
+    d = defaultdict(list)
+    for x in paired:
+        d[x[1]].append(x[0])
+    return d
