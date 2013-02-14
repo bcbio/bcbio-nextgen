@@ -155,16 +155,16 @@ class VariantPipeline(AbstractPipeline):
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
 
+class SNPCallingPipeline(VariantPipeline):
+    """Back compatible: old name for variant analysis.
+    """
+    name = "SNP calling"
 
 class MinimalPipeline(VariantPipeline):
-
     name = "Minimal"
 
-
 class StandardPipeline(VariantPipeline):
-
     name = "Standard"
-
 
 class RnaseqPipeline(AbstractPipeline):
 
@@ -186,7 +186,6 @@ def _get_pipeline(lane_item):
     SUPPORTED_PIPELINES = {x.name: x for x in
                            utils.itersubclasses(AbstractPipeline)}
     analysis_type = lane_item[2].get("analysis")
-    print "ANALYSIS TYPE:" + analysis_type
     if analysis_type not in SUPPORTED_PIPELINES:
         logger.error("Cannot determine which type of analysis to run, "
                       "set in the run_info under details.")
