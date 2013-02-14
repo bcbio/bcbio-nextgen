@@ -122,6 +122,7 @@ def _is_up(profile, cluster_id, n):
         #client = Client(profile=profile, cluster_id=cluster_id)
         client = Client(profile=profile)
         up = len(client.ids)
+        client.close()
     except IOError, msg:
         return False
     else:
@@ -152,6 +153,7 @@ def cluster_view(parallel, config):
             num_tries += 1
             time.sleep(delay)
     try:
+        client = None
         slept = 0
         while not _is_up(profile, cluster_id, parallel["num_jobs"]):
             time.sleep(delay)
@@ -167,6 +169,8 @@ def cluster_view(parallel, config):
         client[:].execute('from bcbio.log import logger')
         yield client.load_balanced_view()
     finally:
+        if client:
+            client.close()
         _stop(profile, cluster_id)
 
 def dictadd(orig, k, v):
