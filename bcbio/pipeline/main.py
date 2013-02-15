@@ -74,9 +74,13 @@ def parse_cl_args(in_args):
         description="Best-practice pipelines for fully automated high throughput sequencing analysis")
     parser.add_argument("inputs", nargs="*")
     parser.add_argument("-n", "--numcores", type=int, default=0)
-    parser.add_argument("-t", "--paralleltype")
-    parser.add_argument("-s", "--scheduler")
-    parser.add_argument("-q", "--queue")
+    parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
+                        choices=["local", "ipython", "messaging"], default="local")
+    parser.add_argument("-s", "--scheduler", help="Schedulerto use for ipython parallel",
+                        choices=["lsf", "sge"])
+    parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
+    parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
+                        default="bcbio_nextgen")
     parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
                         choices = ["stable", "development", "system"])
 
@@ -86,6 +90,7 @@ def parse_cl_args(in_args):
               "paralleltype": args.paralleltype,
               "scheduler": args.scheduler,
               "queue": args.queue,
+              "profile": args.profile,
               "upgrade": args.upgrade}
     if len(args.inputs) == 3:
         kwargs["fc_dir"] = args.inputs[1]

@@ -140,7 +140,7 @@ def cluster_view(parallel, config):
     delay = 5
     max_delay = 300
     max_tries = 10
-    profile = "bcbio_nextgen"
+    profile = parallel["profile"]
     cluster_id = str(uuid.uuid1())
     num_tries = 0
     while 1:
