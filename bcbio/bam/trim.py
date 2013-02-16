@@ -91,3 +91,10 @@ def brun_trim_fastq(fastq_files, dirs, config):
         for inf, outf in zip(fastq_files, out_files):
             _save_diskspace(inf, outf, config)
         return out_files
+
+def cutadapt_trim(fastq_files, dirs, config):
+    """
+    XXX: to be implemented
+    """
+    raise NotImplementedError("Adapter trimming is not implemented yet.")
+    return fastq_files
