@@ -40,6 +40,19 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``genome_build`` Genome build to align to, which references a genome
   keyword in Galaxy to find location build files.
 
+Upload
+~~~~~~
+
+The ``upload`` section of the sample configuration file defines a
+method to extract the final pipeline outputs::
+
+     upload:
+       dir: /local/filesystem/directory
+
+- ``method`` Upload method to employ. Defaults to local filesystem.
+  [filesystem, galaxy]
+- ``dir`` Local filesystem directory to copy to.
+
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~
 

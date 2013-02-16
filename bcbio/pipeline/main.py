@@ -10,7 +10,7 @@ import argparse
 from collections import defaultdict
 
 from bcbio.solexa.flowcell import get_fastq_dir
-from bcbio import utils
+from bcbio import utils, upload
 from bcbio.log import setup_logging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.run_info import get_run_info
@@ -42,13 +42,15 @@ def run_main(config, config_file, work_dir, parallel,
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
-    run_items = add_multiplex_across_lanes(run_info["details"], dirs["fastq"],
-                                           fc_name)
+    run_items = add_multiplex_across_lanes(run_info["details"],
+                                           dirs["fastq"], fc_name)
     lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
     lane_items = run_parallel("process_lane", lanes)
     pipelines = _pair_lanes_with_pipelines(lane_items)
     for pipeline, pipeline_items in pipelines.items():
-        pipeline.run(config, config_file, run_parallel, dirs, pipeline_items)
+        for xs in pipeline.run(config, config_file, run_parallel, dirs, pipeline_items):
+            assert len(xs) == 1
+            upload.from_sample(xs[0])
     write_metrics(run_info, fc_name, fc_date, dirs)
 
 def _set_resources(parallel, config):
@@ -116,6 +118,7 @@ def _get_full_paths(fastq_dir, config, config_file):
                                              config_dir)
     return fastq_dir, os.path.dirname(galaxy_config_file), config_dir
 
+# ## Generic pipeline framework
 
 class AbstractPipeline:
     """
@@ -159,6 +162,7 @@ class VariantPipeline(AbstractPipeline):
         run_parallel("process_sample", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
+        return samples
 
 class SNPCallingPipeline(VariantPipeline):
     """Back compatible: old name for variant analysis.
@@ -184,7 +188,7 @@ class RnaseqPipeline(AbstractPipeline):
         run_parallel("process_sample", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
-
+        return samples
 
 def _get_pipeline(lane_item):
     from bcbio.log import logger
