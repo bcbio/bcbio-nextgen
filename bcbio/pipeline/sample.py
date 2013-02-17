@@ -60,9 +60,9 @@ def process_sample(data):
                                                data["config"])
     if data["sam_ref"] is not None:
         logger.info("Generating summary files: %s" % str(data["name"]))
-        generate_align_summary(data["work_bam"], data["fastq2"] is not None,
-                               data["sam_ref"], data["name"],
-                               data["config"], data["dirs"])
+        data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
+                                                 data["sam_ref"], data["name"],
+                                                 data["config"], data["dirs"])
     return [[data]]
 
 def generate_bigwig(data):

@@ -296,7 +296,6 @@ class PicardMetrics(object):
         summary_info = self._parser.get_summary_metrics(align_metrics,
                 dup_metrics, insert_metrics, hybrid_metrics,
                 vrn_vals)
-        pprint.pprint(summary_info)
         graphs = []
         if gc_graph and os.path.exists(gc_graph):
             graphs.append((gc_graph, "Distribution of GC content across reads"))
@@ -459,7 +458,6 @@ class RNASeqPicardMetrics(PicardMetrics):
                                                 dup_metrics,
                                                 insert_metrics=insert_metrics,
                                                 rnaseq_metrics=rnaseq_metrics)
-        pprint.pprint(summary_info)
         graphs = []
         if insert_graph and file_exists(insert_graph):
             graphs.append((insert_graph,

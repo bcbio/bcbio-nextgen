@@ -14,7 +14,7 @@ def from_sample(sample):
     if upload_config:
         approach = _approaches[upload_config.get("method", "filesystem")]
         for finfo in _get_files(sample):
-            approach.update_file(finfo, upload_config)
+            approach.update_file(finfo, sample["info"], upload_config)
 
 # ## File information from sample
 
@@ -41,9 +41,12 @@ def _add_meta(xs, sample):
 def _get_files_variantcall(sample):
     """Return output files for the variant calling pipeline.
     """
-    out = [{"path": sample["work_bam"],
-            "type": "bam",
-            "ext": "ready"}]
+    out = [{"path": sample["summary"]["pdf"],
+            "type": "pdf",
+            "ext": "summary"},
+            {"path": sample["work_bam"],
+             "type": "bam",
+             "ext": "ready"}]
     for x in sample["variants"]:
         out.append({"path": x["vrn_file"],
                     "type": "vcf",

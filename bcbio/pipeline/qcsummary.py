@@ -26,8 +26,8 @@ def generate_align_summary(bam_file, is_paired, sam_ref, sample_name,
             graphs, summary, overrep = \
                     _graphs_and_summary(bam_file, sam_ref, is_paired,
                                         tmp_dir, config)
-        return _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
-                             dirs, config)
+        return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
+                                     dirs, config)}
 
 def _safe_latex(to_fix):
     """Escape characters that make LaTeX unhappy.
@@ -55,10 +55,12 @@ def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
     out_tmpl = Template(_base_template)
     with open(out_file, "w") as out_handle:
         out_handle.write(out_tmpl.render(parts=[section]))
-    if config["algorithm"].get("write_summary", True):
+    pdf_file = "%s.pdf" % os.path.splitext(out_file)[0]
+    if (config["algorithm"].get("write_summary", True) and
+         not utils.file_exists(pdf_file)):
         cl = [config_utils.get_program("pdflatex", config), out_file]
         subprocess.check_call(cl)
-    return "%s.pdf" % os.path.splitext(out_file)[0]
+    return pdf_file
 
 def _graphs_and_summary(bam_file, sam_ref, is_paired, tmp_dir, config):
     """Prepare picard/FastQC graphs and summary details.
@@ -96,30 +98,31 @@ def write_project_summary(samples):
         return x.replace(",", "")
     def _percent(x):
         return x.replace("(", "").replace(")", "").replace("\\", "")
-    out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.csv")
-    sample_info = _get_sample_summaries(samples)
-    header = ["Total", "Aligned", "Pair duplicates", "Insert size",
-              "On target bases", "Mean target coverage", "10x coverage targets",
-              "Zero coverage targets", "Total variations", "In dbSNP",
-              "Transition/Transversion (all)", "Transition/Transversion (dbSNP)",
-              "Transition/Transversion (novel)"]
-    select = [(0, _nocommas), (1, _percent), (1, _percent), (0, None),
-              (1, _percent), (0, None), (0, _percent),
-              (0, _percent), (0, None), (0, _percent),
-              (0, None), (0, None), (0, None)]
-    rows = [["Sample"] + header]
-    for name, info in sample_info:
-        cur = [name]
-        for col, (i, prep_fn) in zip(header, select):
-            val = info.get(col, ["", ""])[i]
-            if prep_fn and val:
-                val = prep_fn(val)
-            cur.append(val)
-        rows.append(cur)
-    with open(out_file, "w") as out_handle:
-        writer = csv.writer(out_handle)
-        for row in rows:
-            writer.writerow(row)
+    if len(samples) > 0:
+        out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.csv")
+        sample_info = _get_sample_summaries(samples)
+        header = ["Total", "Aligned", "Pair duplicates", "Insert size",
+                  "On target bases", "Mean target coverage", "10x coverage targets",
+                  "Zero coverage targets", "Total variations", "In dbSNP",
+                  "Transition/Transversion (all)", "Transition/Transversion (dbSNP)",
+                  "Transition/Transversion (novel)"]
+        select = [(0, _nocommas), (1, _percent), (1, _percent), (0, None),
+                  (1, _percent), (0, None), (0, _percent),
+                  (0, _percent), (0, None), (0, _percent),
+                  (0, None), (0, None), (0, None)]
+        rows = [["Sample"] + header]
+        for name, info in sample_info:
+            cur = [name]
+            for col, (i, prep_fn) in zip(header, select):
+                val = info.get(col, ["", ""])[i]
+                if prep_fn and val:
+                    val = prep_fn(val)
+                cur.append(val)
+            rows.append(cur)
+        with open(out_file, "w") as out_handle:
+            writer = csv.writer(out_handle)
+            for row in rows:
+                writer.writerow(row)
 
 def _get_sample_summaries(samples):
     """Retrieve high level summary information for each sample.

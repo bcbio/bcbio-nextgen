@@ -159,7 +159,7 @@ class VariantPipeline(AbstractPipeline):
         samples = combine_multiple_callers(samples)
         samples = run_parallel("detect_sv", samples)
         samples = run_parallel("combine_calls", samples)
-        run_parallel("process_sample", samples)
+        samples = run_parallel("process_sample", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
         return samples
@@ -185,7 +185,7 @@ class RnaseqPipeline(AbstractPipeline):
         # process samples, potentially multiplexed across multiple lanes
         samples = organize_samples(align_items, dirs, config_file)
         samples = run_parallel("merge_sample", samples)
-        run_parallel("process_sample", samples)
+        samples = run_parallel("process_sample", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
         return samples

@@ -105,7 +105,11 @@ def _run_info_from_yaml(fc_dir, run_info_yaml):
         if not item.has_key("description"):
             item["description"] = str(item["lane"])
         item["description_filenames"] = global_config.get("description_filenames", False)
-        item["upload"] = global_config.get("upload")
+        upload = global_config.get("upload")
+        if upload:
+            upload["fc_name"] = fc_name
+            upload["fc_date"] = fc_date
+        item["upload"] = upload
         run_details.append(item)
     run_info = dict(details=run_details, run_id="")
     return fc_name, fc_date, run_info
