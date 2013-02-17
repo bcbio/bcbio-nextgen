@@ -33,6 +33,11 @@ def process_lane(*args):
         return apply(lane.process_lane, *args)
 
 @require(lane)
+def trim_lane(*args):
+    with _setup_logging(args):
+        return apply(lane.trim_lane, *args)
+
+@require(lane)
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)

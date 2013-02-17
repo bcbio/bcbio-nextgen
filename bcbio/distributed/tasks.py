@@ -32,6 +32,10 @@ def process_lane(*args):
     return lane.process_lane(*args)
 
 @task
+def trim_lane(*args):
+    return lane.trim_lane(*args)
+
+@task
 def process_alignment(*args):
     return lane.process_alignment(*args)
 

@@ -142,11 +142,11 @@ class AbstractPipeline:
 
 
 class VariantPipeline(AbstractPipeline):
-
     name = "variant"
 
     @classmethod
     def run(self, config, config_file, run_parallel, dirs, lane_items):
+        lane_items = run_parallel("trim_lane", lane_items)
         align_items = run_parallel("process_alignment", lane_items)
         # process samples, potentially multiplexed across multiple lanes
         samples = organize_samples(align_items, dirs, config_file)
@@ -176,11 +176,11 @@ class StandardPipeline(VariantPipeline):
     name = "Standard"
 
 class RnaseqPipeline(AbstractPipeline):
-
     name = "RNA-seq"
 
     @classmethod
     def run(self, config, config_file, run_parallel, dirs, lane_items):
+        lane_items = run_parallel("trim_lane", lane_items)
         align_items = run_parallel("process_alignment", lane_items)
         # process samples, potentially multiplexed across multiple lanes
         samples = organize_samples(align_items, dirs, config_file)

@@ -9,7 +9,8 @@ from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.ngsalign.split import split_read_files
-from bcbio.bam.trim import brun_trim_fastq
+from bcbio.bam.trim import brun_trim_fastq, cutadapt_trim
+
 
 def _prep_fastq_files(item, bc_files, dirs, config):
     """Potentially prepare input FASTQ files for processing.
@@ -49,6 +50,9 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
                     cur_lane_name += "_%s" % (item["barcode_id"])
                 if lane_ext is not None:
                     cur_lane_name += "_s{0}".format(lane_ext)
+                out.append((fastq1, fastq2, item, cur_lane_name, cur_lane_desc,
+                            dirs, config))
+                """
                 if config["algorithm"].get("trim_reads", False):
                     trim_info = brun_trim_fastq([x for x in [fastq1, fastq2] if x is not None],
                                                 dirs, config)
@@ -57,7 +61,44 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
                         fastq2 = trim_info[1]
                 out.append((fastq1, fastq2, item, cur_lane_name, cur_lane_desc,
                             dirs, config))
+                            """
     return out
+
+
+def trim_lane(fastq1, fastq2, info, lane_name, lane_desc, dirs, config):
+    """
+    if trim_reads is set with no trimmer specified, default to B-run trimming
+    only. if trimmer is set to a supported type, perform that trimming
+    instead.
+
+    """
+    # this block is to maintain legacy configuration files
+    if not config["algorithm"].get("trim_reads", False):
+        return [(fastq1, fastq2, info, lane_name, lane_desc, dirs, config)]
+
+    # swap the default to None if trim_reads gets deprecated
+    trimmer = config["algorithm"].get("trimmer", "low_quality")
+
+    to_trim = [x for x in [fastq1, fastq2] if x is not None]
+
+    if trimmer == "low_quality":
+        logger.info("Trimming low quality ends from %s."
+                    % (", ".join(to_trim)))
+        out_files = brun_trim_fastq(to_trim, dirs, config)
+
+    elif trimmer == "adapter":
+        logger.info("Trimming low quality ends and adapter sequence "
+                    "from %s." % (", ".join(to_trim)))
+        out_files = cutadapt_trim(to_trim, dirs, config)
+    else:
+        logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
+        out_files = [fastq1, fastq2]
+
+    fastq1 = out_files[0]
+    if fastq2 is not None:
+        fastq2 = out_files[1]
+
+    return [(fastq1, fastq2, info, lane_name, lane_desc, dirs, config)]
 
 
 def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
