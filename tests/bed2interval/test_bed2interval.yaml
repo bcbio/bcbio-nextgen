@@ -1,5 +1,0 @@
-input: tests/data/organisms/mouse/mouse.bam
-correct: tests/bed2interval/mouse.interval
-
-annotation:
-  bed: tests/data/organisms/mouse/mouse.bed

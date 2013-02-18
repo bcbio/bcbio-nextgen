@@ -21,6 +21,8 @@ setup(name = "bcbio-nextgen",
                  'scripts/upload_to_galaxy.py',
                  ],
       install_requires = [
+          "boto == 2.8.0",
+          "cutadapt == 1.2.1",
           "psutil == 0.6.1",
           "numpy >= 1.6.2",
           "biopython >= 1.60",
