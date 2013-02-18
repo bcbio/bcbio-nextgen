@@ -3,9 +3,10 @@
 import datetime
 import os
 
-from bcbio.upload import shared, filesystem
+from bcbio.upload import shared, filesystem, galaxy
 
-_approaches = {"filesystem": filesystem}
+_approaches = {"filesystem": filesystem,
+               "galaxy": galaxy}
 
 def from_sample(sample):
     """Upload results of processing from an analysis pipeline sample.
