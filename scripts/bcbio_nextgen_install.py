@@ -141,8 +141,10 @@ def get_cloudbiolinux():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines")
-    parser.add_argument("tooldir", help="Directory to install 3rd party software tools")
-    parser.add_argument("datadir", help="Directory to install genome data")
+    parser.add_argument("tooldir", help="Directory to install 3rd party software tools",
+                        type=os.path.abspath)
+    parser.add_argument("datadir", help="Directory to install genome data",
+                        type=os.path.abspath)
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="ubuntu")
     parser.add_argument("--genomes", help="Genomes to download",
