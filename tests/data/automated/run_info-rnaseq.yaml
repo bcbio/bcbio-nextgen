@@ -4,6 +4,8 @@ details:
   - analysis: RNA-seq
     algorithm:
       quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq, polya]
     description: Test1
     genome_build: mm9
     lane: 1

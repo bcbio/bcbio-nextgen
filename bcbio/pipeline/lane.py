@@ -9,7 +9,7 @@ from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.ngsalign.split import split_read_files
-from bcbio.bam.trim import brun_trim_fastq, cutadapt_trim
+from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 
 
 def _prep_fastq_files(item, bc_files, dirs, config):
@@ -72,27 +72,31 @@ def trim_lane(fastq1, fastq2, info, lane_name, lane_desc, dirs, config):
     instead.
 
     """
+    to_trim = [x for x in [fastq1, fastq2] if x is not None]
     # this block is to maintain legacy configuration files
-    if not config["algorithm"].get("trim_reads", False):
+    trim_reads = config["algorithm"].get("trim_reads", False)
+    if not trim_reads:
+        logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
         return [(fastq1, fastq2, info, lane_name, lane_desc, dirs, config)]
 
     # swap the default to None if trim_reads gets deprecated
-    trimmer = config["algorithm"].get("trimmer", "low_quality")
 
-    to_trim = [x for x in [fastq1, fastq2] if x is not None]
 
-    if trimmer == "low_quality":
+
+    if trim_reads == "low_quality" or trim_reads == "true":
         logger.info("Trimming low quality ends from %s."
                     % (", ".join(to_trim)))
         out_files = brun_trim_fastq(to_trim, dirs, config)
 
-    elif trimmer == "adapter":
-        logger.info("Trimming low quality ends and adapter sequence "
-                    "from %s." % (", ".join(to_trim)))
-        out_files = cutadapt_trim(to_trim, dirs, config)
+    if trim_reads == "read_through":
+        logger.info("Trimming low quality ends and read through adapter "
+                    "sequence from %s." % (", ".join(to_trim)))
+        out_files = trim_read_through(to_trim, dirs, config)
+
     else:
-        logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
-        out_files = [fastq1, fastq2]
+        logger.info("Trimming low quality ends from %s."
+                    % (", ".join(to_trim)))
+        out_files = brun_trim_fastq(to_trim, dirs, config)
 
     fastq1 = out_files[0]
     if fastq2 is not None:

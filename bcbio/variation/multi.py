@@ -32,7 +32,7 @@ def group_batches(xs):
     remap_batches = {}
     for (batch, region, _), xs in batch_groups.iteritems():
         cur_data, cur_fname = xs[0]
-        batch_fname = utils.append_stem(cur_fname, batch, "-")
+        batch_fname = utils.append_stem(cur_fname, "-" + batch)
         batch_data = copy.deepcopy(cur_data)
         batch_data["work_bam"] = [x[0]["work_bam"] for x in xs]
         batch_data["group"] = batch_fname
