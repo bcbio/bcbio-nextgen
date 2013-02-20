@@ -27,7 +27,7 @@ def _fix_varscan_vcf(orig_file, in_bams):
     - Remap sample names back to those defined in the input BAM file.
     - Convert indels into correct VCF representation.
     """
-    tmp_file = utils.append_stem(orig_file, "origsample", "-")
+    tmp_file = utils.append_stem(orig_file, "-origsample")
     if not utils.file_exists(tmp_file):
         shutil.move(orig_file, tmp_file)
         with file_transaction(orig_file) as tx_out_file:

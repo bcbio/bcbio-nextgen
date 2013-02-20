@@ -83,10 +83,7 @@ def transform_to(ext):
             if not out_file:
                 in_path = kwargs.get("in_file", args[0])
                 out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
-                if out_dir is None:
-                    out_dir = os.path.dirname(in_path)
-                if out_dir:
-                    safe_makedir(out_dir)
+                safe_makedir(out_dir)
                 out_name = replace_suffix(os.path.basename(in_path), ext)
                 out_file = os.path.join(out_dir, out_name)
             kwargs["out_file"] = out_file
@@ -110,13 +107,13 @@ def filter_to(word):
     f(in_file=in_file, out_dir=None, out_file=None)
 
     examples:
-    @filter_to("foo")
+    @filter_to(".foo")
     f("the/input/path/file.sam") ->
-        f("the/input/path/file.sam", out_file="the/input/path/file_foo.bam")
+        f("the/input/path/file.sam", out_file="the/input/path/file.foo.bam")
 
-    @filter_to("foo")
+    @filter_to(".foo")
     f("the/input/path/file.sam", out_dir="results") ->
-        f("the/input/path/file.sam", out_file="results/file_foo.bam")
+        f("the/input/path/file.sam", out_file="results/file.foo.bam")
 
     """
 
@@ -127,11 +124,8 @@ def filter_to(word):
             if not out_file:
                 in_path = kwargs.get("in_file", args[0])
                 out_dir = kwargs.get("out_dir", os.path.dirname(in_path))
-                if out_dir is None:
-                    out_dir = os.path.dirname(in_path)
-                if out_dir:
-                    safe_makedir(out_dir)
-                out_name = append_stem(os.path.basename(in_path), word, "_")
+                safe_makedir(out_dir)
+                out_name = append_stem(os.path.basename(in_path), word)
                 out_file = os.path.join(out_dir, out_name)
             kwargs["out_file"] = out_file
             if not file_exists(out_file):
@@ -156,6 +150,8 @@ def memoize_outfile(ext=None, stem=None):
 def safe_makedir(dname):
     """Make a directory if it doesn't exist, handling concurrent race conditions.
     """
+    if not dname:
+        return dname
     num_tries = 0
     max_tries = 5
     while not os.path.exists(dname):
@@ -259,11 +255,11 @@ def add_full_path(dirname, basedir=None):
     return dirname
 
 
-def append_stem(to_transform, word, delim="_"):
+def append_stem(to_transform, word):
     """
     renames a filename or list of filenames with 'word' appended to the stem
     of each one:
-    example: append_stem("/path/to/test.sam", "filtered") ->
+    example: append_stem("/path/to/test.sam", "_filtered") ->
     "/path/to/test_filtered.sam"
 
     """
@@ -271,11 +267,11 @@ def append_stem(to_transform, word, delim="_"):
         transformed = []
         for f in to_transform:
             (base, ext) = os.path.splitext(f)
-            transformed.append("".join([base, delim, word, ext]))
+            transformed.append("".join([base, word, ext]))
         return transformed
     elif is_string(to_transform):
         (base, ext) = os.path.splitext(to_transform)
-        return "".join([base, delim, word, ext])
+        return "".join([base, word, ext])
     else:
         raise ValueError("append_stem takes a single filename as a string or "
                          "a list of filenames to transform.")

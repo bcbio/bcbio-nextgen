@@ -28,7 +28,7 @@ class Utils(unittest.TestCase):
         in_file = "test.sam"
         out_file = "test_sorted.sam"
 
-        @filter_to("sorted")
+        @filter_to("_sorted")
         def f(in_file, out_dir=None, out_file=None):
             return out_file
 
@@ -51,7 +51,7 @@ class Utils(unittest.TestCase):
     def test_memoize_outfile_stem(self):
         temp_file = tempfile.NamedTemporaryFile(dir=self.out_dir,
                                                 suffix=".sam")
-        stem = "stem"
+        stem = "_stem"
         word = __name__
 
         @utils.memoize_outfile(stem=stem)
@@ -63,7 +63,7 @@ class Utils(unittest.TestCase):
         temp_file = tempfile.NamedTemporaryFile(dir=self.out_dir,
                                                 suffix=".sam")
         temp_dir = tempfile.mkdtemp()
-        stem = "stem"
+        stem = "_stem"
         word = __name__
 
         @utils.memoize_outfile(stem=stem)
@@ -101,13 +101,13 @@ class Utils(unittest.TestCase):
     def test_append_stem_of_string(self):
         test_string = "/string/test/foo.txt"
         correct = "/string/test/foo_bar.txt"
-        out_string = utils.append_stem(test_string, "bar")
+        out_string = utils.append_stem(test_string, "_bar")
         self.assertEquals(correct, out_string)
 
     def test_append_stem_of_list(self):
         test_list = ["/list/test/foo.txt", "/list/test/foobar.txt"]
         correct = ["/list/test/foo_bar.txt", "/list/test/foobar_bar.txt"]
-        out_list = utils.append_stem(test_list, "bar")
+        out_list = utils.append_stem(test_list, "_bar")
         for c, o in zip(correct, out_list):
             self.assertEquals(c, o)
 
