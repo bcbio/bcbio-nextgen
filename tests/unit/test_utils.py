@@ -85,6 +85,45 @@ class Utils(unittest.TestCase):
 
         self._run_calls_with_dir(f, temp_file, word, out_dir=temp_dir)
 
+    def test_replace_suffix_of_string(self):
+        test_string = "/string/test/foo.txt"
+        correct = "/string/test/foo.bar"
+        out_string = utils.replace_suffix(test_string, ".bar")
+        self.assertEquals(correct, out_string)
+
+    def test_replace_suffix_of_list(self):
+        test_list = ["/list/test/foo.txt", "/list/test/foobar.txt"]
+        correct = ["/list/test/foo.bar", "/list/test/foobar.bar"]
+        out_list = utils.replace_suffix(test_list, ".bar")
+        for c, o in zip(correct, out_list):
+            self.assertEquals(c, o)
+
+    def test_append_stem_of_string(self):
+        test_string = "/string/test/foo.txt"
+        correct = "/string/test/foo_bar.txt"
+        out_string = utils.append_stem(test_string, "bar")
+        self.assertEquals(correct, out_string)
+
+    def test_append_stem_of_list(self):
+        test_list = ["/list/test/foo.txt", "/list/test/foobar.txt"]
+        correct = ["/list/test/foo_bar.txt", "/list/test/foobar_bar.txt"]
+        out_list = utils.append_stem(test_list, "bar")
+        for c, o in zip(correct, out_list):
+            self.assertEquals(c, o)
+
+    def test_replace_directory_of_string(self):
+        test_string = "/string/test/foo.txt"
+        correct = "/new/dir/foo.txt"
+        out_string = utils.replace_directory(test_string, "/new/dir")
+        self.assertEquals(correct, out_string)
+
+    def test_replace_directory_of_list(self):
+        test_list = ["/list/test/bar.txt", "/list/test/foobar.txt"]
+        correct = ["/new/dir/bar.txt", "/new/dir/foobar.txt"]
+        out_list = utils.replace_directory(test_list, "/new/dir")
+        for c, o in zip(correct, out_list):
+            self.assertEquals(c, o)
+
     def _run_calls_with_dir(self, f, temp_file, word, out_dir=None):
         first_call = f(temp_file.name, word, out_dir=out_dir)
         second_call = f(temp_file.name, word, out_dir=out_dir)

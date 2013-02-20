@@ -259,26 +259,47 @@ def add_full_path(dirname, basedir=None):
     return dirname
 
 
-def append_stem(filename, word, delim="_"):
+def append_stem(to_transform, word, delim="_"):
     """
-    returns a filename with 'word' appended to the stem
+    renames a filename or list of filenames with 'word' appended to the stem
+    of each one:
     example: append_stem("/path/to/test.sam", "filtered") ->
     "/path/to/test_filtered.sam"
 
     """
-    (base, ext) = os.path.splitext(filename)
-    return "".join([base, delim, word, ext])
+    if is_sequence(to_transform):
+        transformed = []
+        for f in to_transform:
+            (base, ext) = os.path.splitext(f)
+            transformed.append("".join([base, delim, word, ext]))
+        return transformed
+    elif is_string(to_transform):
+        (base, ext) = os.path.splitext(to_transform)
+        return "".join([base, delim, word, ext])
+    else:
+        raise ValueError("append_stem takes a single filename as a string or "
+                         "a list of filenames to transform.")
 
 
-def replace_suffix(filename, suffix):
+def replace_suffix(to_transform, suffix):
     """
-    replace the suffix of filename with suffix
+    replaces the suffix on a filename or list of filenames
     example: replace_suffix("/path/to/test.sam", ".bam") ->
     "/path/to/test.bam"
 
     """
-    (base, _) = os.path.splitext(filename)
-    return base + suffix
+    if is_sequence(to_transform):
+        transformed = []
+        for f in to_transform:
+            (base, _) = os.path.splitext(f)
+            transformed.append(base + suffix)
+        return transformed
+    elif is_string(to_transform):
+        (base, _) = os.path.splitext(to_transform)
+        return base + suffix
+    else:
+        raise ValueError("replace_suffix takes a single filename as a string or "
+                         "a list of filenames to transform.")
 
 # ## Functional programming
 
@@ -364,6 +385,9 @@ def is_pair(arg):
     """
     return is_sequence(arg) and len(arg) == 2
 
+def is_string(arg):
+    return isinstance(arg, basestring)
+
 
 def locate(pattern, root=os.curdir):
     '''Locate all files matching supplied filename pattern in and below
@@ -414,3 +438,18 @@ def itersubclasses(cls, _seen=None):
             yield sub
             for sub in itersubclasses(sub, _seen):
                 yield sub
+
+def replace_directory(out_files, dest_dir):
+    """
+    change the output directory to dest_dir
+    can take a string (single file) or a list of files
+
+    """
+    if is_sequence(out_files):
+        filenames = map(os.path.basename, out_files)
+        return [os.path.join(dest_dir, x) for x in filenames]
+    elif is_string(out_files):
+        return os.path.join(dest_dir, os.path.basename(out_files))
+    else:
+        raise ValueError("in_files must either be a sequence of filenames "
+                         "or a string")
