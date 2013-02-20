@@ -62,8 +62,8 @@ Galaxy parameters:
   the Galaxy machine.
 - ``galaxy_api_key`` User API key to access Galaxy: see the
   `Galaxy API`_ documentation.
--  ``galaxy_library`` Name of the Galaxy Data Library to upload to.
-  You can specify this globally for a project in ``upload`` or for
+- ``galaxy_library`` Name of the Galaxy Data Library to upload to. You
+  can specify this globally for a project in ``upload`` or for
   individual samples in the sample details section.
 - ``galaxy_role`` Specific Galaxy access roles to assign to the
   uploaded datasets. This is optional and will default to the access

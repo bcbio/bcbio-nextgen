@@ -18,10 +18,12 @@ import sys
 
 import yaml
 
-bcbio_remotes = {"system_config":
-                 "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
-                 "requirements":
-                 "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt"}
+remotes = {"system_config":
+           "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
+           "requirements":
+           "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
+           "virtualenv":
+           "https://raw.github.com/pypa/virtualenv/master/virtualenv.py"}
 
 def main(args):
     work_dir = os.path.join(os.getcwd(), "tmpbcbio-install")
@@ -38,9 +40,9 @@ def main(args):
     print "Installing data..."
     install_data(cbl["data_fabfile"], fabricrc, biodata)
     print "Installing bcbio-nextgen..."
-    install_bcbio_nextgen(bcbio_remotes["requirements"], args.datadir, args.tooldir,
+    install_bcbio_nextgen(remotes["requirements"], args.datadir, args.tooldir,
                           args.sudo)
-    system_config = write_system_config(bcbio_remotes["system_config"], args.datadir,
+    system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
     print "Finished: bcbio-nextgen, tools and data installed"
     print " Ready to use system configuration at:\n  %s" % system_config
@@ -53,15 +55,19 @@ def install_bcbio_nextgen(requirements, datadir, tooldir, use_sudo):
     """
     virtualenv_dir = os.path.join(datadir, "bcbio-nextgen-virtualenv")
     if not os.path.exists(virtualenv_dir):
-        subprocess.check_call(["virtualenv", "--no-site-packages", "--distribute", virtualenv_dir])
-    sudo_cmd = ["sudo"] if use_sudo else []
-    subprocess.check_call(sudo_cmd + ["pip", "install", "--upgrade", "distribute"])
-    subprocess.check_call([os.path.join(virtualenv_dir, "bin", "pip"), "install",
-                           "-r", requirements])
+        subprocess.check_call(["wget", remotes["virtualenv"]])
+        subprocess.check_call(["python", "virtualenv.py", "--no-site-packages",
+                               "--distribute", virtualenv_dir])
+        os.remove("virtualenv.py")
+    pip_cmd = os.path.join(virtualenv_dir, "bin", "pip")
+    subprocess.check_call([pip_cmd, "install", "--upgrade", "distribute"])
+    subprocess.check_call([pip_cmd, "install", "-r", requirements])
     for script in ["bcbio_nextgen.py", "bam_to_wiggle.py"]:
         final_script = os.path.join(tooldir, "bin", script)
         ve_script = os.path.join(virtualenv_dir, "bin", script)
         if not os.path.exists(final_script):
+            sudo_cmd = ["sudo"] if use_sudo else []
+            subprocess.check_call(sudo_cmd + ["mkdir", "-p", os.path.dirname(final_script)])
             cmd = ["ln", "-s", ve_script, final_script]
             subprocess.check_call(sudo_cmd + cmd)
 
@@ -77,6 +83,8 @@ def install_data(fabfile, fabricrc, biodata):
 def write_system_config(base_url, datadir, tooldir):
     java_basedir = os.path.join(tooldir, "share", "java")
     out_file = os.path.join(datadir, "galaxy", os.path.basename(base_url))
+    if not os.path.exists(os.path.dirname(out_file)):
+        os.makedirs(os.path.dirname(out_file))
     if os.path.exists(out_file):
         bak_file = out_file + ".bak%s" % (datetime.datetime.now().strftime("%Y%M%d_%H%M"))
     to_rewrite = ("gatk", "picard", "snpEff", "bcbio_variation")
