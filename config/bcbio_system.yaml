@@ -100,5 +100,4 @@ analysis:
   copy_host:
   store_dir: /store4/solexadata
   base_dir: /array0/projects/Sequencing
-  upload_program: upload_to_galaxy.py
   worker_program: nextgen_analysis_server.py
