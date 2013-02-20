@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(name = "bcbio-nextgen",
-      version = "0.6.0",
+      version = "0.6.1a",
       author = "Brad Chapman",
       author_email = "chapmanb@50mail.com",
       description = "Best-practice pipelines for fully automated high throughput sequencing analysis",
@@ -18,7 +18,6 @@ setup(name = "bcbio-nextgen",
                  'scripts/illumina_finished_msg.py',
                  'scripts/nextgen_analysis_server.py',
                  'scripts/solexa_qseq_to_fastq.py',
-                 'scripts/upload_to_galaxy.py',
                  ],
       install_requires = [
           "boto == 2.8.0",

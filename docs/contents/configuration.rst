@@ -49,9 +49,27 @@ method to extract the final pipeline outputs::
      upload:
        dir: /local/filesystem/directory
 
+General parameters:
+
 - ``method`` Upload method to employ. Defaults to local filesystem.
   [filesystem, galaxy]
 - ``dir`` Local filesystem directory to copy to.
+
+Galaxy parameters:
+
+- ``galaxy_url`` URL of the Galaxy instance to upload to. Upload
+  assumes you are able to access a shared directory also present on
+  the Galaxy machine.
+- ``galaxy_api_key`` User API key to access Galaxy: see the
+  `Galaxy API`_ documentation.
+-  ``galaxy_library`` Name of the Galaxy Data Library to upload to.
+  You can specify this globally for a project in ``upload`` or for
+  individual samples in the sample details section.
+- ``galaxy_role`` Specific Galaxy access roles to assign to the
+  uploaded datasets. This is optional and will default to the access
+  of the parent data library if not supplied. You can specify this
+  globally for a project in ``upload`` or for individual samples in
+  the sample details section.
 
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~
@@ -186,3 +204,4 @@ usage.
 .. _GATK: http://www.broadinstitute.org/gatk/
 .. _example system config: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _example sample config: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+.. _Galaxy API: http://wiki.galaxyproject.org/Learn/API

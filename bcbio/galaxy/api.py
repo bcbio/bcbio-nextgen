@@ -1,4 +1,4 @@
-"""Access Galaxy via the standard API.
+"""Access Galaxy NGLIMS functionality via the standard API.
 """
 import urllib
 import urllib2
@@ -49,63 +49,6 @@ class GalaxyApiAccess:
             else:
                 data = {}
         return data
-
-    def get_libraries(self):
-        return self._get("/api/libraries")
-
-    def show_library(self, library_id):
-        return self._get("/api/libraries/%s" % library_id)
-
-    def create_library(self, name, descr="", synopsis=""):
-        return self._post("/api/libraries", data = dict(name=name,
-            description=descr, synopsis=synopsis))
-
-    def library_contents(self, library_id):
-        return self._get("/api/libraries/%s/contents" % library_id)
-
-    def create_folder(self, library_id, parent_folder_id, name, descr=""):
-        return self._post("/api/libraries/%s/contents" % library_id,
-                data=dict(create_type="folder", folder_id=parent_folder_id,
-                          name=name, description=descr))
-
-    def show_folder(self, library_id, folder_id):
-        return self._get("/api/libraries/%s/contents/%s" % (library_id,
-            folder_id))
-
-    def upload_directory(self, library_id, folder_id, directory, dbkey,
-            access_role='', file_type='auto', link_data_only='link_to_files'):
-        """Upload a directory of files with a specific type to Galaxy.
-        """
-        return self._post("/api/libraries/%s/contents" % library_id,
-                data=dict(create_type='file', upload_option='upload_directory',
-                    folder_id=folder_id, server_dir=directory,
-                    dbkey=dbkey, roles=str(access_role),
-                    file_type=file_type, link_data_only=str(link_data_only)),
-                need_return=False)
-
-    def upload_from_filesystem(self, library_id, folder_id, fname, dbkey,
-            access_role='', file_type='auto', link_data_only='link_to_files'):
-        """Upload to Galaxy using 'Upload files from filesystem paths'
-        """
-        return self._post("/api/libraries/%s/contents" % library_id,
-                data=dict(create_type='file', upload_option='upload_paths',
-                    folder_id=folder_id, filesystem_paths=fname,
-                    dbkey=dbkey, roles=str(access_role),
-                    file_type=file_type, link_data_only=str(link_data_only)),
-                need_return=False)
-
-    def get_datalibrary_id(self, name):
-        """Retrieve a data library with the given name or create new.
-        """
-        ret_info = None
-        for lib_info in self.get_libraries():
-            if lib_info["name"].strip() == name.strip():
-                ret_info = lib_info
-                break
-        # need to add a new library
-        if ret_info is None:
-            ret_info = self.create_library(name)[0]
-        return ret_info["id"]
 
     def run_details(self, run_bc, run_date=None):
         """Next Gen LIMS specific API functionality.

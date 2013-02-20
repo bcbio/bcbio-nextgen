@@ -25,8 +25,6 @@ def analyze_and_upload(remote_info, config_file):
         config = yaml.load(in_handle)
     fc_dir = _copy_from_sequencer(remote_info, config)
     analysis_dir = _run_analysis(fc_dir, remote_info, config, config_file)
-    _upload_to_galaxy(fc_dir, analysis_dir, remote_info,
-                      config, config_file)
 
 # ## Copying over files from sequencer, if necessary
 
@@ -106,14 +104,3 @@ def _get_run_yaml(remote_info, fc_dir, config):
     if not os.path.exists(run_yaml):
         run_yaml = None
     return run_yaml
-
-def _upload_to_galaxy(fc_dir, analysis_dir, remote_info, config, config_file):
-    """Upload results from analysis directory to Galaxy data libraries.
-    """
-    run_yaml = _get_run_yaml(remote_info, fc_dir, config)
-    with utils.chdir(analysis_dir):
-        cl = [config["analysis"]["upload_program"], config_file, fc_dir,
-              analysis_dir]
-        if run_yaml:
-            cl.append(run_yaml)
-        subprocess.check_call(cl)
