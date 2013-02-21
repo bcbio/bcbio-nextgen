@@ -66,7 +66,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
             safe_makedir(tx_out_dir)
-            if pair_file:
+            if pair_file and not options.get("mate-inner-dist", None):
                 d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file,
                                                         ref_file, out_base,
                                                         tx_out_dir, config)
