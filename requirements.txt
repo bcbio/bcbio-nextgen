@@ -1,6 +1,6 @@
 psutil==0.6.1
-numpy==1.6.2
-biopython==1.60
+numpy==1.7.0
+biopython==1.61
 Mako==0.7.3
 PyYAML==3.10
 sh==1.07

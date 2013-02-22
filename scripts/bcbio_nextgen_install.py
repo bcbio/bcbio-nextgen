@@ -38,7 +38,8 @@ def main(args):
         print "Installing tools..."
         install_tools(cbl["tool_fabfile"], fabricrc)
     print "Installing data..."
-    install_data(cbl["data_fabfile"], fabricrc, biodata)
+    if args.install_data:
+        install_data(cbl["data_fabfile"], fabricrc, biodata)
     print "Installing bcbio-nextgen..."
     install_bcbio_nextgen(remotes["requirements"], args.datadir, args.tooldir,
                           args.sudo)
@@ -163,6 +164,8 @@ if __name__ == "__main__":
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--notools", help="Do not install tool dependencies",
                         dest="install_tools", action="store_false", default=True)
+    parser.add_argument("--nodata", help="Do not install data dependencies",
+                        dest="install_data", action="store_false", default=True)
     if len(sys.argv) == 1:
         parser.print_help()
     else:
