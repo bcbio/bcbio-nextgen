@@ -30,6 +30,7 @@ import os
 import sys
 import subprocess
 
+from bcbio import workflow
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
 from bcbio.pipeline.config_utils import load_config
@@ -37,7 +38,7 @@ from bcbio.pipeline.main import run_main, parse_cl_args
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
          paralleltype=None, queue=None, scheduler=None, upgrade=None,
-         profile=None):
+         profile=None, workflow=None, inputs=None):
     work_dir = os.getcwd()
     config = load_config(config_file)
     if config.get("log_dir", None) is None:
@@ -122,7 +123,11 @@ def _upgrade_bcbio(method):
 
 if __name__ == "__main__":
     config_file, kwargs = parse_cl_args(sys.argv[1:])
+    kwargs["config_file"] = config_file
     if kwargs["upgrade"] and config_file is None:
         _upgrade_bcbio(kwargs["upgrade"])
     else:
-        main(config_file, **kwargs)
+        if kwargs["workflow"]:
+            workdir, new_kwargs = workflow.setup(kwargs["workflow"], kwargs["inputs"])
+            kwargs.update(new_kwargs)
+        main(**kwargs)

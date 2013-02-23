@@ -85,6 +85,7 @@ def parse_cl_args(in_args):
                         default="bcbio_nextgen")
     parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
                         choices = ["stable", "development", "system"])
+    parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
 
     args = parser.parse_args(in_args)
     config_file = args.inputs[0] if len(args.inputs) > 0 else None
@@ -93,7 +94,9 @@ def parse_cl_args(in_args):
               "scheduler": args.scheduler,
               "queue": args.queue,
               "profile": args.profile,
-              "upgrade": args.upgrade}
+              "upgrade": args.upgrade,
+              "workflow": args.workflow,
+              "inputs": args.inputs}
     if len(args.inputs) == 3:
         kwargs["fc_dir"] = args.inputs[1]
         kwargs["run_info_yaml"] = args.inputs[2]
@@ -103,7 +106,7 @@ def parse_cl_args(in_args):
             kwargs["run_info_yaml"] = extra
         else:
             kwargs["fc_dir"] = extra
-    elif args.upgrade is None:
+    elif args.upgrade is None and args.workflow is None:
         parser.print_help()
         sys.exit()
     return config_file, kwargs
@@ -201,7 +204,6 @@ def _get_pipeline(lane_item):
         sys.exit(1)
     else:
         return SUPPORTED_PIPELINES[analysis_type]
-
 
 def _pair_lanes_with_pipelines(lane_items):
     paired = [(x, _get_pipeline(x)) for x in lane_items]
