@@ -89,7 +89,7 @@ def _get_cores_and_type(config, fc_dir, run_info_yaml,
         paralleltype = "local"
 
     if numcores is None:
-        if config["distributed"].get("num_workers", "") == "all":
+        if config.get("distributed", {}).get("num_workers", "") == "all":
             cp = config["distributed"]["cluster_platform"]
             cluster = __import__("bcbio.distributed.{0}".format(cp), fromlist=[cp])
             numcores = cluster.available_nodes(config["distributed"]["platform_args"]) - 1
@@ -129,5 +129,6 @@ if __name__ == "__main__":
     else:
         if kwargs["workflow"]:
             workdir, new_kwargs = workflow.setup(kwargs["workflow"], kwargs["inputs"])
+            os.chdir(workdir)
             kwargs.update(new_kwargs)
         main(**kwargs)

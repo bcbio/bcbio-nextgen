@@ -44,13 +44,20 @@ def _get_files_variantcall(sample):
     """
     out = [{"path": sample["summary"]["pdf"],
             "type": "pdf",
-            "ext": "summary"},
-            {"path": sample["work_bam"],
-             "type": "bam",
-             "ext": "ready"}]
+            "ext": "summary"}]
+    algorithm = sample["config"]["algorithm"]
+    if algorithm["aligner"] or algorithm["realign"] or algorithm["recalibrate"]:
+        out.append({"path": sample["work_bam"],
+                    "type": "bam",
+                    "ext": "ready"})
     for x in sample["variants"]:
         out.append({"path": x["vrn_file"],
                     "type": "vcf",
                     "ext": x["variantcaller"],
                     "variantcaller": x["variantcaller"]})
+        if x.get("bed_file"):
+            out.append({"path": x["bed_file"],
+                        "type": "bed",
+                        "ext": "%s-callregions" % x["variantcaller"],
+                        "variantcaller": x["variantcaller"]})
     return _add_meta(out, sample)
