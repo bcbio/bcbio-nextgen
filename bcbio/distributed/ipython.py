@@ -24,6 +24,7 @@ from bcbio.pipeline import config_utils
 from IPython.parallel import Client
 from IPython.parallel.apps import launcher
 from IPython.utils import traitlets
+from IPython.parallel.error import TimeoutError
 
 # ## Custom launchers
 
@@ -60,6 +61,7 @@ class BcbioSGEEngineSetLauncher(launcher.SGEEngineSetLauncher):
     """Custom launcher handling heterogeneous clusters on SGE.
     """
     cores = traitlets.Integer(1, config=True)
+    pename = traitlets.Unicode("", config=True)
     default_template = traitlets.Unicode("""#$ -V
 #$ -cwd
 #$ -b y
@@ -68,13 +70,14 @@ class BcbioSGEEngineSetLauncher(launcher.SGEEngineSetLauncher):
 #$ -q {queue}
 #$ -N bcbio-ipengine
 #$ -t 1-{n}
-#$ -pe threaded {cores}
+#$ -pe {pename} {cores}
 %s %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """% (' '.join(map(pipes.quote, launcher.ipengine_cmd_argv)),
       ' '.join(timeout_params)))
 
     def start(self, n):
         self.context["cores"] = self.cores
+        self.context["pename"] = str(self.pename)
         return super(BcbioSGEEngineSetLauncher, self).start(n)
 
 class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
@@ -86,6 +89,18 @@ class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
     def start(self):
         return super(BcbioSGEControllerLauncher, self).start()
 
+def _find_parallel_environment():
+    """Find an SGE/OGE parallel environment for running multicore jobs.
+    """
+    for name in subprocess.check_output(["qconf", "-spl"]).strip().split():
+        if name:
+            for line in subprocess.check_output(["qconf", "-sp", name]).split("\n"):
+                if line.startswith("allocation_rule") and line.find("$pe_slots") >= 0:
+                    return name
+    raise ValueError("Could not find an SGE environment configured for parallel execution. " \
+                     "See %s for SGE setup instructions." %
+                     "https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment")
+
 # ## Control clusters
 
 def _start(parallel, profile, cluster_id):
@@ -95,12 +110,11 @@ def _start(parallel, profile, cluster_id):
     ns = "bcbio.distributed.ipython"
     engine_class = "Bcbio%sEngineSetLauncher" % scheduler
     controller_class = "Bcbio%sControllerLauncher" % scheduler
-    subprocess.check_call(
-        launcher.ipcluster_cmd_argv +
+    args = launcher.ipcluster_cmd_argv + \
         ["start",
          "--daemonize=True",
          "--IPClusterEngines.early_shutdown=180",
-         "--delay=30",
+         "--delay=20",
          "--log-level=%s" % "WARN",
          "--profile=%s" % profile,
          #"--cluster-id=%s" % cluster_id,
@@ -108,8 +122,11 @@ def _start(parallel, profile, cluster_id):
          "--%s.cores=%s" % (engine_class, parallel["cores_per_job"]),
          "--IPClusterStart.controller_launcher_class=%s.%s" % (ns, controller_class),
          "--IPClusterStart.engine_launcher_class=%s.%s" % (ns, engine_class),
-         "--%sLauncher.queue=%s" % (scheduler, parallel["queue"]),
-         ])
+         "--%sLauncher.queue='%s'" % (scheduler, parallel["queue"]),
+         ]
+    if scheduler in ["SGE"]:
+        args += ["--%s.pename=%s" % (engine_class, _find_parallel_environment())]
+    subprocess.check_call(args)
 
 def _stop(profile, cluster_id):
     subprocess.check_call(launcher.ipcluster_cmd_argv +
