@@ -16,6 +16,11 @@ import subprocess
 import yaml
 from itertools import izip
 
+SUPPORTED_ADAPTERS = {
+    "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
+    "truseq": ["AGATCGGAAGAG"],
+    "polya": ["AAAAAAAAAAAAA"],
+    "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
 def brun_trim_fastq(fastq_files, dirs, config):
     """Trim FASTQ files, removing low quality B-runs.
@@ -158,7 +163,7 @@ def _get_read_through_trimmed_outfiles(fastq_files, dirs):
 
 def _get_sequences_to_trim(lane_config):
     builtin_adapters = _get_builtin_adapters(lane_config)
-    polya = builtin_adapters.get("polya", None)
+    polya = builtin_adapters.get("polya", [None])[0]
     # allow for trimming of custom sequences for advanced users
     custom_trim = lane_config["algorithm"].get("custom_trim", [])
     builtin_adapters = {k: v for k, v in builtin_adapters.items() if
@@ -195,8 +200,7 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files):
 
     for in_file, out_file in zip(fastq_files, out_files):
         # if you pass an output filename, cutadapt will write some stats
-        # about which adapters are trimmed to stdout, so capture that
-        # to stat_file
+        # about trimmed adapters to stdout. stat_file captures that.
         stat_file = replace_suffix(out_file, ".trim_stats.txt")
         with open(stat_file, "w") as stat_handle:
             cmd = list(base_cmd)
@@ -222,29 +226,7 @@ def _get_quality_format(lane_config):
     return quality_format
 
 def _get_builtin_adapters(lane_config):
-    with resource_stream(__name__, 'data/adapters.yaml') as in_handle:
-        SUPPORTED_CHEMISTRIES = yaml.load(in_handle)
     chemistries = lane_config["algorithm"].get("adapters", [])
-    adapters = {chemistry: SUPPORTED_CHEMISTRIES[chemistry] for
-                chemistry in chemistries if chemistry in SUPPORTED_CHEMISTRIES}
-    return adapters
-
-def _get_adapters(lane_config):
-    with resource_stream(__name__, 'data/adapters.yaml') as in_handle:
-        SUPPORTED_ADAPTERS = yaml.load(in_handle)
-    SUPPORTED_ADAPTERS = "truseq"
-    # right now we just support truseq non-inline barcodes
-    adapter_chemistry = lane_config["algorithm"].get("adapters", None)
-    user_adapters = lane_config["algorithm"].get("optional_adapters", [])
-
-    if not adapter_chemistry:
-        return None
-
-    if adapter_chemistry not in SUPPORTED_ADAPTERS:
-        logger.error("adapter_chemistry is set to an unsupported format. "
-                     "Supported formats are %s."
-                     % (", ".join(SUPPORTED_ADAPTERS)))
-        exit(1)
-
-    adapters = SUPPORTED_ADAPTERS[adapter_chemistry] + user_adapters
+    adapters = {chemistry: SUPPORTED_ADAPTERS[chemistry] for
+                chemistry in chemistries if chemistry in SUPPORTED_ADAPTERS}
     return adapters
