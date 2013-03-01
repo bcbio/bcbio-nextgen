@@ -5,7 +5,6 @@ Handles running the full pipeline based on instructions
 import abc
 import os
 import sys
-import math
 import argparse
 from collections import defaultdict
 
@@ -19,7 +18,7 @@ from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
-from bcbio.variation import ensemble, recalibrate
+from bcbio.variation import recalibrate
 
 def run_main(config, config_file, work_dir, parallel,
          fc_dir=None, run_info_yaml=None):
@@ -73,8 +72,13 @@ def parse_cl_args(in_args):
     Returns the main config file and set of kwargs.
     """
     parser = argparse.ArgumentParser(
-        description="Best-practice pipelines for fully automated high throughput sequencing analysis")
-    parser.add_argument("inputs", nargs="*")
+        description= "Best-practice pipelines for fully automated high throughput sequencing analysis.")
+    parser.add_argument("global_config", help="Global YAML configuration file specifying details about the system",
+                        nargs="?")
+    parser.add_argument("fc_dir", help="A directory of Illumina output or fastq files to process (optional)",
+                        nargs="?")
+    parser.add_argument("run_config", help="YAML file with details about samples to process (optional)",
+                        nargs="*")
     parser.add_argument("-n", "--numcores", type=int, default=0)
     parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
                         choices=["local", "ipython", "messaging"], default="local")
@@ -88,7 +92,8 @@ def parse_cl_args(in_args):
     parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
 
     args = parser.parse_args(in_args)
-    config_file = args.inputs[0] if len(args.inputs) > 0 else None
+    inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
+              if x is not None]
     kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
               "paralleltype": args.paralleltype,
               "scheduler": args.scheduler,
@@ -96,20 +101,19 @@ def parse_cl_args(in_args):
               "profile": args.profile,
               "upgrade": args.upgrade,
               "workflow": args.workflow,
-              "inputs": args.inputs}
-    if len(args.inputs) == 3:
-        kwargs["fc_dir"] = args.inputs[1]
-        kwargs["run_info_yaml"] = args.inputs[2]
-    elif len(args.inputs) == 2:
-        extra = args.inputs[1]
-        if os.path.isfile(extra):
-            kwargs["run_info_yaml"] = extra
+              "inputs": inputs}
+    if args.fc_dir is not None and len(args.run_config) == 1:
+        kwargs["fc_dir"] = args.fc_dir
+        kwargs["run_info_yaml"] = args.run_config[0]
+    elif args.fc_dir is not None:
+        if os.path.isfile(args.fc_dir):
+            kwargs["run_info_yaml"] = args.fc_dir
         else:
-            kwargs["fc_dir"] = extra
+            kwargs["fc_dir"] = args.fc_dir
     elif args.upgrade is None and args.workflow is None:
         parser.print_help()
         sys.exit()
-    return config_file, kwargs
+    return args.global_config, kwargs
 
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.

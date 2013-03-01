@@ -1,6 +1,8 @@
 psutil==0.6.1
 numpy==1.7.0
+boto == 2.8.0
 biopython==1.61
+cutadapt==1.2.1
 Mako==0.7.3
 PyYAML==3.10
 sh==1.07
@@ -13,4 +15,4 @@ ipython==0.13.1
 bioblend==0.2.1
 paramiko==1.9.0
 celery==2.2.7
-bcbio-nextgen==0.6.0
+bcbio-nextgen==0.6.1

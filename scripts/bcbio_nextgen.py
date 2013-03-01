@@ -113,13 +113,15 @@ def _upgrade_bcbio(method):
     """Perform upgrade of bcbio to latest release, or from GitHub development version.
     """
     url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt"
+    git_repo = "git://github.com/chapmanb/bcbio-nextgen.git"
     pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
     if method in ["stable", "system"]:
         sudo_cmd = [] if method == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "--upgrade", "distribute"])
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", url])
     else:
-        raise NotImplementedError("Development upgrade")
+        subprocess.check_call([pip_bin, "install", "--upgrade",
+                               "git+%s#egg=bcbio-nextgen" % git_repo])
 
 if __name__ == "__main__":
     config_file, kwargs = parse_cl_args(sys.argv[1:])

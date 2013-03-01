@@ -3,12 +3,12 @@ bcbio-nextgen
 
 A python toolkit providing best-practice pipelines for fully automated
 high throughput sequencing analysis. You write a high level
-configuration file specifying your inputs and analysis parameters. This
-input drives a parallel pipeline that handles distributed execution,
-idempotent processing restarts and safe transactional steps. The goal is
-to provide a shared community resource that handles the front end data
-processing component of sequencing analysis, allowing us to focus on the
-downstream biology.
+configuration file specifying your inputs and analysis parameters.
+This input drives a parallel pipeline that handles distributed
+execution, idempotent processing restarts and safe transactional
+steps. The goal is to provide a shared community resource that handles
+the data processing component of sequencing analysis, providing
+researchers with more time to focus on the downstream biology.
 
 Quick start
 -----------
@@ -38,24 +38,34 @@ Pipelines
 Variant calling
 ~~~~~~~~~~~~~~~
 
-The pipeline implements the `GATK best practice`_ guidelines for variant
-calling, which includes:
+bcbio-nextgen implements configurable best-practice pipelines for SNP
+and small indel calling:
 
--  Alignment
+-  Sequence alignment:
+
+   - `bowtie2`_
+   - `bwa`_
+   - `mosaik`_
+   - `novoalign`_
+   
 -  Base Quality Recalibration
 -  Realignment around indels
--  Variant calling. The pipeline supports:
+-  Variant calling:
 
-   -  `GATK Unified Genotyper`_ (part of GATK-lite in GATK 2.x)
-   -  `GATK Haplotype caller`_ (part of the full, non-open source GATK
-      2.x)
+   -  `GATK Unified Genotyper`_ (part of GATK-lite in GATK 2.3)
+   -  `GATK Haplotype caller`_ (part of the restricted GATK tools)
    -  `FreeBayes`_
    -  `samtools mpileup`_
    -  `cortex\_var`_
 
 -  Quality filtering, using both `GATK's Variant Quality Score
-   Recalibrator`_ and hard filtering.
--  Annotation of effects, using `snpEff`_
+   Recalibrator`_ or hard filtering.
+-  Annotation of variant effects, using `snpEff`_
+
+It follows approaches from:
+
+- `GATK best practice`_ guidelines for variant calling
+- Marth Lab's `gkno pipelines`_
 
 Features
 --------
@@ -96,3 +106,8 @@ system`_.
 .. _Galaxy: http://galaxy.psu.edu/
 .. _installation instructions for the front end: https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
 .. _detailed description of the full system: http://bcbio.wordpress.com/2011/01/11/next-generation-sequencing-information-management-and-analysis-system-for-galaxy/
+.. _bwa: http://bio-bwa.sourceforge.net/
+.. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
+.. _mosaik: https://github.com/wanpinglee/MOSAIK
+.. _novoalign: http://www.novocraft.com
+.. _gkno pipelines: http://gkno.me/pipelines.html
