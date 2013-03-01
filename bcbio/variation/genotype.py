@@ -162,7 +162,7 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
         return _variant_filtration_both(broad_runner, call_file, ref_file, vrn_files,
                                         config)
     # no additional filtration for callers that filter as part of call process
-    elif caller in ["samtools", "varscan"]:
+    elif caller in ["samtools", "varscan", "freebayes"]:
         return call_file
     else:
         snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)

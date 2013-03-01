@@ -18,9 +18,7 @@ def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
     ploidy = aconfig.get("ploidy", 2)
     opts += ["--ploidy", str(ploidy)]
-    if ploidy == 2:
-        opts += ["--min-alternate-fraction", "0.2"]
-
+    
     variant_regions = aconfig.get("variant_regions", None)
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
@@ -32,7 +30,7 @@ def _freebayes_options_from_config(aconfig, out_file, region=None):
 
 def run_freebayes(align_bams, ref_file, config, dbsnp=None, region=None,
                   out_file=None):
-    """Detect small polymorphisms with FreeBayes.
+    """Detect SNPs and indels with FreeBayes.
     """
     if len(align_bams) == 1:
         align_bam = align_bams[0]
@@ -48,7 +46,7 @@ def run_freebayes(align_bams, ref_file, config, dbsnp=None, region=None,
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("freebayes", config),
                   "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
-                  "--use-mapping-quality", "--min-alternate-count", "2"]
+                  "--use-mapping-quality"]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
         _remove_freebayes_refalt_dups(out_file)

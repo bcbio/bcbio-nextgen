@@ -12,7 +12,7 @@ details:
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
       aligner: novoalign
-      variantcaller: gatk
+      variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
     analysis: variant
