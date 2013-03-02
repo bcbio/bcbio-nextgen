@@ -3,6 +3,7 @@
 import os
 import shutil
 from contextlib import closing
+import subprocess
 
 import pysam
 
@@ -11,11 +12,46 @@ from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    write_nochr_reads, subset_bam_by_region,
                                    subset_variant_regions)
 
-# ## Realignment runners with GATK specific arguments
+# ## gkno Marth lab realignment
+
+def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
+                   out_file=None, deep_coverage=False):
+    """Perform realignment using commandline tools from the Marth lab.
+
+    Runs bamtools filter -> ogap -> bamleftalign
+
+    http://blog.gkno.me/post/32258606906/call-short-variants
+    """
+    if not out_file:
+        base, ext = os.path.splitext(align_bam)
+        out_file = "%s-realign%s%s" % (base, ("-%s" % region if region else ""), ext)
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            bfilter = [config_utils.get_program("bamtools", config),
+                       "filter", "-in", align_bam]
+            if region:
+                bfilter += ["-region", region]
+            ogap = [config_utils.get_program("ogap", config),
+                    "--repeat-gap-extend", "25",
+                    "--soft-clip-qsum", "20",
+                    "--fasta-reference", ref_file,
+                    "--entropy-gap-open",
+                    "--mismatch-qsum", "20",
+                    "--soft-clip-limit", "0"]
+            bleft = [config_utils.get_program("bamleftalign", config),
+                     "--fasta-reference", ref_file]
+            subprocess.check_call("{bfilter} | {ogap} | {bleft} > {out}".format
+                                  (bfilter=" ".join(bfilter), ogap=" ".join(ogap),
+                                   bleft=" ".join(bleft), out=tx_out_file),
+                                   shell=True)
+    return out_file
+
+# ## GATK realignment
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
                            region=None, out_file=None, deep_coverage=False,
@@ -112,6 +148,8 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     else:
         return align_bam
 
+# ## High level functionality to run realignments in parallel
+
 def has_aligned_reads(align_bam, region=None):
     """Check if the aligned BAM file has any reads in the region.
     """
@@ -127,8 +165,6 @@ def has_aligned_reads(align_bam, region=None):
                     has_items = True
                     break
     return has_items
-
-# ## High level functionality to run realignments in parallel
 
 def parallel_realign_sample(sample_info, parallel_fn):
     """Realign samples, running in parallel over individual chromosomes.
@@ -151,22 +187,28 @@ def parallel_realign_sample(sample_info, parallel_fn):
         finished.extend(processed)
     return finished
 
+_realign_approaches = {"gatk": gatk_realigner,
+                       "gkno": gkno_realigner}
+
 def realign_sample(data, region=None, out_file=None):
     """Realign sample BAM file at indels.
     """
-    logger.info("Realigning %s with GATK: %s %s" % (data["name"],
-                                                    os.path.basename(data["work_bam"]),
-                                                    region))
-    if (data["config"]["algorithm"]["snpcall"] and
-        data["config"]["algorithm"].get("realign", True)):
+    realigner = data["config"]["algorithm"].get("realign", True)
+    realigner = "gatk" if realigner is True else realigner
+    realign_fn = _realign_approaches[realigner] if realigner else None
+    
+    if data["config"]["algorithm"]["snpcall"] and realign_fn:
+        logger.info("Realigning %s with %s: %s %s" % (data["name"], realigner,
+                                                      os.path.basename(data["work_bam"]),
+                                                      region))
         sam_ref = data["sam_ref"]
         config = data["config"]
         if region == "nochr":
             realign_bam = write_nochr_reads(data["work_bam"], out_file)
         else:
-            realign_bam = gatk_realigner(data["work_bam"], sam_ref, config,
-                                         configured_ref_file("dbsnp", config, sam_ref),
-                                         region, out_file)
+            realign_bam = realign_fn(data["work_bam"], sam_ref, config,
+                                     configured_ref_file("dbsnp", config, sam_ref),
+                                     region, out_file)
         if region is None:
             save_diskspace(data["work_bam"], "Realigned to %s" % realign_bam,
                            config)

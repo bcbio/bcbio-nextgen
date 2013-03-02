@@ -120,7 +120,8 @@ Variant calling
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [false, true]
 -  ``recalibrate`` Perform variant recalibration [true, false]
--  ``realign`` Do variant realignment [true, false]
+-  ``realign`` Type of variant alignment to perform, Defaults to
+   GATK realignment. [gatk, gkno, false]
 
 Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
 This requires some associated data files, and also has some configurable
