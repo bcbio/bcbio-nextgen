@@ -17,6 +17,7 @@ from bcbio.distributed.transaction import file_transaction
 # align_fn -- runs an aligner and generates SAM output
 # galaxy_loc_file -- name of a Galaxy location file to retrieve
 #  the genome index location
+# bam_align_fn -- runs an aligner on a BAM file
 # remap_index_fn -- Function that will take the location provided
 #  from galaxy_loc_file and find the actual location of the index file.
 #  This is useful for indexes that don't have an associated location file
