@@ -30,25 +30,20 @@ def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     if not out_file:
         base, ext = os.path.splitext(align_bam)
         out_file = "%s-realign%s%s" % (base, ("-%s" % region if region else ""), ext)
+    bamtools = config_utils.get_program("bamtools", config)
+    ogap = config_utils.get_program("ogap", config)
+    bamleftalign = config_utils.get_program("bamleftalign", config)
+    region = "-region %s" % region if region else ""
+
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            bfilter = [config_utils.get_program("bamtools", config),
-                       "filter", "-in", align_bam]
-            if region:
-                bfilter += ["-region", region]
-            ogap = [config_utils.get_program("ogap", config),
-                    "--repeat-gap-extend", "25",
-                    "--soft-clip-qsum", "20",
-                    "--fasta-reference", ref_file,
-                    "--entropy-gap-open",
-                    "--mismatch-qsum", "20",
-                    "--soft-clip-limit", "0"]
-            bleft = [config_utils.get_program("bamleftalign", config),
-                     "--fasta-reference", ref_file]
-            subprocess.check_call("{bfilter} | {ogap} | {bleft} > {out}".format
-                                  (bfilter=" ".join(bfilter), ogap=" ".join(ogap),
-                                   bleft=" ".join(bleft), out=tx_out_file),
-                                   shell=True)
+            cmd = ("{bamtools} filter -in {align_bam} {region} "
+                   "| {ogap} --repeat-gap-extend 25 --soft-clip-qsum 20 "
+                   "  --fasta-reference {ref_file} --entropy-gap-open "
+                   "  --mismatch-qsum 20 --soft-clip-limit 0 "
+                   "| {bamleftalign} --fasta-reference {ref_file} "
+                   "> {tx_out_file}")
+            subprocess.check_call(cmd.format(**locals()), shell=True)
     return out_file
 
 # ## GATK realignment
@@ -196,7 +191,7 @@ def realign_sample(data, region=None, out_file=None):
     realigner = data["config"]["algorithm"].get("realign", True)
     realigner = "gatk" if realigner is True else realigner
     realign_fn = _realign_approaches[realigner] if realigner else None
-    
+
     if data["config"]["algorithm"]["snpcall"] and realign_fn:
         logger.info("Realigning %s with %s: %s %s" % (data["name"], realigner,
                                                       os.path.basename(data["work_bam"]),

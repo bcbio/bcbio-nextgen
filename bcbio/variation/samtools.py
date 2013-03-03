@@ -3,13 +3,13 @@
 http://samtools.sourceforge.net/mpileup.shtml
 """
 import os
-
-import sh
+import subprocess
 
 from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation.genotype import write_empty_vcf
 from bcbio.variation.realign import has_aligned_reads
@@ -45,21 +45,28 @@ def run_samtools(align_bams, ref_file, config, dbsnp=None, region=None,
     return shared_variantcall(_call_variants_samtools, "samtools", align_bams, ref_file,
                               config, dbsnp, region, out_file)
 
-def prep_mpileup(align_bams, ref_file, max_read_depth, target_regions=None, want_bcf=True):
-    mpileup = sh.samtools.mpileup.bake(f=ref_file, d=max_read_depth, L=max_read_depth,
-                                       m=3, F=0.0002)
+def prep_mpileup(align_bams, ref_file, max_read_depth, config,
+                 target_regions=None, want_bcf=True):
+    cl = [config_utils.get_program("samtools", config), "mpileup",
+          "-f", ref_file, "-d", str(max_read_depth), "-L", str(max_read_depth),
+          "-m", "3", "-F", "0.0002"]
     if want_bcf:
-        mpileup = mpileup.bake(D=True, S=True, u=True)
+        cl += ["-D", "-S", "-u"]
     if target_regions:
-        mpileup = mpileup.bake(l=target_regions)
-    return mpileup.bake(*align_bams)
+        cl += ["-l", target_regions]
+    cl += align_bams
+    return " ".join(cl)
 
 def _call_variants_samtools(align_bams, ref_file, config, target_regions, out_file):
     """Call variants with samtools in target_regions.
     """
-    max_read_depth = 1000
-    with open(out_file, "w") as out_handle:
-        mpileup = prep_mpileup(align_bams, ref_file, max_read_depth, target_regions)
-        bcftools = sh.bcftools.view.bake(v=True, c=True, g=True).bake("-")
-        varfilter = sh.Command("vcfutils.pl").varFilter.bake(D=max_read_depth, _out=out_handle)
-        varfilter(bcftools(mpileup()))
+    max_read_depth = "1000"
+    mpileup = prep_mpileup(align_bams, ref_file, max_read_depth, config,
+                           target_regions=target_regions)
+    bcftools = config_utils.get_program("bcftools", config)
+    vcfutils = config_utils.get_program("vcfutils.pl", config)
+    cmd = ("{mpileup} "
+           "| {bcftools} view -v -c -g - "
+           "| {vcfutils} varFilter -D {max_read_depth} "
+           "> {out_file}")
+    subprocess.check_call(cmd.format(**locals()), shell=True)

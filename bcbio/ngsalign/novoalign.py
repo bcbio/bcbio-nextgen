@@ -7,8 +7,6 @@ For BAM input handling this requires:
 """
 import os
 import subprocess
-import sys
-import sh
 
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
@@ -27,24 +25,25 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
       - coordinate sorting with novosort
     """
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    novosort = config_utils.get_program("novosort", config)
+    novoalign = config_utils.get_program("novoalign", config)
+    samtools = config_utils.get_program("samtools", config)
+    resources = config_utils.get_resources("novoalign", config)
+    num_cores = resources["cores"]
+    max_mem = resources.get("memory", "4G")
+
     if not file_exists(out_file):
         with curdir_tmpdir(base_dir=align_dir) as work_dir:
             with file_transaction(out_file) as tx_out_file:
-                resources = config_utils.get_resources("novoalign", config)
-                num_cores = resources["cores"]
-                max_mem = resources.get("memory", "4G")
-                read_sort = sh.novosort.bake(in_bam, c=num_cores, m=max_mem,
-                                             compression=0, n=True, t=work_dir,
-                                             _piped=True)
-                rg_info = r"SAM '@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}'".format(**names)
-                align = sh.novoalign.bake(o=rg_info, d=ref_file, f="/dev/stdin", F="BAMPE",
-                                          c=num_cores, _piped=True)
-                to_bam = sh.samtools.view.bake(b=True, S=True, u=True,
-                                               _piped=True).bake("-")
-                coord_sort = sh.novosort.bake("/dev/stdin", c=num_cores, m=max_mem,
-                                              o=tx_out_file, t=work_dir)
-                subprocess.check_call("%s | %s | %s | %s" % (read_sort, align, to_bam, coord_sort),
-                                      shell=True)
+                rg_info = r"@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}".format(**names)
+                cmd = ("{novosort} -c {num_cores} -m {max_mem} --compression 0 "
+                       " -n -t {work_dir} {in_bam} "
+                       "| {novoalign} -o SAM '{rg_info}' -d {ref_file} -f /dev/stdin "
+                       "  -F BAMPE -c {num_cores} "
+                       "| {samtools} view -b -S -u - "
+                       "| {novosort} -c {num_cores} -m {max_mem} -t {work_dir} "
+                       "  -o {tx_out_file} /dev/stdin")
+                subprocess.check_call(cmd.format(**locals()), shell=True)
     return out_file
 
 # ## Fastq to BAM alignment

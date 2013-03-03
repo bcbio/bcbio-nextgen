@@ -2,16 +2,16 @@
 
 http://varscan.sourceforge.net/
 """
+import contextlib
 import os
 import shutil
-import contextlib
+import subprocess
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.variation import samtools
 
-import sh
 import pysam
 
 def run_varscan(align_bams, ref_file, config,
@@ -78,14 +78,13 @@ def _fix_sample_line(line, in_bams):
 def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
     """Perform SNP and indel genotyping with VarScan.
     """
-    max_read_depth = 1000
+    max_read_depth = "1000"
     varscan_jar = config_utils.get_jar("VarScan",
                                        config_utils.get_program("varscan", config, "dir"))
-    with open(out_file, "w") as out_handle:
-        mpileup = samtools.prep_mpileup(align_bams, ref_file, max_read_depth, target_regions,
-                                        want_bcf=False)
-        varscan = sh.Command("java").bake("-jar", varscan_jar, "mpileup2cns",
-                                          "--min-coverage", "5",
-                                          "--p-value", "0.98",
-                                          "--output-vcf", "--variants", _out=out_handle)
-        varscan(mpileup())
+    mpileup = samtools.prep_mpileup(align_bams, ref_file, max_read_depth, config,
+                                    target_regions=target_regions, want_bcf=False)
+    cmd = ("{mpileup} "
+           "| java -jar {varscan_jar} mpileup2cns --min-coverage 5 --p-value 0.98 "
+           "  --output-vcf --variants "
+           "> {out_file}")
+    subprocess.check_call(cmd.format(**locals()), shell=True)

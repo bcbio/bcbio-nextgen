@@ -5,8 +5,6 @@ http://www.ebi.ac.uk/ena/about/cram_toolkit
 import os
 import subprocess
 
-import sh
-
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
@@ -26,24 +24,19 @@ def illumina_qual_bin(in_file, ref_file, out_dir, config):
     out_file = os.path.join(out_dir, "%s-qualbin%s" % os.path.splitext(os.path.basename(in_file)))
     cram_jar = config_utils.get_jar("cramtools",
                                     config_utils.get_program("cram", config, "dir"))
+    samtools = config_utils.get_program("samtools", config)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             orig_header = "%s-header.sam" % os.path.splitext(out_file)[0]
-            make_header = sh.Command("samtools").bake("view", "-H", "-o", orig_header,
-                                                      in_file)
-            to_cram = sh.Command("java").bake("-jar", cram_jar, "cram",
-                                              "--input-bam-file", in_file,
-                                              "--reference-fasta-file", ref_file,
-                                              "--preserve-read-names",
-                                              "--capture-all-tags",
-                                              "--lossy-quality-score-spec", "'*8'")
-            to_bam = sh.Command("java").bake("-jar", cram_jar, "bam",
-                                             "--output-bam-format",
-                                             "--reference-fasta-file", ref_file)
-            reheader = sh.Command("samtools").bake("reheader", orig_header, "-")
-            make_header()
-            cmd = "%s | %s | %s > %s" % (to_cram, to_bam, reheader, tx_out_file)
+            header_cmd = "{samtools} view -H -o {orig_header} {in_file}"
+            cmd = ("java -jar {cram_jar} cram --input-bam-file {in_file} "
+                   " --reference-fasta-file {ref_file} --preserve-read-names "
+                   " --capture-all-tags --lossy-quality-score-spec '*8' "
+                   "| java -jar {cram_jar} bam --output-bam-format "
+                   "  --reference-fasta-file {ref_file} "
+                   "| {samtools} reheader {orig_header} - "
+                   "> {tx_out_file}")
             logger.info("Quality binning with CRAM")
-            logger.info(cmd)
-            subprocess.check_call(cmd, shell=True)
+            subprocess.check_call(header_cmd.format(**locals()), shell=True)
+            subprocess.check_call(cmd.format(**locals()), shell=True)
     return out_file
