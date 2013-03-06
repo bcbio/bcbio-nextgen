@@ -48,8 +48,8 @@ class TestHtseqCount(unittest.TestCase):
         data = {"work_bam": self.in_bam,
                 "config": {"algorithm": {"transcripts": self.in_gtf},
                            "dirs": {"work": self.out_dir}}}
-        out_file = count.htseq_count(data)
-        self.assertTrue(count.is_countfile(out_file))
+        new_data = count.htseq_count(data)
+        self.assertTrue(count.is_countfile(new_data["count_file"]))
 
     def tearDown(self):
         shutil.rmtree(self.out_dir)

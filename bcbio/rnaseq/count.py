@@ -26,8 +26,9 @@ def htseq_count(data):
                 "{cmd}".format(**locals()))
 
     subprocess.check_call(cmd, shell=True)
+    data["count_file"] = out_file
 
-    return out_file
+    return data
 
 def _get_files(data):
     in_file = _get_sam_file(data)
