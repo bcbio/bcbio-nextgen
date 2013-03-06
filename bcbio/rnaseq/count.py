@@ -18,14 +18,16 @@ def htseq_count(data):
         return out_file
 
     htseq = _choose_htseq_count_executable(data)
-    htseq_cmd = ("{htseq} --mode=union --stranded=no --type=exon "
-                 "--idattr=gene_id {in_file} {gtf_file} > {out_file}")
 
-    cmd = htseq_cmd.format(**locals())
-    logger.info("Running htseq-count on {in_file} with command: "
-                "{cmd}".format(**locals()))
+    with file_transaction(out_file) as tmp_out_file:
+        htseq_cmd = ("{htseq} --mode=union --stranded=no --type=exon "
+                     "--idattr=gene_id {in_file} {gtf_file} > {tmp_out_file}")
 
-    subprocess.check_call(cmd, shell=True)
+        cmd = htseq_cmd.format(**locals())
+        logger.info("Running htseq-count on {in_file} with command: "
+                    "{cmd}".format(**locals()))
+        subprocess.check_call(cmd, shell=True)
+
     data["count_file"] = out_file
 
     return data
