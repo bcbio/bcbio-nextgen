@@ -31,7 +31,7 @@ class TestHtseqCount(unittest.TestCase):
         self.assertFalse(count.is_countfile(test_file))
 
     def test_htseq_is_installed_in_path(self):
-        self.assertTrue(count.htseq_is_installed({"config": {}}))
+        self.assertTrue(count._htseq_is_installed({"config": {}}))
 
     def test_htseq_is_installed_in_resource(self):
         orig_path = os.environ['PATH']
@@ -40,7 +40,7 @@ class TestHtseqCount(unittest.TestCase):
         os.chmod(faux_htseq_count.name, stat.S_IEXEC)
         config = {"config": {"resources": {"htseq-count":
                                            {"cmd": faux_htseq_count.name}}}}
-        is_installed = count.htseq_is_installed(config)
+        is_installed = count._htseq_is_installed(config)
         os.environ['PATH'] = orig_path
         self.assertTrue(is_installed)
 

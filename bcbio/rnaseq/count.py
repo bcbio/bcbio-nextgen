@@ -17,7 +17,7 @@ def htseq_count(data):
     if file_exists(out_file):
         return out_file
 
-    htseq = choose_htseq_count_executable(data)
+    htseq = _choose_htseq_count_executable(data)
     htseq_cmd = ("{htseq} --mode=union --stranded=no --type=exon "
                  "--idattr=gene_id {in_file} {gtf_file} > {out_file}")
 
@@ -30,7 +30,7 @@ def htseq_count(data):
     return out_file
 
 def _get_files(data):
-    in_file = get_sam_file(data)
+    in_file = _get_sam_file(data)
     config = data["config"]
     gtf_file = get_in(config, ("algorithm", "transcripts"))
     out_file = _get_out_file(in_file, config)
@@ -43,16 +43,16 @@ def _get_out_file(in_file, config):
     base, _ = os.path.splitext(os.path.basename(in_file))
     return os.path.join(out_dir, base + ".counts")
 
-def choose_htseq_count_executable(data):
+def _choose_htseq_count_executable(data):
     htseq = get_in(data["config"], ("resources", "htseq-count", "cmd"), "htseq-count")
     return which(htseq)
 
-def htseq_is_installed(config):
-    if choose_htseq_count_executable(config):
+def _htseq_is_installed(config):
+    if _choose_htseq_count_executable(config):
         return True
     return False
 
-def gtf_exists(config):
+def _gtf_exists(config):
     transcript_file = get_in(config, ("algorithm", "transcripts"))
     return file_exists(transcript_file)
 
@@ -92,6 +92,6 @@ def convert_bam_to_sam(in_file):
         pysam.view("-h", "-o" + tmp_out_file, in_file)
     return out_file
 
-def get_sam_file(data):
+def _get_sam_file(data):
     in_file = data["work_bam"]
     return convert_bam_to_sam(in_file)
