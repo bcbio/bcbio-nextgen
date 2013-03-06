@@ -1,8 +1,9 @@
 """Prepare pre-defined workflows that handle creation of input sample configs.
 """
-from bcbio.workflow import xprize
+from bcbio.workflow import xprize, stormseq
 
-workflows = {"xprize": xprize}
+workflows = {"xprize": xprize,
+             "stormseq": stormseq}
 
 def setup(name, inputs):
     workflow = workflows[name]

@@ -2,10 +2,6 @@
 
 Automates the Ensemble approach described here (http://j.mp/VUbz9A) to prepare
 a final set of reference haploid variant calls for X Prize scoring.
-
-Usage:
-  xprize_ensemble.py <sample name> <BAM file> <fosmid region BED file>
-                     <base directory> <bcbio system YAML>
 """
 import argparse
 import datetime
@@ -33,18 +29,23 @@ def parse_args(args):
     args = parser.parse_args(args)
     return args
 
-def setup(args):
-    final_dir = utils.safe_makedir(os.path.join(args.base_dir, "ready"))
-    configdir = utils.safe_makedir(os.path.join(args.base_dir, args.sample, "config"))
-    out_config_file = os.path.join(configdir, "%s.yaml" % args.sample)
+def get_fc_date(out_config_file):
+    """Retrieve flowcell date, reusing older dates if refreshing a present workflow.
+    """
     if os.path.exists(out_config_file):
         with open(out_config_file) as in_handle:
             old_config = yaml.load(in_handle)
             fc_date = old_config["fc_date"]
     else:
         fc_date = datetime.datetime.now().strftime("%y%m%d")
+    return fc_date
+
+def setup(args):
+    final_dir = utils.safe_makedir(os.path.join(args.base_dir, "ready"))
+    configdir = utils.safe_makedir(os.path.join(args.base_dir, args.sample, "config"))
+    out_config_file = os.path.join(configdir, "%s.yaml" % args.sample)
     callers = ["gatk", "freebayes", "samtools", "varscan"]
-    out = {"fc_date": fc_date,
+    out = {"fc_date": get_fc_date(out_config_file),
            "fc_name": args.sample,
            "upload": {"dir": final_dir},
            "details": [{
@@ -71,7 +72,7 @@ def setup(args):
                            "type": "svm"},
                        "trusted-pct": 0.65}}}]}
     with open(out_config_file, "w") as out_handle:
-        yaml.dump(out, out_handle)
+        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
     workdir = utils.safe_makedir(os.path.join(args.base_dir, args.sample, "work"))
     return workdir, {"config_file": args.bcbio_config_file,
