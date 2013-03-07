@@ -28,7 +28,7 @@ from IPython.parallel.error import TimeoutError
 
 # ## Custom launchers
 
-timeout_params = ["--timeout=30", "--IPEngineApp.wait_for_url_file=120"]
+timeout_params = ["--timeout=60", "--IPEngineApp.wait_for_url_file=480"]
 
 class BcbioLSFEngineSetLauncher(launcher.LSFEngineSetLauncher):
     """Custom launcher handling heterogeneous clusters on LSF.
@@ -52,7 +52,7 @@ class BcbioLSFControllerLauncher(launcher.LSFControllerLauncher):
     default_template = traitlets.Unicode("""#!/bin/sh
 #BSUB -J bcbio-ipcontroller
 #BSUB -oo bcbio-ipcontroller.bsub.%%J
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --sqlitedb
     """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioLSFControllerLauncher, self).start()
@@ -84,7 +84,7 @@ class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
     default_template = traitlets.Unicode(u"""#$ -V
 #$ -S /bin/sh
 #$ -N ipcontroller
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --sqlitedb
 """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioSGEControllerLauncher, self).start()
@@ -113,8 +113,8 @@ def _start(parallel, profile, cluster_id):
     args = launcher.ipcluster_cmd_argv + \
         ["start",
          "--daemonize=True",
-         "--IPClusterEngines.early_shutdown=180",
-         "--delay=20",
+         "--IPClusterEngines.early_shutdown=240",
+         "--delay=2",
          "--log-level=%s" % "WARN",
          "--profile=%s" % profile,
          #"--cluster-id=%s" % cluster_id,
