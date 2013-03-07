@@ -52,8 +52,9 @@ and small indel calling:
 -  Realignment around indels
 -  Variant calling:
 
-   -  `GATK Unified Genotyper`_ (part of GATK-lite in GATK 2.3)
-   -  `GATK Haplotype caller`_ (part of the restricted GATK tools)
+   -  `GATK Unified Genotyper`_ (supports both GATK-lite in GATK 2.3
+      and commercial restricted version in GATK 2.4+)
+   -  `GATK Haplotype caller`_ (part of the commercially restricted GATK 2.4+)
    -  `FreeBayes`_
    -  `samtools mpileup`_
    -  `cortex\_var`_

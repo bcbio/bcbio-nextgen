@@ -85,16 +85,19 @@ class BroadRunner:
             #print " ".join(cl)
             subprocess.check_call(cl)
 
-    def has_gatk_full(self):
-        """Check if we have the full GATK jar, including non-open source parts.
+    def gatk_type(self):
+        """Retrieve type of GATK jar, allowing support for older GATK lite.
+        Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,
+        the latest 2.4+ restricted version of GATK.
         """
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-        cl = ["java", "-jar", gatk_jar, "-h"]
+        cl = ["java", "-jar", gatk_jar, "-version"]
         with closing(subprocess.Popen(cl, stdout=subprocess.PIPE).stdout) as stdout:
-            for line in stdout:
-                if line.strip().startswith("HaplotypeCaller"):
-                    return True
-        return False
+            version, subversion, githash = stdout.read().strip().split("-")
+            if float(version) > 2.3:
+                return "restricted"
+            else:
+                return "lite"
 
     def _get_picard_cmd(self, command):
         """Retrieve the base Picard command, handling both shell scripts and directory of jars.

@@ -88,7 +88,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                                    "--downsampling_type", "ALL_READS"]
                     # GATK-lite does not have support for
                     # insertion/deletion quality modeling
-                    if not broad_runner.has_gatk_full():
+                    if broad_runner.gatk_type() == "lite":
                         params += ["--disable_indel_quals"]
                     if dbsnp_file:
                         params += ["--knownSites", dbsnp_file]
