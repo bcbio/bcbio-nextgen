@@ -52,7 +52,7 @@ method to extract the final pipeline outputs::
 General parameters:
 
 - ``method`` Upload method to employ. Defaults to local filesystem.
-  [filesystem, galaxy]
+  [filesystem, galaxy, s3]
 - ``dir`` Local filesystem directory to copy to.
 
 Galaxy parameters:
@@ -70,6 +70,14 @@ Galaxy parameters:
   of the parent data library if not supplied. You can specify this
   globally for a project in ``upload`` or for individual samples in
   the sample details section.
+
+S3 parameters:
+
+- ``bucket`` AWS bucket to upload to
+- ``access_key_id`` AWS access key ID from Amazon credentials page
+- ``secret_access_key`` AWS secret key ID from Amazon credentials page
+- ``reduced_redundancy`` Flag to determine if we should store S3 data
+  with reduced redundancy: cheaper but less reliable [false, true]
 
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~
