@@ -52,10 +52,11 @@ def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
     align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", sample_name, dir_ext))
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     if fastq1.endswith(".bam"):
-        return _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)
+        out_bam = _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)
     else:
-        return _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
-                                 align_dir, config)
+        out_bam = _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
+                                    align_dir, config)
+    return out_bam, sam_ref
 
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config):
     qual_bin_method = config["algorithm"].get("quality_bin")

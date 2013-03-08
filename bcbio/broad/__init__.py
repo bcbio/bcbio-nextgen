@@ -92,8 +92,13 @@ class BroadRunner:
         """
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         cl = ["java", "-jar", gatk_jar, "-version"]
-        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE).stdout) as stdout:
-            version, subversion, githash = stdout.read().strip().split("-")
+        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+            out = stdout.read().strip()
+            # version was not properly implemented in earlier versions
+            if out.find("USER ERROR") > 0:
+                version = 2.3
+            else:
+                version, subversion, githash = out.split("-")
             if float(version) > 2.3:
                 return "restricted"
             else:

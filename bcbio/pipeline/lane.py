@@ -3,13 +3,14 @@
 import os
 import copy
 
-from bcbio.log import logger
 from bcbio import utils, broad
+from bcbio.log import logger
+from bcbio.bam import callable
+from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
-from bcbio.pipeline.alignment import align_to_sort_bam
+from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
 from bcbio.ngsalign.split import split_read_files
-from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 
 
 def _prep_fastq_files(item, bc_files, dirs, config):
@@ -103,8 +104,8 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
     out_bam = ""
     if os.path.exists(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
-        out_bam = align_to_sort_bam(fastq1, fastq2, info["genome_build"], aligner,
-                                    lane_name, lane_desc, dirs, config)
+        out_bam, ref_file = align_to_sort_bam(fastq1, fastq2, info["genome_build"], aligner,
+                                              lane_name, lane_desc, dirs, config)
     elif os.path.exists(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
         if sort_method:
@@ -114,8 +115,10 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
         else:
             out_bam = fastq1
+        _, ref_file = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     return [{"fastq": [fastq1, fastq2], "out_bam": out_bam, "info": info,
-             "config": config}]
+             "regions": callable.block_regions(out_bam, ref_file, config),
+             "ref_file": ref_file, "config": config}]
 
 def _update_config_w_custom(config, lane_info):
     """Update the configuration for this lane if a custom analysis is specified.
