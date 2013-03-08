@@ -12,9 +12,12 @@ file::
 By default the script downloads genomes, indexes and associated data
 files for human variant and RNA-seq analysis. Run
 ``python bcbio_nextgen_install.py`` with no arguments to see options
-for configuring the installation process. There is a ``--nosudo``
-argument for running in environments where you lack administrator
-privileges. 
+for configuring the installation process. Some useful arguments are:
+
+- ``--nosudo`` For running in environments where you lack administrator
+  privileges.
+- ``--distribution`` Specifies the operating system distribution
+  (ubuntu, centos, debian, scientificlinux).
 
 This script requires that you can do a ``ssh localhost`` to your
 installation machine. If you'd like to do this without any passwords
