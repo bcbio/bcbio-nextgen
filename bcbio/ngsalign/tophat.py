@@ -38,9 +38,9 @@ def _set_gtf(options, config):
 
 
 def _set_cores(options, config):
-    cores = config.get("resources", {}).get("tophat", {}).get("cores", None)
-    if cores and "num-threads" not in options:
-        options["num-threads"] = cores
+    num_cores = config["algorithm"].get("num_cores", 1)
+    if num_cores > 1 and "num-threads" not in options:
+        options["num-threads"] = num_cores
     return options
 
 

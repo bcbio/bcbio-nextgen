@@ -37,7 +37,6 @@ def run_main(config, config_file, work_dir, parallel,
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
-    config = _set_resources(parallel, config)
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
@@ -51,18 +50,6 @@ def run_main(config, config_file, work_dir, parallel,
             assert len(xs) == 1
             upload.from_sample(xs[0])
     write_metrics(run_info, fc_name, fc_date, dirs)
-
-def _set_resources(parallel, config):
-    """Set resource availability for programs, downsizing to local runs.
-    """
-    for program in ["gatk", "novoalign"]:
-        if not config["resources"].has_key(program):
-            config["resources"][program] = {}
-        if parallel["type"] == "local":
-            import multiprocessing
-            cores = min(parallel["cores"], multiprocessing.cpu_count())
-            config["resources"][program]["cores"] = cores
-    return config
 
 # ## Utility functions
 

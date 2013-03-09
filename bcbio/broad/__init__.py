@@ -14,11 +14,12 @@ from bcbio.utils import curdir_tmpdir
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """
-    def __init__(self, picard_ref, gatk_dir, resources):
+    def __init__(self, picard_ref, gatk_dir, config):
+        resources = config_utils.get_resources("gatk", config)
         self._jvm_opts = resources.get("jvm_opts", ["-Xmx6g", "-Xms6g"])
-        self._resources = resources
         self._picard_ref = picard_ref
         self._gatk_dir = gatk_dir or picard_ref
+        self._config = config
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
@@ -62,10 +63,10 @@ class BroadRunner:
     def run_gatk(self, params, tmp_dir=None):
         #support_nt = set(["UnifiedGenotyper", "VariantEval"])
         support_nt = set()
-        support_nct = set(["BaseRecalibrator"])
+        support_nct = set(["BaseRecalibrator", "CallableLoci"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
-        cores = self._resources.get("cores", None)
+        cores = self._config["algorithm"].get("num_cores", 1)
         if cores and cores > 1:
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
@@ -156,4 +157,4 @@ def _get_picard_ref(config):
 def runner_from_config(config):
     return BroadRunner(_get_picard_ref(config),
                        config_utils.get_program("gatk", config, "dir"),
-                       config_utils.get_resources("gatk", config))
+                       config)

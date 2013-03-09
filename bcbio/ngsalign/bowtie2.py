@@ -18,8 +18,8 @@ def _bowtie2_args_from_config(config):
         qual_flags = ["--phred64-quals"]
     else:
         qual_flags = []
-    cores = config.get("resources", {}).get("bowtie", {}).get("cores", None)
-    core_flags = ["-p", str(cores)] if cores else []
+    num_cores = config["algorithm"].get("num_cores", 1)
+    core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     return core_flags + qual_flags
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,

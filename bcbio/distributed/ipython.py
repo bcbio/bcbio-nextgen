@@ -228,6 +228,35 @@ def _get_checkpoint_file(cdir, fn_name):
     cur_num += 1
     return fname
 
+def add_cores_to_config(args, cores_per_job):
+    """Add information about available cores for a job to configuration.
+    Ugly hack to update core information in a configuration dictionary.
+    """
+    def _is_std_config(x):
+        return (isinstance(x, dict) and x.has_key("algorithm"))
+    def _is_nested_config(x):
+        return (isinstance(x, dict) and x.has_key("config") and
+                isinstance(x["config"], dict) and x["config"].has_key("algorithm"))
+
+    new_i = None
+    for i, arg in enumerate(args):
+        if _is_std_config(arg) or _is_nested_config(arg):
+            new_i = i
+            break
+    if new_i is None:
+        raise ValueError("Could not find configuration in args: %s" % args)
+
+    new_arg = copy.deepcopy(args[new_i])
+    if _is_nested_config(new_arg):
+        new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
+    elif _is_std_config(new_arg):
+        new_arg["algorithm"]["num_cores"] = int(cores_per_job)
+    else:
+        raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
+    args = list(args)[:]
+    args[new_i] = new_arg
+    return args
+
 def runner(parallel, fn_name, items, work_dir, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
 
@@ -253,7 +282,7 @@ def runner(parallel, fn_name, items, work_dir, config):
         logger.info("ipython: %s -- local; checkpoint passed" % fn_name)
         for args in items:
             if args:
-                data = fn(args)
+                data = fn(add_cores_to_config(args, cores_per_job))
                 if data:
                     out.extend(data)
     # Run on a standard parallel queue

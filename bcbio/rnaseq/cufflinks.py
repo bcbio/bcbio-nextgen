@@ -12,9 +12,8 @@ def assemble_transcripts(align_file, ref_file, config):
     """Create transcript assemblies using Cufflinks.
     """
     work_dir, fname = os.path.split(align_file)
-    cores = config.get("resources", {}).get("cufflinks", {}).get("cores", None)
-
-    core_flags = ["-p", str(cores)] if cores else []
+    num_cores = config["algorithm"].get("num_cores", 1)
+    core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     out_dir = os.path.join(work_dir,
                            "{base}-cufflinks".format(base=os.path.splitext(fname)[0]))
     cl = [config_utils.get_program("cufflinks", config),
