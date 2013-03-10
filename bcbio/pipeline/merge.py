@@ -3,9 +3,10 @@
 Merges samples located in multiple lanes on a flowcell. Unique sample names identify
 items to combine within a group.
 """
+import copy
+import collections
 import os
 import shutil
-import collections
 
 from bcbio import utils, broad
 
@@ -46,12 +47,12 @@ def organize_samples(items, dirs, config_file):
     out = []
     for name, item_group in items_by_name.iteritems():
         fastq_files = [x["fastq"] for x in item_group]
-        bam_files = [x["out_bam"] for x in item_group]
+        bam_files = [x["work_bam"] for x in item_group]
         item_group.sort(key=_sort_by_lane_barcode)
 
         out.append({"name": name, "info": item_group[0]["info"],
                     "fastq_files": fastq_files, "bam_files": bam_files,
-                    "dirs": dirs, "config": item_group[0]["config"],
+                    "dirs": copy.deepcopy(dirs), "config": item_group[0]["config"],
                     "config_file": config_file})
     out.sort(key=_sort_by_lane_barcode)
     out = [[x] for x in out]

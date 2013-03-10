@@ -1,6 +1,7 @@
 """Pipeline functionality shared amongst multiple analysis types.
 """
 import os
+import copy
 import collections
 from contextlib import closing
 
@@ -10,6 +11,26 @@ from bcbio import broad
 from bcbio.pipeline.alignment import get_genome_ref
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
+
+# ## Configuration
+
+def update_config_w_custom(config, lane_info):
+    """Update the configuration for this lane if a custom analysis is specified.
+    """
+    name_remaps = {"variant": ["SNP calling", "variant"],
+                   "SNP calling": ["SNP calling", "variant"],
+                   "variant2": ["variant"]}
+    config = copy.deepcopy(config)
+    base_name = lane_info.get("analysis")
+    for analysis_type in name_remaps.get(base_name, [base_name]):
+        custom = config["custom_algorithms"].get(analysis_type, None)
+        if custom:
+            for key, val in custom.iteritems():
+                config["algorithm"][key] = val
+    # apply any algorithm details specified with the lane
+    for key, val in lane_info.get("algorithm", {}).iteritems():
+        config["algorithm"][key] = val
+    return config
 
 # ## Split/Combine helpers
 
@@ -39,7 +60,7 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ex
         out_dir = os.path.dirname(bam_file)
         if dir_ext_fn:
             out_dir = os.path.join(out_dir, dir_ext_fn(data))
-            
+
         out_file = os.path.join(out_dir, "{base}{ext}".format(
                 base=os.path.splitext(os.path.basename(bam_file))[0],
                 ext=output_ext))

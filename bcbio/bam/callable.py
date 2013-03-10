@@ -68,8 +68,24 @@ def block_regions(in_bam, ref_file, config):
     Identifies islands of callable regions, surrounding by regions
     with no read support, that can be analyzed independently.
     """
-    min_n_size = config["algorithm"].get("nomap_split_size", 2000)
+    min_n_size = int(config["algorithm"].get("nomap_split_size", 2000))
     callable_bed = calc_callable_loci(in_bam, ref_file, config)
     ref_regions = get_ref_bedtool(ref_file, config)
     nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
     return [(r.chrom, int(r.start), int(r.stop)) for r in ref_regions.subtract(nblock_regions)]
+
+def combine_sample_regions(samples):
+    """Combine islands of callable regions from multiple samples.
+    Creates a global set of callable samples usable across a
+    project with multi-sample calling.
+    """
+    min_n_size = int(samples[0]["config"]["algorithm"].get("nomap_split_size", 2000))
+    final_regions = None
+    for regions in (x["regions"] for x in samples):
+        bed_lines = ["%s\t%s\t%s" % (c, s, e) for (c, s, e) in regions]
+        bed_regions = pybedtools.BedTool("\n".join(bed_lines), from_string=True)
+        if final_regions is None:
+            final_regions = bed_regions
+        else:
+            final_regions = final_regions.merge(bed_regions, d=min_n_size)
+    return [(r.chrom, int(r.start), int(r.stop)) for r in final_regions]

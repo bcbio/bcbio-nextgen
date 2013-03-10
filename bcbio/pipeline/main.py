@@ -8,14 +8,16 @@ import sys
 import argparse
 from collections import defaultdict
 
-from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio import utils, upload
+from bcbio.bam import callable
 from bcbio.log import setup_logging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
+from bcbio.pipeline import variation
+from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.variation import recalibrate
@@ -156,6 +158,24 @@ class VariantPipeline(AbstractPipeline):
         samples = run_parallel("process_sample", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
+        return samples
+
+class Variant2Pipeline(AbstractPipeline):
+    """Streamlined variant calling pipeline for large files.
+    This is less generalized but faster in standard cases.
+    The goal is to replace the base variant calling approach.
+    """
+    name = "variant2"
+
+    @classmethod
+    def run(self, config, config_file, run_parallel, dirs, lane_items):
+        # Handle alignment and preparation requiring the entire input file
+        samples = run_parallel("align_prep_full", (list(x) + [config_file] for x in lane_items))
+        regions = callable.combine_sample_regions(samples)
+        # Handle all variant calling on sub-regions of the input file
+        samples = variation.parallel_call_region(samples, regions, run_parallel)
+        samples = combine_multiple_callers(samples)
+        samples = run_parallel("combine_calls", samples)
         return samples
 
 class SNPCallingPipeline(VariantPipeline):

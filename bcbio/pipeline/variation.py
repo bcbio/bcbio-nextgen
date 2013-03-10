@@ -11,6 +11,14 @@ from bcbio.variation import freebayes, phasing
 from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
 from bcbio.structural import hydra
 
+# ## Regional calling
+
+def parallel_call_region(samples, regions, run_parallel):
+    """Perform full BAM prep, variant calling and post-processing on regions.
+    """
+    print regions
+    raise NotImplementedError
+
 # ## Genotyping
 
 def finalize_genotyper(call_file, bam_file, ref_file, config):
@@ -35,16 +43,6 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
         with open(metrics_file, "w") as out_handle:
             json.dump(stats, out_handle)
     return metrics_file
-
-# ## Calculate variation effects
-
-def variation_effects(vrn_file, genome_file, genome_build, config):
-    """Calculate effects of variations, associating them with transcripts.
-
-    Runs snpEff, returning the resulting effects file. No longer runs the GATK
-    annotator, since it requires an old version of snpEff.
-    """
-    return snpeff_effects(vrn_file, genome_build, config)
 
 # ## Structural variation
 

@@ -10,8 +10,9 @@ from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
+from bcbio.pipeline import merge, shared, sample
 from bcbio.ngsalign.split import split_read_files
-
+from bcbio.variation import recalibrate
 
 def _prep_fastq_files(item, bc_files, dirs, config):
     """Potentially prepare input FASTQ files for processing.
@@ -29,16 +30,15 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
     """Prepare lanes, potentially splitting based on barcodes.
     """
     lane_name = "%s_%s_%s" % (lane_items[0]['lane'], fc_date, fc_name)
-    logger.info("Demulitplexing %s" % lane_name)
-    full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"], dirs["work"],
-                                               lane_items[0], fc_name,
-                                               dirs=dirs,
-                                               config=_update_config_w_custom(config, lane_items[0]))
+    logger.info("Preparing %s" % lane_name)
+    full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"],
+      dirs["work"], lane_items[0], fc_name, dirs=dirs,
+      config=shared.update_config_w_custom(config, lane_items[0]))
     bc_files = split_by_barcode(full_fastq1, full_fastq2, lane_items,
                                 lane_name, dirs, config)
     out = []
     for item in lane_items:
-        config = _update_config_w_custom(config, item)
+        config = shared.update_config_w_custom(config, item)
         # Can specify all barcodes but might not have actual sequences
         # Would be nice to have a good way to check this is okay here.
         if bc_files.has_key(item["barcode_id"]):
@@ -95,6 +95,7 @@ def trim_lane(fastq1, fastq2, info, lane_name, lane_desc, dirs, config):
 
     return [(fastq1, fastq2, info, lane_name, lane_desc, dirs, config)]
 
+# ## Alignment
 
 def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
                       dirs, config):
@@ -115,24 +116,38 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
         else:
             out_bam = fastq1
-        _, ref_file = get_genome_ref(genome_build, aligner, dirs["galaxy"])
-    return [{"fastq": [fastq1, fastq2], "out_bam": out_bam, "info": info,
-             "regions": callable.block_regions(out_bam, ref_file, config),
-             "ref_file": ref_file, "config": config}]
+    return [{"fastq": [fastq1, fastq2], "work_bam": out_bam, "info": info,
+             "sam_ref": ref_file, "config": config}]
 
-def _update_config_w_custom(config, lane_info):
-    """Update the configuration for this lane if a custom analysis is specified.
+def align_prep_full(fastq1, fastq2, info, lane_name, lane_desc,
+                    dirs, config, config_file):
+    """Perform alignment and post-processing required on full BAM files.
+    Prepare list of callable genome regions allowing subsequent parallelization.
     """
-    name_remaps = {"variant": ["SNP calling", "variant"],
-                   "SNP calling": ["SNP calling", "variant"]}
-    config = copy.deepcopy(config)
-    base_name = lane_info.get("analysis")
-    for analysis_type in name_remaps.get(base_name, [base_name]):
-        custom = config["custom_algorithms"].get(analysis_type, None)
-        if custom:
-            for key, val in custom.iteritems():
-                config["algorithm"][key] = val
-    # apply any algorithm details specified with the lane
-    for key, val in lane_info.get("algorithm", {}).iteritems():
-        config["algorithm"][key] = val
-    return config
+    align_out = process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
+                                  dirs, config)[0]
+    data = _organize_merge_samples(align_out, dirs, config_file)
+    data["regions"] = callable.block_regions(data["work_bam"],
+                                             data["sam_ref"], config)
+    data = _recal_no_markduplicates(data)
+    return [data]
+
+def _recal_no_markduplicates(data):
+    orig_config = copy.deepcopy(data["config"])
+    data["config"]["algorithm"]["mark_duplicates"] = False
+    data = recalibrate.prep_recal(data)[0][0]
+    data["config"] = orig_config
+    return data
+
+def _organize_merge_samples(align_out, dirs, config_file):
+    """Back compatibility handling organizing and merging samples.
+    """
+    samples = merge.organize_samples([align_out], dirs, config_file)
+    assert len(samples) == 1 and len(samples[0]) == 1
+    sample_data = samples[0][0]
+    sample_data["dirs"]["work"] = os.path.dirname(align_out["work_bam"])
+    samples2 = sample.merge_sample(sample_data)
+    assert len(samples2) == 1 and len(samples2[0]) == 1
+    data = samples2[0][0]
+    data["dirs"] = copy.deepcopy(dirs)
+    return data

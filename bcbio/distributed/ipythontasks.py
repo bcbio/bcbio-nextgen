@@ -41,7 +41,13 @@ def trim_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
-process_alignment.metadata = {"resources": ["novoalign"]}
+process_alignment.metadata = {"resources": ["novoalign", "bwa"]}
+
+@require(lane)
+def align_prep_full(*args):
+    with _setup_logging(args):
+        return apply(lane.align_prep_full, *args)
+process_alignment.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
 
 @require(sample)
 def merge_sample(*args):

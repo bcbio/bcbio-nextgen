@@ -27,7 +27,7 @@ def _get_files(sample):
     metadata about the file and pipeline versions.
     """
     analysis = sample["info"].get("analysis")
-    if analysis in ["variant", "SNP calling"]:
+    if analysis in ["variant", "SNP calling", "variant2"]:
         return _get_files_variantcall(sample)
     else:
         return []
