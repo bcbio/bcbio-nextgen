@@ -10,7 +10,6 @@ https://github.com/roryk/bipy/blob/master/bipy/cluster/__init__.py
 """
 import os
 import copy
-import glob
 import pipes
 import time
 import uuid
@@ -24,7 +23,6 @@ from bcbio.pipeline import config_utils
 from IPython.parallel import Client
 from IPython.parallel.apps import launcher
 from IPython.utils import traitlets
-from IPython.parallel.error import TimeoutError
 
 # ## Custom launchers
 
