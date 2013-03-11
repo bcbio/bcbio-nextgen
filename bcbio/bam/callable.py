@@ -62,6 +62,18 @@ def _get_nblock_regions(in_file, min_n_size):
                 out_lines.append("%s\t%s\t%s\n" % (contig, start, end))
     return pybedtools.BedTool("\n".join(out_lines), from_string=True)
 
+def _add_config_regions(nblock_regions, ref_regions, config):
+    """Add additional nblock regions based on configured regions to call.
+    Identifies user defined regions which we should not be analyzing.
+    """
+    input_regions_bed = config["algorithm"].get("variant_regions", None)
+    if input_regions_bed:
+        input_regions = pybedtools.BedTool(input_regions_bed)
+        input_nblock = ref_regions.subtract(nblock_regions)
+        return nblock_regions.merge(input_nblock)
+    else:
+        return nblock_regions
+
 def block_regions(in_bam, ref_file, config):
     """Find blocks of regions for analysis from mapped input BAM file.
 
@@ -72,7 +84,18 @@ def block_regions(in_bam, ref_file, config):
     callable_bed = calc_callable_loci(in_bam, ref_file, config)
     ref_regions = get_ref_bedtool(ref_file, config)
     nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
+    nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
     return [(r.chrom, int(r.start), int(r.stop)) for r in ref_regions.subtract(nblock_regions)]
+
+def _write_bed_regions(sample, final_regions):
+    work_dir = sample["dirs"]["work"]
+    ref_regions = get_ref_bedtool(sample["sam_ref"], sample["config"])
+    noanalysis_regions = ref_regions.subtract(final_regions)
+    out_file = os.path.join(work_dir, "analysis_blocks.bed")
+    out_file_ref = os.path.join(work_dir, "noanalysis_blocks.bed")
+    final_regions.saveas(out_file)
+    noanalysis_regions.saveas(out_file_ref)
+    return out_file_ref
 
 def combine_sample_regions(samples):
     """Combine islands of callable regions from multiple samples.
@@ -88,4 +111,6 @@ def combine_sample_regions(samples):
             final_regions = bed_regions
         else:
             final_regions = final_regions.merge(bed_regions, d=min_n_size)
-    return [(r.chrom, int(r.start), int(r.stop)) for r in final_regions]
+    no_analysis_file = _write_bed_regions(samples[0], final_regions)
+    return {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
+            "noanalysis": no_analysis_file}
