@@ -199,7 +199,7 @@ class RnaseqPipeline(AbstractPipeline):
         # process samples, potentially multiplexed across multiple lanes
         samples = organize_samples(align_items, dirs, config_file)
         samples = run_parallel("merge_sample", samples)
-        samples = run_parallel("process_sample", samples)
+        samples = run_parallel("generate_transcript_counts", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
         return samples

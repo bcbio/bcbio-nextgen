@@ -16,6 +16,7 @@ from bcbio.pipeline.variation import finalize_genotyper
 from bcbio.rnaseq.cufflinks import assemble_transcripts
 from bcbio.pipeline import shared
 from bcbio.variation import effects
+from bcbio.rnaseq import count
 
 def merge_sample(data):
     """Merge fastq and BAM files for multiple samples.
@@ -63,6 +64,11 @@ def process_sample(data):
         data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
                                                  data["sam_ref"], data["name"],
                                                  data["config"], data["dirs"])
+    return [[data]]
+
+def generate_transcript_counts(data):
+    """Generate counts per transcript from an alignment"""
+    data["count_file"] = count.htseq_count(data)
     return [[data]]
 
 def generate_bigwig(data):

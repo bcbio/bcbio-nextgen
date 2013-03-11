@@ -9,6 +9,7 @@ from bcbio.distributed.transaction import file_transaction
 import subprocess
 import os
 import pysam
+from bcbio.pipeline.variation import configured_ref_file
 
 
 def htseq_count(data):
@@ -28,15 +29,12 @@ def htseq_count(data):
                     "{cmd}".format(**locals()))
         subprocess.check_call(cmd, shell=True)
 
-    data["count_file"] = out_file
-
-    return data
+    return out_file
 
 def _get_files(data):
     in_file = _get_sam_file(data)
-    config = data["config"]
-    gtf_file = get_in(config, ("algorithm", "transcripts"))
-    out_file = _get_out_file(in_file, config)
+    gtf_file = _get_gtf_file(data)
+    out_file = _get_out_file(in_file, data)
     return in_file, gtf_file, out_file
 
 def _get_out_file(in_file, config):
@@ -55,9 +53,13 @@ def _htseq_is_installed(config):
         return True
     return False
 
+def _get_gtf_file(data):
+    ref_file = data["sam_ref"]
+    return configured_ref_file("transcripts", data["config"], ref_file)
+
 def _gtf_exists(config):
-    transcript_file = get_in(config, ("algorithm", "transcripts"))
-    return file_exists(transcript_file)
+    gtf_file = _get_gtf_file(config)
+    return file_exists(gtf_file)
 
 def is_countfile(in_file):
     with open(in_file) as in_handle:

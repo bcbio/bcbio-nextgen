@@ -91,6 +91,11 @@ def process_sample(*args):
         return apply(sample.process_sample, *args)
 
 @require(sample)
+def generate_transcript_counts(*args):
+    with _setup_logging(args):
+        return apply(sample.generate_transcript_counts, *args)
+
+@require(sample)
 def generate_bigwig(*args):
     with _setup_logging(args):
         return apply(sample.generate_bigwig, *args)
