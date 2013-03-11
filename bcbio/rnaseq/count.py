@@ -9,7 +9,7 @@ from bcbio.distributed.transaction import file_transaction
 import subprocess
 import os
 import pysam
-from bcbio.pipeline.variation import configured_ref_file
+from bcbio.pipeline.shared import configured_ref_file
 
 
 def htseq_count(data):

@@ -4,6 +4,7 @@ import os
 import copy
 import collections
 from contextlib import closing
+import subprocess
 
 import pysam
 
@@ -91,6 +92,15 @@ def write_nochr_reads(in_file, out_file):
                     for read in in_bam:
                         if read.tid < 0:
                             out_bam.write(read)
+    return out_file
+
+def write_noanalysis_reads(in_file, region_file, out_file):
+    """Write a BAM file of reads in the specified region file that
+    """
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            cl = "samtools view -b -L {region_file} {in_file} > {tx_out_file}"
+            subprocess.check_call(cl.format(**locals()), shell=True)
     return out_file
 
 def subset_bam_by_region(in_file, region, out_file_base = None):

@@ -6,7 +6,7 @@ import os
 import subprocess
 
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.variation import configured_ref_file
+from bcbio.pipeline.shared import configured_ref_file
 
 def assemble_transcripts(align_file, ref_file, config):
     """Create transcript assemblies using Cufflinks.

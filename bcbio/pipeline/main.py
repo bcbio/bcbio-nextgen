@@ -16,7 +16,7 @@ from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
-from bcbio.pipeline import variation
+from bcbio.pipeline import region
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
@@ -171,9 +171,10 @@ class Variant2Pipeline(AbstractPipeline):
     def run(self, config, config_file, run_parallel, dirs, lane_items):
         # Handle alignment and preparation requiring the entire input file
         samples = run_parallel("align_prep_full", (list(x) + [config_file] for x in lane_items))
-        regions = callable.combine_sample_regions(samples)
+        samples = callable.combine_sample_regions(samples)
         # Handle all variant calling on sub-regions of the input file
-        samples = variation.parallel_call_region(samples, regions, run_parallel)
+        samples = region.parallel_prep_region(samples, run_parallel)
+        samples = region.parallel_variantcall_region(samples, run_parallel)
         samples = combine_multiple_callers(samples)
         samples = run_parallel("combine_calls", samples)
         return samples

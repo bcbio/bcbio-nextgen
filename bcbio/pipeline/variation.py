@@ -2,22 +2,11 @@
 """
 import os
 import json
-import subprocess
 
 from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
-from bcbio.variation.effects import snpeff_effects
-from bcbio.variation.annotation import annotate_effects
 from bcbio.variation import freebayes, phasing
-from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
+from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
-
-# ## Regional calling
-
-def parallel_call_region(samples, regions, run_parallel):
-    """Perform full BAM prep, variant calling and post-processing on regions.
-    """
-    print regions
-    raise NotImplementedError
 
 # ## Genotyping
 

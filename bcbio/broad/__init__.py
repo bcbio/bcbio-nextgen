@@ -37,12 +37,17 @@ class BroadRunner:
         assert fn is not None, "Could not find function %s in %s" % (name, to_check)
         return fn(self, *args, **kwds)
 
-    def run(self, command, options, pipe=False, get_stdout=False):
-        """Run a Picard command with the provided option pairs.
+    def cl_picard(self, command, options):
+        """Prepare a Picard commandline.
         """
         options = ["%s=%s" % (x, y) for x, y in options]
         options.append("VALIDATION_STRINGENCY=SILENT")
-        cl = self._get_picard_cmd(command) + options
+        return self._get_picard_cmd(command) + options
+
+    def run(self, command, options, pipe=False, get_stdout=False):
+        """Run a Picard command with the provided option pairs.
+        """
+        cl = self.cl_picard(command, options)
         if pipe:
             subprocess.Popen(cl)
         elif get_stdout:
@@ -60,8 +65,7 @@ class BroadRunner:
         p.wait()
         return version
 
-    def run_gatk(self, params, tmp_dir=None):
-        #support_nt = set(["UnifiedGenotyper", "VariantEval"])
+    def cl_gatk(self, params, tmp_dir):
         support_nt = set()
         support_nct = set(["BaseRecalibrator", "CallableLoci"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
@@ -77,13 +81,15 @@ class BroadRunner:
                 params.extend(["-nct", str(cores)])
         if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
             params.extend(["-U", "LENIENT_VCF_PROCESSING"])
+        local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
+        return ["java"] + self._jvm_opts + local_args + \
+          ["-jar", gatk_jar] + [str(x) for x in params]
+
+    def run_gatk(self, params, tmp_dir=None):
         with curdir_tmpdir() as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
-            local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-            cl = ["java"] + self._jvm_opts + local_args + \
-                    ["-jar", gatk_jar] + [str(x) for x in params]
-            #print " ".join(cl)
+            cl = self.cl_gatk(params, tmp_dir)
             subprocess.check_call(cl)
 
     def gatk_type(self):

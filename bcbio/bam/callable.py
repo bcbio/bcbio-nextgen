@@ -112,5 +112,10 @@ def combine_sample_regions(samples):
         else:
             final_regions = final_regions.merge(bed_regions, d=min_n_size)
     no_analysis_file = _write_bed_regions(samples[0], final_regions)
-    return {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
-            "noanalysis": no_analysis_file}
+    regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
+               "noanalysis": no_analysis_file}
+    out = []
+    for s in samples:
+        s["regions"] = regions
+        out.append([s])
+    return out

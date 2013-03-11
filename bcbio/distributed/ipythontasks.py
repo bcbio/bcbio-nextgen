@@ -5,7 +5,7 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
+from bcbio.variation import bamprep, realign, genotype, ensemble, recalibrate, multi
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
@@ -79,6 +79,11 @@ def realign_sample(*args):
 def split_variants_by_sample(*args):
     with _setup_logging(args):
         return apply(multi.split_variants_by_sample, *args)
+
+@require(bamprep)
+def piped_bamprep(*args):
+    with _setup_logging(args):
+        return apply(bamprep.piped_bamprep, *args)
 
 @require(sample)
 def postprocess_variants(*args):
