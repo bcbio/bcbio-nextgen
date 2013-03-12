@@ -47,7 +47,7 @@ process_alignment.metadata = {"resources": ["novoalign", "bwa"]}
 def align_prep_full(*args):
     with _setup_logging(args):
         return apply(lane.align_prep_full, *args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
 
 @require(sample)
 def merge_sample(*args):
