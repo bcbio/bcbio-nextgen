@@ -155,7 +155,8 @@ if __name__ == "__main__":
     parser.add_argument("datadir", help="Directory to install genome data",
                         type=os.path.abspath)
     parser.add_argument("--distribution", help="Operating system distribution",
-                        default="ubuntu")
+                        default="ubuntu",
+                        choices=["ubuntu", "debian", "centos", "scientificlinux"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["hg19", "GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",

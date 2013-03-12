@@ -17,8 +17,8 @@ def _mosaik_args_from_config(config):
     multi_mappers = config["algorithm"].get("multiple_mappers", True)
     multi_flags = ["-m", "all"] if multi_mappers else ["-m", "unique"]
     error_flags = ["-mm", config["algorithm"]["max_errors"]]
-    cores = config.get("resources", {}).get("mosaik", {}).get("cores", None)
-    core_flags = ["-p", str(cores)] if cores else []
+    num_cores = config["algorithm"].get("num_cores", 1)
+    core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     return core_flags + multi_flags + error_flags
 
 def _convert_fastq(fastq_file, pair_file, rg_name, out_file, config):

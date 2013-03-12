@@ -53,8 +53,8 @@ def setup(args):
            "upload": {"dir": finaldir,
                       "method": "s3",
                       "bucket": ss_params["s3_bucket"],
-                      "aws": {"access_key_id": ss_params["access_key_id"],
-                              "secret_access_key": ss_params["secret_access_key"]}},
+                      "access_key_id": ss_params["access_key_id"],
+                      "secret_access_key": ss_params["secret_access_key"]},
             "details": [{
                 "files": _get_s3_files(inputdir, ss_config["files"], ss_params),
                 "lane": 1,

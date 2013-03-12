@@ -60,6 +60,10 @@ def process_sample(*args):
     return sample.process_sample(*args)
 
 @task
+def generate_transcript_counts(*args):
+    return sample.generate_transcript_counts(*args)
+
+@task
 def split_variants_by_sample(*args):
     return multi.split_variants_by_sample(*args)
 

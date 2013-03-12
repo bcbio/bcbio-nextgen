@@ -9,20 +9,21 @@ import subprocess
 
 from bcbio.utils import file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline.lane import _update_config_w_custom
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.pipeline.qcsummary import generate_align_summary
-from bcbio.pipeline.variation import (finalize_genotyper, variation_effects)
+from bcbio.pipeline.variation import finalize_genotyper
 from bcbio.rnaseq.cufflinks import assemble_transcripts
-from bcbio.pipeline.shared import ref_genome_info
+from bcbio.pipeline import shared
+from bcbio.variation import effects
+from bcbio.rnaseq import count
 
 def merge_sample(data):
     """Merge fastq and BAM files for multiple samples.
     """
     logger.info("Combining fastq and BAM files %s" % str(data["name"]))
-    config = _update_config_w_custom(data["config"], data["info"])
-    genome_build, sam_ref = ref_genome_info(data["info"], config, data["dirs"])
+    config = shared.update_config_w_custom(data["config"], data["info"])
+    genome_build, sam_ref = shared.ref_genome_info(data["info"], config, data["dirs"])
     if config["algorithm"].get("upload_fastq", False):
         fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
                                              config)
@@ -46,8 +47,8 @@ def postprocess_variants(data):
         data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
                                               data["sam_ref"], data["config"])
         logger.info("Calculating variation effects for %s" % str(data["name"]))
-        ann_vrn_file = variation_effects(data["vrn_file"], data["sam_ref"],
-                                         data["genome_build"], data["config"])
+        ann_vrn_file = effects.snpeff_effects(data["vrn_file"], data["genome_build"],
+                                              data["config"])
         if ann_vrn_file:
             data["vrn_file"] = ann_vrn_file
     return [[data]]
@@ -63,6 +64,11 @@ def process_sample(data):
         data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
                                                  data["sam_ref"], data["name"],
                                                  data["config"], data["dirs"])
+    return [[data]]
+
+def generate_transcript_counts(data):
+    """Generate counts per transcript from an alignment"""
+    data["count_file"] = count.htseq_count(data)
     return [[data]]
 
 def generate_bigwig(data):

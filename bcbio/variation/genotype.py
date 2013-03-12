@@ -23,7 +23,7 @@ from bcbio.distributed.split import (parallel_split_combine,
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import multi
+from bcbio.variation import multi, annotation
 
 # ## GATK Genotype calling
 
@@ -42,16 +42,11 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
     region = subset_variant_regions(variant_regions, region, out_file)
 
     params = ["-R", ref_file,
-              "--annotation", "QualByDepth",
-              "--annotation", "HaplotypeScore",
-              "--annotation", "MappingQualityRankSumTest",
-              "--annotation", "ReadPosRankSumTest",
-              "--annotation", "FisherStrand",
-              "--annotation", "RMSMappingQuality",
-              "--annotation", "DepthOfCoverage",
               "--standard_min_confidence_threshold_for_calling", confidence,
               "--standard_min_confidence_threshold_for_emitting", confidence,
               ]
+    for a in annotation.get_gatk_annotations(config):
+        params += ["--annotation", a]
     for x in align_bams:
         params += ["-I", x]
     if dbsnp:
@@ -78,7 +73,7 @@ def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
                 broad_runner.run_gatk(params)
     return out_file
 
-def haplotype_caller(align_bam, ref_file, config, dbsnp=None,
+def haplotype_caller(align_bams, ref_file, config, dbsnp=None,
                        region=None, out_file=None):
     """Call variation with GATK's HaplotypeCaller.
 
@@ -87,8 +82,8 @@ def haplotype_caller(align_bam, ref_file, config, dbsnp=None,
     broad_runner, params, out_file = \
         _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
                                region, out_file)
-    assert broad_runner.has_gatk_full(), \
-        "Require full version of GATK 2.0 for haplotype based calling"
+    assert broad_runner.gatk_type() == "restricted", \
+        "Require full version of GATK 2.4+ for haplotype calling"
     if not file_exists(out_file):
         if not all(has_aligned_reads(x, region) for x in align_bams):
             write_empty_vcf(out_file)
@@ -428,7 +423,6 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
                       "--doNotUseAllStandardModules",
                       "--evalModule", "CompOverlap",
                       "--evalModule", "CountVariants",
-                      "--evalModule", "GenotypeConcordance",
                       "--evalModule", "TiTvVariantEvaluator",
                       "--evalModule", "ValidationReport",
                       "--stratificationModule", "Filter"]

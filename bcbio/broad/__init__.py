@@ -14,11 +14,12 @@ from bcbio.utils import curdir_tmpdir
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """
-    def __init__(self, picard_ref, gatk_dir, resources):
+    def __init__(self, picard_ref, gatk_dir, config):
+        resources = config_utils.get_resources("gatk", config)
         self._jvm_opts = resources.get("jvm_opts", ["-Xmx6g", "-Xms6g"])
-        self._resources = resources
         self._picard_ref = picard_ref
         self._gatk_dir = gatk_dir or picard_ref
+        self._config = config
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
@@ -36,12 +37,17 @@ class BroadRunner:
         assert fn is not None, "Could not find function %s in %s" % (name, to_check)
         return fn(self, *args, **kwds)
 
-    def run(self, command, options, pipe=False, get_stdout=False):
-        """Run a Picard command with the provided option pairs.
+    def cl_picard(self, command, options):
+        """Prepare a Picard commandline.
         """
         options = ["%s=%s" % (x, y) for x, y in options]
         options.append("VALIDATION_STRINGENCY=SILENT")
-        cl = self._get_picard_cmd(command) + options
+        return self._get_picard_cmd(command) + options
+
+    def run(self, command, options, pipe=False, get_stdout=False):
+        """Run a Picard command with the provided option pairs.
+        """
+        cl = self.cl_picard(command, options)
         if pipe:
             subprocess.Popen(cl)
         elif get_stdout:
@@ -59,13 +65,12 @@ class BroadRunner:
         p.wait()
         return version
 
-    def run_gatk(self, params, tmp_dir=None):
-        #support_nt = set(["UnifiedGenotyper", "VariantEval"])
+    def cl_gatk(self, params, tmp_dir):
         support_nt = set()
-        support_nct = set(["BaseRecalibrator"])
+        support_nct = set(["BaseRecalibrator", "CallableLoci"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
-        cores = self._resources.get("cores", None)
+        cores = self._config["algorithm"].get("num_cores", 1)
         if cores and cores > 1:
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
@@ -76,25 +81,35 @@ class BroadRunner:
                 params.extend(["-nct", str(cores)])
         if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
             params.extend(["-U", "LENIENT_VCF_PROCESSING"])
+        local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
+        return ["java"] + self._jvm_opts + local_args + \
+          ["-jar", gatk_jar] + [str(x) for x in params]
+
+    def run_gatk(self, params, tmp_dir=None):
         with curdir_tmpdir() as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
-            local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-            cl = ["java"] + self._jvm_opts + local_args + \
-                    ["-jar", gatk_jar] + [str(x) for x in params]
-            #print " ".join(cl)
+            cl = self.cl_gatk(params, tmp_dir)
             subprocess.check_call(cl)
 
-    def has_gatk_full(self):
-        """Check if we have the full GATK jar, including non-open source parts.
+    def gatk_type(self):
+        """Retrieve type of GATK jar, allowing support for older GATK lite.
+        Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,
+        the latest 2.4+ restricted version of GATK.
         """
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-        cl = ["java", "-jar", gatk_jar, "-h"]
-        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE).stdout) as stdout:
-            for line in stdout:
-                if line.strip().startswith("HaplotypeCaller"):
-                    return True
-        return False
+        cl = ["java", "-jar", gatk_jar, "-version"]
+        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+            out = stdout.read().strip()
+            # version was not properly implemented in earlier versions
+            if out.find("USER ERROR") > 0:
+                version = 2.3
+            else:
+                version, subversion, githash = out.split("-")
+            if float(version) > 2.3:
+                return "restricted"
+            else:
+                return "lite"
 
     def _get_picard_cmd(self, command):
         """Retrieve the base Picard command, handling both shell scripts and directory of jars.
@@ -148,4 +163,4 @@ def _get_picard_ref(config):
 def runner_from_config(config):
     return BroadRunner(_get_picard_ref(config),
                        config_utils.get_program("gatk", config, "dir"),
-                       config_utils.get_resources("gatk", config))
+                       config)

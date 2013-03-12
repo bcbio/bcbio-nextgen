@@ -20,7 +20,8 @@ def _bowtie_args_from_config(config):
     multi_mappers = config["algorithm"].get("multiple_mappers", True)
     multi_flags = ["-M", 1] if multi_mappers else ["-m", 1]
     cores = config.get("resources", {}).get("bowtie", {}).get("cores", None)
-    core_flags = ["-p", str(cores)] if cores else []
+    num_cores = config["algorithm"].get("num_cores", 1)
+    core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     return core_flags + qual_flags + multi_flags
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,

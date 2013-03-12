@@ -32,7 +32,8 @@ def parallel_runner(parallel, dirs, config, config_file):
                          fn_name)
             cores = cores_including_resources(int(parallel["cores"]), metadata, config)
             with utils.cpmap(cores) as cpmap:
-                for data in cpmap(fn, filter(lambda x: x is not None, items)):
+                for data in cpmap(fn, (ipython.add_cores_to_config(x, 1)
+                                       for x in items if x is not None)):
                     if data:
                         out.extend(data)
             return out

@@ -2,13 +2,10 @@
 """
 import os
 import json
-import subprocess
 
 from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
-from bcbio.variation.effects import snpeff_effects
-from bcbio.variation.annotation import annotate_effects
 from bcbio.variation import freebayes, phasing
-from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
+from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
 
 # ## Genotyping
@@ -35,16 +32,6 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
         with open(metrics_file, "w") as out_handle:
             json.dump(stats, out_handle)
     return metrics_file
-
-# ## Calculate variation effects
-
-def variation_effects(vrn_file, genome_file, genome_build, config):
-    """Calculate effects of variations, associating them with transcripts.
-
-    Runs snpEff, returning the resulting effects file. No longer runs the GATK
-    annotator, since it requires an old version of snpEff.
-    """
-    return snpeff_effects(vrn_file, genome_build, config)
 
 # ## Structural variation
 

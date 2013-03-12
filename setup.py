@@ -36,6 +36,7 @@ setup(name = "bcbio-nextgen",
           "pyzmq == 2.2.0.1",
           "ipython >= 0.13.1",
           "bioblend >= 0.2.1",
+          "pybedtools >= 0.6.2",
           "paramiko >= 1.9.0",
           "celery >= 2.2.7,<3.0.0",
           #"rpy2 >= 2.0.7"

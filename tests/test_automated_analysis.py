@@ -100,7 +100,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
 
     @attr(speed=2)
     def test_2_rnaseq(self):
-        """Run an RNA-seq analysis with TopHat and Cufflinks.
+        """Run an RNA-seq analysis with TopHat and generate gene-level counts.
         """
         self._install_test_files(self.data_dir)
         with make_workdir():
@@ -123,6 +123,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=2)
+    @attr(devel=True)
     def test_5_bam(self):
         """Allow BAM files as input to pipeline.
         """
@@ -133,5 +134,3 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
-
-

@@ -5,7 +5,7 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
+from bcbio.variation import bamprep, realign, genotype, ensemble, recalibrate, multi
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
@@ -41,7 +41,13 @@ def trim_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
-process_alignment.metadata = {"resources": ["novoalign"]}
+process_alignment.metadata = {"resources": ["novoalign", "bwa"]}
+
+@require(lane)
+def align_prep_full(*args):
+    with _setup_logging(args):
+        return apply(lane.align_prep_full, *args)
+process_alignment.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
 
 @require(sample)
 def merge_sample(*args):
@@ -74,6 +80,11 @@ def split_variants_by_sample(*args):
     with _setup_logging(args):
         return apply(multi.split_variants_by_sample, *args)
 
+@require(bamprep)
+def piped_bamprep(*args):
+    with _setup_logging(args):
+        return apply(bamprep.piped_bamprep, *args)
+
 @require(sample)
 def postprocess_variants(*args):
     with _setup_logging(args):
@@ -83,6 +94,11 @@ def postprocess_variants(*args):
 def process_sample(*args):
     with _setup_logging(args):
         return apply(sample.process_sample, *args)
+
+@require(sample)
+def generate_transcript_counts(*args):
+    with _setup_logging(args):
+        return apply(sample.generate_transcript_counts, *args)
 
 @require(sample)
 def generate_bigwig(*args):

@@ -12,11 +12,11 @@ details:
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
       aligner: novoalign
-      realign: gkno
+      #realign: gkno
       variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
-    analysis: variant
+    analysis: variant2
     description: Test1
     genome_build: hg19
     lane: 7

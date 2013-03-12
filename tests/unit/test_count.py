@@ -1,7 +1,7 @@
 import os
 import unittest
 from bcbio.rnaseq import count
-from bcbio.utils import safe_makedir
+from bcbio.utils import safe_makedir, file_exists
 import tempfile
 import stat
 import shutil
@@ -46,10 +46,11 @@ class TestHtseqCount(unittest.TestCase):
 
     def test_htseq_count(self):
         data = {"work_bam": self.in_bam,
-                "config": {"algorithm": {"transcripts": self.in_gtf},
-                           "dirs": {"work": self.out_dir}}}
-        new_data = count.htseq_count(data)
-        self.assertTrue(count.is_countfile(new_data["count_file"]))
+                "sam_ref": os.path.join(self.data_dir, "foo"),
+                "dirs": {"work": self.out_dir},
+                "config": {"algorithm": {"transcripts": self.in_gtf}}}
+        out_file = count.htseq_count(data)
+        self.assertTrue(file_exists(out_file))
 
     def tearDown(self):
         shutil.rmtree(self.out_dir)

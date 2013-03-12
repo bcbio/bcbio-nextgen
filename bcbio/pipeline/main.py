@@ -8,14 +8,16 @@ import sys
 import argparse
 from collections import defaultdict
 
-from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio import utils, upload
+from bcbio.bam import callable
 from bcbio.log import setup_logging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
+from bcbio.pipeline import region
+from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.variation import recalibrate
@@ -37,7 +39,6 @@ def run_main(config, config_file, work_dir, parallel,
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
-    config = _set_resources(parallel, config)
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
@@ -51,18 +52,6 @@ def run_main(config, config_file, work_dir, parallel,
             assert len(xs) == 1
             upload.from_sample(xs[0])
     write_metrics(run_info, fc_name, fc_date, dirs)
-
-def _set_resources(parallel, config):
-    """Set resource availability for programs, downsizing to local runs.
-    """
-    for program in ["gatk", "novoalign"]:
-        if not config["resources"].has_key(program):
-            config["resources"][program] = {}
-        if parallel["type"] == "local":
-            import multiprocessing
-            cores = min(parallel["cores"], multiprocessing.cpu_count())
-            config["resources"][program]["cores"] = cores
-    return config
 
 # ## Utility functions
 
@@ -171,6 +160,25 @@ class VariantPipeline(AbstractPipeline):
         write_project_summary(samples)
         return samples
 
+class Variant2Pipeline(AbstractPipeline):
+    """Streamlined variant calling pipeline for large files.
+    This is less generalized but faster in standard cases.
+    The goal is to replace the base variant calling approach.
+    """
+    name = "variant2"
+
+    @classmethod
+    def run(self, config, config_file, run_parallel, dirs, lane_items):
+        # Handle alignment and preparation requiring the entire input file
+        samples = run_parallel("align_prep_full", (list(x) + [config_file] for x in lane_items))
+        samples = callable.combine_sample_regions(samples)
+        # Handle all variant calling on sub-regions of the input file
+        samples = region.parallel_prep_region(samples, run_parallel)
+        samples = region.parallel_variantcall_region(samples, run_parallel)
+        samples = combine_multiple_callers(samples)
+        samples = run_parallel("combine_calls", samples)
+        return samples
+
 class SNPCallingPipeline(VariantPipeline):
     """Back compatible: old name for variant analysis.
     """
@@ -192,7 +200,7 @@ class RnaseqPipeline(AbstractPipeline):
         # process samples, potentially multiplexed across multiple lanes
         samples = organize_samples(align_items, dirs, config_file)
         samples = run_parallel("merge_sample", samples)
-        samples = run_parallel("process_sample", samples)
+        samples = run_parallel("generate_transcript_counts", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         write_project_summary(samples)
         return samples

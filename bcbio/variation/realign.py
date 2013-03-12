@@ -80,6 +80,24 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
             runner.run_gatk(params)
     return out_file
 
+def gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
+                              tmp_dir, region=None, deep_coverage=False):
+    """Prepare input arguments for GATK indel realignment.
+    """
+    params = ["-T", "IndelRealigner",
+              "-I", align_bam,
+              "-R", ref_file,
+              "-targetIntervals", intervals,
+              ]
+    if region:
+        params += ["-L", region]
+    if deep_coverage:
+        params += ["--maxReadsInMemory", "300000",
+                   "--maxReadsForRealignment", str(int(5e5)),
+                   "--maxReadsForConsensuses", "500",
+                   "--maxConsensuses", "100"]
+    return runner.cl_gatk(params, tmp_dir)
+
 def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                            region=None, out_file=None, deep_coverage=False):
     """Perform realignment of BAM file in specified regions
@@ -91,26 +109,10 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
             with file_transaction(out_file) as tx_out_file:
                 logger.info("GATK IndelRealigner: %s %s" %
                             (os.path.basename(align_bam), region))
-                params = ["-T", "IndelRealigner",
-                          "-I", align_bam,
-                          "-R", ref_file,
-                          "-targetIntervals", intervals,
-                          "-o", tx_out_file,
-                          "-l", "INFO",
-                          ]
-                if region:
-                    params += ["-L", region]
-                if deep_coverage:
-                    params += ["--maxReadsInMemory", "300000",
-                               "--maxReadsForRealignment", str(int(5e5)),
-                               "--maxReadsForConsensuses", "500",
-                               "--maxConsensuses", "100"]
-                try:
-                    runner.run_gatk(params, tmp_dir)
-                except:
-                    logger.exception("Running GATK IndelRealigner failed: {} {}".format(
-                        os.path.basename(align_bam), region))
-                    raise
+                cl = gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
+                                                   tmp_dir, region, deep_coverage)
+                cl += ["-o", tx_out_file]
+                subprocess.check_call(cl)
     return out_file
 
 def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,

@@ -2,7 +2,7 @@
 """
 from bcbio import utils
 from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
+from bcbio.variation import bamprep, realign, genotype, ensemble, recalibrate, multi
 
 @utils.map_wrap
 def process_lane(*args):
@@ -17,8 +17,16 @@ def process_alignment(*args):
     return lane.process_alignment(*args)
 
 @utils.map_wrap
+def align_prep_full(*args):
+    return lane.align_prep_full(*args)
+
+@utils.map_wrap
 def merge_sample(*args):
     return sample.merge_sample(*args)
+
+@utils.map_wrap
+def piped_bamprep(*args):
+    return bamprep.piped_bamprep(*args)
 
 @utils.map_wrap
 def prep_recal(*args):
@@ -43,6 +51,10 @@ def postprocess_variants(*args):
 @utils.map_wrap
 def process_sample(*args):
     return sample.process_sample(*args)
+
+@utils.map_wrap
+def generate_transcript_counts(*args):
+    return sample.generate_transcript_counts(*args)
 
 @utils.map_wrap
 def generate_bigwig(*args):
