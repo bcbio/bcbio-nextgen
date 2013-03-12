@@ -28,7 +28,7 @@ from IPython.parallel.error import TimeoutError
 
 # ## Custom launchers
 
-timeout_params = ["--timeout=60", "--IPEngineApp.wait_for_url_file=480"]
+timeout_params = ["--timeout=60", "--IPEngineApp.wait_for_url_file=960"]
 
 class BcbioLSFEngineSetLauncher(launcher.LSFEngineSetLauncher):
     """Custom launcher handling heterogeneous clusters on LSF.
@@ -114,7 +114,7 @@ def _start(parallel, profile, cluster_id):
         ["start",
          "--daemonize=True",
          "--IPClusterEngines.early_shutdown=240",
-         "--delay=2",
+         "--delay=10",
          "--log-level=%s" % "WARN",
          "--profile=%s" % profile,
          #"--cluster-id=%s" % cluster_id,
@@ -154,8 +154,8 @@ def cluster_view(parallel, config):
       - num_jobs: Number of jobs to start.
       - cores_per_job: The number of cores to use for each job.
     """
-    delay = 5
-    max_delay = 300
+    delay = 10
+    max_delay = 960
     max_tries = 10
     profile = parallel["profile"]
     cluster_id = str(uuid.uuid1())
