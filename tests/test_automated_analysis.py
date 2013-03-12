@@ -123,6 +123,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=2)
+    @attr(devel=True)
     def test_5_bam(self):
         """Allow BAM files as input to pipeline.
         """
