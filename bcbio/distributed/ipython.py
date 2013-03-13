@@ -287,7 +287,7 @@ def runner(parallel, fn_name, items, work_dir, config):
     else:
         logger.info("ipython: %s" % fn_name)
         if len(items) > 0:
-            items = (add_cores_to_config(x, cores_per_job) for x in items)
+            items = [add_cores_to_config(x, cores_per_job) for x in items]
             with cluster_view(parallel, config) as view:
                 for data in view.map_sync(fn, items):
                     if data:
