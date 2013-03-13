@@ -231,10 +231,10 @@ def add_cores_to_config(args, cores_per_job):
     Ugly hack to update core information in a configuration dictionary.
     """
     def _is_std_config(x):
-        return (isinstance(x, dict) and x.has_key("algorithm"))
+        return (isinstance(x, dict) and x.has_key("algorithm") and x.has_key("resources"))
     def _is_nested_config(x):
         return (isinstance(x, dict) and x.has_key("config") and
-                isinstance(x["config"], dict) and x["config"].has_key("algorithm"))
+                _is_std_config(x["config"]))
 
     new_i = None
     for i, arg in enumerate(args):
