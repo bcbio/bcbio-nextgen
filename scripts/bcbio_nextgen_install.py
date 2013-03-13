@@ -26,6 +26,7 @@ remotes = {"system_config":
            "https://raw.github.com/pypa/virtualenv/master/virtualenv.py"}
 
 def main(args):
+    check_dependencies()
     work_dir = os.path.join(os.getcwd(), "tmpbcbio-install")
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
@@ -146,6 +147,19 @@ def get_cloudbiolinux():
             "biodata": os.path.join(base_dir, "config", "biodata.yaml"),
             "tool_fabfile": os.path.join(base_dir, "fabfile.py"),
             "data_fabfile": os.path.join(base_dir, "data_fabfile.py")}
+
+def check_dependencies():
+    """Ensure required tools for installation are present.
+    """
+    print "Checking required dependencies"
+    try:
+        subprocess.check_call(["fab", "--version"])
+    except OSError:
+        raise OSError("bcbio-nextgen installer requires fabric (http://fabfile.org)")
+    try:
+        subprocess.check_call(["git", "--version"])
+    except OSError:
+        raise OSError("bcbio-nextgen installer requires Git (http://git-scm.com/)")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
