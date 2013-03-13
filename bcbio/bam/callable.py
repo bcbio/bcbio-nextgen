@@ -23,8 +23,8 @@ from bcbio.pipeline import shared
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
     data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
-    parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
     if num_cores > 1:
+        parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
         runner = parallel_runner(parallel, {}, config)
         split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
         out = parallel_split_combine([[data]], split_fn, runner,

@@ -69,10 +69,25 @@ def parallel_split_combine(args, split_fn, parallel_fn,
     """
     split_args, combine_map, finished_out = _get_split_tasks(args, split_fn, file_key)
     split_output = parallel_fn(parallel_name, split_args)
-    combine_args, final_args = _organize_output(split_output, combine_map,
-                                                file_key, combine_arg_keys)
-    parallel_fn(combine_name, combine_args)
+    if combine_name:
+        combine_args, final_args = _organize_output(split_output, combine_map,
+                                                    file_key, combine_arg_keys)
+        parallel_fn(combine_name, combine_args)
+    else:
+        final_args = _add_combine_info(split_output, combine_map, file_key)
     return finished_out + final_args
+
+def _add_combine_info(output, combine_map, file_key):
+    """Do not actually combine, but add details for later combining work.
+    """
+    out = []
+    for data in output:
+        cur_file = data[file_key]
+        if not data.has_key("combine"):
+            data["combine"] = {}
+        data["combine"][file_key] = combine_map[cur_file]
+        out.append([data])
+    return out
 
 def _organize_output(output, combine_map, file_key, combine_arg_keys):
     """Combine output details for parallelization.
@@ -108,7 +123,7 @@ def _get_split_tasks(args, split_fn, file_key):
             split_args.append(copy.deepcopy(data) + list(parts))
         for part_file in [x[-1] for x in out_parts]:
             combine_map[part_file] = out_final
-        if len(out_parts) == 0:
+        if len(out_parts) == 0 and out_final is not None:
             data[0][file_key] = out_final
             finished_out.append(data)
     return split_args, combine_map, finished_out

@@ -117,4 +117,5 @@ def piped_bamprep(data, region=None, out_file=None):
                 _piped_bamprep_region(data, region, out_file, tmp_dir)
         prep_bam = out_file
     data["work_bam"] = prep_bam
+    data["regions"]["current"] = region
     return [data]

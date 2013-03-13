@@ -459,7 +459,7 @@ def _is_bed_file(fname):
 
 # ## High level functionality to run genotyping in parallel
 
-def _get_variantcaller(data):
+def get_variantcaller(data):
     return data["config"]["algorithm"].get("variantcaller", "gatk")
 
 def combine_multiple_callers(data):
@@ -470,7 +470,7 @@ def combine_multiple_callers(data):
         by_bam[x[0]["work_bam"]].append(x[0])
     out = []
     for grouped_calls in by_bam.itervalues():
-        ready_calls = [{"variantcaller": _get_variantcaller(x),
+        ready_calls = [{"variantcaller": get_variantcaller(x),
                         "vrn_file": x.get("vrn_file")}
                        for x in grouped_calls]
         final = grouped_calls[0]
@@ -487,7 +487,7 @@ def _handle_multiple_variantcallers(data):
     """Split samples that potentially require multiple variant calling approaches.
     """
     assert len(data) == 1
-    callers = _get_variantcaller(data[0])
+    callers = get_variantcaller(data[0])
     if isinstance(callers, basestring):
         return [data]
     else:
@@ -512,7 +512,7 @@ def parallel_variantcall(sample_info, parallel_fn):
             finished.append(x)
     if len(to_process) > 0:
         split_fn = process_bam_by_chromosome("-variants.vcf", "work_bam",
-                                             dir_ext_fn = _get_variantcaller)
+                                             dir_ext_fn = get_variantcaller)
         processed = grouped_parallel_split_combine(
             to_process, split_fn, multi.group_batches, parallel_fn,
             "variantcall_sample", "split_variants_by_sample", "combine_variant_files",
