@@ -15,7 +15,7 @@ from mako.template import Template
 from bcbio import utils
 from bcbio.distributed import ipython
 
-def parallel_runner(parallel, dirs, config, config_file):
+def parallel_runner(parallel, dirs, config, config_file=None):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):

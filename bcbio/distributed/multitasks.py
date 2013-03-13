@@ -1,6 +1,7 @@
 """Multiprocessing ready entry points for sample analysis.
 """
 from bcbio import utils
+from bcbio.bam import callable
 from bcbio.pipeline import sample, lane, shared, variation
 from bcbio.variation import bamprep, realign, genotype, ensemble, recalibrate, multi
 
@@ -79,3 +80,11 @@ def detect_sv(*args):
 @utils.map_wrap
 def combine_calls(*args):
     return ensemble.combine_calls(*args)
+
+@utils.map_wrap
+def combine_bed(*args):
+    return callable.combine_bed(*args)
+
+@utils.map_wrap
+def calc_callable_loci(*args):
+    return callable.calc_callable_loci(*args)

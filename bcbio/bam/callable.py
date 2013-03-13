@@ -7,36 +7,68 @@ mapping handled separately.
 """
 import contextlib
 import os
+import shutil
 
 import pybedtools
 import pysam
 
 from bcbio import utils, broad
 from bcbio.log import logger
+from bcbio.distributed import messaging
+from bcbio.distributed.messaging import parallel_runner
+from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import shared
 
-def calc_callable_loci(in_bam, ref_file, config):
+def parallel_callable_loci(in_bam, ref_file, config):
+    num_cores = config["algorithm"].get("num_cores", 1)
+    data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
+    parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
+    if num_cores > 1:
+        runner = parallel_runner(parallel, {}, config)
+        split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
+        out = parallel_split_combine([[data]], split_fn, runner,
+                                      "calc_callable_loci", "combine_bed",
+                                      "callable_bed", ["config"])[0]
+    else:
+        out = calc_callable_loci(data)
+    return out[0]["callable_bed"]
+
+def combine_bed(in_files, out_file, config):
+    """Combine multiple BED files into a single output.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for in_file in in_files:
+                    with open(in_file) as in_handle:
+                        shutil.copyfileobj(in_handle, out_handle)
+    return out_file
+
+def calc_callable_loci(data, region=None, out_file=None):
     """Determine callable bases for input BAM using Broad's CallableLoci walker.
 
     http://www.broadinstitute.org/gatk/gatkdocs/
     org_broadinstitute_sting_gatk_walkers_coverage_CallableLoci.html
     """
-    broad_runner = broad.runner_from_config(config)
-    out_bed = "%s-callable.bed" % os.path.splitext(in_bam)[0]
-    out_summary = "%s-callable-summary.txt" % os.path.splitext(in_bam)[0]
-    variant_regions = config["algorithm"].get("variant_regions", None)
-    if not utils.file_exists(out_bed):
-        with file_transaction(out_bed) as tx_out_file:
-            broad_runner.run_fn("picard_index", in_bam)
+    broad_runner = broad.runner_from_config(data["config"])
+    if out_file is None:
+        out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
+    out_summary = "%s-callable-summary.txt" % os.path.splitext(data["work_bam"])[0]
+    variant_regions = data["config"]["algorithm"].get("variant_regions", None)
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            broad_runner.run_fn("picard_index", data["work_bam"])
             params = ["-T", "CallableLoci",
-                      "-R", ref_file,
-                      "-I", in_bam,
+                      "-R", data["sam_ref"],
+                      "-I", data["work_bam"],
                       "--out", tx_out_file,
                       "--summary", out_summary]
-            if variant_regions:
-                params += ["-L", variant_regions]
+            region = shared.subset_variant_regions(variant_regions, region, tx_out_file)
+            if region:
+                params += ["-L", region]
             broad_runner.run_gatk(params)
-    return out_bed
+    return [{"callable_bed": out_file, "config": data["config"]}]
 
 def get_ref_bedtool(ref_file, config):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
@@ -81,7 +113,7 @@ def block_regions(in_bam, ref_file, config):
     with no read support, that can be analyzed independently.
     """
     min_n_size = int(config["algorithm"].get("nomap_split_size", 2000))
-    callable_bed = calc_callable_loci(in_bam, ref_file, config)
+    callable_bed = parallel_callable_loci(in_bam, ref_file, config)
     ref_regions = get_ref_bedtool(ref_file, config)
     nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
     nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)

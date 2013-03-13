@@ -67,11 +67,11 @@ class BroadRunner:
 
     def cl_gatk(self, params, tmp_dir):
         support_nt = set()
-        support_nct = set(["BaseRecalibrator", "CallableLoci"])
+        support_nct = set(["BaseRecalibrator"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
         cores = self._config["algorithm"].get("num_cores", 1)
-        if cores and cores > 1:
+        if cores and int(cores) > 1:
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
             prog = params[atype_index + 1]
