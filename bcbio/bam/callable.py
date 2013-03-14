@@ -94,6 +94,23 @@ def _get_nblock_regions(in_file, min_n_size):
                 out_lines.append("%s\t%s\t%s\n" % (contig, start, end))
     return pybedtools.BedTool("\n".join(out_lines), from_string=True)
 
+def _combine_regions(all_regions, ref_regions):
+    """Combine multiple BEDtools regions of regions into sorted final BEDtool.
+    """
+    chrom_order = {}
+    for i, x in enumerate(ref_regions):
+        chrom_order[x.chrom] = i
+    def wchrom_key(x):
+        chrom, start, end = x
+        return (chrom_order[chrom], start, end)
+    all_intervals = []
+    for region_group in all_regions:
+        for region in region_group:
+            all_intervals.append((region.chrom, int(region.start), int(region.stop)))
+    all_intervals.sort(key=wchrom_key)
+    bed_lines = ["%s\t%s\t%s" % (c, s, e) for (c, s, e) in all_intervals]
+    return pybedtools.BedTool("\n".join(bed_lines), from_string=True)
+
 def _add_config_regions(nblock_regions, ref_regions, config):
     """Add additional nblock regions based on configured regions to call.
     Identifies user defined regions which we should not be analyzing.
@@ -102,7 +119,8 @@ def _add_config_regions(nblock_regions, ref_regions, config):
     if input_regions_bed:
         input_regions = pybedtools.BedTool(input_regions_bed)
         input_nblock = ref_regions.subtract(nblock_regions)
-        return nblock_regions.merge(input_nblock)
+        all_intervals = _combine_regions([input_regions, nblock_regions], ref_regions)
+        return all_intervals.merge()
     else:
         return nblock_regions
 
@@ -114,10 +132,16 @@ def block_regions(in_bam, ref_file, config):
     """
     min_n_size = int(config["algorithm"].get("nomap_split_size", 2000))
     callable_bed = parallel_callable_loci(in_bam, ref_file, config)
-    ref_regions = get_ref_bedtool(ref_file, config)
-    nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
-    nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
-    return [(r.chrom, int(r.start), int(r.stop)) for r in ref_regions.subtract(nblock_regions)]
+    block_bed = "%s-analysisblocks%s" % os.path.splitext(callable_bed)
+    if utils.file_uptodate(block_bed, callable_bed):
+        ready_regions = pybedtools.BedTool(block_bed)
+    else:
+        ref_regions = get_ref_bedtool(ref_file, config)
+        nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
+        nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
+        ready_regions = ref_regions.subtract(nblock_regions)
+        ready_regions.saveas(block_bed)
+    return [(r.chrom, int(r.start), int(r.stop)) for r in ready_regions]
 
 def _write_bed_regions(sample, final_regions):
     work_dir = sample["dirs"]["work"]
@@ -136,13 +160,16 @@ def combine_sample_regions(samples):
     """
     min_n_size = int(samples[0]["config"]["algorithm"].get("nomap_split_size", 2000))
     final_regions = None
+    all_regions = []
     for regions in (x["regions"] for x in samples):
         bed_lines = ["%s\t%s\t%s" % (c, s, e) for (c, s, e) in regions]
-        bed_regions = pybedtools.BedTool("\n".join(bed_lines), from_string=True)
-        if final_regions is None:
-            final_regions = bed_regions
-        else:
-            final_regions = final_regions.merge(bed_regions, d=min_n_size)
+        all_regions.append(pybedtools.BedTool("\n".join(bed_lines), from_string=True))
+    if len(all_regions) == 1:
+        final_regions = all_regions[0]
+    else:
+        ref_bedtool = get_ref_bedtool(samples[0]["sam_ref"], samples[0]["config"])
+        combo_regions = _combine_regions(all_regions, ref_bedtool)
+        final_regions = combo_regions.merge(d=min_n_size)
     no_analysis_file = _write_bed_regions(samples[0], final_regions)
     regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
                "noanalysis": no_analysis_file}

@@ -219,6 +219,12 @@ def file_exists(fname):
     """
     return os.path.exists(fname) and os.path.getsize(fname) > 0
 
+def file_uptodate(fname, cmp_fname):
+    """Check if a file exists, is non-empty and is more recent than cmp_fname.
+    """
+    return (file_exists(fname) and file_exists(cmp_fname) and
+            os.path.getmtime(fname) >= os.path.getmtime(cmp_fname))
+
 def create_dirs(config, names=None):
     if names is None:
         names = config["dir"].keys()
