@@ -10,9 +10,12 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.variation import realign
 
-def _region_to_gatk(region):
-    chrom, start, end = region
-    return "%s:%s-%s" % (chrom, start + 1, end)
+def region_to_gatk(region):
+    if isinstance(region, (list, tuple)):
+        chrom, start, end = region
+        return "%s:%s-%s" % (chrom, start + 1, end)
+    else:
+        return region
 
 def _gatk_extract_reads_cl(data, region, tmp_dir):
     """Use GATK to extract reads from full BAM file, recalibrating if configured.
@@ -20,7 +23,7 @@ def _gatk_extract_reads_cl(data, region, tmp_dir):
     broad_runner = broad.runner_from_config(data["config"])
     algorithm = data["config"]["algorithm"]
     args = ["-T", "PrintReads",
-            "-L", _region_to_gatk(region),
+            "-L", region_to_gatk(region),
             "-R", data["sam_ref"],
             "-I", data["work_bam"]]
     recal_config = algorithm.get("recalibrate", True)
@@ -70,9 +73,9 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir):
     broad_runner.run_fn("picard_index", pa_bam)
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
                       dbsnp=shared.configured_ref_file("dbsnp", data["config"], data["sam_ref"]),
-                      region=_region_to_gatk(region))
+                      region=region_to_gatk(region))
     recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],
-                                                 recal_file, tmp_dir, region=_region_to_gatk(region))
+                                                 recal_file, tmp_dir, region=region_to_gatk(region))
     return pa_bam, " ".join(recal_cl)
 
 def _cleanup_tempfiles(data, tmp_files):

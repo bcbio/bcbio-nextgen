@@ -23,7 +23,7 @@ from bcbio.distributed.split import (parallel_split_combine,
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import multi, annotation
+from bcbio.variation import annotation, bamprep, multi
 
 # ## GATK Genotype calling
 
@@ -52,7 +52,7 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
     if dbsnp:
         params += ["--dbsnp", dbsnp]
     if region:
-        params += ["-L", region, "--interval_set_rule", "INTERSECTION"]
+        params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     return broad_runner, params, out_file
 
 def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
@@ -63,7 +63,8 @@ def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
         _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
                                region, out_file)
     if not file_exists(out_file):
-        if not all(has_aligned_reads(x, region) for x in align_bams):
+        if (not isinstance(region, (list, tuple)) and
+            not all(has_aligned_reads(x, region) for x in align_bams)):
             write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:

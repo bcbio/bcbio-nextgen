@@ -45,12 +45,13 @@ def _split_by_ready_regions(output_ext, file_key, dir_ext_fn):
             ext = output_ext
             chrom, start, end = data["regions"]["current"]
             base = os.path.splitext(os.path.basename(bam_file))[0]
+            noregion_base = base[:base.index("-%s_%s_%s" % (chrom, start, end))]
             out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], dir_ext_fn(data)))
-            out_file = os.path.join(out_dir, "{base}{ext}".format(**locals()))
+            out_file = os.path.join(out_dir, "{noregion_base}{ext}".format(**locals()))
             out_parts = []
             if not utils.file_exists(out_file):
                 out_region_dir = utils.safe_makedir(os.path.join(out_dir, chrom))
-                out_region_file = os.path.join(out_dir, "{base}{ext}".format(**locals()))
+                out_region_file = os.path.join(out_region_dir, "{base}{ext}".format(**locals()))
                 out_parts = [(data["regions"]["current"], out_region_file)]
             return out_file, out_parts
         else:

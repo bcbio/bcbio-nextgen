@@ -14,15 +14,23 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 
+def region_to_freebayes(region):
+    if isinstance(region, (list, tuple)):
+        chrom, start, end = region
+        return "%s:%s..%s" % (chrom, start, end)
+    else:
+        return region
+
 def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
     ploidy = aconfig.get("ploidy", 2)
     opts += ["--ploidy", str(ploidy)]
-    
+
     variant_regions = aconfig.get("variant_regions", None)
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
-        opts += ["--region" if target == region else "--targets", target]
+        opts += ["--region" if target == region else "--targets",
+                 region_to_freebayes(target)]
     background = aconfig.get("call_background", None)
     if background and os.path.exists(background):
         opts += ["--variant-input", background]
@@ -32,21 +40,19 @@ def run_freebayes(align_bams, ref_file, config, dbsnp=None, region=None,
                   out_file=None):
     """Detect SNPs and indels with FreeBayes.
     """
-    if len(align_bams) == 1:
-        align_bam = align_bams[0]
-    else:
-        raise NotImplementedError("Need to add multisample calling for freebayes")
     broad_runner = broad.runner_from_config(config)
-    broad_runner.run_fn("picard_index", align_bam)
     if out_file is None:
-        out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
+        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         logger.info("Genotyping with FreeBayes: {region} {fname}".format(
-            region=region, fname=os.path.basename(align_bam)))
+            region=region, fname=", ".join(os.path.basename(x) for x in align_bams)))
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("freebayes", config),
-                  "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
+                  "-v", tx_out_file, "-f", ref_file,
                   "--use-mapping-quality"]
+            for align_bam in align_bams:
+                broad_runner.run_fn("picard_index", align_bam)
+                cl += ["-b", align_bam]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
         _remove_freebayes_refalt_dups(out_file)

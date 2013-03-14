@@ -13,7 +13,8 @@ details:
       #quality_bin: [prealignment, postrecal]
       aligner: novoalign
       #realign: gkno
-      variantcaller: freebayes
+      #variantcaller: freebayes
+      variantcaller: gatk
       quality_format: Standard
       coverage_interval: regional
     analysis: variant2
