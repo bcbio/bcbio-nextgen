@@ -11,6 +11,7 @@ import shutil
 
 import pybedtools
 import pysam
+from py_descriptive_statistics import Enum as Stats
 
 from bcbio import utils, broad
 from bcbio.log import logger
@@ -130,7 +131,7 @@ def block_regions(in_bam, ref_file, config):
     Identifies islands of callable regions, surrounding by regions
     with no read support, that can be analyzed independently.
     """
-    min_n_size = int(config["algorithm"].get("nomap_split_size", 2000))
+    min_n_size = int(config["algorithm"].get("nomap_split_size", 5000))
     callable_bed = parallel_callable_loci(in_bam, ref_file, config)
     block_bed = "%s-analysisblocks%s" % os.path.splitext(callable_bed)
     if utils.file_uptodate(block_bed, callable_bed):
@@ -139,6 +140,7 @@ def block_regions(in_bam, ref_file, config):
         ref_regions = get_ref_bedtool(ref_file, config)
         nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
+        nblock_regions = nblock_regions.merge(d=min_n_size)
         ready_regions = ref_regions.subtract(nblock_regions)
         ready_regions.saveas(block_bed)
     return [(r.chrom, int(r.start), int(r.stop)) for r in ready_regions]
@@ -153,12 +155,38 @@ def _write_bed_regions(sample, final_regions):
     noanalysis_regions.saveas(out_file_ref)
     return out_file_ref
 
+def _analysis_block_stats(regions):
+    """Provide statistics on sizes and number of analysis blocks.
+    """
+    prev = None
+    between_sizes = []
+    region_sizes = []
+    for region in regions:
+        if prev and prev.chrom == region.chrom:
+            between_sizes.append(region.start - prev.end)
+        region_sizes.append(region.end - region.start)
+        prev = region
+    def descriptive_stats(xs):
+        calc = Stats(xs)
+        parts = ["min: %s" % min(xs),
+                 "5%%: %s" % calc.percentile(5),
+                 "25%%: %s" % calc.percentile(25),
+                 "median: %s" % calc.percentile(50),
+                 "75%%: %s" % calc.percentile(75),
+                 "95%%: %s" % calc.percentile(95),
+                 "99%%: %s" % calc.percentile(99),
+                 "max: %s" % max(xs)]
+        return "\n".join(["  " + x for x in parts])
+    logger.info("Identified %s parallel analysis blocks\n" % len(region_sizes) +
+                "Block sizes:\n%s\n" % descriptive_stats(region_sizes) +
+                "Between block sizes:\n%s\n" % descriptive_stats(between_sizes))
+
 def combine_sample_regions(samples):
     """Combine islands of callable regions from multiple samples.
     Creates a global set of callable samples usable across a
     project with multi-sample calling.
     """
-    min_n_size = int(samples[0]["config"]["algorithm"].get("nomap_split_size", 2000))
+    min_n_size = int(samples[0]["config"]["algorithm"].get("nomap_split_size", 5000))
     final_regions = None
     all_regions = []
     for regions in (x["regions"] for x in samples):
@@ -170,6 +198,7 @@ def combine_sample_regions(samples):
         ref_bedtool = get_ref_bedtool(samples[0]["sam_ref"], samples[0]["config"])
         combo_regions = _combine_regions(all_regions, ref_bedtool)
         final_regions = combo_regions.merge(d=min_n_size)
+    _analysis_block_stats(final_regions)
     no_analysis_file = _write_bed_regions(samples[0], final_regions)
     regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
                "noanalysis": no_analysis_file}
