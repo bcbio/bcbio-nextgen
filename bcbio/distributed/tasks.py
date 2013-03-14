@@ -69,7 +69,7 @@ def split_variants_by_sample(*args):
 
 @task
 def postprocess_variants(*args):
-    return sample.postprocess_variants(*args)
+    return variation.postprocess_variants(*args)
 
 @task
 def generate_bigwig(*args):

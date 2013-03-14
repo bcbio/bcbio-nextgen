@@ -85,10 +85,10 @@ def piped_bamprep(*args):
     with _setup_logging(args):
         return apply(bamprep.piped_bamprep, *args)
 
-@require(sample)
+@require(variation)
 def postprocess_variants(*args):
     with _setup_logging(args):
-        return apply(sample.postprocess_variants, *args)
+        return apply(variation.postprocess_variants, *args)
 
 @require(sample)
 def process_sample(*args):

@@ -3,12 +3,27 @@
 import os
 import json
 
-from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
-from bcbio.variation import freebayes, phasing
+from bcbio.log import logger
 from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
+from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
+from bcbio.variation import effects, freebayes
 
 # ## Genotyping
+
+def postprocess_variants(data):
+    """Provide post-processing of variant calls.
+    """
+    if data["config"]["algorithm"]["snpcall"]:
+        logger.info("Finalizing variant calls: %s" % str(data["name"]))
+        data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
+                                              data["sam_ref"], data["config"])
+        logger.info("Calculating variation effects for %s" % str(data["name"]))
+        ann_vrn_file = effects.snpeff_effects(data["vrn_file"], data["genome_build"],
+                                              data["config"])
+        if ann_vrn_file:
+            data["vrn_file"] = ann_vrn_file
+    return [[data]]
 
 def finalize_genotyper(call_file, bam_file, ref_file, config):
     """Perform SNP genotyping and analysis.
@@ -18,9 +33,8 @@ def finalize_genotyper(call_file, bam_file, ref_file, config):
     if variantcaller in ["freebayes", "cortex", "samtools", "gatk-haplotype", "varscan"]:
         call_file = freebayes.postcall_annotate(call_file, bam_file, ref_file, vrn_files, config)
     filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
-    phase_snp = phasing.read_backed_phasing(filter_snp, bam_file, ref_file, config)
-    _eval_genotyper(phase_snp, ref_file, vrn_files.dbsnp, config)
-    return phase_snp
+    _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
+    return filter_snp
 
 def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.

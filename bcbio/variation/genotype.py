@@ -10,9 +10,10 @@ Variant Evaluation:
 http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval
 """
 import os
+import collections
 import copy
 import itertools
-import collections
+import shutil
 
 from bcbio import broad
 from bcbio.log import logger
@@ -23,7 +24,7 @@ from bcbio.distributed.split import (parallel_split_combine,
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import annotation, bamprep, multi
+from bcbio.variation import annotation, bamprep, multi, phasing
 
 # ## GATK Genotype calling
 
@@ -539,7 +540,16 @@ def variantcall_sample(data, region=None, out_file=None):
             align_bams = [data["work_bam"]]
         else:
             align_bams = data["work_bam"]
-        data["vrn_file"] = caller_fn(align_bams, sam_ref, config,
-                                     configured_ref_file("dbsnp", config, sam_ref),
-                                     region, out_file)
+        call_vcf = caller_fn(align_bams, sam_ref, config,
+                             configured_ref_file("dbsnp", config, sam_ref),
+                             region, out_file)
+        if data["config"]["algorithm"].get("phasing", "gatk") == "gatk":
+            call_vcf = phasing.read_backed_phasing(call_vcf, align_bams, sam_ref, region, config)
+        if call_vcf != out_file:
+            for ext in ["", ".idx"]:
+                if os.path.exists(call_vcf + ext):
+                    shutil.move(call_vcf + ext, out_file + ext)
+            with open(call_vcf, "w") as out_handle:
+                out_handle.write("Moved to %s" % out_file)
+        data["vrn_file"] = out_file
     return [data]
