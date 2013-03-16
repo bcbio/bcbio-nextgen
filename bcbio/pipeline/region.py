@@ -16,16 +16,19 @@ def _split_by_regions(dirname, out_ext, in_key):
     def _do_work(data):
         bam_file = data[in_key]
         part_info = []
+        base_out = os.path.splitext(os.path.basename(bam_file))[0]
         nowork = [["nochrom"], ["noanalysis", data["regions"]["noanalysis"]]]
         for region in data["regions"]["analysis"] + nowork:
             out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], dirname,
                                                       data["name"][-1], region[0]))
-            region_str = "_".join([str(x) for x in region])
+            region_str = "_".join([str(x) for x in region if not (isinstance(x, basestring) and
+                                                                  os.path.isfile(x))])
             region_outfile = os.path.join(out_dir, "%s-%s%s" %
-                                          (os.path.splitext(os.path.basename(bam_file))[0],
-                                           region_str, out_ext))
+                                          (base_out, region_str, out_ext))
             part_info.append((region, region_outfile))
-        return None, part_info
+        out_file = os.path.join(data["dirs"]["work"], dirname, data["name"][-1],
+                                "%s%s" % (base_out, out_ext))
+        return out_file, part_info
     return _do_work
 
 def parallel_prep_region(samples, run_parallel):

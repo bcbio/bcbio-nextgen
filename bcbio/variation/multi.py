@@ -50,7 +50,7 @@ def split_variants_by_sample(data):
         if is_multisample(vrn_file):
             select_sample_from_vcf(vrn_file, sub_data["name"][-1], sub_vrn_file,
                                    data["sam_ref"], config)
-        else:
+        elif not os.path.exists(sub_vrn_file):
             os.symlink(vrn_file, sub_vrn_file)
         sub_data["vrn_file"] = sub_vrn_file
         out.append(sub_data)

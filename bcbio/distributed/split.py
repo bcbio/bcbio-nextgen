@@ -28,7 +28,7 @@ def grouped_parallel_split_combine(args, split_fn, group_fn, parallel_fn,
       that will pull apart results from grouped analysis into individual sample
       results to combine via `combine_name`
     """
-    split_args, combine_map, finished_out = _get_split_tasks(args, split_fn, file_key)
+    split_args, combine_map, finished_out, extras = _get_split_tasks(args, split_fn, file_key)
     grouped_args, grouped_info = group_fn(split_args)
     split_output = parallel_fn(parallel_name, grouped_args)
     ready_output, grouped_output = _check_group_status(split_output, grouped_info)
@@ -37,7 +37,8 @@ def grouped_parallel_split_combine(args, split_fn, group_fn, parallel_fn,
     combine_args, final_args = _organize_output(final_output, combine_map,
                                                 file_key, combine_arg_keys)
     parallel_fn(combine_name, combine_args)
-    return finished_out + final_args
+    out = _add_combine_extras(finished_out + final_args, extras)
+    return out
 
 def _check_group_status(xs, grouped_info):
     """Identify grouped items that need ungrouping to continue.
@@ -67,7 +68,7 @@ def parallel_split_combine(args, split_fn, parallel_fn,
     combine_name: The name of the function, also from tasks, that combines
       the split output files into a final ready to run file.
     """
-    split_args, combine_map, finished_out = _get_split_tasks(args, split_fn, file_key)
+    split_args, combine_map, finished_out, extras = _get_split_tasks(args, split_fn, file_key)
     split_output = parallel_fn(parallel_name, split_args)
     if combine_name:
         combine_args, final_args = _organize_output(split_output, combine_map,
@@ -75,7 +76,10 @@ def parallel_split_combine(args, split_fn, parallel_fn,
         parallel_fn(combine_name, combine_args)
     else:
         final_args = _add_combine_info(split_output, combine_map, file_key)
-    return finished_out + final_args
+    out = _add_combine_extras(finished_out + final_args, extras)
+    return out
+
+# ##  Handle information for future combinations
 
 def _add_combine_info(output, combine_map, file_key):
     """Do not actually combine, but add details for later combining work.
@@ -85,8 +89,43 @@ def _add_combine_info(output, combine_map, file_key):
         cur_file = data[file_key]
         if not data.has_key("combine"):
             data["combine"] = {}
-        data["combine"][file_key] = combine_map[cur_file]
+        data["combine"][file_key] = {"out": combine_map[cur_file],
+                                     "extras": []}
         out.append([data])
+    return out
+
+def _get_combine_key(data):
+    assert len(data["combine"].keys()) == 1
+    return data["combine"].keys()[0]
+
+def _add_combine_parts(args, cur_out, data):
+    """Add additional parts to existing combine info when combining via another key.
+    """
+    base_data = args[cur_out]
+    file_key = _get_combine_key(base_data)
+    assert base_data["combine"][file_key]["out"] == data["combine"][file_key]["out"]
+    base_data["combine"][file_key]["extras"].append(data[file_key])
+    args[cur_out] = base_data
+    return args
+
+def _add_combine_extras(args, extras):
+    """Add in extra combination items: brings along non-processed items.
+    """
+    if len(extras) == 0:
+        return args
+    extra_out_map = collections.defaultdict(list)
+    file_key = _get_combine_key(args[0][0])
+    for extra in extras:
+        extra_out_map[extra["combine"][file_key]["out"]].append(extra)
+    out = []
+    added = 0
+    for arg in (x[0] for x in args):
+        cur_out = arg["combine"][file_key]["out"]
+        to_add = [x[file_key] for x in extra_out_map[cur_out]]
+        added += len(to_add)
+        arg["combine"][file_key]["extras"].extend(to_add)
+        out.append([arg])
+    assert added == len(extras), (added, len(extras))
     return out
 
 def _organize_output(output, combine_map, file_key, combine_arg_keys):
@@ -97,7 +136,7 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
     """
     out_map = collections.defaultdict(list)
     extra_args = {}
-    final_args = []
+    final_args = {}
     already_added = []
     for data in output:
         cur_file = data[file_key]
@@ -107,23 +146,36 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
         data[file_key] = cur_out
         if cur_out not in already_added:
             already_added.append(cur_out)
-            final_args.append([data])
+            final_args[cur_out] = data
+        elif data.has_key("combine"):
+            final_args = _add_combine_parts(final_args, cur_out, data)
     combine_args = [[v, k] + extra_args[k] for (k, v) in out_map.iteritems()]
-    return combine_args, final_args
+    return combine_args, [[final_args[x]] for x in already_added]
 
 def _get_split_tasks(args, split_fn, file_key):
     """Split up input files and arguments, returning arguments for parallel processing.
     """
     split_args = []
     combine_map = {}
-    finished_out = []
+    finished_order = []
+    finished_map = {}
+    extras = []
     for data in args:
         out_final, out_parts = split_fn(*data)
         for parts in out_parts:
             split_args.append(copy.deepcopy(data) + list(parts))
         for part_file in [x[-1] for x in out_parts]:
             combine_map[part_file] = out_final
-        if len(out_parts) == 0 and out_final is not None:
-            data[0][file_key] = out_final
-            finished_out.append(data)
-    return split_args, combine_map, finished_out
+        if len(out_parts) == 0:
+            if out_final is not None:
+                if out_final not in finished_order:
+                    finished_order.append(out_final)
+                    data[0][file_key] = out_final
+                    finished_map[out_final] = data[0]
+                else:
+                    finished_map = _add_combine_parts(finished_map, out_final, data[0])
+            else:
+                assert len(data) == 1
+                extras.append(data[0])
+    finished_out = [[finished_map[x]] for x in finished_order]
+    return split_args, combine_map, finished_out, extras

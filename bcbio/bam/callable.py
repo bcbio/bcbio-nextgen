@@ -119,8 +119,8 @@ def _add_config_regions(nblock_regions, ref_regions, config):
     input_regions_bed = config["algorithm"].get("variant_regions", None)
     if input_regions_bed:
         input_regions = pybedtools.BedTool(input_regions_bed)
-        input_nblock = ref_regions.subtract(nblock_regions)
-        all_intervals = _combine_regions([input_regions, nblock_regions], ref_regions)
+        input_nblock = ref_regions.subtract(input_regions)
+        all_intervals = _combine_regions([input_nblock, nblock_regions], ref_regions)
         return all_intervals.merge()
     else:
         return nblock_regions
@@ -167,6 +167,8 @@ def _analysis_block_stats(regions):
         region_sizes.append(region.end - region.start)
         prev = region
     def descriptive_stats(xs):
+        if len(xs) < 2:
+            return xs
         calc = Stats(xs)
         parts = ["min: %s" % min(xs),
                  "5%%: %s" % calc.percentile(5),
