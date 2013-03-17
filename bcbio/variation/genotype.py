@@ -158,8 +158,10 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
     if caller in ["gatk-haplotype"] and cov_interval not in ["regional"]:
         return _variant_filtration_both(broad_runner, call_file, ref_file, vrn_files,
                                         config)
+    elif caller in ["freebayes"]:
+        return filter_freebayes(broad_runner, call_file, ref_file, vrn_files, config)
     # no additional filtration for callers that filter as part of call process
-    elif caller in ["samtools", "varscan", "freebayes"]:
+    elif caller in ["samtools", "varscan"]:
         return call_file
     else:
         snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)
@@ -170,6 +172,12 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
         orig_files = [snp_filter_file, indel_filter_file]
         out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
         return combine_variant_files(orig_files, out_file, ref_file, config)
+
+def filter_freebayes(broad_runner, in_file, ref_file, vrn_files, config):
+    """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
+    """
+    filters = ["QUAL < 20.0", "DP < 5"]
+    return variant_filtration_with_exp(broad_runner, in_file, ref_file, "", filters)
 
 def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                          tranch_file, filter_type):
@@ -485,7 +493,7 @@ def combine_multiple_callers(data):
         out.append([final])
     return out
 
-def _handle_multiple_variantcallers(data):
+def handle_multiple_variantcallers(data):
     """Split samples that potentially require multiple variant calling approaches.
     """
     assert len(data) == 1
@@ -509,7 +517,7 @@ def parallel_variantcall(sample_info, parallel_fn):
     finished = []
     for x in sample_info:
         if x[0]["config"]["algorithm"]["snpcall"]:
-            to_process.extend(_handle_multiple_variantcallers(x))
+            to_process.extend(handle_multiple_variantcallers(x))
         else:
             finished.append(x)
     if len(to_process) > 0:

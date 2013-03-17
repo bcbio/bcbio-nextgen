@@ -175,6 +175,7 @@ class Variant2Pipeline(AbstractPipeline):
         # Handle all variant calling on sub-regions of the input file
         samples = region.parallel_prep_region(samples, run_parallel)
         samples = region.parallel_variantcall_region(samples, run_parallel)
+        samples = run_parallel("postprocess_variants", samples)
         samples = combine_multiple_callers(samples)
         samples = run_parallel("combine_calls", samples)
         return samples

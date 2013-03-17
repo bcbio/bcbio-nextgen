@@ -64,8 +64,11 @@ def _split_by_ready_regions(output_ext, file_key, dir_ext_fn):
 def parallel_variantcall_region(samples, run_parallel):
     """Perform variant calling and post-analysis on samples by region.
     """
+    to_process = []
+    for x in samples:
+        to_process.extend(genotype.handle_multiple_variantcallers(x))
     split_fn = _split_by_ready_regions("-variants.vcf", "work_bam", genotype.get_variantcaller)
-    return grouped_parallel_split_combine(samples, split_fn,
+    return grouped_parallel_split_combine(to_process, split_fn,
                                           multi.group_batches, run_parallel,
                                           "variantcall_sample", "split_variants_by_sample",
                                           "combine_variant_files",

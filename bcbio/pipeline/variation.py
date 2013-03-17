@@ -7,7 +7,7 @@ from bcbio.log import logger
 from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
 from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
-from bcbio.variation import effects, freebayes
+from bcbio.variation import annotation, effects
 
 # ## Genotyping
 
@@ -31,7 +31,8 @@ def finalize_genotyper(call_file, bam_file, ref_file, config):
     vrn_files = configured_vrn_files(config, ref_file)
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     if variantcaller in ["freebayes", "cortex", "samtools", "gatk-haplotype", "varscan"]:
-        call_file = freebayes.postcall_annotate(call_file, bam_file, ref_file, vrn_files, config)
+        call_file = annotation.annotate_nongatk_vcf(call_file, bam_file, vrn_files.dbsnp,
+                                                    ref_file, config)
     filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
     _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp

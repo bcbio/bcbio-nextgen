@@ -125,7 +125,7 @@ def _add_combine_extras(args, extras):
         added += len(to_add)
         arg["combine"][file_key]["extras"].extend(to_add)
         out.append([arg])
-    assert added == len(extras), (added, len(extras))
+    assert added >= len(extras), (added, len(extras))
     return out
 
 def _organize_output(output, combine_map, file_key, combine_arg_keys):

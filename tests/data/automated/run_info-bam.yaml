@@ -14,7 +14,7 @@ details:
       aligner: novoalign
       #realign: gkno
       #variantcaller: freebayes
-      variantcaller: gatk
+      variantcaller: [gatk, freebayes]
       quality_format: Standard
       coverage_interval: regional
       nomap_split_size: 500
@@ -34,7 +34,8 @@ details:
       #quality_bin: [prealignment, postrecal]
       aligner: novoalign
       #realign: gkno
-      variantcaller: gatk
+      #variantcaller: freebayes
+      variantcaller: [gatk, freebayes]
       quality_format: Standard
       coverage_interval: regional
       variant_regions: ../data/automated/variant_regions-bam.bed
