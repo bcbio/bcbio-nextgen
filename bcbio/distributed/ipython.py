@@ -244,7 +244,7 @@ def add_cores_to_config(args, cores_per_job):
     if new_i is None:
         raise ValueError("Could not find configuration in args: %s" % args)
 
-    new_arg = utils.deepish_copy(args[new_i])
+    new_arg = copy.deepcopy(args[new_i])
     if _is_nested_config(new_arg):
         new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
     elif _is_std_config(new_arg):

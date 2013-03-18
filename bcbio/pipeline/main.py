@@ -171,9 +171,10 @@ class Variant2Pipeline(AbstractPipeline):
     def run(self, config, config_file, run_parallel, dirs, lane_items):
         # Handle alignment and preparation requiring the entire input file
         samples = run_parallel("align_prep_full", (list(x) + [config_file] for x in lane_items))
-        samples = callable.combine_sample_regions(samples)
+        regions = callable.combine_sample_regions(samples)
         # Handle all variant calling on sub-regions of the input file
-        samples = region.parallel_prep_region(samples, run_parallel)
+        samples = region.clean_sample_data(samples)
+        samples = region.parallel_prep_region(samples, regions, run_parallel)
         samples = region.parallel_variantcall_region(samples, run_parallel)
         samples = run_parallel("postprocess_variants", samples)
         samples = combine_multiple_callers(samples)
