@@ -12,6 +12,8 @@ import os
 import copy
 import collections
 
+from bcbio import utils
+
 def grouped_parallel_split_combine(args, split_fn, group_fn, parallel_fn,
                                    parallel_name, ungroup_name, combine_name,
                                    file_key, combine_arg_keys):
@@ -163,7 +165,7 @@ def _get_split_tasks(args, split_fn, file_key):
     for data in args:
         out_final, out_parts = split_fn(*data)
         for parts in out_parts:
-            split_args.append(copy.deepcopy(data) + list(parts))
+            split_args.append(utils.deepish_copy(data) + list(parts))
         for part_file in [x[-1] for x in out_parts]:
             combine_map[part_file] = out_final
         if len(out_parts) == 0:

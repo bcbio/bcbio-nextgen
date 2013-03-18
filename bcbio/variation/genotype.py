@@ -17,7 +17,7 @@ import shutil
 
 from bcbio import broad
 from bcbio.log import logger
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import (parallel_split_combine,
                                      grouped_parallel_split_combine)
@@ -534,6 +534,7 @@ def variantcall_sample(data, region=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
     from bcbio.variation import freebayes, cortex, samtools, varscan
+    safe_makedir(os.path.dirname(out_file))
     caller_fns = {"gatk": unified_genotyper,
                   "gatk-haplotype": haplotype_caller,
                   "freebayes": freebayes.run_freebayes,

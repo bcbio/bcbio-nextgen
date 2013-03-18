@@ -315,6 +315,22 @@ def partition_all(n, iterable):
         if not chunk:
             break
         yield chunk
+        
+def deepish_copy(orig):
+    """Improved speed deepcopy for standard dictionary/list objects.
+    http://writeonly.wordpress.com/2009/05/07/deepcopy-is-a-pig-for-simple-data/
+    """
+    if isinstance(orig, dict):
+        out = orig.copy()
+        for k, v in out.iteritems():
+            out[k] = deepish_copy(v)
+    elif isinstance(orig, (list, tuple)):
+        out = orig[:]
+        for i, x in enumerate(orig):
+            out[i] = deepish_copy(x)
+    else:
+        out = orig
+    return out
 
 # ## Dealing with configuration files
 

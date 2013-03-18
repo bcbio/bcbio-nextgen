@@ -50,7 +50,7 @@ class BcbioLSFControllerLauncher(launcher.LSFControllerLauncher):
     default_template = traitlets.Unicode("""#!/bin/sh
 #BSUB -J bcbio-ipcontroller
 #BSUB -oo bcbio-ipcontroller.bsub.%%J
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --sqlitedb
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb
     """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioLSFControllerLauncher, self).start()
@@ -82,7 +82,7 @@ class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
     default_template = traitlets.Unicode(u"""#$ -V
 #$ -S /bin/sh
 #$ -N ipcontroller
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --sqlitedb
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb
 """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioSGEControllerLauncher, self).start()
@@ -244,7 +244,7 @@ def add_cores_to_config(args, cores_per_job):
     if new_i is None:
         raise ValueError("Could not find configuration in args: %s" % args)
 
-    new_arg = copy.deepcopy(args[new_i])
+    new_arg = utils.deepish_copy(args[new_i])
     if _is_nested_config(new_arg):
         new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
     elif _is_std_config(new_arg):

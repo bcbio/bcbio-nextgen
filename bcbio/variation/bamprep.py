@@ -110,6 +110,7 @@ def piped_bamprep(data, region=None, out_file=None):
 
     Handles de-duplication, recalibration and realignment of original BAMs.
     """
+    utils.safe_makedir(os.path.dirname(out_file))
     if region[0] == "nochrom":
         prep_bam = shared.write_nochr_reads(data["work_bam"], out_file)
     elif region[0] == "noanalysis":

@@ -19,10 +19,11 @@ def _split_by_regions(dirname, out_ext, in_key):
         base_out = os.path.splitext(os.path.basename(bam_file))[0]
         nowork = [["nochrom"], ["noanalysis", data["regions"]["noanalysis"]]]
         for region in data["regions"]["analysis"] + nowork:
-            out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], dirname,
-                                                      data["name"][-1], region[0]))
-            region_str = "_".join([str(x) for x in region if not (isinstance(x, basestring) and
-                                                                  os.path.isfile(x))])
+            out_dir = os.path.join(data["dirs"]["work"], dirname, data["name"][-1], region[0])
+            if region[0] in ["nochrom", "noanalysis"]:
+                region_str = region[0]
+            else:
+                region_str = "_".join([str(x) for x in region])
             region_outfile = os.path.join(out_dir, "%s-%s%s" %
                                           (base_out, region_str, out_ext))
             part_info.append((region, region_outfile))
@@ -49,11 +50,11 @@ def _split_by_ready_regions(output_ext, file_key, dir_ext_fn):
             chrom, start, end = data["regions"]["current"]
             base = os.path.splitext(os.path.basename(bam_file))[0]
             noregion_base = base[:base.index("-%s_%s_%s" % (chrom, start, end))]
-            out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], dir_ext_fn(data)))
+            out_dir = os.path.join(data["dirs"]["work"], dir_ext_fn(data))
             out_file = os.path.join(out_dir, "{noregion_base}{ext}".format(**locals()))
             out_parts = []
             if not utils.file_exists(out_file):
-                out_region_dir = utils.safe_makedir(os.path.join(out_dir, chrom))
+                out_region_dir = os.path.join(out_dir, chrom)
                 out_region_file = os.path.join(out_region_dir, "{base}{ext}".format(**locals()))
                 out_parts = [(data["regions"]["current"], out_region_file)]
             return out_file, out_parts
