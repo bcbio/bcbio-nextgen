@@ -50,7 +50,7 @@ class BcbioLSFControllerLauncher(launcher.LSFControllerLauncher):
     default_template = traitlets.Unicode("""#!/bin/sh
 #BSUB -J bcbio-ipcontroller
 #BSUB -oo bcbio-ipcontroller.bsub.%%J
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=20 --scheme=pure
     """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioLSFControllerLauncher, self).start()
@@ -82,7 +82,7 @@ class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
     default_template = traitlets.Unicode(u"""#$ -V
 #$ -S /bin/sh
 #$ -N ipcontroller
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=20 --scheme=pure
 """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioSGEControllerLauncher, self).start()
@@ -289,7 +289,7 @@ def runner(parallel, fn_name, items, work_dir, config):
         if len(items) > 0:
             items = [add_cores_to_config(x, cores_per_job) for x in items]
             with cluster_view(parallel, config) as view:
-                for data in view.map_sync(fn, items):
+                for data in view.map_sync(fn, items, track=False):
                     if data:
                         out.extend(data)
     with open(checkpoint_file, "w") as out_handle:
