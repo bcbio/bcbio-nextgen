@@ -14,6 +14,17 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
 
+def needs_fastq_conversion(item, config):
+    """Check if an item needs conversion to fastq files.
+    """
+    files = item.get("files", [])
+    if isinstance(files, basestring):
+        files = [files]
+    for f in files:
+        if f.endswith(".bam") and _pipeline_needs_fastq(config, item):
+            return True
+    return False
+
 def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
                     config=None, dirs=None):
     """Retrieve fastq files for the given lane, ready to process.

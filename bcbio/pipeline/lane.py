@@ -7,12 +7,30 @@ from bcbio import utils, broad
 from bcbio.log import logger
 from bcbio.bam import callable
 from bcbio.bam.trim import brun_trim_fastq, trim_read_through
-from bcbio.pipeline.fastq import get_fastq_files
+from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
 from bcbio.pipeline import merge, shared, sample
 from bcbio.ngsalign.split import split_read_files
 from bcbio.variation import recalibrate
+
+def _item_needs_compute(lanes):
+    """Determine if any item needs computing resources to spin up a cluster.
+    """
+    for lane_items, _, _, _, config in lanes:
+        # check if multiplexed
+        if len(lane_items) > 1 or lane_items[0]["barcode_id"] is not None:
+            return True
+        # check if we need to process the input by splitting or conversion
+        item = lane_items[0]
+        config = shared.update_config_w_custom(config, item)
+        split_size = config.get("distributed", {}).get("align_split_size",
+                                                   config["algorithm"].get("align_split_size", None))
+        if split_size is not None:
+            return True
+        if needs_fastq_conversion(item, config):
+            return True
+    return False
 
 def _prep_fastq_files(item, bc_files, dirs, config):
     """Potentially prepare input FASTQ files for processing.
@@ -25,6 +43,15 @@ def _prep_fastq_files(item, bc_files, dirs, config):
         return split_read_files(fastq1, fastq2, item, split_size, split_dir, dirs, config)
     else:
         return [[fastq1, fastq2, None]]
+
+def process_all_lanes(lanes, run_parallel):
+    """Process all input lanes, avoiding starting a cluster if not needed.
+    """
+    lanes = list(lanes)
+    if _item_needs_compute(lanes):
+        return run_parallel("process_lane", lanes)
+    else:
+        return [apply(process_lane, xs)[0] for xs in lanes]
 
 def process_lane(lane_items, fc_name, fc_date, dirs, config):
     """Prepare lanes, potentially splitting based on barcodes.

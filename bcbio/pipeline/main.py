@@ -16,7 +16,7 @@ from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
-from bcbio.pipeline import region
+from bcbio.pipeline import lane, region
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
@@ -45,7 +45,7 @@ def run_main(config, config_file, work_dir, parallel,
     run_items = add_multiplex_across_lanes(run_info["details"],
                                            dirs["fastq"], fc_name)
     lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
-    lane_items = run_parallel("process_lane", lanes)
+    lane_items = lane.process_all_lanes(lanes, run_parallel)
     pipelines = _pair_lanes_with_pipelines(lane_items)
     for pipeline, pipeline_items in pipelines.items():
         for xs in pipeline.run(config, config_file, run_parallel, dirs, pipeline_items):
