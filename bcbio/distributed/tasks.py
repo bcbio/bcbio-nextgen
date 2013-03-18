@@ -4,7 +4,7 @@ import time
 
 from celery.task import task
 
-from bcbio.pipeline import sample, lane, toplevel, storage, shared, variation
+from bcbio.pipeline import sample, lane, qcsummary, toplevel, storage, shared, variation
 from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
 
 # Global configuration for tasks in the main celeryconfig module
@@ -56,8 +56,8 @@ def realign_sample(*args):
     return realign.realign_sample(*args)
 
 @task
-def process_sample(*args):
-    return sample.process_sample(*args)
+def pipeline_summary(*args):
+    return qcsummary.pipeline_summary(*args)
 
 @task
 def generate_transcript_counts(*args):

@@ -2,8 +2,8 @@
 """
 from bcbio import utils
 from bcbio.bam import callable
-from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import bamprep, realign, genotype, ensemble, recalibrate, multi
+from bcbio.pipeline import lane, qcsummary, sample, shared, variation
+from bcbio.variation import bamprep, realign, genotype, ensemble, multi, recalibrate
 
 @utils.map_wrap
 def process_lane(*args):
@@ -50,8 +50,8 @@ def postprocess_variants(*args):
     return variation.postprocess_variants(*args)
 
 @utils.map_wrap
-def process_sample(*args):
-    return sample.process_sample(*args)
+def pipeline_summary(*args):
+    return qcsummary.pipeline_summary(*args)
 
 @utils.map_wrap
 def generate_transcript_counts(*args):

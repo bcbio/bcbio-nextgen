@@ -15,10 +15,13 @@ from bcbio import utils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 
+def _has_ensemble(data):
+    return len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble")
+
 def combine_calls(data):
     """Combine multiple callsets into a final set of merged calls.
     """
-    if len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble"):
+    if _has_ensemble(data):
         logger.info("Ensemble consensus calls for {0}: {1}".format(
             ",".join(x["variantcaller"] for x in data["variants"]), data["work_bam"]))
         sample = data["name"][-1].replace(" ", "_")
@@ -29,6 +32,19 @@ def combine_calls(data):
         data["variants"].insert(0, callinfo)
         _write_config_file(data, sample, base_dir, "compare")
     return [[data]]
+
+def combine_calls_parallel(samples, run_parallel):
+    """Combine calls using Ensemble approach, skipping cluster creation if nothing to do.
+    """
+    need_combine = False
+    for data in samples:
+        if _has_ensemble(data[0]):
+            need_combine = True
+            break
+    if need_combine:
+        return run_parallel("combine_calls", samples)
+    else:
+        return samples
 
 def _run_bcbio_variation(config_file, base_dir, sample, data):
     tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))

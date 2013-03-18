@@ -4,8 +4,8 @@ import contextlib
 
 from IPython.parallel import require
 
-from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import bamprep, realign, genotype, ensemble, recalibrate, multi
+from bcbio.pipeline import sample, lane, qcsummary, shared, variation
+from bcbio.variation import bamprep, realign, genotype, ensemble, multi, recalibrate
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
@@ -90,10 +90,10 @@ def postprocess_variants(*args):
     with _setup_logging(args):
         return apply(variation.postprocess_variants, *args)
 
-@require(sample)
-def process_sample(*args):
+@require(qcsummary)
+def pipeline_summary(*args):
     with _setup_logging(args):
-        return apply(sample.process_sample, *args)
+        return apply(qcsummary.pipeline_summary, *args)
 
 @require(sample)
 def generate_transcript_counts(*args):

@@ -10,12 +10,35 @@ import xml.etree.ElementTree as ET
 import yaml
 from mako.template import Template
 
+from bcbio import utils
 from bcbio.broad import runner_from_config
 from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser
-from bcbio import utils
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 
 # ## High level functions to generate summary PDF
+
+def generate_parallel(samples, run_parallel):
+    """Provide parallel preparation of summary information for alignment and variant calling.
+    """
+    need_summary = False
+    for data in samples:
+        if data[0]["config"]["algorithm"].get("write_summary", True):
+            need_summary = True
+    if need_summary:
+        samples = run_parallel("pipeline_summary", samples)
+        write_project_summary(samples)
+    return samples
+
+def pipeline_summary(data):
+    """Provide summary information on processing sample.
+    """
+    if data["sam_ref"] is not None:
+        logger.info("Generating summary files: %s" % str(data["name"]))
+        data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
+                                                 data["sam_ref"], data["name"],
+                                                 data["config"], data["dirs"])
+    return [[data]]
 
 def generate_align_summary(bam_file, is_paired, sam_ref, sample_name,
                            config, dirs):

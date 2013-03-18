@@ -15,12 +15,11 @@ from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
-from bcbio.pipeline.qcsummary import write_metrics, write_project_summary
-from bcbio.pipeline import lane, region
+from bcbio.pipeline import lane, region, qcsummary
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
-from bcbio.variation import recalibrate
+from bcbio.variation import ensemble, recalibrate
 
 def run_main(config, config_file, work_dir, parallel,
          fc_dir=None, run_info_yaml=None):
@@ -51,7 +50,7 @@ def run_main(config, config_file, work_dir, parallel,
         for xs in pipeline.run(config, config_file, run_parallel, dirs, pipeline_items):
             assert len(xs) == 1
             upload.from_sample(xs[0])
-    write_metrics(run_info, fc_name, fc_date, dirs)
+    qcsummary.write_metrics(run_info, fc_name, fc_date, dirs)
 
 # ## Utility functions
 
@@ -153,11 +152,10 @@ class VariantPipeline(AbstractPipeline):
         samples = parallel_variantcall(samples, run_parallel)
         samples = run_parallel("postprocess_variants", samples)
         samples = combine_multiple_callers(samples)
+        samples = ensemble.combine_calls_parallel(samples, run_parallel)
         samples = run_parallel("detect_sv", samples)
-        samples = run_parallel("combine_calls", samples)
-        samples = run_parallel("process_sample", samples)
+        samples = qcsummary.generate_parallel(samples, run_parallel)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
-        write_project_summary(samples)
         return samples
 
 class Variant2Pipeline(AbstractPipeline):
@@ -178,7 +176,8 @@ class Variant2Pipeline(AbstractPipeline):
         samples = region.parallel_variantcall_region(samples, run_parallel)
         samples = run_parallel("postprocess_variants", samples)
         samples = combine_multiple_callers(samples)
-        samples = run_parallel("combine_calls", samples)
+        samples = ensemble.combine_calls_parallel(samples, run_parallel)
+        samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
 
 class SNPCallingPipeline(VariantPipeline):
@@ -204,7 +203,7 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("merge_sample", samples)
         samples = run_parallel("generate_transcript_counts", samples)
         run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
-        write_project_summary(samples)
+        samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
 
 def _get_pipeline(lane_item):

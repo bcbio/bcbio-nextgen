@@ -11,7 +11,6 @@ from bcbio.utils import file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
-from bcbio.pipeline.qcsummary import generate_align_summary
 from bcbio.rnaseq.cufflinks import assemble_transcripts
 from bcbio.pipeline import shared
 from bcbio.rnaseq import count
@@ -37,17 +36,12 @@ def merge_sample(data):
 
 # ## General processing
 
-def process_sample(data):
+def parallel_transcript_assemble(data):
     """Finalize processing for a sample, potentially multiplexed.
     """
     if data["config"]["algorithm"].get("transcript_assemble", False):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
                                                data["config"])
-    if data["sam_ref"] is not None:
-        logger.info("Generating summary files: %s" % str(data["name"]))
-        data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
-                                                 data["sam_ref"], data["name"],
-                                                 data["config"], data["dirs"])
     return [[data]]
 
 def generate_transcript_counts(data):

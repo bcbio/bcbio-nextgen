@@ -29,8 +29,11 @@ class PicardMetricsParser(object):
         """
         with open(align_metrics) as in_handle:
             align_vals = self._parse_align_metrics(in_handle)
-        with open(dup_metrics) as in_handle:
-            dup_vals = self._parse_dup_metrics(in_handle)
+        if dup_metrics:
+            with open(dup_metrics) as in_handle:
+                dup_vals = self._parse_dup_metrics(in_handle)
+        else:
+            dup_vals = {}
         (insert_vals, hybrid_vals, rnaseq_vals) = (None, None, None)
         if insert_metrics and file_exists(insert_metrics):
             with open(insert_metrics) as in_handle:
@@ -76,7 +79,7 @@ class PicardMetricsParser(object):
         paired = insert_vals is not None
 
         total = align_vals["TOTAL_READS"]
-        dup_total = int(dup_vals["READ_PAIRS_EXAMINED"])
+        dup_total = int(dup_vals.get("READ_PAIRS_EXAMINED", 0))
         align_total = int(align_vals["PF_READS_ALIGNED"])
         out.append(("Total", _add_commas(str(total)),
                     ("paired" if paired else "")))
@@ -87,12 +90,13 @@ class PicardMetricsParser(object):
                                            align_vals["READS_ALIGNED_IN_PAIRS"],
                                            total))
             align_total = int(align_vals["READS_ALIGNED_IN_PAIRS"])
-            if align_total != dup_total:
-                out.append(("Alignment combinations",
-                            _add_commas(str(dup_total)), ""))
-            out.append(self._count_percent("Pair duplicates",
-                                           dup_vals["READ_PAIR_DUPLICATES"],
-                                           dup_total))
+            if dup_total > 0:
+                if align_total != dup_total:
+                    out.append(("Alignment combinations",
+                                _add_commas(str(dup_total)), ""))
+                out.append(self._count_percent("Pair duplicates",
+                                               dup_vals["READ_PAIR_DUPLICATES"],
+                                               dup_total))
             std = insert_vals.get("STANDARD_DEVIATION", "?")
             std_dev = "+/- %.1f" % float(std.replace(",", ".")) if (std and std != "?") else ""
             out.append(("Insert size",
@@ -313,7 +317,7 @@ class PicardMetrics(object):
             assert len(metrics) > 0, "Appear to have deduplication but did not find metrics file"
             return align_bam, metrics[0]
         else:
-            return self._picard.run_fn("picard_mark_duplicates", align_bam)
+            return align_bam, None
 
     def _check_metrics_file(self, bam_name, metrics_ext):
         """Check for an existing metrics file for the given BAM.
