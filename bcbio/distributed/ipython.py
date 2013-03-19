@@ -50,7 +50,7 @@ class BcbioLSFControllerLauncher(launcher.LSFControllerLauncher):
     default_template = traitlets.Unicode("""#!/bin/sh
 #BSUB -J bcbio-ipcontroller
 #BSUB -oo bcbio-ipcontroller.bsub.%%J
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=20 --scheme=pure
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=5 --scheme=pure
     """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioLSFControllerLauncher, self).start()
@@ -82,7 +82,7 @@ class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
     default_template = traitlets.Unicode(u"""#$ -V
 #$ -S /bin/sh
 #$ -N ipcontroller
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=20 --scheme=pure
+%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=5 --scheme=pure
 """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
     def start(self):
         return super(BcbioSGEControllerLauncher, self).start()
