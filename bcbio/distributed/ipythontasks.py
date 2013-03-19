@@ -55,6 +55,11 @@ def merge_sample(*args):
         return apply(sample.merge_sample, *args)
 
 @require(sample)
+def delayed_bam_merge(*args):
+    with _setup_logging(args):
+        return apply(sample.delayed_bam_merge, *args)
+
+@require(sample)
 def recalibrate_sample(*args):
     with _setup_logging(args):
         return apply(sample.recalibrate_sample, *args)

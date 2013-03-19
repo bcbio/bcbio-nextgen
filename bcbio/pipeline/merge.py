@@ -58,7 +58,7 @@ def organize_samples(items, dirs, config_file):
     out = [[x] for x in out]
     return out
 
-def merge_bam_files(bam_files, work_dir, config, batch=0):
+def merge_bam_files(bam_files, work_dir, config, batch=0, out_file=None):
     """Merge multiple BAM files from a sample into a single BAM for processing.
 
     Avoids too many open file issues by merging large numbers of files in batches.
@@ -67,14 +67,15 @@ def merge_bam_files(bam_files, work_dir, config, batch=0):
     bam_files.sort()
     i = 1
     while len(bam_files) > max_merge:
-        bam_files = [merge_bam_files(xs, work_dir, config, batch + i)
+        bam_files = [merge_bam_files(xs, work_dir, config, batch=batch + i)
                      for xs in utils.partition_all(max_merge, bam_files)]
         i += 1
     if batch > 0:
         out_dir = utils.safe_makedir(os.path.join(work_dir, "batchmerge%s" % batch))
     else:
         out_dir = work_dir
-    out_file = os.path.join(out_dir, os.path.basename(sorted(bam_files)[0]))
+    if out_file is None:
+        out_file = os.path.join(out_dir, os.path.basename(sorted(bam_files)[0]))
     picard = broad.runner_from_config(config)
     if len(bam_files) == 1:
         if not os.path.exists(out_file):
@@ -83,4 +84,5 @@ def merge_bam_files(bam_files, work_dir, config, batch=0):
         picard.run_fn("picard_merge", bam_files, out_file)
         for b in bam_files:
             utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
+    picard.run_fn("picard_index", out_file)
     return out_file

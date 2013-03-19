@@ -43,11 +43,14 @@ def _add_meta(xs, sample):
 def _get_files_variantcall(sample):
     """Return output files for the variant calling pipeline.
     """
-    out = [{"path": sample["summary"]["pdf"],
-            "type": "pdf",
-            "ext": "summary"}]
+    out = []
     algorithm = sample["config"]["algorithm"]
-    if algorithm["aligner"] or algorithm["realign"] or algorithm["recalibrate"]:
+    if algorithm.get("write_summary", True):
+        out = [{"path": sample["summary"]["pdf"],
+                "type": "pdf",
+                "ext": "summary"}]
+    if ((algorithm["aligner"] or algorithm["realign"] or algorithm["recalibrate"])
+          and algorithm.get("merge_bamprep", True)):
         out.append({"path": sample["work_bam"],
                     "type": "bam",
                     "ext": "ready"})

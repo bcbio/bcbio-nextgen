@@ -15,6 +15,8 @@ from bcbio.rnaseq.cufflinks import assemble_transcripts
 from bcbio.pipeline import shared
 from bcbio.rnaseq import count
 
+# ## Merging
+
 def merge_sample(data):
     """Merge fastq and BAM files for multiple samples.
     """
@@ -33,6 +35,22 @@ def merge_sample(data):
               "work_bam": sort_bam, "fastq1": fastq1, "fastq2": fastq2,
               "dirs": data["dirs"], "config": config,
               "config_file": data["config_file"]}]]
+
+def delayed_bam_merge(data):
+    """Perform a merge on previously prepped files, delayed in processing.
+    """
+    if data.get("combine"):
+        assert len(data["combine"].keys()) == 1
+        file_key = data["combine"].keys()[0]
+        in_files = list(set([data[file_key]] + data["combine"][file_key].get("extras", [])))
+        out_file = data["combine"][file_key]["out"]
+        logger.info("Combining BAM files to %s" % out_file)
+        merged_file = merge_bam_files(in_files, os.path.dirname(out_file), data["config"],
+                                      out_file=out_file)
+        if data.has_key("region"):
+            del data["region"]
+        data[file_key] = merged_file
+    return [[data]]
 
 # ## General processing
 

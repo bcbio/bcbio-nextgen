@@ -107,6 +107,9 @@ Alignment
 -  ``quality_format`` Quality format of fastq inputs [illumina,
    standard]
 -  ``write_summary`` Write a PDF summary of results [true, false]
+-  ``merge_bamprep`` Merge regional BAM prepped files into a final
+   prepared BAM. false avoids the time consuming merge when you only
+   want variant calls [true, false]
 
 Experimental information
 ========================
@@ -144,6 +147,14 @@ The dbSNP and training files are from the `GATK resource bundle`_. These
 are inputs into the training models for recalibration. The automated
 `CloudBioLinux`_ data scripts will download and install these in the
 variation subdirectory relative to the genome files.
+
+Parallelization
+===============
+
+- ``nomap_split_size`` Unmapped base pair regions required to split
+  analysis into blocks. Creates islands of mapped reads surrounded by
+  unmapped (or N) regions, allowing each mapped region to run in
+  parallel.
 
 Ensemble variant calling
 ========================

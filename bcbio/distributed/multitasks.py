@@ -26,6 +26,10 @@ def merge_sample(*args):
     return sample.merge_sample(*args)
 
 @utils.map_wrap
+def delayed_bam_merge(*args):
+    return sample.delayed_bam_merge(*args)
+
+@utils.map_wrap
 def piped_bamprep(*args):
     return bamprep.piped_bamprep(*args)
 

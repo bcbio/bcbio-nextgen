@@ -177,6 +177,7 @@ class Variant2Pipeline(AbstractPipeline):
         samples = run_parallel("postprocess_variants", samples)
         samples = combine_multiple_callers(samples)
         samples = ensemble.combine_calls_parallel(samples, run_parallel)
+        samples = region.delayed_bamprep_merge(samples, run_parallel)
         samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
 

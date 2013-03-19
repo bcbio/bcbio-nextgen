@@ -1,6 +1,6 @@
 # upload:
-#   method: galaxy
 #   dir: upload
+#   method: galaxy
 #   galaxy_url: http://localhost:8080
 #   galaxy_api_key: 57c5786d6a6665e5afc045d73ef3ee94
 #   galaxy_library: test

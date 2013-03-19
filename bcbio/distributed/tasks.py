@@ -43,6 +43,10 @@ def process_alignment(*args):
 def merge_sample(*args):
     return sample.merge_sample(*args)
 
+@tasks
+def delayed_bam_merge(*args):
+    return sample.delayed_bam_merge(*args)
+
 @task
 def prep_recal(*args):
     return recalibrate.prep_recal(*args)
