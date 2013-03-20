@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(name = "bcbio-nextgen",
-      version = "0.6.2a",
+      version = "0.6.2",
       author = "Brad Chapman",
       author_email = "chapmanb@50mail.com",
       description = "Best-practice pipelines for fully automated high throughput sequencing analysis",
@@ -35,7 +35,7 @@ setup(name = "bcbio-nextgen",
           "fabric >= 1.5",
           "pyzmq == 2.2.0.1",
           "ipython >= 0.13.1",
-          "bioblend >= 0.2.1",
+          "bioblend >= 0.2.2",
           "pybedtools >= 0.6.2",
           "py_descriptive_statistics >= 0.2",
           "paramiko >= 1.9.0",
