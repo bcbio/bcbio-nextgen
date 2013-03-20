@@ -54,6 +54,10 @@ def _get_files_variantcall(sample):
         out.append({"path": sample["work_bam"],
                     "type": "bam",
                     "ext": "ready"})
+        if os.path.exists(sample["work_bam"] + ".bai"):
+            out.append({"path": sample["work_bam"] + ".bai",
+                        "type": "bai",
+                        "ext": "ready"})
     for x in sample["variants"]:
         out.append({"path": x["vrn_file"],
                     "type": "vcf",

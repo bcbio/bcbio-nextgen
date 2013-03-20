@@ -120,6 +120,8 @@ def piped_bamprep(data, region=None, out_file=None):
             with utils.curdir_tmpdir() as tmp_dir:
                 _piped_bamprep_region(data, region, out_file, tmp_dir)
         prep_bam = out_file
+    broad_runner = broad.runner_from_config(data["config"])
+    broad_runner.run_fn("picard_index", prep_bam)
     data["work_bam"] = prep_bam
     data["region"] = region
     return [data]
