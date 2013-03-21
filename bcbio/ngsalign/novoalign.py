@@ -15,6 +15,9 @@ from bcbio.distributed.transaction import file_transaction
 
 # ## BAM realignment
 
+def get_rg_info(names):
+    return r"@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}".format(**names)
+
 def align_bam(in_bam, ref_file, names, align_dir, config):
     """Perform realignment of input BAM file, handling sorting of input/output with novosort.
 
@@ -35,7 +38,7 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
     if not file_exists(out_file):
         with curdir_tmpdir(base_dir=align_dir) as work_dir:
             with file_transaction(out_file) as tx_out_file:
-                rg_info = r"@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}".format(**names)
+                rg_info = get_rg_info(names)
                 cmd = ("{novosort} -c {num_cores} -m {max_mem} --compression 0 "
                        " -n -t {work_dir} {in_bam} "
                        "| {novoalign} -o SAM '{rg_info}' -d {ref_file} -f /dev/stdin "

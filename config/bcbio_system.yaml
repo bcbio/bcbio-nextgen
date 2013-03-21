@@ -56,20 +56,20 @@ resources:
   ucsc_bigwig:
     memory: 36g
   bwa:
-    cores:
     cmd: bwa
+    cores: 16
+    memory: 2G
   novoalign:
     cores: 16
-    memory: 4G
+    memory: 2G
   gatk:
-    jvm_opts: ["-Xms2g", "-Xmx4g"]
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/gatk
-    cores: 12
   picard:
-    jvm_opts: ["-Xms2g", "-Xmx4g"]
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/picard
   snpEff:
-    jvm_opts: ["-Xms2g", "-Xmx6g"]
+    jvm_opts: ["-Xms1g", "-Xmx6g"]
     dir: /usr/share/java/snpeff
   bcbio_variation:
     dir: /usr/share/java/bcbio_variation

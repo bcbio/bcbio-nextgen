@@ -5,10 +5,43 @@ import subprocess
 
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
-from bcbio.utils import file_exists
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.ngsalign import novoalign
 
 galaxy_location_file = "bwa_index.loc"
+
+def align_bam(in_bam, ref_file, names, align_dir, config):
+    """Perform direct alignment of an input BAM file with BWA using pipes.
+
+    This avoids disk IO by piping between processes:
+     - samtools sort of input BAM to queryname
+     - bedtools conversion to interleaved FASTQ
+     - bwa-mem alignment
+     - samtools conversion to BAM
+     - samtools sort to coordinate
+    """
+    out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    samtools = config_utils.get_program("samtools", config)
+    bedtools = config_utils.get_program("bedtools", config)
+    bwa = config_utils.get_program("bwa", config)
+    resources = config_utils.get_resources("bwa", config)
+    num_cores = config["algorithm"].get("num_cores", 1)
+    max_mem = resources.get("memory", "2G")
+    rg_info = novoalign.get_rg_info(names)
+    if not utils.file_exists(out_file):
+        with utils.curdir_tmpdir() as work_dir:
+            with file_transaction(out_file) as tx_out_file:
+                tx_out_prefix = os.path.splitext(tx_out_file)[0]
+                prefix1 = "%s-in1" % tx_out_prefix
+                cmd = ("{samtools} sort -n -o -l 0 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
+                       "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
+                       "| {bwa} mem -p -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} - "
+                       "| {samtools} view -b -S -u - "
+                       "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
+                print cmd.format(**locals())
+                subprocess.check_call(cmd.format(**locals()), shell=True)
+    return out_file
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           rg_name=None):
@@ -18,11 +51,11 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     sai2_file = (os.path.join(align_dir, "%s_2.sai" % out_base)
                  if pair_file else None)
     sam_file = os.path.join(align_dir, "%s.sam" % out_base)
-    if not file_exists(sam_file):
-        if not file_exists(sai1_file):
+    if not utils.file_exists(sam_file):
+        if not utils.file_exists(sai1_file):
             with file_transaction(sai1_file) as tx_sai1_file:
                 _run_bwa_align(fastq_file, ref_file, tx_sai1_file, config)
-        if sai2_file and not file_exists(sai2_file):
+        if sai2_file and not utils.file_exists(sai2_file):
             with file_transaction(sai2_file) as tx_sai2_file:
                 _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
         align_type = "sampe" if sai2_file else "samse"

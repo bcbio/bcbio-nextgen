@@ -29,7 +29,7 @@ base_location_file = "sam_fa_indices.loc"
 _tools = {
     "bowtie": NgsTool(bowtie.align, None, bowtie.galaxy_location_file, None),
     "bowtie2": NgsTool(bowtie2.align, None, base_location_file, bowtie2.remap_index_fn),
-    "bwa": NgsTool(bwa.align, None, bwa.galaxy_location_file, None),
+    "bwa": NgsTool(bwa.align, bwa.align_bam, bwa.galaxy_location_file, None),
     "mosaik": NgsTool(mosaik.align, None, mosaik.galaxy_location_file, None),
     "novoalign": NgsTool(novoalign.align, novoalign.align_bam, base_location_file, novoalign.remap_index_fn),
     "tophat": NgsTool(tophat.align, None, base_location_file, bowtie2.remap_index_fn),

@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(name = "bcbio-nextgen",
-      version = "0.6.2",
+      version = "0.6.3a",
       author = "Brad Chapman",
       author_email = "chapmanb@50mail.com",
       description = "Best-practice pipelines for fully automated high throughput sequencing analysis",
