@@ -1,7 +1,8 @@
 """Top level driver functionality for processing a sequencing lane.
 """
-import os
 import copy
+import os
+import re
 
 from bcbio import utils, broad
 from bcbio.log import logger
@@ -10,7 +11,7 @@ from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
-from bcbio.pipeline import merge, shared, sample
+from bcbio.pipeline import cleanbam, merge, shared, sample
 from bcbio.ngsalign.split import split_read_files
 from bcbio.variation import recalibrate
 
@@ -124,23 +125,38 @@ def trim_lane(fastq1, fastq2, info, lane_name, lane_desc, dirs, config):
 
 # ## Alignment
 
+def rg_names(lane_name, lane_desc, config):
+    return {"rg": lane_name.split("_")[0],
+            "sample": lane_desc,
+            "lane": lane_name,
+            "pl": config["algorithm"]["platform"].lower(),
+            "pu": (lane_name.rsplit("_", 1)[0]
+                   if re.search(r"_s\d+$", lane_name) is not None
+                   else lane_name)}
+
 def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
                       dirs, config):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
     aligner = config["algorithm"].get("aligner", None)
     out_bam = ""
+    names = rg_names(lane_name, lane_desc, config)
+    _, ref_file = get_genome_ref(info["genome_build"], None, dirs["galaxy"])
     if os.path.exists(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (lane_name, aligner))
-        out_bam, ref_file = align_to_sort_bam(fastq1, fastq2, info["genome_build"], aligner,
-                                              lane_name, lane_desc, dirs, config)
+        out_bam, ref_file = align_to_sort_bam(fastq1, fastq2, names,
+                                              info["genome_build"], aligner,
+                                              dirs, config)
     elif os.path.exists(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
+        bamclean = config["algorithm"].get("bam_clean")
         if sort_method:
             runner = broad.runner_from_config(config)
             out_file = os.path.join(dirs["work"], "{}-sort.bam".format(
                 os.path.splitext(os.path.basename(fastq1))[0]))
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
+        elif bamclean is True or bamclean == "picard":
+            out_bam = cleanbam.picard_prep(fastq1, names, ref_file, dirs, config)
         else:
             out_bam = fastq1
     return [{"fastq": [fastq1, fastq2], "work_bam": out_bam, "info": info,

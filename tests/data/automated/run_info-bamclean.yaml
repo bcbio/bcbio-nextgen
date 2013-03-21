@@ -1,0 +1,13 @@
+details:
+  - algorithm:
+      aligner: false
+      bam_clean: picard
+      recalibrate: true
+      realign: true
+      variantcaller: false
+      quality_format: Standard
+    analysis: variant2
+    description: Test1
+    genome_build: hg19
+    lane: 8
+    files: [8_100326_FC6107FAAXX.bam]

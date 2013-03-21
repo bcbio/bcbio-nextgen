@@ -3,7 +3,6 @@
 This works as part of the lane/flowcell process step of the pipeline.
 """
 import os
-import re
 from collections import namedtuple
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
@@ -38,18 +37,11 @@ _tools = {
 
 metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}
 
-def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
-                      lane_name, sample_name, dirs, config, dir_ext=""):
+def align_to_sort_bam(fastq1, fastq2, names, genome_build, aligner,
+                      dirs, config, dir_ext=""):
     """Align to the named genome build, returning a sorted BAM file.
     """
-    names = {"rg": lane_name.split("_")[0],
-             "sample": sample_name,
-             "lane": lane_name,
-             "pl": config["algorithm"]["platform"].lower(),
-             "pu": (lane_name.rsplit("_", 1)[0]
-                    if re.search(r"_s\d+$", lane_name) is not None
-                    else lane_name)}
-    align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", sample_name, dir_ext))
+    align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", names["sample"], dir_ext))
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     if fastq1.endswith(".bam"):
         out_bam = _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)

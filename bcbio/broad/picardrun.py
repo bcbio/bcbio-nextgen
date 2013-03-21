@@ -78,6 +78,39 @@ def picard_index(picard, in_bam):
             picard.run("BuildBamIndex", opts)
     return index_file
 
+def picard_reorder(picard, in_bam, ref_file, out_file):
+    """Reorder BAM file to match reference file ordering.
+    """
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("REFERENCE", ref_file),
+                        ("ALLOW_INCOMPLETE_DICT_CONCORDANCE", "true"),
+                        ("TMP_DIR", tmp_dir)]
+                picard.run("ReorderSam", opts)
+    return out_file
+
+def picard_fix_rgs(picard, in_bam, names):
+    """Add read group information to BAM files and coordinate sort.
+    """
+    out_file = "%s-fixrgs.bam" % os.path.splitext(in_bam)[0]
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("SORT_ORDER", "coordinate"),
+                        ("RGID", names["rg"]),
+                        ("RGLB", names.get("library", "unknown")),
+                        ("RGPL", names["pl"]),
+                        ("RGPU", names["pu"]),
+                        ("RGSM", names["sample"]),
+                        ("TMP_DIR", tmp_dir)]
+                picard.run("AddOrReplaceReadGroups", opts)
+    return out_file
+
 def picard_index_ref(picard, ref_file):
     """Provide a Picard style dict index file for a reference genome.
     """

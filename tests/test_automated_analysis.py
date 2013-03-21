@@ -40,7 +40,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
                          DlInfo("genomes_automated_test.tar.gz", "genomes", 8),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
-                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 3)]
+                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 4)]
         for dl in download_data:
             url = "http://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
             dirname = os.path.join(data_dir, os.pardir,
@@ -123,7 +123,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=2)
-    @attr(devel=True)
     def test_5_bam(self):
         """Allow BAM files as input to pipeline.
         """
@@ -133,4 +132,17 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
+            subprocess.check_call(cl)
+
+    @attr(speed=2)
+    @attr(devel=True)
+    def test_6_bamclean(self):
+        """Clean problem BAM input files that do not require alignment.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir():
+            cl = ["bcbio_nextgen.py",
+                  self._get_post_process_yaml(),
+                  os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
+                  os.path.join(self.data_dir, "run_info-bamclean.yaml")]
             subprocess.check_call(cl)

@@ -91,6 +91,10 @@ Alignment
 
 -  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign,
    false]
+-  ``bam_clean`` Clean an input BAM when skipping alignment step. This
+   handles adding read groups, sorting to a reference genome and
+   filtering problem records that cause problems with GATK. Set to
+   ``picard`` to do Picard/GATK based cleaning.
 -  ``bam_sort`` Allow sorting of input BAMs when skipping alignment
    step (``aligner`` set to false). Options are coordinate or
    queryname. For additional processing through standard pipelines

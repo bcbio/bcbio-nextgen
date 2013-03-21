@@ -500,6 +500,8 @@ def handle_multiple_variantcallers(data):
     callers = get_variantcaller(data[0])
     if isinstance(callers, basestring):
         return [data]
+    elif not callers:
+        return []
     else:
         out = []
         for caller in callers:
