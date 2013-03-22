@@ -69,7 +69,10 @@ def calc_callable_loci(data, region=None, out_file=None):
                 broad_runner.run_gatk(params)
             else:
                 with open(out_file, "w") as out_handle:
-                    out_handle.write("")
+                    for tregion in get_ref_bedtool(data["sam_ref"], data["config"]):
+                        if tregion.chrom == region:
+                            out_handle.write("%s\t%s\t%s\tNO_COVERAGE\n" %
+                                             (tregion.chrom, tregion.start, tregion.stop))
     return [{"callable_bed": out_file, "config": data["config"]}]
 
 def get_ref_bedtool(ref_file, config):
