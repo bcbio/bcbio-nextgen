@@ -143,8 +143,8 @@ def subset_variant_regions(variant_regions, region, out_file):
         items = []
         with open(variant_regions) as in_handle:
             for line in in_handle:
-                if line.startswith(region) and line.split("\t")[0] == region:
-                    start = int(line.split("\t")[1])
+                if line.startswith(region) and line.split()[0] == region:
+                    start = int(line.split()[1])
                     items.append((start, line))
         if len(items) > 0:
             if not os.path.exists(subset_file):

@@ -123,6 +123,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=2)
+    @attr(devel=True)
     def test_5_bam(self):
         """Allow BAM files as input to pipeline.
         """
@@ -135,7 +136,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=2)
-    @attr(devel=True)
     def test_6_bamclean(self):
         """Clean problem BAM input files that do not require alignment.
         """

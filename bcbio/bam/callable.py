@@ -24,15 +24,12 @@ from bcbio.pipeline import shared
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
     data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
-    if num_cores > 1:
-        parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
-        runner = parallel_runner(parallel, {}, config)
-        split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
-        out = parallel_split_combine([[data]], split_fn, runner,
-                                      "calc_callable_loci", "combine_bed",
-                                      "callable_bed", ["config"])[0]
-    else:
-        out = calc_callable_loci(data)
+    parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
+    runner = parallel_runner(parallel, {}, config)
+    split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
+    out = parallel_split_combine([[data]], split_fn, runner,
+                                  "calc_callable_loci", "combine_bed",
+                                  "callable_bed", ["config"])[0]
     return out[0]["callable_bed"]
 
 def combine_bed(in_files, out_file, config):
@@ -65,10 +62,14 @@ def calc_callable_loci(data, region=None, out_file=None):
                       "-I", data["work_bam"],
                       "--out", tx_out_file,
                       "--summary", out_summary]
-            region = shared.subset_variant_regions(variant_regions, region, tx_out_file)
-            if region:
-                params += ["-L", region]
-            broad_runner.run_gatk(params)
+            ready_region = shared.subset_variant_regions(variant_regions, region, tx_out_file)
+            if ready_region:
+                params += ["-L", ready_region]
+            if variant_regions and ready_region and os.path.isfile(ready_region):
+                broad_runner.run_gatk(params)
+            else:
+                with open(out_file, "w") as out_handle:
+                    out_handle.write("")
     return [{"callable_bed": out_file, "config": data["config"]}]
 
 def get_ref_bedtool(ref_file, config):
