@@ -123,6 +123,11 @@ def _add_config_regions(nblock_regions, ref_regions, config):
     input_regions_bed = config["algorithm"].get("variant_regions", None)
     if input_regions_bed:
         input_regions = pybedtools.BedTool(input_regions_bed)
+        # work around problem with single region not subtracted correctly.
+        if len(input_regions) == 1:
+            str_regions = str(input_regions[0]).strip()
+            input_regions = pybedtools.BedTool("%s\n%s" % (str_regions, str_regions),
+                                               from_string=True)
         input_nblock = ref_regions.subtract(input_regions)
         all_intervals = _combine_regions([input_nblock, nblock_regions], ref_regions)
         return all_intervals.merge()
