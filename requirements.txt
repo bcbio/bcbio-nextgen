@@ -10,6 +10,7 @@ Logbook==0.4.1
 Cython==0.17.4
 pysam==0.7.4
 fabric==1.5.2
+ipython-cluster-helper==0.1.1
 pyzmq==2.2.0.1
 ipython==0.13.1
 bioblend==0.2.2

@@ -4,189 +4,18 @@ Uses IPython parallel to setup a cluster and manage execution:
 
 http://ipython.org/ipython-doc/stable/parallel/index.html
 
-Borrowed from Rory Kirchner's Bipy cluster implementation:
+Cluster implementation from ipython-cluster-helper:
 
-https://github.com/roryk/bipy/blob/master/bipy/cluster/__init__.py
+https://github.com/roryk/ipython-cluster-helper
 """
 import os
 import copy
-import pipes
-import time
-import uuid
-import subprocess
-import contextlib
 
 from bcbio import utils
 from bcbio.log import setup_logging, logger
 from bcbio.pipeline import config_utils
 
-from IPython.parallel import Client
-from IPython.parallel.apps import launcher
-from IPython.utils import traitlets
-
-# ## Custom launchers
-
-timeout_params = ["--timeout=60", "--IPEngineApp.wait_for_url_file=960"]
-
-class BcbioLSFEngineSetLauncher(launcher.LSFEngineSetLauncher):
-    """Custom launcher handling heterogeneous clusters on LSF.
-    """
-    cores = traitlets.Integer(1, config=True)
-    default_template = traitlets.Unicode("""#!/bin/sh
-#BSUB -q {queue}
-#BSUB -J bcbio-ipengine[1-{n}]
-#BSUB -oo bcbio-ipengine.bsub.%%J
-#BSUB -n {cores}
-#BSUB -R "span[hosts=1]"
-%s %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-    """ % (' '.join(map(pipes.quote, launcher.ipengine_cmd_argv)),
-           ' '.join(timeout_params)))
-
-    def start(self, n):
-        self.context["cores"] = self.cores
-        return super(BcbioLSFEngineSetLauncher, self).start(n)
-
-class BcbioLSFControllerLauncher(launcher.LSFControllerLauncher):
-    default_template = traitlets.Unicode("""#!/bin/sh
-#BSUB -J bcbio-ipcontroller
-#BSUB -oo bcbio-ipcontroller.bsub.%%J
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=5 --scheme=pure
-    """%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
-    def start(self):
-        return super(BcbioLSFControllerLauncher, self).start()
-
-class BcbioSGEEngineSetLauncher(launcher.SGEEngineSetLauncher):
-    """Custom launcher handling heterogeneous clusters on SGE.
-    """
-    cores = traitlets.Integer(1, config=True)
-    pename = traitlets.Unicode("", config=True)
-    default_template = traitlets.Unicode("""#$ -V
-#$ -cwd
-#$ -b y
-#$ -j y
-#$ -S /bin/sh
-#$ -q {queue}
-#$ -N bcbio-ipengine
-#$ -t 1-{n}
-#$ -pe {pename} {cores}
-%s %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-"""% (' '.join(map(pipes.quote, launcher.ipengine_cmd_argv)),
-      ' '.join(timeout_params)))
-
-    def start(self, n):
-        self.context["cores"] = self.cores
-        self.context["pename"] = str(self.pename)
-        return super(BcbioSGEEngineSetLauncher, self).start(n)
-
-class BcbioSGEControllerLauncher(launcher.SGEControllerLauncher):
-    default_template = traitlets.Unicode(u"""#$ -V
-#$ -S /bin/sh
-#$ -N ipcontroller
-%s --ip=* --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}" --nodb --hwm=5 --scheme=pure
-"""%(' '.join(map(pipes.quote, launcher.ipcontroller_cmd_argv))))
-    def start(self):
-        return super(BcbioSGEControllerLauncher, self).start()
-
-def _find_parallel_environment():
-    """Find an SGE/OGE parallel environment for running multicore jobs.
-    """
-    for name in subprocess.check_output(["qconf", "-spl"]).strip().split():
-        if name:
-            for line in subprocess.check_output(["qconf", "-sp", name]).split("\n"):
-                if line.startswith("allocation_rule") and line.find("$pe_slots") >= 0:
-                    return name
-    raise ValueError("Could not find an SGE environment configured for parallel execution. " \
-                     "See %s for SGE setup instructions." %
-                     "https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment")
-
-# ## Control clusters
-
-def _start(parallel, profile, cluster_id):
-    """Starts cluster from commandline.
-    """
-    scheduler = parallel["scheduler"].upper()
-    ns = "bcbio.distributed.ipython"
-    engine_class = "Bcbio%sEngineSetLauncher" % scheduler
-    controller_class = "Bcbio%sControllerLauncher" % scheduler
-    args = launcher.ipcluster_cmd_argv + \
-        ["start",
-         "--daemonize=True",
-         "--IPClusterEngines.early_shutdown=240",
-         "--delay=10",
-         "--log-level=%s" % "WARN",
-         "--profile=%s" % profile,
-         #"--cluster-id=%s" % cluster_id,
-         "--n=%s" % parallel["num_jobs"],
-         "--%s.cores=%s" % (engine_class, parallel["cores_per_job"]),
-         "--IPClusterStart.controller_launcher_class=%s.%s" % (ns, controller_class),
-         "--IPClusterStart.engine_launcher_class=%s.%s" % (ns, engine_class),
-         "--%sLauncher.queue='%s'" % (scheduler, parallel["queue"]),
-         ]
-    if scheduler in ["SGE"]:
-        args += ["--%s.pename=%s" % (engine_class, _find_parallel_environment())]
-    subprocess.check_call(args)
-
-def _stop(profile, cluster_id):
-    subprocess.check_call(launcher.ipcluster_cmd_argv +
-                          ["stop", "--profile=%s" % profile,
-                           #"--cluster-id=%s" % cluster_id
-                          ])
-
-def _is_up(profile, cluster_id, n):
-    try:
-        #client = Client(profile=profile, cluster_id=cluster_id)
-        client = Client(profile=profile)
-        up = len(client.ids)
-        client.close()
-    except IOError, msg:
-        return False
-    else:
-        return up >= n
-
-@contextlib.contextmanager
-def cluster_view(parallel, config):
-    """Provide a view on an ipython cluster for processing.
-
-    parallel is a dictionary with:
-      - scheduler: The type of cluster to start (lsf, sge).
-      - num_jobs: Number of jobs to start.
-      - cores_per_job: The number of cores to use for each job.
-    """
-    delay = 10
-    max_delay = 960
-    max_tries = 10
-    profile = parallel["profile"]
-    cluster_id = str(uuid.uuid1())
-    num_tries = 0
-    while 1:
-        try:
-            _start(parallel, profile, cluster_id)
-            break
-        except subprocess.CalledProcessError:
-            if num_tries > max_tries:
-                raise
-            num_tries += 1
-            time.sleep(delay)
-    try:
-        client = None
-        slept = 0
-        while not _is_up(profile, cluster_id, parallel["num_jobs"]):
-            time.sleep(delay)
-            slept += delay
-            if slept > max_delay:
-                raise IOError("Cluster startup timed out.")
-        #client = Client(profile=profile, cluster_id=cluster_id)
-        client = Client(profile=profile)
-        # push config to all engines and force them to set up logging
-        client[:]['config'] = config
-        client[:].execute('from bcbio.log import setup_logging')
-        client[:].execute('setup_logging(config)')
-        client[:].execute('from bcbio.log import logger')
-        yield client.load_balanced_view()
-    finally:
-        if client:
-            client.close()
-        _stop(profile, cluster_id)
+from cluster_helper import cluster as ipython_cluster
 
 def dictadd(orig, k, v):
     """Imitates immutability by adding a key/value to a new dictionary.
@@ -288,7 +117,9 @@ def runner(parallel, fn_name, items, work_dir, config):
         logger.info("ipython: %s" % fn_name)
         if len(items) > 0:
             items = [add_cores_to_config(x, cores_per_job) for x in items]
-            with cluster_view(parallel, config) as view:
+            with ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
+                                              parallel["num_jobs"], parallel["cores_per_job"],
+                                              profile=parallel["profile"]) as view:
                 for data in view.map_sync(fn, items, track=False):
                     if data:
                         out.extend(data)
