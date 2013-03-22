@@ -49,7 +49,7 @@ def _get_files_variantcall(sample):
         out = [{"path": sample["summary"]["pdf"],
                 "type": "pdf",
                 "ext": "summary"}]
-    if ((algorithm["aligner"] or algorithm["realign"] or algorithm["recalibrate"])
+    if ((algorithm.get("aligner") or algorithm.get("realign") or algorithm.get("recalibrate"))
           and algorithm.get("merge_bamprep", True)):
         out.append({"path": sample["work_bam"],
                     "type": "bam",

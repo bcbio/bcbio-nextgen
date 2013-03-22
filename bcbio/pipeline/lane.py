@@ -134,6 +134,19 @@ def rg_names(lane_name, lane_desc, config):
                    if re.search(r"_s\d+$", lane_name) is not None
                    else lane_name)}
 
+def link_bam_file(orig_file, new_dir):
+    """Provide symlinks of BAM file and existing indexes.
+    """
+    new_dir = utils.safe_makedir(new_dir)
+    update_files = []
+    for fname in (orig_file, "%s.bai" % orig_file,
+                  "%s.bai" % os.path.splitext(orig_file)[0]):
+        if utils.file_exists(fname):
+            sym_file = os.path.join(new_dir, os.path.basename(fname))
+            os.symlink(fname, sym_file)
+            update_files.append(sym_file)
+    return update_files[0]
+
 def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
                       dirs, config):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
@@ -158,7 +171,8 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
         elif bamclean is True or bamclean == "picard":
             out_bam = cleanbam.picard_prep(fastq1, names, ref_file, dirs, config)
         else:
-            out_bam = fastq1
+            out_bam = link_bam_file(fastq1, os.path.join(dirs["work"], "prealign",
+                                                         names["sample"]))
     return [{"fastq": [fastq1, fastq2], "work_bam": out_bam, "info": info,
              "sam_ref": ref_file, "config": config}]
 
