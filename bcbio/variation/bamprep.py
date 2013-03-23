@@ -91,6 +91,7 @@ def _piped_bamprep_region(data, region, out_file, tmp_dir):
     """
     broad_runner = broad.runner_from_config(data["config"])
     algorithm = data["config"]["algorithm"]
+    dup_param = algorithm.get("mark_duplicates", True)
     realign_param = algorithm.get("realign", "gatk")
     realign_param = "gatk" if realign_param is True else realign_param
     cur_bam, cl = _piped_input_cl(data, region, tmp_dir, out_file, realign_param)
@@ -101,7 +102,8 @@ def _piped_bamprep_region(data, region, out_file, tmp_dir):
     else:
         raise NotImplementedError("Realignment method: %s" % realign_param)
     with file_transaction(out_file) as tx_out_file:
-        out_flag = "-o" if realign_param == "gatk" else ">"
+        out_flag = ("-o" if realign_param == "gatk" or (not realign_param and not dup_param)
+                    else ">")
         subprocess.check_call("{cl} {out_flag} {tx_out_file}".format(**locals()), shell=True)
         _cleanup_tempfiles(data, [cur_bam, prerecal_bam])
 
