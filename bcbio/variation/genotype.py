@@ -543,24 +543,23 @@ def variantcall_sample(data, region=None, out_file=None):
                   "cortex": cortex.run_cortex,
                   "samtools": samtools.run_samtools,
                   "varscan": varscan.run_varscan}
-    if data["config"]["algorithm"]["snpcall"]:
-        sam_ref = data["sam_ref"]
-        config = data["config"]
-        caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
-        if isinstance(data["work_bam"], basestring):
-            align_bams = [data["work_bam"]]
-        else:
-            align_bams = data["work_bam"]
-        call_vcf = caller_fn(align_bams, sam_ref, config,
-                             configured_ref_file("dbsnp", config, sam_ref),
-                             region, out_file)
-        if data["config"]["algorithm"].get("phasing", "gatk") == "gatk":
-            call_vcf = phasing.read_backed_phasing(call_vcf, align_bams, sam_ref, region, config)
-        if call_vcf != out_file:
-            for ext in ["", ".idx"]:
-                if os.path.exists(call_vcf + ext):
-                    shutil.move(call_vcf + ext, out_file + ext)
-            with open(call_vcf, "w") as out_handle:
-                out_handle.write("Moved to %s" % out_file)
-        data["vrn_file"] = out_file
+    sam_ref = data["sam_ref"]
+    config = data["config"]
+    caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
+    if isinstance(data["work_bam"], basestring):
+        align_bams = [data["work_bam"]]
+    else:
+        align_bams = data["work_bam"]
+    call_vcf = caller_fn(align_bams, sam_ref, config,
+                         configured_ref_file("dbsnp", config, sam_ref),
+                         region, out_file)
+    if data["config"]["algorithm"].get("phasing", "gatk") == "gatk":
+        call_vcf = phasing.read_backed_phasing(call_vcf, align_bams, sam_ref, region, config)
+    if call_vcf != out_file:
+        for ext in ["", ".idx"]:
+            if os.path.exists(call_vcf + ext):
+                shutil.move(call_vcf + ext, out_file + ext)
+        with open(call_vcf, "w") as out_handle:
+            out_handle.write("Moved to %s" % out_file)
+    data["vrn_file"] = out_file
     return [data]

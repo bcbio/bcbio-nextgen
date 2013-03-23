@@ -55,28 +55,29 @@ def _get_checkpoint_file(cdir, fn_name):
     cur_num += 1
     return fname
 
+def is_std_config_arg(x):
+    return (isinstance(x, dict) and x.has_key("algorithm") and x.has_key("resources"))
+
+def is_nested_config_arg(x):
+    return (isinstance(x, dict) and x.has_key("config") and
+            is_std_config_arg(x["config"]))
+
 def add_cores_to_config(args, cores_per_job):
     """Add information about available cores for a job to configuration.
     Ugly hack to update core information in a configuration dictionary.
     """
-    def _is_std_config(x):
-        return (isinstance(x, dict) and x.has_key("algorithm") and x.has_key("resources"))
-    def _is_nested_config(x):
-        return (isinstance(x, dict) and x.has_key("config") and
-                _is_std_config(x["config"]))
-
     new_i = None
     for i, arg in enumerate(args):
-        if _is_std_config(arg) or _is_nested_config(arg):
+        if is_std_config_arg(arg) or is_nested_config_arg(arg):
             new_i = i
             break
     if new_i is None:
         raise ValueError("Could not find configuration in args: %s" % args)
 
     new_arg = copy.deepcopy(args[new_i])
-    if _is_nested_config(new_arg):
+    if is_nested_config_arg(new_arg):
         new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
-    elif _is_std_config(new_arg):
+    elif is_std_config_arg(new_arg):
         new_arg["algorithm"]["num_cores"] = int(cores_per_job)
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)

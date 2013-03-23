@@ -4,23 +4,27 @@ import contextlib
 
 from IPython.parallel import require
 
+from bcbio.distributed import ipython
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
 from bcbio.variation import bamprep, realign, genotype, ensemble, multi, recalibrate
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
 def _setup_logging(args):
-    if len(args) > 0:
-        for check_i in [0, -1]:
-            config = args[0][check_i]
-            if isinstance(config, dict) and config.has_key("config"):
-                config = config["config"]
-                break
-            elif isinstance(config, dict) and config.has_key("algorithm"):
-                break
-            else:
-                config = None
+    config = None
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        args = args[0]
+    for arg in args:
+        if ipython.is_nested_config_arg(arg):
+            config = arg["config"]
+            break
+        elif ipython.is_std_config_arg(arg):
+            config = arg
+            break
+    if config is not None:
         setup_logging(config)
+    else:
+        raise NotImplementedError("No config in %s:" % args[0])
     try:
         yield None
     except:

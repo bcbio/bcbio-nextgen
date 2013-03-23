@@ -11,7 +11,8 @@ details:
       #realign: false
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
-      aligner: bwa
+      #aligner: bwa
+      aligner: novoalign
       #realign: gkno
       variantcaller: gatk
       #variantcaller: [gatk, freebayes]

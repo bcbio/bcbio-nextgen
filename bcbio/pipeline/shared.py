@@ -18,9 +18,9 @@ from bcbio.distributed.transaction import file_transaction
 def update_config_w_custom(config, lane_info):
     """Update the configuration for this lane if a custom analysis is specified.
     """
-    name_remaps = {"variant": ["SNP calling", "variant"],
-                   "SNP calling": ["SNP calling", "variant"],
-                   "variant2": ["variant"]}
+    name_remaps = {"variant": ["SNP calling", "variant", "variant2"],
+                   "SNP calling": ["SNP calling", "variant", "variant2"],
+                   "variant2": ["SNP calling", "variant", "variant2"]}
     config = copy.deepcopy(config)
     base_name = lane_info.get("analysis")
     for analysis_type in name_remaps.get(base_name, [base_name]):
