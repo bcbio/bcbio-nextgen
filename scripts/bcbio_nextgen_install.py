@@ -63,6 +63,7 @@ def install_bcbio_nextgen(requirements, datadir, tooldir, use_sudo):
         os.remove("virtualenv.py")
     pip_cmd = os.path.join(virtualenv_dir, "bin", "pip")
     subprocess.check_call([pip_cmd, "install", "--upgrade", "distribute"])
+    subprocess.check_call([pip_cmd, "install", "--upgrade", "cython"])
     subprocess.check_call([pip_cmd, "install", "-r", requirements])
     for script in ["bcbio_nextgen.py", "bam_to_wiggle.py"]:
         final_script = os.path.join(tooldir, "bin", script)
