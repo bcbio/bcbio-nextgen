@@ -73,7 +73,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
     plot_file = "%s-plots.pdf" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
-        if has_aligned_reads(dup_align_bam):
+        if has_aligned_reads(dup_align_bam, intervals):
             with curdir_tmpdir() as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
                     params = ["-T", "BaseRecalibrator",

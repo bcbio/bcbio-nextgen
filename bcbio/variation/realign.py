@@ -149,13 +149,28 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
 
 def has_aligned_reads(align_bam, region=None):
     """Check if the aligned BAM file has any reads in the region.
+
+    region can be a chromosome string ("chr22"),
+    a tuple region (("chr22", 1, 100)) or a file of regions.
     """
     has_items = False
+    if region is not None:
+        if os.path.isfile(region):
+            with open(region) as in_handle:
+                regions = [tuple(line.split()[:3]) for line in in_handle]
+        else:
+            regions = [region]
     with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
         if region is not None:
-            for item in cur_bam.fetch(region):
-                has_items = True
-                break
+            for region in regions:
+                if isinstance(region, basestring):
+                    for item in cur_bam.fetch(region):
+                        has_items = True
+                        break
+                else:
+                    for item in cur_bam.fetch(region[0], int(region[1]), int(region[2])):
+                        has_items = True
+                        break
         else:
             for item in cur_bam:
                 if not item.is_unmapped:

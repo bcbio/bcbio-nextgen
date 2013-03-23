@@ -191,6 +191,8 @@ def _analysis_block_stats(regions):
     logger.info("Identified %s parallel analysis blocks\n" % len(region_sizes) +
                 "Block sizes:\n%s\n" % descriptive_stats(region_sizes) +
                 "Between block sizes:\n%s\n" % descriptive_stats(between_sizes))
+    if len(region_sizes) == 0:
+        raise ValueError("No callable analysis regions found in all samples")
 
 def combine_sample_regions(samples):
     """Combine islands of callable regions from multiple samples.
