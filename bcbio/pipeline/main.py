@@ -71,7 +71,7 @@ def parse_cl_args(in_args):
     parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
                         choices=["local", "ipython", "messaging"], default="local")
     parser.add_argument("-s", "--scheduler", help="Schedulerto use for ipython parallel",
-                        choices=["lsf", "sge"])
+                        choices=["lsf", "sge", "torque"])
     parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
     parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
                         default="bcbio_nextgen")
