@@ -173,6 +173,8 @@ def process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
         else:
             out_bam = link_bam_file(fastq1, os.path.join(dirs["work"], "prealign",
                                                          names["sample"]))
+    if not out_bam and not os.path.exists(fastq1):
+        raise ValueError("Could not find input file: %s" % fastq1)
     return [{"fastq": [fastq1, fastq2], "work_bam": out_bam, "info": info,
              "sam_ref": ref_file, "config": config}]
 

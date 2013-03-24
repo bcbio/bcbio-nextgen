@@ -7,15 +7,16 @@ upload:
 details:
   - algorithm:
       #aligner: false
+      #mark_duplicates: false
       #recalibrate: false
-      #realign: false
+      realign: false
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
-      #aligner: bwa
-      aligner: novoalign
-      #realign: gkno
+      #aligner: novoalign
       variantcaller: gatk
-      #variantcaller: [gatk, freebayes]
+      aligner: bwa
+      #realign: gkno
+      #variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
       nomap_split_size: 500

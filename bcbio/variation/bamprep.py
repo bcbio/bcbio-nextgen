@@ -17,38 +17,35 @@ def region_to_gatk(region):
     else:
         return region
 
-def _gatk_extract_reads_cl(data, region, tmp_dir):
+def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
     """Use GATK to extract reads from full BAM file, recalibrating if configured.
     """
     broad_runner = broad.runner_from_config(data["config"])
-    algorithm = data["config"]["algorithm"]
     args = ["-T", "PrintReads",
             "-L", region_to_gatk(region),
             "-R", data["sam_ref"],
             "-I", data["work_bam"]]
-    recal_config = algorithm.get("recalibrate", True)
-    if recal_config in ["gatk", True]:
+    if prep_params["recal"] == "gatk":
         args += ["-BQSR", data["prep_recal"]]
-    elif recal_config:
+    elif prep_params["recal"]:
         raise NotImplementedError("Recalibration method %s" %  recal_config)
     return broad_runner.cl_gatk(args, tmp_dir)
 
-def _piped_input_cl(data, region, tmp_dir, out_base_file, realign_param):
+def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
     """Retrieve the commandline for streaming input into preparation step.
     If marking duplicates, this requires writing an intermediate file since
     MarkDuplicates uses multiple passed on an input.
     """
     broad_runner = broad.runner_from_config(data["config"])
-    cl = _gatk_extract_reads_cl(data, region, tmp_dir)
-    algorithm = data["config"]["algorithm"]
-    if algorithm.get("mark_duplicates", True):
+    cl = _gatk_extract_reads_cl(data, region, prep_params, tmp_dir)
+    if prep_params["dup"] == "picard":
         sel_file = "%s-select%s" % os.path.splitext(out_base_file)
         if not utils.file_exists(sel_file):
             with file_transaction(sel_file) as tx_out_file:
                 cl += ["-o", tx_out_file]
                 subprocess.check_call(cl)
         dup_metrics = "%s-dup.dup_metrics" % os.path.splitext(out_base_file)[0]
-        compression = "5" if realign_param == "gatk" else "0"
+        compression = "5" if prep_params["realign"] == "gatk" else "0"
         cl = broad_runner.cl_picard("MarkDuplicates",
                                     [("INPUT", sel_file),
                                      ("OUTPUT", "/dev/stdout"),
@@ -86,23 +83,35 @@ def _cleanup_tempfiles(data, tmp_files):
                 if os.path.exists(fname):
                     os.remove(fname)
 
+def _get_prep_params(data):
+    """Retrieve configuration parameters with defaults for preparing BAM files.
+    """
+    algorithm = data["config"]["algorithm"]
+    dup_param = algorithm.get("mark_duplicates", True)
+    dup_param = "picard" if dup_param is True else dup_param
+    recal_param = algorithm.get("recalibrate", True)
+    recal_param = "gatk" if recal_param is True else recal_param
+    realign_param = algorithm.get("realign", True)
+    realign_param = "gatk" if realign_param is True else realign_param
+    all_params = [dup_param, recal_param, realign_param]
+    return {"dup": dup_param, "recal": recal_param, "realign": realign_param,
+            "all_pipe": "gatk" not in all_params and "picard" not in all_params}
+
 def _piped_bamprep_region(data, region, out_file, tmp_dir):
     """Do work of preparing BAM input file on the selected region.
     """
     broad_runner = broad.runner_from_config(data["config"])
-    algorithm = data["config"]["algorithm"]
-    dup_param = algorithm.get("mark_duplicates", True)
-    realign_param = algorithm.get("realign", "gatk")
-    realign_param = "gatk" if realign_param is True else realign_param
-    cur_bam, cl = _piped_input_cl(data, region, tmp_dir, out_file, realign_param)
-    if not realign_param:
+    prep_params = _get_prep_params(data)
+    cur_bam, cl = _piped_input_cl(data, region, tmp_dir, out_file, prep_params)
+    if not prep_params["realign"]:
         prerecal_bam = None
-    elif realign_param == "gatk":
+    elif prep_params["realign"] == "gatk":
         prerecal_bam, cl = _piped_realign_gatk(data, region, cl, out_file, tmp_dir)
     else:
-        raise NotImplementedError("Realignment method: %s" % realign_param)
+        raise NotImplementedError("Realignment method: %s" % prep_params["realign"])
     with file_transaction(out_file) as tx_out_file:
-        out_flag = ("-o" if realign_param == "gatk" or (not realign_param and not dup_param)
+        out_flag = ("-o" if prep_params["realign"] == "gatk"
+                    or (not prep_params["realign"] and not prep_params["dup"])
                     else ">")
         subprocess.check_call("{cl} {out_flag} {tx_out_file}".format(**locals()), shell=True)
         _cleanup_tempfiles(data, [cur_bam, prerecal_bam])
