@@ -54,7 +54,11 @@ def prep_mpileup(align_bams, ref_file, max_read_depth, config,
     if want_bcf:
         cl += ["-D", "-S", "-u"]
     if target_regions:
-        cl += ["-l", bamprep.region_to_gatk(target_regions)]
+        str_regions = bamprep.region_to_gatk(target_regions)
+        if os.path.isfile(str_regions):
+            cl += ["-l", str_regions]
+        else:
+            cl += ["-r", str_regions]
     cl += align_bams
     return " ".join(cl)
 
@@ -70,4 +74,5 @@ def _call_variants_samtools(align_bams, ref_file, config, target_regions, out_fi
            "| {bcftools} view -v -c -g - "
            "| {vcfutils} varFilter -D {max_read_depth} "
            "> {out_file}")
+    logger.info(cmd.format(**locals()))
     subprocess.check_call(cmd.format(**locals()), shell=True)
