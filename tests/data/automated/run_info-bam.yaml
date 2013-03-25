@@ -9,14 +9,16 @@ details:
       #aligner: false
       #mark_duplicates: false
       #recalibrate: false
-      realign: false
+      #realign: false
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
       #aligner: novoalign
-      variantcaller: gatk
+      #variantcaller: gatk
       aligner: bwa
-      #realign: gkno
-      #variantcaller: freebayes
+      mark_duplicates: bamutil
+      recalibrate: bamutil
+      realign: gkno
+      variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
       nomap_split_size: 500

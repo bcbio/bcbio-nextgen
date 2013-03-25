@@ -7,8 +7,10 @@ import subprocess
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import shared
-from bcbio.variation import realign
+from bcbio.pipeline import config_utils, shared
+from bcbio.variation import realign, recalibrate
+
+# ## GATK/Picard preparation
 
 def region_to_gatk(region):
     if isinstance(region, (list, tuple)):
@@ -83,6 +85,73 @@ def _cleanup_tempfiles(data, tmp_files):
                 if os.path.exists(fname):
                     os.remove(fname)
 
+def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
+    """Perform semi-piped BAM preparation using Picard/GATK tools.
+    """
+    broad_runner = broad.runner_from_config(data["config"])
+    cur_bam, cl = _piped_input_cl(data, region, tmp_dir, out_file, prep_params)
+    if not prep_params["realign"]:
+        prerecal_bam = None
+    elif prep_params["realign"] == "gatk":
+        prerecal_bam, cl = _piped_realign_gatk(data, region, cl, out_file, tmp_dir)
+    else:
+        raise NotImplementedError("Realignment method: %s" % prep_params["realign"])
+    with file_transaction(out_file) as tx_out_file:
+        out_flag = ("-o" if prep_params["realign"] == "gatk"
+                    or (not prep_params["realign"] and not prep_params["dup"])
+                    else ">")
+        subprocess.check_call("{cl} {out_flag} {tx_out_file}".format(**locals()), shell=True)
+        _cleanup_tempfiles(data, [cur_bam, prerecal_bam])
+
+# ## Full-piped approaches
+
+def _piped_dedup_recal_cmd(data, prep_params, tmp_dir):
+    """Generate de-duplication and recalibration commandline.
+    """
+    if prep_params["dup"] == "bamutil":
+        assert prep_params["recal"] in ["bamutil", False], \
+          "Cannot handle recalibration approach %s with bamutil dedup" % prep_params["recal"]
+        out_stream = "-.ubam" if prep_params["realign"] else "-.bam"
+        return "| " + recalibrate.bamutil_dedup_recal_cl("-.ubam", out_stream, data,
+                                                         prep_params["recal"] == "bamutil")
+    elif prep_param["dup"]:
+        raise ValueError("Unexpected deduplication approach: %s" % prep_params["dup"])
+    else:
+        return ""
+
+def _piped_realign_cmd(data, prep_params, tmp_dir):
+    """Generate piped realignment commandline.
+    """
+    if prep_params["realign"] == "gkno":
+        assert prep_params["recal"] in ["bamutil", False], \
+          "Cannot handle recalibration approach %s with bamutil dedup" % prep_params["recal"]
+        raise NotImplementedError
+    elif prep_param["realign"]:
+        raise ValueError("Unexpected realignment approach: %s" % prep_params["realign"])
+    else:
+        return ""
+
+def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir):
+    """Perform fully piped BAM preparation using non-GATK/Picard tools.
+    """
+    config = data["config"]
+    samtools = config_utils.get_program("samtools", config)
+    in_file = data["work_bam"]
+    prep_region = region_to_gatk(region)
+    out_type = "-u" if prep_params["dup"] or prep_params["realign"] else "-b"
+    with file_transaction(out_file) as tx_out_file:
+        dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir)
+        realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
+        cmd = ("{samtools} view {out_type} {in_file} {prep_region} "
+               "{dedup_cmd} "
+               "{realign_cmd} "
+               "> {tx_out_file}")
+        print cmd.format(**locals())
+        raise NotImplementedError
+        subprocess.check_call(cmd.format(**locals()), shell=True)
+
+# ## Shared functionality
+
 def _get_prep_params(data):
     """Retrieve configuration parameters with defaults for preparing BAM files.
     """
@@ -100,21 +169,13 @@ def _get_prep_params(data):
 def _piped_bamprep_region(data, region, out_file, tmp_dir):
     """Do work of preparing BAM input file on the selected region.
     """
-    broad_runner = broad.runner_from_config(data["config"])
     prep_params = _get_prep_params(data)
-    cur_bam, cl = _piped_input_cl(data, region, tmp_dir, out_file, prep_params)
-    if not prep_params["realign"]:
-        prerecal_bam = None
-    elif prep_params["realign"] == "gatk":
-        prerecal_bam, cl = _piped_realign_gatk(data, region, cl, out_file, tmp_dir)
+    if prep_params["recal"]:
+        assert prep_params["dup"],  "Requires duplicate marking with BAM recalibration."
+    if prep_params["all_pipe"]:
+        _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
     else:
-        raise NotImplementedError("Realignment method: %s" % prep_params["realign"])
-    with file_transaction(out_file) as tx_out_file:
-        out_flag = ("-o" if prep_params["realign"] == "gatk"
-                    or (not prep_params["realign"] and not prep_params["dup"])
-                    else ">")
-        subprocess.check_call("{cl} {out_flag} {tx_out_file}".format(**locals()), shell=True)
-        _cleanup_tempfiles(data, [cur_bam, prerecal_bam])
+        _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir)
 
 def piped_bamprep(data, region=None, out_file=None):
     """Perform full BAM preparation using pipes to avoid intermediate disk IO.
