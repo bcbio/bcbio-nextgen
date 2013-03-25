@@ -12,7 +12,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation.genotype import write_empty_vcf
-from bcbio.variation.realign import has_aligned_reads
+from bcbio.variation import bamprep, realign
 
 def shared_variantcall(call_fn, name, align_bams, ref_file, config,
                        dbsnp=None, region=None, out_file=None):
@@ -28,8 +28,9 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, config,
             region=region, fname=os.path.basename(align_bams[0])))
         variant_regions = config["algorithm"].get("variant_regions", None)
         target_regions = subset_variant_regions(variant_regions, region, out_file)
-        if ((variant_regions is not None and not os.path.isfile(target_regions))
-              or not all(has_aligned_reads(x, region) for x in align_bams)):
+        if ((variant_regions is not None and isinstance(target_regions, basestring)
+              and not os.path.isfile(target_regions))
+              or not all(realign.has_aligned_reads(x, region) for x in align_bams)):
             write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:
@@ -53,7 +54,7 @@ def prep_mpileup(align_bams, ref_file, max_read_depth, config,
     if want_bcf:
         cl += ["-D", "-S", "-u"]
     if target_regions:
-        cl += ["-l", target_regions]
+        cl += ["-l", bamprep.region_to_gatk(target_regions)]
     cl += align_bams
     return " ".join(cl)
 

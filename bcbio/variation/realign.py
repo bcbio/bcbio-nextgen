@@ -163,7 +163,7 @@ def has_aligned_reads(align_bam, region=None):
     """
     has_items = False
     if region is not None:
-        if os.path.isfile(region):
+        if isinstance(region, basestring) and os.path.isfile(region):
             with open(region) as in_handle:
                 regions = [tuple(line.split()[:3]) for line in in_handle]
         else:
