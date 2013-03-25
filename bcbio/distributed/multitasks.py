@@ -16,10 +16,12 @@ def trim_lane(*args):
 @utils.map_wrap
 def process_alignment(*args):
     return lane.process_alignment(*args)
+process_alignment.metadata = {"resources": ["novoalign", "bwa"]}
 
 @utils.map_wrap
 def align_prep_full(*args):
     return lane.align_prep_full(*args)
+align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
 
 @utils.map_wrap
 def merge_sample(*args):
@@ -36,6 +38,7 @@ def piped_bamprep(*args):
 @utils.map_wrap
 def prep_recal(*args):
     return recalibrate.prep_recal(*args)
+prep_recal.metadata = {"resources": ["gatk"]}
 
 @utils.map_wrap
 def write_recal_bam(*args):

@@ -48,9 +48,9 @@ resources:
   tophat:
     cores: 
   bwa:
-    cores: 2
+    cores: 4
   novoalign:
-    cores: 2
+    cores: 4
     memory: 4G
   gatk:
     cores: 2

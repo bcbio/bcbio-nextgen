@@ -30,7 +30,7 @@ def dictadd(orig, k, v):
         new["view"] = view
     return new
 
-def _find_cores_per_job(fn, parallel, item_count, config):
+def find_cores_per_job(fn, parallel, item_count, config):
     """Determine cores and workers to use for this stage based on function metadata.
     """
     all_cores = [1]
@@ -102,7 +102,7 @@ def runner(parallel, fn_name, items, work_dir, config):
                             fromlist=["ipythontasks"]),
                  fn_name)
     items = [x for x in items if x is not None]
-    num_jobs, cores_per_job = _find_cores_per_job(fn, parallel, len(items), config)
+    num_jobs, cores_per_job = find_cores_per_job(fn, parallel, len(items), config)
     parallel = dictadd(parallel, "cores_per_job", cores_per_job)
     parallel = dictadd(parallel, "num_jobs", num_jobs)
     # already finished, run locally on current machine to collect details
