@@ -65,7 +65,8 @@ def calc_callable_loci(data, region=None, out_file=None):
             ready_region = shared.subset_variant_regions(variant_regions, region, tx_out_file)
             if ready_region:
                 params += ["-L", ready_region]
-            if variant_regions and ready_region and os.path.isfile(ready_region):
+            if ((variant_regions and ready_region and os.path.isfile(ready_region))
+                 or not variant_regions or not region):
                 broad_runner.run_gatk(params)
             else:
                 with open(out_file, "w") as out_handle:
