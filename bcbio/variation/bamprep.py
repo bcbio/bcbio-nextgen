@@ -129,7 +129,7 @@ def _piped_realign_cmd(data, prep_params, tmp_dir):
     """
     if prep_params["realign"] == "gkno":
         return "| " + realign.gkno_realigner_cl(data["sam_ref"], data["config"])
-    elif prep_param["realign"]:
+    elif prep_params["realign"]:
         raise ValueError("Unexpected realignment approach: %s" % prep_params["realign"])
     else:
         return ""

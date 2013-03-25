@@ -25,9 +25,9 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
     samtools = config_utils.get_program("samtools", config)
     bedtools = config_utils.get_program("bedtools", config)
     bwa = config_utils.get_program("bwa", config)
-    resources = config_utils.get_resources("bwa", config)
+    resources = config_utils.get_resources("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    max_mem = resources.get("memory", "2G")
+    max_mem = resources.get("memory", "768M")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
         with utils.curdir_tmpdir() as work_dir:
