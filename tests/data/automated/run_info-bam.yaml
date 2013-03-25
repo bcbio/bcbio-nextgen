@@ -15,8 +15,8 @@ details:
       #aligner: novoalign
       #variantcaller: gatk
       aligner: bwa
-      mark_duplicates: bamutil
-      recalibrate: bamutil
+      mark_duplicates: samtools
+      recalibrate: false
       realign: gkno
       variantcaller: freebayes
       quality_format: Standard
