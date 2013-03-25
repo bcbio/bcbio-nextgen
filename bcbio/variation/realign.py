@@ -19,6 +19,19 @@ from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_fil
 
 # ## gkno Marth lab realignment
 
+def gkno_realigner_cl(ref_file, config):
+    """Prepare commandline for Marth lab realignment tools.
+    Assumes feeding to piped input and output so doesn't not manage
+    readying or writing from disk.
+    """
+    ogap = config_utils.get_program("ogap", config)
+    bamleftalign = config_utils.get_program("bamleftalign", config)
+    cmd = ("{ogap} --repeat-gap-extend 25 --soft-clip-qsum 20 "
+           "  --fasta-reference {ref_file} --entropy-gap-open "
+           "  --mismatch-qsum 20 --soft-clip-limit 0 "
+           "| {bamleftalign} --fasta-reference {ref_file} ")
+    return cmd.format(**locals())
+
 def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
                    out_file=None, deep_coverage=False):
     """Perform realignment using commandline tools from the Marth lab.
@@ -31,18 +44,13 @@ def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
         base, ext = os.path.splitext(align_bam)
         out_file = "%s-realign%s%s" % (base, ("-%s" % region if region else ""), ext)
     bamtools = config_utils.get_program("bamtools", config)
-    ogap = config_utils.get_program("ogap", config)
-    bamleftalign = config_utils.get_program("bamleftalign", config)
+    realign_cmd = gkno_realigner_cl(ref_file, config)
     region = "-region %s" % region if region else ""
 
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{bamtools} filter -in {align_bam} {region} "
-                   "| {ogap} --repeat-gap-extend 25 --soft-clip-qsum 20 "
-                   "  --fasta-reference {ref_file} --entropy-gap-open "
-                   "  --mismatch-qsum 20 --soft-clip-limit 0 "
-                   "| {bamleftalign} --fasta-reference {ref_file} "
-                   "> {tx_out_file}")
+                   "| {realign_cmd} > {tx_out_file}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
     return out_file
 

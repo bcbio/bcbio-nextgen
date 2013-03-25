@@ -7,6 +7,7 @@ import subprocess
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import config_utils, shared
 from bcbio.variation import realign, recalibrate
 
@@ -114,7 +115,11 @@ def _piped_dedup_recal_cmd(data, prep_params, tmp_dir):
         out_stream = "-.ubam" if prep_params["realign"] else "-.bam"
         return "| " + recalibrate.bamutil_dedup_recal_cl("-.ubam", out_stream, data,
                                                          prep_params["recal"] == "bamutil")
-    elif prep_param["dup"]:
+    elif prep_params["dup"] == "samtools":
+        assert not prep_params["recal"], "Cannot recalibrate with samtools dedup"
+        samtools = config_utils.get_program("samtools", data["config"])
+        return "| " + "{samtools} rmdup - -".format(**locals())
+    elif prep_params["dup"]:
         raise ValueError("Unexpected deduplication approach: %s" % prep_params["dup"])
     else:
         return ""
@@ -123,9 +128,7 @@ def _piped_realign_cmd(data, prep_params, tmp_dir):
     """Generate piped realignment commandline.
     """
     if prep_params["realign"] == "gkno":
-        assert prep_params["recal"] in ["bamutil", False], \
-          "Cannot handle recalibration approach %s with bamutil dedup" % prep_params["recal"]
-        raise NotImplementedError
+        return "| " + realign.gkno_realigner_cl(data["sam_ref"], data["config"])
     elif prep_param["realign"]:
         raise ValueError("Unexpected realignment approach: %s" % prep_params["realign"])
     else:
@@ -146,8 +149,7 @@ def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
                "{dedup_cmd} "
                "{realign_cmd} "
                "> {tx_out_file}")
-        print cmd.format(**locals())
-        raise NotImplementedError
+        logger.info(cmd.format(**locals()))
         subprocess.check_call(cmd.format(**locals()), shell=True)
 
 # ## Shared functionality

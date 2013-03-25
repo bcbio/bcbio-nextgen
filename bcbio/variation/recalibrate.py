@@ -29,6 +29,7 @@ def bamutil_dedup_recal_cl(in_file, out_file, data, do_recal):
     """Prepare commandline for running deduplication and recalibration with bamutil.
     http://genome.sph.umich.edu/wiki/BamUtil:_dedup
     """
+    raise NotImplementedError("Not functional for piped BAM analysis")
     config = data["config"]
     bam_cmd = config_utils.get_program("bam", config)
     ref_file = data["sam_ref"]
