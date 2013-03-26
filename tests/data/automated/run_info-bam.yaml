@@ -29,6 +29,7 @@ details:
     description: Test1
     genome_build: hg19
     lane: 7
+    #files: [7_100326_FC6107FAAXX_1_fastq.txt.gz, 7_100326_FC6107FAAXX_2_fastq.txt.gz]
     files: [7_100326_FC6107FAAXX.bam]
   # - algorithm:
   #     #aligner: false

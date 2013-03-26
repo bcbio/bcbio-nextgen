@@ -8,7 +8,7 @@ from collections import namedtuple
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils, broad
-from bcbio.bam import cram
+from bcbio.bam import cram, fastq
 from bcbio.ngsalign import bowtie, bwa, tophat, bowtie2, mosaik, novoalign
 from bcbio.distributed.transaction import file_transaction
 
@@ -21,18 +21,19 @@ from bcbio.distributed.transaction import file_transaction
 #  from galaxy_loc_file and find the actual location of the index file.
 #  This is useful for indexes that don't have an associated location file
 #  but are stored in the same directory structure.
-NgsTool = namedtuple("NgsTool", ["align_fn", "bam_align_fn", "galaxy_loc_file",
-                                 "remap_index_fn"])
+NgsTool = namedtuple("NgsTool", ["align_fn", "pipe_align_fn", "bam_align_fn",
+                                 "galaxy_loc_file", "remap_index_fn"])
 
 base_location_file = "sam_fa_indices.loc"
 _tools = {
-    "bowtie": NgsTool(bowtie.align, None, bowtie.galaxy_location_file, None),
-    "bowtie2": NgsTool(bowtie2.align, None, base_location_file, bowtie2.remap_index_fn),
-    "bwa": NgsTool(bwa.align, bwa.align_bam, bwa.galaxy_location_file, None),
-    "mosaik": NgsTool(mosaik.align, None, mosaik.galaxy_location_file, None),
-    "novoalign": NgsTool(novoalign.align, novoalign.align_bam, base_location_file, novoalign.remap_index_fn),
-    "tophat": NgsTool(tophat.align, None, base_location_file, bowtie2.remap_index_fn),
-    "samtools": NgsTool(None, None, base_location_file, None),
+    "bowtie": NgsTool(bowtie.align, None, None, bowtie.galaxy_location_file, None),
+    "bowtie2": NgsTool(bowtie2.align, None, None, base_location_file, bowtie2.remap_index_fn),
+    "bwa": NgsTool(bwa.align, bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
+    "mosaik": NgsTool(mosaik.align, None, None, mosaik.galaxy_location_file, None),
+    "novoalign": NgsTool(novoalign.align, None, novoalign.align_bam, base_location_file,
+                         novoalign.remap_index_fn),
+    "tophat": NgsTool(tophat.align, None, None, base_location_file, bowtie2.remap_index_fn),
+    "samtools": NgsTool(None, None, None, base_location_file, None),
     }
 
 metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}
@@ -45,10 +46,21 @@ def align_to_sort_bam(fastq1, fastq2, names, genome_build, aligner,
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     if fastq1.endswith(".bam"):
         out_bam = _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)
+    elif fastq.readlen_supports_piping(fastq1) and _tools[aligner].pipe_align_fn:
+        out_bam = _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names,
+                                         align_dir, config)
     else:
         out_bam = _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
                                     align_dir, config)
     return out_bam, sam_ref
+
+def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, config):
+    """Align longer reads using new piped strategies that avoid disk IO.
+    """
+    align_fn = _tools[aligner].pipe_align_fn
+    if align_fn is None:
+        raise NotImplementedError("Do not yet support piped alignment with %s" % aligner)
+    return align_fn(fastq1, fastq2, align_ref, names, align_dir, config)
 
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config):
     qual_bin_method = config["algorithm"].get("quality_bin")
@@ -57,6 +69,8 @@ def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, confi
         out_dir = utils.safe_makedir(os.path.join(align_dir, "qualbin"))
         fastq1 = cram.illumina_qual_bin(fastq1, sam_ref, out_dir, config)
     align_fn = _tools[aligner].bam_align_fn
+    if align_fn is None:
+        raise NotImplementedError("Do not yet support BAM alignment with %s" % aligner)
     return align_fn(fastq1, align_ref, names, align_dir, config)
 
 def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,

@@ -39,7 +39,30 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        "| {bwa} mem -p -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} - "
                        "| {samtools} view -b -S -u - "
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                print cmd.format(**locals())
+                logger.info(cmd.format(**locals()))
+                subprocess.check_call(cmd.format(**locals()), shell=True)
+    return out_file
+
+def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
+    """Perform piped alignment of fastq input files, generating sorted output BAM.
+    """
+    pair_file = pair_file if pair_file else ""
+    out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    samtools = config_utils.get_program("samtools", config)
+    bwa = config_utils.get_program("bwa", config)
+    resources = config_utils.get_resources("samtools", config)
+    num_cores = config["algorithm"].get("num_cores", 1)
+    max_mem = resources.get("memory", "768M")
+    rg_info = novoalign.get_rg_info(names)
+    if not utils.file_exists(out_file):
+        with utils.curdir_tmpdir() as work_dir:
+            with file_transaction(out_file) as tx_out_file:
+                tx_out_prefix = os.path.splitext(tx_out_file)[0]
+                cmd = ("{bwa} mem -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} "
+                       "{fastq_file} {pair_file} "
+                       "| {samtools} view -b -S -u - "
+                       "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
+                logger.info(cmd.format(**locals()))
                 subprocess.check_call(cmd.format(**locals()), shell=True)
     return out_file
 

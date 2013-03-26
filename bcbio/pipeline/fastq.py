@@ -48,7 +48,7 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
                     (directory, lane, fc_name, files))
     ready_files = []
     for fname in files:
-        if fname.endswith(".gz"):
+        if fname.endswith(".gz") and _pipeline_needs_fastq(config, item):
             cl = ["gunzip", fname]
             subprocess.check_call(cl)
             ready_files.append(os.path.splitext(fname)[0])
