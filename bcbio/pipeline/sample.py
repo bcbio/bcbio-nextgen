@@ -4,10 +4,11 @@ Samples may include multiple lanes, or barcoded subsections of lanes,
 processed together.
 """
 import os
+import copy
 import subprocess
 
 
-from bcbio.utils import file_exists, save_diskspace
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
@@ -45,7 +46,9 @@ def delayed_bam_merge(data):
         in_files = list(set([data[file_key]] + data["combine"][file_key].get("extras", [])))
         out_file = data["combine"][file_key]["out"]
         logger.info("Combining BAM files to %s" % out_file)
-        merged_file = merge_bam_files(in_files, os.path.dirname(out_file), data["config"],
+        config = copy.deepcopy(data["config"])
+        config["algorithm"]["save_diskspace"] = False
+        merged_file = merge_bam_files(in_files, os.path.dirname(out_file), config,
                                       out_file=out_file)
         if data.has_key("region"):
             del data["region"]
