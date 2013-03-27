@@ -81,7 +81,7 @@ class BroadRunner:
                 params.extend(["-nct", str(cores)])
         if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
             params.extend(["-U", "LENIENT_VCF_PROCESSING"])
-        params.extend(["--read_filter", "BadCigar"])
+        params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         return ["java"] + self._jvm_opts + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
