@@ -40,9 +40,8 @@ def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
     """Evaluate variant genotyping, producing a JSON metrics file with values.
     """
     metrics_file = "%s.eval_metrics" % vrn_file
-    target = config["algorithm"].get("hybrid_target", None)
     if not os.path.exists(metrics_file):
-        stats = gatk_evaluate_variants(vrn_file, ref_file, config, dbsnp_file, target)
+        stats = gatk_evaluate_variants(vrn_file, ref_file, config, dbsnp_file)
         with open(metrics_file, "w") as out_handle:
             json.dump(stats, out_handle)
     return metrics_file

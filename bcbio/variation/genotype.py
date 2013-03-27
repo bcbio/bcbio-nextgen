@@ -344,11 +344,11 @@ def _variant_filtration_both(broad_runner, snp_file, ref_file, vrn_files,
 
 # ## Variant evaluation
 
-def gatk_evaluate_variants(vcf_file, ref_file, config, dbsnp=None, intervals=None):
+def gatk_evaluate_variants(vcf_file, ref_file, config, dbsnp=None):
     """Evaluate variants, return SNP counts and Transition/Transversion ratios.
     """
     runner = broad.runner_from_config(config)
-    eval_file = variant_eval(vcf_file, ref_file, dbsnp, intervals, runner)
+    eval_file = variant_eval(vcf_file, ref_file, dbsnp, runner)
     stats = _extract_eval_stats(eval_file)
     return _format_stats(stats['called'])
 
@@ -417,7 +417,7 @@ def _eval_analysis_type(in_file, analysis_name):
             parts = line.rstrip("\n\r").split()
             yield parts
 
-def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
+def variant_eval(vcf_in, ref_file, dbsnp, picard):
     """Evaluate variants in comparison with dbSNP reference.
     """
     out_file = "%s.eval" % os.path.splitext(vcf_in)[0]
@@ -426,6 +426,7 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
             params = ["-T", "VariantEval",
                       "-R", ref_file,
                       "--eval", vcf_in,
+                      "-L", vcf_in,
                       "--dbsnp", dbsnp,
                       "-ST", "Filter",
                       "-o", tx_out_file,
@@ -436,15 +437,6 @@ def variant_eval(vcf_in, ref_file, dbsnp, target_intervals, picard):
                       "--evalModule", "TiTvVariantEvaluator",
                       "--evalModule", "ValidationReport",
                       "--stratificationModule", "Filter"]
-            if target_intervals:
-                # BED file target intervals are explicit with GATK 1.3
-                # http://getsatisfaction.com/gsa/topics/
-                # gatk_v1_3_and_bed_interval_file_must_be_parsed_through_tribble
-                if _is_bed_file(target_intervals):
-                    flag = "-L:bed"
-                else:
-                    flag = "-L"
-                params.extend([flag, target_intervals])
             picard.run_gatk(params)
     return out_file
 
