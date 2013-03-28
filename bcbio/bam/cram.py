@@ -22,6 +22,8 @@ def illumina_qual_bin(in_file, ref_file, out_dir, config):
     index_file = ref_file + ".fai"
     assert os.path.exists(index_file), "Could not find FASTA reference index: %s" % index_file
     out_file = os.path.join(out_dir, "%s-qualbin%s" % os.path.splitext(os.path.basename(in_file)))
+    resources = config_utils.get_resources("cram", config)
+    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"]))
     cram_jar = config_utils.get_jar("cramtools",
                                     config_utils.get_program("cram", config, "dir"))
     samtools = config_utils.get_program("samtools", config)
@@ -29,10 +31,10 @@ def illumina_qual_bin(in_file, ref_file, out_dir, config):
         with file_transaction(out_file) as tx_out_file:
             orig_header = "%s-header.sam" % os.path.splitext(out_file)[0]
             header_cmd = "{samtools} view -H -o {orig_header} {in_file}"
-            cmd = ("java -jar {cram_jar} cram --input-bam-file {in_file} "
+            cmd = ("java {jvm_opts} -jar {cram_jar} cram --input-bam-file {in_file} "
                    " --reference-fasta-file {ref_file} --preserve-read-names "
                    " --capture-all-tags --lossy-quality-score-spec '*8' "
-                   "| java -jar {cram_jar} bam --output-bam-format "
+                   "| java {jvm_opts} -jar {cram_jar} bam --output-bam-format "
                    "  --reference-fasta-file {ref_file} "
                    "| {samtools} reheader {orig_header} - "
                    "> {tx_out_file}")

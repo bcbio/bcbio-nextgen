@@ -87,7 +87,7 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
     out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
     if not file_exists(out_file):
         cl = ["java"]
-        cl += resources.get("jvm_opts", [])
+        cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
         cl += ["-jar", snpeff_jar, "eff", "-c", config_file,
                "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
         if se_interval:

@@ -54,8 +54,11 @@ def _run_bcbio_variation(config_file, base_dir, sample, data):
         bv_jar = config_utils.get_jar("bcbio.variation",
                                       config_utils.get_program("bcbio_variation",
                                                                data["config"], "dir"))
+        resources = config_utils.get_resources("bcbio_variation", config)
+        jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
         java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
-        subprocess.check_call(["java"] + java_args + ["-jar", bv_jar, "variant-compare", config_file])
+        subprocess.check_call(["java"] + jvm_opts + java_args +
+                              ["-jar", bv_jar, "variant-compare", config_file])
         base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
                                           "*-cfilter.vcf"))[0]
         base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep",

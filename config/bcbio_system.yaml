@@ -64,13 +64,12 @@ resources:
     cores: 16
     memory: 2G
   gatk:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/share/java/gatk
   picard:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/picard
   snpEff:
-    jvm_opts: ["-Xms1g", "-Xmx6g"]
+    jvm_opts: ["-Xms750m", "-Xmx6g"]
     dir: /usr/share/java/snpeff
   bcbio_variation:
     dir: /usr/share/java/bcbio_variation

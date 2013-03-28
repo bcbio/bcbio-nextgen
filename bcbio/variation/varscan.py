@@ -81,10 +81,12 @@ def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
     max_read_depth = "1000"
     varscan_jar = config_utils.get_jar("VarScan",
                                        config_utils.get_program("varscan", config, "dir"))
+    resources = config_utils.get_resources("varscan", config)
+    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"]))
     mpileup = samtools.prep_mpileup(align_bams, ref_file, max_read_depth, config,
                                     target_regions=target_regions, want_bcf=False)
     cmd = ("{mpileup} "
-           "| java -jar {varscan_jar} mpileup2cns --min-coverage 5 --p-value 0.98 "
+           "| java {jvm_opts} -jar {varscan_jar} mpileup2cns --min-coverage 5 --p-value 0.98 "
            "  --output-vcf --variants "
            "> {out_file}")
     subprocess.check_call(cmd.format(**locals()), shell=True)

@@ -10,7 +10,6 @@ algorithm:
   bc_read: 1
   bc_position: 3
   bc_illumina_no_trailing: true
-  java_memory: 3g
   save_diskspace: true
   upload_fastq: false
 
@@ -55,11 +54,13 @@ resources:
   gatk:
     cores: 2
     dir: /usr/share/java/gatk
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
   picard:
     cores: 1
     dir: /usr/share/java/picard
   snpEff:
     dir: /usr/share/java/snpeff
+    jvm_opts: ["-Xms750m", "-Xmx3g"]
   varscan:
     dir: /usr/share/java/varscan
   cram:

@@ -16,7 +16,7 @@ class BroadRunner:
     """
     def __init__(self, picard_ref, gatk_dir, config):
         resources = config_utils.get_resources("gatk", config)
-        self._jvm_opts = resources.get("jvm_opts", ["-Xmx6g", "-Xms6g"])
+        self._jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
         self._picard_ref = picard_ref
         self._gatk_dir = gatk_dir or picard_ref
         self._config = config
@@ -99,7 +99,7 @@ class BroadRunner:
         the latest 2.4+ restricted version of GATK.
         """
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-        cl = ["java", "-jar", gatk_jar, "-version"]
+        cl = ["java"] + self._jvm_opts + ["-jar", gatk_jar, "-version"]
         with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
             out = stdout.read().strip()
             try:
