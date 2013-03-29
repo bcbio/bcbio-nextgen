@@ -1,0 +1,37 @@
+# Example configuration for running a whole genome variant calling
+# pipeline on public NA12878 data from Illumina's Platinum Genome project
+# http://www.illumina.com/platinumgenomes/
+#
+# A quick-start guide to running this analysis:
+#
+# - Create a directory structure like:
+#    ├── config
+#    │   └── NA12878-illumina.yaml
+#    ├── input
+#    └── work
+# - Get input files:
+#    + cd input
+#    + wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
+#    + wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
+# - Run analysis on 16 core machine:
+#    + cd work
+#    + bcbio_nextgen.py /path/to/your/bcbio_system.yaml ../input ../config/NA12878-illumina.yaml -n 16
+# - Compare output in `final/NA12878-gatk.vcf` to:
+#   https://s3.amazonaws.com/bcbio_nextgen/NA12878-illumina-example.vcf.gz
+---
+upload:
+  dir: ../final
+fc_date: '130327'
+fc_name: iplat
+details:
+  - algorithm:
+      aligner: bwa
+      variantcaller: gatk
+      quality_format: Standard
+      coverage_interval: genome
+      coverage_depth: high
+    analysis: variant2
+    description: NA12878
+    genome_build: GRCh37
+    lane: 1
+    files: [ERR091571_1.fastq.gz, ERR091571_2.fastq.gz]
