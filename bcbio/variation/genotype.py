@@ -548,7 +548,7 @@ def variantcall_sample(data, region=None, out_file=None):
     caller_fn(align_bams, sam_ref, config,
               configured_ref_file("dbsnp", config, sam_ref),
               region, call_file)
-    if data["config"]["algorithm"].get("phasing", "gatk") == "gatk":
+    if data["config"]["algorithm"].get("phasing", False) == "gatk":
         call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
     if not os.path.exists(out_file):
         for ext in ["", ".idx"]:

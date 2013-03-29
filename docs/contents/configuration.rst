@@ -137,6 +137,8 @@ Variant calling
 -  ``recalibrate`` Perform variant recalibration [true, false]
 -  ``realign`` Type of variant alignment to perform, Defaults to
    GATK realignment. [gatk, gkno, false]
+-  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
+   no phasing [false, gatk]
 
 Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
 This requires some associated data files, and also has some configurable
