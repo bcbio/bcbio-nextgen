@@ -10,9 +10,9 @@ import collections
 import subprocess
 from contextlib import nested, closing
 
-import pysam
-import numpy
 from Bio.Seq import Seq
+import pysam
+from py_descriptive_statistics import Enum as Stats
 
 from bcbio import utils, broad
 from bcbio.pipeline.alignment import align_to_sort_bam
@@ -78,12 +78,12 @@ def calc_paired_insert_stats(in_bam):
             if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize))
     # remove outliers
-    med = numpy.median(dists)
+    med = Stats(dists).median()
     filter_dists = filter(lambda x: x < med + 10 * med, dists)
-    median = numpy.median(filter_dists)
-    return {"mean": numpy.mean(filter_dists), "std": numpy.std(filter_dists),
+    median = Stats(filter_dists).median()
+    return {"mean": Stats(filter_dists).mean(), "std": Stats(filter_dists).standard_deviation(),
             "median": median,
-            "mad": numpy.median([abs(x - median) for x in filter_dists])}
+            "mad": Stats([abs(x - median) for x in filter_dists]).median()}
 
 def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                      genome_build, pair_stats,

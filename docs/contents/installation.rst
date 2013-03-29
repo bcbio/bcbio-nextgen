@@ -71,7 +71,6 @@ as needed.
 The code uses a number of Python modules, installed with the code:
 
 -  `biopython`_
--  `numpy`_
 -  `pysam`_
 -  `ipython`_
 -  `sh`_

@@ -8,8 +8,10 @@ import shutil
 import subprocess
 from contextlib import closing
 import glob
+
+from py_descriptive_statistics import Enum as Stats
 import pysam
-import numpy
+
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, flatten
@@ -122,7 +124,8 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
     if len(dists) == 0:
         dists = _bowtie_for_innerdist("1", fastq_file, pair_file, ref_file,
                                       out_base, out_dir, config, True)
-    return int(round(numpy.mean(dists))), int(round(numpy.std(dists)))
+    dist_stats = Stats(dists)
+    return int(round(dist_stats.mean())), int(round(dist_stats.standard_deviation()))
 
 
 def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,

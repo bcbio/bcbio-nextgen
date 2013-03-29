@@ -1,16 +1,15 @@
 psutil==0.6.1
-numpy==1.7.0
 boto == 2.8.0
-biopython==1.61
+git+https://github.com/chapmanb/biopython.git@f48cb557a2#egg=biopython
 cutadapt==1.2.1
 Mako==0.7.3
 PyYAML==3.10
 sh==1.07
 Logbook==0.4.1
-Cython==0.17.4
+Cython==0.18
 pysam==0.7.4
-fabric==1.5.2
-ipython-cluster-helper==0.1.1
+fabric==1.6.0
+ipython-cluster-helper==0.1.2
 pyzmq==2.2.0.1
 ipython==0.13.1
 bioblend==0.2.2
