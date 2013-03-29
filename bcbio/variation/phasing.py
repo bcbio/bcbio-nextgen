@@ -28,7 +28,9 @@ def read_backed_phasing(vcf_file, bam_files, genome_file, region, config):
                 params = ["-T", "ReadBackedPhasing",
                           "-R", genome_file,
                           "--variant", vcf_file,
-                          "--out", tx_out_file]
+                          "--out", tx_out_file,
+                          "--downsample_to_coverage", "250",
+                          "--downsampling_type", "BY_SAMPLE"]
                 for bam_file in bam_files:
                     params += ["-I", bam_file]
                 variant_regions = config["algorithm"].get("variant_regions", None)
