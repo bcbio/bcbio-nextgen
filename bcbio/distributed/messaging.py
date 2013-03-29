@@ -14,6 +14,7 @@ from mako.template import Template
 
 from bcbio import utils
 from bcbio.distributed import ipython
+from bcbio.log import logger
 
 def parallel_runner(parallel, dirs, config, config_file=None):
     """Process a supplied function: single, multi-processor or distributed.
@@ -26,6 +27,7 @@ def parallel_runner(parallel, dirs, config, config_file=None):
         elif parallel["type"] == "ipython":
             return ipython.runner(parallel, fn_name, items, dirs["work"], config)
         else:
+            logger.info("multiprocessing: %s" % fn_name)
             out = []
             fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
                                     fromlist=["multitasks"]),
