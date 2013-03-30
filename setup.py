@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 """Setup file and install script for NextGen sequencing analysis scripts.
 """
+import os
 from setuptools import setup, find_packages
 
+version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline', 'version.py')
+version = open(version_py).read().strip().split('=')[-1].replace('"','')
+
 setup(name = "bcbio-nextgen",
-      version = "0.6.3",
+      version = version,
       author = "Brad Chapman",
       author_email = "chapmanb@50mail.com",
       description = "Best-practice pipelines for fully automated high throughput sequencing analysis",

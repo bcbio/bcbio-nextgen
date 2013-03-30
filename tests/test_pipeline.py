@@ -5,7 +5,9 @@ import unittest
 
 from nose.plugins.attrib import attr
 
+from bcbio.pipeline.config_utils import load_config
 from bcbio.pipeline.run_info import _generate_lane, get_run_info
+from bcbio.provenance import program
 
 class RunInfoTest(unittest.TestCase):
     def setUp(self):
@@ -34,3 +36,12 @@ class RunInfoTest(unittest.TestCase):
         assert x3["genome_build"] == "mm9"
         x1 = run_info["details"][1][0]
         assert x1["barcode_id"] is None
+
+    @attr(working=True)
+    @attr(speed=1)
+    def test_programs(self):
+        """Identify programs and versions used in analysis.
+        """
+        config = load_config(os.path.join(self.data_dir, "automated",
+                                          "post_process-sample.yaml"))
+        print program.get_versions(config)

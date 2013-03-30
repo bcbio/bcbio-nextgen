@@ -93,24 +93,36 @@ class BroadRunner:
             cl = self.cl_gatk(params, tmp_dir)
             subprocess.check_call(cl)
 
+    def get_gatk_version(self):
+        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+        cl = ["java", "-Xms5m", "-Xmx5m", "-jar", gatk_jar, "-version"]
+        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+            out = stdout.read().strip()
+            # versions earlier than 2.4 do not have explicit version command,
+            # parse from error output from GATK
+            if out.find("ERROR") >= 0:
+                flag = "The Genome Analysis Toolkit (GATK)"
+                for line in out.split("\n"):
+                    if line.startswith(flag):
+                        return line.split(flag)[-1].split(",")[0].strip()
+            else:
+                return out
+
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
         Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,
         the latest 2.4+ restricted version of GATK.
         """
-        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-        cl = ["java"] + self._jvm_opts + ["-jar", gatk_jar, "-version"]
-        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
-            out = stdout.read().strip()
-            try:
-                version, subversion, githash = out.split("-")
-            # version was not properly implemented in earlier versions
-            except ValueError:
-                version = 2.3
-            if float(version) > 2.3:
-                return "restricted"
-            else:
-                return "lite"
+        full_version = self.get_gatk_version()
+        try:
+            version, subversion, githash = full_version.split("-")
+        # version was not properly implemented in earlier versions
+        except ValueError:
+            version = 2.3
+        if float(version) > 2.3:
+            return "restricted"
+        else:
+            return "lite"
 
     def _get_picard_cmd(self, command):
         """Retrieve the base Picard command, handling both shell scripts and directory of jars.
