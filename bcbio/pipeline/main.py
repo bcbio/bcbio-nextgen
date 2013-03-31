@@ -16,6 +16,7 @@ from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline import lane, region, qcsummary
+from bcbio.provenance import program
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
@@ -38,6 +39,7 @@ def run_main(config, config_file, work_dir, parallel,
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+    provenance = {"program": program.write_versions(dirs, config)}
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
@@ -49,7 +51,9 @@ def run_main(config, config_file, work_dir, parallel,
     for pipeline, pipeline_items in pipelines.items():
         for xs in pipeline.run(config, config_file, run_parallel, dirs, pipeline_items):
             assert len(xs) == 1
-            upload.from_sample(xs[0])
+            x = xs[0]
+            x["provenance"] = provenance
+            upload.from_sample(x)
     qcsummary.write_metrics(run_info, fc_name, fc_date, dirs)
 
 # ## Utility functions

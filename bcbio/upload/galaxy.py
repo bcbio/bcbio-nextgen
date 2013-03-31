@@ -22,7 +22,7 @@ def update_file(finfo, sample_info, config):
         gi = GalaxyInstance(config["galaxy_url"], config["galaxy_api_key"])
     else:
         raise ValueError("Galaxy upload requires `galaxy_url` and `galaxy_api_key` in config")
-    if storage_file:
+    if storage_file and sample_info:
         _to_datalibrary(storage_file, gi, folder_name, sample_info, config)
 
 def _to_datalibrary(fname, gi, folder_name, sample_info, config):

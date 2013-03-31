@@ -34,7 +34,8 @@ def update_file(finfo, sample_info, config):
     bucket = conn.lookup(config["bucket"])
     if bucket is None:
         bucket = conn.create_bucket(config["bucket"])
-    keyname = os.path.join(finfo["sample"], os.path.basename(finfo["path"]))
+    s3dirname = finfo["sample"] if finfo.has_key("sample") else finfo["run"]
+    keyname = os.path.join(s3dirname, os.path.basename(finfo["path"]))
     key = bucket.get_key(keyname)
     modified = datetime.datetime.fromtimestamp(email.utils.mktime_tz(
         email.utils.parsedate_tz(key.last_modified))) if key else None

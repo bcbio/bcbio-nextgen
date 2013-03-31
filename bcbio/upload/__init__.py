@@ -17,6 +17,8 @@ def from_sample(sample):
         approach = _approaches[upload_config.get("method", "filesystem")]
         for finfo in _get_files(sample):
             approach.update_file(finfo, sample["info"], upload_config)
+        for finfo in _get_files_run(sample, upload_config):
+            approach.update_file(finfo, None, upload_config)
 
 # ## File information from sample
 
@@ -32,11 +34,14 @@ def _get_files(sample):
     else:
         return []
 
-def _add_meta(xs, sample):
+def _add_meta(xs, sample=None, config=None):
     out = []
     for x in xs:
         x["mtime"] = shared.get_file_timestamp(x["path"])
-        x["sample"] = sample["name"][-1]
+        if sample:
+            x["sample"] = sample["name"][-1]
+        if config:
+            x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
         out.append(x)
     return out
 
@@ -69,3 +74,11 @@ def _get_files_variantcall(sample):
                         "ext": "%s-callregions" % x["variantcaller"],
                         "variantcaller": x["variantcaller"]})
     return _add_meta(out, sample)
+
+# ## File information from run
+
+def _get_files_run(sample, upload_config):
+    """Retrieve output files associated with an entire analysis run.
+    """
+    out = [{"path": sample["provenance"]["program"]}]
+    return _add_meta(out, config=upload_config)

@@ -37,7 +37,6 @@ class RunInfoTest(unittest.TestCase):
         x1 = run_info["details"][1][0]
         assert x1["barcode_id"] is None
 
-    @attr(working=True)
     @attr(speed=1)
     def test_programs(self):
         """Identify programs and versions used in analysis.

@@ -3,10 +3,11 @@
 Catalogs the full list of programs used in analysis, enabling reproduction of
 results and tracking of provenance in output files.
 """
+import os
 import collections
 import subprocess
 
-from bcbio import broad
+from bcbio import broad, utils
 from bcbio.pipeline import config_utils, version
 
 _cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
@@ -77,3 +78,13 @@ def get_versions(config):
         out.append({"program": p["name"],
                     "version": p["version_fn"](config)})
     return out
+
+def write_versions(dirs, config):
+    """Write CSV file with versions used in analysis pipeline.
+    """
+    base_dir = utils.safe_makedir(os.path.join(dirs["work"], "provenance"))
+    out_file = os.path.join(base_dir, "program.txt")
+    with open(out_file, "w") as out_handle:
+        for p in get_versions(config):
+            out_handle.write("{program},{version}\n".format(**p))
+    return out_file
