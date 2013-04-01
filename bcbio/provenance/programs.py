@@ -14,11 +14,12 @@ _cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"}
              {"cmd": "bedtools", "args": "--version", "stdout_flag": "bedtools"},
              {"cmd": "bowtie2", "args": "--version", "stdout_flag": "bowtie2-align"},
              {"cmd": "bwa", "stdout_flag": "Version:"},
+             {"cmd": "fastqc", "args": "--version", "stdout_flag": "FastQC"},
              {"cmd": "freebayes", "stdout_flag": "version:"},
              {"cmd": "novosort", "paren_flag": "novosort"},
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
              {"cmd": "samtools", "stdout_flag": "Version"}]
-# TODO: ogap, bamleftalign
+# TODO: ogap, bamleftalign, gemini
 
 def _broad_versioner(type):
     def get_version(config):

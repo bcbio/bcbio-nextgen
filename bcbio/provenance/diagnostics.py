@@ -24,19 +24,32 @@ def track_parallel(items, sub_type):
     """
     out = []
     for i, args in enumerate(items):
-        item_i, item = get_item_from_args(args)
+        item_i, item, nested_key = get_item_from_args(args)
         if item:
-            sub_entity = "%s.%s.%s" % (item["provenance"]["entity"], sub_type, i)
-            item["provenance"]["entity"] = sub_entity
+            if nested_key:
+                sub_entity = "%s.%s.%s" % (item[nested_key]["provenance"]["entity"], sub_type, i)
+                item[nested_key]["provenance"]["entity"] = sub_entity
+            else:
+                sub_entity = "%s.%s.%s" % (item["provenance"]["entity"], sub_type, i)
+                item["provenance"]["entity"] = sub_entity
+            args = list(args)
             args[item_i] = item
         out.append(args)
     # TODO: store mapping of entity to sub identifiers
     return out
 
+def _has_provenance(x):
+    return isinstance(x, dict) and x.has_key("provenance")
+
+def _has_info_provenance(x):
+    return isinstance(x, dict) and x.has_key("info") and _has_provenance(x["info"])
+
 def get_item_from_args(xs):
     """Retrieve processed item from list of input arguments.
     """
     for i, x in enumerate(xs):
-        if isinstance(x, dict) and x.has_key("provenance"):
-            return i, x
-    return -1, None
+        if _has_provenance(x):
+            return i, x, None
+        elif _has_info_provenance(x):
+            return i, x, "info"
+    return -1, None, None
