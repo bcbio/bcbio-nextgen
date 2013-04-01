@@ -8,10 +8,12 @@ For BAM input handling this requires:
 import os
 import subprocess
 
-from bcbio.pipeline import config_utils
-from bcbio.log import logger
-from bcbio.utils import (memoize_outfile, file_exists, transform_to, curdir_tmpdir)
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
+from bcbio.pipeline import config_utils
+from bcbio.provenance.diagnostics import log_cmd
+from bcbio.utils import (memoize_outfile, file_exists, transform_to, curdir_tmpdir)
 
 # ## BAM realignment
 
@@ -46,10 +48,38 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        "| {samtools} view -b -S -u - "
                        "| {novosort} -c {num_cores} -m {max_mem} -t {work_dir} "
                        "  -o {tx_out_file} /dev/stdin")
-                subprocess.check_call(cmd.format(**locals()), shell=True)
+                cmd = cmd.format(**locals())
+                log_cmd("Novoalign: %s" % names["sample"], None, cmd)
+                subprocess.check_call(cmd, shell=True)
     return out_file
 
 # ## Fastq to BAM alignment
+
+def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
+    """Perform piped alignment of fastq input files, generating sorted output BAM.
+    """
+    pair_file = pair_file if pair_file else ""
+    out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    samtools = config_utils.get_program("samtools", config)
+    novoalign = config_utils.get_program("novoalign", config)
+    resources = config_utils.get_resources("novoalign", config)
+    num_cores = config["algorithm"].get("num_cores", 1)
+    max_mem = resources.get("memory", "1G")
+    qual_format = config["algorithm"].get("quality_format", "").lower()
+    qual_flag = "ILMFQ" if qual_format == "illumina" else "STDFQ"
+    rg_info = get_rg_info(names)
+    if not utils.file_exists(out_file):
+        with utils.curdir_tmpdir() as work_dir:
+            with file_transaction(out_file) as tx_out_file:
+                tx_out_prefix = os.path.splitext(tx_out_file)[0]
+                cmd = ("{novoalign} -o SAM '{rg_info}' -d {ref_file} -f {fastq_file} {pair_file} "
+                       "  -F {qual_flag} -c {num_cores} "
+                       "| {samtools} view -b -S -u - "
+                       "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
+                cmd = cmd.format(**locals())
+                log_cmd("Novoalign: %s" % names["sample"], None, cmd)
+                subprocess.check_call(cmd, shell=True)
+    return out_file
 
 def _novoalign_args_from_config(config):
     """Select novoalign options based on configuration parameters.

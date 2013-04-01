@@ -18,13 +18,13 @@ details:
       mark_duplicates: samtools
       recalibrate: false
       realign: gkno
-      variantcaller: [gatk, freebayes]
+      variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
       nomap_split_size: 500
       variant_regions: ../data/automated/variant_regions-bam.bed
-    #metadata:
-    #  batch: TestBatch1
+    metadata:
+      batch: TestBatch1
     analysis: variant2
     description: Test1
     genome_build: hg19

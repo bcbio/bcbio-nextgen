@@ -30,7 +30,7 @@ _tools = {
     "bowtie2": NgsTool(bowtie2.align, None, None, base_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align, bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
     "mosaik": NgsTool(mosaik.align, None, None, mosaik.galaxy_location_file, None),
-    "novoalign": NgsTool(novoalign.align, None, novoalign.align_bam, base_location_file,
+    "novoalign": NgsTool(novoalign.align, novoalign.align_pipe, novoalign.align_bam, base_location_file,
                          novoalign.remap_index_fn),
     "tophat": NgsTool(tophat.align, None, None, base_location_file, bowtie2.remap_index_fn),
     "samtools": NgsTool(None, None, None, base_location_file, None),
