@@ -116,6 +116,8 @@ class BroadRunner:
         full_version = self.get_gatk_version()
         try:
             version, subversion, githash = full_version.split("-")
+            if version.startswith("v"):
+                version = version[1:]
         # version was not properly implemented in earlier versions
         except ValueError:
             version = 2.3
