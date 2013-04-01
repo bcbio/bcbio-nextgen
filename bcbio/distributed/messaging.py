@@ -15,11 +15,14 @@ from mako.template import Template
 from bcbio import utils
 from bcbio.distributed import ipython
 from bcbio.log import logger
+from bcbio.provenance import diagnostics
 
 def parallel_runner(parallel, dirs, config, config_file=None):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):
+        items = [x for x in items if x is not None]
+        items = diagnostics.track_parallel(items, fn_name)
         if parallel["type"].startswith("messaging"):
             task_module = "{base}.tasks".format(base=parallel["module"])
             runner_fn = runner(task_module, dirs, config, config_file)
@@ -32,7 +35,6 @@ def parallel_runner(parallel, dirs, config, config_file=None):
             fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
                                     fromlist=["multitasks"]),
                          fn_name)
-            items = [x for x in items if x is not None]
             num_jobs, cores_per_job = ipython.find_cores_per_job(fn, parallel, len(items), config)
             items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
             num_jobs = cores_including_resources(num_jobs, metadata, config)

@@ -102,6 +102,7 @@ def clean_sample_data(samples):
         data["config"] = {"algorithm": data["config"]["algorithm"],
                           "resources": data["config"]["resources"]}
         data["info"] = {"upload": data["info"].get("upload"),
+                        "provenance": data["info"]["provenance"],
                         "analysis": data["info"].get("analysis")}
         for remove_attr in ["config_file", "regions"]:
             if data.has_key(remove_attr):

@@ -16,7 +16,7 @@ from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
 from bcbio.pipeline import lane, region, qcsummary
-from bcbio.provenance import program
+from bcbio.provenance import programs
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
@@ -39,7 +39,6 @@ def run_main(config, config_file, work_dir, parallel,
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
-    provenance = {"program": program.write_versions(dirs, config)}
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
@@ -49,12 +48,25 @@ def run_main(config, config_file, work_dir, parallel,
     lane_items = lane.process_all_lanes(lanes, run_parallel)
     pipelines = _pair_lanes_with_pipelines(lane_items)
     for pipeline, pipeline_items in pipelines.items():
+        pipeline_items = _add_provenance(pipeline_items, dirs, config)
         for xs in pipeline.run(config, config_file, run_parallel, dirs, pipeline_items):
             assert len(xs) == 1
-            x = xs[0]
-            x["provenance"] = provenance
-            upload.from_sample(x)
+            upload.from_sample(xs[0])
     qcsummary.write_metrics(run_info, fc_name, fc_date, dirs)
+
+def _add_provenance(items, dirs, config):
+    p = programs.write_versions(dirs, config)
+    out = []
+    for item_info in items:
+        item = item_info[2]
+        item["provenance"] = {"programs": p,
+                              "entity": "%s.%s.%s" % (item["upload"]["fc_date"],
+                                                      item["upload"]["fc_name"],
+                                                      item["description"])}
+        cur = list(item_info)
+        cur[2] = item
+        out.append(cur)
+    return out
 
 # ## Utility functions
 

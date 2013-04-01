@@ -80,5 +80,5 @@ def _get_files_variantcall(sample):
 def _get_files_run(sample, upload_config):
     """Retrieve output files associated with an entire analysis run.
     """
-    out = [{"path": sample["provenance"]["program"]}]
+    out = [{"path": sample["info"]["provenance"]["programs"]}]
     return _add_meta(out, config=upload_config)

@@ -7,7 +7,7 @@ from nose.plugins.attrib import attr
 
 from bcbio.pipeline.config_utils import load_config
 from bcbio.pipeline.run_info import _generate_lane, get_run_info
-from bcbio.provenance import program
+from bcbio.provenance import programs
 
 class RunInfoTest(unittest.TestCase):
     def setUp(self):
@@ -43,4 +43,4 @@ class RunInfoTest(unittest.TestCase):
         """
         config = load_config(os.path.join(self.data_dir, "automated",
                                           "post_process-sample.yaml"))
-        print program.get_versions(config)
+        print programs.get_versions(config)
