@@ -16,13 +16,14 @@ from bcbio.pipeline import config_utils
 # ## snpEff variant effects
 
 # remap Galaxy genome names to the ones used by snpEff. Not nice code.
-SnpEffGenome = collections.namedtuple("SnpEffGenome", ["base", "default_version"])
+SnpEffGenome = collections.namedtuple("SnpEffGenome", ["base", "default_version", "is_human"])
 SNPEFF_GENOME_REMAP = {
-        "GRCh37": SnpEffGenome("GRCh37.", "68"),
-        "hg19" : SnpEffGenome("hg19", ""),
-        "mm9" : SnpEffGenome("NCBIM37.", "68"),
-        "araTha_tair9": SnpEffGenome("athalianaTair9", ""),
-        "araTha_tair10": SnpEffGenome("athalianaTair10", ""),
+        "GRCh37": SnpEffGenome("GRCh37.", "68", True),
+        "b37": SnpEffGenome("GRCh37.", "68", True),
+        "hg19" : SnpEffGenome("hg19", "", True),
+        "mm9" : SnpEffGenome("NCBIM37.", "68", False),
+        "araTha_tair9": SnpEffGenome("athalianaTair9", "", False),
+        "araTha_tair10": SnpEffGenome("athalianaTair10", "", False),
         }
 
 def _find_snpeff_datadir(config_file):

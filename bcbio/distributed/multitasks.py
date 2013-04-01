@@ -3,7 +3,7 @@
 from bcbio import utils
 from bcbio.bam import callable
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
-from bcbio.variation import bamprep, realign, genotype, ensemble, multi, recalibrate
+from bcbio.variation import bamprep, realign, genotype, ensemble, multi, population, recalibrate
 
 @utils.map_wrap
 def process_lane(*args):
@@ -87,6 +87,11 @@ def detect_sv(*args):
 @utils.map_wrap
 def combine_calls(*args):
     return ensemble.combine_calls(*args)
+
+@utils.map_wrap
+def prep_gemini_db(*args):
+    return population.prep_gemini_db(*args)
+prep_gemini_db.metadata = {"resources": ["gemini"]}
 
 @utils.map_wrap
 def combine_bed(*args):

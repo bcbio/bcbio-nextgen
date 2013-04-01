@@ -85,7 +85,8 @@ def write_versions(dirs, config):
     """
     base_dir = utils.safe_makedir(os.path.join(dirs["work"], "provenance"))
     out_file = os.path.join(base_dir, "programs.txt")
-    with open(out_file, "w") as out_handle:
-        for p in get_versions(config):
-            out_handle.write("{program},{version}\n".format(**p))
+    if not utils.file_exists(out_file):
+        with open(out_file, "w") as out_handle:
+            for p in get_versions(config):
+                out_handle.write("{program},{version}\n".format(**p))
     return out_file

@@ -20,7 +20,7 @@ from bcbio.provenance import programs
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
-from bcbio.variation import ensemble, recalibrate
+from bcbio.variation import ensemble, population, recalibrate
 
 def run_main(config, config_file, work_dir, parallel,
          fc_dir=None, run_info_yaml=None):
@@ -193,6 +193,7 @@ class Variant2Pipeline(AbstractPipeline):
         samples = run_parallel("postprocess_variants", samples)
         samples = combine_multiple_callers(samples)
         samples = ensemble.combine_calls_parallel(samples, run_parallel)
+        samples = population.prep_db_parallel(samples, run_parallel)
         samples = region.delayed_bamprep_merge(samples, run_parallel)
         samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples

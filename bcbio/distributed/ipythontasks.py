@@ -6,7 +6,7 @@ from IPython.parallel import require
 
 from bcbio.distributed import ipython
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
-from bcbio.variation import bamprep, realign, genotype, ensemble, multi, recalibrate
+from bcbio.variation import bamprep, realign, genotype, ensemble, multi, population, recalibrate
 from bcbio.log import setup_logging, logger
 
 @contextlib.contextmanager
@@ -128,6 +128,12 @@ def variantcall_sample(*args):
 def combine_variant_files(*args):
     with _setup_logging(args):
         return apply(genotype.combine_variant_files, *args)
+
+@require(population)
+def prep_gemini_db(*args):
+    with _setup_logging(args):
+        return apply(population.prep_gemini_db, *args)
+prep_gemini_db.metadata = {"resources": ["gemini"]}
 
 @require(variation)
 def detect_sv(*args):

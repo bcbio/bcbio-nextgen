@@ -6,7 +6,7 @@ import json
 from bcbio.log import logger
 from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
-from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
+from bcbio.variation.genotype import variant_filtration
 from bcbio.variation import annotation, effects
 
 # ## Genotyping
@@ -33,18 +33,7 @@ def finalize_genotyper(call_file, bam_file, ref_file, config):
         call_file = annotation.annotate_nongatk_vcf(call_file, bam_file, vrn_files.dbsnp,
                                                     ref_file, config)
     filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
-    _eval_genotyper(filter_snp, ref_file, vrn_files.dbsnp, config)
     return filter_snp
-
-def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
-    """Evaluate variant genotyping, producing a JSON metrics file with values.
-    """
-    metrics_file = "%s.eval_metrics" % vrn_file
-    if not os.path.exists(metrics_file):
-        stats = gatk_evaluate_variants(vrn_file, ref_file, config, dbsnp_file)
-        with open(metrics_file, "w") as out_handle:
-            json.dump(stats, out_handle)
-    return metrics_file
 
 # ## Structural variation
 

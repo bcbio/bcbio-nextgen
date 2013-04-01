@@ -51,6 +51,8 @@ resources:
   novoalign:
     cores: 4
     memory: 4G
+  gemini:
+    cores: 4
   gatk:
     cores: 2
     dir: /usr/share/java/gatk

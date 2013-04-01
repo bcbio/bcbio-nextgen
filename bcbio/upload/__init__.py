@@ -81,4 +81,9 @@ def _get_files_run(sample, upload_config):
     """Retrieve output files associated with an entire analysis run.
     """
     out = [{"path": sample["info"]["provenance"]["programs"]}]
+    for x in sample["variants"]:
+        if x.has_key("pop_db"):
+            out.append({"path": x["pop_db"],
+                        "type": "sqlite",
+                        "variantcaller": x["variantcaller"]})
     return _add_meta(out, config=upload_config)
