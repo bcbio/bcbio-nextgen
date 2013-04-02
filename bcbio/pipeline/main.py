@@ -59,10 +59,13 @@ def _add_provenance(items, dirs, config):
     out = []
     for item_info in items:
         item = item_info[2]
-        item["provenance"] = {"programs": p,
-                              "entity": "%s.%s.%s" % (item["upload"]["fc_date"],
-                                                      item["upload"]["fc_name"],
-                                                      item["description"])}
+        if item.get("upload"):
+            entity_id = "%s.%s.%s" % (item["upload"]["fc_date"],
+                                      item["upload"]["fc_name"],
+                                      item["description"])
+        else:
+            entity_id = item["description"]
+        item["provenance"] = {"programs": p, "entity": entity_id}
         cur = list(item_info)
         cur[2] = item
         out.append(cur)
