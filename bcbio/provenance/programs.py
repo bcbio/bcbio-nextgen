@@ -16,10 +16,11 @@ _cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"}
              {"cmd": "bwa", "stdout_flag": "Version:"},
              {"cmd": "fastqc", "args": "--version", "stdout_flag": "FastQC"},
              {"cmd": "freebayes", "stdout_flag": "version:"},
+             {"cmd": "gemini", "args": "--version", "stdout_flag": "gemini"},
              {"cmd": "novosort", "paren_flag": "novosort"},
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
              {"cmd": "samtools", "stdout_flag": "Version"}]
-# TODO: ogap, bamleftalign, gemini
+# TODO: ogap, bamleftalign
 
 def _broad_versioner(type):
     def get_version(config):
@@ -32,9 +33,30 @@ def _broad_versioner(type):
             raise NotImplementedError(type)
     return get_version
 
+def _jar_versioner(program_name, jar_name):
+    """Retrieve version information based on jar file.
+    """
+    def get_version(config):
+        try:
+            pdir = config_utils.get_program(program_name, config, "dir")
+        # not configured
+        except ValueError:
+            return ""
+        jar = os.path.basename(config_utils.get_jar(jar_name, pdir))
+        for to_remove in [jar_name, ".jar", "-standalone"]:
+            jar = jar.replace(to_remove, "")
+        if jar.startswith(("-", ".")):
+            jar = jar[1:]
+        return jar
+    return get_version
+
 _alt_progs = [{"name": "gatk", "version_fn": _broad_versioner("gatk")},
-              {"name": "picard", "version_fn": _broad_versioner("picard")}]
-# TODO: varscan, bcbio.variation, cortex_var
+              {"name": "picard", "version_fn": _broad_versioner("picard")},
+              {"name": "bcbio.variation",
+               "version_fn": _jar_versioner("bcbio_variation", "bcbio.variation")},
+              {"name": "varscan",
+               "version_fn": _jar_versioner("varscan", "VarScan")}]
+# TODO: cortex_var
 
 def _parse_from_stdoutflag(stdout, x):
     for line in stdout:

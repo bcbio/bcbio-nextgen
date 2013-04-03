@@ -189,6 +189,7 @@ class Variant2Pipeline(AbstractPipeline):
         # Handle alignment and preparation requiring the entire input file
         samples = run_parallel("align_prep_full", (list(x) + [config_file] for x in lane_items))
         regions = callable.combine_sample_regions(samples)
+        samples = region.add_region_info(samples, regions)
         # Handle all variant calling on sub-regions of the input file
         samples = region.clean_sample_data(samples)
         samples = region.parallel_prep_region(samples, regions, run_parallel)

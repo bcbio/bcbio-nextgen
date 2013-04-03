@@ -132,6 +132,11 @@ Variant calling
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
    multiple options [gatk, freebayes, varscan, samtools,
    gatk-haplotype, cortex]
+-  ``validate`` A VCF file of expected variant calls to perform
+    validation and grading of output variants from the pipeline.
+    This provides a mechanism to ensure consistency of calls against
+    a known set of variants, supporting comparisons to genotyping
+    array data or reference materials.
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [false, true]
 -  ``recalibrate`` Perform variant recalibration [true, false]

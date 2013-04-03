@@ -14,6 +14,7 @@ import yaml
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio.provenance.diagnostics import log_cmd
 
 def _has_ensemble(data):
     return len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble")
@@ -46,19 +47,25 @@ def combine_calls_parallel(samples, run_parallel):
     else:
         return samples
 
-def _run_bcbio_variation(config_file, base_dir, sample, data):
+def bcbio_variation_comparison(config_file, base_dir, data):
+    """Run a variant comparison using the bcbio.variation toolkit, given an input configuration.
+    """
     tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))
+    bv_jar = config_utils.get_jar("bcbio.variation",
+                                  config_utils.get_program("bcbio_variation",
+                                                           data["config"], "dir"))
+    resources = config_utils.get_resources("bcbio_variation", data["config"])
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
+    java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
+    cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-compare", config_file]
+    log_cmd("Comparing variant calls using bcbio.variation", data, " ".join(cmd))
+    subprocess.check_call(cmd)
+
+def _run_bcbio_variation(config_file, base_dir, sample, data):
     out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(sample))
     out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(sample))
     if not utils.file_exists(out_vcf_file):
-        bv_jar = config_utils.get_jar("bcbio.variation",
-                                      config_utils.get_program("bcbio_variation",
-                                                               data["config"], "dir"))
-        resources = config_utils.get_resources("bcbio_variation", data["config"])
-        jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
-        java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
-        subprocess.check_call(["java"] + jvm_opts + java_args +
-                              ["-jar", bv_jar, "variant-compare", config_file])
+        bcbio_variation_comparison(config_file, base_dir, data)
         base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
                                           "*-cfilter.vcf"))[0]
         base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep",

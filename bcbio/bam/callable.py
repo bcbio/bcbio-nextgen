@@ -163,7 +163,7 @@ def _write_bed_regions(sample, final_regions):
     out_file_ref = os.path.join(work_dir, "noanalysis_blocks.bed")
     final_regions.saveas(out_file)
     noanalysis_regions.saveas(out_file_ref)
-    return out_file_ref
+    return out_file, out_file_ref
 
 def _analysis_block_stats(regions):
     """Provide statistics on sizes and number of analysis blocks.
@@ -213,7 +213,8 @@ def combine_sample_regions(samples):
         combo_regions = _combine_regions(all_regions, ref_bedtool)
         final_regions = combo_regions.merge(d=min_n_size)
     _analysis_block_stats(final_regions)
-    no_analysis_file = _write_bed_regions(samples[0], final_regions)
+    analysis_file, no_analysis_file = _write_bed_regions(samples[0], final_regions)
     regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
-               "noanalysis": no_analysis_file}
+               "noanalysis": no_analysis_file,
+               "analysis_bed": analysis_file}
     return regions

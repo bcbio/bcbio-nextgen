@@ -10,6 +10,17 @@ from bcbio.distributed.split import (parallel_split_combine,
 from bcbio import utils
 from bcbio.variation import genotype, multi
 
+# ## data preparation
+
+def add_region_info(samples, regions):
+    """Add reference to BED file of callable regions to each sample.
+    """
+    out = []
+    for data in samples:
+        data["config"]["algorithm"]["callable_regions"] = regions["analysis_bed"]
+        out.append(data)
+    return out
+
 # ## BAM preparation
 
 def _split_by_regions(regions, dirname, out_ext, in_key):

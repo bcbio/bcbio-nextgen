@@ -73,7 +73,7 @@ def _group_by_batches(samples):
 def prep_db_parallel(samples, parallel_fn):
     """Prepares gemini databases in parallel, handling jointly called populations.
     """
-    if not _do_db_build(samples):
+    if len(samples) > 0 and not _do_db_build(samples):
         return samples
     batch_groups, singles, out_retrieve = _group_by_batches(samples)
     to_process = []
