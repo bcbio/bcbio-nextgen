@@ -51,7 +51,7 @@ def _get_analysis_intervals(data):
 def _create_validate_config(vrn_file, rm_file, base_dir, data):
     """Create a bcbio.variation configuration input for validation.
     """
-    calls = [{"file": rm_file, "name": "ref", "type": "grading-ref"},
+    calls = [{"file": rm_file, "name": "ref", "type": "grading-ref", "preclean": True},
              {"file": vrn_file, "name": "eval"}]
     exp = {"sample": data["name"][-1],
            "ref": data["sam_ref"],

@@ -456,7 +456,8 @@ def combine_multiple_callers(data):
     out = []
     for grouped_calls in by_bam.itervalues():
         ready_calls = [{"variantcaller": get_variantcaller(x),
-                        "vrn_file": x.get("vrn_file")}
+                        "vrn_file": x.get("vrn_file"),
+                        "validate": x.get("validate")}
                        for x in grouped_calls]
         final = grouped_calls[0]
         def orig_variantcaller_order(x):
