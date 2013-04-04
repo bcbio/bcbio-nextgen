@@ -42,12 +42,6 @@ def _create_validate_config_file(vrn_file, rm_file, base_dir, data):
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return config_file
 
-def _get_analysis_intervals(data):
-    for key in ["callable_regions", "variant_regions"]:
-        intervals = data["config"]["algorithm"].get(key)
-        if intervals:
-            return intervals
-
 def _create_validate_config(vrn_file, rm_file, base_dir, data):
     """Create a bcbio.variation configuration input for validation.
     """
@@ -58,7 +52,7 @@ def _create_validate_config(vrn_file, rm_file, base_dir, data):
            "align": data["work_bam"],
            "approach": "grade",
            "calls": calls}
-    intervals = _get_analysis_intervals(data)
+    intervals = ensemble.get_analysis_intervals(data)
     if intervals:
         exp["intervals"] = intervals
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},

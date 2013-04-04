@@ -68,14 +68,23 @@ def _run_bcbio_variation(config_file, base_dir, sample, data):
         bcbio_variation_comparison(config_file, base_dir, data)
         base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
                                           "*-cfilter.vcf"))[0]
-        base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep",
-                                          "*-multicombine.bed"))[0]
         os.symlink(base_vcf, out_vcf_file)
-        os.symlink(base_bed, out_bed_file)
+        multi_beds = glob.glob(os.path.join(base_dir, sample, "work", "prep",
+                                            "*-multicombine.bed"))
+        if len(multi_beds) > 0:
+            os.symlink(multi_beds[0], out_bed_file)
 
     return {"variantcaller": "ensemble",
             "vrn_file": out_vcf_file,
-            "bed_file": out_bed_file}
+            "bed_file": out_bed_file if os.path.exists(out_bed_file) else None}
+
+def get_analysis_intervals(data):
+    """Retrieve analysis regions for the current variant calling pipeline.
+    """
+    for key in ["callable_regions", "variant_regions"]:
+        intervals = data["config"]["algorithm"].get(key)
+        if intervals:
+            return intervals
 
 def _write_config_file(data, sample, base_dir, config_name):
     """Write YAML configuration to generate an ensemble set of combined calls.
@@ -87,7 +96,7 @@ def _write_config_file(data, sample, base_dir, config_name):
 
     econfig = prep_fns[config_name](sample, data["variants"],
                                     data["work_bam"], data["sam_ref"], sample_dir,
-                                    data["config"]["algorithm"].get("variant_regions", None),
+                                    get_analysis_intervals(data),
                                     data["config"]["algorithm"])
     with open(config_file, "w") as out_handle:
         yaml.dump(econfig, out_handle, allow_unicode=False, default_flow_style=False)
