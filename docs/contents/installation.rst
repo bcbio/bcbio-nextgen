@@ -19,11 +19,22 @@ for configuring the installation process. Some useful arguments are:
 - ``--distribution`` Specifies the operating system distribution
   (ubuntu, centos, debian, scientificlinux).
 
-This script requires that you can do a ``ssh localhost`` to your
+To bootstrap installation, the machine will need to have some basic
+requirements:
+
+- Python 2.6 or 2.7, with the development libraries
+  installed (the python-dev or python-devel packages).
+- A compiler like gcc.
+- The git version control (http://git-scm.com/).
+- PyYAML: install with `pip install pyyaml` or `easy_install pyyaml`
+
+The script requires that you can do a ``ssh localhost`` to your
 installation machine. If you'd like to do this without any passwords
 you can setup your ssh keys with::
 
     $ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
+(Use `ssh-keygen` if your user doesn't have an ssh key)
 
 If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
