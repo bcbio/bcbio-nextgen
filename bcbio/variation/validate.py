@@ -4,12 +4,15 @@ Automates the process of checking pipeline results against known valid calls
 to identify discordant variants. This provides a baseline for ensuring the
 validity of pipeline updates and algorithm changes.
 """
+import csv
 import os
 
 import yaml
 
 from bcbio import utils
 from bcbio.variation import ensemble
+
+# ## Individual sample comparisons
 
 def _has_validate(data):
     return data.get("vrn_file") and data["config"]["algorithm"].has_key("validate")
@@ -27,6 +30,7 @@ def compare_to_rm(data):
         val_config_file = _create_validate_config_file(vrn_file, rm_file, base_dir, data)
         work_dir = os.path.join(base_dir, "work")
         out = {"summary": os.path.join(work_dir, "validate-summary.csv"),
+               "grading": os.path.join(work_dir, "validate-grading.yaml"),
                "concordant": os.path.join(work_dir, "%s-ref-eval-concordance.vcf" % sample),
                "discordant": os.path.join(work_dir, "%s-eval-ref-discordance-annotate.vcf" % sample)}
         if not utils.file_exists(out["concordant"]):
@@ -57,3 +61,47 @@ def _create_validate_config(vrn_file, rm_file, base_dir, data):
         exp["intervals"] = intervals
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
+
+# ## Summarize comparisons
+
+def _flatten_grading(stats):
+    vtypes = ["snp", "indel"]
+    cat = "concordant"
+    for vtype in vtypes:
+        yield vtype, cat, stats[cat][cat].get(vtype, 0)
+    for vtype in vtypes:
+        for vclass, vitems in stats["discordant"].get(vtype, {}).iteritems():
+            for vreason, val in vitems.iteritems():
+                yield vtype, "discordant-%s-%s" % (vclass, vreason), val
+
+def _has_grading_info(samples):
+    for data in (x[0] for x in samples):
+        for variant in data.get("variants", []):
+            if variant.has_key("validate"):
+                return True
+    return False
+
+def summarize_grading(samples):
+    """Provide summaries of grading results across all samples.
+    """
+    if not _has_grading_info(samples):
+        return samples
+    out = []
+    out_csv = os.path.join(samples[0][0]["dirs"]["work"],
+                           "grading-summary.csv")
+    with open(out_csv, "w") as out_handle:
+        writer = csv.writer(out_handle)
+        writer.writerow(["sample", "caller", "variant.type", "category", "value"])
+        for data in (x[0] for x in samples):
+            data["validate"]["grading_summary"] = out_csv
+            out.append([data])
+            for variant in data.get("variants", []):
+                if variant.has_key("validate"):
+                    with open(variant["validate"]["grading"]) as in_handle:
+                        grade_stats = yaml.load(in_handle)
+                    for sample_stats in grade_stats:
+                        sample = sample_stats["sample"]
+                        for vtype, cat, val in _flatten_grading(sample_stats):
+                            writer.writerow([sample, variant["variantcaller"],
+                                             vtype, cat, val])
+    return out
