@@ -137,6 +137,8 @@ Variant calling
     This provides a mechanism to ensure consistency of calls against
     a known set of variants, supporting comparisons to genotyping
     array data or reference materials.
+- ``validate_regions`` A BED file of regions to evaluate in. This
+  defines specific regions covered by the ``validate`` VCF  file.
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [false, true]
 -  ``recalibrate`` Perform variant recalibration [true, false]

@@ -74,7 +74,7 @@ def calc_callable_loci(data, region=None, out_file=None):
                         if tregion.chrom == region:
                             out_handle.write("%s\t%s\t%s\tNO_COVERAGE\n" %
                                              (tregion.chrom, tregion.start, tregion.stop))
-    return [{"callable_bed": out_file, "config": data["config"]}]
+    return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
 def get_ref_bedtool(ref_file, config):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
@@ -150,8 +150,8 @@ def block_regions(in_bam, ref_file, config):
         ref_regions = get_ref_bedtool(ref_file, config)
         nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
-        nblock_regions = nblock_regions.merge(d=min_n_size)
         ready_regions = ref_regions.subtract(nblock_regions)
+        ready_regions = ready_regions.merge(d=min_n_size)
         ready_regions.saveas(block_bed)
     return [(r.chrom, int(r.start), int(r.stop)) for r in ready_regions]
 
