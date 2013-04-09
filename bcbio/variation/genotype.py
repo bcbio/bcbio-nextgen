@@ -38,8 +38,6 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
     coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
     variant_regions = config["algorithm"].get("variant_regions", None)
     confidence = "4.0" if coverage_depth in ["low"] else "30.0"
-    if out_file is None:
-        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     region = subset_variant_regions(variant_regions, region, out_file)
 
     params = ["-R", ref_file,
@@ -56,16 +54,18 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
         params += ["--dbsnp", dbsnp]
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
-    return broad_runner, params, out_file
+    return broad_runner, params
 
 def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
                        region=None, out_file=None):
     """Perform SNP genotyping on the given alignment file.
     """
-    broad_runner, params, out_file = \
-        _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
-                               region, out_file)
+    if out_file is None:
+        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
+        broad_runner, params = \
+            _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
+                                   region, out_file)
         if (not isinstance(region, (list, tuple)) and
             not all(has_aligned_reads(x, region) for x in align_bams)):
             write_empty_vcf(out_file)
@@ -83,12 +83,14 @@ def haplotype_caller(align_bams, ref_file, config, dbsnp=None,
 
     This requires the full non open-source version of GATK.
     """
-    broad_runner, params, out_file = \
-        _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
-                               region, out_file)
-    assert broad_runner.gatk_type() == "restricted", \
-        "Require full version of GATK 2.4+ for haplotype calling"
+    if out_file is None:
+        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
+        broad_runner, params = \
+            _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
+                                   region, out_file)
+        assert broad_runner.gatk_type() == "restricted", \
+            "Require full version of GATK 2.4+ for haplotype calling"
         if not all(has_aligned_reads(x, region) for x in align_bams):
             write_empty_vcf(out_file)
         else:

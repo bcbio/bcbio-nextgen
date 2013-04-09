@@ -79,9 +79,9 @@ def annotate_nongatk_vcf(orig_file, bam_file, dbsnp_file, ref_file, config):
     """
     broad_runner = broad.runner_from_config(config)
     out_file = "%s-gatkann%s" % os.path.splitext(orig_file)
-    annotations = get_gatk_annotations(config)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            annotations = get_gatk_annotations(config)
             params = ["-T", "VariantAnnotator",
                       "-R", ref_file,
                       "-I", bam_file,
