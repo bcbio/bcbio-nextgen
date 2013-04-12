@@ -63,7 +63,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
     if file_exists(out_file):
-        return out_file
+        return os.path.join(out_dir, "%s.sam" % out_base)
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
@@ -97,7 +97,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     out_file = os.path.join(out_dir, _out_fnames[0])
 
     if file_exists(out_file):
-        return out_file
+        return os.path.join(out_dir, "%s.sam" % out_base)
 
     if not _bowtie_ref_match(ref_file, config):
         logger.error("Bowtie version %d was detected but the reference "
