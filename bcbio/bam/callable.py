@@ -135,6 +135,21 @@ def _add_config_regions(nblock_regions, ref_regions, config):
     else:
         return nblock_regions
 
+def _avoid_small_regions(regions, min_size, ref_regions):
+    """Expand regions less than min_size to merge with nearby regions.
+    This avoids large numbers of very small regions, which are
+    problematic for parallelizing.
+    """
+    chromsizes = {}
+    for r in ref_regions:
+        chromsizes[r.chrom] = (r.start, r.stop)
+    small_regions = regions.filter(lambda b: (b.stop - b.start) < min_size)
+    if len(small_regions) > 0:
+        expand_small_regions = small_regions.slop(g=chromsizes, b=min_size*2)
+        return regions.cat(expand_small_regions, postmerge=True)
+    else:
+        return regions
+
 def block_regions(in_bam, ref_file, config):
     """Find blocks of regions for analysis from mapped input BAM file.
 
@@ -152,6 +167,7 @@ def block_regions(in_bam, ref_file, config):
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
         ready_regions = ref_regions.subtract(nblock_regions)
         ready_regions = ready_regions.merge(d=min_n_size)
+        ready_regions = _avoid_small_regions(ready_regions, min_n_size, ref_regions)
         ready_regions.saveas(block_bed)
     return [(r.chrom, int(r.start), int(r.stop)) for r in ready_regions]
 
