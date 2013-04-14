@@ -144,8 +144,8 @@ def _avoid_small_regions(regions, min_size, ref_regions):
     for r in ref_regions:
         chromsizes[r.chrom] = (r.start, r.stop)
     small_regions = regions.filter(lambda b: (b.stop - b.start) < min_size)
-    if len(small_regions) > 0:
-        expand_small_regions = small_regions.slop(g=chromsizes, b=min_size*2)
+    expand_small_regions = small_regions.slop(g=chromsizes, b=min_size*4)
+    if len(expand_small_regions) > 0:
         return regions.cat(expand_small_regions, postmerge=True)
     else:
         return regions
