@@ -13,14 +13,12 @@ import os
 import collections
 import copy
 import itertools
-import shutil
 
 from bcbio import broad
 from bcbio.log import logger
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
-from bcbio.distributed.split import (parallel_split_combine,
-                                     grouped_parallel_split_combine)
+from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
@@ -67,7 +65,7 @@ def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
             _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp,
                                    region, out_file)
         if (not isinstance(region, (list, tuple)) and
-            not all(has_aligned_reads(x, region) for x in align_bams)):
+                not all(has_aligned_reads(x, region) for x in align_bams)):
             write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:
@@ -146,6 +144,10 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             params.extend(["--rod_priority_list", ",".join(priority_order)])
             if quiet_out:
                 params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
+            variant_regions = config["algorithm"].get("variant_regions", None)
+            if variant_regions:
+                params += ["-L", bamprep.region_to_gatk(variant_regions),
+                           "--interval_set_rule", "INTERSECTION"]
             broad_runner.run_gatk(params)
     return out_file
 
@@ -206,8 +208,8 @@ def _shared_variant_filtration(filter_type, cov_interval, snp_file,
                                ref_file, vrn_files):
     """Share functionality for filtering variants.
     """
-    recal_file = "{base}.recal".format(base = os.path.splitext(snp_file)[0])
-    tranches_file = "{base}.tranches".format(base = os.path.splitext(snp_file)[0])
+    recal_file = "{base}.recal".format(base=os.path.splitext(snp_file)[0])
+    tranches_file = "{base}.tranches".format(base=os.path.splitext(snp_file)[0])
     params = ["-T", "VariantRecalibrator",
               "-R", ref_file,
               "--input", snp_file,
@@ -227,11 +229,10 @@ def _shared_variant_filtration(filter_type, cov_interval, snp_file,
               "-an", "MQRankSum",
               "-an", "MQ"])
     if filter_type in ["INDEL", "BOTH"]:
-        assert vrn_files.train_indels, \
-               "Need indel training file specified"
+        assert vrn_files.train_indels, "Need indel training file specified"
         params.extend(
             ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
-             vrn_files.train_indels,])
+             vrn_files.train_indels])
     if cov_interval == "exome":
         params.extend(["--maxGaussians", "4", "--percentBadVariants", "0.05"])
     else:
@@ -286,7 +287,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
                                            filters)
     else:
         # also check if we've failed recal and needed to do strict filtering
-        filter_file = "{base}-filterSNP.vcf".format(base = os.path.splitext(snp_file)[0])
+        filter_file = "{base}-filterSNP.vcf".format(base=os.path.splitext(snp_file)[0])
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
             return _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
@@ -374,7 +375,7 @@ def _format_stats(stats):
         titv_novel = float(ti_novel) / float(tv_novel)
     else:
         titv_all, titv_dbsnp, titv_novel = (-1.0, -1.0, -1.0)
-    return dict(total=total, dbsnp_pct = dbsnp, titv_all=titv_all,
+    return dict(total=total, dbsnp_pct=dbsnp, titv_all=titv_all,
                 titv_dbsnp=titv_dbsnp, titv_novel=titv_novel)
 
 def _extract_eval_stats(eval_file):
@@ -382,7 +383,7 @@ def _extract_eval_stats(eval_file):
     """
     stats = dict()
     for snp_type in ['called', 'filtered']:
-        stats[snp_type]  = dict()
+        stats[snp_type] = dict()
         for dbsnp_type in ['known', 'novel']:
             stats[snp_type][dbsnp_type] = dict(ti=0, tv=0)
     for line in _eval_analysis_type(eval_file, "Ti/Tv Variant Evaluator"):
@@ -502,7 +503,7 @@ def parallel_variantcall(sample_info, parallel_fn):
             finished.append(x)
     if len(to_process) > 0:
         split_fn = process_bam_by_chromosome("-variants.vcf", "work_bam",
-                                             dir_ext_fn = get_variantcaller)
+                                             dir_ext_fn=get_variantcaller)
         processed = grouped_parallel_split_combine(
             to_process, split_fn, multi.group_batches, parallel_fn,
             "variantcall_sample", "split_variants_by_sample", "combine_variant_files",

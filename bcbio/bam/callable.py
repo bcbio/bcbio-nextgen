@@ -15,7 +15,6 @@ from py_descriptive_statistics import Enum as Stats
 
 from bcbio import utils, broad
 from bcbio.log import logger
-from bcbio.distributed import messaging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
@@ -28,8 +27,8 @@ def parallel_callable_loci(in_bam, ref_file, config):
     runner = parallel_runner(parallel, {}, config)
     split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
     out = parallel_split_combine([[data]], split_fn, runner,
-                                  "calc_callable_loci", "combine_bed",
-                                  "callable_bed", ["config"])[0]
+                                 "calc_callable_loci", "combine_bed",
+                                 "callable_bed", ["config"])[0]
     return out[0]["callable_bed"]
 
 def combine_bed(in_files, out_file, config):
@@ -144,7 +143,7 @@ def _avoid_small_regions(regions, min_size, ref_regions):
     for r in ref_regions:
         chromsizes[r.chrom] = (r.start, r.stop)
     small_regions = regions.filter(lambda b: (b.stop - b.start) < min_size)
-    expand_small_regions = small_regions.slop(g=chromsizes, b=min_size*4)
+    expand_small_regions = small_regions.slop(g=chromsizes, b=min_size * 4)
     if len(expand_small_regions) > 0:
         return regions.cat(expand_small_regions, postmerge=True)
     else:
