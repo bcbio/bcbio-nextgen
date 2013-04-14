@@ -59,7 +59,12 @@ class BroadRunner:
             subprocess.check_call(cl)
 
     def get_picard_version(self, command):
-        cl = self._get_picard_cmd(command) + ["--version"]
+        if os.path.isdir(self._picard_ref):
+            picard_jar = self._get_jar(command)
+            cl = ["java", "-Xms5m", "-Xmx5m", "-jar", picard_jar]
+        else:
+            cl = [self._picard_ref, command]
+        cl += ["--version"]
         p = subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         version = float(p.stdout.read().split("(")[0])
         p.wait()
