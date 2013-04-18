@@ -73,12 +73,13 @@ def generate_transcript_counts(data):
 def generate_bigwig(data):
     """Provide a BigWig coverage file of the sorted alignments.
     """
-    logger.info("Preparing BigWig file %s" % str(data["name"]))
-    bam_file = data["work_bam"]
-    wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
-    if not file_exists(wig_file):
-        with file_transaction(wig_file) as tx_file:
-            cl = ["bam_to_wiggle.py", bam_file,
-                  data["config_file"], "--outfile=%s" % tx_file]
-            subprocess.check_call(cl)
+    if data["config"]["algorithm"].get("coverage_bigwig", True):
+        logger.info("Preparing BigWig file %s" % str(data["name"]))
+        bam_file = data["work_bam"]
+        wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
+        if not file_exists(wig_file):
+            with file_transaction(wig_file) as tx_file:
+                cl = ["bam_to_wiggle.py", bam_file,
+                      data["config_file"], "--outfile=%s" % tx_file]
+                subprocess.check_call(cl)
     return [[data]]

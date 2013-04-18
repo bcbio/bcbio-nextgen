@@ -114,6 +114,8 @@ Alignment
 -  ``merge_bamprep`` Merge regional BAM prepped files into a final
    prepared BAM. false avoids the time consuming merge when you only
    want variant calls [true, false]
+-  ``coverage_bigwig`` Generate a bigwig file of coverage, for loading
+   into the UCSC genome browser [true, false]
 
 Experimental information
 ========================
