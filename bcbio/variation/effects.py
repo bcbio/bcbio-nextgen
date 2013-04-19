@@ -32,7 +32,7 @@ def _find_snpeff_datadir(config_file):
             if line.startswith("data_dir"):
                 data_dir = config_utils.expand_path(line.split("=")[-1].strip())
                 if not data_dir.startswith("/"):
-                    data_dir = os.path.join(os.path.dirname(config_file, data_dir))
+                    data_dir = os.path.join(os.path.dirname(config_file), data_dir)
                 return data_dir
     raise ValueError("Did not find data directory in snpEff config file: %s" % config_file)
 
