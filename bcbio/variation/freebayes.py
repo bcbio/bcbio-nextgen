@@ -48,13 +48,13 @@ def run_freebayes(align_bams, ref_file, config, dbsnp=None, region=None,
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("freebayes", config),
                   "-v", tx_out_file, "-f", ref_file,
-                  "--use-mapping-quality"]
+                  "--use-mapping-quality", "--pvar", "0.7"]
             for align_bam in align_bams:
                 broad_runner.run_fn("picard_index", align_bam)
                 cl += ["-b", align_bam]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
-        _remove_freebayes_refalt_dups(out_file)
+        _clean_freebayes_output(out_file)
     return out_file
 
 def _move_vcf(orig_file, new_file):
@@ -65,9 +65,10 @@ def _move_vcf(orig_file, new_file):
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
 
-def _remove_freebayes_refalt_dups(in_file):
-    """Remove lines from FreeBayes outputs where REF/ALT are identical.
-    2       22816178        .       G       G       0.0339196
+def _clean_freebayes_output(in_file):
+    """Clean FreeBayes output to make post-processing with GATK happy.
+    - Remove lines from FreeBayes outputs where REF/ALT are identical:
+      2       22816178        .       G       G       0.0339196
     """
     out_file = apply("{0}-nodups{1}".format, os.path.splitext(in_file))
     if not file_exists(out_file):

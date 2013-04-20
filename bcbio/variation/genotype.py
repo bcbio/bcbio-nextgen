@@ -137,8 +137,8 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
                       "-R", ref_file,
                       "--out", tx_out_file]
             priority_order = []
-            for orig_file in orig_files:
-                name = os.path.splitext(os.path.basename(orig_file))[0]
+            for i, orig_file in enumerate(orig_files):
+                name = "v%s" % i
                 params.extend(["--variant:{name}".format(name=name), orig_file])
                 priority_order.append(name)
             params.extend(["--rod_priority_list", ",".join(priority_order)])
