@@ -4,13 +4,11 @@ import os
 import glob
 import subprocess
 import contextlib
-import collections
 
 import pysam
 
 from bcbio import broad
 from bcbio.bam import cram
-from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
 
@@ -29,11 +27,13 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
                     config=None, dirs=None):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    if item.has_key("files") and bc_name is None:
+    if "files" in item and bc_name is None:
         names = item["files"]
         if isinstance(names, basestring):
             names = [names]
         files = [x if os.path.isabs(x) else os.path.join(directory, x) for x in names]
+    elif "vrn_file" in item:
+        files = []
     else:
         assert fc_name is not None
         lane = item["lane"]
@@ -45,7 +45,7 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
         files.sort()
         if len(files) > 2 or len(files) == 0:
             raise ValueError("Did not find correct files for %s %s %s %s" %
-                    (directory, lane, fc_name, files))
+                             (directory, lane, fc_name, files))
     ready_files = []
     for fname in files:
         if fname.endswith(".gz") and _pipeline_needs_fastq(config, item):
@@ -61,7 +61,8 @@ def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
             assert os.path.exists(fname), fname
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]
-    return ready_files[0], (ready_files[1] if len(ready_files) > 1 else None)
+    return ((ready_files[0] if len(ready_files) > 0 else None),
+            (ready_files[1] if len(ready_files) > 1 else None))
 
 def _pipeline_needs_fastq(config, item):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
@@ -106,5 +107,5 @@ def _is_paired(bam_file):
     # Instead return true by default and then check after output
     return True
     with contextlib.closing(pysam.Samfile(bam_file, "rb")) as work_bam:
-        for read in bam_file:
+        for read in work_bam:
             return read.is_paired

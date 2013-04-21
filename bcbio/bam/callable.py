@@ -218,17 +218,22 @@ def combine_sample_regions(samples):
     min_n_size = int(samples[0]["config"]["algorithm"].get("nomap_split_size", 5000))
     final_regions = None
     all_regions = []
-    for regions in (x["regions"] for x in samples):
+    for regions in (x["regions"] for x in samples if "regions" in x):
         bed_lines = ["%s\t%s\t%s" % (c, s, e) for (c, s, e) in regions]
         all_regions.append(pybedtools.BedTool("\n".join(bed_lines), from_string=True))
-    if len(all_regions) == 1:
+    if len(all_regions) == 0:
+        final_regions = []
+    elif len(all_regions) == 1:
         final_regions = all_regions[0]
     else:
         ref_bedtool = get_ref_bedtool(samples[0]["sam_ref"], samples[0]["config"])
         combo_regions = _combine_regions(all_regions, ref_bedtool)
         final_regions = combo_regions.merge(d=min_n_size)
-    _analysis_block_stats(final_regions)
-    analysis_file, no_analysis_file = _write_bed_regions(samples[0], final_regions)
+    if len(all_regions) > 0:
+        _analysis_block_stats(final_regions)
+        analysis_file, no_analysis_file = _write_bed_regions(samples[0], final_regions)
+    else:
+        analysis_file, no_analysis_file = None, None
     regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
                "noanalysis": no_analysis_file,
                "analysis_bed": analysis_file}

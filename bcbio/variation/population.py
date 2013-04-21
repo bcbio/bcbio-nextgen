@@ -45,8 +45,9 @@ def _do_db_build(samples):
         return False
     genomes = set()
     for data in [x[0] for x in samples]:
-        genomes.add(data["genome_build"])
-    if len(genomes) > 1:
+        if data["work_bam"]:
+            genomes.add(data["genome_build"])
+    if len(genomes) == 0 or len(genomes) > 1:
         return False
     else:
         return effects.SNPEFF_GENOME_REMAP[genomes.pop()].is_human
@@ -57,25 +58,29 @@ def _group_by_batches(samples):
     batch_groups = collections.defaultdict(list)
     singles = []
     out_retrieve = []
+    extras = []
     for data in [x[0] for x in samples]:
-        batch = data.get("metadata", {}).get("batch")
-        if batch:
-            out_retrieve.append((batch, data))
-        else:
-            out_retrieve.append((data["name"][-1], data))
-        for vrn in data["variants"]:
+        if data["work_bam"]:
+            batch = data.get("metadata", {}).get("batch")
             if batch:
-                batch_groups[(batch, vrn["variantcaller"])].append((vrn["vrn_file"], data))
+                out_retrieve.append((batch, data))
             else:
-                singles.append((data["name"][-1], vrn["variantcaller"], data, vrn["vrn_file"]))
-    return batch_groups, singles, out_retrieve
+                out_retrieve.append((data["name"][-1], data))
+            for vrn in data["variants"]:
+                if batch:
+                    batch_groups[(batch, vrn["variantcaller"])].append((vrn["vrn_file"], data))
+                else:
+                    singles.append((data["name"][-1], vrn["variantcaller"], data, vrn["vrn_file"]))
+        else:
+            extras.append(data)
+    return batch_groups, singles, out_retrieve, extras
 
 def prep_db_parallel(samples, parallel_fn):
     """Prepares gemini databases in parallel, handling jointly called populations.
     """
     if len(samples) > 0 and not _do_db_build(samples):
         return samples
-    batch_groups, singles, out_retrieve = _group_by_batches(samples)
+    batch_groups, singles, out_retrieve, extras = _group_by_batches(samples)
     to_process = []
     for (name, caller), info in batch_groups.iteritems():
         fnames = [x[0] for x in info]
@@ -95,4 +100,6 @@ def prep_db_parallel(samples, parallel_fn):
             out_variants.append(vrn)
         data["variants"] = out_variants
         out.append([data])
+    for x in extras:
+        out.append([x])
     return out

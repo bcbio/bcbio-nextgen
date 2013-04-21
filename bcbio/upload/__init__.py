@@ -50,12 +50,12 @@ def _get_files_variantcall(sample):
     """
     out = []
     algorithm = sample["config"]["algorithm"]
-    if algorithm.get("write_summary", True):
+    if algorithm.get("write_summary", True) and "summary" in sample:
         out = [{"path": sample["summary"]["pdf"],
                 "type": "pdf",
                 "ext": "summary"}]
     if ((algorithm.get("aligner") or algorithm.get("realign") or algorithm.get("recalibrate"))
-          and algorithm.get("merge_bamprep", True)):
+          and algorithm.get("merge_bamprep", True)) and sample["work_bam"] is not None:
         out.append({"path": sample["work_bam"],
                     "type": "bam",
                     "ext": "ready"})
@@ -63,16 +63,17 @@ def _get_files_variantcall(sample):
             out.append({"path": sample["work_bam"] + ".bai",
                         "type": "bai",
                         "ext": "ready"})
-    for x in sample["variants"]:
-        out.append({"path": x["vrn_file"],
-                    "type": "vcf",
-                    "ext": x["variantcaller"],
-                    "variantcaller": x["variantcaller"]})
-        if x.get("bed_file"):
-            out.append({"path": x["bed_file"],
-                        "type": "bed",
-                        "ext": "%s-callregions" % x["variantcaller"],
+    if sample["work_bam"] is not None:
+        for x in sample["variants"]:
+            out.append({"path": x["vrn_file"],
+                        "type": "vcf",
+                        "ext": x["variantcaller"],
                         "variantcaller": x["variantcaller"]})
+            if x.get("bed_file"):
+                out.append({"path": x["bed_file"],
+                            "type": "bed",
+                            "ext": "%s-callregions" % x["variantcaller"],
+                            "variantcaller": x["variantcaller"]})
     return _add_meta(out, sample)
 
 # ## File information from run

@@ -15,13 +15,14 @@ def postprocess_variants(data):
     """Provide post-processing of variant calls.
     """
     logger.info("Finalizing variant calls: %s" % str(data["name"]))
-    data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
-                                          data["sam_ref"], data["config"])
-    logger.info("Calculating variation effects for %s" % str(data["name"]))
-    ann_vrn_file = effects.snpeff_effects(data["vrn_file"], data["genome_build"],
-                                          data["config"])
-    if ann_vrn_file:
-        data["vrn_file"] = ann_vrn_file
+    if data["work_bam"]:
+        data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
+                                              data["sam_ref"], data["config"])
+        logger.info("Calculating variation effects for %s" % str(data["name"]))
+        ann_vrn_file = effects.snpeff_effects(data["vrn_file"], data["genome_build"],
+                                              data["config"])
+        if ann_vrn_file:
+            data["vrn_file"] = ann_vrn_file
     data = validate.compare_to_rm(data)
     return [[data]]
 

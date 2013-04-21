@@ -33,7 +33,7 @@ def generate_parallel(samples, run_parallel):
 def pipeline_summary(data):
     """Provide summary information on processing sample.
     """
-    if data["sam_ref"] is not None:
+    if data["sam_ref"] is not None and data["work_bam"]:
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
                                                  data["sam_ref"], data["name"],
@@ -153,16 +153,17 @@ def _get_sample_summaries(samples):
     out = []
     with utils.curdir_tmpdir() as tmp_dir:
         for sample in (x[0] for x in samples):
-            is_paired = sample.get("fastq2", None) not in ["", None]
-            _, summary, _ = _graphs_and_summary(sample["work_bam"], sample["sam_ref"],
-                                            is_paired, tmp_dir, sample["config"])
-            sample_info = {}
-            for xs in summary:
-                n = xs[0]
-                if n is not None:
-                    sample_info[n] = xs[1:]
-            sample_name = ";".join([x for x in sample["name"] if x])
-            out.append((sample_name, sample_info))
+            if sample["work_bam"] is not None:
+                is_paired = sample.get("fastq2", None) not in ["", None]
+                _, summary, _ = _graphs_and_summary(sample["work_bam"], sample["sam_ref"],
+                                                is_paired, tmp_dir, sample["config"])
+                sample_info = {}
+                for xs in summary:
+                    n = xs[0]
+                    if n is not None:
+                        sample_info[n] = xs[1:]
+                sample_name = ";".join([x for x in sample["name"] if x])
+                out.append((sample_name, sample_info))
     return out
 
 # ## Run and parse read information from FastQC

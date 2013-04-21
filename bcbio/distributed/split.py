@@ -113,11 +113,19 @@ def _add_combine_extras(args, extras):
     """
     if len(extras) == 0:
         return args
+    # Pass along extras when we have no processed items
+    if len(args) == 0:
+        return [[x] for x in extras]
     extra_out_map = collections.defaultdict(list)
     file_key = _get_combine_key(args[0][0])
-    for extra in extras:
-        extra_out_map[extra["combine"][file_key]["out"]].append(extra)
     out = []
+    no_combine_extras = 0
+    for extra in extras:
+        if "combine" in extra:
+            extra_out_map[extra["combine"][file_key]["out"]].append(extra)
+        else:
+            no_combine_extras += 1
+            out.append([extra])
     added = 0
     for arg in (x[0] for x in args):
         cur_out = arg["combine"][file_key]["out"]
@@ -125,7 +133,7 @@ def _add_combine_extras(args, extras):
         added += len(to_add)
         arg["combine"][file_key]["extras"].extend(to_add)
         out.append([arg])
-    assert added >= len(extras), (added, len(extras))
+    assert added + no_combine_extras >= len(extras), (added, len(extras))
     return out
 
 def _organize_output(output, combine_map, file_key, combine_arg_keys):

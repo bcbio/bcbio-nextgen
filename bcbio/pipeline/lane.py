@@ -26,7 +26,7 @@ def _item_needs_compute(lanes):
         item = lane_items[0]
         config = shared.update_config_w_custom(config, item)
         split_size = config.get("distributed", {}).get("align_split_size",
-                                                   config["algorithm"].get("align_split_size", None))
+                                                       config["algorithm"].get("align_split_size", None))
         if split_size is not None:
             return True
         if needs_fastq_conversion(item, config):
@@ -60,8 +60,8 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
     lane_name = "%s_%s_%s" % (lane_items[0]['lane'], fc_date, fc_name)
     logger.info("Preparing %s" % lane_name)
     full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"],
-      dirs["work"], lane_items[0], fc_name, dirs=dirs,
-      config=shared.update_config_w_custom(config, lane_items[0]))
+                                               dirs["work"], lane_items[0], fc_name, dirs=dirs,
+                                               config=shared.update_config_w_custom(config, lane_items[0]))
     bc_files = split_by_barcode(full_fastq1, full_fastq2, lane_items,
                                 lane_name, dirs, config)
     out = []
@@ -69,7 +69,7 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
         config = shared.update_config_w_custom(config, item)
         # Can specify all barcodes but might not have actual sequences
         # Would be nice to have a good way to check this is okay here.
-        if bc_files.has_key(item["barcode_id"]):
+        if item["barcode_id"] in bc_files:
             for fastq1, fastq2, lane_ext in _prep_fastq_files(item, bc_files, dirs, config):
                 cur_lane_name = lane_name
                 cur_lane_desc = item["description"]
@@ -183,12 +183,22 @@ def align_prep_full(fastq1, fastq2, info, lane_name, lane_desc,
     """Perform alignment and post-processing required on full BAM files.
     Prepare list of callable genome regions allowing subsequent parallelization.
     """
-    align_out = process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
-                                  dirs, config)[0]
-    data = _organize_merge_samples(align_out, dirs, config_file)
-    data["regions"] = callable.block_regions(data["work_bam"],
-                                             data["sam_ref"], config)
-    data = _recal_no_markduplicates(data)
+    if fastq1 is None and "vrn_file" in info:
+        _, ref_file = get_genome_ref(info["genome_build"], None, dirs["galaxy"])
+        config["algorithm"]["variantcaller"] = ""
+        data = {"info": info, "sam_ref": ref_file,
+                "work_bam": None,
+                "genome_build": info["genome_build"],
+                "name": ("", lane_desc),
+                "vrn_file": info["vrn_file"],
+                "dirs": copy.deepcopy(dirs), "config": config}
+    else:
+        align_out = process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
+                                      dirs, config)[0]
+        data = _organize_merge_samples(align_out, dirs, config_file)
+        data["regions"] = callable.block_regions(data["work_bam"],
+                                                 data["sam_ref"], config)
+        data = _recal_no_markduplicates(data)
     return [data]
 
 def _recal_no_markduplicates(data):

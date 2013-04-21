@@ -21,15 +21,19 @@ def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
     if _has_validate(data):
-        vrn_file = os.path.abspath(data["vrn_file"])
+        if isinstance(data["vrn_file"], (list, tuple)):
+            vrn_file = [os.path.abspath(x) for x in data["vrn_file"]]
+        else:
+            vrn_file = os.path.abspath(data["vrn_file"])
         rm_file = os.path.abspath(data["config"]["algorithm"]["validate"])
         rm_interval_file = data["config"]["algorithm"].get("validate_regions")
         if rm_interval_file:
             rm_interval_file = os.path.abspath(rm_interval_file)
         sample = data["name"][-1].replace(" ", "_")
-        base_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"],
-                                                   "validate", sample,
-                                                   data["config"]["algorithm"]["variantcaller"]))
+        caller = data["config"]["algorithm"].get("variantcaller")
+        if not caller:
+            caller = "precalled"
+        base_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "validate", sample, caller))
         val_config_file = _create_validate_config_file(vrn_file, rm_file, rm_interval_file,
                                                        base_dir, data)
         work_dir = os.path.join(base_dir, "work")
@@ -60,12 +64,13 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, base_dir, data)
     calls = [ref_call, {"file": vrn_file, "name": "eval"}]
     exp = {"sample": data["name"][-1],
            "ref": data["sam_ref"],
-           "align": data["work_bam"],
            "approach": "grade",
            "calls": calls}
+    if data["work_bam"]:
+        exp["align"] = data["work_bam"]
     intervals = ensemble.get_analysis_intervals(data)
     if intervals:
-        exp["intervals"] = intervals
+        exp["intervals"] = os.path.abspath(intervals)
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
 
@@ -109,6 +114,6 @@ def summarize_grading(samples):
                     for sample_stats in grade_stats:
                         sample = sample_stats["sample"]
                         for vtype, cat, val in _flatten_grading(sample_stats):
-                            writer.writerow([sample, variant["variantcaller"],
+                            writer.writerow([sample, variant.get("variantcaller", ""),
                                              vtype, cat, val])
     return out
