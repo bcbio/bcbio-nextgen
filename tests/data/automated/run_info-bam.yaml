@@ -11,6 +11,7 @@ details:
     genome_build: hg19
     algorithm:
       variant_regions: ../data/automated/variant_regions-bam.bed
+      validate_genome_build: hg19
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
   - algorithm:
       #aligner: false

@@ -10,6 +10,7 @@ import os
 import yaml
 
 from bcbio import utils
+from bcbio.pipeline import alignment
 from bcbio.variation import ensemble
 
 # ## Individual sample comparisons
@@ -29,13 +30,14 @@ def compare_to_rm(data):
         rm_interval_file = data["config"]["algorithm"].get("validate_regions")
         if rm_interval_file:
             rm_interval_file = os.path.abspath(rm_interval_file)
+        rm_genome = data["config"]["algorithm"].get("validate_genome_build")
         sample = data["name"][-1].replace(" ", "_")
         caller = data["config"]["algorithm"].get("variantcaller")
         if not caller:
             caller = "precalled"
         base_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "validate", sample, caller))
         val_config_file = _create_validate_config_file(vrn_file, rm_file, rm_interval_file,
-                                                       base_dir, data)
+                                                       rm_genome, base_dir, data)
         work_dir = os.path.join(base_dir, "work")
         out = {"summary": os.path.join(work_dir, "validate-summary.csv"),
                "grading": os.path.join(work_dir, "validate-grading.yaml"),
@@ -46,26 +48,40 @@ def compare_to_rm(data):
         data["validate"] = out
     return data
 
-def _create_validate_config_file(vrn_file, rm_file, rm_interval_file, base_dir, data):
+def _create_validate_config_file(vrn_file, rm_file, rm_interval_file, rm_genome,
+                                 base_dir, data):
     config_dir = utils.safe_makedir(os.path.join(base_dir, "config"))
     config_file = os.path.join(config_dir, "validate.yaml")
     with open(config_file, "w") as out_handle:
-        out = _create_validate_config(vrn_file, rm_file, rm_interval_file,
+        out = _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
                                       base_dir, data)
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return config_file
 
-def _create_validate_config(vrn_file, rm_file, rm_interval_file, base_dir, data):
+def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
+                            base_dir, data):
     """Create a bcbio.variation configuration input for validation.
     """
+    if rm_genome:
+        rm_genome = alignment.get_genome_ref(rm_genome, None, data["dirs"]["galaxy"])[-1]
+        if rm_genome != data["sam_ref"]:
+            eval_genome = data["sam_ref"]
+        else:
+            eval_genome = None
+    else:
+        eval_genome = None
+        rm_genome = data["sam_ref"]
     ref_call = {"file": rm_file, "name": "ref", "type": "grading-ref", "preclean": True}
     if rm_interval_file:
         ref_call["intervals"] = rm_interval_file
-    calls = [ref_call, {"file": vrn_file, "name": "eval"}]
+    eval_call = {"file": vrn_file, "name": "eval"}
+    if eval_genome:
+        eval_call["ref"] = eval_genome
+        eval_call["prep"] = True
     exp = {"sample": data["name"][-1],
-           "ref": data["sam_ref"],
+           "ref": rm_genome,
            "approach": "grade",
-           "calls": calls}
+           "calls": [ref_call, eval_call]}
     if data["work_bam"]:
         exp["align"] = data["work_bam"]
     intervals = ensemble.get_analysis_intervals(data)

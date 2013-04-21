@@ -141,6 +141,9 @@ Variant calling
     array data or reference materials.
 - ``validate_regions`` A BED file of regions to evaluate in. This
   defines specific regions covered by the ``validate`` VCF  file.
+- ``validate_genome_build``: Genome build of the validation file, if
+  different than the samples genome build. Helps manage hg19/GRCh37
+  chromosome naming differences.
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [false, true]
 -  ``recalibrate`` Perform variant recalibration [true, false]
