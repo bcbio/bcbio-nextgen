@@ -82,14 +82,15 @@ def sample_callable_bed(bam_file, ref_file, config):
     callable_bed = parallel_callable_loci(bam_file, ref_file, config)
     input_regions_bed = config["algorithm"].get("variant_regions", None)
     if not utils.file_uptodate(out_file, callable_bed):
-        if input_regions_bed:
-            if not utils.file_uptodate(out_file, input_regions_bed):
-                callable_regions = pybedtools.BedTool(callable_bed)
-                input_regions = pybedtools.BedTool(input_regions_bed)
-                with file_transaction(out_file) as tx_out_file:
-                    callable_regions.intersect(input_regions).saveas(tx_out_file)
-        else:
-            os.path.symlink(callable_bed, out_file)
+        with file_transaction(out_file) as tx_out_file:
+            callable_regions = pybedtools.BedTool(callable_bed)
+            filter_regions = callable_regions.filter(lambda x: x.name == "CALLABLE")
+            if input_regions_bed:
+                if not utils.file_uptodate(out_file, input_regions_bed):
+                    input_regions = pybedtools.BedTool(input_regions_bed)
+                    filter_regions.intersect(input_regions).saveas(tx_out_file)
+            else:
+                filter_regions.saveas(tx_out_file)
     return out_file
 
 def get_ref_bedtool(ref_file, config):
