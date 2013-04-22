@@ -12,6 +12,7 @@ import subprocess
 import yaml
 
 from bcbio import utils
+from bcbio.bam import callable
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance.diagnostics import log_cmd
@@ -81,10 +82,13 @@ def _run_bcbio_variation(config_file, base_dir, sample, data):
 def get_analysis_intervals(data):
     """Retrieve analysis regions for the current variant calling pipeline.
     """
-    for key in ["callable_regions", "variant_regions"]:
-        intervals = data["config"]["algorithm"].get(key)
-        if intervals:
-            return intervals
+    if data.get("callable_bam"):
+        return callable.sample_callable_bed(data["callable_bam"], data["sam_ref"], data["config"])
+    else:
+        for key in ["callable_regions", "variant_regions"]:
+            intervals = data["config"]["algorithm"].get(key)
+            if intervals:
+                return intervals
 
 def _write_config_file(data, sample, base_dir, config_name):
     """Write YAML configuration to generate an ensemble set of combined calls.
@@ -95,7 +99,8 @@ def _write_config_file(data, sample, base_dir, config_name):
     prep_fns = {"ensemble": _prep_config_ensemble, "compare": _prep_config_compare}
 
     econfig = prep_fns[config_name](sample, data["variants"],
-                                    data["work_bam"], data["sam_ref"], sample_dir,
+                                    data.get("callable_bam", data["work_bam"]),
+                                    data["sam_ref"], sample_dir,
                                     get_analysis_intervals(data),
                                     data["config"]["algorithm"])
     with open(config_file, "w") as out_handle:

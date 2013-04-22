@@ -16,7 +16,7 @@ from bcbio.variation import ensemble
 # ## Individual sample comparisons
 
 def _has_validate(data):
-    return data.get("vrn_file") and data["config"]["algorithm"].has_key("validate")
+    return data.get("vrn_file") and "validate" in data["config"]["algorithm"]
 
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
@@ -84,11 +84,11 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
            "ref": rm_genome,
            "approach": "grade",
            "calls": [ref_call, eval_call]}
-    if data["work_bam"]:
-        exp["align"] = data["work_bam"]
-    intervals = ensemble.get_analysis_intervals(data)
-    if intervals:
-        exp["intervals"] = os.path.abspath(intervals)
+    if data.get("callable_bam"):
+        exp["align"] = data["callable_bam"]
+        intervals = ensemble.get_analysis_intervals(data)
+        if intervals:
+            exp["intervals"] = os.path.abspath(intervals)
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
 

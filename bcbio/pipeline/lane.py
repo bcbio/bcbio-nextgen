@@ -198,6 +198,7 @@ def align_prep_full(fastq1, fastq2, info, lane_name, lane_desc,
         data = _organize_merge_samples(align_out, dirs, config_file)
         data["regions"] = callable.block_regions(data["work_bam"],
                                                  data["sam_ref"], config)
+        data["callable_bam"] = data["work_bam"]
         data = _recal_no_markduplicates(data)
     return [data]
 

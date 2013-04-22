@@ -75,6 +75,23 @@ def calc_callable_loci(data, region=None, out_file=None):
                                              (tregion.chrom, tregion.start, tregion.stop))
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
+def sample_callable_bed(bam_file, ref_file, config):
+    """Retrieve callable regions for a sample subset by defined analysis regions.
+    """
+    out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
+    callable_bed = parallel_callable_loci(bam_file, ref_file, config)
+    input_regions_bed = config["algorithm"].get("variant_regions", None)
+    if not utils.file_uptodate(out_file, callable_bed):
+        if input_regions_bed:
+            if not utils.file_uptodate(out_file, input_regions_bed):
+                callable_regions = pybedtools.BedTool(callable_bed)
+                input_regions = pybedtools.BedTool(input_regions_bed)
+                with file_transaction(out_file) as tx_out_file:
+                    callable_regions.intersect(input_regions).saveas(tx_out_file)
+        else:
+            os.path.symlink(callable_bed, out_file)
+    return out_file
+
 def get_ref_bedtool(ref_file, config):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
     """
