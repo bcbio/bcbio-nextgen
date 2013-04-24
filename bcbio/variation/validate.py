@@ -18,6 +18,22 @@ from bcbio.variation import ensemble
 def _has_validate(data):
     return data.get("vrn_file") and "validate" in data["config"]["algorithm"]
 
+def normalize_input_path(x, data):
+    """Normalize path for input files, handling relative paths.
+    Looks for non-absolute paths in local and fastq directories
+    """
+    if x is None:
+        return None
+    elif os.path.isabs(x):
+        return os.path.normpath(x)
+    else:
+        for d in [data["dirs"].get("fastq"), data["dirs"].get("work")]:
+            if d:
+                cur_x = os.path.normpath(os.path.join(d, x))
+                if os.path.exists(cur_x):
+                    return cur_x
+        raise IOError("Could not find validation file %s" % x)
+
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
@@ -26,10 +42,9 @@ def compare_to_rm(data):
             vrn_file = [os.path.abspath(x) for x in data["vrn_file"]]
         else:
             vrn_file = os.path.abspath(data["vrn_file"])
-        rm_file = os.path.abspath(data["config"]["algorithm"]["validate"])
-        rm_interval_file = data["config"]["algorithm"].get("validate_regions")
-        if rm_interval_file:
-            rm_interval_file = os.path.abspath(rm_interval_file)
+        rm_file = normalize_input_path(data["config"]["algorithm"]["validate"], data)
+        rm_interval_file = normalize_input_path(data["config"]["algorithm"].get("validate_regions"),
+                                               data)
         rm_genome = data["config"]["algorithm"].get("validate_genome_build")
         sample = data["name"][-1].replace(" ", "_")
         caller = data["config"]["algorithm"].get("variantcaller")
@@ -107,7 +122,7 @@ def _flatten_grading(stats):
 def _has_grading_info(samples):
     for data in (x[0] for x in samples):
         for variant in data.get("variants", []):
-            if variant.has_key("validate"):
+            if "validate" in variant:
                 return True
     return False
 
@@ -126,7 +141,7 @@ def summarize_grading(samples):
             data["validate"]["grading_summary"] = out_csv
             out.append([data])
             for variant in data.get("variants", []):
-                if variant.has_key("validate"):
+                if "validate" in variant:
                     with open(variant["validate"]["grading"]) as in_handle:
                         grade_stats = yaml.load(in_handle)
                     for sample_stats in grade_stats:
