@@ -34,11 +34,12 @@ bwa and GATK, using Illumina's `Platinum genomes project`_
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
 
 - Run analysis on 16 core machine::
+    
     cd work
     bcbio_nextgen.py /path/to/your/bcbio_system.yaml ../input ../config/NA12878-illumina.yaml -n 16
 
 - Examine summary of concordance and discordance to comparison calls
-  from the `grading-summary.csv` file in the work directory.
+  from the ``grading-summary.csv`` file in the work directory.
 
 .. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
 .. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
