@@ -4,6 +4,10 @@ Identifies callable analysis regions surrounded by larger regions lacking
 aligned bases. This allows parallelization of smaller chromosome chunks
 through post-processing and variant calling, with each sub-section
 mapping handled separately.
+
+Regions are split to try to maintain relative uniformity across the
+genome and avoid extremes of large blocks or large numbers of
+small blocks.
 """
 import contextlib
 import os
@@ -152,20 +156,36 @@ def _add_config_regions(nblock_regions, ref_regions, config):
     else:
         return nblock_regions
 
-def _avoid_small_regions(regions, min_size, ref_regions):
-    """Expand regions less than min_size to merge with nearby regions.
-    This avoids large numbers of very small regions, which are
-    problematic for parallelizing.
+class NBlockRegionPicker:
+    """Choose nblock regions reasonably spaced across chromosomes.
+
+    This avoids excessively large blocks and also large numbers of tiny blocks
+    by splitting to a defined number of blocks.
+
+    Assumes to be iterating over an ordered input file and needs re-initiation
+    with each new file processed as it keeps track of previous blocks to
+    maintain the splitting.
     """
-    chromsizes = {}
-    for r in ref_regions:
-        chromsizes[r.chrom] = (r.start, r.stop)
-    small_regions = regions.filter(lambda b: (b.stop - b.start) < min_size)
-    expand_small_regions = small_regions.slop(g=chromsizes, b=min_size * 4)
-    if len(expand_small_regions) > 0:
-        return regions.cat(expand_small_regions, postmerge=True)
-    else:
-        return regions
+    def __init__(self, ref_regions, config):
+        self._chr_last_blocks = {}
+        target_blocks = int(config["algorithm"].get("nomap_split_targets", 1000))
+        self._target_size = self._get_target_size(target_blocks, ref_regions)
+
+    def _get_target_size(self, target_blocks, ref_regions):
+        size = 0
+        for x in ref_regions:
+            size += (x.end - x.start)
+        return size // target_blocks
+
+    def include_block(self, x):
+        """Check for inclusion of block based on distance from previous.
+        """
+        last_pos = self._chr_last_blocks.get(x.chrom, 0)
+        if (x.start - last_pos) > self._target_size:
+            self._chr_last_blocks[x.chrom] = x.stop
+            return True
+        else:
+            return False
 
 def block_regions(in_bam, ref_file, config):
     """Find blocks of regions for analysis from mapped input BAM file.
@@ -173,20 +193,26 @@ def block_regions(in_bam, ref_file, config):
     Identifies islands of callable regions, surrounding by regions
     with no read support, that can be analyzed independently.
     """
-    min_n_size = int(config["algorithm"].get("nomap_split_size", 5000))
+    min_n_size = int(config["algorithm"].get("nomap_split_size", 500))
     callable_bed = parallel_callable_loci(in_bam, ref_file, config)
     block_bed = "%s-analysisblocks%s" % os.path.splitext(callable_bed)
+    callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
     if utils.file_uptodate(block_bed, callable_bed):
         ready_regions = pybedtools.BedTool(block_bed)
     else:
         ref_regions = get_ref_bedtool(ref_file, config)
         nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
-        ready_regions = ref_regions.subtract(nblock_regions)
-        ready_regions = ready_regions.merge(d=min_n_size)
-        ready_regions = _avoid_small_regions(ready_regions, min_n_size, ref_regions)
+        block_filter = NBlockRegionPicker(ref_regions, config)
+        nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
+        if len(nblock_size_filtered) > len(ref_regions):
+            final_nblock_regions = nblock_size_filtered
+        else:
+            final_nblock_regions = nblock_regions
+        ready_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
         ready_regions.saveas(block_bed)
-    return [(r.chrom, int(r.start), int(r.stop)) for r in ready_regions]
+        ref_regions.subtract(nblock_regions).merge(d=min_n_size).saveas(callblock_bed)
+    return callblock_bed, [(r.chrom, int(r.start), int(r.stop)) for r in ready_regions]
 
 def _write_bed_regions(sample, final_regions):
     work_dir = sample["dirs"]["work"]

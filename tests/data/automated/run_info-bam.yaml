@@ -20,16 +20,17 @@ details:
       #realign: false
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
-      aligner: novoalign
+      #aligner: novoalign
       #variantcaller: gatk
-      #aligner: bwa
+      aligner: bwa
       mark_duplicates: samtools
       recalibrate: false
       realign: gkno
       variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
-      nomap_split_size: 500
+      nomap_split_size: 50
+      nomap_split_targets: 20
       variant_regions: ../data/automated/variant_regions-bam.bed
       validate: ../reference_material/7_100326_FC6107FAAXX-grade.vcf
     metadata:
