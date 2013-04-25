@@ -103,6 +103,7 @@ def _flatten_grading(stats):
         for vclass, vitems in stats["discordant"].get(vtype, {}).iteritems():
             for vreason, val in vitems.iteritems():
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
+            yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
 
 def _has_grading_info(samples):
     for data in (x[0] for x in samples):
