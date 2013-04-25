@@ -139,10 +139,10 @@ def summarize_grading(samples):
         writer = csv.writer(out_handle)
         writer.writerow(["sample", "caller", "variant.type", "category", "value"])
         for data in (x[0] for x in samples):
-            data["validate"]["grading_summary"] = out_csv
             out.append([data])
             for variant in data.get("variants", []):
                 if "validate" in variant:
+                    data["validate"]["grading_summary"] = out_csv
                     with open(variant["validate"]["grading"]) as in_handle:
                         grade_stats = yaml.load(in_handle)
                     for sample_stats in grade_stats:
