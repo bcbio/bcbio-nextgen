@@ -172,7 +172,12 @@ Parallelization
 - ``nomap_split_size`` Unmapped base pair regions required to split
   analysis into blocks. Creates islands of mapped reads surrounded by
   unmapped (or N) regions, allowing each mapped region to run in
-  parallel.
+  parallel. (default: 500)
+
+- ``nomap_split_targets`` Number of target intervals to attempt to
+  split processing into. This picks unmapped regions evenly spaced
+  across the genome to process concurrently. Limiting targets prevents
+  a large number of small targets. (default: 1500)
 
 Ensemble variant calling
 ========================

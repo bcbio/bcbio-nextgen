@@ -111,7 +111,8 @@ def clean_sample_data(samples):
     """
     out = []
     for data in samples:
-        data["dirs"] = {"work": data["dirs"]["work"], "galaxy": data["dirs"]["galaxy"]}
+        data["dirs"] = {"work": data["dirs"]["work"], "galaxy": data["dirs"]["galaxy"],
+                        "fastq": data["dirs"].get("fastq")}
         data["config"] = {"algorithm": data["config"]["algorithm"],
                           "resources": data["config"]["resources"]}
         data["info"] = {"upload": data["info"].get("upload"),

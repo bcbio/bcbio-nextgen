@@ -5,11 +5,47 @@ Example pipelines
 =================
 
 We supply example input configuration files for comparison purposes
-and to help in understanding the pipeline:
+and to help in understanding the pipeline.
 
-- An input configuration for running whole gnome variant calling with
-  bwa and GATK, using Illumina's platinum genomes
-  (`NA12878-illumina.yaml`_).
+Whole genome
+~~~~~~~~~~~~
+An input configuration for running whole gnome variant calling with
+bwa and GATK, using Illumina's `Platinum genomes project`_
+(`NA12878-illumina.yaml`_). To run the analysis:
+
+- Create an input directory structure like::
+
+    ├── config
+    │   └── NA12878-illumina.yaml
+    ├── input
+    └── work
+
+- Retrieve inputs and comparison calls::
+
+    cd input
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
+    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-illumina-example.vcf.gz
+    gunzip NA12878-illumina-example.vcf.gz
+
+- Retrieve configuration input file::
+
+    cd config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+
+- Run analysis on 16 core machine::
+    
+    cd work
+    bcbio_nextgen.py /path/to/your/bcbio_system.yaml ../input ../config/NA12878-illumina.yaml -n 16
+
+- Examine summary of concordance and discordance to comparison calls
+  from the ``grading-summary.csv`` file in the work directory.
+
+.. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
+.. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+
+Exome
+~~~~~
 
 - Example configuration for running `ensemble variant calling`_ on
   multiple exome samples (`NA12878-ensemble.yaml`_).
@@ -18,7 +54,6 @@ We plan to utilize reference materials from NIST's `Genome in a Bottle`_
 initiative to develop these into a full regression pipeline to ensure
 consistency of calling between releases.
 
-.. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
 .. _NA12878-ensemble.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-ensemble.yaml
 .. _ensemble variant calling: http://bcbio.wordpress.com/2013/02/06/an-automated-ensemble-method-for-combining-and-evaluating-genomic-variants-from-multiple-callers/
 .. _Genome in a Bottle: http://www.genomeinabottle.org/

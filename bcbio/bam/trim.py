@@ -191,7 +191,7 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files):
     # this behavior might not be what we want; we could also do two or
     # more passes of cutadapt
     base_cmd = ["cutadapt", "--times=" + "2", "--quality-base=" + quality_base,
-                "--quality-cutoff=20", "--format=fastq"]
+                "--quality-cutoff=20", "--format=fastq", "--minimum-length=0"]
     adapter_cmd = map(lambda x: "--adapter=" + x, adapters)
     base_cmd.extend(adapter_cmd)
 
