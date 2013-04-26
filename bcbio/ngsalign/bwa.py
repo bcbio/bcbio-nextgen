@@ -30,6 +30,7 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
     max_mem = resources.get("memory", "768M")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
+        _check_samtools_version()
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
@@ -55,6 +56,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     max_mem = resources.get("memory", "768M")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
+        _check_samtools_version()
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
@@ -65,6 +67,16 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                 logger.info(cmd.format(**locals()))
                 subprocess.check_call(cmd.format(**locals()), shell=True)
     return out_file
+
+def _check_samtools_version():
+    """Ensure samtools has parallel processing required for piped analysis.
+    """
+    p = subprocess.Popen(["samtools", "sort"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output, _ = p.communicate()
+    if output.find("-@") == -1:
+        raise OSError("Installed version of samtools sort does not have support for multithreading (-@ option) "
+                      "required to support bwa piped alignment. Please upgrade to the latest version "
+                      "from http://samtools.sourceforge.net/")
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           rg_name=None):
