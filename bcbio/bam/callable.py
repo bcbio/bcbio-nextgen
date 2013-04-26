@@ -168,7 +168,7 @@ class NBlockRegionPicker:
     """
     def __init__(self, ref_regions, config):
         self._chr_last_blocks = {}
-        target_blocks = int(config["algorithm"].get("nomap_split_targets", 1000))
+        target_blocks = int(config["algorithm"].get("nomap_split_targets", 2000))
         self._target_size = self._get_target_size(target_blocks, ref_regions)
 
     def _get_target_size(self, target_blocks, ref_regions):
@@ -193,7 +193,7 @@ def block_regions(in_bam, ref_file, config):
     Identifies islands of callable regions, surrounding by regions
     with no read support, that can be analyzed independently.
     """
-    min_n_size = int(config["algorithm"].get("nomap_split_size", 500))
+    min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
     callable_bed = parallel_callable_loci(in_bam, ref_file, config)
     block_bed = "%s-analysisblocks%s" % os.path.splitext(callable_bed)
     callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
