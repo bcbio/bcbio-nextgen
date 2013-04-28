@@ -17,9 +17,9 @@ details:
       quality_format: Standard
       coverage_interval: genome
       coverage_depth: high
+      validate: NA12878-illumina-example.vcf
     analysis: variant2
     description: NA12878
     genome_build: GRCh37
     lane: 1
     files: [ERR091571_1.fastq.gz, ERR091571_2.fastq.gz]
-    validate: NA12878-illumina-example.vcf

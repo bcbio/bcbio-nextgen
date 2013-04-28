@@ -95,8 +95,40 @@ def haplotype_caller(align_bams, ref_file, config, dbsnp=None,
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "HaplotypeCaller",
                            "-o", tx_out_file]
+                params = _gatk_location_hack(params)
                 broad_runner.run_gatk(params)
     return out_file
+
+def _gatk_location_hack(args):
+    """Temporary work around for issues in GATK 2.4-9 HaplotypeCaller.
+
+    Fixes:
+    - softclipped reads at end of chromosomes.
+      Pads these regions to avoid working exclusively with the end. Needs to be
+      fixed properly in upstream GATK.
+    - Problematic assembly around repeat regions. Excludes these regions.
+    """
+    region_idxs = [i + 1 for i, x in enumerate(args) if x == "-L"]
+    # padding
+    problem_chrs = ["GL000195.1"]
+    pad_start = 100
+    # exclusion
+    exclude_args = {"20": ["-XL", "20:33972777-33973070"]}
+    extra_args = []
+    for ridx in region_idxs:
+        if os.path.isfile(args[ridx]):
+            with open(args[ridx]) as in_handle:
+                chrom = in_handle.readline().split()[0]
+        else:
+            chrom = args[ridx].split(":")[0]
+        if chrom in problem_chrs and args[ridx].find(":") > 0:
+            chrom, rest = args[ridx].split(":")
+            start, end = rest.split("-")
+            new_start = max([pad_start, int(start)])
+            args[ridx] = "%s:%s-%s" % (chrom, new_start, end)
+        elif chrom in exclude_args:
+            extra_args.extend(exclude_args[chrom])
+    return args + extra_args
 
 def write_empty_vcf(out_file):
     with open(out_file, "w") as out_handle:
@@ -216,9 +248,10 @@ def _shared_variant_filtration(filter_type, cov_interval, snp_file,
               "--mode", filter_type,
               "-an", "QD",
               "-an", "FS",
-              "-an", "HaplotypeScore",
               "-an", "ReadPosRankSum"]
     if filter_type in ["SNP", "BOTH"]:
+        # Haplotype Score no longer calculated for indels as of GATK 2.4
+        params.extend(["-an", "HaplotypeScore"])
         params.extend(
             ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
              vrn_files.train_hapmap,

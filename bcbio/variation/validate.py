@@ -58,7 +58,7 @@ def compare_to_rm(data):
                "grading": os.path.join(work_dir, "validate-grading.yaml"),
                "concordant": os.path.join(work_dir, "%s-ref-eval-concordance.vcf" % sample),
                "discordant": os.path.join(work_dir, "%s-eval-ref-discordance-annotate.vcf" % sample)}
-        if not utils.file_exists(out["concordant"]):
+        if not utils.file_exists(out["concordant"]) or not utils.file_exists(out["grading"]):
             ensemble.bcbio_variation_comparison(val_config_file, base_dir, data)
         data["validate"] = out
     return data
@@ -141,8 +141,8 @@ def summarize_grading(samples):
         for data in (x[0] for x in samples):
             out.append([data])
             for variant in data.get("variants", []):
-                if "validate" in variant:
-                    data["validate"]["grading_summary"] = out_csv
+                if variant.get("validate"):
+                    variant["validate"]["grading_summary"] = out_csv
                     with open(variant["validate"]["grading"]) as in_handle:
                         grade_stats = yaml.load(in_handle)
                     for sample_stats in grade_stats:
