@@ -1,14 +1,16 @@
 """Quality control and summary metrics for next-gen alignments and analysis.
 """
-import os
-import csv
+import contextlib
 import copy
+import csv
 import glob
+import os
 import subprocess
 import xml.etree.ElementTree as ET
 
 import yaml
 from mako.template import Template
+import pysam
 
 from bcbio import utils
 from bcbio.broad import runner_from_config
@@ -35,20 +37,19 @@ def pipeline_summary(data):
     """
     if data["sam_ref"] is not None and data["work_bam"]:
         logger.info("Generating summary files: %s" % str(data["name"]))
-        data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
+        data["summary"] = generate_align_summary(data["work_bam"],
                                                  data["sam_ref"], data["name"],
                                                  data["config"], data["dirs"])
     return [[data]]
 
-def generate_align_summary(bam_file, is_paired, sam_ref, sample_name,
+def generate_align_summary(bam_file, sam_ref, sample_name,
                            config, dirs):
     """Run alignment summarizing script to produce a pdf with align details.
     """
     with utils.chdir(dirs["work"]):
         with utils.curdir_tmpdir() as tmp_dir:
             graphs, summary, overrep = \
-                    _graphs_and_summary(bam_file, sam_ref, is_paired,
-                                        tmp_dir, config)
+                    _graphs_and_summary(bam_file, sam_ref, tmp_dir, config)
         return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
                                      dirs, config)}
 
@@ -85,7 +86,7 @@ def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
         subprocess.check_call(cl)
     return pdf_file
 
-def _graphs_and_summary(bam_file, sam_ref, is_paired, tmp_dir, config):
+def _graphs_and_summary(bam_file, sam_ref, tmp_dir, config):
     """Prepare picard/FastQC graphs and summary details.
     """
     bait = config["algorithm"].get("hybrid_bait", None)
@@ -93,7 +94,7 @@ def _graphs_and_summary(bam_file, sam_ref, is_paired, tmp_dir, config):
     broad_runner = runner_from_config(config)
     metrics = PicardMetrics(broad_runner, tmp_dir)
     summary_table, metrics_graphs = \
-                   metrics.report(bam_file, sam_ref, is_paired, bait, target)
+                   metrics.report(bam_file, sam_ref, is_paired(bam_file), bait, target)
     metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
     fastqc_graphs, fastqc_stats, fastqc_overrep = \
                    fastqc_report(bam_file, config)
@@ -154,9 +155,8 @@ def _get_sample_summaries(samples):
     with utils.curdir_tmpdir() as tmp_dir:
         for sample in (x[0] for x in samples):
             if sample["work_bam"] is not None:
-                is_paired = sample.get("fastq2", None) not in ["", None]
                 _, summary, _ = _graphs_and_summary(sample["work_bam"], sample["sam_ref"],
-                                                is_paired, tmp_dir, sample["config"])
+                                                    tmp_dir, sample["config"])
                 sample_info = {}
                 for xs in summary:
                     n = xs[0]
@@ -165,6 +165,13 @@ def _get_sample_summaries(samples):
                 sample_name = ";".join([x for x in sample["name"] if x])
                 out.append((sample_name, sample_info))
     return out
+
+def is_paired(bam_file):
+    """Determine if a BAM file has paired reads.
+    """
+    with contextlib.closing(pysam.Samfile(bam_file, "rb")) as in_pysam:
+        for read in in_pysam:
+            return read.is_paired
 
 # ## Run and parse read information from FastQC
 
