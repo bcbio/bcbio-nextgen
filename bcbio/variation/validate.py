@@ -87,10 +87,10 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
         eval_genome = None
         rm_genome = data["sam_ref"]
     ref_call = {"file": rm_file, "name": "ref", "type": "grading-ref",
-                "preclean": True, "prep": True}
+                "preclean": True, "prep": True, "remove-refcalls": True}
     if rm_interval_file:
         ref_call["intervals"] = rm_interval_file
-    eval_call = {"file": vrn_file, "name": "eval"}
+    eval_call = {"file": vrn_file, "name": "eval", "remove-refcalls": True}
     if eval_genome:
         eval_call["ref"] = eval_genome
         eval_call["preclean"] = True
