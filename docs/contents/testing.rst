@@ -7,6 +7,41 @@ Example pipelines
 We supply example input configuration files for comparison purposes
 and to help in understanding the pipeline.
 
+Exome with validation against reference materials
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example calls variants on NA12878 exomes from `EdgeBio's`_
+clinical sequencing pipeline, and compares them against
+reference materials from NIST's `Genome in a Bottle`_
+initiative. This supplies a full regression pipeline to ensure
+consistency of calling between releases and updates of third party
+software.
+
+First get the input configuration file::
+
+    $ mkdir config && cd config
+    $ wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
+       examples/NA12878-exome-methodcmp.yaml
+
+Then the fastq reads and reference materials::
+
+    $ cd .. && mkdir input && cd input
+    $ wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
+       CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_1.fastq.gz
+    $ wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
+       CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_2.fastq.gz
+    $ wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-nist-v2_13-NGv3-pass.vcf.gz
+    $ wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-nist-v2_13-NGv3-regions.bed.gz
+    $ gunzip NA12878-nist-*.gz
+
+Finally run the analysis, distributed on 8 local cores, with::
+
+    $ mkdir work && cd work
+    $ bcbio_nextgen.py bcbio_system.yaml ../input ../config/NA12878-exome-methodcmp.yaml -n 8
+
+The ``grading-summary.csv`` contains detailed comparisons of the results
+to the NIST reference materials.
+
 Whole genome
 ~~~~~~~~~~~~
 An input configuration for running whole gnome variant calling with
@@ -41,18 +76,15 @@ bwa and GATK, using Illumina's `Platinum genomes project`_
 - Examine summary of concordance and discordance to comparison calls
   from the ``grading-summary.csv`` file in the work directory.
 
+.. _EdgeBio's: http://www.edgebio.com/
 .. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
 .. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
 
-Exome
-~~~~~
+Exome with Ensemble calling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Example configuration for running `ensemble variant calling`_ on
-  multiple exome samples (`NA12878-ensemble.yaml`_).
-
-We plan to utilize reference materials from NIST's `Genome in a Bottle`_
-initiative to develop these into a full regression pipeline to ensure
-consistency of calling between releases.
+An example configuration for running `ensemble variant calling`_ on
+multiple exome samples (`NA12878-ensemble.yaml`_).
 
 .. _NA12878-ensemble.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-ensemble.yaml
 .. _ensemble variant calling: http://bcbio.wordpress.com/2013/02/06/an-automated-ensemble-method-for-combining-and-evaluating-genomic-variants-from-multiple-callers/
