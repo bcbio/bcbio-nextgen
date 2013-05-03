@@ -23,7 +23,7 @@ First get the input configuration file::
     $ wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
        examples/NA12878-exome-methodcmp.yaml
 
-Then the fastq reads and reference materials::
+Then the fastq reads, reference materials and analysis regions::
 
     $ cd .. && mkdir input && cd input
     $ wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
@@ -33,6 +33,8 @@ Then the fastq reads and reference materials::
     $ wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-nist-v2_13-NGv3-pass.vcf.gz
     $ wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-nist-v2_13-NGv3-regions.bed.gz
     $ gunzip NA12878-nist-*.gz
+    $ wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
+    $ gunzip NGv3.bed.gz
 
 Finally run the analysis, distributed on 8 local cores, with::
 
