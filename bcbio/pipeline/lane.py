@@ -143,7 +143,8 @@ def link_bam_file(orig_file, new_dir):
                   "%s.bai" % os.path.splitext(orig_file)[0]):
         if utils.file_exists(fname):
             sym_file = os.path.join(new_dir, os.path.basename(fname))
-            os.symlink(fname, sym_file)
+            if not os.path.exists(sym_file):
+                os.symlink(fname, sym_file)
             update_files.append(sym_file)
     return update_files[0]
 
