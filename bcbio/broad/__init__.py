@@ -175,7 +175,10 @@ def _get_picard_ref(config):
       picard:
         cmd: picard-tools
     """
-    picard = config_utils.get_program("picard", config, default="notfound")
+    try:
+        picard = config_utils.get_program("picard", config, default="notfound")
+    except config_utils.CmdNotFound:
+        picard = "notfound"
     if picard == "notfound" or os.path.isdir(picard):
         picard = config_utils.get_program("picard", config, "dir")
     return picard

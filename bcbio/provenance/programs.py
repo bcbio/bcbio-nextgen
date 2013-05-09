@@ -73,7 +73,10 @@ def _parse_from_parenflag(stdout, x):
 def _get_cl_version(p, config):
     """Retrieve version of a single commandline program.
     """
-    prog = config_utils.get_program(p["cmd"], config)
+    try:
+        prog = config_utils.get_program(p["cmd"], config)
+    except config_utils.CmdNotFound:
+        return "NA"
     args = p.get("args", "")
 
     cmd = "{prog} {args}"

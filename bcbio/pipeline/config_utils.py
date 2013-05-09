@@ -4,6 +4,9 @@ import os
 import glob
 import yaml
 
+class CmdNotFound(Exception):
+    pass
+
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
     """
@@ -60,6 +63,21 @@ def get_program(name, config, ptype="cmd", default=None):
     else:
         raise ValueError("Don't understand program type: %s" % ptype)
 
+def _get_check_program_cmd(fn):
+
+    def wrap(name, config, default):
+        program = expand_path(fn(name, config, default))
+        is_ok = lambda f: os.path.isfile(f) and os.access(f, os.X_OK)
+        if is_ok(program): return program
+
+        for adir in os.environ['PATH'].split(":"):
+            if is_ok(os.path.join(adir, program)):
+                return os.path.join(adir, program)
+        else:
+            raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, config, default))))
+    return wrap
+
+@_get_check_program_cmd
 def _get_program_cmd(name, config, default):
     """Retrieve commandline of a program.
     """
