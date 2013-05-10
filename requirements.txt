@@ -9,12 +9,10 @@ Logbook==0.4.1
 Cython==0.18
 pysam==0.7.4
 fabric==1.6.0
-ipython-cluster-helper==0.1.4
+ipython-cluster-helper==0.1.5
 pyzmq==13.1.0
-ipython==0.13.1
+git+https://github.com/ipython/ipython.git@9f313b4#egg=ipython
 bioblend==0.2.3
 pybedtools==0.6.2
 py_descriptive_statistics==0.2
-paramiko==1.9.0
-celery==2.2.7
 bcbio-nextgen==0.6.4
