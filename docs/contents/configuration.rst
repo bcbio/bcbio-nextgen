@@ -6,16 +6,16 @@ details about your system and samples to run:
 
 - ``bcbio_system.yaml`` High level information about the system,
   including locations of installed programs like Picard and GATK.
-  These apply across multiple runs.
+  These apply across multiple runs. The automated installer creates
+  a ready to go system configuration file.
 
 - ``bcbio_sample.yaml`` Details about a set of samples to process,
   including input files and analysis options. You configure these for
   each set of samples to process.
 
-Commented example files are available in the ``config`` directory:
-
-- `example system config`_
-- `example sample config`_
+Commented `system`_ and `sample`_ example files are available in the
+``config`` directory. The :ref:`example-pipelines` section contains
+additional examples of ready to run sample files.
 
 Sample information
 ~~~~~~~~~~~~~~~~~~
@@ -23,14 +23,14 @@ Sample information
 The sample configuration file defines ``details`` of each sample to process::
 
     details:
-      - analysis: variant
+      - analysis: variant2
         algorithm:
         metadata:
           batch: Batch1
         description: Example1
         genome_build: hg19
 
-- ``analysis`` Analysis method to use [variant, RNA-seq]
+- ``analysis`` Analysis method to use [variant2, RNA-seq]
 - ``algorithm`` Parameters to configure algorithm inputs. Options
   described in more detail below.
 - ``metadata`` Additional descriptive metadata about the sample. The
@@ -215,6 +215,8 @@ the multiple methods:
   approaches (4 or more callers) pass without being requiring SVM
   filtering.
 
+.. _config-resources:
+   
 Resources
 ~~~~~~~~~
 
@@ -233,7 +235,9 @@ and memory and compute resources to devote to them::
   are on the path.
 - ``dir`` For software not distributed as a single executable, like
   files of Java jars, the location of the base directory.
-- ``cores`` Cores to use for multi-proccessor enabled software.
+- ``cores`` Cores to use for multi-proccessor enabled software. On
+  cluster systems, match this with the number of physical cores
+  available on individual machines.
 - ``jvm_opts`` Specific memory usage options for Java software.
 
 Resources will continue to expand to allow direct customization of
@@ -245,6 +249,6 @@ usage.
 .. _YAML format: https://en.wikipedia.org/wiki/YAML#Examples
 .. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
 .. _GATK: http://www.broadinstitute.org/gatk/
-.. _example system config: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
-.. _example sample config: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+.. _system: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
+.. _sample: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 .. _Galaxy API: http://wiki.galaxyproject.org/Learn/API

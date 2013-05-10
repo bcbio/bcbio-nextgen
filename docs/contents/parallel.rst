@@ -32,87 +32,22 @@ Run an analysis using ipython for parallel execution::
 
     bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
-The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge)``.
+The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque)``.
 The ``-q`` flag specifies the queue to submit jobs to.
-  
-Celery and RabbitMQ
-~~~~~~~~~~~~~~~~~~~
 
-We still support celery and RabbitMQ messaging, but please try IPython
-when setting up a new cluster. The IPython approach is under active
-development and supports additional cluster and parallel approaches.
+The ``-n`` flag defines the total number of cores to use on the
+cluster during processing. The framework will select the appropriate
+number of cores and type of cluster (single core versus multi-core) to
+use based on the pipeline stage (see the :ref:`internals-parallel`
+section in the internals documentation for more details). For
+multiple core steps, the number of cores to use for programs like
+``bwa``, ``novoalign`` and ``gatk`` comes from the
+:ref:`config-resources` section of the configuration.
+Ensure the ``cores`` specification matches the physical cores
+available on machines in your cluster, and the pipeline will divide
+the total cores specified by ``-n`` into the appropriate number of
+multicore jobs to run.
 
-To enable parallel messaging:
-
-1. Configure RabbitMQ as described below. Ensure all processing machines
-   can talk to the RabbitMQ server on port 5672. Update
-   ``universe_wsgi.ini`` to contain the server details.
-
-2. Edit your ``post_process.yaml`` file to set parameters in the
-   ``distributed`` section corresponding to your environment: this
-   includes the type of cluster management and arguments to start jobs.
-
-3. Run ``bcbio_nextgen.py`` with parameters for a distributed cluster
-   environment. It takes care of starting worker nodes, running the
-   processing, and then cleaning up after jobs::
-
-      bcbio_nextgen.py post_process.yaml flowcell_dir run_info.yaml
-                       -t messaging -n 20
-
-RabbitMQ configuration
-**********************
-
-RabbitMQ messaging manages communication between the sequencing machine
-and the analysis machine. This allows complete separation between all of
-the machines. The RabbitMQ server can run anywhere; an easy solution is
-to install it on the Galaxy and analysis server::
-
-        (yum or apt-get) install rabbitmq-server
-
-Setup rabbitmq for passing Galaxy and processing messages::
-
-        rabbitmqctl add_user <username> <password>
-        rabbitmqctl add_vhost bionextgen
-        rabbitmqctl set_permissions -p bionextgen <username> ".*" ".*" ".*"
-
-Then adjust the ``[galaxy_amqp]`` section of your ``universe_wsgi.ini``
-Galaxy configuration file. An example configuration is available in the
-config directory; you'll need to specifically change these three values::
-
-        [galaxy_amqp]
-        host = <host you installed the RabbitMQ server on>
-        userid = <username>
-        password = <password>
-
-ssh keys
-********
-
-The sequencing, analysis and storage machines transfer files using
-secure copy. This requires that you can securely copy files between
-machines without passwords, using `ssh public key`_ authentication.
-You want to enable password-less ssh for the following machine
-combinations:
-
--  Analysis server to ``illumina_finished_msg`` machine
--  Storage server to ``illumina_finished_msg`` machine
-
-Sequencing machines
-*******************
-
-The sequencer automation has been fully tested using Illumina GAII and
-HiSeq sequencing machines. The framework is general and supports other
-platforms; we welcome feedback from researchers with different machines
-at their institutions.
-
-Illumina machines produce run directories that include the date, machine
-identifier, and flowcell ID::
-
-    110216_HWI-EAS264_00035_FC638NPAAXX
-
-A shortened name, with just date and flowcell ID, is used to uniquely
-identify each flowcell during processing.
-
-.. _ssh public key: http://macnugget.org/projects/publickeys/
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
 .. _pyzmq: https://github.com/zeromq/pyzmq
 .. _ZeroMQ: http://www.zeromq.org/

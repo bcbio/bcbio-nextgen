@@ -43,11 +43,11 @@ and small indel calling:
 
 -  Sequence alignment:
 
-   - `bowtie2`_
-   - `bwa`_
-   - `mosaik`_
+   - `bwa mem`_
    - `novoalign`_
-   
+   - `bowtie2`_
+   - `mosaik`_
+
 -  Base Quality Recalibration
 -  Realignment around indels
 -  Variant calling:
@@ -59,9 +59,10 @@ and small indel calling:
    -  `samtools mpileup`_
    -  `cortex\_var`_
 
--  Quality filtering, using both `GATK's Variant Quality Score
-   Recalibrator`_ or hard filtering.
+-  Quality filtering, using either
+   `GATK's Variant Quality Score Recalibrator`_ or hard filtering.
 -  Annotation of variant effects, using `snpEff`_
+-  Variant exploration and prioritization, using `GEMINI`_
 
 It follows approaches from:
 
@@ -112,3 +113,4 @@ system`_.
 .. _mosaik: https://github.com/wanpinglee/MOSAIK
 .. _novoalign: http://www.novocraft.com
 .. _gkno pipelines: http://gkno.me/pipelines.html
+.. _GEMINI: http://gemini.readthedocs.org/en/latest/

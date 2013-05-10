@@ -19,6 +19,7 @@ Contents:
    contents/configuration
    contents/parallel
    contents/internals
+   contents/deprecated
 
 
 Indices and tables
