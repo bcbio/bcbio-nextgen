@@ -30,11 +30,28 @@ def dictadd(orig, k, v):
         new["view"] = view
     return new
 
-def find_cores_per_job(fn, parallel, item_count, config):
+def _get_resource_programs(fn, algs):
+    """Retrieve programs used in analysis based on algorithm configurations.
+
+    Helps avoid requiring core information from unused programs.
+    """
+    # standard list of programs we always use
+    used_progs = set(["gatk", "gemini"])
+    for alg in algs:
+        # get aligners used
+        aligner = alg.get("aligner")
+        if aligner:
+            used_progs.add(aligner)
+    for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
+        if prog in used_progs:
+            yield prog
+
+def find_cores_per_job(fn, parallel, items, config):
     """Determine cores and workers to use for this stage based on function metadata.
     """
     all_cores = [1]
-    for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
+    algs = [get_algorithm_config(x) for x in items]
+    for prog in _get_resource_programs(fn, algs):
         resources = config_utils.get_resources(prog, config)
         cores = resources.get("cores")
         if cores:
@@ -42,7 +59,7 @@ def find_cores_per_job(fn, parallel, item_count, config):
     cores_per_job = max(all_cores)
     total = parallel["cores"]
     if total > cores_per_job:
-        return min(total // cores_per_job, item_count), cores_per_job
+        return min(total // cores_per_job, len(items)), cores_per_job
     else:
         return 1, total
 
@@ -56,11 +73,21 @@ def _get_checkpoint_file(cdir, fn_name):
     return fname
 
 def is_std_config_arg(x):
-    return (isinstance(x, dict) and x.has_key("algorithm") and x.has_key("resources"))
+    return isinstance(x, dict) and "algorithm" in x and "resources" in x
 
 def is_nested_config_arg(x):
-    return (isinstance(x, dict) and x.has_key("config") and
-            is_std_config_arg(x["config"]))
+    return isinstance(x, dict) and "config" in x and is_std_config_arg(x["config"])
+
+def get_algorithm_config(xs):
+    """Flexibly extract algorithm configuration for a sample from any function arguments.
+    """
+    for x in xs:
+        if is_std_config_arg(x):
+            return x["algorithm"]
+        elif is_nested_config_arg(x):
+            return x["config"]["algorithm"]
+    raise ValueError("Did not find algorithm configuration in items: {0}"
+                     .format(xs))
 
 def add_cores_to_config(args, cores_per_job):
     """Add information about available cores for a job to configuration.
@@ -102,7 +129,7 @@ def runner(parallel, fn_name, items, work_dir, config):
                             fromlist=["ipythontasks"]),
                  fn_name)
     items = [x for x in items if x is not None]
-    num_jobs, cores_per_job = find_cores_per_job(fn, parallel, len(items), config)
+    num_jobs, cores_per_job = find_cores_per_job(fn, parallel, items, config)
     parallel = dictadd(parallel, "cores_per_job", cores_per_job)
     parallel = dictadd(parallel, "num_jobs", num_jobs)
     # already finished, run locally on current machine to collect details
