@@ -123,8 +123,8 @@ Contributors
 - `Peter Cock`_, The James Hutton Institute
 - `Rory Kirchner`_, Harvard School of Public Health
 - `Brent Pedersen`_, University of Colorado Denver
-_ `Valentine Svensson`_, Science for Life Laboratory, Stockholm
-_ `Roman Valls`_, Science for Life Laboratory, Stockholm
+- `Valentine Svensson`_, Science for Life Laboratory, Stockholm
+- `Roman Valls`_, Science for Life Laboratory, Stockholm
 
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Brad Chapman: https://github.com/chapmanb
