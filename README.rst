@@ -108,9 +108,35 @@ system`_.
 .. _Galaxy: http://galaxy.psu.edu/
 .. _installation instructions for the front end: https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
 .. _detailed description of the full system: http://bcbio.wordpress.com/2011/01/11/next-generation-sequencing-information-management-and-analysis-system-for-galaxy/
-.. _bwa: http://bio-bwa.sourceforge.net/
+.. _bwa mem: http://bio-bwa.sourceforge.net/
 .. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 .. _mosaik: https://github.com/wanpinglee/MOSAIK
 .. _novoalign: http://www.novocraft.com
 .. _gkno pipelines: http://gkno.me/pipelines.html
 .. _GEMINI: http://gemini.readthedocs.org/en/latest/
+
+Contributors
+------------
+
+- `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
+- `Brad Chapman`_, Harvard School of Public Health
+- `Peter Cock`_, The James Hutton Institute
+- `Rory Kirchner`_, Harvard School of Public Health
+- `Brent Pedersen`_, University of Colorado Denver
+_ `Valentine Svensson`_, Science for Life Laboratory, Stockholm
+_ `Roman Valls`_, Science for Life Laboratory, Stockholm
+
+.. _Guillermo Carrasco: https://github.com/guillermo-carrasco
+.. _Brad Chapman: https://github.com/chapmanb
+.. _Peter Cock: https://github.com/peterjc
+.. _Rory Kirchner: https://github.com/roryk
+.. _Brent Pedersen: https://github.com/brentp
+.. _Valentine Svensson: https://github.com/vals
+.. _Roman Valls: https://github.com/brainstorm
+
+License
+-------
+
+The code is freely available under the `MIT license`_.
+
+.. _MIT license: http://www.opensource.org/licenses/mit-license.html
