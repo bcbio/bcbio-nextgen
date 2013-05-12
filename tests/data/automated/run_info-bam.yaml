@@ -24,7 +24,7 @@ details:
       #variantcaller: gatk
       aligner: bwa
       mark_duplicates: samtools
-      recalibrate: false
+      recalibrate: gatk
       realign: gkno
       variantcaller: freebayes
       quality_format: Standard

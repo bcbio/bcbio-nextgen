@@ -31,7 +31,7 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
     if prep_params["recal"] == "gatk":
         args += ["-BQSR", data["prep_recal"]]
     elif prep_params["recal"]:
-        raise NotImplementedError("Recalibration method %s" %  recal_config)
+        raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
     return broad_runner.cl_gatk(args, tmp_dir)
 
 def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
@@ -71,9 +71,9 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir):
         with file_transaction(pa_bam) as tx_out_file:
             subprocess.check_call("{cl} > {tx_out_file}".format(**locals()), shell=True)
     broad_runner.run_fn("picard_index", pa_bam)
+    dbsnp_vcf = shared.configured_ref_file("dbsnp", data["config"], data["sam_ref"])
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
-                      dbsnp=shared.configured_ref_file("dbsnp", data["config"], data["sam_ref"]),
-                      region=region_to_gatk(region))
+                                                dbsnp=dbsnp_vcf, region=region_to_gatk(region))
     recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],
                                                  recal_file, tmp_dir, region=region_to_gatk(region))
     return pa_bam, " ".join(recal_cl)
@@ -111,12 +111,11 @@ def _piped_dedup_recal_cmd(data, prep_params, tmp_dir):
     """
     if prep_params["dup"] == "bamutil":
         assert prep_params["recal"] in ["bamutil", False], \
-          "Cannot handle recalibration approach %s with bamutil dedup" % prep_params["recal"]
+            "Cannot handle recalibration approach %s with bamutil dedup" % prep_params["recal"]
         out_stream = "-.ubam" if prep_params["realign"] else "-.bam"
         return "| " + recalibrate.bamutil_dedup_recal_cl("-.ubam", out_stream, data,
                                                          prep_params["recal"] == "bamutil")
     elif prep_params["dup"] == "samtools":
-        assert not prep_params["recal"], "Cannot recalibrate with samtools dedup"
         samtools = config_utils.get_program("samtools", data["config"])
         return "| " + "{samtools} rmdup - -".format(**locals())
     elif prep_params["dup"]:
@@ -134,21 +133,34 @@ def _piped_realign_cmd(data, prep_params, tmp_dir):
     else:
         return ""
 
-def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir):
-    """Perform fully piped BAM preparation using non-GATK/Picard tools.
+def _piped_extract_recal_cmd(data, region, prep_params, tmp_dir):
+    """Extract region to process, potentially performing recalibration.
+    Combines extraction and recalibration supported by GATK.
     """
     config = data["config"]
     samtools = config_utils.get_program("samtools", config)
-    in_file = data["work_bam"]
-    prep_region = region_to_gatk(region)
     out_type = "-u" if prep_params["dup"] or prep_params["realign"] else "-b"
+    if not prep_params.get("recal"):
+        prep_region = region_to_gatk(region)
+        in_file = data["work_bam"]
+        cmd = "{samtools} view {out_type} {in_file} {prep_region}"
+        return cmd.format(**locals())
+    elif prep_params["recal"] == "gatk":
+        cl = _gatk_extract_reads_cl(data, region, prep_params, tmp_dir)
+        cl += ["--logging_level", "ERROR"]
+        cmd = "{samtools} view -S {out_type} -"
+        return " ".join(cl) + " | " + cmd.format(**locals())
+    else:
+        raise ValueError("Unexpected recalibration approach: %s" % prep_params["recal"])
+
+def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir):
+    """Perform fully piped BAM preparation using non-GATK/Picard tools.
+    """
     with file_transaction(out_file) as tx_out_file:
+        extract_recal_cmd = _piped_extract_recal_cmd(data, region, prep_params, tmp_dir)
         dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir)
         realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
-        cmd = ("{samtools} view {out_type} {in_file} {prep_region} "
-               "{dedup_cmd} "
-               "{realign_cmd} "
-               "> {tx_out_file}")
+        cmd = "{extract_recal_cmd} {dedup_cmd} {realign_cmd}  > {tx_out_file}"
         logger.info(cmd.format(**locals()))
         subprocess.check_call(cmd.format(**locals()), shell=True)
 
@@ -164,7 +176,7 @@ def _get_prep_params(data):
     recal_param = "gatk" if recal_param is True else recal_param
     realign_param = algorithm.get("realign", True)
     realign_param = "gatk" if realign_param is True else realign_param
-    all_params = [dup_param, recal_param, realign_param]
+    all_params = set([dup_param, realign_param])
     return {"dup": dup_param, "recal": recal_param, "realign": realign_param,
             "all_pipe": "gatk" not in all_params and "picard" not in all_params}
 
@@ -173,7 +185,7 @@ def _piped_bamprep_region(data, region, out_file, tmp_dir):
     """
     prep_params = _get_prep_params(data)
     if prep_params["recal"]:
-        assert prep_params["dup"],  "Requires duplicate marking with BAM recalibration."
+        assert prep_params["dup"], "Requires duplicate marking with BAM recalibration."
     if prep_params["all_pipe"]:
         _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
     else:
