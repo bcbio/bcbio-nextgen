@@ -56,8 +56,10 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
                                      ("PROGRAM_RECORD_ID", "null"),
                                      ("COMPRESSION_LEVEL", compression),
                                      ("TMP_DIR", tmp_dir)])
-    else:
+    elif not prep_params["dup"]:
         sel_file = data["work_bam"]
+    else:
+        raise ValueError("Duplication approach not supported with GATK: %s" % prep_params["dup"])
     broad_runner.run_fn("picard_index", sel_file)
     return sel_file, " ".join(cl)
 
