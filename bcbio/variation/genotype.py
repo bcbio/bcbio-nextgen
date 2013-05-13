@@ -100,7 +100,7 @@ def haplotype_caller(align_bams, ref_file, config, dbsnp=None,
     return out_file
 
 def _gatk_location_hack(args):
-    """Temporary work around for issues in GATK 2.4-9 HaplotypeCaller.
+    """Temporary work around for issues in GATK 2.4-9 and 2.5-2 HaplotypeCaller.
 
     Fixes:
     - softclipped reads at end of chromosomes.
@@ -111,7 +111,7 @@ def _gatk_location_hack(args):
     region_idxs = [i + 1 for i, x in enumerate(args) if x == "-L"]
     # padding
     problem_chrs = ["GL000195.1"]
-    pad_start = 100
+    pad_start = 250
     # exclusion
     exclude_args = {"20": ["-XL", "20:33972777-33973070"]}
     extra_args = []
