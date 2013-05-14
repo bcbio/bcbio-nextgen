@@ -10,7 +10,7 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="1052.9999"
-   height="321.69531"
+   height="371.16406"
    id="svg3153"
    version="1.1"
    inkscape:version="0.48.3.1 r9886"
@@ -23,8 +23,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.7"
-     inkscape:cx="543.21114"
-     inkscape:cy="18.31295"
+     inkscape:cx="498.75505"
+     inkscape:cy="238.79712"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -45,7 +45,7 @@
        enabled="true"
        snapvisiblegridlinesonly="true"
        originx="-4.2142858px"
-       originy="-416.35714px" />
+       originy="-416.35713px" />
   </sodipodi:namedview>
   <defs
      id="defs3155">
@@ -279,7 +279,7 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(-4.2142858,-314.30972)"
+     transform="translate(-4.2142858,-264.84097)"
      id="layer1"
      inkscape:groupmode="layer"
      inkscape:label="Layer 1">
@@ -800,5 +800,16 @@
          x="962.53003"
          y="569.7843"
          id="tspan5589">BAM</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:28px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Georgia;-inkscape-font-specification:Georgia"
+       x="224.21428"
+       y="286.00504"
+       id="text3095"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3097"
+         x="224.21428"
+         y="286.00504">Heterogeneous cluster creation during variant calling</tspan></text>
   </g>
 </svg>
