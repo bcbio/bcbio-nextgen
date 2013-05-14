@@ -3,13 +3,12 @@ count number of reads mapping to features of transcripts
 
 """
 from bcbio.log import logger
-from bcbio.utils import (which, file_exists, get_in, replace_suffix,
-                         safe_makedir)
+from bcbio.utils import (which, file_exists, get_in, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
 import subprocess
 import os
-import pysam
 from bcbio.pipeline.shared import configured_ref_file
+from bcbio.format.convert import bam2sam
 
 
 def htseq_count(data):
@@ -72,31 +71,7 @@ def is_countfile(in_file):
         return False
     return True
 
-def is_sam(in_file):
-    _, ext = os.path.splitext(in_file)
-    if ext == ".sam":
-        return True
-    else:
-        return False
-
-def is_bam(in_file):
-    _, ext = os.path.splitext(in_file)
-    if ext == ".bam":
-        return True
-    else:
-        return False
-
-def convert_bam_to_sam(in_file):
-    if not is_bam(in_file):
-        raise ValueError("Non BAM file passed to convert_sam_to_bam: "
-                         "%s" % (in_file))
-    out_file = replace_suffix(in_file, ".sam")
-    if file_exists(out_file):
-        return out_file
-    with file_transaction(out_file) as tmp_out_file:
-        pysam.view("-h", "-o" + tmp_out_file, in_file)
-    return out_file
 
 def _get_sam_file(data):
     in_file = data["work_bam"]
-    return convert_bam_to_sam(in_file)
+    return bam2sam(in_file)
