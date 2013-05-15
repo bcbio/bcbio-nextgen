@@ -69,6 +69,8 @@ def bam2sizes(in_file):
     For example:
     chr1	249250621
     chr2	243199373
+
+    bam2sizes("in.bam") -> "in.sizes"
     """
     base, _ = os.path.splitext(in_file)
     out_file = base + ".sizes"
@@ -76,10 +78,42 @@ def bam2sizes(in_file):
         return out_file
 
     header = pysam.Samfile(in_file, 'rb').header
-    with open(out_file, 'w') as out_handle:
-        for line in header['SQ']:
-            out_handle.write("\t".join([line['SN'], str(line['LN'])]) + "\n")
+    with file_transaction(out_file) as tmp_out_file:
+        with open(tmp_out_file, 'w') as out_handle:
+            for line in header['SQ']:
+                out_handle.write("\t".join([line['SN'], str(line['LN'])]) + "\n")
     return out_file
+
+@expects("bam")
+def bam2freec_len(in_file):
+    """
+    converts a bam file to a chromosome length file for the use with
+    Control-FREEC:
+    http://bioinfo-out.curie.fr/projects/freec/
+    the length file has the format:
+    INDEX	CHROM	SIZE
+
+    For example:
+    1	chr1	249250621
+    2	chr2	243199373
+
+    bam2freec_len("in.bam") -> "in.len"
+    """
+    base, _ = os.path.splitext(in_file)
+    out_file = base + ".len"
+    if file_exists(out_file):
+        return out_file
+
+    header = pysam.Samfile(in_file, 'rb').header
+    with file_transaction(out_file) as tmp_out_file:
+        with open(tmp_out_file, 'w') as out_handle:
+            count = 1
+            for line in header['SQ']:
+                out_handle.write("\t".join([str(count), line['SN'],
+                                            str(line['LN'])]) + "\n")
+                count += 1
+    return out_file
+
 
 def is_sam(in_file):
     _, ext = os.path.splitext(in_file)
