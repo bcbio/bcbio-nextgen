@@ -59,11 +59,27 @@ def bam2sam(in_file):
         pysam.view("-h", "-o" + tmp_out_file, in_file)
     return out_file
 
+@expects("bam")
 def bam2sizes(in_file):
     """
     converts a bam file to a chromosome sizes file
+    chromosome sizes has the format:
+    CHROM	SIZE
+
+    For example:
+    chr1	249250621
+    chr2	243199373
     """
-    pass
+    base, _ = os.path.splitext(in_file)
+    out_file = base + ".len"
+    if file_exists(out_file):
+        return out_file
+
+    header = pysam.Samfile(in_file, 'rb').header
+    with open(out_file, 'w') as out_handle:
+        for line in header['SQ']:
+            out_handle.write("\t".join([line['SN'], str(line['LN'])]) + "\n")
+    return out_file
 
 def is_sam(in_file):
     _, ext = os.path.splitext(in_file)
