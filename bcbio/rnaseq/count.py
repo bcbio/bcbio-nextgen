@@ -8,7 +8,7 @@ from bcbio.distributed.transaction import file_transaction
 import subprocess
 import os
 from bcbio.pipeline.shared import configured_ref_file
-from bcbio.format.convert import bam2sam
+from bcbio.convert import bam2sam
 
 
 def htseq_count(data):
