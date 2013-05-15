@@ -89,7 +89,7 @@ def _novoalign_args_from_config(config, need_quality=True):
         qual_flags = ["-F", "ILMFQ" if qual_format == "illumina" else "STDFQ"]
     else:
         qual_flags = []
-    multi_mappers = config["algorithm"].get("multiple_mappers", True)
+    multi_mappers = config["algorithm"].get("multiple_mappers")
     if multi_mappers is True:
         multi_flag = "Random"
     elif isinstance(multi_mappers, basestring):
