@@ -31,6 +31,12 @@ def update_config_w_custom(config, lane_info):
     # apply any algorithm details specified with the lane
     for key, val in lane_info.get("algorithm", {}).iteritems():
         config["algorithm"][key] = val
+    # apply any resource details specified with the lane
+    for prog, pkvs in lane_info.get("resources", {}).iteritems():
+        if prog not in config["resources"]:
+            config["resources"][prog] = {}
+        for key, val in pkvs.iteritems():
+            config["resources"][prog][key] = val
     return config
 
 # ## Split/Combine helpers

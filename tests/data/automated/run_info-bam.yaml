@@ -33,6 +33,9 @@ details:
       nomap_split_targets: 20
       variant_regions: ../data/automated/variant_regions-bam.bed
       validate: ../reference_material/7_100326_FC6107FAAXX-grade.vcf
+    resources:
+      novoalign:
+        options: [-o, FullNW]
     metadata:
       batch: TestBatch1
     analysis: variant2

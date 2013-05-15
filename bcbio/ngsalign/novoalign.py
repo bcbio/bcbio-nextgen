@@ -36,6 +36,7 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
     resources = config_utils.get_resources("novoalign", config)
     num_cores = config["algorithm"].get("num_cores", 1)
     max_mem = resources.get("memory", "4G")
+    extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
 
     if not file_exists(out_file):
         with curdir_tmpdir(base_dir=align_dir) as work_dir:
@@ -44,7 +45,7 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                 cmd = ("{novosort} -c {num_cores} -m {max_mem} --compression 0 "
                        " -n -t {work_dir} {in_bam} "
                        "| {novoalign} -o SAM '{rg_info}' -d {ref_file} -f /dev/stdin "
-                       "  -F BAMPE -c {num_cores} "
+                       "  -F BAMPE -c {num_cores} {extra_novo_args} "
                        "| {samtools} view -b -S -u - "
                        "| {novosort} -c {num_cores} -m {max_mem} -t {work_dir} "
                        "  -o {tx_out_file} /dev/stdin")
@@ -65,15 +66,14 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     resources = config_utils.get_resources("novoalign", config)
     num_cores = config["algorithm"].get("num_cores", 1)
     max_mem = resources.get("memory", "1G")
-    qual_format = config["algorithm"].get("quality_format", "").lower()
-    qual_flag = "ILMFQ" if qual_format == "illumina" else "STDFQ"
+    extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
     rg_info = get_rg_info(names)
     if not utils.file_exists(out_file):
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 cmd = ("{novoalign} -o SAM '{rg_info}' -d {ref_file} -f {fastq_file} {pair_file} "
-                       "  -F {qual_flag} -c {num_cores} "
+                       "  -c {num_cores} {extra_novo_args}"
                        "| {samtools} view -b -S -u - "
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                 cmd = cmd.format(**locals())
@@ -81,11 +81,14 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                 subprocess.check_call(cmd, shell=True)
     return out_file
 
-def _novoalign_args_from_config(config):
+def _novoalign_args_from_config(config, need_quality=True):
     """Select novoalign options based on configuration parameters.
     """
-    qual_format = config["algorithm"].get("quality_format", "").lower()
-    qual_flags = ["-F", "ILMFQ" if qual_format == "illumina" else "STDFQ"]
+    if need_quality:
+        qual_format = config["algorithm"].get("quality_format", "").lower()
+        qual_flags = ["-F", "ILMFQ" if qual_format == "illumina" else "STDFQ"]
+    else:
+        qual_flags = []
     multi_mappers = config["algorithm"].get("multiple_mappers", True)
     if multi_mappers is True:
         multi_flag = "Random"
@@ -94,7 +97,8 @@ def _novoalign_args_from_config(config):
     else:
         multi_flag = "None"
     multi_flags = ["-r"] + multi_flag.split()
-    extra_args = config["algorithm"].get("extra_align_args", [])
+    resources = config_utils.get_resources("novoalign", config)
+    extra_args = resources.get("options", [])
     return qual_flags + multi_flags + extra_args
 
 # Tweaks to add
