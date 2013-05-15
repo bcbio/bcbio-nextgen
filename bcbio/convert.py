@@ -71,7 +71,7 @@ def bam2sizes(in_file):
     chr2	243199373
     """
     base, _ = os.path.splitext(in_file)
-    out_file = base + ".len"
+    out_file = base + ".sizes"
     if file_exists(out_file):
         return out_file
 
