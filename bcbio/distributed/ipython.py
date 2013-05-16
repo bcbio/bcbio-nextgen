@@ -73,7 +73,7 @@ def _get_checkpoint_file(cdir, fn_name):
     return fname
 
 def is_std_config_arg(x):
-    return isinstance(x, dict) and "algorithm" in x and "resources" in x
+    return isinstance(x, dict) and "algorithm" in x and "resources" in x and not "files" in x
 
 def is_nested_config_arg(x):
     return isinstance(x, dict) and "config" in x and is_std_config_arg(x["config"])

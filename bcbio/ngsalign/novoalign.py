@@ -73,7 +73,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 cmd = ("{novoalign} -o SAM '{rg_info}' -d {ref_file} -f {fastq_file} {pair_file} "
-                       "  -c {num_cores} {extra_novo_args}"
+                       "  -c {num_cores} {extra_novo_args} "
                        "| {samtools} view -b -S -u - "
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                 cmd = cmd.format(**locals())
