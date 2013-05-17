@@ -60,7 +60,8 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
             args.append(run_info_yaml)
         messaging.run_and_monitor(config, config_file, args, parallel)
     elif parallel["type"] == "ipython":
-        assert parallel["queue"] is not None, "Ipython parallel requires a specified queue (-q)"
+        assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
+        assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
         run_main(config, config_file, work_dir, parallel,
                  fc_dir, run_info_yaml)
     else:
