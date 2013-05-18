@@ -6,15 +6,10 @@ from bcbio.utils import (file_exists, save_diskspace, safe_makedir,
                          replace_suffix, append_stem, is_pair,
                          replace_directory)
 from bcbio.log import logger
-from Bio import SeqIO
 from bcbio.bam import fastq
-from bcbio.distributed.transaction import file_transaction
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
-from pkg_resources import resource_stream
 import subprocess
-import yaml
-from itertools import izip
 
 SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
