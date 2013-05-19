@@ -4,12 +4,15 @@ import os
 import contextlib
 from bcbio.utils import (file_exists, save_diskspace, safe_makedir,
                          replace_suffix, append_stem, is_pair,
-                         replace_directory)
+                         replace_directory, map_wrap)
 from bcbio.log import logger
 from bcbio.bam import fastq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 import subprocess
+from multiprocessing import Pool
+from bcbio.distributed.ipython import get_algorithm_config
+from itertools import izip, repeat
 
 SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
@@ -52,15 +55,15 @@ def trim_read_through(fastq_files, dirs, lane_config):
     MYSEQUENCEAAAARETPADA -> MYSEQUENCEAAAA (no polyA trim)
 
     """
-
     quality_format = _get_quality_format(lane_config)
     to_trim = _get_sequences_to_trim(lane_config)
     out_files = _get_read_through_trimmed_outfiles(fastq_files, dirs)
     logger.info("Trimming %s from the 3' end of reads in %s using "
                 "cutadapt." % (", ".join(to_trim),
                                ", ".join(fastq_files)))
+    cores = lane_config["algorithm"]["num_cores"]
     out_files = _cutadapt_trim(fastq_files, quality_format,
-                               to_trim, out_files)
+                               to_trim, out_files, cores)
     trimmed_files = _remove_short_reads(out_files, dirs, lane_config)
     return trimmed_files
 
@@ -175,7 +178,7 @@ def _get_sequences_to_trim(lane_config):
     return trim_sequences
 
 
-def _cutadapt_trim(fastq_files, quality_format, adapters, out_files):
+def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
     if quality_format == "illumina":
         quality_base = "64"
     else:
@@ -189,25 +192,29 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files):
                 "--quality-cutoff=20", "--format=fastq", "--minimum-length=0"]
     adapter_cmd = map(lambda x: "--adapter=" + x, adapters)
     base_cmd.extend(adapter_cmd)
-
     if all(map(file_exists, out_files)):
         return out_files
-
-    for in_file, out_file in zip(fastq_files, out_files):
-        # if you pass an output filename, cutadapt will write some stats
-        # about trimmed adapters to stdout. stat_file captures that.
-        stat_file = replace_suffix(out_file, ".trim_stats.txt")
-        with open(stat_file, "w") as stat_handle:
-            cmd = list(base_cmd)
-            cmd.extend(["--output=" + out_file, in_file])
-            try:
-                return_value = subprocess.check_call(cmd, stdout=stat_handle)
-            except subprocess.CalledProcessError:
-                cmd_string = subprocess.list2cmdline(cmd)
-                logger.error("Cutadapt returned an error. The command "
-                             "used to run cutadapt was: %s." % (cmd_string))
-                exit(1)
+    pool = Pool(processes=cores)
+    pool.map(_run_cutadapt_on_single_file, izip(repeat(base_cmd), fastq_files,
+                                                out_files))
     return out_files
+
+@map_wrap
+def _run_cutadapt_on_single_file(base_cmd, fastq_file, out_file):
+    stat_file = replace_suffix(out_file, ".trim_stats.txt")
+    with open(stat_file, "w") as stat_handle:
+        cmd = list(base_cmd)
+        cmd.extend(["--output=" + out_file, fastq_file])
+        _run_with_possible_error_message(cmd, stdout=stat_handle)
+
+def _run_with_possible_error_message(cmd, **kwargs):
+    try:
+        subprocess.check_call(cmd, **kwargs)
+    except subprocess.CalledProcessError:
+        cmd_string = subprocess.list2cmdline(cmd)
+        logger.error("Cutadapt returned an error. The command "
+                     "used to run cutadapt was: %s." % (cmd_string))
+        exit(1)
 
 def _get_quality_format(lane_config):
     SUPPORTED_FORMATS = ["illumina", "standard"]
