@@ -9,6 +9,7 @@ from contextlib import closing
 
 from bcbio.broad import picardrun
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 from bcbio.utils import curdir_tmpdir
 
 class BroadRunner:
@@ -56,7 +57,7 @@ class BroadRunner:
             p.wait()
             return stdout
         else:
-            subprocess.check_call(cl)
+            do.run(cl, "Picard {0}".format(command), None)
 
     def get_picard_version(self, command):
         if os.path.isdir(self._picard_ref):
@@ -96,7 +97,10 @@ class BroadRunner:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
             cl = self.cl_gatk(params, tmp_dir)
-            subprocess.check_call(cl)
+            atype_index = cl.index("-T") if cl.count("-T") > 0 \
+                          else cl.index("--analysis_type")
+            prog = cl[atype_index + 1]
+            do.run(cl, "GATK: {0}".format(prog), None)
 
     def get_gatk_version(self):
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])

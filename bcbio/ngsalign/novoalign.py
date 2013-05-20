@@ -10,10 +10,9 @@ import subprocess
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
 from bcbio.pipeline import config_utils
-from bcbio.provenance.diagnostics import log_cmd
-from bcbio.utils import (memoize_outfile, file_exists, transform_to, curdir_tmpdir)
+from bcbio.provenance import do
+from bcbio.utils import (memoize_outfile, file_exists, curdir_tmpdir)
 
 # ## BAM realignment
 
@@ -50,8 +49,8 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        "| {novosort} -c {num_cores} -m {max_mem} -t {work_dir} "
                        "  -o {tx_out_file} /dev/stdin")
                 cmd = cmd.format(**locals())
-                log_cmd("Novoalign: %s" % names["sample"], None, cmd)
-                subprocess.check_call(cmd, shell=True)
+                do.run(cmd, "Novoalign: %s" % names["sample"], None,
+                       [do.file_nonempty(tx_out_file)])
     return out_file
 
 # ## Fastq to BAM alignment
@@ -77,8 +76,8 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                        "| {samtools} view -b -S -u - "
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                 cmd = cmd.format(**locals())
-                log_cmd("Novoalign: %s" % names["sample"], None, cmd)
-                subprocess.check_call(cmd, shell=True)
+                do.run(cmd, "Novoalign: %s" % names["sample"], None,
+                       [do.file_nonempty(tx_out_file)])
     return out_file
 
 def _novoalign_args_from_config(config, need_quality=True):
@@ -98,7 +97,7 @@ def _novoalign_args_from_config(config, need_quality=True):
         multi_flag = "None"
     multi_flags = ["-r"] + multi_flag.split()
     resources = config_utils.get_resources("novoalign", config)
-    extra_args = resources.get("options", [])
+    extra_args = [str(x) for x in resources.get("options", [])]
     return qual_flags + multi_flags + extra_args
 
 # Tweaks to add
@@ -116,14 +115,13 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         cl += extra_args if extra_args is not None else []
         cl += ["-o", "SAM"]
         if rg_name:
-            cl.append(r"@RG\tID:{0}".format(rg_name))
+            cl.append(r"'@RG\tID:{0}'".format(rg_name))
         cl += ["-d", ref_file, "-f", fastq_file]
         if pair_file:
             cl.append(pair_file)
         with file_transaction(out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                logger.info(" ".join([str(x) for x in cl]))
-                subprocess.check_call([str(x) for x in cl], stdout=out_handle)
+            cmd = "{cl} > {out_file}".format(cl=" ".join(cl), out_file=tx_out_file)
+            do.run(cmd, "novoalign {rg_name}".format(**locals()), None)
     return out_file
 
 # ## Indexing

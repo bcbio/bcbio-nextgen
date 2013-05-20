@@ -3,12 +3,11 @@ Handles independent analysis of chromosome regions, allowing parallel
 runs of this step.
 """
 import os
-import subprocess
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
 from bcbio.pipeline import config_utils, shared
+from bcbio.provenance import do
 from bcbio.variation import realign, recalibrate
 
 # ## GATK/Picard preparation
@@ -46,7 +45,7 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
         if not utils.file_exists(sel_file):
             with file_transaction(sel_file) as tx_out_file:
                 cl += ["-o", tx_out_file]
-                subprocess.check_call(cl)
+                do.run(cl, "GATK: PrintReads {0}".format(region), data)
         dup_metrics = "%s-dup.dup_metrics" % os.path.splitext(out_base_file)[0]
         compression = "5" if prep_params["realign"] == "gatk" else "0"
         cl = broad_runner.cl_picard("MarkDuplicates",
@@ -71,7 +70,8 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir):
     pa_bam = "%s-prealign%s" % os.path.splitext(out_base_file)
     if not utils.file_exists(pa_bam):
         with file_transaction(pa_bam) as tx_out_file:
-            subprocess.check_call("{cl} > {tx_out_file}".format(**locals()), shell=True)
+            cmd = "{cl} > {tx_out_file}".format(**locals())
+            do.run(cmd, "GATK pre-alignment {0}".format(region), data)
     broad_runner.run_fn("picard_index", pa_bam)
     dbsnp_vcf = shared.configured_ref_file("dbsnp", data["config"], data["sam_ref"])
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
@@ -103,7 +103,8 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
         out_flag = ("-o" if prep_params["realign"] == "gatk"
                     or (not prep_params["realign"] and not prep_params["dup"])
                     else ">")
-        subprocess.check_call("{cl} {out_flag} {tx_out_file}".format(**locals()), shell=True)
+        cmd = "{cl} {out_flag} {tx_out_file}".format(**locals())
+        do.run(cmd, "GATK: realign {0}".format(region), data)
         _cleanup_tempfiles(data, [cur_bam, prerecal_bam])
 
 # ## Full-piped approaches
@@ -163,8 +164,8 @@ def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
         dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir)
         realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
         cmd = "{extract_recal_cmd} {dedup_cmd} {realign_cmd}  > {tx_out_file}"
-        logger.info(cmd.format(**locals()))
-        subprocess.check_call(cmd.format(**locals()), shell=True)
+        cmd = cmd.format(**locals())
+        do.run(cmd, "Piped post-alignment bamprep {0}".format(region), data)
 
 # ## Shared functionality
 
