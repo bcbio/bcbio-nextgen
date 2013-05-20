@@ -139,7 +139,6 @@ def summarize_grading(samples):
         writer = csv.writer(out_handle)
         writer.writerow(["sample", "caller", "variant.type", "category", "value"])
         for data in (x[0] for x in samples):
-            out.append([data])
             for variant in data.get("variants", []):
                 if variant.get("validate"):
                     variant["validate"]["grading_summary"] = out_csv
@@ -150,4 +149,5 @@ def summarize_grading(samples):
                         for vtype, cat, val in _flatten_grading(sample_stats):
                             writer.writerow([sample, variant.get("variantcaller", ""),
                                              vtype, cat, val])
+            out.append([data])
     return out

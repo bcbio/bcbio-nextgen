@@ -90,4 +90,8 @@ def _get_files_project(sample, upload_config):
             out.append({"path": x["pop_db"],
                         "type": "sqlite",
                         "variantcaller": x["variantcaller"]})
+    for x in sample["variants"]:
+        if x.get("validate", {}).get("grading_summary"):
+            out.append({"path": x["validate"]["grading_summary"]})
+            break
     return _add_meta(out, config=upload_config)
