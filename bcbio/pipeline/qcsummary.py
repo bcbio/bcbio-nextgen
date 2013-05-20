@@ -28,8 +28,15 @@ def generate_parallel(samples, run_parallel):
         if data[0]["config"]["algorithm"].get("write_summary", True):
             need_summary = True
     if need_summary:
-        samples = run_parallel("pipeline_summary", samples)
-        write_project_summary(samples)
+        sum_samples = run_parallel("pipeline_summary", samples)
+        summary_csv = write_project_summary(sum_samples)
+        samples = []
+        for data in sum_samples:
+            if summary_csv:
+                if "summary" not in data[0]:
+                    data[0]["summary"] = {}
+                data[0]["summary"]["project"] = summary_csv
+            samples.append(data)
     return samples
 
 def pipeline_summary(data):
@@ -147,6 +154,7 @@ def write_project_summary(samples):
             writer = csv.writer(out_handle)
             for row in rows:
                 writer.writerow(row)
+        return out_file
 
 def _get_sample_summaries(samples):
     """Retrieve high level summary information for each sample.
