@@ -1,5 +1,6 @@
 """Centralize running of external commands, providing logging and tracking.
 """
+import os
 import subprocess
 
 from bcbio import utils
@@ -40,6 +41,16 @@ def _do_run(cmd, checks):
 
 def file_nonempty(target_file):
     def check():
-        logger.info("Did not find non-empty output file {0}".format(target_file))
-        return utils.file_exists(target_file)
+        ok = utils.file_exists(target_file)
+        if not ok:
+            logger.info("Did not find non-empty output file {0}".format(target_file))
+        return ok
+    return check
+
+def file_exists(target_file):
+    def check():
+        ok = os.path.exists(target_file)
+        if not ok:
+            logger.info("Did not find output file {0}".format(target_file))
+        return ok
     return check
