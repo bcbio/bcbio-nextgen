@@ -97,7 +97,12 @@ def _novoalign_args_from_config(config, need_quality=True):
         multi_flag = "None"
     multi_flags = ["-r"] + multi_flag.split()
     resources = config_utils.get_resources("novoalign", config)
-    extra_args = [str(x) for x in resources.get("options", [])]
+    # default arguments for improved variant calling based on
+    # comparisons to reference materials: turn off soft clipping and recalibrate
+    if resources.get("options") is None:
+        extra_args = ["-o", "FullNW", "-k"]
+    else:
+        extra_args = [str(x) for x in resources.get("options", [])]
     return qual_flags + multi_flags + extra_args
 
 # Tweaks to add
