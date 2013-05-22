@@ -91,7 +91,7 @@ def _get_files_project(sample, upload_config):
                         "type": "sqlite",
                         "variantcaller": x["variantcaller"]})
     for x in sample["variants"]:
-        if x.get("validate", {}).get("grading_summary"):
+        if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})
             break
     return _add_meta(out, config=upload_config)
