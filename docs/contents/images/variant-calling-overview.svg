@@ -808,9 +808,9 @@
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="638"
-     inkscape:window-height="781"
+     inkscape:window-height="767"
      inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-y="14"
      inkscape:window-maximized="0"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -1180,36 +1180,44 @@
     <text
        xml:space="preserve"
        style="font-size:16px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana Italic"
-       x="356.58383"
-       y="189.69191"
+       x="358.01239"
+       y="191.12048"
        id="text7145"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan7147"
-         x="356.58383"
-         y="189.69191">Alignment</tspan></text>
+         x="358.01239"
+         y="191.12048">Alignment</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:16px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana Italic"
-       x="269.63895"
-       y="321.2569"
+       x="285.35324"
+       y="314.11407"
        id="text7149"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
-         x="269.63895"
-         y="321.2569"
-         id="tspan7153">Split into callable </tspan><tspan
+         x="285.35324"
+         y="314.11407"
+         id="tspan10117"></tspan><tspan
          sodipodi:role="line"
-         x="269.63895"
-         y="341.2569"
-         id="tspan7155">regions</tspan><tspan
+         x="285.35324"
+         y="334.11407"
+         id="tspan3211"></tspan><tspan
          sodipodi:role="line"
-         x="269.63895"
-         y="361.2569"
-         id="tspan10117">Apply recalibration </tspan><tspan
+         x="285.35324"
+         y="354.11407"
+         id="tspan3213">Post-alignment </tspan><tspan
          sodipodi:role="line"
-         x="269.63895"
-         y="381.2569"
+         x="285.35324"
+         y="374.11407"
+         id="tspan3219">preparation:</tspan><tspan
+         sodipodi:role="line"
+         x="285.35324"
+         y="394.11407"
+         id="tspan3217">recalibration </tspan><tspan
+         sodipodi:role="line"
+         x="285.35324"
+         y="414.11407"
          id="tspan10125">and realignment</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:none;marker-mid:none;marker-end:url(#Arrow1Lend)"
@@ -1218,12 +1226,12 @@
        inkscape:connector-curvature="0" />
     <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:none;marker-mid:none;marker-end:url(#Arrow1Lend)"
-       d="M 298.89168,289.87389 C 197.0337,315.77224 197.0337,315.77224 197.0337,315.77224"
+       d="M 298.89168,289.87389 C 182.74799,307.33977 182.74799,307.33977 182.74799,307.33977"
        id="path9294-2"
        inkscape:connector-curvature="0" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:none;marker-mid:none;marker-end:url(#Arrow1Lend)"
-       d="m 371.71407,291.71733 c 108.52207,21.65314 108.52207,21.65314 108.52207,21.65314"
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:none;marker-mid:none;marker-end:url(#Arrow1Lend)"
+       d="m 371.71408,291.71733 c 144.23635,13.52585 144.23635,13.52585 144.23635,13.52585"
        id="path9294-6"
        inkscape:connector-curvature="0" />
     <text
@@ -1263,25 +1271,21 @@
     <text
        xml:space="preserve"
        style="font-size:16px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana Italic"
-       x="264.5636"
-       y="444.1156"
+       x="254.56358"
+       y="466.97278"
        id="text7145-8"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
-         x="264.5636"
-         y="444.1156"
-         id="tspan10119">Regional variant</tspan><tspan
+         x="254.56358"
+         y="466.97278"
+         id="tspan10133">Variant calling: supports</tspan><tspan
          sodipodi:role="line"
-         x="264.5636"
-         y="464.1156"
-         id="tspan10131">calling, supporting</tspan><tspan
+         x="254.56358"
+         y="486.97278"
+         id="tspan3231">multiple approaches</tspan><tspan
          sodipodi:role="line"
-         x="264.5636"
-         y="484.1156"
-         id="tspan10133">multiple approaches</tspan><tspan
-         sodipodi:role="line"
-         x="264.5636"
-         y="504.1156"
+         x="254.56358"
+         y="506.97278"
          id="tspan10137">and multisample calling</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:none;marker-mid:none;marker-end:url(#Arrow1Lend)"
@@ -1306,32 +1310,28 @@
     <text
        xml:space="preserve"
        style="font-size:16px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana Italic"
-       x="302.2276"
-       y="538.68134"
+       x="286.51331"
+       y="555.82422"
        id="text7145-8-3"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
-         x="302.2276"
-         y="538.68134"
-         id="tspan10001-1"> Merge all</tspan><tspan
-         sodipodi:role="line"
-         x="302.2276"
-         y="558.68134"
-         id="tspan10105">region calls</tspan></text>
+         x="286.51331"
+         y="555.82422"
+         id="tspan10105"> Merge variants</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:16px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana Italic"
-       x="320.14792"
+       x="355.86221"
        y="665.96039"
        id="text7145-8-3-1"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
-         x="320.14792"
+         x="355.86221"
          y="665.96039"
          id="tspan10105-8"> Filter variants</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:none;marker-mid:none;marker-end:url(#Arrow1Lend)"
-       d="m 305.53247,645.27071 c 1.01016,30.30458 1.01016,30.30458 1.01016,30.30458"
+       d="m 344.1039,645.27071 c 1.01016,30.30458 1.01016,30.30458 1.01016,30.30458"
        id="path9294-0"
        inkscape:connector-curvature="0" />
     <path
@@ -1346,5 +1346,28 @@
        id="path9294-3-3"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="csc" />
+    <text
+       xml:space="preserve"
+       style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana Italic"
+       x="187.14285"
+       y="259.9758"
+       id="text3180"
+       sodipodi:linespacing="125%"
+       transform="translate(82.976447,48.767845)"><tspan
+         sodipodi:role="line"
+         id="tspan3182"
+         x="187.14285"
+         y="259.9758" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:16px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana Italic"
+       x="243.72923"
+       y="314.59799"
+       id="text7145-91"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="243.72923"
+         y="314.59799"
+         id="tspan3205">Parallel by callable regions</tspan></text>
   </g>
 </svg>
