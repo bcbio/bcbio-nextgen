@@ -1,7 +1,11 @@
 """Next-gen alignments with BWA (http://bio-bwa.sourceforge.net/)
 """
+import contextlib
+import gzip
 import os
 import subprocess
+
+from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio.pipeline import config_utils
 from bcbio import utils
@@ -44,6 +48,24 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                 do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
                        [do.file_nonempty(tx_out_file)])
     return out_file
+
+def can_pipe(fastq_file):
+    """bwa-mem handle longer (> 75bp) reads with improved piping.
+    """
+    min_size = 75
+    if fastq_file.endswith(".gz"):
+        handle = gzip.open(fastq_file, "rb")
+    else:
+        handle = open(fastq_file)
+    supports_piping = True
+    with contextlib.closing(handle) as in_handle:
+        fqit = FastqGeneralIterator(in_handle)
+        for i, (_, seq, qual) in enumerate(fqit):
+            if len(seq) < min_size:
+                supports_piping = False
+            if i > 100:
+                break
+    return supports_piping
 
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     """Perform piped alignment of fastq input files, generating sorted output BAM.

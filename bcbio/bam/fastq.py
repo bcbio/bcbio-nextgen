@@ -1,9 +1,6 @@
-import gzip
-import contextlib
 from itertools import izip
 
 from Bio import SeqIO
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -77,22 +74,3 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
                     fq2_single_handle.write(fq2_record.format(quality_format))
 
     return [fq1_out, fq2_out]
-
-def readlen_supports_piping(fastq_file):
-    """Check an input fastq file to determine read length.
-    New wave of aligners handle longer (> 75bp) reads with improved piping.
-    """
-    min_size = 75
-    if fastq_file.endswith(".gz"):
-        handle = gzip.open(fastq_file, "rb")
-    else:
-        handle = open(fastq_file)
-    supports_piping = True
-    with contextlib.closing(handle) as in_handle:
-        fqit = FastqGeneralIterator(in_handle)
-        for i, (_, seq, qual) in enumerate(fqit):
-            if len(seq) < min_size:
-                supports_piping = False
-            if i > 100:
-                break
-    return supports_piping
