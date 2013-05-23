@@ -10,6 +10,21 @@ steps. The goal is to provide a shared community resource that handles
 the data processing component of sequencing analysis, providing
 researchers with more time to focus on the downstream biology.
 
+The advantages of a community developed framework over in house custom
+scripts include:
+
+- `Automated validation`_ of variant calls against common reference
+  materials or sample specific SNP arrays to ensure call correctness.
+
+- Focus on `parallel analysis and scaling`_ to handle large population
+  studies and whole genome analysis.
+
+- Incorporation of multiple approaches for alignment, preparation and
+  variant calling enable unbiased comparisons of algorithms.
+
+.. _parallel analysis and scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _Automated validation: http://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
+
 Quick start
 -----------
 
