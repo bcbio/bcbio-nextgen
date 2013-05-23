@@ -1,4 +1,4 @@
-bcbio-nextgen
+jbcbio-nextgen
 -------------
 
 A python toolkit providing best-practice pipelines for fully automated
@@ -49,8 +49,8 @@ See the `full documentation at ReadTheDocs`_. We welcome enhancements
 or problem reports using `GitHub`_ and discussion on the
 `biovalidation mailing list`_.
 
-.. GitHub: https://github.com/chapmanb/bcbio-nextgen/issues
-.. biovalidation mailing list: https://groups.google.com/d/forum/biovalidation
+.. _GitHub: https://github.com/chapmanb/bcbio-nextgen/issues
+.. _biovalidation mailing list: https://groups.google.com/d/forum/biovalidation
 
 Pipelines
 ---------
