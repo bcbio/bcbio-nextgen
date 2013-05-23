@@ -21,11 +21,12 @@ details:
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
       #aligner: novoalign
-      #variantcaller: gatk
       aligner: bwa
       mark_duplicates: samtools
       recalibrate: gatk
+      #realign: gatk
       realign: gkno
+      #variantcaller: gatk
       variantcaller: freebayes
       quality_format: Standard
       coverage_interval: regional
@@ -36,6 +37,8 @@ details:
     resources:
       novoalign:
         options: [-o, FullNW]
+      #gatk:
+      #  dir: /usr/share/java/gatk-1.6-13-g91f02df
     metadata:
       batch: TestBatch1
     analysis: variant2

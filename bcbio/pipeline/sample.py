@@ -7,13 +7,12 @@ import os
 import copy
 import subprocess
 
-
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.rnaseq.cufflinks import assemble_transcripts
-from bcbio.pipeline import shared
+from bcbio.pipeline import config_utils, shared
 from bcbio.rnaseq import count
 
 # ## Merging
@@ -22,7 +21,8 @@ def merge_sample(data):
     """Merge fastq and BAM files for multiple samples.
     """
     logger.info("Combining fastq and BAM files %s" % str(data["name"]))
-    config = shared.update_config_w_custom(data["config"], data["info"])
+    config = config_utils.update_w_custom(data["config"], data["info"])
+    config = config_utils.add_cached_versions(config)
     genome_build, sam_ref = shared.ref_genome_info(data["info"], config, data["dirs"])
     if config["algorithm"].get("upload_fastq", False):
         fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],

@@ -1,7 +1,6 @@
 """Pipeline functionality shared amongst multiple analysis types.
 """
 import os
-import copy
 import collections
 from contextlib import closing
 import subprocess
@@ -12,32 +11,6 @@ from bcbio import broad
 from bcbio.pipeline.alignment import get_genome_ref
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
-
-# ## Configuration
-
-def update_config_w_custom(config, lane_info):
-    """Update the configuration for this lane if a custom analysis is specified.
-    """
-    name_remaps = {"variant": ["SNP calling", "variant", "variant2"],
-                   "SNP calling": ["SNP calling", "variant", "variant2"],
-                   "variant2": ["SNP calling", "variant", "variant2"]}
-    config = copy.deepcopy(config)
-    base_name = lane_info.get("analysis")
-    for analysis_type in name_remaps.get(base_name, [base_name]):
-        custom = config["custom_algorithms"].get(analysis_type, None)
-        if custom:
-            for key, val in custom.iteritems():
-                config["algorithm"][key] = val
-    # apply any algorithm details specified with the lane
-    for key, val in lane_info.get("algorithm", {}).iteritems():
-        config["algorithm"][key] = val
-    # apply any resource details specified with the lane
-    for prog, pkvs in lane_info.get("resources", {}).iteritems():
-        if prog not in config["resources"]:
-            config["resources"][prog] = {}
-        for key, val in pkvs.iteritems():
-            config["resources"][prog][key] = val
-    return config
 
 # ## Split/Combine helpers
 

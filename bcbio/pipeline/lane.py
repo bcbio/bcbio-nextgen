@@ -11,7 +11,7 @@ from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.demultiplex import split_by_barcode
 from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
-from bcbio.pipeline import cleanbam, merge, shared, sample
+from bcbio.pipeline import config_utils, cleanbam, merge, sample
 from bcbio.ngsalign.split import split_read_files
 from bcbio.variation import recalibrate
 
@@ -24,7 +24,7 @@ def _item_needs_compute(lanes):
             return True
         # check if we need to process the input by splitting or conversion
         item = lane_items[0]
-        config = shared.update_config_w_custom(config, item)
+        config = config_utils.update_w_custom(config, item)
         split_size = config.get("distributed", {}).get("align_split_size",
                                                        config["algorithm"].get("align_split_size", None))
         if split_size is not None:
@@ -61,12 +61,12 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
     logger.info("Preparing %s" % lane_name)
     full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"],
                                                dirs["work"], lane_items[0], fc_name, dirs=dirs,
-                                               config=shared.update_config_w_custom(config, lane_items[0]))
+                                               config=config_utils.update_w_custom(config, lane_items[0]))
     bc_files = split_by_barcode(full_fastq1, full_fastq2, lane_items,
                                 lane_name, dirs, config)
     out = []
     for item in lane_items:
-        config = shared.update_config_w_custom(config, item)
+        config = config_utils.update_w_custom(config, item)
         # Can specify all barcodes but might not have actual sequences
         # Would be nice to have a good way to check this is okay here.
         if item["barcode_id"] in bc_files:
