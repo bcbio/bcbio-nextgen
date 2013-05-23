@@ -45,7 +45,12 @@ software and data.
 Documentation
 -------------
 
-See the `full documentation at ReadTheDocs`_.
+See the `full documentation at ReadTheDocs`_. We welcome enhancements
+or problem reports using `GitHub`_ and discussion on the
+`biovalidation mailing list`_.
+
+.. GitHub: https://github.com/chapmanb/bcbio-nextgen/issues
+.. biovalidation mailing list: https://groups.google.com/d/forum/biovalidation
 
 Pipelines
 ---------
