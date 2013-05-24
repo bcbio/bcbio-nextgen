@@ -10,6 +10,7 @@ genome and avoid extremes of large blocks or large numbers of
 small blocks.
 """
 import contextlib
+import operator
 import os
 import shutil
 
@@ -195,24 +196,15 @@ def block_regions(in_bam, ref_file, config):
     """
     min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
     callable_bed = parallel_callable_loci(in_bam, ref_file, config)
-    block_bed = "%s-analysisblocks%s" % os.path.splitext(callable_bed)
+    nblock_bed = "%s-nblocks%s" % os.path.splitext(callable_bed)
     callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
-    if utils.file_uptodate(block_bed, callable_bed):
-        ready_regions = pybedtools.BedTool(block_bed)
-    else:
+    if not utils.file_uptodate(nblock_bed, callable_bed):
         ref_regions = get_ref_bedtool(ref_file, config)
         nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
-        block_filter = NBlockRegionPicker(ref_regions, config)
-        nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
-        if len(nblock_size_filtered) > len(ref_regions):
-            final_nblock_regions = nblock_size_filtered
-        else:
-            final_nblock_regions = nblock_regions
-        ready_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
-        ready_regions.saveas(block_bed)
         ref_regions.subtract(nblock_regions).merge(d=min_n_size).saveas(callblock_bed)
-    return callblock_bed, [(r.chrom, int(r.start), int(r.stop)) for r in ready_regions]
+        nblock_regions.saveas(nblock_bed)
+    return callblock_bed, nblock_bed
 
 def _write_bed_regions(sample, final_regions):
     work_dir = sample["dirs"]["work"]
@@ -255,29 +247,30 @@ def _analysis_block_stats(regions):
         raise ValueError("No callable analysis regions found in all samples")
 
 def combine_sample_regions(samples):
-    """Combine islands of callable regions from multiple samples.
-    Creates a global set of callable samples usable across a
-    project with multi-sample calling.
+    """Create global set of callable regions for multi-sample calling.
+
+    Intersects all non-callable (nblock) regions from all samples,
+    producing a global set of callable regions.
     """
-    min_n_size = int(samples[0]["config"]["algorithm"].get("nomap_split_size", 5000))
-    final_regions = None
-    all_regions = []
-    for regions in (x["regions"] for x in samples if "regions" in x):
-        bed_lines = ["%s\t%s\t%s" % (c, s, e) for (c, s, e) in regions]
-        all_regions.append(pybedtools.BedTool("\n".join(bed_lines), from_string=True))
-    if len(all_regions) == 0:
-        final_regions = []
-    elif len(all_regions) == 1:
-        final_regions = all_regions[0]
+    config = samples[0]["config"]
+    min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
+
+    # Combine all nblocks into a final set of intersecting regions
+    # without callable bases. HT @brentp for intersection approach
+    # https://groups.google.com/forum/?fromgroups#!topic/bedtools-discuss/qA9wK4zN8do
+    nblock_regions = reduce(operator.add,
+                            (pybedtools.BedTool(x["regions"]["nblock"])
+                             for x in samples if "regions" in x))
+    ref_regions = get_ref_bedtool(samples[0]["sam_ref"], config)
+    block_filter = NBlockRegionPicker(ref_regions, config)
+    nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
+    if len(nblock_size_filtered) > len(ref_regions):
+        final_nblock_regions = nblock_size_filtered
     else:
-        ref_bedtool = get_ref_bedtool(samples[0]["sam_ref"], samples[0]["config"])
-        combo_regions = _combine_regions(all_regions, ref_bedtool)
-        final_regions = combo_regions.merge(d=min_n_size)
-    if len(all_regions) > 0:
-        _analysis_block_stats(final_regions)
-        analysis_file, no_analysis_file = _write_bed_regions(samples[0], final_regions)
-    else:
-        analysis_file, no_analysis_file = None, None
+        final_nblock_regions = nblock_regions
+    final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
+    _analysis_block_stats(final_regions)
+    analysis_file, no_analysis_file = _write_bed_regions(samples[0], final_regions)
     regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
                "noanalysis": no_analysis_file,
                "analysis_bed": analysis_file}

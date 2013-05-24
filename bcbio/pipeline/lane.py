@@ -197,9 +197,9 @@ def align_prep_full(fastq1, fastq2, info, lane_name, lane_desc,
         align_out = process_alignment(fastq1, fastq2, info, lane_name, lane_desc,
                                       dirs, config)[0]
         data = _organize_merge_samples(align_out, dirs, config_file)
-        callable_region_bed, analysis_regions = callable.block_regions(data["work_bam"],
-                                                                       data["sam_ref"], config)
-        data["regions"] = analysis_regions
+        callable_region_bed, nblock_bed = callable.block_regions(data["work_bam"],
+                                                                 data["sam_ref"], config)
+        data["regions"] = {"nblock": nblock_bed}
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
