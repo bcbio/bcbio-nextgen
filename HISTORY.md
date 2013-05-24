@@ -2,6 +2,8 @@
 
 - Piping improvements: provide fully piped analysis with GATK recalibration and
   gkno realignment. Handle smaller reads with novoalign piped analysis.
+- Improve collapsing analysis regions into evenly sized blocks to better handle
+  large numbers of samples analyzed together.
 - Updated program support: Improved novoalign support based on evaluation with
   reference genomes. Support GATK 2.5-2. Support VarScan 2.3.5.
 - Fix IPython parallel usage for larger clusters, providing improved resiliency

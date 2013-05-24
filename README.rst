@@ -1,4 +1,4 @@
-jbcbio-nextgen
+bcbio-nextgen
 -------------
 
 A python toolkit providing best-practice pipelines for fully automated

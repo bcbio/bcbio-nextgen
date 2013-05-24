@@ -30,7 +30,6 @@ def run_main(config, config_file, work_dir, parallel,
     fc_dir -- Directory of fastq files to process
     run_info_yaml -- YAML configuration file specifying inputs to process
     """
-
     setup_logging(config)
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir)
