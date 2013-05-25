@@ -5,61 +5,46 @@ import os
 import socket
 import sys
 
-import logging
+import logbook, logbook.queues
 
 from bcbio import utils
 
 LOG_NAME = "bcbio-nextgen"
-
-logger = logging.getLogger(LOG_NAME)
 
 def _get_log_dir(config):
     d = config.get("log_dir",
                    config.get("resources", {}).get("log", {}).get("dir", "log"))
     return d
 
-def setup_logging(config):
-    logger.setLevel(logging.INFO)
-    if not logger.handlers:
-        formatter = logging.Formatter('[%(asctime)s] %(message)s')
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        log_dir = _get_log_dir(config)
-        if log_dir:
-            logfile = os.path.join(utils.safe_makedir(log_dir),
-                                   "{0}.log".format(LOG_NAME))
-            handler = logging.FileHandler(logfile)
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-
-import logbook
-logger2 = logbook.Logger(LOG_NAME)
+logger = logbook.Logger(LOG_NAME)
 mpq = multiprocessing.Queue(-1)
 
 def _add_host(record):
-    record.hostname = socket.gethostname()
+    record.extra["hostname"] = socket.gethostname()
     return record
 
 def _create_log_handler(config):
     handlers = [logbook.Processor(_add_host),
                 logbook.NullHandler()]
+    format_str = ("[{record.time:%Y-%m-%d %H:%M}] "
+                  "{record.extra[hostname]}: {record.message}")
 
     log_dir = _get_log_dir(config)
     if log_dir:
         utils.safe_makedir(log_dir)
-        handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s.log" % LOG_NAME)),
-                                           level="INFO")
-        handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s-debug.log" % LOG_NAME)),
-                                           level="DEBUG", bubble=True)
+        handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s.log" % LOG_NAME),
+                                            format_string=format_str, level="INFO"))
+        handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s-debug.log" % LOG_NAME),
+                                            format_string=format_str, level="DEBUG", bubble=True))
 
     email = config.get("email", config.get("resources", {}).get("log", {}).get("email"))
     if email:
+        email_str = u'''Subject: [bcbio-nextgen] {record.extra[run]} \n\n {record.message}'''
         handlers.append(logbook.MailHandler(email, [email],
-                                            format_string=u'''Subject: [bcbio-nextgen] {record.extra[run]} \n\n {record.message}''',
+                                            format_string=email_str,
                                             level='INFO', bubble = True))
 
-    handlers.append(logbook.StreamHandler(sys.stderr, bubble=True))
+    handlers.append(logbook.StreamHandler(sys.stderr, format_string=format_str, bubble=True))
     return logbook.NestedSetup(handlers)
 
 def create_base_logger(config, parallel=None):

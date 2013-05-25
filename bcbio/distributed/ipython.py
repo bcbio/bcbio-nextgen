@@ -12,7 +12,7 @@ import os
 import copy
 
 from bcbio import utils
-from bcbio.log import setup_logging, logger
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 
 from cluster_helper import cluster as ipython_cluster
@@ -89,7 +89,7 @@ def get_algorithm_config(xs):
     raise ValueError("Did not find algorithm configuration in items: {0}"
                      .format(xs))
 
-def add_cores_to_config(args, cores_per_job):
+def add_cores_to_config(args, cores_per_job, parallel):
     """Add information about available cores for a job to configuration.
     Ugly hack to update core information in a configuration dictionary.
     """
@@ -104,8 +104,10 @@ def add_cores_to_config(args, cores_per_job):
     new_arg = copy.deepcopy(args[new_i])
     if is_nested_config_arg(new_arg):
         new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
+        new_arg["config"]["parallel"] = parallel
     elif is_std_config_arg(new_arg):
         new_arg["algorithm"]["num_cores"] = int(cores_per_job)
+        new_arg["parallel"] = parallel
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
     args = list(args)[:]
@@ -121,7 +123,6 @@ def runner(parallel, fn_name, items, work_dir, config):
     A checkpoint directory keeps track of finished tasks, avoiding spinning up clusters
     for sections that have been previous processed.
     """
-    setup_logging(config)
     out = []
     checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
     checkpoint_file = _get_checkpoint_file(checkpoint_dir, fn_name)
@@ -144,7 +145,7 @@ def runner(parallel, fn_name, items, work_dir, config):
     else:
         logger.info("ipython: %s" % fn_name)
         if len(items) > 0:
-            items = [add_cores_to_config(x, cores_per_job) for x in items]
+            items = [add_cores_to_config(x, cores_per_job, parallel) for x in items]
             with ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                               parallel["num_jobs"], parallel["cores_per_job"],
                                               profile=parallel["profile"]) as view:

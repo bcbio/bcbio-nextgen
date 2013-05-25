@@ -36,7 +36,7 @@ def parallel_runner(parallel, dirs, config, config_file=None):
                                     fromlist=["multitasks"]),
                          fn_name)
             num_jobs, cores_per_job = ipython.find_cores_per_job(fn, parallel, items, config)
-            items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
+            items = [ipython.add_cores_to_config(x, cores_per_job, parallel) for x in items]
             num_jobs = cores_including_resources(num_jobs, metadata, config)
             with utils.cpmap(num_jobs) as cpmap:
                 for data in cpmap(fn, items):

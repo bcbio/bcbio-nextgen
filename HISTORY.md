@@ -1,5 +1,7 @@
 ## 0.6.5 (in progress)
 
+- Improve logging: Detailed debugging logs collect all process standard out and
+  error and command lines across distributed systems.
 - Piping improvements: provide fully piped analysis with GATK recalibration and
   gkno realignment. Handle smaller reads with novoalign piped analysis.
 - Improve collapsing analysis regions into evenly sized blocks to better handle

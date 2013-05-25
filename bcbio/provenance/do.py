@@ -12,13 +12,14 @@ def run(cmd, descr, data, checks=None):
     """
     if data:
         descr = "{0} : {1}".format(descr, data["name"][-1])
-    logger.info(descr)
+    logger.debug(descr)
     # TODO: Extract entity information from data input
     cmd_id = diagnostics.start_cmd(descr, data, cmd)
     try:
         _do_run(cmd, checks)
     except:
         diagnostics.end_cmd(cmd_id, False)
+        logger.exception()
         raise
     finally:
         diagnostics.end_cmd(cmd_id)
@@ -26,16 +27,26 @@ def run(cmd, descr, data, checks=None):
 def _do_run(cmd, checks):
     """Perform running and check results, raising errors for issues.
     """
-    if isinstance(cmd, basestring):
-        subprocess.check_call(cmd, shell=True)
-    else:
-        subprocess.check_call(cmd)
+    s = subprocess.Popen(cmd, shell=isinstance(cmd, basestring),
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
+    while 1:
+        line = s.stdout.readline()
+        exitcode = s.poll()
+        if exitcode is not None:
+            if exitcode is not None and exitcode != 0:
+                raise subprocess.CalledProcessError(exitcode,
+                                                    " ".join(cmd) if not
+                                                    isinstance(cmd, basestring) else cmd)
+            else:
+                break
+        if line:
+            logger.debug(line.rstrip())
     # Check for problems not identified by shell return codes
     if checks:
         for check in checks:
             if not check():
-                raise IOError("External command failed: %s" %
-                              " ".join(cmd) if not isinstance(cmd, basestring) else cmd)
+                raise IOError("External command failed")
 
 # checks for validating run completed successfully
 
