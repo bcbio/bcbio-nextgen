@@ -10,7 +10,7 @@ import subprocess
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.provenance.diagnostics import log_cmd
+from bcbio.provenance import do
 from bcbio.variation import effects, genotype
 
 def prep_gemini_db(fnames, call_id, data):
@@ -30,7 +30,7 @@ def prep_gemini_db(fnames, call_id, data):
             num_cores = data["config"]["algorithm"].get("num_cores", 1)
             cmd = "{gemini} load -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
             cmd = cmd.format(**locals())
-            log_cmd("Create gemini database for %s" % str(call_id), data["info"]["provenance"], cmd)
+            do.run(cmd, "Create gemini database for %s" % str(call_id), data)
             subprocess.check_call(cmd, shell=True)
     return [[call_id, gemini_db]]
 
@@ -40,7 +40,7 @@ def _do_db_build(samples):
     config = samples[0][0]["config"]
     gemini = config_utils.get_program("gemini", config)
     try:
-        subprocess.check_call(["gemini", "-h"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.check_call([gemini, "-h"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except:
         return False
     genomes = set()

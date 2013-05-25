@@ -9,6 +9,7 @@ from contextlib import closing
 
 from bcbio.broad import picardrun
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 from bcbio.utils import curdir_tmpdir
 
 class BroadRunner:
@@ -20,6 +21,8 @@ class BroadRunner:
         self._picard_ref = picard_ref
         self._gatk_dir = gatk_dir or picard_ref
         self._config = config
+        self._resources = resources
+        self._gatk_version = None
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
@@ -56,7 +59,7 @@ class BroadRunner:
             p.wait()
             return stdout
         else:
-            subprocess.check_call(cl)
+            do.run(cl, "Picard {0}".format(command), None)
 
     def get_picard_version(self, command):
         if os.path.isdir(self._picard_ref):
@@ -84,9 +87,10 @@ class BroadRunner:
                 params.extend(["-nt", str(cores)])
             elif prog in support_nct:
                 params.extend(["-nct", str(cores)])
-        if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
-            params.extend(["-U", "LENIENT_VCF_PROCESSING"])
-        params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
+        if self.get_gatk_version() > "1.9":
+            if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
+                params.extend(["-U", "LENIENT_VCF_PROCESSING"])
+            params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         return ["java"] + self._jvm_opts + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
@@ -96,22 +100,38 @@ class BroadRunner:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
             cl = self.cl_gatk(params, tmp_dir)
-            subprocess.check_call(cl)
+            atype_index = cl.index("-T") if cl.count("-T") > 0 \
+                          else cl.index("--analysis_type")
+            prog = cl[atype_index + 1]
+            do.run(cl, "GATK: {0}".format(prog), None)
 
     def get_gatk_version(self):
-        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-        cl = ["java", "-Xms5m", "-Xmx5m", "-jar", gatk_jar, "-version"]
-        with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
-            out = stdout.read().strip()
-            # versions earlier than 2.4 do not have explicit version command,
-            # parse from error output from GATK
-            if out.find("ERROR") >= 0:
-                flag = "The Genome Analysis Toolkit (GATK)"
-                for line in out.split("\n"):
-                    if line.startswith(flag):
-                        return line.split(flag)[-1].split(",")[0].strip()
-            else:
-                return out
+        """Retrieve GATK version, handling locally and config cached versions.
+        Calling version can be expensive due to all the startup and shutdown
+        of JVMs, so we prefer cached version information.
+        """
+        if self._gatk_version is not None:
+            return self._gatk_version
+        elif self._resources.get("version"):
+            return self._resources["version"]
+        else:
+            gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+            cl = ["java", "-Xms5m", "-Xmx5m", "-jar", gatk_jar, "-version"]
+            with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+                out = stdout.read().strip()
+                # versions earlier than 2.4 do not have explicit version command,
+                # parse from error output from GATK
+                if out.find("ERROR") >= 0:
+                    flag = "The Genome Analysis Toolkit (GATK)"
+                    for line in out.split("\n"):
+                        if line.startswith(flag):
+                            version = line.split(flag)[-1].split(",")[0].strip()
+                else:
+                    version = out
+            if version.startswith("v"):
+                version = version[1:]
+            self._gatk_version = version
+            return version
 
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
@@ -145,7 +165,7 @@ class BroadRunner:
         """Retrieve the jar for running the specified command.
         """
         dirs = []
-        for bdir in [self._picard_ref, self._gatk_dir]:
+        for bdir in [self._gatk_dir, self._picard_ref]:
             dirs.extend([bdir,
                          os.path.join(bdir, os.pardir, "gatk"),
                          os.path.join(bdir, "dist"),

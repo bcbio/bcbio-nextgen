@@ -8,9 +8,8 @@ import sys
 import argparse
 from collections import defaultdict
 
-from bcbio import utils, upload
+from bcbio import log, utils, upload
 from bcbio.bam import callable
-from bcbio.log import setup_logging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
@@ -30,8 +29,8 @@ def run_main(config, config_file, work_dir, parallel,
     fc_dir -- Directory of fastq files to process
     run_info_yaml -- YAML configuration file specifying inputs to process
     """
-
-    setup_logging(config)
+    parallel = log.create_base_logger(config, parallel)
+    log.setup_local_logging(config, parallel)
     fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir)
                                                         if fc_dir else None,

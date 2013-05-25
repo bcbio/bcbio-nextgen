@@ -1,11 +1,50 @@
 """Loads configurations from .yaml files and expands environment variables.
 """
-import os
+import copy
 import glob
+import os
 import yaml
+
 
 class CmdNotFound(Exception):
     pass
+
+# ## Generalized configuration
+
+def update_w_custom(config, lane_info):
+    """Update the configuration for this lane if a custom analysis is specified.
+    """
+    name_remaps = {"variant": ["SNP calling", "variant", "variant2"],
+                   "SNP calling": ["SNP calling", "variant", "variant2"],
+                   "variant2": ["SNP calling", "variant", "variant2"]}
+    config = copy.deepcopy(config)
+    base_name = lane_info.get("analysis")
+    for analysis_type in name_remaps.get(base_name, [base_name]):
+        custom = config["custom_algorithms"].get(analysis_type, None)
+        if custom:
+            for key, val in custom.iteritems():
+                config["algorithm"][key] = val
+    # apply any algorithm details specified with the lane
+    for key, val in lane_info.get("algorithm", {}).iteritems():
+        config["algorithm"][key] = val
+    # apply any resource details specified with the lane
+    for prog, pkvs in lane_info.get("resources", {}).iteritems():
+        if prog not in config["resources"]:
+            config["resources"][prog] = {}
+        for key, val in pkvs.iteritems():
+            config["resources"][prog][key] = val
+    return config
+
+def add_cached_versions(config):
+    """Add version information to configuration, avoiding multiple access during parallel runs.
+    """
+    from bcbio import broad
+    # cache GATK version in sample information to avoid multiple retrievals later
+    if "gatk" in config["resources"]:
+        config["resources"]["gatk"]["version"] = broad.runner_from_config(config).get_gatk_version()
+    return config
+
+# ## Retrieval functions
 
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.

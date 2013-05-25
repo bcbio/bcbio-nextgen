@@ -27,6 +27,7 @@ The sample configuration file defines ``details`` of each sample to process::
         algorithm:
         metadata:
           batch: Batch1
+        lane: 1
         description: Example1
         genome_build: hg19
 
@@ -35,8 +36,12 @@ The sample configuration file defines ``details`` of each sample to process::
   described in more detail below.
 - ``metadata`` Additional descriptive metadata about the sample. The
   ``batch`` input defines a batch that the sample falls in. We perform
-  multi-sample variant calling on all samples with the same batch name.
-- ``description`` Unique name for this sample. Required.
+  multi-sample variant calling on all samples with the same batch
+  name.
+- ``lane`` A unique number within the project. Corresponds to the
+  ``ID`` parameter in the BAM read group. Required.
+- ``description`` Unique name for this sample, corresponding to the
+  ``SM`` parameter in the BAM read group.
 - ``genome_build`` Genome build to align to, which references a genome
   keyword in Galaxy to find location build files.
 

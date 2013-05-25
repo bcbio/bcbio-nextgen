@@ -17,7 +17,7 @@ def from_sample(sample):
         approach = _approaches[upload_config.get("method", "filesystem")]
         for finfo in _get_files(sample):
             approach.update_file(finfo, sample["info"], upload_config)
-        for finfo in _get_files_run(sample, upload_config):
+        for finfo in _get_files_project(sample, upload_config):
             approach.update_file(finfo, None, upload_config)
 
 # ## File information from sample
@@ -51,9 +51,10 @@ def _get_files_variantcall(sample):
     out = []
     algorithm = sample["config"]["algorithm"]
     if algorithm.get("write_summary", True) and "summary" in sample:
-        out = [{"path": sample["summary"]["pdf"],
-                "type": "pdf",
-                "ext": "summary"}]
+        if sample["summary"].get("pdf"):
+            out = [{"path": sample["summary"]["pdf"],
+                    "type": "pdf",
+                    "ext": "summary"}]
     if ((algorithm.get("aligner") or algorithm.get("realign") or algorithm.get("recalibrate"))
           and algorithm.get("merge_bamprep", True)) and sample["work_bam"] is not None:
         out.append({"path": sample["work_bam"],
@@ -76,15 +77,21 @@ def _get_files_variantcall(sample):
                             "variantcaller": x["variantcaller"]})
     return _add_meta(out, sample)
 
-# ## File information from run
+# ## File information from full project
 
-def _get_files_run(sample, upload_config):
-    """Retrieve output files associated with an entire analysis run.
+def _get_files_project(sample, upload_config):
+    """Retrieve output files associated with an entire analysis project.
     """
     out = [{"path": sample["info"]["provenance"]["programs"]}]
+    if sample["summary"].get("project"):
+        out.append({"path": sample["summary"]["project"]})
     for x in sample["variants"]:
-        if x.has_key("pop_db"):
+        if "pop_db" in x:
             out.append({"path": x["pop_db"],
                         "type": "sqlite",
                         "variantcaller": x["variantcaller"]})
+    for x in sample["variants"]:
+        if x.get("validate") and x["validate"].get("grading_summary"):
+            out.append({"path": x["validate"]["grading_summary"]})
+            break
     return _add_meta(out, config=upload_config)

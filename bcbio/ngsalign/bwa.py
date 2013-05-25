@@ -1,13 +1,17 @@
 """Next-gen alignments with BWA (http://bio-bwa.sourceforge.net/)
 """
+import contextlib
+import gzip
 import os
 import subprocess
 
-from bcbio.log import logger
+from Bio.SeqIO.QualityIO import FastqGeneralIterator
+
 from bcbio.pipeline import config_utils
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import novoalign
+from bcbio.provenance import do
 
 galaxy_location_file = "bwa_index.loc"
 
@@ -40,9 +44,28 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        "| {bwa} mem -p -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} - "
                        "| {samtools} view -b -S -u - "
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                logger.info(cmd.format(**locals()))
-                subprocess.check_call(cmd.format(**locals()), shell=True)
+                cmd = cmd.format(**locals())
+                do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
+                       [do.file_nonempty(tx_out_file)])
     return out_file
+
+def can_pipe(fastq_file):
+    """bwa-mem handle longer (> 75bp) reads with improved piping.
+    """
+    min_size = 75
+    if fastq_file.endswith(".gz"):
+        handle = gzip.open(fastq_file, "rb")
+    else:
+        handle = open(fastq_file)
+    supports_piping = True
+    with contextlib.closing(handle) as in_handle:
+        fqit = FastqGeneralIterator(in_handle)
+        for i, (_, seq, qual) in enumerate(fqit):
+            if len(seq) < min_size:
+                supports_piping = False
+            if i > 100:
+                break
+    return supports_piping
 
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
@@ -64,8 +87,9 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                        "{fastq_file} {pair_file} "
                        "| {samtools} view -b -S -u - "
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                logger.info(cmd.format(**locals()))
-                subprocess.check_call(cmd.format(**locals()), shell=True)
+                cmd = cmd.format(**locals())
+                do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
+                       [do.file_nonempty(tx_out_file)])
     return out_file
 
 def _check_samtools_version():
@@ -101,9 +125,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         if sai2_file:
             sam_cl.append(pair_file)
         with file_transaction(sam_file) as tx_sam_file:
-            with open(tx_sam_file, "w") as out_handle:
-                logger.info(" ".join(sam_cl))
-                subprocess.check_call(sam_cl, stdout=out_handle)
+            cmd = "{cl} > {out_file}".format(cl=" ".join(sam_cl), out_file=tx_sam_file)
+            do.run(cmd, "bwa {align_type}".format(**locals()), None)
     return sam_file
 
 def _bwa_args_from_config(config):
@@ -119,6 +142,5 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
               "-k %s" % config["algorithm"]["max_errors"]]
     aln_cl += _bwa_args_from_config(config)
     aln_cl += [ref_file, fastq_file]
-    with open(out_file, "w") as out_handle:
-        logger.info(" ".join(aln_cl))
-        subprocess.check_call(aln_cl, stdout=out_handle)
+    cmd = "{cl} > {out_file}".format(cl=" ".join(aln_cl), out_file=out_file)
+    do.run(cmd, "bwa aln: {f}".format(f=os.path.basename(fastq_file)), None)

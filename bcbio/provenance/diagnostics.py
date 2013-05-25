@@ -7,13 +7,15 @@ The goal is to allow traceability and reproducibility of pipelines.
 https://bitbucket.org/caseywdunn/biolite
 """
 
-from bcbio.log import logger
-
-def log_cmd(descr, entity, cmd):
-    """Log and save details when running a program.
+def start_cmd(cmd, descr, entity):
+    """Retain details about starting a command, returning a command identifier.
     """
-    logger.info(descr)
-    # TODO: storage of command line mapped to entity
+    pass
+
+def end_cmd(cmd_id, succeeded=True):
+    """Mark a command as finished with success or failure.
+    """
+    pass
 
 def track_parallel(items, sub_type):
     """Create entity identifiers to trace the given items in sub-commands.

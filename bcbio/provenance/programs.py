@@ -33,7 +33,7 @@ def _broad_versioner(type):
             raise NotImplementedError(type)
     return get_version
 
-def _jar_versioner(program_name, jar_name):
+def jar_versioner(program_name, jar_name):
     """Retrieve version information based on jar file.
     """
     def get_version(config):
@@ -53,9 +53,9 @@ def _jar_versioner(program_name, jar_name):
 _alt_progs = [{"name": "gatk", "version_fn": _broad_versioner("gatk")},
               {"name": "picard", "version_fn": _broad_versioner("picard")},
               {"name": "bcbio.variation",
-               "version_fn": _jar_versioner("bcbio_variation", "bcbio.variation")},
+               "version_fn": jar_versioner("bcbio_variation", "bcbio.variation")},
               {"name": "varscan",
-               "version_fn": _jar_versioner("varscan", "VarScan")}]
+               "version_fn": jar_versioner("varscan", "VarScan")}]
 # TODO: cortex_var
 
 def _parse_from_stdoutflag(stdout, x):

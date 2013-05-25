@@ -7,7 +7,7 @@ from IPython.parallel import require
 from bcbio.distributed import ipython
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
 from bcbio.variation import bamprep, realign, genotype, ensemble, multi, population, recalibrate
-from bcbio.log import setup_logging, logger
+from bcbio.log import logger, setup_local_logging
 
 @contextlib.contextmanager
 def _setup_logging(args):
@@ -22,7 +22,7 @@ def _setup_logging(args):
             config = arg
             break
     if config is not None:
-        setup_logging(config)
+        setup_local_logging(config, config.get("parallel", {}))
     else:
         raise NotImplementedError("No config in %s:" % args[0])
     try:
