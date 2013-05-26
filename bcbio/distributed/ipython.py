@@ -89,7 +89,7 @@ def get_algorithm_config(xs):
     raise ValueError("Did not find algorithm configuration in items: {0}"
                      .format(xs))
 
-def add_cores_to_config(args, cores_per_job, parallel):
+def add_cores_to_config(args, cores_per_job, parallel=None):
     """Add information about available cores for a job to configuration.
     Ugly hack to update core information in a configuration dictionary.
     """
@@ -104,10 +104,12 @@ def add_cores_to_config(args, cores_per_job, parallel):
     new_arg = copy.deepcopy(args[new_i])
     if is_nested_config_arg(new_arg):
         new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
-        new_arg["config"]["parallel"] = parallel
+        if parallel:
+            new_arg["config"]["parallel"] = parallel
     elif is_std_config_arg(new_arg):
         new_arg["algorithm"]["num_cores"] = int(cores_per_job)
-        new_arg["parallel"] = parallel
+        if parallel:
+            new_arg["parallel"] = parallel
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
     args = list(args)[:]

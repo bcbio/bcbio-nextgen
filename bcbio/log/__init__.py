@@ -8,6 +8,7 @@ import sys
 import logbook, logbook.queues
 
 from bcbio import utils
+from bcbio.log import logbook_zmqpush
 
 LOG_NAME = "bcbio-nextgen"
 
@@ -17,25 +18,33 @@ def _get_log_dir(config):
     return d
 
 logger = logbook.Logger(LOG_NAME)
+logger_cl = logbook.Logger(LOG_NAME + "-commands")
 mpq = multiprocessing.Queue(-1)
 
-def _add_host(record):
-    record.extra["hostname"] = socket.gethostname()
-    return record
+def _is_cl(record, _):
+    return record.channel == LOG_NAME + "-commands"
 
-def _create_log_handler(config):
-    handlers = [logbook.Processor(_add_host),
-                logbook.NullHandler()]
-    format_str = ("[{record.time:%Y-%m-%d %H:%M}] "
-                  "{record.extra[hostname]}: {record.message}")
+def _not_cl(record, handler):
+    return not _is_cl(record, handler)
+
+def _create_log_handler(config, add_hostname=False):
+    handlers = [logbook.NullHandler()]
+    format_str = " ".join(["[{record.time:%Y-%m-%d %H:%M}]",
+                           "{record.extra[source]}:" if add_hostname else "",
+                           "{record.message}"])
 
     log_dir = _get_log_dir(config)
     if log_dir:
         utils.safe_makedir(log_dir)
         handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s.log" % LOG_NAME),
-                                            format_string=format_str, level="INFO"))
+                                            format_string=format_str, level="INFO",
+                                            filter=_not_cl))
         handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s-debug.log" % LOG_NAME),
-                                            format_string=format_str, level="DEBUG", bubble=True))
+                                            format_string=format_str, level="DEBUG", bubble=True,
+                                            filter=_not_cl))
+        handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s-commands.log" % LOG_NAME),
+                                            format_string=format_str, level="DEBUG",
+                                            filter=_is_cl))
 
     email = config.get("email", config.get("resources", {}).get("log", {}).get("email"))
     if email:
@@ -44,7 +53,8 @@ def _create_log_handler(config):
                                             format_string=email_str,
                                             level='INFO', bubble = True))
 
-    handlers.append(logbook.StreamHandler(sys.stderr, format_string=format_str, bubble=True))
+    handlers.append(logbook.StreamHandler(sys.stderr, format_string=format_str, bubble=True,
+                                          filter=_not_cl))
     return logbook.NestedSetup(handlers)
 
 def create_base_logger(config, parallel=None):
@@ -58,9 +68,14 @@ def create_base_logger(config, parallel=None):
     parallel_type = parallel.get("type", "local")
     cores = parallel.get("cores", 1)
     if parallel_type == "ipython":
-        parallel["log_queue"] = "tcp://%s:5000" % socket.gethostname()
-        subscriber = logbook.queues.ZeroMQSubscriber(parallel(["log_queue"]))
-        subscriber.dispatch_in_background(_create_log_handler(config))
+        ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+               if not ip.startswith("127.")]
+        uri = "tcp://%s" % ips[0]
+        subscriber = logbook_zmqpush.ZeroMQPullSubscriber()
+        mport = subscriber.socket.bind_to_random_port(uri)
+        wport_uri = "%s:%s" % (uri, mport)
+        parallel["log_queue"] = wport_uri
+        subscriber.dispatch_in_background(_create_log_handler(config, True))
     elif cores > 1:
         subscriber = logbook.queues.MultiProcessingSubscriber(mpq)
         subscriber.dispatch_in_background(_create_log_handler(config))
@@ -79,7 +94,7 @@ def setup_local_logging(config, parallel=None):
     parallel_type = parallel.get("type", "local")
     cores = parallel.get("cores", 1)
     if parallel_type == "ipython":
-        handler = logbook.queues.ZeroMQHandler(parallel["log_queue"])
+        handler = logbook_zmqpush.ZeroMQPushHandler(parallel["log_queue"])
     elif cores > 1:
         handler = logbook.queues.MultiProcessingHandler(mpq)
     else:

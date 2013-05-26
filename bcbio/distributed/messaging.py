@@ -14,7 +14,7 @@ from mako.template import Template
 
 from bcbio import utils
 from bcbio.distributed import ipython
-from bcbio.log import logger
+from bcbio.log import logger, setup_local_logging
 from bcbio.provenance import diagnostics
 
 def parallel_runner(parallel, dirs, config, config_file=None):
@@ -36,12 +36,19 @@ def parallel_runner(parallel, dirs, config, config_file=None):
                                     fromlist=["multitasks"]),
                          fn_name)
             num_jobs, cores_per_job = ipython.find_cores_per_job(fn, parallel, items, config)
-            items = [ipython.add_cores_to_config(x, cores_per_job, parallel) for x in items]
+            items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
             num_jobs = cores_including_resources(num_jobs, metadata, config)
+            # running a multiprocessing job inside of ipython parallel
+            # job and need to handle logging
+            if "parallel" in config:
+                setup_local_logging(config, parallel)
             with utils.cpmap(num_jobs) as cpmap:
                 for data in cpmap(fn, items):
                     if data:
                         out.extend(data)
+            # restore logging
+            if "parallel" in config:
+                setup_local_logging(config, config["parallel"])
             return out
     return run_parallel
 

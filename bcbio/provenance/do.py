@@ -4,7 +4,7 @@ import os
 import subprocess
 
 from bcbio import utils
-from bcbio.log import logger
+from bcbio.log import logger, logger_cl
 from bcbio.provenance import diagnostics
 
 def run(cmd, descr, data, checks=None):
@@ -16,6 +16,7 @@ def run(cmd, descr, data, checks=None):
     # TODO: Extract entity information from data input
     cmd_id = diagnostics.start_cmd(descr, data, cmd)
     try:
+        logger_cl.debug(" ".join(cmd) if not isinstance(cmd, basestring) else cmd)
         _do_run(cmd, checks)
     except:
         diagnostics.end_cmd(cmd_id, False)

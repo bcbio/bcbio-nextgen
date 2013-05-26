@@ -1,6 +1,35 @@
 Getting started
 ---------------
 
+Overview
+========
+
+1. Edit a `sample configuration file`_ to describe your samples. The
+   example pipelines provide a good starting point.
+
+2. Run analysis, distributed across 8 local cores::
+
+         bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -n 8
+
+.. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+
+Logging
+=======
+
+There are 3 logging files in the ``log`` directory within your working folder:
+
+- ``bcbio-nextgen.log`` High level logging information about the analysis.
+  This provides an overview of major processing steps and useful
+  checkpoints for assessing run times.
+- ``bcbio-nextgen-debug.log`` Detailed information about processes
+  including stdout/stderr from third party software and error traces
+  for failures. Look here to identify the status of running pipelines
+  or to debug errors. It labels each line with the hostname of the
+  machine it ran on to ease debugging in distributed cluster
+  environments.
+- ``bcbio-nextgen-commands.log`` Full command lines for all third
+  party software tools run.
+
 .. _example-pipelines:
 
 Example pipelines
