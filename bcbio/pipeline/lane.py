@@ -58,7 +58,7 @@ def process_lane(lane_items, fc_name, fc_date, dirs, config):
     """Prepare lanes, potentially splitting based on barcodes.
     """
     lane_name = "%s_%s_%s" % (lane_items[0]['lane'], fc_date, fc_name)
-    logger.info("Preparing %s" % lane_name)
+    logger.debug("Preparing %s" % lane_name)
     full_fastq1, full_fastq2 = get_fastq_files(dirs["fastq"],
                                                dirs["work"], lane_items[0], fc_name, dirs=dirs,
                                                config=config_utils.update_w_custom(config, lane_items[0]))

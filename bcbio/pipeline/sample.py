@@ -20,7 +20,7 @@ from bcbio.rnaseq import count
 def merge_sample(data):
     """Merge fastq and BAM files for multiple samples.
     """
-    logger.info("Combining fastq and BAM files %s" % str(data["name"]))
+    logger.debug("Combining fastq and BAM files %s" % str(data["name"]))
     config = config_utils.update_w_custom(data["config"], data["info"])
     config = config_utils.add_cached_versions(config)
     genome_build, sam_ref = shared.ref_genome_info(data["info"], config, data["dirs"])
@@ -45,7 +45,7 @@ def delayed_bam_merge(data):
         file_key = data["combine"].keys()[0]
         in_files = list(set([data[file_key]] + data["combine"][file_key].get("extras", [])))
         out_file = data["combine"][file_key]["out"]
-        logger.info("Combining BAM files to %s" % out_file)
+        logger.debug("Combining BAM files to %s" % out_file)
         config = copy.deepcopy(data["config"])
         config["algorithm"]["save_diskspace"] = False
         merged_file = merge_bam_files(in_files, os.path.dirname(out_file), config,

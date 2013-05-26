@@ -69,8 +69,8 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
     # on small chromosomes, so don't rerun in those cases
     if not os.path.exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            logger.info("GATK RealignerTargetCreator: %s %s" %
-                        (os.path.basename(align_bam), region))
+            logger.debug("GATK RealignerTargetCreator: %s %s" %
+                         (os.path.basename(align_bam), region))
             params = ["-T", "RealignerTargetCreator",
                       "-I", align_bam,
                       "-R", ref_file,
