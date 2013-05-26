@@ -58,8 +58,8 @@ def create_base_logger(config, parallel=None):
     parallel_type = parallel.get("type", "local")
     cores = parallel.get("cores", 1)
     if parallel_type == "ipython":
-        parallel["log_queue"] = "tcp://%s:5000" % socket.gethostname()
-        subscriber = logbook.queues.ZeroMQSubscriber(parallel(["log_queue"]))
+        parallel["log_queue"] = "tcp://%s:5000" % socket.gethostbyname(socket.gethostname())
+        subscriber = logbook.queues.ZeroMQSubscriber(parallel["log_queue"])
         subscriber.dispatch_in_background(_create_log_handler(config))
     elif cores > 1:
         subscriber = logbook.queues.MultiProcessingSubscriber(mpq)
