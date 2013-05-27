@@ -97,6 +97,7 @@ def _check_samtools_version():
     """
     p = subprocess.Popen(["samtools", "sort"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
+    p.stdout.close()
     if output.find("-@") == -1:
         raise OSError("Installed version of samtools sort does not have support for multithreading (-@ option) "
                       "required to support bwa piped alignment. Please upgrade to the latest version "

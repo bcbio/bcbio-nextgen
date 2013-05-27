@@ -57,6 +57,7 @@ class BroadRunner:
             p = subprocess.Popen(cl, stdout=subprocess.PIPE)
             stdout = p.stdout.read()
             p.wait()
+            p.stdout.close()
             return stdout
         else:
             do.run(cl, "Picard {0}".format(command), None)
@@ -71,6 +72,7 @@ class BroadRunner:
         p = subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         version = float(p.stdout.read().split("(")[0])
         p.wait()
+        p.stdout.close()
         return version
 
     def cl_gatk(self, params, tmp_dir):

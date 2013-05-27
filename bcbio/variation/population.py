@@ -40,7 +40,8 @@ def _do_db_build(samples):
     config = samples[0][0]["config"]
     gemini = config_utils.get_program("gemini", config)
     try:
-        subprocess.check_call([gemini, "-h"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        p = subprocess.check_call([gemini, "-h"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        p.stdout.close()
     except:
         return False
     genomes = set()

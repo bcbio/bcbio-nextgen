@@ -4,7 +4,7 @@ Catalogs the full list of programs used in analysis, enabling reproduction of
 results and tracking of provenance in output files.
 """
 import os
-import collections
+import contextlib
 import subprocess
 
 from bcbio import broad, utils
@@ -83,14 +83,15 @@ def _get_cl_version(p, config):
     subp = subprocess.Popen(cmd.format(**locals()), stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             shell=True)
-    if p.get("stdout_flag"):
-        version = _parse_from_stdoutflag(subp.stdout, p["stdout_flag"])
-    elif p.get("paren_flag"):
-        version = _parse_from_parenflag(subp.stdout, p["paren_flag"])
-    else:
-        print p.stdout.read()
-        raise NotImplementedError("Don't know how to extract version")
-    return version
+    with contextlib.closing(subp.stdout) as stdout:
+        if p.get("stdout_flag"):
+            v = _parse_from_stdoutflag(stdout, p["stdout_flag"])
+        elif p.get("paren_flag"):
+            v = _parse_from_parenflag(stdout, p["paren_flag"])
+        else:
+            print stdout.read()
+            raise NotImplementedError("Don't know how to extract version")
+    return v
 
 def get_versions(config):
     """Retrieve details on all programs available on the system.
