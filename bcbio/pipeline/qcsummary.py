@@ -98,6 +98,8 @@ def _graphs_and_summary(bam_file, sam_ref, tmp_dir, config):
     """
     bait = config["algorithm"].get("hybrid_bait", None)
     target = config["algorithm"].get("hybrid_target", None)
+    if target is not None:
+        assert os.path.exists(target), (target, "does not exist!")
     broad_runner = runner_from_config(config)
     metrics = PicardMetrics(broad_runner, tmp_dir)
     summary_table, metrics_graphs = \
