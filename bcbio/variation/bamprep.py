@@ -62,7 +62,7 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
     broad_runner.run_fn("picard_index", sel_file)
     return sel_file, " ".join(cl)
 
-def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir):
+def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
     """Perform realignment with GATK, using input commandline.
     GATK requires writing to disk and indexing before realignment.
     """
@@ -70,7 +70,8 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir):
     pa_bam = "%s-prealign%s" % os.path.splitext(out_base_file)
     if not utils.file_exists(pa_bam):
         with file_transaction(pa_bam) as tx_out_file:
-            cmd = "{cl} > {tx_out_file}".format(**locals())
+            pipe = ">" if prep_params["dup"] else "-o"
+            cmd = "{cl} {pipe} {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
     broad_runner.run_fn("picard_index", pa_bam)
     dbsnp_vcf = shared.configured_ref_file("dbsnp", data["config"], data["sam_ref"])
@@ -96,7 +97,8 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
     if not prep_params["realign"]:
         prerecal_bam = None
     elif prep_params["realign"] == "gatk":
-        prerecal_bam, cl = _piped_realign_gatk(data, region, cl, out_file, tmp_dir)
+        prerecal_bam, cl = _piped_realign_gatk(data, region, cl, out_file, tmp_dir,
+                                               prep_params)
     else:
         raise NotImplementedError("Realignment method: %s" % prep_params["realign"])
     with file_transaction(out_file) as tx_out_file:
@@ -187,8 +189,6 @@ def _piped_bamprep_region(data, region, out_file, tmp_dir):
     """Do work of preparing BAM input file on the selected region.
     """
     prep_params = _get_prep_params(data)
-    if prep_params["recal"]:
-        assert prep_params["dup"], "Requires duplicate marking with BAM recalibration."
     if prep_params["all_pipe"]:
         _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
     else:
