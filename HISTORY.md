@@ -8,6 +8,9 @@
   large numbers of samples analyzed together.
 - Updated program support: Improved novoalign support based on evaluation with
   reference genomes. Support GATK 2.5-2. Support VarScan 2.3.5.
+- Fix naming of read group information (ID and SM) to be more robust. Identifies
+  issues with duplicated read groups up front to avoid downstream errors during
+  variant calling. Thanks to Zhengqiu Cai.
 - Fix IPython parallel usage for larger clusters, providing improved resiliency
   for long running jobs.
 - Clean up handling of missing programs and input files with better error
