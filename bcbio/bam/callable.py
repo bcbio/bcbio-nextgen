@@ -169,7 +169,7 @@ class NBlockRegionPicker:
     """
     def __init__(self, ref_regions, config):
         self._chr_last_blocks = {}
-        target_blocks = int(config["algorithm"].get("nomap_split_targets", 2000))
+        target_blocks = int(config["algorithm"].get("nomap_split_targets", 200))
         self._target_size = self._get_target_size(target_blocks, ref_regions)
 
     def _get_target_size(self, target_blocks, ref_regions):
