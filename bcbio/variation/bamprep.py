@@ -28,10 +28,15 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
             "-R", data["sam_ref"],
             "-I", data["work_bam"]]
     if prep_params["recal"] == "gatk":
-        args += ["-BQSR", data["prep_recal"]]
+        if _recal_has_reads(data["prep_recal"]):
+            args += ["-BQSR", data["prep_recal"]]
     elif prep_params["recal"]:
         raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
     return broad_runner.cl_gatk(args, tmp_dir)
+
+def _recal_has_reads(in_file):
+    with open(in_file) as in_handle:
+        return not in_handle.readline().startswith("# No aligned reads")
 
 def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
     """Retrieve the commandline for streaming input into preparation step.
