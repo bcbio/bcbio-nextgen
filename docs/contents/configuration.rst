@@ -130,7 +130,9 @@ Experimental information
 -  ``coverage_depth`` Depth of sequencing coverage. Influences GATK
    variant calling [high, low]
 -  ``hybrid_target`` BED file with target regions for hybrid selection
-   experiments.
+   experiments. This is only a descriptive set of regions for metrics
+   assessment. Use ``variant_regions`` to restrict calling and
+   assessment regions.
 -  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
 
 Variant calling
@@ -139,6 +141,13 @@ Variant calling
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
    multiple options [gatk, freebayes, varscan, samtools,
    gatk-haplotype, cortex]
+-  ``variant_regions`` BED file of regions to call variants in.
+-  ``mark_duplicates`` Identify and remove variants [false, true]
+-  ``recalibrate`` Perform variant recalibration [true, false]
+-  ``realign`` Type of variant alignment to perform, Defaults to
+   GATK realignment. [gatk, gkno, false]
+-  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
+   no phasing [false, gatk]
 -  ``validate`` A VCF file of expected variant calls to perform
     validation and grading of output variants from the pipeline.
     This provides a mechanism to ensure consistency of calls against
@@ -149,13 +158,6 @@ Variant calling
 - ``validate_genome_build``: Genome build of the validation file, if
   different than the samples genome build. Helps manage hg19/GRCh37
   chromosome naming differences.
--  ``variant_regions`` BED file of regions to call variants in.
--  ``mark_duplicates`` Identify and remove variants [false, true]
--  ``recalibrate`` Perform variant recalibration [true, false]
--  ``realign`` Type of variant alignment to perform, Defaults to
-   GATK realignment. [gatk, gkno, false]
--  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
-   no phasing [false, gatk]
 
 Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
 This requires some associated data files, and also has some configurable
