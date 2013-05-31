@@ -44,7 +44,11 @@ def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
     sample_list = _create_sample_list(align_bams, out_file)
     mpileup = samtools.prep_mpileup(align_bams, ref_file, max_read_depth, config,
                                     target_regions=target_regions, want_bcf=False)
-    cmd = ("{mpileup} "
+    # VarScan fails to generate a header on files that start with
+    # zerocoverage calls; strip these with grep, we're not going to
+    # call on them
+    remove_zerocoverage = "grep -v -P '\t0\t\t$'"
+    cmd = ("{mpileup} | {remove_zerocoverage} "
            "| java {jvm_opts} -jar {varscan_jar} mpileup2cns --min-coverage 5 --p-value 0.98 "
            "  --vcf-sample-list {sample_list} --output-vcf --variants "
            "> {out_file}")
