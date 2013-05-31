@@ -100,3 +100,4 @@ def setup_local_logging(config, parallel=None):
     else:
         handler = _create_log_handler(config)
     handler.push_thread()
+    return handler

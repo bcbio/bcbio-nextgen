@@ -21,12 +21,13 @@ def _setup_logging(args):
         elif ipython.is_std_config_arg(arg):
             config = arg
             break
-    if config is not None:
-        setup_local_logging(config, config.get("parallel", {}))
-    else:
+    if config is None:
         raise NotImplementedError("No config in %s:" % args[0])
+    handler = setup_local_logging(config, config.get("parallel", {}))
     try:
         yield None
+        if hasattr(handler, "close"):
+            handler.close()
     except:
         logger.exception("Unexpected error")
         raise

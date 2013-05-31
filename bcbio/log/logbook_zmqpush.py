@@ -37,7 +37,7 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
         logbook.Handler.__init__(self, level, filter, bubble)
 
         self.hostname = hostname
-        self.context = context or zmq.Context()
+        self.context = context or zmq.Context.instance()
         self.socket = self.context.socket(zmq.PUSH)
         if addr is not None:
             self.socket.connect(addr)
@@ -65,7 +65,7 @@ class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
 
     def __init__(self, addr=None, context=None):
         self._zmq = zmq
-        self.context = context or zmq.Context()
+        self.context = context or zmq.Context.instance()
         self.socket = self.context.socket(zmq.PULL)
         if addr is not None:
             self.socket.bind(addr)
