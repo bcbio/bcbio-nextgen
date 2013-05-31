@@ -1,0 +1,15 @@
+# Template for whole genome Illumina variant calling with GATK pipeline
+---
+details:
+  - algorithm:
+      aligner: bwa
+      mark_duplicates: picard
+      recalibrate: gatk
+      realign: gatk
+      variantcaller: gatk
+      platform: illumina
+      quality_format: Standard
+      coverage_interval: genome
+      coverage_depth: high
+    analysis: variant2
+    genome_build: GRCh37

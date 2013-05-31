@@ -131,7 +131,10 @@ if __name__ == "__main__":
         _upgrade_bcbio(kwargs["upgrade"])
     else:
         if kwargs["workflow"]:
-            workdir, new_kwargs = workflow.setup(kwargs["workflow"], kwargs["inputs"])
+            setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])
+            if setup_info is None: # no automated run after setup
+                sys.exit(0)
+            workdir, new_kwargs = setup_info
             os.chdir(workdir)
             kwargs.update(new_kwargs)
         main(**kwargs)

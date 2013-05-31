@@ -142,7 +142,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
                 local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
                 indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
                 cortex_out = _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size,
-                                                          "sample": _get_sample_name(align_bam)},
+                                                          "sample": get_sample_name(align_bam)},
                                          out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
                                                         "vcftools": vcftools_dir},
                                          config)
@@ -325,6 +325,6 @@ def _count_fastq_reads(in_fastq, min_reads):
                                          (i for i, _ in enumerate(FastqGeneralIterator(in_handle)))))
     return len(items)
 
-def _get_sample_name(align_bam):
+def get_sample_name(align_bam):
     with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
         return in_pysam.header["RG"][0]["SM"]

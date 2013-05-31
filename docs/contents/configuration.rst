@@ -144,8 +144,9 @@ Variant calling
    multiple options [gatk, freebayes, varscan, samtools,
    gatk-haplotype, cortex]
 -  ``variant_regions`` BED file of regions to call variants in.
--  ``mark_duplicates`` Identify and remove variants [false, true]
--  ``recalibrate`` Perform variant recalibration [true, false]
+-  ``mark_duplicates`` Identify and remove variants [picard, samtools,
+   false]
+-  ``recalibrate`` Perform variant recalibration [gatk, false]
 -  ``realign`` Type of variant alignment to perform, Defaults to
    GATK realignment. [gatk, gkno, false]
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
