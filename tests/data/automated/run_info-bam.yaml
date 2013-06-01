@@ -26,6 +26,7 @@ details:
       recalibrate: gatk
       #realign: gatk
       realign: gkno
+      merge_bamprep: false
       #variantcaller: gatk
       variantcaller: freebayes
       quality_format: Standard
