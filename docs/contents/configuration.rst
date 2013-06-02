@@ -17,6 +17,36 @@ Commented `system`_ and `sample`_ example files are available in the
 ``config`` directory. The :ref:`example-pipelines` section contains
 additional examples of ready to run sample files.
 
+.. _automated-sample-config:
+
+Automated sample configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio-nextgen provides a utility to create configuration files for
+multiple sample inputs using a base template. You start with one of
+the `best-practice templates`_, or define your own, then apply to
+multiple samples using the template workflow command::
+
+  bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
+
+- ``gatk-variant`` is the name of the standard ``gatk-template.yaml``
+  input, which the script fetches from GitHub. This argument can also
+  be a path to a locally customized YAML configuration. In both cases,
+  the script replicates the single sample template configuration to
+  all input samples.
+
+- ``project1`` is a short name identifying the current project. The
+  script creates a ``project1`` directory containing the sample
+  configuration in ``project1/config/project1.yaml``.
+
+- The remaining arguments are input BAM or fastq files. The script
+  pairs fastq files (identified by ``_1`` and ``_2``) and extracts
+  sample names from input BAMs, populating the ``files`` and
+  ``description`` field in the final configuration file.
+
+.. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
+.. _sample-configuration:
+
 Sample information
 ~~~~~~~~~~~~~~~~~~
 

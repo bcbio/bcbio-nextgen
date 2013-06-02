@@ -6,11 +6,16 @@
   gkno realignment. Handle smaller reads with novoalign piped analysis.
 - Improve collapsing analysis regions into evenly sized blocks to better handle
   large numbers of samples analyzed together.
+- Provide template functionality to ease generation of input sample.yaml files
+  from lists of BAM of fastq files. Thanks to Brent Pedersen and Paul Tang.
 - Updated program support: Improved novoalign support based on evaluation with
   reference genomes. Support GATK 2.5-2. Support VarScan 2.3.5.
 - Fix naming of read group information (ID and SM) to be more robust. Identifies
   issues with duplicated read groups up front to avoid downstream errors during
   variant calling. Thanks to Zhengqiu Cai.
+- Improve quality control metrics: Cleanup into custom qc directory and ensure
+  correct selection of duplicate and other metrics for split post-alignment
+  prep, even without merging.
 - Fix IPython parallel usage for larger clusters, providing improved resiliency
   for long running jobs.
 - Clean up handling of missing programs and input files with better error

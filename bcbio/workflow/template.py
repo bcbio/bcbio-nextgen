@@ -4,6 +4,7 @@ Provides an automated way to generate a full set of analysis files from an input
 YAML template. Default templates are provided for common approaches which can be tweaked
 as needed.
 """
+import contextlib
 import copy
 import datetime
 import itertools
@@ -13,6 +14,7 @@ import urllib2
 import yaml
 
 from bcbio import utils
+from bcbio.bam import fastq
 from bcbio.variation.cortex import get_sample_name
 from bcbio.workflow.xprize import HelpArgParser
 
@@ -21,9 +23,51 @@ def parse_args(inputs):
         description="Create a bcbio_sample.yaml file from a standard template and inputs")
     parser.add_argument("template", help="Template name or path to template YAML file")
     parser.add_argument("project_name", help="Name of the current project")
-    parser.add_argument("out_directory", help="Output directory to setup project")
     parser.add_argument("input_files", nargs="+", help="Input read files, in BAM or fastq format")
     return parser.parse_args(inputs)
+
+# ## Prepare sequence data inputs
+
+def _prep_bam_input(f, base):
+    if not os.path.exists(f):
+        raise ValueError("Could not find input file: %s" % f)
+    cur = copy.deepcopy(base)
+    cur["files"] = os.path.abspath(f)
+    cur["description"] = get_sample_name(f)
+    return cur
+
+def _prep_fastq_input(fs, base):
+    for f in fs:
+        if not os.path.exists(f):
+            raise ValueError("Could not find input file: %s" % f)
+    cur = copy.deepcopy(base)
+    cur["files"] = [os.path.abspath(f) for f in fs]
+    d = os.path.commonprefix([os.path.splitext(os.path.basename(f))[0] for f in fs])
+    to_strip = ("_", "fastq")
+    while d.endswith(to_strip):
+        for x in to_strip:
+            if d.endswith(x):
+                d = d[:len(d) - len(x)]
+                break
+    cur["description"] = d
+    return cur
+
+def _prep_items_from_base(base, in_files):
+    """Prepare a set of configuration items for input files.
+    """
+    details = []
+    for ext, files in itertools.groupby(in_files, lambda x: os.path.splitext(x)[-1].lower()):
+        if ext == ".bam":
+            for f in files:
+                details.append(_prep_bam_input(f, base))
+        elif ext in [".fq", ".fastq", ".txt"]:
+            for fs in fastq.combine_pairs(files):
+                details.append(_prep_fastq_input(fs, base))
+        else:
+            raise ValueError("File type not yet implemented: %s" % ext)
+    return details
+
+# ## Read and write configuration files
 
 def _read_template(template):
     """Read template file into a dictionary to use as base for all samples.
@@ -35,32 +79,14 @@ def _read_template(template):
         with open(template) as in_handle:
             return yaml.load(in_handle)
     else:
-        base_url = "https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates/%s.yaml"
+        base_url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/%s.yaml"
         try:
-            with urllib2.urlopen(base_url % template):
-                return yaml.load(base_url)
+            with contextlib.closing(urllib2.urlopen(base_url % template)) as in_handle:
+                return yaml.load(in_handle)
         except urllib2.HTTPError:
             raise ValueError("Could not find template '%s' locally or in standard templates on GitHub"
                              % template)
 
-def _prep_items_from_base(base, in_files):
-    """Prepare a set of configuration items for input files.
-
-    XXX Only currently handles BAM inputs.
-    """
-    details = []
-    for ext, files in itertools.groupby(in_files, lambda x: os.path.splitext(x)[-1].lower()):
-        if ext == ".bam":
-            for f in files:
-                if not os.path.exists(f):
-                    raise ValueError("Could not find input file: %s" % f)
-                cur = copy.deepcopy(base)
-                cur["files"] = os.path.abspath(f)
-                cur["description"] = get_sample_name(f)
-                details.append(cur)
-        else:
-            raise ValueError("File type not yet implemented: %s" % ext)
-    return details
 
 def _write_config_file(items, template, project_name, out_dir):
     """Write configuration file, adding required top level attributes.
@@ -83,9 +109,10 @@ def setup(args):
     base_item = template["details"][0]
     items = _prep_items_from_base(base_item, args.input_files)
 
-    out_config_file = _write_config_file(items, template, args.out_directory,
-                                         args.project_name.replace(" ", "_"))
-    work_dir = utils.safe_makedir(os.path.join(args.out_directory, "work"))
+    project_name = args.project_name.replace(" ", "_")
+    out_dir = os.path.join(os.getcwd(), project_name)
+    out_config_file = _write_config_file(items, template, project_name, out_dir)
+    work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     print "Configuration file created at: %s" % out_config_file
     print "Edit to finalize and run with:"
     print "  cd %s" % work_dir

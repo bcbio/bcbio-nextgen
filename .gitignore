@@ -2,6 +2,7 @@
 *.idx
 bcbio_nextgen.egg-info/
 build/
+docs/_build
 dist/
 tests/data/100326*
 tests/data/110106*

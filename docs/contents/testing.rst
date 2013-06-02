@@ -4,8 +4,18 @@ Getting started
 Overview
 ========
 
-1. Edit a `sample configuration file`_ to describe your samples. The
-   example pipelines provide a good starting point.
+1. Create a `sample configuration file`_ for your samples::
+
+         bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
+
+   This uses a standard template (GATK best practice variant calling)
+   to automate creation of a full configuration for all samples. See
+   :ref:`automated-sample-config` for more details on running the
+   script, and manually edit the base template or final output
+   file to incorporate project specific configuration. The example
+   pipelines provide a good starting point and the
+   :ref:`sample-configuration` documentation has full details on
+   available options.
 
 2. Run analysis, distributed across 8 local cores::
 

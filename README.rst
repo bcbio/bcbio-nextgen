@@ -36,7 +36,9 @@ Quick start
 producing a `system configuration file`_ referencing the installed
 software and data.
 
-2. Edit a `sample configuration file`_ to describe your samples.
+2. Create a `sample configuration file`_ for your samples:
+
+         bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
 
 3. Run analysis, distributed across 8 local cores::
 
