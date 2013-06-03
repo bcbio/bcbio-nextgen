@@ -297,3 +297,26 @@ usage.
 .. _system: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _sample: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 .. _Galaxy API: http://wiki.galaxyproject.org/Learn/API
+
+
+Reference genome files
+~~~~~~~~~~~~~~~~~~~~~~
+
+The pipeline requires access to reference genomes, including the raw
+FASTA sequence and pre-built indexes for aligners. The
+:ref:`data-requirements` section describes the expected layout of
+`Galaxy .loc files`_ pointing to the actual sequence and index
+files.
+
+The pipeline identifies the root ``galaxy`` directory, in which it
+expects a ``tool-data`` sub-directory with the ``.loc`` files, in two
+ways:
+
+- Using the directory of your ``bcbio-system.yaml``. This is the
+  default mechanism setup by the automated installer.
+
+- From the path specified by the ``galaxy_config`` option in your
+  ``bcbio-system.yaml``. If you'd like to move your system YAML file,
+  add the full path to your ``galaxy`` directory here.
+
+.. _Galaxy .loc files: http://wiki.galaxyproject.org/Admin/NGS%20Local%20Setup

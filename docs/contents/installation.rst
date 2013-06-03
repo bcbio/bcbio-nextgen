@@ -109,6 +109,9 @@ The code uses a number of Python modules, installed with the code:
 .. _ipython: http://ipython.org/
 .. _sh: http://amoffat.github.com/sh/
 
+
+.. _data-requirements:
+
 Data requirements
 ~~~~~~~~~~~~~~~~~
 
