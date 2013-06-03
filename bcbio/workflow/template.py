@@ -43,7 +43,7 @@ def _prep_fastq_input(fs, base):
     cur = copy.deepcopy(base)
     cur["files"] = [os.path.abspath(f) for f in fs]
     d = os.path.commonprefix([os.path.splitext(os.path.basename(f))[0] for f in fs])
-    to_strip = ("_", "fastq")
+    to_strip = ("_", "fastq", ".")
     while d.endswith(to_strip):
         for x in to_strip:
             if d.endswith(x):
@@ -56,11 +56,15 @@ def _prep_items_from_base(base, in_files):
     """Prepare a set of configuration items for input files.
     """
     details = []
+    fq_exts = [".fq", ".fastq", ".txt", ".gz"]
+    gz_exts = tuple(["%s.gz" % ext for ext in fq_exts if ext != ".gz"])
     for ext, files in itertools.groupby(in_files, lambda x: os.path.splitext(x)[-1].lower()):
         if ext == ".bam":
             for f in files:
                 details.append(_prep_bam_input(f, base))
-        elif ext in [".fq", ".fastq", ".txt"]:
+        elif ext in fq_exts:
+            files = list(files)
+            if ext == ".gz": assert all(f.endswith(gz_exts) for f in files), (files, gz_exts)
             for fs in fastq.combine_pairs(files):
                 details.append(_prep_fastq_input(fs, base))
         else:
