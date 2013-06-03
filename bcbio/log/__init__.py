@@ -27,6 +27,12 @@ def _is_cl(record, _):
 def _not_cl(record, handler):
     return not _is_cl(record, handler)
 
+class CloseableNestedSetup(logbook.NestedSetup):
+    def close(self):
+        for obj in self.objects:
+            if hasattr(obj, "close"):
+                obj.close()
+
 def _create_log_handler(config, add_hostname=False):
     handlers = [logbook.NullHandler()]
     format_str = " ".join(["[{record.time:%Y-%m-%d %H:%M}]",
@@ -55,7 +61,7 @@ def _create_log_handler(config, add_hostname=False):
 
     handlers.append(logbook.StreamHandler(sys.stderr, format_string=format_str, bubble=True,
                                           filter=_not_cl))
-    return logbook.NestedSetup(handlers)
+    return CloseableNestedSetup(handlers)
 
 def create_base_logger(config, parallel=None):
     """Setup base logging configuration, also handling remote logging.
