@@ -100,7 +100,8 @@ def combine_pairs(input_files):
             if len(s.get_matching_blocks()) is not 3:
                 continue
             if comp_file[blocks[0][2]] in PAIR_FILE_IDENTIFIERS:
-                if comp_file[blocks[0][2] - 1] == "_":
+                # e.g. _R1, _R2 or _1, _2
+                if comp_file[blocks[0][2] - 1] in ("R", "_"):
                     used.append(in_file)
                     used.append(comp_file)
                     pairs.append([in_file, comp_file])
