@@ -34,6 +34,7 @@ def _prep_bam_input(f, base):
     cur = copy.deepcopy(base)
     cur["files"] = os.path.abspath(f)
     cur["description"] = get_sample_name(f)
+    cur["algorithm"]["aligner"] = False
     return cur
 
 def _prep_fastq_input(fs, base):
