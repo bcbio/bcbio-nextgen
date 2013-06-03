@@ -43,7 +43,7 @@ def _prep_fastq_input(fs, base):
     cur = copy.deepcopy(base)
     cur["files"] = [os.path.abspath(f) for f in fs]
     d = os.path.commonprefix([os.path.splitext(os.path.basename(f))[0] for f in fs])
-    to_strip = ("_", "fastq", ".")
+    to_strip = ("_R", "_", "fastq", ".")
     while d.endswith(to_strip):
         for x in to_strip:
             if d.endswith(x):
