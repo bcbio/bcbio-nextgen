@@ -288,6 +288,7 @@ def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
         with file_transaction(out_file) as tx_out_file:
             params = ["-T", "VariantFiltration",
                       "-R", ref_file,
+                      "-l", "ERROR",
                       "--out", tx_out_file,
                       "--variant", snp_file]
             for exp in expressions:
