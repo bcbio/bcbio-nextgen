@@ -3,6 +3,8 @@
 details:
   - algorithm:
       aligner: bwa
+      # include a lane or ID for each sample
+      # lane: 1
       # to do multi-sample SNP calling, set the same metadata / batch 
       # metadata:
       #   batch: your-arbitrary-batch-name
