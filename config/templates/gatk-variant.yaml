@@ -3,6 +3,11 @@
 details:
   - algorithm:
       aligner: bwa
+      # include a lane or ID for each sample
+      # lane: 1
+      # to do multi-sample SNP calling, set the same metadata / batch 
+      # metadata:
+      #   batch: your-arbitrary-batch-name
       mark_duplicates: picard
       recalibrate: gatk
       realign: gatk
@@ -11,5 +16,7 @@ details:
       quality_format: Standard
       coverage_interval: genome
       coverage_depth: high
+      # for targetted projects, set the region
+      # variant_regions: /path/to/your.bed
     analysis: variant2
     genome_build: GRCh37
