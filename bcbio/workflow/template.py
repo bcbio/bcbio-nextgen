@@ -23,7 +23,7 @@ def parse_args(inputs):
         description="Create a bcbio_sample.yaml file from a standard template and inputs")
     parser.add_argument("template", help="Template name or path to template YAML file")
     parser.add_argument("project_name", help="Name of the current project")
-    parser.add_argument("input_files", nargs="+", help="Input read files, in BAM or fastq format")
+    parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
     return parser.parse_args(inputs)
 
 # ## Prepare sequence data inputs
@@ -92,11 +92,12 @@ def _read_template(template):
                              % template)
 
 
-def _write_config_file(items, template, project_name, out_dir):
+def _write_config_file(items, template, project_name, out_dir, is_template=False):
     """Write configuration file, adding required top level attributes.
     """
     config_dir = utils.safe_makedir(os.path.join(out_dir, "config"))
-    out_config_file = os.path.join(config_dir, "%s.yaml" % project_name)
+    out_config_file = os.path.join(config_dir, "%s%s.yaml" %
+                                   (project_name, "-template" if is_template else ""))
     out = {"fc_date": datetime.datetime.now().strftime("%y%m%d"),
            "fc_name": project_name,
            "upload" : {"dir": "../final"},
@@ -115,9 +116,17 @@ def setup(args):
 
     project_name = args.project_name.replace(" ", "_")
     out_dir = os.path.join(os.getcwd(), project_name)
-    out_config_file = _write_config_file(items, template, project_name, out_dir)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
-    print "Configuration file created at: %s" % out_config_file
-    print "Edit to finalize and run with:"
-    print "  cd %s" % work_dir
-    print "  bcbio_nextgen.py /path/to/bcbio_system.yaml %s" % out_config_file
+    if len(items) == 0:
+        out_config_file = _write_config_file([base_item], template, project_name, out_dir,
+                                             is_template=True)
+        print "Template configuration file created at: %s" % out_config_file
+        print "Edit to finalize custom options, then prepare full sample config with:"
+        print "  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
+            (out_config_file, project_name)
+    else:
+        out_config_file = _write_config_file(items, template, project_name, out_dir)
+        print "Configuration file created at: %s" % out_config_file
+        print "Edit to finalize and run with:"
+        print "  cd %s" % work_dir
+        print "  bcbio_nextgen.py /path/to/bcbio_system.yaml %s" % out_config_file

@@ -27,7 +27,7 @@ multiple sample inputs using a base template. You start with one of
 the `best-practice templates`_, or define your own, then apply to
 multiple samples using the template workflow command::
 
-  bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
+    bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
 
 - ``gatk-variant`` is the name of the standard ``gatk-template.yaml``
   input, which the script fetches from GitHub. This argument can also
@@ -43,6 +43,18 @@ multiple samples using the template workflow command::
   pairs fastq files (identified by ``_1`` and ``_2``) and extracts
   sample names from input BAMs, populating the ``files`` and
   ``description`` field in the final configuration file.
+
+To make it easier to define your own project specific template, an
+optional first step is to download and edit a local template. First
+retrieve a standard template::
+
+    bcbio_nextgen -w template gatk-variant project1
+
+This pulls the current GATK best practice variant calling template
+into your project directory in
+``project1/config/project1-template.yaml``. Manually edit this file to
+define your options, then run the full template creation for your
+samples, pointing to this custom configuration file.
 
 .. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
 .. _sample-configuration:
