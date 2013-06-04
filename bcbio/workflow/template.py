@@ -81,23 +81,33 @@ def _read_template(template):
     """
     if os.path.isfile(template):
         with open(template) as in_handle:
-            return yaml.load(in_handle)
+            txt_config = in_handle.read()
+        with open(template) as in_handle:
+            config = yaml.load(in_handle)
     else:
         base_url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/%s.yaml"
         try:
             with contextlib.closing(urllib2.urlopen(base_url % template)) as in_handle:
-                return yaml.load(in_handle)
+                txt_config = in_handle.read()
+            with contextlib.closing(urllib2.urlopen(base_url % template)) as in_handle:
+                config = yaml.load(in_handle)
         except urllib2.HTTPError:
             raise ValueError("Could not find template '%s' locally or in standard templates on GitHub"
                              % template)
+    return config, txt_config
 
+def _write_template_config(template_txt, project_name, out_dir):
+    config_dir = utils.safe_makedir(os.path.join(out_dir, "config"))
+    out_config_file = os.path.join(config_dir, "%s-template.yaml" % project_name)
+    with open(out_config_file, "w") as out_handle:
+        out_handle.write(template_txt)
+    return out_config_file
 
-def _write_config_file(items, template, project_name, out_dir, is_template=False):
+def _write_config_file(items, template, project_name, out_dir):
     """Write configuration file, adding required top level attributes.
     """
     config_dir = utils.safe_makedir(os.path.join(out_dir, "config"))
-    out_config_file = os.path.join(config_dir, "%s%s.yaml" %
-                                   (project_name, "-template" if is_template else ""))
+    out_config_file = os.path.join(config_dir, "%s.yaml" % project_name)
     out = {"fc_date": datetime.datetime.now().strftime("%y%m%d"),
            "fc_name": project_name,
            "upload" : {"dir": "../final"},
@@ -110,7 +120,7 @@ def _write_config_file(items, template, project_name, out_dir, is_template=False
     return out_config_file
 
 def setup(args):
-    template = _read_template(args.template)
+    template, template_txt = _read_template(args.template)
     base_item = template["details"][0]
     items = _prep_items_from_base(base_item, args.input_files)
 
@@ -118,8 +128,7 @@ def setup(args):
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     if len(items) == 0:
-        out_config_file = _write_config_file([base_item], template, project_name, out_dir,
-                                             is_template=True)
+        out_config_file = _write_template_config(template_txt, project_name, out_dir)
         print "Template configuration file created at: %s" % out_config_file
         print "Edit to finalize custom options, then prepare full sample config with:"
         print "  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
