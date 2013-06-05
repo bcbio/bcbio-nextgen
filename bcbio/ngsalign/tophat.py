@@ -122,9 +122,14 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
     # skip initial reads for large file, but not for smaller
     mean, stdev = _bowtie_for_innerdist("1000000", fastq_file, pair_file, ref_file,
                                   out_base, out_dir, config)
-    if not mean:
-        mean, stdev = _bowtie_for_innerdist("1", fastq_file, pair_file, ref_file,
+    # if it is a small file, use the old method
+    if not mean or not stdev:
+        mean, stdev = _small_file_innerdist("1", fastq_file, pair_file, ref_file,
                                             out_base, out_dir, config, True)
+
+    assert mean, "mean insert size is not set."
+    assert stdev, "stdev of insert size is not set."
+
     return mean, stdev
 
 
@@ -150,6 +155,24 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
     mean_insert = int(float(insert_metrics["MEAN_INSERT_SIZE"])) - int(2 * avg_read_length)
     std_deviation = int(float(insert_metrics["STANDARD_DEVIATION"]))
     return mean_insert, std_deviation
+
+def _small_file_innerdist(start, fastq_file, pair_file, ref_file, out_base,
+                          out_dir, config, remove_workdir=False):
+    work_dir = os.path.join(out_dir, "innerdist_estimate")
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir)
+    safe_makedir(work_dir)
+    extra_args = ["-s", str(start), "-u", "250000"]
+    bowtie_runner = _select_bowtie_version(config)
+    out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, out_base,
+                                  work_dir, config, extra_args)
+    dists = []
+    with closing(pysam.Samfile(out_sam)) as work_sam:
+        for read in work_sam:
+            if read.is_proper_pair and read.is_read1:
+                dists.append(abs(read.isize) - 2 * read.rlen)
+    dist_stats = Stats(dists)
+    return int(round(dist_stats.mean())), int(round(dist_stats.standard_deviation()))
 
 def _calculate_average_read_length(sam_file):
     with closing(pysam.Samfile(sam_file)) as work_sam:
