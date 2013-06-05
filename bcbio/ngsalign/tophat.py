@@ -17,7 +17,8 @@ from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, flatten
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
-
+from bcbio import broad
+from bcbio.broad.metrics import PicardMetricsParser
 
 _out_fnames = ["accepted_hits.sam", "junctions.bed",
                "insertions.bed", "deletions.bed"]
@@ -119,13 +120,12 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
     """Use Bowtie to estimate the inner distance of paired reads.
     """
     # skip initial reads for large file, but not for smaller
-    dists = _bowtie_for_innerdist("1000000", fastq_file, pair_file, ref_file,
+    mean, stdev = _bowtie_for_innerdist("1000000", fastq_file, pair_file, ref_file,
                                   out_base, out_dir, config)
-    if len(dists) == 0:
-        dists = _bowtie_for_innerdist("1", fastq_file, pair_file, ref_file,
-                                      out_base, out_dir, config, True)
-    dist_stats = Stats(dists)
-    return int(round(dist_stats.mean())), int(round(dist_stats.standard_deviation()))
+    if not mean:
+        mean, stdev = _bowtie_for_innerdist("1", fastq_file, pair_file, ref_file,
+                                            out_base, out_dir, config, True)
+    return mean, stdev
 
 
 def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
@@ -138,13 +138,28 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
     bowtie_runner = _select_bowtie_version(config)
     out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, out_base,
                                   work_dir, config, extra_args)
-    dists = []
-    with closing(pysam.Samfile(out_sam)) as work_sam:
-        for read in work_sam:
-            if read.is_proper_pair and read.is_read1:
-                dists.append(abs(read.isize) - 2 * read.rlen)
-    return dists
+    runner = broad.runner_from_config(config)
+    metrics_file = runner.run_fn("picard_insert_metrics", out_sam)
+    if not file_exists(metrics_file):
+        return None, None
+    parser = PicardMetricsParser()
+    with open(metrics_file) as metrics_handle:
+        insert_metrics = parser._parse_insert_metrics(metrics_handle)
 
+    avg_read_length = _calculate_average_read_length(out_sam)
+    mean_insert = int(float(insert_metrics["MEAN_INSERT_SIZE"])) - int(2 * avg_read_length)
+    std_deviation = int(float(insert_metrics["STANDARD_DEVIATION"]))
+    return mean_insert, std_deviation
+
+def _calculate_average_read_length(sam_file):
+    with closing(pysam.Samfile(sam_file)) as work_sam:
+        count = 0
+        read_lengths = []
+        for read in work_sam:
+            count = count + 1
+            read_lengths.append(read.rlen)
+    avg_read_length = int(float(sum(read_lengths)) / float(count))
+    return avg_read_length
 
 def _bowtie_major_version(config):
     bowtie_runner = sh.Command(config_utils.get_program("bowtie", config,

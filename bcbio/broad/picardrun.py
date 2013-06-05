@@ -29,6 +29,22 @@ def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
                 picard.run("CollectRnaSeqMetrics", opts)
     return out_file
 
+def picard_insert_metrics(picard, align_bam, out_file=None):
+    """ Collect insert size metrics for a bam file """
+    base, ext = os.path.splitext(align_bam)
+    if out_file is None:
+        out_file = "%s-insert-metrics.txt" % (base)
+    histogram = "%s-insert-histogram.pdf" % (base)
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", align_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("HISTOGRAM_FILE", histogram),
+                        ("TMP_DIR", tmp_dir)]
+                picard.run("CollectInsertSizeMetrics", opts)
+    return out_file
+
 
 def picard_sort(picard, align_bam, sort_order="coordinate",
                 out_file=None, compression_level=None, pipe=False):
