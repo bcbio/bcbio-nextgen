@@ -99,6 +99,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=2)
+    @attr(rnaseq=True)
     def test_2_rnaseq(self):
         """Run an RNA-seq analysis with TopHat and generate gene-level counts.
         """
