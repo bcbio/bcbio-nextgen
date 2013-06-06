@@ -117,11 +117,30 @@ def _okay_with_multiplex(xs):
             return False
     return True
 
-def _check_sample_config(items):
+def _check_for_misplaced(xs, subkey, other_keys):
+    """Ensure configuration keys are not incorrectly nested under other keys.
+    """
+    problems = []
+    for x in xs:
+        check_dict = x.get(subkey, {})
+        for to_check in other_keys:
+            if to_check in check_dict:
+                problems.append((x["description"], to_check, subkey))
+    if len(problems) > 0:
+        raise ValueError("\n".join(["Incorrectly nested keys found in sample YAML. These should be top level:",
+                                    " sample         |   key name      |   nested under ",
+                                    "----------------+-----------------+----------------"] +
+                                   ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
+
+def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
+    logger.info("Checking sample YAML configuration: %s" % in_file)
     _check_for_duplicates(items, "lane", _okay_with_multiplex)
     _check_for_duplicates(items, "description", _okay_with_multiplex)
+    _check_for_misplaced(items, "algorithm",
+                         ["resources", "metadata", "analysis",
+                          "description", "genome_build", "lane", "files"])
 
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.
@@ -160,7 +179,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["upload"] = upload
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
-    _check_sample_config(run_details)
+    _check_sample_config(run_details, run_info_yaml)
     run_info = dict(details=run_details, run_id="")
     return fc_name, fc_date, run_info
 
