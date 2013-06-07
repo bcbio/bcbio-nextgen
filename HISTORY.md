@@ -1,4 +1,4 @@
-## 0.6.5 (in progress)
+## 0.6.5 (June 07, 2013)
 
 - Improve logging: Detailed debugging logs collect all process standard out and
   error and command lines across distributed systems.

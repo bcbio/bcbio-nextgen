@@ -1,18 +1,18 @@
-psutil==0.6.1
-boto == 2.8.0
-git+https://github.com/chapmanb/biopython.git@f48cb557a2#egg=biopython
-cutadapt==1.2.1
-Mako==0.7.3
-PyYAML==3.10
-sh==1.07
-Logbook==0.4.1
-Cython==0.18
-pysam==0.7.4
-fabric==1.6.0
-ipython-cluster-helper==0.1.5
-pyzmq==13.1.0
--e git+https://github.com/ipython/ipython.git@bc29c1643ea#egg=ipython-1.0.dev
 bioblend==0.2.3
+git+https://github.com/chapmanb/biopython.git@f48cb557a2#egg=biopython
+boto == 2.8.0
+cutadapt==1.2.1
+Cython==0.18
+fabric==1.6.0
+-e git+https://github.com/ipython/ipython.git@bc29c1643ea#egg=ipython-1.0.dev
+ipython-cluster-helper==0.1.5
+Logbook==0.4.1
+Mako==0.7.3
+psutil==0.6.1
 pybedtools==0.6.2
 py_descriptive_statistics==0.2
-bcbio-nextgen==0.6.4
+pysam==0.7.4
+PyYAML==3.10
+pyzmq==13.1.0
+sh==1.07
+bcbio-nextgen==0.6.5
