@@ -1,3 +1,5 @@
+## 0.7.0 (in development)
+
 ## 0.6.5 (June 07, 2013)
 
 - Improve logging: Detailed debugging logs collect all process standard out and
