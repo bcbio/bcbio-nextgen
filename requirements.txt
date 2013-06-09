@@ -1,10 +1,10 @@
-bioblend==0.2.3
+bioblend==0.2.4
 git+https://github.com/chapmanb/biopython.git@f48cb557a2#egg=biopython
 boto == 2.8.0
 cutadapt==1.2.1
 Cython==0.18
 fabric==1.6.0
--e git+https://github.com/ipython/ipython.git@bc29c1643ea#egg=ipython-1.0.dev
+git+https://github.com/ipython/ipython.git@bc29c1643ea#egg=ipython-1.0.dev
 ipython-cluster-helper==0.1.5
 Logbook==0.4.1
 Mako==0.7.3

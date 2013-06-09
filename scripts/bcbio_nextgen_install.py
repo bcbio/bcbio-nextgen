@@ -37,7 +37,7 @@ def main(args):
     cbl = get_cloudbiolinux(remotes)
     fabricrc = write_fabricrc(cbl["fabricrc"], args.tooldir, args.datadir,
                               args.distribution, args.sudo)
-    biodata = write_biodata(cbl["biodata"], args.genomes, args.aligners)
+    biodata = write_biodata(cbl["biodata"], args.genomes, args.aligners, args.mindata)
     if args.install_tools:
         print "Installing tools..."
         install_tools(cbl["tool_fabfile"], fabricrc, venv)
@@ -75,8 +75,10 @@ def install_virtualenv_base(remotes, datadir):
             "dir": virtualenv_dir}
 
 def install_bcbio_nextgen(remotes, datadir, tooldir, use_sudo, venv):
-    """Install a virtualenv containing bcbio_nextgen depdencies.
+    """Install a virtualenv containing bcbio_nextgen dependencies.
     """
+    subprocess.check_call([venv["pip"], "install",
+                           "https://github.com/ipython/ipython/tarball/master#egg=ipython-1.0.dev"])
     subprocess.check_call([venv["pip"], "install", "-r", remotes["requirements"]])
     for script in ["bcbio_nextgen.py", "bam_to_wiggle.py"]:
         final_script = os.path.join(tooldir, "bin", script)
@@ -103,6 +105,7 @@ def write_system_config(base_url, datadir, tooldir):
         os.makedirs(os.path.dirname(out_file))
     if os.path.exists(out_file):
         bak_file = out_file + ".bak%s" % (datetime.datetime.now().strftime("%Y%M%d_%H%M"))
+        shutil.copy(out_file, bak_file)
     to_rewrite = ("gatk", "picard", "snpEff", "bcbio_variation")
     with contextlib.closing(urllib2.urlopen(base_url)) as in_handle:
         with open(out_file, "w") as out_handle:
@@ -119,13 +122,13 @@ def write_system_config(base_url, datadir, tooldir):
                 out_handle.write(line)
     return out_file
 
-def write_biodata(base_file, genomes, aligners):
+def write_biodata(base_file, genomes, aligners, use_mindata):
     import yaml
     out_file = os.path.join(os.getcwd(), os.path.basename(base_file))
     with open(base_file) as in_handle:
         config = yaml.load(in_handle)
     config["install_liftover"] = False
-    config["genome_indexes"] = aligners
+    config["genome_indexes"] = [] if use_mindata else aligners
     config["genomes"] = [g for g in config["genomes"] if g["dbkey"] in genomes]
     with open(out_file, "w") as out_handle:
         yaml.dump(config, out_handle, allow_unicode=False, default_flow_style=False)
@@ -205,6 +208,8 @@ if __name__ == "__main__":
                         dest="install_tools", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--mindata", help="Install minimal genome data, avoiding aligner indexes",
+                        action="store_true", default=False)
     if len(sys.argv) == 1:
         parser.print_help()
     else:
