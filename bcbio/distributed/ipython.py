@@ -150,7 +150,8 @@ def runner(parallel, fn_name, items, work_dir, config):
             items = [add_cores_to_config(x, cores_per_job, parallel) for x in items]
             with ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                               parallel["num_jobs"], parallel["cores_per_job"],
-                                              profile=parallel["profile"]) as view:
+                                              profile=parallel["profile"], start_wait=parallel["timeout"],
+                                              extra_params={"resources": parallel["resources"]}) as view:
                 for data in view.map_sync(fn, items, track=False):
                     if data:
                         out.extend(data)

@@ -91,6 +91,12 @@ def parse_cl_args(in_args):
     parser.add_argument("-s", "--scheduler", help="Schedulerto use for ipython parallel",
                         choices=["lsf", "sge", "torque"])
     parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
+    parser.add_argument("-r", "--resources",
+                        help=("Cluster specific resources specifications. Provide multiple specs separated by ';'\n"
+                              "Supports SGE: translated to -l parameters"),
+                        default="")
+    parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
+                        default=15, type=int)
     parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
                         default="bcbio_nextgen")
     parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
@@ -104,6 +110,8 @@ def parse_cl_args(in_args):
               "paralleltype": args.paralleltype,
               "scheduler": args.scheduler,
               "queue": args.queue,
+              "timeout": args.timeout,
+              "resources": args.resources,
               "profile": args.profile,
               "upgrade": args.upgrade,
               "workflow": args.workflow,

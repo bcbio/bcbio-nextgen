@@ -5,7 +5,7 @@ cutadapt==1.2.1
 Cython==0.18
 fabric==1.6.0
 git+https://github.com/ipython/ipython.git@bc29c1643ea#egg=ipython-1.0.dev
-ipython-cluster-helper==0.1.5
+ipython-cluster-helper==0.1.6
 Logbook==0.4.1
 Mako==0.7.3
 psutil==0.6.1

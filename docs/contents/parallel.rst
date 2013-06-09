@@ -33,6 +33,7 @@ Run an analysis using ipython for parallel execution::
     bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
 The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque)``.
+
 The ``-q`` flag specifies the queue to submit jobs to.
 
 The ``-n`` flag defines the total number of cores to use on the
@@ -48,6 +49,17 @@ available on machines in your cluster, and the pipeline will divide
 the total cores specified by ``-n`` into the appropriate number of
 multicore jobs to run.
 
+An the ``-r resources`` flag specifies resource options to pass along
+to the underlying queue scheduler. This currently supports SGE's
+``-l`` parameter, which allows specification or resources to the
+scheduler (see the `qsub man page`_). You may specify multiple
+resources separated with a ``;``, so a ``-r mem=4g;ct=01:40:00``
+translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub``.
+
+A ``--timeout`` flag specifies the numbers of minutes to wait for a
+cluster to start up before timing out. This defaults to 15 minutes.
+
+.. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
 .. _pyzmq: https://github.com/zeromq/pyzmq
 .. _ZeroMQ: http://www.zeromq.org/
