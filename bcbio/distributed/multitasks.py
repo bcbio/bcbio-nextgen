@@ -16,7 +16,7 @@ def trim_lane(*args):
 @utils.map_wrap
 def process_alignment(*args):
     return lane.process_alignment(*args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa"]}
+process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
 
 @utils.map_wrap
 def align_prep_full(*args):

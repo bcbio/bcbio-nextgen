@@ -5,6 +5,8 @@ import pysam
 from bcbio.utils import (file_exists, replace_suffix)
 from bcbio.distributed.transaction import file_transaction
 import os
+import subprocess
+from bcbio.log import logger
 
 def expects(fmt):
     """
@@ -46,20 +48,45 @@ def _wrong_input_file_format(fn, fmt, in_file):
     error_string = "{0} expects {1} but {2} is not of that format."
     raise ValueError(error_string.format(fn, fmt, in_file))
 
-@expects("bam")
-def bam2sam(in_file):
+def bam2sam(in_file, samtools="samtools"):
     """
     converts a bam file to a sam file
     bam2sam("file.bam") -> "file.sam"
     """
+    assert(is_bam(in_file)), "bam2sam requires a BAM file, got %s" % in_file
     out_file = replace_suffix(in_file, ".sam")
     if file_exists(out_file):
         return out_file
     with file_transaction(out_file) as tmp_out_file:
-        pysam.view("-h", "-o" + tmp_out_file, in_file)
+        #pysam.view("-h", "-o" + tmp_out_file, in_file)
+        cmd = "{samtools} view -h -o {tmp_out_file} {in_file}".format(**locals())
+        try:
+            subprocess.check_call(cmd)
+        except subprocess.CalledProcessError:
+            cmd_string = subprocess.list2cmdline(cmd)
+            logger.error("bam2sam returned an error. The command "
+                         "used to run bam2sam was: %s." % (cmd_string))
     return out_file
 
-@expects("bam")
+def bamindex(in_file, samtools="samtools"):
+    """
+    index a bam file
+    avoids use of pysam.index which is not working for indexing as of 0.7.4
+    with ipython
+    """
+    assert(is_bam(in_file)), "bamindex requires a BAM file, got %s" % in_file
+    out_file = replace_suffix(in_file, ".bai")
+    if file_exists(out_file):
+        return out_file
+    cmd = ["samtools", "index", in_file]
+    try:
+        subprocess.check_call(cmd)
+    except subprocess.CalledProcessError:
+        cmd_string = subprocess.list2cmdline(cmd)
+        logger.error("bamindex returned an error. The command "
+                     "used to run bamindex was: %s." % (cmd_string))
+    return out_file
+
 def bam2sizes(in_file):
     """
     converts a bam file to a chromosome sizes file
@@ -72,6 +99,7 @@ def bam2sizes(in_file):
 
     bam2sizes("in.bam") -> "in.sizes"
     """
+    assert(is_bam(in_file)), "bam2sizes requires a BAM file, got %s" % in_file
     base, _ = os.path.splitext(in_file)
     out_file = base + ".sizes"
     if file_exists(out_file):
@@ -84,7 +112,6 @@ def bam2sizes(in_file):
                 out_handle.write("\t".join([line['SN'], str(line['LN'])]) + "\n")
     return out_file
 
-@expects("bam")
 def bam2freec_len(in_file):
     """
     converts a bam file to a chromosome length file for the use with
@@ -99,6 +126,7 @@ def bam2freec_len(in_file):
 
     bam2freec_len("in.bam") -> "in.len"
     """
+    assert(is_bam(in_file)), "bam2freec_len requires a BAM file, got %s" % in_file
     base, _ = os.path.splitext(in_file)
     out_file = base + ".len"
     if file_exists(out_file):
@@ -113,7 +141,6 @@ def bam2freec_len(in_file):
                                             str(line['LN'])]) + "\n")
                 count += 1
     return out_file
-
 
 def is_sam(in_file):
     _, ext = os.path.splitext(in_file)

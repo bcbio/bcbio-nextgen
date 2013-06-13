@@ -4,7 +4,6 @@ This works as part of the lane/flowcell process step of the pipeline.
 """
 import os
 from collections import namedtuple
-
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils, broad
@@ -132,7 +131,16 @@ def sam_to_querysort_bam(sam_file, config):
     This allows merging of multiple mappers which do not work with MergeBamAlignment.
     """
     runner = broad.runner_from_config(config)
-    out_file = "{}.bam".format(os.path.splitext(sam_file)[0])
+    out_file = "{}-querysorted.bam".format(os.path.splitext(sam_file)[0])
+    return runner.run_fn("picard_sort", sam_file, "queryname", out_file)
+
+def sam_to_querysort_sam(sam_file, config):
+    """Convert SAM file directly to a query sorted SAM without merging of FASTQ reads.
+
+    This allows merging of multiple mappers which do not work with MergeBamAlignment.
+    """
+    runner = broad.runner_from_config(config)
+    out_file = "{}-querysorted.sam".format(os.path.splitext(sam_file)[0])
     return runner.run_fn("picard_sort", sam_file, "queryname", out_file)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,

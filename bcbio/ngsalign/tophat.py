@@ -8,6 +8,7 @@ import shutil
 import subprocess
 from contextlib import closing
 import glob
+import pprint
 
 from py_descriptive_statistics import Enum as Stats
 import pysam
@@ -17,6 +18,7 @@ from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, flatten
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
+from bcbio.convert import bam2sam, bamindex
 from bcbio import broad
 from bcbio.broad.metrics import PicardMetricsParser
 
@@ -33,15 +35,37 @@ def _set_quality_flag(options, config):
     return options
 
 
-def _set_gtf(options, config):
+def _get_transcriptome_index(ref_file):
+    base_dir = os.path.dirname(os.path.dirname(ref_file))
+    base = os.path.basename(ref_file)
+    transcriptome_index = os.path.join(base_dir, "tophat", base + "_transcriptome")
+    if file_exists(transcriptome_index + ".1.bt2"):
+        return transcriptome_index
+    else:
+        return None
+
+def _get_gtf(ref_file, config):
     gtf_file = config.get("gtf", None)
-    if gtf_file is not None:
+    if not gtf_file:
+        base_dir = os.path.dirname(os.path.dirname(ref_file))
+        gtf_file = os.path.join(base_dir, "rnaseq/ref-transcripts.gtf")
+        if not file_exists(gtf_file):
+            gtf_file = None
+    return gtf_file
+
+def _set_transcriptome_option(options, config, ref_file):
+    # prefer transcriptome-index vs a GTF file if available
+    transcriptome_index = _get_transcriptome_index(ref_file)
+    if transcriptome_index:
+        options["transcriptome-index"] = transcriptome_index
+
+    gtf_file = _get_gtf(ref_file, config)
+    if gtf_file:
         options["GTF"] = gtf_file
     return options
 
-
 def _set_cores(options, config):
-    num_cores = config["algorithm"].get("num_cores", 1)
+    num_cores = config["algorithm"].get("num_cores", 0)
     if num_cores > 1 and "num-threads" not in options:
         options["num-threads"] = num_cores
     return options
@@ -54,11 +78,15 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     """
     options = get_in(config, ("resources", "tophat", "options"), {})
     options = _set_quality_flag(options, config)
-    options = _set_gtf(options, config)
+    options = _set_transcriptome_option(options, config, ref_file)
     options = _set_cores(options, config)
 
     # select the correct bowtie option to use; tophat2 is ignoring this option
-    if _tophat_major_version(config) == 2 and _ref_version(ref_file) == 1:
+    if _tophat_major_version(config) == 1:
+        raise NotImplementedError("Tophat versions < 2.0 are not supported, please "
+                                  "download the newest version of Tophat here: "
+                                  "http://tophat.cbcb.umd.edu")
+    if _ref_version(ref_file) == 1:
         options["bowtie1"] = True
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
@@ -87,9 +115,9 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             # otherwise it silently ignores them
             tophat_ready = tophat_runner.bake(**ready_options)
             tophat_ready(*files)
-    out_file_final = os.path.join(out_dir, "%s.sam" % out_base)
-    os.symlink(os.path.basename(out_file), out_file_final)
-    return out_file_final
+    out_sam_final = os.path.join(out_dir, "%s.sam" % out_base)
+    os.symlink(os.path.basename(out_file), out_sam_final)
+    return out_sam_final
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           rg_name=None):

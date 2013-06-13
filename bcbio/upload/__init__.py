@@ -85,7 +85,12 @@ def _get_files_project(sample, upload_config):
     out = [{"path": sample["info"]["provenance"]["programs"]}]
     if sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
-    for x in sample["variants"]:
+    for x in sample.get("variants", []):
+        if "pop_db" in x:
+            out.append({"path": x["pop_db"],
+                        "type": "sqlite",
+                        "variantcaller": x["variantcaller"]})
+    for x in sample.get("variants", []):
         if "population" in x:
             pop_db = x["population"].get("db")
             if pop_db:
@@ -94,10 +99,11 @@ def _get_files_project(sample, upload_config):
                             "variantcaller": x["variantcaller"]})
             pop_vcf = x["population"].get("vcf")
             if pop_vcf:
+
                 out.append({"path": pop_vcf,
                             "type": "vcf",
                             "variantcaller": x["variantcaller"]})
-    for x in sample["variants"]:
+    for x in sample.get("variants", []):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})
             break

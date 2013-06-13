@@ -8,6 +8,7 @@ import sys
 import argparse
 from collections import defaultdict
 
+
 from bcbio import log, utils, upload
 from bcbio.bam import callable
 from bcbio.distributed.messaging import parallel_runner
@@ -20,6 +21,7 @@ from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.variation import ensemble, population, recalibrate, validate
+from bcbio.rnaseq import count
 
 def run_main(config, config_file, work_dir, parallel,
          fc_dir=None, run_info_yaml=None):
@@ -49,8 +51,8 @@ def run_main(config, config_file, work_dir, parallel,
     for pipeline, pipeline_items in pipelines.items():
         pipeline_items = _add_provenance(pipeline_items, dirs, config)
         for xs in pipeline.run(config, config_file, run_parallel, dirs, pipeline_items):
-            assert len(xs) == 1
-            upload.from_sample(xs[0])
+            if len(xs) == 1:
+                upload.from_sample(xs[0])
     qcsummary.write_metrics(run_info, fc_name, fc_date, dirs)
 
 def _add_provenance(items, dirs, config):
@@ -232,8 +234,9 @@ class RnaseqPipeline(AbstractPipeline):
         samples = organize_samples(align_items, dirs, config_file)
         samples = run_parallel("merge_sample", samples)
         samples = run_parallel("generate_transcript_counts", samples)
-        run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         samples = qcsummary.generate_parallel(samples, run_parallel)
+        samples = map(count.combine_htseq_count_files, samples)
+        #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         return samples
 
 def _get_pipeline(lane_item):

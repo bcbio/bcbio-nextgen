@@ -11,7 +11,6 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 import subprocess
 from multiprocessing import Pool
-from bcbio.distributed.ipython import get_algorithm_config
 from itertools import izip, repeat
 
 SUPPORTED_ADAPTERS = {
@@ -61,11 +60,13 @@ def trim_read_through(fastq_files, dirs, lane_config):
     logger.info("Trimming %s from the 3' end of reads in %s using "
                 "cutadapt." % (", ".join(to_trim),
                                ", ".join(fastq_files)))
-    cores = lane_config["algorithm"]["num_cores"]
+    cores = lane_config["algorithm"].get("num_cores", 1)
     out_files = _cutadapt_trim(fastq_files, quality_format,
                                to_trim, out_files, cores)
     trimmed_files = _remove_short_reads(out_files, dirs, lane_config)
     return trimmed_files
+
+
 
 def _trim_quality(seq, qual, to_trim, min_length):
     """Trim bases of the given quality from 3' read ends.
@@ -147,9 +148,9 @@ def _remove_short_reads(fastq_files, dirs, lane_config):
         out_files = fastq.filter_reads_by_length(fastq1, fastq2, quality_format,
                                                  MIN_LENGTH)
     else:
-        out_files = fastq.filter_single_reads_by_length(fastq_files[0],
+        out_files = [fastq.filter_single_reads_by_length(fastq_files[0],
                                                         quality_format,
-                                                        MIN_LENGTH)
+                                                        MIN_LENGTH)]
     return out_files
 
 def _get_read_through_trimmed_outfiles(fastq_files, dirs):

@@ -1,4 +1,5 @@
 ## 0.7.0 (in development)
+- RNA-seq pipeline updated.
 
 ## 0.6.5 (June 07, 2013)
 
