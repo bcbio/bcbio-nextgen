@@ -49,15 +49,25 @@ available on machines in your cluster, and the pipeline will divide
 the total cores specified by ``-n`` into the appropriate number of
 multicore jobs to run.
 
+The pipeline default parameters assume a system with minimal time to
+obtain processing cores and consistent file system accessibility. These
+defaults allow the system to fail fast in the case of cluster issues
+which need diagnosis. For running on shared systems with high resource
+usage and potential failures due to intermittent cluster issues, there
+are turning parameters that increase resiliency. The ``--timeout``
+flag specifies the numbers of minutes to wait for a cluster to start
+up before timing out. This defaults to 15 minutes. The ``--retries``
+flag specify the number of times to retry a job on failure. In systems
+with transient distributed file system hiccups like lock errors or disk
+availability, this will provide recoverability at the cost of
+resubmitting jobs that may have failed for reproducible reasons.
+
 An the ``-r resources`` flag specifies resource options to pass along
 to the underlying queue scheduler. This currently supports SGE's
 ``-l`` parameter, which allows specification or resources to the
 scheduler (see the `qsub man page`_). You may specify multiple
 resources separated with a ``;``, so a ``-r mem=4g;ct=01:40:00``
 translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub``.
-
-A ``--timeout`` flag specifies the numbers of minutes to wait for a
-cluster to start up before timing out. This defaults to 15 minutes.
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html

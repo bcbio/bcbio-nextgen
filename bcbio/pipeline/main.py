@@ -12,6 +12,8 @@ from collections import defaultdict
 from bcbio import log, utils, upload
 from bcbio.bam import callable
 from bcbio.distributed.messaging import parallel_runner
+from bcbio.distributed.ipython import global_parallel
+from bcbio.log import logger
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
@@ -50,7 +52,7 @@ def run_main(config, config_file, work_dir, parallel,
     pipelines = _pair_lanes_with_pipelines(lane_items)
     for pipeline, pipeline_items in pipelines.items():
         pipeline_items = _add_provenance(pipeline_items, dirs, config)
-        for xs in pipeline.run(config, config_file, run_parallel, dirs, pipeline_items):
+        for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
             if len(xs) == 1:
                 upload.from_sample(xs[0])
     qcsummary.write_metrics(run_info, fc_name, fc_date, dirs)
@@ -99,6 +101,10 @@ def parse_cl_args(in_args):
                         default="")
     parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
                         default=15, type=int)
+    parser.add_argument("--retries",
+                        help=("Number of retries of failed tasks during distributed processing. "
+                              "Default 0 (no retries)"),
+                        default=0, type=int)
     parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
                         default="bcbio_nextgen")
     parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
@@ -113,6 +119,7 @@ def parse_cl_args(in_args):
               "scheduler": args.scheduler,
               "queue": args.queue,
               "timeout": args.timeout,
+              "retries": args.retries,
               "resources": args.resources,
               "profile": args.profile,
               "upgrade": args.upgrade,
@@ -160,7 +167,7 @@ class AbstractPipeline:
         return
 
     @abc.abstractmethod
-    def run(self, config, config_file, run_parallel, dirs, lanes):
+    def run(self, config, config_file, run_parallel, parallel, dirs, lanes):
         return
 
 
@@ -168,7 +175,7 @@ class VariantPipeline(AbstractPipeline):
     name = "variant"
 
     @classmethod
-    def run(self, config, config_file, run_parallel, dirs, lane_items):
+    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
         lane_items = run_parallel("trim_lane", lane_items)
         align_items = run_parallel("process_alignment", lane_items)
         # process samples, potentially multiplexed across multiple lanes
@@ -194,22 +201,43 @@ class Variant2Pipeline(AbstractPipeline):
     name = "variant2"
 
     @classmethod
-    def run(self, config, config_file, run_parallel, dirs, lane_items):
-        # Handle alignment and preparation requiring the entire input file
-        samples = run_parallel("align_prep_full", (list(x) + [config_file] for x in lane_items))
-        regions = callable.combine_sample_regions(samples)
-        samples = region.add_region_info(samples, regions)
-        # Handle all variant calling on sub-regions of the input file
-        samples = region.clean_sample_data(samples)
-        samples = region.parallel_prep_region(samples, regions, run_parallel)
-        samples = region.parallel_variantcall_region(samples, run_parallel)
-        samples = run_parallel("postprocess_variants", samples)
-        samples = combine_multiple_callers(samples)
-        samples = ensemble.combine_calls_parallel(samples, run_parallel)
-        samples = population.prep_db_parallel(samples, run_parallel)
-        samples = region.delayed_bamprep_merge(samples, run_parallel)
-        samples = qcsummary.generate_parallel(samples, run_parallel)
-        samples = validate.summarize_grading(samples)
+    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
+        ## Alignment and preparation requiring the entire input file (multicore cluster)
+        with global_parallel(parallel, "multicore", ["align_prep_full"],
+                             lane_items, dirs["work"], config) as parallel:
+            run_parallel = parallel_runner(parallel, dirs, config)
+            logger.info("Timing: alignment")
+            samples = run_parallel("align_prep_full", [list(x) + [config_file] for x in lane_items])
+            regions = callable.combine_sample_regions(samples)
+            samples = region.add_region_info(samples, regions)
+            samples = region.clean_sample_data(samples)
+
+        ## Variant calling on sub-regions of the input file (full cluster)
+        with global_parallel(parallel, "full", ["piped_bamprep", "variantcall_sample"],
+                             samples, dirs["work"], config) as parallel:
+            run_parallel = parallel_runner(parallel, dirs, config)
+            logger.info("Timing: alignment post-processing")
+            samples = region.parallel_prep_region(samples, regions, run_parallel)
+            logger.info("Timing: variant calling")
+            samples = region.parallel_variantcall_region(samples, run_parallel)
+
+        ## Finalize variants (per-sample cluster)
+        with global_parallel(parallel, "persample", ["postprocess_variants"],
+                             samples, dirs["work"], config) as parallel:
+            run_parallel = parallel_runner(parallel, dirs, config)
+            logger.info("Timing: variant post-processing")
+            samples = run_parallel("postprocess_variants", samples)
+            samples = combine_multiple_callers(samples)
+            logger.info("Timing: ensembl")
+            samples = ensemble.combine_calls_parallel(samples, run_parallel)
+            logger.info("Timing: prepped BAM merging")
+            samples = region.delayed_bamprep_merge(samples, run_parallel)
+            logger.info("Timing: validation")
+            samples = validate.summarize_grading(samples)
+            logger.info("Timing: population database")
+            samples = population.prep_db_parallel(samples, run_parallel)
+            logger.info("Timing: quality control")
+            samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
 
 class SNPCallingPipeline(VariantPipeline):
@@ -227,7 +255,7 @@ class RnaseqPipeline(AbstractPipeline):
     name = "RNA-seq"
 
     @classmethod
-    def run(self, config, config_file, run_parallel, dirs, lane_items):
+    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
         lane_items = run_parallel("trim_lane", lane_items)
         align_items = run_parallel("process_alignment", lane_items)
         # process samples, potentially multiplexed across multiple lanes

@@ -35,7 +35,7 @@ def parallel_runner(parallel, dirs, config, config_file=None):
             fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
                                     fromlist=["multitasks"]),
                          fn_name)
-            num_jobs, cores_per_job = ipython.find_cores_per_job(fn, parallel, items, config)
+            num_jobs, cores_per_job = ipython.find_cores_per_job([fn], parallel, items, config)
             items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
             num_jobs = cores_including_resources(num_jobs, metadata, config)
             # running a multiprocessing job inside of ipython parallel
