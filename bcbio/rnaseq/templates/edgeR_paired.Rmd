@@ -1,0 +1,143 @@
+<!-- EdgeR analysis using paired data
+-->
+
+```{r setup, echo=FALSE}
+opts_chunk$set(tidy=TRUE, echo=FALSE, highlight=TRUE, figalign="center", fig.height=6, fig.width=6, message=FALSE, error=FALSE, warning=FALSE, cache=FALSE)
+```
+
+```{r libraries}
+library("edgeR")
+library("googleVis")
+library("ggplot2")
+library("ggthemes")
+library("scales")
+```
+
+```{r variables}
+count_file = "${count_file}"
+wd = dirname(in_file)
+setwd(wd)
+counts = read.table(count_file, header=TRUE, row.names=1)
+condition_file = "${condition_file}"
+conditions = read.table(condition_file, header=TRUE)
+formula = as.formula("${formula}")
+design = model.matrix(formula, conditions)
+gene_symbol = "${gene_symbol}"
+ensembl_gene = "${gene_ensembl}"
+filter_type = "${filter_type}"
+FDR_CUTOFF = 0.10
+```
+
+Model setup
+-----------
+The sample that each column represents needs to be described with the
+experimental condition and any confounding factors. After each column
+is described, a design matrix is created using a formula based on the
+variables described for each column. __The last term in the model will
+be the default term that is tested against during differential expression
+testing.
+
+```{r annotate-df}
+annotate_df = function(d) {
+	require(biomaRt)
+	ensembl = useMart('ensembl', dataset = ensembl_gene)
+	a = getBM(attributes=c(filter_type, gene_symbol, "description"),
+		filters=c(filter_type), values=d[, 'id'],
+		mart=ensembl)
+	m = merge(d, a, by.x='id', by.y=filter_type)
+	#names(m)[which(names(m)=="Row.names")]= "id"
+	return(m)
+}
+```
+
+Data overview
+-------------
+```{r data-load, results='asis'}
+cds = DGEList(counts)
+```
+We want to only look at genes that are expressed in at least two libraries,
+so keep only genes that have at least 1 count per million reads sequenced
+in each library. Low numbers of reads will not be able to be reliably
+tested and having a large amount of genes which cannot be tested will throw
+off the multiple hypothesis correction later on.
+
+```{R data-filtering, echo=TRUE}
+dim(cds)
+keep = rowSums(cpm(cds) > 1) >= 2
+cds = cds[keep,]
+dim(cds)
+```
+
+Normalization
+-------------
+Two types of normalization are performed; the first is scaling the number of
+reads mapping to each gene by the total number of mappable reads. The second
+type of normalization is to ensure the RNA composition is similar across
+the lanes. If a small number of genes are very highly expressed in one sample
+but not another it can artificially cause more moderately expressed genes
+in that sample to be under-sampled.
+
+We do not correct for GC content at this time.
+
+```{r normalization, results='asis'}
+cds = calcNormFactors(cds)
+lib.size = data.frame(lane=colnames(counts), "Library size"=cds$samples$lib.size,
+	"Normalization factor"=cds$samples$norm.factors)
+print(gvisTable(lib.size, options=list(width=900)), "chart")
+```
+
+Dispersion estimation
+----------------------
+edgeR fits a negative binomial to the read counts and for hypothesis testing
+a measurement of the deviance of the observed counts from the fit called
+the dispersion must be calculated. There are several different ways
+to estimate the dispersion. The first estimator is to assume all genes
+have the same dispersion from the fit; edgeR calls this the common dispersion.
+Another alternative is to make the assumption that all genes with the
+same expression level have the same variance; this is the assumption
+made in DESeq; edgeR calls this a trended dispersion. Both of the above
+assumptions are too strong.
+TODO Break down how the tagwise dispersion estimation works.
+
+This is a plot of the biological coefficient of variation; you can see that
+for low counts the dispersion is much higher. TODO break this down some more.
+```{r estimateDispersions}
+cds = estimateGLMTrendedDisp(cds, design)
+cds = estimateGLMTagwiseDisp(cds, design)
+plotBCV(cds)
+```
+
+Principle component analysis
+```{r pca}
+plotMDS(cds)
+```
+
+Differential expression
+-----------------------
+TODO: flesh this out, add captions to the tables? (How to do that?)
+Differentially regulated genes. -1 is for downregulated in the treated sample,
++1 is upregulated in the treated sample.
+
+```{r de, results='asis'}
+fit = glmFit(cds, design)
+lrt = glmLRT(fit)
+de = decideTestsDGE(lrt)
+lrt_table = lrt$table
+lrt_table$DE = as.numeric(decideTestsDGE(lrt, p.value=FDR_CUTOFF))
+lrt_table$id=rownames(lrt_table)
+lrt_table = annotate_df(lrt_table)
+print(gvisTable(subset(lrt_table, DE == -1), options=list(width=900)), "chart")
+print(gvisTable(subset(lrt_table, DE == 1), options=list(width=900)), "chart")
+```
+
+The blue line incidcates 2-fold changes.
+```{r display_de}
+#detags = as.logical(lrt_table$DE)
+plotSmear(lrt, de.tags=lrt_table$DE)
+abline(h=c(-1, 1), col="blue")
+```
+
+```{r data_write}
+out_file = paste(infile, ".deseq.annotated.txt", sep="")
+write.table(annotated_res, out_file, quote=FALSE, row.names=FALSE, sep="\t")
+```
