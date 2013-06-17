@@ -30,6 +30,14 @@ def dictadd(orig, k, v):
         new["view"] = view
     return new
 
+def dictdissoc(orig, k):
+    """Imitates immutability: create a new dictionary with the key dropped.
+    """
+    v = orig.pop(k, None)
+    new = copy.deepcopy(orig)
+    orig[k] = v
+    return new
+
 def _get_resource_programs(fn, algs):
     """Retrieve programs used in analysis based on algorithm configurations.
 
@@ -46,8 +54,10 @@ def _get_resource_programs(fn, algs):
         if prog in used_progs:
             yield prog
 
-def find_cores_per_job(fns, parallel, items, config):
+def find_cores_per_job(fns, parallel, items, config, multiplier=1):
     """Determine cores and workers to use for this stage based on function metadata.
+    multiplier specifies the number of regions items will be split into during
+    processing.
     """
     all_cores = [1]
     algs = [get_algorithm_config(x) for x in items]
@@ -60,7 +70,7 @@ def find_cores_per_job(fns, parallel, items, config):
     cores_per_job = max(all_cores)
     total = parallel["cores"]
     if total > cores_per_job:
-        return min(total // cores_per_job, len(items)), cores_per_job
+        return min(total // cores_per_job, len(items) * multiplier), cores_per_job
     else:
         return 1, total
 
@@ -106,11 +116,11 @@ def add_cores_to_config(args, cores_per_job, parallel=None):
     if is_nested_config_arg(new_arg):
         new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
         if parallel:
-            new_arg["config"]["parallel"] = parallel
+            new_arg["config"]["parallel"] = dictdissoc(parallel, "view")
     elif is_std_config_arg(new_arg):
         new_arg["algorithm"]["num_cores"] = int(cores_per_job)
         if parallel:
-            new_arg["parallel"] = parallel
+            new_arg["parallel"] = dictdissoc(parallel, "view")
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
     args = list(args)[:]
@@ -132,7 +142,8 @@ def _get_ipython_fn(fn_name, parallel):
                    fn_name)
 
 @contextlib.contextmanager
-def global_parallel(parallel, name, fn_names, items, work_dir, config):
+def global_parallel(parallel, name, fn_names, items, work_dir, config,
+                    multiplier=1):
     """Add an IPython cluster to be used for multiple remote functions.
 
     Allows sharing of a single cluster across multiple functions with
@@ -146,8 +157,8 @@ def global_parallel(parallel, name, fn_names, items, work_dir, config):
             yield parallel
         else:
             items = [x for x in items if x is not None]
-            num_jobs, cores_per_job = find_cores_per_job([_get_ipython_fn(x) for x in fn_names],
-                                                         parallel, items, config)
+            num_jobs, cores_per_job = find_cores_per_job([_get_ipython_fn(x, parallel) for x in fn_names],
+                                                         parallel, items, config, multiplier=multiplier)
             parallel = dictadd(parallel, "cores_per_job", cores_per_job)
             parallel = dictadd(parallel, "num_jobs", num_jobs)
             with _view_from_parallel(parallel) as view:
@@ -156,6 +167,7 @@ def global_parallel(parallel, name, fn_names, items, work_dir, config):
     except:
         raise
     else:
+        parallel["view"] = None
         with open(checkpoint_file, "w") as out_handle:
             out_handle.write("done\n")
 

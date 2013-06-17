@@ -213,7 +213,8 @@ class Variant2Pipeline(AbstractPipeline):
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with global_parallel(parallel, "full", ["piped_bamprep", "variantcall_sample"],
-                             samples, dirs["work"], config) as parallel:
+                             samples, dirs["work"], config,
+                             multiplier=len(regions["analysis"])) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment post-processing")
             samples = region.parallel_prep_region(samples, regions, run_parallel)
