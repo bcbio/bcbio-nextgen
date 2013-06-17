@@ -10,7 +10,6 @@ import os
 from bcbio.pipeline.shared import configured_ref_file
 from bcbio.pipeline.alignment import sam_to_querysort_sam
 import pandas as pd
-import ipdb
 
 
 def htseq_count(data):
