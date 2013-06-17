@@ -39,7 +39,7 @@ from bcbio.pipeline.main import run_main, parse_cl_args
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
          paralleltype=None, queue=None, scheduler=None, upgrade=None,
          profile=None, workflow=None, inputs=None, resources="",
-         timeout=15):
+         timeout=15, retries=None):
     work_dir = os.getcwd()
     config = load_config(config_file)
     if config.get("log_dir", None) is None:
@@ -49,7 +49,8 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
     parallel = {"type": paralleltype, "cores": numcores,
                 "scheduler": scheduler, "queue": queue,
                 "profile": profile, "module": "bcbio.distributed",
-                "resources": resources, "timeout": timeout}
+                "resources": resources, "timeout": timeout,
+                "retries": retries}
     if parallel["type"] in ["local", "messaging-main"]:
         if numcores is None:
             config["algorithm"]["num_cores"] = numcores

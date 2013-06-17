@@ -99,6 +99,10 @@ def parse_cl_args(in_args):
                         default="")
     parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
                         default=15, type=int)
+    parser.add_argument("--retries",
+                        help=("Number of retries of failed tasks during distributed processing. "
+                              "Default 0 (no retries)"),
+                        default=0, type=int)
     parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
                         default="bcbio_nextgen")
     parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
@@ -113,6 +117,7 @@ def parse_cl_args(in_args):
               "scheduler": args.scheduler,
               "queue": args.queue,
               "timeout": args.timeout,
+              "retries": args.retries,
               "resources": args.resources,
               "profile": args.profile,
               "upgrade": args.upgrade,

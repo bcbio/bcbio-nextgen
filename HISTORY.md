@@ -1,5 +1,9 @@
 ## 0.7.0 (in development)
+
 - RNA-seq pipeline updated.
+- Options for improved cluster resiliency: flexible timeouts for waiting on
+  cluster start up and expose flag to allow job retries. Thanks to Zhengqiu Cai.
+
 
 ## 0.6.5 (June 07, 2013)
 
