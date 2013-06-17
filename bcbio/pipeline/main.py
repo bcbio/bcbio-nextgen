@@ -23,7 +23,6 @@ from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.variation import ensemble, population, recalibrate, validate
-from bcbio.rnaseq import count
 
 def run_main(config, config_file, work_dir, parallel,
          fc_dir=None, run_info_yaml=None):
@@ -263,7 +262,6 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("merge_sample", samples)
         samples = run_parallel("generate_transcript_counts", samples)
         samples = qcsummary.generate_parallel(samples, run_parallel)
-        samples = map(count.combine_htseq_count_files, samples)
         #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         return samples
 

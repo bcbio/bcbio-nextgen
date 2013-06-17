@@ -43,7 +43,6 @@ setup(name = "bcbio-nextgen",
           "PyYAML >= 3.10",
           "pyzmq >= 13.1.0",
           "sh >= 1.07",
-          "pandas >= 0.11.0"
           #"paramiko >= 1.9.0",
           #"celery >= 2.2.7,<3.0.0",
           #"rpy2 >= 2.0.7"

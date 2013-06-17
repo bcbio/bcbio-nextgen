@@ -9,7 +9,6 @@ import subprocess
 import os
 from bcbio.pipeline.shared import configured_ref_file
 from bcbio.pipeline.alignment import sam_to_querysort_sam
-import pandas as pd
 
 
 def htseq_count(data):
@@ -30,24 +29,6 @@ def htseq_count(data):
         subprocess.check_call(cmd, shell=True)
 
     return out_file
-
-def combine_htseq_count_files(data):
-    count_files = [x.get("count_file", {}) for x in data]
-    out_file = os.path.join(os.path.dirname(count_files[0]), "combined.counts")
-    if file_exists(out_file):
-        return out_file
-    df = _combine_htseq_count_files(count_files)
-    df.to_csv(out_file, sep="\t", index_label="id")
-    return out_file
-
-def _combine_htseq_count_files(files):
-    f = files.pop()
-    df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
-                                  names=[os.path.basename(f)])
-    for f in files:
-        df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
-                                              names=[os.path.basename(f)]))
-    return df
 
 def _get_files(data):
     in_file = _get_sam_file(data)
