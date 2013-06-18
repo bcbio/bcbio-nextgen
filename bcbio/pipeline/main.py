@@ -233,6 +233,7 @@ class Variant2Pipeline(AbstractPipeline):
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
             logger.info("Timing: validation")
+            samples = run_parallel("compare_to_rm", samples)
             samples = validate.summarize_grading(samples)
             logger.info("Timing: population database")
             samples = population.prep_db_parallel(samples, run_parallel)

@@ -61,7 +61,7 @@ def compare_to_rm(data):
         if not utils.file_exists(out["concordant"]) or not utils.file_exists(out["grading"]):
             ensemble.bcbio_variation_comparison(val_config_file, base_dir, data)
         data["validate"] = out
-    return data
+    return [[data]]
 
 def _create_validate_config_file(vrn_file, rm_file, rm_interval_file, rm_genome,
                                  base_dir, data):

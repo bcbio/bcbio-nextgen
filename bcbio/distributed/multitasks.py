@@ -3,7 +3,8 @@
 from bcbio import utils
 from bcbio.bam import callable
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
-from bcbio.variation import bamprep, realign, genotype, ensemble, multi, population, recalibrate
+from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+                             recalibrate, validate)
 
 @utils.map_wrap
 def process_lane(*args):
@@ -100,3 +101,7 @@ def combine_bed(*args):
 @utils.map_wrap
 def calc_callable_loci(*args):
     return callable.calc_callable_loci(*args)
+
+@utils.map_wrap
+def compare_to_rm(*args):
+    return validate.compare_to_rm(*args)
