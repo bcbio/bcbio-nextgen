@@ -4,7 +4,7 @@ import time
 
 from celery.task import task
 
-from bcbio.pipeline import sample, lane, qcsummary, toplevel, storage, shared, variation
+from bcbio.pipeline import sample, lane, qcsummary, toplevel, storage, shared, variation, validate
 from bcbio.variation import realign, genotype, ensemble, population, multi, recalibrate
 
 # Global configuration for tasks in the main celeryconfig module
@@ -102,6 +102,10 @@ def combine_calls(*args):
 @task
 def prep_gemini_db(*args):
     return population.prep_gemini_db(*args)
+
+@task
+def compare_to_rm(*args):
+    return validate.compare_to_rm(*args)
 
 @task
 def test(x):
