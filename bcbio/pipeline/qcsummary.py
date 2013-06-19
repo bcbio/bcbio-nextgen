@@ -75,10 +75,13 @@ def rnaseq_align_summary(bam_file, sam_ref, sample_name, config, dirs):
     qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
     genome_dir = os.path.dirname(os.path.dirname(sam_ref))
     refflat_file = config_utils.get_transcript_refflat(genome_dir)
+    rrna_file = config_utils.get_rRNA_interval(genome_dir)
+    if not utils.file_exists(rrna_file):
+        rrna_file = "null"
     with utils.curdir_tmpdir() as tmp_dir:
         graphs, summary, overrep = \
-                _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, qc_dir,
-                                           tmp_dir, config)
+                _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
+                                           qc_dir, tmp_dir, config)
     with utils.chdir(qc_dir):
         return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
                                      qc_dir, config),
@@ -132,13 +135,14 @@ def _graphs_and_summary(bam_file, sam_ref, qc_dir, tmp_dir, config):
     summary_table = _update_summary_table(summary_table, sam_ref, fastqc_stats)
     return all_graphs, summary_table, fastqc_overrep
 
-def _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, qc_dir, tmp_dir, config):
+def _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
+                               qc_dir, tmp_dir, config):
     """Prepare picard/FastQC graphs and summary details.
     """
     broad_runner = runner_from_config(config)
     metrics = RNASeqPicardMetrics(broad_runner, tmp_dir)
     summary_table, metrics_graphs = metrics.report(bam_file, sam_ref, refflat_file,
-                                                   is_paired(bam_file))
+                                                   is_paired(bam_file), rrna_file)
     metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
     fastqc_graphs, fastqc_stats, fastqc_overrep = \
                    fastqc_report(bam_file, qc_dir, config)
