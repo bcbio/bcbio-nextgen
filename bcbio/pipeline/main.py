@@ -228,7 +228,7 @@ class Variant2Pipeline(AbstractPipeline):
             logger.info("Timing: variant post-processing")
             samples = run_parallel("postprocess_variants", samples)
             samples = combine_multiple_callers(samples)
-            logger.info("Timing: ensembl")
+            logger.info("Timing: ensemble calling")
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
@@ -239,6 +239,7 @@ class Variant2Pipeline(AbstractPipeline):
             samples = population.prep_db_parallel(samples, run_parallel)
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)
+            logger.info("Timing: finished")
         return samples
 
 class SNPCallingPipeline(VariantPipeline):
