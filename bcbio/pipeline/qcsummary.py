@@ -17,7 +17,6 @@ from bcbio.broad import runner_from_config
 from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser, RNASeqPicardMetrics
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
-import ipdb
 
 # ## High level functions to generate summary PDF
 
