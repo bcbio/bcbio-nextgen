@@ -14,7 +14,7 @@ import pysam
 
 from bcbio import utils
 from bcbio.broad import runner_from_config
-from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser
+from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser, RNASeqPicardMetrics
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 
@@ -47,13 +47,18 @@ def pipeline_summary(data):
                 else data.get("callable_bam"))
     if data["sam_ref"] is not None and work_bam:
         logger.info("Generating summary files: %s" % str(data["name"]))
-        data["summary"] = generate_align_summary(work_bam,
-                                                 data["sam_ref"], data["name"],
-                                                 data["config"], data["dirs"])
+        data["summary"] = generate_align_summary(work_bam, data)
     return [[data]]
 
-def generate_align_summary(bam_file, sam_ref, sample_name,
-                           config, dirs):
+def generate_align_summary(bam_file, data):
+    if data["info"]["analysis"].lower() == "rna-seq":
+        return rnaseq_align_summary(bam_file, data["sam_ref"],
+                                    data["name"], data["config"], data["dirs"])
+    else:
+        return variant_align_summary(bam_file, data["sam_ref"], data["name"],
+                                     data["config"], data["dirs"])
+
+def variant_align_summary(bam_file, sam_ref, sample_name, config, dirs):
     """Run alignment summarizing script to produce a pdf with align details.
     """
     qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
@@ -64,6 +69,23 @@ def generate_align_summary(bam_file, sam_ref, sample_name,
         return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
                                      qc_dir, config),
                 "metrics": summary}
+
+def rnaseq_align_summary(bam_file, sam_ref, sample_name, config, dirs):
+    qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
+    genome_dir = os.path.dirname(os.path.dirname(sam_ref))
+    refflat_file = config_utils.get_transcript_refflat(genome_dir)
+    rrna_file = config_utils.get_rRNA_interval(genome_dir)
+    if not utils.file_exists(rrna_file):
+        rrna_file = "null"
+    with utils.curdir_tmpdir() as tmp_dir:
+        graphs, summary, overrep = \
+                _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
+                                           qc_dir, tmp_dir, config)
+    with utils.chdir(qc_dir):
+        return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
+                                     qc_dir, config),
+                "metrics": summary}
+
 
 def _safe_latex(to_fix):
     """Escape characters that make LaTeX unhappy.
@@ -106,6 +128,21 @@ def _graphs_and_summary(bam_file, sam_ref, qc_dir, tmp_dir, config):
                                   config["algorithm"].get("hybrid_target"),
                                   config["algorithm"].get("variant_regions"),
                                   config)
+    metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
+    fastqc_graphs, fastqc_stats, fastqc_overrep = \
+                   fastqc_report(bam_file, qc_dir, config)
+    all_graphs = fastqc_graphs + metrics_graphs
+    summary_table = _update_summary_table(summary_table, sam_ref, fastqc_stats)
+    return all_graphs, summary_table, fastqc_overrep
+
+def _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
+                               qc_dir, tmp_dir, config):
+    """Prepare picard/FastQC graphs and summary details.
+    """
+    broad_runner = runner_from_config(config)
+    metrics = RNASeqPicardMetrics(broad_runner, tmp_dir)
+    summary_table, metrics_graphs = metrics.report(bam_file, sam_ref, refflat_file,
+                                                   is_paired(bam_file), rrna_file)
     metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
     fastqc_graphs, fastqc_stats, fastqc_overrep = \
                    fastqc_report(bam_file, qc_dir, config)

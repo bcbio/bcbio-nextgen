@@ -7,7 +7,7 @@ from bcbio.log import logger
 from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
 from bcbio.variation.genotype import variant_filtration
-from bcbio.variation import annotation, effects, validate
+from bcbio.variation import annotation, effects
 
 # ## Genotyping
 
@@ -23,7 +23,6 @@ def postprocess_variants(data):
                                               data["config"])
         if ann_vrn_file:
             data["vrn_file"] = ann_vrn_file
-    data = validate.compare_to_rm(data)
     return [[data]]
 
 def finalize_genotyper(call_file, bam_file, ref_file, config):

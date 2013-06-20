@@ -152,3 +152,15 @@ def get_jar(base_name, dname):
     else:
         raise ValueError("Could not find java jar %s in %s: %s" % (
             base_name, dname, jars))
+
+## functions for navigating through the standard galaxy directory of files
+
+def get_transcript_gtf(genome_dir):
+    out_file = os.path.join(genome_dir, "rnaseq", "ref-transcripts.gtf")
+    return out_file
+
+def get_rRNA_interval(genome_dir):
+    return os.path.join(genome_dir, "rnaseq", "rRNA.interval")
+
+def get_transcript_refflat(genome_dir):
+    return os.path.join(genome_dir, "rnaseq", "ref-transcripts.refFlat")

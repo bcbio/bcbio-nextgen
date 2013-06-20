@@ -6,7 +6,8 @@ from IPython.parallel import require
 
 from bcbio.distributed import ipython
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
-from bcbio.variation import bamprep, realign, genotype, ensemble, multi, population, recalibrate
+from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+                             recalibrate, validate)
 from bcbio.log import logger, setup_local_logging
 
 @contextlib.contextmanager
@@ -145,3 +146,8 @@ def detect_sv(*args):
 def combine_calls(*args):
     with _setup_logging(args):
         return apply(ensemble.combine_calls, *args)
+
+@require(validate)
+def compare_to_rm(*args):
+    with _setup_logging(args):
+        return apply(validate.compare_to_rm, *args)

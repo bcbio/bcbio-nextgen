@@ -2,11 +2,12 @@
 file format conversion utility functions
 """
 import pysam
-from bcbio.utils import (file_exists, replace_suffix)
+from bcbio.utils import (file_exists, replace_suffix, tmpfile)
 from bcbio.distributed.transaction import file_transaction
 import os
 import subprocess
 from bcbio.log import logger
+from bcbio.pipeline.config_utils import get_transcript_gtf
 
 def expects(fmt):
     """
@@ -155,3 +156,25 @@ def is_bam(in_file):
         return True
     else:
         return False
+
+def make_refflat(genome_dir):
+    """
+    makes a refflat file for use with Picard from a GTF file
+    """
+    gtf_file = get_transcript_gtf(genome_dir)
+    base, _ = os.path.splitext(gtf_file)
+    refflat_file = base + ".refFlat"
+    print "Making %s into a refFlat file named %s." % (gtf_file, refflat_file)
+    if file_exists(refflat_file):
+        print "%s already exists, skipping." % refflat_file
+        return refflat_file
+
+    with tmpfile(dir=os.getcwd(), prefix="genepred") as tmp_file:
+        cmd = "gtfToGenePred {gtf_file} {tmp_file}".format(**locals())
+        subprocess.check_call(cmd, shell=True)
+        with open(tmp_file) as tmp_handle, open(refflat_file, "w") as out_handle:
+            for line in tmp_handle:
+                l = line.split("\t")
+                l = [l[0]] + l
+                out_handle.write("\t".join(l) + "\n")
+    return refflat_file

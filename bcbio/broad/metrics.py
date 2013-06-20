@@ -456,15 +456,14 @@ def bed_to_interval(orig_bed, bam_file):
 
 class RNASeqPicardMetrics(PicardMetrics):
 
-    def report(self, align_bam, ref_file, gtf_file, is_paired=False,
-               rrna_file="null"):
+    def report(self, align_bam, ref_file, gtf_file, is_paired=False, rrna_file="null"):
         """Produce report metrics for a RNASeq experiment using Picard
         with a sorted aligned BAM file.
 
         """
 
         # collect duplication metrics
-        dup_bam, dup_metrics = self._get_current_dup_metrics(align_bam)
+        dup_metrics = self._get_current_dup_metrics(align_bam)
         align_metrics = self._collect_align_metrics(align_bam, ref_file)
         insert_graph, insert_metrics = (None, None)
         if is_paired:

@@ -213,7 +213,8 @@ class Variant2Pipeline(AbstractPipeline):
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with global_parallel(parallel, "full", ["piped_bamprep", "variantcall_sample"],
-                             samples, dirs["work"], config) as parallel:
+                             samples, dirs["work"], config,
+                             multiplier=len(regions["analysis"])) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment post-processing")
             samples = region.parallel_prep_region(samples, regions, run_parallel)
@@ -227,16 +228,18 @@ class Variant2Pipeline(AbstractPipeline):
             logger.info("Timing: variant post-processing")
             samples = run_parallel("postprocess_variants", samples)
             samples = combine_multiple_callers(samples)
-            logger.info("Timing: ensembl")
+            logger.info("Timing: ensemble calling")
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
             logger.info("Timing: validation")
+            samples = run_parallel("compare_to_rm", samples)
             samples = validate.summarize_grading(samples)
             logger.info("Timing: population database")
             samples = population.prep_db_parallel(samples, run_parallel)
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)
+            logger.info("Timing: finished")
         return samples
 
 class SNPCallingPipeline(VariantPipeline):
