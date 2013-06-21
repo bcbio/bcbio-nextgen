@@ -1,11 +1,11 @@
 """Next gen sequence alignments with Bowtie (http://bowtie-bio.sourceforge.net).
 """
 import os
-import subprocess
 
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance import do
 
 galaxy_location_file = "bowtie_indices.loc"
 
@@ -48,6 +48,5 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                 cl += [fastq_file]
             cl += [tx_out_file]
             cl = [str(i) for i in cl]
-            subprocess.check_call(cl)
+            do.run(cl)
     return out_file
-
