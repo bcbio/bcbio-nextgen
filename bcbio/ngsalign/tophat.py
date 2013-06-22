@@ -18,6 +18,7 @@ from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, flatten
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
+from bcbio.provenance import do
 from bcbio.convert import bam2sam, bamindex
 from bcbio import broad
 from bcbio.broad.metrics import PicardMetricsParser
@@ -114,7 +115,8 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             # tophat requires options before arguments,
             # otherwise it silently ignores them
             tophat_ready = tophat_runner.bake(**ready_options)
-            tophat_ready(*files)
+            cmd = str(tophat_ready.bake(*files))
+            do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
     out_sam_final = os.path.join(out_dir, "%s.sam" % out_base)
     os.symlink(os.path.basename(out_file), out_sam_final)
     return out_sam_final
@@ -148,9 +150,11 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
     """Use Bowtie to estimate the inner distance of paired reads.
     """
     # skip initial reads for large file, but not for smaller
-    mean, stdev = _bowtie_for_innerdist("1000000", fastq_file, pair_file, ref_file,
-                                  out_base, out_dir, config)
+    # mean, stdev = _bowtie_for_innerdist("1000000", fastq_file, pair_file, ref_file,
+    #                              out_base, out_dir, config)
     # if it is a small file, use the old method
+    mean, stdev = _small_file_innerdist("100000", fastq_file, pair_file, ref_file,
+                                        out_base, out_dir, config, True)
     if not mean or not stdev:
         mean, stdev = _small_file_innerdist("1", fastq_file, pair_file, ref_file,
                                             out_base, out_dir, config, True)
@@ -199,8 +203,11 @@ def _small_file_innerdist(start, fastq_file, pair_file, ref_file, out_base,
         for read in work_sam:
             if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize) - 2 * read.rlen)
-    dist_stats = Stats(dists)
-    return int(round(dist_stats.mean())), int(round(dist_stats.standard_deviation()))
+    if dists:
+        dist_stats = Stats(dists)
+        return int(round(dist_stats.mean())), int(round(dist_stats.standard_deviation()))
+    else:
+        return None, None
 
 def _calculate_average_read_length(sam_file):
     with closing(pysam.Samfile(sam_file)) as work_sam:

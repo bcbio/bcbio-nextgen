@@ -126,7 +126,8 @@ def _graphs_and_summary(bam_file, sam_ref, qc_dir, tmp_dir, config):
                    metrics.report(bam_file, sam_ref, is_paired(bam_file),
                                   config["algorithm"].get("hybrid_bait"),
                                   config["algorithm"].get("hybrid_target"),
-                                  config["algorithm"].get("variant_regions"))
+                                  config["algorithm"].get("variant_regions"),
+                                  config)
     metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
     fastqc_graphs, fastqc_stats, fastqc_overrep = \
                    fastqc_report(bam_file, qc_dir, config)

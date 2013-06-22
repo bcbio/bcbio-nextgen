@@ -284,7 +284,7 @@ class PicardMetrics(object):
         self._parser = PicardMetricsParser()
 
     def report(self, align_bam, ref_file, is_paired, bait_file, target_file,
-               variant_region_file):
+               variant_region_file, config):
         """Produce report metrics using Picard with sorted aligned BAM file.
         """
         dup_metrics = self._get_current_dup_metrics(align_bam)
@@ -300,7 +300,9 @@ class PicardMetrics(object):
             assert os.path.exists(target_file), (target_file, "does not exist!")
             hybrid_metrics = self._hybrid_select_metrics(align_bam,
                                                          bait_file, target_file)
-        elif variant_region_file:
+        elif (variant_region_file and 
+              config["algorithm"].get("coverage_interval", "").lower() in ["exome"]):
+            assert os.path.exists(variant_region_file), (variant_region_file, "does not exist")
             hybrid_metrics = self._hybrid_select_metrics(
                 align_bam, variant_region_file, variant_region_file)
 
@@ -439,7 +441,7 @@ def bed_to_interval(orig_bed, bam_file):
         bam_handle = pysam.Samfile(bam_file, "rb")
         with contextlib.closing(bam_handle):
             header = bam_handle.text
-        with tmpfile(dir=os.getcwd(), prefix="picardbed") as tmp_bed:
+        with tmpfile(dir=os.path.dirname(orig_bed), prefix="picardbed") as tmp_bed:
             with open(tmp_bed, "w") as out_handle:
                 out_handle.write(header)
                 with open(orig_bed) as in_handle:
