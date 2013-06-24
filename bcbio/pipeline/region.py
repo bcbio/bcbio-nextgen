@@ -97,14 +97,20 @@ def parallel_variantcall_region(samples, run_parallel):
     """Perform variant calling and post-analysis on samples by region.
     """
     to_process = []
+    extras = []
     for x in samples:
-        to_process.extend(genotype.handle_multiple_variantcallers(x))
+        added = False
+        for add in genotype.handle_multiple_variantcallers(x):
+            added = True
+            to_process.append(add)
+        if not added:
+            extras.append(x)
     split_fn = _split_by_ready_regions("-variants.vcf", "work_bam", genotype.get_variantcaller)
-    return grouped_parallel_split_combine(to_process, split_fn,
-                                          multi.group_batches, run_parallel,
-                                          "variantcall_sample", "split_variants_by_sample",
-                                          "combine_variant_files",
-                                          "vrn_file", ["sam_ref", "config"])
+    return extras + grouped_parallel_split_combine(to_process, split_fn,
+                                                   multi.group_batches, run_parallel,
+                                                   "variantcall_sample", "split_variants_by_sample",
+                                                   "combine_variant_files",
+                                                   "vrn_file", ["sam_ref", "config"])
 
 def clean_sample_data(samples):
     """Clean unnecessary information from sample data, reducing size for messaging passing.

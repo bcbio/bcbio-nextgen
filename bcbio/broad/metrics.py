@@ -1,9 +1,10 @@
 """Handle running, parsing and manipulating metrics available through Picard.
 """
-import os
+import contextlib
 import glob
 import json
-import contextlib
+import os
+import subprocess
 
 from bcbio.utils import tmpfile, file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -362,7 +363,13 @@ class PicardMetrics(object):
                                 ("TARGET_INTERVALS", ready_target),
                                 ("INPUT", dup_bam),
                                 ("OUTPUT", tx_metrics)]
-                        self._picard.run("CalculateHsMetrics", opts)
+                        try:
+                            self._picard.run("CalculateHsMetrics", opts)
+                        # HsMetrics fails regularly with memory errors
+                        # so we catch and skip instead of aborting the
+                        # full process
+                        except subprocess.CalledProcessError:
+                            return None
         return metrics
 
     def _variant_eval_metrics(self, dup_bam):

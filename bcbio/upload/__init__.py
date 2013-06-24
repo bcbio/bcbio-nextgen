@@ -1,6 +1,5 @@
 """Handle extraction of final files from processing pipelines into storage.
 """
-import datetime
 import os
 
 from bcbio.upload import shared, filesystem, galaxy, s3
@@ -64,7 +63,7 @@ def _get_files_variantcall(sample):
             out.append({"path": sample["work_bam"] + ".bai",
                         "type": "bai",
                         "ext": "ready"})
-    if sample["work_bam"] is not None:
+    if sample["work_bam"] is not None and sample.get("vrn_file"):
         for x in sample["variants"]:
             out.append({"path": x["vrn_file"],
                         "type": "vcf",

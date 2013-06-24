@@ -65,7 +65,7 @@ def _group_by_batches(samples):
     out_retrieve = []
     extras = []
     for data in [x[0] for x in samples]:
-        if data["work_bam"]:
+        if data["work_bam"] and data.get("vrn_file"):
             batch = data.get("metadata", {}).get("batch")
             if batch:
                 out_retrieve.append((batch, data))
