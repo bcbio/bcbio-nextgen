@@ -15,7 +15,7 @@ def postprocess_variants(data):
     """Provide post-processing of variant calls.
     """
     logger.info("Finalizing variant calls: %s" % str(data["name"]))
-    if data["work_bam"]:
+    if data["work_bam"] and data.get("vrn_file"):
         data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
                                               data["sam_ref"], data["config"])
         logger.info("Calculating variation effects for %s" % str(data["name"]))

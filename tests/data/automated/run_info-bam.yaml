@@ -24,10 +24,10 @@ details:
       aligner: bwa
       mark_duplicates: samtools
       recalibrate: gatk
-      #realign: gatk
       realign: gkno
-      #variantcaller: gatk
       variantcaller: freebayes
+      #realign: gatk
+      #variantcaller: gatk
       quality_format: Standard
       coverage_interval: regional
       nomap_split_size: 50
