@@ -89,7 +89,7 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
     """
     align_fn = _tools[aligner].align_fn
     sam_file = align_fn(fastq1, fastq2, align_ref, names["lane"], align_dir, config,
-                        rg_name=names["rg"])
+                        names=names)
     if fastq2 is None and aligner in ["bwa", "bowtie2"]:
         fastq1 = _remove_read_number(fastq1, sam_file)
     sort_method = config["algorithm"].get("bam_sort", "coordinate")

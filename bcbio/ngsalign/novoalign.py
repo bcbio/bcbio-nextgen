@@ -128,9 +128,10 @@ def _novoalign_args_from_config(config, need_quality=True):
 # paired end sizes
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-          extra_args=None, rg_name=None):
+          extra_args=None, names=None):
     """Align with novoalign.
     """
+    rg_name = names.get("rg", None) if names else None
     out_file = os.path.join(align_dir, "{0}.sam".format(out_base))
     if not file_exists(out_file):
         cl = [config_utils.get_program("novoalign", config)]

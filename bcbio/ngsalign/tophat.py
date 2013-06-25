@@ -71,9 +71,17 @@ def _set_cores(options, config):
         options["num-threads"] = num_cores
     return options
 
+def _set_rg_options(options, names):
+    if not names:
+        return options
+    options["rg-id"] = names["rg"]
+    options["rg-sample"] = names["sample"]
+    options["rg-library"] = names["pl"]
+    options["rg-platform-unit"] = names["pu"]
+    return options
 
 def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-                 rg_name=None):
+                 names=None):
     """
     run alignment using Tophat v2
     """
@@ -81,6 +89,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     options = _set_quality_flag(options, config)
     options = _set_transcriptome_option(options, config, ref_file)
     options = _set_cores(options, config)
+    options = _set_rg_options(options, names)
 
     # select the correct bowtie option to use; tophat2 is ignoring this option
     if _tophat_major_version(config) == 1:
@@ -122,7 +131,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
     return out_sam_final
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-          rg_name=None):
+          names=None):
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
@@ -140,7 +149,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         exit(1)
 
     out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
-                             align_dir, config, rg_name=None)
+                             align_dir, config, names=None)
 
     return out_files
 
