@@ -164,3 +164,6 @@ def get_rRNA_interval(genome_dir):
 
 def get_transcript_refflat(genome_dir):
     return os.path.join(genome_dir, "rnaseq", "ref-transcripts.refFlat")
+
+def get_rRNA_sequence(genome_dir):
+    return os.path.join(genome_dir, "rnaseq", "rRNA.fa")

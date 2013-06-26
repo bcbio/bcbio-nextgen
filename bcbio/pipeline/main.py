@@ -11,6 +11,7 @@ from collections import defaultdict
 
 from bcbio import log, utils, upload
 from bcbio.bam import callable
+from bcbio.rnaseq import qc
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
@@ -265,6 +266,7 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("merge_sample", samples)
         samples = run_parallel("generate_transcript_counts", samples)
         samples = qcsummary.generate_parallel(samples, run_parallel)
+        samples = qc.sample_summary(samples)
         #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         return samples
 
