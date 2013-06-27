@@ -14,7 +14,7 @@ class RNASeQCRunner(object):
 
     """
     def __init__(self, rnaseqc_path, bwa_path=None, jvm_opts=None):
-        self._jvm_opts = jvm_opts if jvm_opts else "-Xms2g -Xmx4g"
+        self._jvm_opts = " ".join(jvm_opts) if jvm_opts else "-Xms2g -Xmx4g"
         self._bwa_path = bwa_path if bwa_path else "bwa"
         self._rnaseqc_path = rnaseqc_path
         self._base_cmd = ("java -jar {jvm_opts} {rnaseqc_path} -n 1000 -s "
@@ -35,7 +35,7 @@ def rnaseqc_runner_from_config(config):
     configure it
     """
     resources = config_utils.get_resources("rnaseqc", config)
-    jvm_opts = resources.get("jvm_opts", "-Xms750m -Xmx2g")
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
     bwa_path = config_utils.get_program("bwa", config)
     rnaseqc_path = config_utils.get_program("rnaseqc", config, "dir")
     return RNASeQCRunner(rnaseqc_path, bwa_path, jvm_opts)
@@ -59,7 +59,6 @@ def sample_summary(samples):
     runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
 
     return samples
-
 
 def _write_sample_id_file(samples, out_file):
     HEADER = "\t".join(["Sample ID", "Bam File", "Notes"]) + "\n"
