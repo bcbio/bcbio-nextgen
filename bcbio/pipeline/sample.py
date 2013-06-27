@@ -29,10 +29,8 @@ def merge_sample(data):
                                              config)
     else:
         fastq1, fastq2 = None, None
-    if config["algorithm"]["aligner"] in ["tophat"]:
-        sort_bam = data["bam_files"][0]
-    else:
-        sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
+
+    sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
     return [[{"name": data["name"], "metadata": data["info"].get("metadata", {}),
               "info": data["info"],
               "genome_build": genome_build, "sam_ref": sam_ref,
