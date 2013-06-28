@@ -52,8 +52,21 @@ def parallel_prep_region(samples, regions, run_parallel):
     """
     file_key = "work_bam"
     split_fn = _split_by_regions(regions, "bamprep", "-prep.bam", file_key)
-    return parallel_split_combine(samples, split_fn, run_parallel,
-                                  "piped_bamprep", None, file_key, ["config"])
+    # identify samples that do not need preparation -- no prep or
+    # variant calling
+    extras = []
+    torun = []
+    for data in [x[0] for x in samples]:
+        a = data["config"]["algorithm"]
+        if (not a.get("mark_duplicates") and not a.get("recalibrate") and
+            not a.get("realign", "gatk") and not a.get("variantcaller", "gatk")):
+            extras.append([data])
+        elif not data.get("work_bam"):
+            extras.append([data])
+        else:
+            torun.append([data])
+    return extras + parallel_split_combine(torun, split_fn, run_parallel,
+                                           "piped_bamprep", None, file_key, ["config"])
 
 def delayed_bamprep_merge(samples, run_parallel):
     """Perform a delayed merge on regional prepared BAM files.
