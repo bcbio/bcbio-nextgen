@@ -22,6 +22,7 @@ SNPEFF_GENOME_REMAP = {
         "b37": SnpEffGenome("GRCh37.", "68", True),
         "hg19" : SnpEffGenome("hg19", "", True),
         "mm9" : SnpEffGenome("NCBIM37.", "68", False),
+        "mm10" : SnpEffGenome("GRCm38.", "71", False),
         "araTha_tair9": SnpEffGenome("athalianaTair9", "", False),
         "araTha_tair10": SnpEffGenome("athalianaTair10", "", False),
         }
