@@ -4,6 +4,7 @@ Thanks to Zachary Voase: https://github.com/zacharyvoase/logbook-zmqpush
 Slightly modified to support Logbook 0.4.1.
 """
 
+import multiprocessing
 import socket
 
 import zmq
@@ -37,8 +38,9 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
         logbook.Handler.__init__(self, level, filter, bubble)
 
         self.hostname = hostname
-        self.context = context or zmq.Context.instance()
-        self.socket = self.context.socket(zmq.PUSH)
+        if context is None:
+            context = zmq.Context()
+        self.socket = context.socket(zmq.PUSH)
         if addr is not None:
             self.socket.connect(addr)
 
@@ -46,7 +48,6 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
         if self.hostname:
             inject_hostname.process(record)
         return super(ZeroMQPushHandler, self).emit(record)
-
 
 class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
 
@@ -69,7 +70,6 @@ class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
         self.socket = self.context.socket(zmq.PULL)
         if addr is not None:
             self.socket.bind(addr)
-
 
 @logbook.Processor
 def inject_hostname(log_record):

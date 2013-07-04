@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import socket
 import sys
+import time
 
 import logbook, logbook.queues
 
@@ -42,6 +43,7 @@ def _create_log_handler(config, add_hostname=False):
     log_dir = _get_log_dir(config)
     if log_dir:
         utils.safe_makedir(log_dir)
+        time.sleep(1)
         handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s.log" % LOG_NAME),
                                             format_string=format_str, level="INFO",
                                             filter=_not_cl))

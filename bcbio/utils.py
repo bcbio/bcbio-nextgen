@@ -9,10 +9,12 @@ import itertools
 import functools
 import ConfigParser
 try:
-    import multiprocessing
-    from multiprocessing.pool import IMapIterator
+    from concurrent import futures
 except ImportError:
-    multiprocessing = None
+    try:
+        import futures
+    except ImportError:
+        futures = None
 import collections
 import yaml
 import fnmatch
@@ -29,22 +31,11 @@ def cpmap(cores=1):
     if int(cores) == 1:
         yield itertools.imap
     else:
-        if multiprocessing is None:
-            raise ImportError("multiprocessing not available")
-        # Fix to allow keyboard interrupts in multiprocessing: https://gist.github.com/626518
-        def wrapper(func):
-            def wrap(self, timeout=None):
-                return func(self, timeout=timeout if timeout is not None else 1e100)
-            return wrap
-        IMapIterator.next = wrapper(IMapIterator.next)
-        # recycle threads on Python 2.7; remain compatible with Python 2.6
-        try:
-            pool = multiprocessing.pool(int(cores), maxtasksperchild=None)
-        except TypeError:
-            pool = multiprocessing.Pool(int(cores))
-        yield pool.imap_unordered
-        pool.terminate()
-
+        if futures is None:
+            raise ImportError("concurrent.futures not available")
+        pool = futures.ProcessPoolExecutor(cores)
+        yield pool.map
+        pool.shutdown()
 
 def map_wrap(f):
     """Wrap standard function to easily pass into 'map' processing.

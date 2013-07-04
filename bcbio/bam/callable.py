@@ -19,7 +19,7 @@ import pysam
 from py_descriptive_statistics import Enum as Stats
 
 from bcbio import utils, broad
-from bcbio.log import logger
+from bcbio.log import logger, setup_local_logging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
@@ -54,6 +54,9 @@ def calc_callable_loci(data, region=None, out_file=None):
     http://www.broadinstitute.org/gatk/gatkdocs/
     org_broadinstitute_sting_gatk_walkers_coverage_CallableLoci.html
     """
+    if data["config"].get("parallel", {}).get("log_queue"):
+        handler = setup_local_logging(data["config"], data["config"]["parallel"])
+    logger.info("Testing")
     broad_runner = broad.runner_from_config(data["config"])
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
