@@ -3,6 +3,7 @@
   Picard -- BAM manipulation and analysis library.
   GATK -- Next-generation sequence processing.
 """
+import copy
 import os
 import subprocess
 from contextlib import closing
@@ -23,6 +24,28 @@ class BroadRunner:
         self._config = config
         self._resources = resources
         self._gatk_version = None
+
+    def _context_jvm_opts(self, config):
+        """Establish JVM opts, adjusting memory for the context if needed.
+
+        This allows using less or more memory for highly parallel or multicore
+        supporting processes, respectively.
+        """
+        jvm_opts = []
+        memory_adjust = config["algorithm"].get("memory_adjust", {})
+        for opt in self._jvm_opts:
+            if opt.startswith(("-Xmx", "-Xms")):
+                arg = opt[:4]
+                modifier = opt[-1:]
+                amount = int(opt[4:-1])
+                if memory_adjust.get("direction") == "decrease":
+                    amount = amount / memory_adjust.get("magnitude", 1)
+                elif memory_adjust.get("direction") == "increase":
+                    amount = amount * memory_adjust.get("magnitude", 1)
+                opt = "{arg}{amount}{modifier}".format(arg=arg, amount=amount,
+                                                       modifier=modifier)
+            jvm_opts.append(opt)
+        return jvm_opts
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
@@ -81,6 +104,7 @@ class BroadRunner:
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         local_args = []
         cores = self._config["algorithm"].get("num_cores", 1)
+        config = copy.deepcopy(self._config)
         if cores and int(cores) > 1:
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
@@ -89,12 +113,15 @@ class BroadRunner:
                 params.extend(["-nt", str(cores)])
             elif prog in support_nct:
                 params.extend(["-nct", str(cores)])
+                if config["algorithm"].get("memory_adjust") is None:
+                    config["algorithm"]["memory_adjust"] = {"direction": "increase",
+                                                            "magnitude": int(cores) // 2}
         if self.get_gatk_version() > "1.9":
             if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-        return ["java"] + self._jvm_opts + local_args + \
+        return ["java"] + self._context_jvm_opts(config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None):

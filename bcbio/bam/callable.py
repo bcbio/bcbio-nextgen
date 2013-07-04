@@ -27,6 +27,7 @@ from bcbio.pipeline import shared
 
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
+    config["algorithm"]["memory_adjust"] = {"direction": "decrease", "magnitude": 2}
     data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
     runner = parallel_runner(parallel, {}, config)
