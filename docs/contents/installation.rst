@@ -36,6 +36,12 @@ you can setup your ssh keys with::
 
 (Use `ssh-keygen` if your user doesn't have an ssh key)
 
+Some steps retrieve third party tools from GitHub, which can run into
+issues if you're behind a proxy or block git ports. To instruct git to
+use ``https://`` globally instead of ``git://``::
+
+    $ git config --global url.https://github.com/.insteadOf git://github.com/
+
 If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
 
