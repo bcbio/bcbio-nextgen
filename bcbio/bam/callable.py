@@ -56,7 +56,8 @@ def calc_callable_loci(data, region=None, out_file=None):
     """
     if data["config"].get("parallel", {}).get("log_queue"):
         handler = setup_local_logging(data["config"], data["config"]["parallel"])
-    logger.info("Testing")
+    else:
+        handler = None
     broad_runner = broad.runner_from_config(data["config"])
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
@@ -82,6 +83,8 @@ def calc_callable_loci(data, region=None, out_file=None):
                         if tregion.chrom == region:
                             out_handle.write("%s\t%s\t%s\tNO_COVERAGE\n" %
                                              (tregion.chrom, tregion.start, tregion.stop))
+    if handler and hasattr(handler, "close"):
+        handler.close()
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
 def sample_callable_bed(bam_file, ref_file, config):

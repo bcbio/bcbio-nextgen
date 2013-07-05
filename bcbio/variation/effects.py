@@ -41,7 +41,8 @@ def _installed_snpeff_genome(config_file, base_name):
     """Find the most recent installed genome for snpEff with the given name.
     """
     data_dir = _find_snpeff_datadir(config_file)
-    dbs = sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+    dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+           if os.path.isdir(d)]
     if len(dbs) == 0:
         raise ValueError("No database found in %s for %s" % (data_dir, base_name))
     else:
