@@ -39,7 +39,7 @@ def convert_to_plink_bed(ped_file, map_file, base_dir):
             break
         except:
             pass
-    plink_prefix = os.path.splitext(os.path.basename(ped_file))[0]
+    plink_prefix = os.path.splitext(os.path.basename(ped_file))[0].replace(".", "_")
     work_dir = os.path.join(base_dir, "vcfconvert")
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
@@ -52,7 +52,7 @@ def convert_to_plink_bed(ped_file, map_file, base_dir):
 
 def convert_bed_to_vcf(pbed_prefix, ped_file, base_dir):
     out_file = os.path.join(base_dir,
-                            "{0}.vcf".format(os.path.splitext(os.path.basename(ped_file))[0]))
+                            "{0}-raw.vcf".format(os.path.splitext(os.path.basename(ped_file))[0]))
     if not os.path.exists(out_file):
         subprocess.check_call(["pseq", pbed_prefix, "new-project"])
         subprocess.check_call(["pseq", pbed_prefix, "load-plink",
@@ -124,7 +124,7 @@ def fix_nonref_positions(in_file, ref_file):
     """
     ignore_chrs = ["."]
     ref2bit = twobit.TwoBitFile(open(ref_file))
-    out_file = apply("{0}-fix{1}".format, os.path.splitext(in_file))
+    out_file = in_file.replace("-raw.vcf", ".vcf")
 
     with open(in_file) as in_handle:
         with open(out_file, "w") as out_handle:
