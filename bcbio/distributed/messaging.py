@@ -11,6 +11,10 @@ import multiprocessing
 import psutil
 
 from mako.template import Template
+try:
+    import joblib
+except ImportError:
+    joblib = False
 
 from bcbio import utils
 from bcbio.distributed import ipython
@@ -31,17 +35,18 @@ def parallel_runner(parallel, dirs, config, config_file=None):
             return ipython.runner(parallel, fn_name, items, dirs["work"], config)
         else:
             logger.info("multiprocessing: %s" % fn_name)
-            out = []
             fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
                                     fromlist=["multitasks"]),
                          fn_name)
             num_jobs, cores_per_job = ipython.find_cores_per_job([fn], parallel, items, config)
             items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
             num_jobs = cores_including_resources(num_jobs, metadata, config)
-            with utils.cpmap(num_jobs) as cpmap:
-                for data in cpmap(fn, items):
-                    if data:
-                        out.extend(data)
+            if joblib is None:
+                raise ImportError("Need joblib for multiprocessing parallelization")
+            out = []
+            for data in joblib.Parallel(num_jobs)(joblib.delayed(fn)(x) for x in items):
+                if data:
+                    out.extend(data)
             return out
     return run_parallel
 
