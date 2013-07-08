@@ -26,8 +26,22 @@ from bcbio.variation import annotation, bamprep, multi, phasing
 
 # ## GATK Genotype calling
 
+
 def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file):
-    """Shared preparation work for GATK variant calling.
+
+    """
+    Perform common operations for GATK variant calling.
+
+    :param align_bams: A list of aligned BAM files to process
+    :param ref_file: The genome reference FASTA file to use
+    :param config:
+    :param dbsnp: The dbSNP VCF file
+    :param region:
+    :param out_file: The final file to write
+
+    :return: A tuple containing a ``BroadRunner`` instance and the predefined
+             parameters.
+
     """
     broad_runner = broad.runner_from_config(config)
     broad_runner.run_fn("picard_index_ref", ref_file)
@@ -54,9 +68,22 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     return broad_runner, params
 
+
 def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
                        region=None, out_file=None):
-    """Perform SNP genotyping on the given alignment file.
+    """
+    Perform SNP genotyping with the GATK's UnifiedGenotyper on a given
+    aligned BAM file.
+
+    :param align_bams: The BAM file(s) to be used for calling
+    :param ref_file: The genome reference FASTA file to use
+    :param config:
+    :param dbsnp: The dbSNP VCF file
+    :param region:
+    :param out_file: The final file to write
+
+    :return: The file containing the variant calls.
+
     """
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
@@ -75,11 +102,25 @@ def unified_genotyper(align_bams, ref_file, config, dbsnp=None,
                 broad_runner.run_gatk(params)
     return out_file
 
+
 def haplotype_caller(align_bams, ref_file, config, dbsnp=None,
                        region=None, out_file=None):
-    """Call variation with GATK's HaplotypeCaller.
 
-    This requires the full non open-source version of GATK.
+    """
+    Perform SNP genotyping with the GATK's HaplotypeCaller on a given
+    aligned BAM file.
+
+    :param align_bams: The BAM file(s) to be used for calling
+    :param ref_file: The genome reference FASTA file to use
+    :param config:
+    :param dbsnp: The dbSNP VCF file
+    :param region:
+    :param out_file: The final file to write
+
+    :return: The file containing the variant calls.
+
+    ..note :: This requires the full non open-source version of GATK.
+
     """
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
@@ -99,15 +140,19 @@ def haplotype_caller(align_bams, ref_file, config, dbsnp=None,
                 broad_runner.run_gatk(params)
     return out_file
 
+
 def _gatk_location_hack(args):
-    """Temporary work around for issues in GATK 2.4-9 and 2.5-2 HaplotypeCaller.
+
+    """
+    Temporary work around for issues in GATK 2.4-9 and 2.5-2 HaplotypeCaller.
 
     Fixes:
-    - softclipped reads at end of chromosomes.
-      Pads these regions to avoid working exclusively with the end. Needs to be
-      fixed properly in upstream GATK.
+    - softclipped reads at end of chromosomes. Pads these regions to avoid
+      working exclusively with the end. Needs to be fixed properly in upstream
+      GATK.
     - Problematic assembly around repeat regions. Excludes these regions.
     """
+
     region_idxs = [i + 1 for i, x in enumerate(args) if x == "-L"]
     # padding
     problem_chrs = ["GL000195.1"]
@@ -130,7 +175,17 @@ def _gatk_location_hack(args):
             extra_args.extend(exclude_args[chrom])
     return args + extra_args
 
+
 def write_empty_vcf(out_file):
+
+    """Write an empty VCF file.
+
+    This is done when variant callers produce no results.
+
+    :param out_file: The empty file to write
+
+    """
+
     with open(out_file, "w") as out_handle:
         out_handle.write("##fileformat=VCFv4.1\n"
                          "## No variants; no reads aligned in region\n"
@@ -139,7 +194,17 @@ def write_empty_vcf(out_file):
 # ## Utility functions for dealing with VCF files
 
 def split_snps_indels(broad_runner, orig_file, ref_file):
-    """Split a variant call file into SNPs and INDELs for processing.
+
+    """
+    Split a variant call file into SNPs and INDELs for processing.
+
+    :param broad_runner: A ```BroadRunner`` instance
+    :param orig_file: The original file to split
+    :param ref_file: The genome reference FASTA file to use
+
+    :return: A tuple containing the name of the file containing only SNP calls,
+             and the name of the file containing only INDEL calls.
+
     """
     base, ext = os.path.splitext(orig_file)
     snp_file = "{base}-snp{ext}".format(base=base, ext=ext)
@@ -158,9 +223,20 @@ def split_snps_indels(broad_runner, orig_file, ref_file):
                 broad_runner.run_gatk(cur_params)
     return snp_file, indel_file
 
+
 def combine_variant_files(orig_files, out_file, ref_file, config,
                           quiet_out=True):
-    """Combine multiple VCF files into a single output file.
+    """
+    Combine multiple VCF files into a single output file.
+
+    :param orig_files: The VCF files to be merged
+    :param out_file: The final merged VCF file
+    :param ref_file: The genome reference FASTA file to use
+    :param config:
+    :param quiet_out:
+
+    :return: The merged VCF file name
+
     """
     broad_runner = broad.runner_from_config(config)
     if not file_exists(out_file):
@@ -186,9 +262,21 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
 # ## Variant filtration -- shared functionality
 
 def variant_filtration(call_file, ref_file, vrn_files, config):
-    """Filter variant calls using Variant Quality Score Recalibration.
 
+    """
+    Filter variant calls using Variant Quality Score Recalibration.
     Newer GATK with Haplotype calling has combined SNP/indel filtering.
+
+    If other callers are used, SNPs and INDELs are filtered separately,
+    then combined together.
+
+    :param call_file: VCF call file to be filtered
+    :param ref_file: The genome reference FASTA file to use
+    :param vrn_files:
+    :param config:
+
+    :return: The filtered VCF file name.
+
     """
     broad_runner = broad.runner_from_config(config)
     caller = config["algorithm"].get("variantcaller")
@@ -211,16 +299,45 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
         out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
         return combine_variant_files(orig_files, out_file, ref_file, config)
 
+
 def filter_freebayes(broad_runner, in_file, ref_file, vrn_files, config):
-    """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
+
+    """
+    Perform basic sanity filtering of FreeBayes results, removing low
+    confidence calls.
+
+    After this sanity check, the result is subsequently processed with
+    hard filtering.
+
+    :param broad_runner: A ```BroadRunner`` instance
+    :param in_file: The VCF file containing FreeBayes results
+    :param vrn_files:
+    :param config:
+
+    :return The filtered VCF file name.
+
     """
     filters = ["QUAL < 20.0", "DP < 5"]
     return variant_filtration_with_exp(broad_runner, in_file, ref_file, "", filters)
 
+
 def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                          tranch_file, filter_type):
-    """Apply recalibration details, returning filtered VCF file.
+
     """
+    Apply the results of VQSR to the input VCF file.
+
+    :param broad_runner: A ```BroadRunner`` instance
+    :param snp_file: The variant file tobe filtered
+    :param ref_file: The genome reference FASTA file to use
+    :param recal_file:
+    :param trench_file:
+    :param filter_type:
+
+    :return: The recalibrated VCF file name
+
+    """
+
     base, ext = os.path.splitext(snp_file)
     out_file = "{base}-{filter}filter{ext}".format(base=base, ext=ext,
                                                    filter=filter_type)
