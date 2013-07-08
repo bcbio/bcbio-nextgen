@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'bcbio-nextgen'
-copyright = u'2013, Brad Chapman'
+copyright = u'2013, Brad Chapman and bcbio-nextgen contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
