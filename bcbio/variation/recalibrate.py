@@ -54,8 +54,7 @@ def prep_recal(data):
         platform = config["algorithm"]["platform"]
         broad_runner.run_fn("picard_index_ref", ref_file)
         if config["algorithm"].get("mark_duplicates", True):
-            (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"],
-                                                     remove_dups=True)
+            (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])
         else:
             dup_align_bam = data["work_bam"]
         broad_runner.run_fn("picard_index", dup_align_bam)
