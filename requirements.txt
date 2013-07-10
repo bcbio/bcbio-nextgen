@@ -5,7 +5,7 @@ cutadapt==1.2.1
 Cython==0.18
 fabric==1.6.0
 ipython>=1.0.dev
-ipython-cluster-helper==0.1.7
+ipython-cluster-helper==0.1.8
 Logbook==0.4.1
 Mako==0.7.3
 psutil==0.6.1

@@ -13,7 +13,7 @@ import contextlib
 import copy
 
 from bcbio import utils
-from bcbio.log import logger
+from bcbio.log import logger, get_log_dir
 from bcbio.pipeline import config_utils
 
 from cluster_helper import cluster as ipython_cluster
@@ -127,12 +127,13 @@ def add_cores_to_config(args, cores_per_job, parallel=None):
     args[new_i] = new_arg
     return args
 
-def _view_from_parallel(parallel):
+def _view_from_parallel(parallel, work_dir, config):
     """Translate parallel map into options for a cluster view.
     """
+    profile_dir = utils.safe_makedir(os.path.join(work_dir, get_log_dir(config), "ipython"))
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                         parallel["num_jobs"], parallel["cores_per_job"],
-                                        profile=parallel["profile"], start_wait=parallel["timeout"],
+                                        profile=profile_dir, start_wait=parallel["timeout"],
                                         extra_params={"resources": parallel["resources"]},
                                         retries=parallel.get("retries"))
 
@@ -161,7 +162,7 @@ def global_parallel(parallel, name, fn_names, items, work_dir, config,
                                                          parallel, items, config, multiplier=multiplier)
             parallel = dictadd(parallel, "cores_per_job", cores_per_job)
             parallel = dictadd(parallel, "num_jobs", num_jobs)
-            with _view_from_parallel(parallel) as view:
+            with _view_from_parallel(parallel, work_dir, config) as view:
                 parallel["view"] = view
                 yield parallel
     except:

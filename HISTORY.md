@@ -2,6 +2,8 @@
 
 - RNA-seq pipeline updated.
 - Fix logging and memory usage for multicore jobs run within ipython clusters.
+- Improve logging for IPython cluster issues, including moving IPython logs
+  inside project logging directory for better access.
 - Options for improved cluster resiliency: minimize number of clusters started
   during processing with more extensive reuse, flexible timeouts for waiting on
   cluster start up, and expose options to allow job retries. Thanks to Zhengqiu
