@@ -85,14 +85,14 @@ function to run variant calling on multiple BAMs in an input region
 that takes the following inputs:
 
 - ``align_bams`` -- A list of BAM files to call simultaneously.
-- ``metadata`` -- List of metadata associated with each BAM file for
-  calling. This allows customization of sample specific variant
-  calls using parameters supplied to :ref:`sample-configuration`.
-- ``ref_file`` -- Fasta reference genome file.
-- ``config`` -- Enables customization of variant calling based on sample
-  configuration inputs. See documentation on the
+- ``configs`` -- List of configurations associated with each of the
+  samples in ``align_bams``. Enables customization of variant calling
+  based on sample configuration inputs. See documentation on the
   :ref:`data-codedetails` dictionary for all of the information
-  contained inside the ``config`` input.
+  contained inside the ``config`` input. Having multiple
+  configurations allows customization of sample specific variant calls
+  using parameters supplied to :ref:`sample-configuration`.
+- ``ref_file`` -- Fasta reference genome file.
 - ``assoc_files`` -- Useful associated files for variant calling. This
   includes the DbSNP VCF file. It's a named tuple mapping to files
   specified in the configuration. `bcbio/pipeline/shared.py`_ has the
