@@ -90,9 +90,10 @@ that takes the following inputs:
   configuration inputs. See documentation on the
   :ref:`data-codedetails` dictionary for all of the information
   contained inside the ``config`` input.
-- ``dbsnp`` -- The DbSNP VCF file, which is often used as part of
-  variant calling. Long term, we'll generalize this to include other
-  inputs.
+- ``assoc_files`` -- Useful associated files for variant calling. This
+  includes the DbSNP VCF file. It's a named tuple mapping to files
+  specified in the configuration. `bcbio/pipeline/shared.py`_ has the
+  available inputs.
 - ``region`` -- A tuple of (chromosome, start, end) specifying the
   region to call in.
 - ``out_file``-- The output file to write to. This should contain calls
@@ -105,6 +106,7 @@ Once implemented, add the variant caller into the pipeline by updating
 
 .. _freebayes.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/variation/freebayes.py
 .. _bcbio/variation/genotype.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/variation/genotype.py#L548
+.. _bcbio/pipeline/shared.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/shared.py#L176
 
 Standard function arguments
 ===========================
