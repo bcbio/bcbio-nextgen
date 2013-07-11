@@ -35,7 +35,7 @@ def _freebayes_options_from_config(aconfig, out_file, region=None):
         opts += ["--variant-input", background]
     return opts
 
-def run_freebayes(align_bams, ref_file, config, assoc_files, region=None,
+def run_freebayes(align_bams, metadata, ref_file, config, assoc_files, region=None,
                   out_file=None):
     """Detect SNPs and indels with FreeBayes.
     """

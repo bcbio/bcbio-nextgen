@@ -12,7 +12,7 @@ from bcbio.variation.genotype import write_empty_vcf
 
 import pysam
 
-def run_varscan(align_bams, ref_file, config, assoc_files,
+def run_varscan(align_bams, metadata, ref_file, config, assoc_files,
                 region=None, out_file=None):
     call_file = samtools.shared_variantcall(_varscan_work, "varscan", align_bams,
                                             ref_file, config, assoc_files, region, out_file)

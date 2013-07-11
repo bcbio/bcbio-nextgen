@@ -54,7 +54,7 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     return broad_runner, params
 
-def unified_genotyper(align_bams, ref_file, config, assoc_files,
+def unified_genotyper(align_bams, metadata, ref_file, config, assoc_files,
                        region=None, out_file=None):
     """Perform SNP genotyping on the given alignment file.
     """
@@ -75,7 +75,7 @@ def unified_genotyper(align_bams, ref_file, config, assoc_files,
                 broad_runner.run_gatk(params)
     return out_file
 
-def haplotype_caller(align_bams, ref_file, config, assoc_files,
+def haplotype_caller(align_bams, metadata, ref_file, config, assoc_files,
                        region=None, out_file=None):
     """Call variation with GATK's HaplotypeCaller.
 
@@ -561,10 +561,12 @@ def variantcall_sample(data, region=None, out_file=None):
     caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
     if isinstance(data["work_bam"], basestring):
         align_bams = [data["work_bam"]]
+        metadata = [data["metadata"]]
     else:
         align_bams = data["work_bam"]
+        metadata = data["metadata"]
     call_file = "%s-raw%s" % os.path.splitext(out_file)
-    caller_fn(align_bams, sam_ref, config,
+    caller_fn(align_bams, metadata, sam_ref, config,
               configured_vrn_files(config, sam_ref),
               region, call_file)
     if data["config"]["algorithm"].get("phasing", False) == "gatk":

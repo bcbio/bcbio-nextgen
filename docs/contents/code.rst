@@ -84,7 +84,10 @@ example to follow for providing your own variant caller. Implement a
 function to run variant calling on multiple BAMs in an input region
 that takes the following inputs:
 
-- ``align_bams`` -- A set of BAMs to call simultaneously.
+- ``align_bams`` -- A list of BAM files to call simultaneously.
+- ``metadata`` -- List of metadata associated with each BAM file for
+  calling. This allows customization of sample specific variant
+  calls using parameters supplied to :ref:`sample-configuration`.
 - ``ref_file`` -- Fasta reference genome file.
 - ``config`` -- Enables customization of variant calling based on sample
   configuration inputs. See documentation on the

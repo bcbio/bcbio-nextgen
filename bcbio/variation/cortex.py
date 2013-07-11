@@ -25,7 +25,7 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.variation.genotype import write_empty_vcf
 
-def run_cortex(align_bams, ref_file, config, assoc_files, region=None,
+def run_cortex(align_bams, metadata, ref_file, config, assoc_files, region=None,
                out_file=None):
     """Top level entry to regional de-novo based variant calling with cortex_var.
     """
