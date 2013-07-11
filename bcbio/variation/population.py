@@ -41,7 +41,10 @@ def _do_db_build(samples):
     """Confirm we should build a gemini database: need gemini + human samples.
     """
     config = samples[0]["config"]
-    gemini = config_utils.get_program("gemini", config)
+    try:
+        gemini = config_utils.get_program("gemini", config)
+    except config_utils.CmdNotFound:
+        return False
     try:
         p = subprocess.Popen([gemini, "-h"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         p.wait()
