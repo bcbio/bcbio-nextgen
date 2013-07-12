@@ -48,8 +48,6 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     tumor_bam = None
     normal_bam = None
 
-    #FIXME: This works for a SINGLE COUPLE! Are more passed?
-
     for bamfile, item in itertools.izip(align_bams, items):
 
         metadata = item["metadata"]
@@ -91,7 +89,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
 
     if not file_exists(out_file):
         broad_runner, params = \
-            _mutect_call_prep(align_bams, ref_file, items, assoc_files,
+            _mutect_call_prep(align_bams, items, ref_file, assoc_files,
                                    region, out_file)
 
         if (not isinstance(region, (list, tuple)) and
