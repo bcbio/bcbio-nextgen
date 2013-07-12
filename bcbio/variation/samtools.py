@@ -39,12 +39,12 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, config,
     return out_file
 
 
-def run_samtools(align_bams, configs, ref_file, assoc_files, region=None,
+def run_samtools(align_bams, items, ref_file, assoc_files, region=None,
                  out_file=None):
     """Detect SNPs and indels with samtools mpileup and bcftools.
     """
     return shared_variantcall(_call_variants_samtools, "samtools", align_bams, ref_file,
-                              configs[0], assoc_files, region, out_file)
+                              items[0]["config"], assoc_files, region, out_file)
 
 def prep_mpileup(align_bams, ref_file, max_read_depth, config,
                  target_regions=None, want_bcf=True):

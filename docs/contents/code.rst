@@ -85,11 +85,11 @@ function to run variant calling on multiple BAMs in an input region
 that takes the following inputs:
 
 - ``align_bams`` -- A list of BAM files to call simultaneously.
-- ``configs`` -- List of configurations associated with each of the
+- ``items`` -- List of ``data`` dictionaries associated with each of the
   samples in ``align_bams``. Enables customization of variant calling
   based on sample configuration inputs. See documentation on the
   :ref:`data-codedetails` dictionary for all of the information
-  contained inside the ``config`` input. Having multiple
+  contained inside each ``data`` item. Having multiple
   configurations allows customization of sample specific variant calls
   using parameters supplied to :ref:`sample-configuration`.
 - ``ref_file`` -- Fasta reference genome file.

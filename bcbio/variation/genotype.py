@@ -54,7 +54,7 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     return broad_runner, params
 
-def unified_genotyper(align_bams, configs, ref_file, assoc_files,
+def unified_genotyper(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
     """Perform SNP genotyping on the given alignment file.
     """
@@ -62,7 +62,7 @@ def unified_genotyper(align_bams, configs, ref_file, assoc_files,
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, ref_file, configs[0], assoc_files.dbsnp,
+            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files.dbsnp,
                                    region, out_file)
         if (not isinstance(region, (list, tuple)) and
                 not all(has_aligned_reads(x, region) for x in align_bams)):
@@ -75,7 +75,7 @@ def unified_genotyper(align_bams, configs, ref_file, assoc_files,
                 broad_runner.run_gatk(params)
     return out_file
 
-def haplotype_caller(align_bams, configs, ref_file, assoc_files,
+def haplotype_caller(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
     """Call variation with GATK's HaplotypeCaller.
 
@@ -85,7 +85,7 @@ def haplotype_caller(align_bams, configs, ref_file, assoc_files,
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, ref_file, configs[0], assoc_files.dbsnp,
+            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files.dbsnp,
                                    region, out_file)
         assert broad_runner.gatk_type() == "restricted", \
             "Require full version of GATK 2.4+ for haplotype calling"
@@ -561,12 +561,12 @@ def variantcall_sample(data, region=None, out_file=None):
     caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
     if isinstance(data["work_bam"], basestring):
         align_bams = [data["work_bam"]]
-        configs = [config]
+        items = [data]
     else:
         align_bams = data["work_bam"]
-        configs = data["work_configs"]
+        items = data["work_items"]
     call_file = "%s-raw%s" % os.path.splitext(out_file)
-    caller_fn(align_bams, configs, sam_ref,
+    caller_fn(align_bams, items, sam_ref,
               configured_vrn_files(config, sam_ref),
               region, call_file)
     if data["config"]["algorithm"].get("phasing", False) == "gatk":
@@ -575,7 +575,7 @@ def variantcall_sample(data, region=None, out_file=None):
         for ext in ["", ".idx"]:
             if os.path.exists(call_file + ext):
                 os.symlink(call_file + ext, out_file + ext)
-    if "work_configs" in data:
-        del data["work_configs"]
+    if "work_items" in data:
+        del data["work_items"]
     data["vrn_file"] = out_file
     return [data]
