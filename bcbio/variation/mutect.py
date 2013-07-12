@@ -31,7 +31,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     if hasattr(assoc_files, "cosmic"):
         cosmic = assoc_files.cosmic
 
-    broad_runner = broad.runner_from_config(base_config)
+    broad_runner = broad.runner_from_config(base_config, "mutect")
 
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
