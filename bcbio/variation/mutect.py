@@ -54,10 +54,10 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
 
         if metadata["phenotype"] == "normal":
             normal_bam = bamfile
-            normal_sample_name = metadata.get("name", "normal sample")
+            normal_sample_name = item["name"]
         elif metadata["phenotype"] == "tumor":
             tumor_bam = bamfile
-            tumor_sample_name = metadata.get("name", "tumor sample")
+            tumor_sample_name = item["name"]
 
     if tumor_bam is None or normal_bam is None:
         raise ValueError("Missing phenotype definition (tumor or normal) "
