@@ -124,6 +124,24 @@ class BroadRunner:
         return ["java"] + self._context_jvm_opts(config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
 
+    def cl_mutect(self, params, tmp_dir):
+
+        """Define parameters to run the mutect paired algorithm."""
+
+        gatk_jar = self._get_jar("muTect")
+        local_args = []
+        cores = self._config["algorithm"].get("num_cores", 1)
+        config = copy.deepcopy(self._config)
+
+        if cores and int(cores) > 1:
+            prog = "MuTect"
+            params.extend(["-nt", str(cores)])
+            # FIXME: Not sure if it applies to muTect
+
+        local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
+        return ["java"] + self._context_jvm_opts(config) + local_args + \
+          ["-jar", gatk_jar] + [str(x) for x in params]
+
     def run_gatk(self, params, tmp_dir=None):
         with curdir_tmpdir() as local_tmp_dir:
             if tmp_dir is None:
@@ -133,6 +151,15 @@ class BroadRunner:
                           else cl.index("--analysis_type")
             prog = cl[atype_index + 1]
             do.run(cl, "GATK: {0}".format(prog), None)
+
+    def run_mutect(self, params, tmp_dir=None):
+
+        with curdir_tmpdir() as local_tmp_dir:
+            if tmp_dir is None:
+                tmp_dir = local_tmp_dir
+            cl = self.cl_mutect(params, tmp_dir)
+            prog = "MuTect"
+            do.run(cl, "MuTect: {0}".format(prog), None)
 
     def get_gatk_version(self):
         """Retrieve GATK version, handling locally and config cached versions.
@@ -200,6 +227,9 @@ class BroadRunner:
                          os.path.join(bdir, "dist"),
                          os.path.join(bdir, "GATK"),
                          os.path.join(bdir, "GATK", "dist"),
+                         os.path.join(bdir, "muTect"),
+                         os.path.join(bdir, "MuTect"),
+                         os.path.join(bdir, "muTect"),
                          os.path.join(bdir, "Picard-private", "dist")])
         if alts is None: alts = []
         for check_cmd in [command] + alts:
@@ -232,7 +262,7 @@ def _get_picard_ref(config):
         picard = config_utils.get_program("picard", config, "dir")
     return picard
 
-def runner_from_config(config):
+def runner_from_config(config, program="gatk"):
     return BroadRunner(_get_picard_ref(config),
-                       config_utils.get_program("gatk", config, "dir"),
+                       config_utils.get_program(program, config, "dir"),
                        config)
