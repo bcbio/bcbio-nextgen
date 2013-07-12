@@ -30,7 +30,10 @@ def merge_sample(data):
     else:
         fastq1, fastq2 = None, None
 
-    sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
+    out_file = os.path.join(data["dirs"]["work"],
+                            data["info"]["rgnames"]["sample"] + ".bam")
+    sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"],
+                               config, out_file=out_file)
     return [[{"name": data["name"], "metadata": data["info"].get("metadata", {}),
               "info": data["info"],
               "genome_build": genome_build, "sam_ref": sam_ref,
