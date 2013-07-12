@@ -16,15 +16,15 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep
 
 
-def _mutect_call_prep(align_bams, ref_file, configs, assoc_files, region,
-                      out_file, metadata):
+def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
+                       region=None, out_file=None):
     """
     Preparation work for MuTect.
     """
 
     #FIXME: We assume all other bits in the config are shared
 
-    base_config = configs[0]
+    base_config = items[0]["config"]
     dbsnp = assoc_files.dbsnp
     cosmic = None
 
@@ -50,14 +50,16 @@ def _mutect_call_prep(align_bams, ref_file, configs, assoc_files, region,
 
     #FIXME: This works for a SINGLE COUPLE! Are more passed?
 
-    for bamfile, meta in itertools.izip(align_bams, metadata):
+    for bamfile, item in itertools.izip(align_bams, items):
 
-        if meta["phenotype"] == "normal":
+        metadata = item["metadata"]
+
+        if metadata["phenotype"] == "normal":
             normal_bam = bamfile
-            normal_sample_name = meta.get("description", "normal sample")
-        elif meta["phenotype"] == "tumor":
+            normal_sample_name = metadata.get("name", "normal sample")
+        elif metadata["phenotype"] == "tumor":
             tumor_bam = bamfile
-            tumor_sample_name = meta.get("description", "tumor sample")
+            tumor_sample_name = metadata.get("name", "tumor sample")
 
     if tumor_bam is None or normal_bam is None:
         raise ValueError("Missing phenotype definition (tumor or normal) "
@@ -78,8 +80,8 @@ def _mutect_call_prep(align_bams, ref_file, configs, assoc_files, region,
     return broad_runner, params
 
 
-def mutect_caller(align_bams, configs, ref_file, assoc_files, region=None,
-                  out_file=None, metadata=None):
+def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
+                  out_file=None):
 
     """Run the MuTect paired analysis algorithm."""
 
@@ -89,7 +91,7 @@ def mutect_caller(align_bams, configs, ref_file, assoc_files, region=None,
 
     if not file_exists(out_file):
         broad_runner, params = \
-            _mutect_call_prep(align_bams, ref_file, configs, assoc_files,
+            _mutect_call_prep(align_bams, ref_file, items, assoc_files,
                                    region, out_file)
 
         if (not isinstance(region, (list, tuple)) and
