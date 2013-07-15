@@ -18,6 +18,8 @@ from bcbio.variation import bamprep
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
                         "java.lang.IllegalArgumentException: "
+                        "Comparison method violates its general contract!",
+                        "java.lang.IllegalArgumentException: "
                         "Comparison method violates its general contract!"])
 
 
@@ -57,6 +59,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
         broad_runner.run_fn("picard_index", x)
 
     variant_regions = base_config["algorithm"].get("variant_regions", None)
+    contamination = base_config["algorithm"].get("fraction_contamination", 0)
     region = subset_variant_regions(variant_regions, region, out_file)
 
     #FIXME: Add more parameters like fraction contamination etc
@@ -86,6 +89,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     params += ["-I:tumor", tumor_bam]
     params += ["--tumor_sample_name", tumor_sample_name]
     params += ["--normal_sample_name", normal_sample_name]
+    params += ["--fraction_contamination", contamination]
 
     if cosmic is not None:
         params += ["--cosmic", cosmic]
@@ -130,7 +134,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                 # will be ignored. All the other exceptions will be raised
                 # correctly.
                 if java_exception in _PASS_EXCEPTIONS:
-                    write_empty_vcf(out_file)
+                    write_empty_vcf(tx_out_file)
                     return
                 else:
                     raise
