@@ -17,6 +17,20 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep
 
 
+def _parse_gatk_java_error_string(error_string):
+
+    """Parse the GATK error string to get the stack trace"""
+
+    for line in error_string.split("##### ERROR "):
+        line = line.strip()
+        if "stack trace" in line:
+            line = line.split("\n")
+            # The name of the exception is immediately after "stack trace"
+            java_error = line[1].strip()
+
+            return java_error
+
+
 def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
     """
@@ -106,7 +120,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             try:
                 broad_runner.run_mutect(params)
             except CalledProcessError as error:
-                java_exception = error[0]
+                java_exception = _parse_gatk_java_error_string(error.cmd)
                 #HACK: Currently MuTect bails out on certain small BAM files
                 # Until the issue is fixed by Broad, this specific exception
                 # will be ignored. All the other exceptions will be raised
