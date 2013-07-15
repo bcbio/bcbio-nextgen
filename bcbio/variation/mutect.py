@@ -4,6 +4,7 @@ import os
 import collections
 import copy
 import itertools
+from subprocess import CalledProcessError
 
 from bcbio import broad
 from bcbio.log import logger
@@ -102,7 +103,18 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout,
             # which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
-
-            broad_runner.run_mutect(params)
+            try:
+                broad_runner.run_mutect(params)
+            except CalledProcessError as error:
+                java_exception = error[0]
+                #HACK: Currently MuTect bails out on certain small BAM files
+                # Until the issue is fixed by Broad, this specific exception
+                # will be ignored. All the other exceptions will be raised
+                # correctly.
+                if "java.lang.IllegalArgumentException" in java_exception:
+                    write_empty_vcf(out_file)
+                    return
+                else:
+                    raise
 
     return out_file
