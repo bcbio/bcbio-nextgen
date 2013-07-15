@@ -133,11 +133,6 @@ class BroadRunner:
         cores = self._config["algorithm"].get("num_cores", 1)
         config = copy.deepcopy(self._config)
 
-        if cores and int(cores) > 1:
-            prog = "MuTect"
-            params.extend(["-nt", str(cores)])
-            # FIXME: Not sure if it applies to muTect
-
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         return ["java"] + self._context_jvm_opts(config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
