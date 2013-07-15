@@ -172,8 +172,10 @@ def _get_sequences_to_trim(lane_config):
     # at the 3' end as well
     if polya:
         trim_sequences += [polya, str(Seq(polya).reverse_complement())]
-    # for read through trimming, take on the reverse complement of the adapters
+
+    # also trim the reverse complement of the adapters
     for _, v in builtin_adapters.items():
+        trim_sequences += [str(Seq(sequence)) for sequence in v]
         trim_sequences += [str(Seq(sequence).reverse_complement()) for
                            sequence in v]
     return trim_sequences
