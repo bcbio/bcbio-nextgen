@@ -16,6 +16,10 @@ from bcbio.variation.genotype import write_empty_vcf
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep
 
+_PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
+                        "java.lang.IllegalArgumentException: "
+                        "Comparison method violates its general contract!"])
+
 
 def _parse_gatk_java_error_string(error_string):
 
@@ -125,7 +129,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                 # Until the issue is fixed by Broad, this specific exception
                 # will be ignored. All the other exceptions will be raised
                 # correctly.
-                if "java.lang.IllegalArgumentException" in java_exception:
+                if java_exception in _PASS_EXCEPTIONS:
                     write_empty_vcf(out_file)
                     return
                 else:
