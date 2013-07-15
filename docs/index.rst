@@ -25,6 +25,7 @@ Contents:
    contents/configuration
    contents/parallel
    contents/internals
+   contents/code
    contents/deprecated
 
 

@@ -140,6 +140,7 @@ system`_.
 Contributors
 ------------
 
+- `Luca Beltrame`_, Mario Negri Research Institute
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
@@ -148,6 +149,7 @@ Contributors
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 
+.. _Luca Beltrame: https://github.com/cswegger
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Brad Chapman: https://github.com/chapmanb
 .. _Peter Cock: https://github.com/peterjc

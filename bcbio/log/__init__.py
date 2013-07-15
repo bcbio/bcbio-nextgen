@@ -13,7 +13,7 @@ from bcbio.log import logbook_zmqpush
 
 LOG_NAME = "bcbio-nextgen"
 
-def _get_log_dir(config):
+def get_log_dir(config):
     d = config.get("log_dir",
                    config.get("resources", {}).get("log", {}).get("dir", "log"))
     return d
@@ -40,10 +40,12 @@ def _create_log_handler(config, add_hostname=False):
                            "{record.extra[source]}:" if add_hostname else "",
                            "{record.message}"])
 
-    log_dir = _get_log_dir(config)
+    log_dir = get_log_dir(config)
     if log_dir:
-        utils.safe_makedir(log_dir)
-        time.sleep(1)
+        if not os.path.exists(log_dir):
+            utils.safe_makedir(log_dir)
+            # Wait to propagate, Otherwise see logging errors on distributed filesystems.
+            time.sleep(5)
         handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s.log" % LOG_NAME),
                                             format_string=format_str, level="INFO",
                                             filter=_not_cl))

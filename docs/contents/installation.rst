@@ -26,7 +26,7 @@ requirements:
   installed (the python-dev or python-devel packages).
 - A compiler like gcc.
 - The git version control (http://git-scm.com/).
-- PyYAML: install with `pip install pyyaml` or `easy_install pyyaml`
+- PyYAML: install with ``pip install pyyaml`` or ``easy_install pyyaml``
 
 The script requires that you can do a ``ssh localhost`` to your
 installation machine. If you'd like to do this without any passwords

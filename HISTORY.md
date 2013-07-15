@@ -1,7 +1,12 @@
 ## 0.7.0 (in development)
 
 - RNA-seq pipeline updated.
+- Generalize variant calling to support alternative callers like cancer-specific
+  calling: provide additional associated files to variant calls and pass along
+  sample specific metadata. Document implementation of new variant callers.
 - Fix logging and memory usage for multicore jobs run within ipython clusters.
+- Improve logging for IPython cluster issues, including moving IPython logs
+  inside project logging directory for better access.
 - Options for improved cluster resiliency: minimize number of clusters started
   during processing with more extensive reuse, flexible timeouts for waiting on
   cluster start up, and expose options to allow job retries. Thanks to Zhengqiu

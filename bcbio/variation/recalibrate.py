@@ -54,8 +54,7 @@ def prep_recal(data):
         platform = config["algorithm"]["platform"]
         broad_runner.run_fn("picard_index_ref", ref_file)
         if config["algorithm"].get("mark_duplicates", True):
-            (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"],
-                                                     remove_dups=True)
+            (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])
         else:
             dup_align_bam = data["work_bam"]
         broad_runner.run_fn("picard_index", dup_align_bam)
@@ -89,16 +88,16 @@ def _get_downsample_pct(runner, in_bam):
 def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
         dbsnp_file, intervals):
     """Step 1 of GATK recalibration process, producing table of covariates.
+
+    TODO: Use new GATK 2.6+ AnalyzeCovariates tool to plot recalibration results.
     """
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
-    plot_file = "%s-plots.pdf" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
         if has_aligned_reads(dup_align_bam, intervals):
             with curdir_tmpdir() as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
                     params = ["-T", "BaseRecalibrator",
                               "-o", tx_out_file,
-                              "--plot_pdf_file", plot_file,
                               "-I", dup_align_bam,
                               "-R", ref_file,
                               ]

@@ -26,7 +26,11 @@ IPython parallel
 `IPython parallel`_ provides a distributed framework for performing
 parallel computation in standard cluster environments. The
 bcbio-nextgen setup script installs both IPython and `pyzmq`_, which
-provides Python bindings for the `ZeroMQ`_ messaging library.
+provides Python bindings for the `ZeroMQ`_ messaging library. The only
+additional requirement is that the work directory where you run the
+analysis is accessible to all processing nodes. This is typically
+accomplished with a distributed file system like
+`NFS`_, `Gluster`_ or `Lustre`_.
 
 Run an analysis using ipython for parallel execution::
 
@@ -73,3 +77,6 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub``.
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
 .. _pyzmq: https://github.com/zeromq/pyzmq
 .. _ZeroMQ: http://www.zeromq.org/
+.. _Gluster: http://www.gluster.org/
+.. _Lustre: http://wiki.lustre.org/index.php/Main_Page
+.. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
