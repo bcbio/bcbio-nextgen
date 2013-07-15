@@ -1,5 +1,6 @@
 """Centralize running of external commands, providing logging and tracking.
 """
+import collections
 import contextlib
 import os
 import subprocess
@@ -32,18 +33,21 @@ def _do_run(cmd, checks):
     s = subprocess.Popen(cmd, shell=isinstance(cmd, basestring),
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
+    debug_stdout = collections.deque(maxlen=100)
     with contextlib.closing(s.stdout) as stdout:
         while 1:
             line = stdout.readline()
             exitcode = s.poll()
             if exitcode is not None:
                 if exitcode is not None and exitcode != 0:
-                    raise subprocess.CalledProcessError(exitcode,
-                                                        " ".join(cmd) if not
-                                                        isinstance(cmd, basestring) else cmd)
+                    error_msg = " ".join(cmd) if not isinstance(cmd, basestring) else cmd
+                    error_msg += "\n"
+                    error_msg += "".join(debug_stdout)
+                    raise subprocess.CalledProcessError(exitcode, error_msg)
                 else:
                     break
             if line:
+                debug_stdout.append(line)
                 logger.debug(line.rstrip())
     # Check for problems not identified by shell return codes
     if checks:
