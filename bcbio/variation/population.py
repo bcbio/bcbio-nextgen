@@ -11,7 +11,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.variation import effects, genotype
+from bcbio.variation import effects, vcfutils
 
 def prep_gemini_db(fnames, call_id, samples, data):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
@@ -22,7 +22,7 @@ def prep_gemini_db(fnames, call_id, samples, data):
     is_population = len(fnames) > 1
     if is_population:
         gemini_vcf = "%s.vcf" % os.path.splitext(gemini_db)[0]
-        gemini_vcf = genotype.combine_variant_files(fnames, gemini_vcf, data["sam_ref"],
+        gemini_vcf = vcfutils.combine_variant_files(fnames, gemini_vcf, data["sam_ref"],
                                                     data["config"])
     else:
         gemini_vcf = fnames[0]

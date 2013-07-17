@@ -3,6 +3,51 @@ Code
 This section provides useful concepts for getting started digging into
 the code and contributing new functionality.
 
+Development goals
+=================
+
+During development we seek to maximize functionality and usefulness,
+while avoiding complexity. Since these goals are sometimes in
+conflict, it's useful to understand the design approaches:
+
+- Support high level configurability but avoid exposing all program
+  options. Since pipelines support a wide variety of tools, each with
+  a large number of options, we try to define configuration variables
+  at high level based on biological intent and then translate these
+  into best-practice options for each tool. The goal is to avoid
+  having an overwhelming number of input configuration options.
+
+- Provide best-practice pipelines that make recommended decisions for
+  processing. Coupled with goal of minimizing configuration
+  parameters, this requires trust and discussion around algorithm
+  choices. An example is bwa alignment, which uses ``bwa aln`` for
+  reads shorter than 75bp and ``bwa mem`` for longer reads, based on
+  recommendations from Heng Li. Our general goal is to encourage
+  discussion and development of best-practices to make it easy to do
+  the right thing.
+
+- Support extensive debugging output. In complex distributed systems,
+  programs fail in unexpected ways even during production runs. We try
+  to maximize logging to help identify and diagnose these type of
+  unexpected problems.
+
+- Avoid making mistakes. This results in being conservative about
+  decisions like deleting file intermediates. Coupled with extensive
+  logging, we trade off disk usage for making it maximally
+  easy to restart and debug problems. If you'd like to delete work or
+  log directories automatically, we recommend doing this as part of
+  your batch scripts wrapping bcbio-nextgen.
+
+- Strive for a clean, readable code base. We strive to make the code a
+  secondary source of information after hand written docs.
+  Practically, this means maximizing information content in source
+  files while using in-line documentation to clarify as needed.
+
+- Focus on a functional coding style with minimal use of global
+  mutable objects. This approach works well with distributed code and
+  isolates debugging to individual functions rather than globally
+  mutable state.
+
 Overview
 ========
 

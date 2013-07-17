@@ -4,7 +4,7 @@ from bcbio import utils
 from bcbio.bam import callable
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
 from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
-                             recalibrate, validate)
+                             recalibrate, validate, vcfutils)
 
 @utils.map_wrap
 def process_lane(*args):
@@ -79,7 +79,11 @@ def variantcall_sample(*args):
 
 @utils.map_wrap
 def combine_variant_files(*args):
-    return genotype.combine_variant_files(*args)
+    return vcfutils.combine_variant_files(*args)
+
+@utils.map_wrap
+def concat_variant_files(*args):
+    return vcfutils.concat_variant_files(*args)
 
 @utils.map_wrap
 def detect_sv(*args):

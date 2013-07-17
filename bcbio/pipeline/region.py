@@ -122,7 +122,7 @@ def parallel_variantcall_region(samples, run_parallel):
     return extras + grouped_parallel_split_combine(to_process, split_fn,
                                                    multi.group_batches, run_parallel,
                                                    "variantcall_sample", "split_variants_by_sample",
-                                                   "combine_variant_files",
+                                                   "concat_variant_files",
                                                    "vrn_file", ["sam_ref", "config"])
 
 def clean_sample_data(samples):

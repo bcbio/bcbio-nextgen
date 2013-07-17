@@ -22,7 +22,7 @@ from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_vrn_files,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import annotation, bamprep, multi, phasing
+from bcbio.variation import annotation, bamprep, multi, phasing, vcfutils
 
 # ## GATK Genotype calling
 
@@ -136,53 +136,6 @@ def write_empty_vcf(out_file):
                          "## No variants; no reads aligned in region\n"
                          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
 
-# ## Utility functions for dealing with VCF files
-
-def split_snps_indels(broad_runner, orig_file, ref_file):
-    """Split a variant call file into SNPs and INDELs for processing.
-    """
-    base, ext = os.path.splitext(orig_file)
-    snp_file = "{base}-snp{ext}".format(base=base, ext=ext)
-    indel_file = "{base}-indel{ext}".format(base=base, ext=ext)
-    params = ["-T", "SelectVariants",
-              "-R", ref_file,
-              "--variant", orig_file]
-    for out_file, select_type in [(snp_file, ["SNP"]),
-                                  (indel_file, ["INDEL", "MIXED", "MNP",
-                                                "SYMBOLIC", "NO_VARIATION"])]:
-        if not file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
-                cur_params = params + ["--out", tx_out_file]
-                for x in select_type:
-                    cur_params += ["--selectTypeToInclude", x]
-                broad_runner.run_gatk(cur_params)
-    return snp_file, indel_file
-
-def combine_variant_files(orig_files, out_file, ref_file, config,
-                          quiet_out=True):
-    """Combine multiple VCF files into a single output file.
-    """
-    broad_runner = broad.runner_from_config(config)
-    if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "CombineVariants",
-                      "-R", ref_file,
-                      "--out", tx_out_file]
-            priority_order = []
-            for i, orig_file in enumerate(orig_files):
-                name = "v%s" % i
-                params.extend(["--variant:{name}".format(name=name), orig_file])
-                priority_order.append(name)
-            params.extend(["--rod_priority_list", ",".join(priority_order)])
-            if quiet_out:
-                params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
-            variant_regions = config["algorithm"].get("variant_regions", None)
-            if variant_regions:
-                params += ["-L", bamprep.region_to_gatk(variant_regions),
-                           "--interval_set_rule", "INTERSECTION"]
-            broad_runner.run_gatk(params)
-    return out_file
-
 # ## Variant filtration -- shared functionality
 
 def variant_filtration(call_file, ref_file, vrn_files, config):
@@ -202,14 +155,14 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
     elif caller in ["samtools", "varscan"]:
         return call_file
     else:
-        snp_file, indel_file = split_snps_indels(broad_runner, call_file, ref_file)
+        snp_file, indel_file = vcfutils.split_snps_indels(broad_runner, call_file, ref_file)
         snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
                                                   vrn_files, config)
         indel_filter_file = _variant_filtration_indel(broad_runner, indel_file,
                                                       ref_file, vrn_files, config)
         orig_files = [snp_filter_file, indel_filter_file]
         out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
-        return combine_variant_files(orig_files, out_file, ref_file, config)
+        return vcfutils.combine_variant_files(orig_files, out_file, ref_file, config)
 
 def filter_freebayes(broad_runner, in_file, ref_file, vrn_files, config):
     """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
@@ -540,7 +493,7 @@ def parallel_variantcall(sample_info, parallel_fn):
                                              dir_ext_fn=get_variantcaller)
         processed = grouped_parallel_split_combine(
             to_process, split_fn, multi.group_batches, parallel_fn,
-            "variantcall_sample", "split_variants_by_sample", "combine_variant_files",
+            "variantcall_sample", "split_variants_by_sample", "concat_variant_files",
             "vrn_file", ["sam_ref", "config"])
         finished.extend(processed)
     return finished
