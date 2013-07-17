@@ -25,7 +25,8 @@ details:
       mark_duplicates: samtools
       recalibrate: gatk
       realign: gkno
-      variantcaller: freebayes
+      variantcaller: [freebayes, gatk, gatk-haplotype, samtools]
+      #variantcaller: freebayes
       #realign: gatk
       #variantcaller: gatk
       quality_format: Standard

@@ -138,6 +138,15 @@ def write_empty_vcf(out_file):
 
 # ## Variant filtration -- shared functionality
 
+def _get_coverage_params(config):
+    Cov = collections.namedtuple("Cov", ["interval", "depth"])
+    return Cov(config["algorithm"].get("coverage_interval", "exome").lower(),
+               config["algorithm"].get("coverage_depth", "high").lower())
+
+def _no_vqsr(config):
+    cov = _get_coverage_params(config)
+    return cov.interval in ["regional", "exome"] or cov.depth == "low"
+
 def variant_filtration(call_file, ref_file, vrn_files, config):
     """Filter variant calls using Variant Quality Score Recalibration.
 
@@ -145,8 +154,7 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
     """
     broad_runner = broad.runner_from_config(config)
     caller = config["algorithm"].get("variantcaller")
-    cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
-    if caller in ["gatk-haplotype"] and cov_interval not in ["regional"]:
+    if caller in ["gatk-haplotype"] and not _no_vqsr(config):
         return _variant_filtration_both(broad_runner, call_file, ref_file, vrn_files,
                                         config)
     elif caller in ["freebayes"]:
@@ -189,8 +197,7 @@ def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
             broad_runner.run_gatk(params)
     return out_file
 
-def _shared_variant_filtration(filter_type, cov_interval, snp_file,
-                               ref_file, vrn_files):
+def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files):
     """Share functionality for filtering variants.
     """
     recal_file = "{base}.recal".format(base=os.path.splitext(snp_file)[0])
@@ -219,10 +226,7 @@ def _shared_variant_filtration(filter_type, cov_interval, snp_file,
         params.extend(
             ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
              vrn_files.train_indels])
-    if cov_interval == "exome":
-        params.extend(["--maxGaussians", "4", "--percentBadVariants", "0.05"])
-    else:
-        params.extend(["-an", "DP"])
+    params.extend(["-an", "DP"])
     return params, recal_file, tranches_file
 
 def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
@@ -257,10 +261,9 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     """Filter SNP variant calls using GATK best practice recommendations.
     """
     filter_type = "SNP"
-    cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, cov_interval, snp_file, ref_file, vrn_files)
+        filter_type, snp_file, ref_file, vrn_files)
     assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
            "Need HapMap and 1000 genomes training files"
     filters = ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
@@ -269,7 +272,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     # resulting in excessive filtering, so avoid this metric
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
-    if cov_interval == "regional" or variantcaller == "freebayes":
+    if _no_vqsr(config):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            filters)
     else:
@@ -301,10 +304,9 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
     """Filter indel variant calls using GATK best practice recommendations.
     """
     filter_type = "INDEL"
-    cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, cov_interval, snp_file, ref_file, vrn_files)
-    if cov_interval in ["exome", "regional"]:
+        filter_type, snp_file, ref_file, vrn_files)
+    if _no_vqsr(config):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
     else:
@@ -323,9 +325,8 @@ def _variant_filtration_both(broad_runner, snp_file, ref_file, vrn_files,
     """Filter SNP and indel variant calls using GATK best practice recommendations.
     """
     filter_type = "BOTH"
-    cov_interval = config["algorithm"].get("coverage_interval", "exome").lower()
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, cov_interval, snp_file, ref_file, vrn_files)
+        filter_type, snp_file, ref_file, vrn_files)
     if not file_exists(recal_file):
         with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
             params.extend(["--recal_file", tx_recal,
