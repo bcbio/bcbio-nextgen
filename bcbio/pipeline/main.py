@@ -9,7 +9,7 @@ import argparse
 from collections import defaultdict
 
 
-from bcbio import log, utils, upload
+from bcbio import install, log, utils, upload
 from bcbio.bam import callable
 from bcbio.rnaseq import qc
 from bcbio.distributed.messaging import parallel_runner
@@ -83,48 +83,57 @@ def parse_cl_args(in_args):
     """
     parser = argparse.ArgumentParser(
         description= "Best-practice pipelines for fully automated high throughput sequencing analysis.")
-    parser.add_argument("global_config", help="Global YAML configuration file specifying details about the system",
-                        nargs="?")
-    parser.add_argument("fc_dir", help="A directory of Illumina output or fastq files to process (optional)",
-                        nargs="?")
-    parser.add_argument("run_config", help="YAML file with details about samples to process (optional)",
-                        nargs="*")
-    parser.add_argument("-n", "--numcores", type=int, default=0)
-    parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
-                        choices=["local", "ipython", "messaging"], default="local")
-    parser.add_argument("-s", "--scheduler", help="Schedulerto use for ipython parallel",
-                        choices=["lsf", "sge", "torque"])
-    parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
-    parser.add_argument("-r", "--resources",
-                        help=("Cluster specific resources specifications. Provide multiple specs separated by ';'\n"
-                              "Supports SGE: translated to -l parameters"),
-                        default="")
-    parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
-                        default=15, type=int)
-    parser.add_argument("--retries",
-                        help=("Number of retries of failed tasks during distributed processing. "
-                              "Default 0 (no retries)"),
-                        default=0, type=int)
-    parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
-                        default="bcbio_nextgen")
-    parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
-                        choices = ["stable", "development", "system"])
-    parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
-
+    if in_args[0] in ["upgrade"]:
+        subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
+        install.add_subparser(subparsers)
+    else:
+        parser.add_argument("global_config", help="Global YAML configuration file specifying details about the system",
+                            nargs="?")
+        parser.add_argument("fc_dir", help="A directory of Illumina output or fastq files to process (optional)",
+                            nargs="?")
+        parser.add_argument("run_config", help="YAML file with details about samples to process (optional)",
+                            nargs="*")
+        parser.add_argument("-n", "--numcores", type=int, default=0)
+        parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
+                            choices=["local", "ipython", "messaging"], default="local")
+        parser.add_argument("-s", "--scheduler", help="Schedulerto use for ipython parallel",
+                            choices=["lsf", "sge", "torque"])
+        parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
+        parser.add_argument("-r", "--resources",
+                            help=("Cluster specific resources specifications. Provide multiple specs separated by ';'\n"
+                                  "Supports SGE: translated to -l parameters"),
+                            default="")
+        parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
+                            default=15, type=int)
+        parser.add_argument("--retries",
+                            help=("Number of retries of failed tasks during distributed processing. "
+                                  "Default 0 (no retries)"),
+                            default=0, type=int)
+        parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
+                            default="bcbio_nextgen")
+        parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
+                            choices = ["stable", "development", "system"])
+        parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
     args = parser.parse_args(in_args)
-    inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
-              if x is not None]
-    kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
-              "paralleltype": args.paralleltype,
-              "scheduler": args.scheduler,
-              "queue": args.queue,
-              "timeout": args.timeout,
-              "retries": args.retries,
-              "resources": args.resources,
-              "profile": args.profile,
-              "upgrade": args.upgrade,
-              "workflow": args.workflow,
-              "inputs": inputs}
+    if hasattr(args, "fc_dir"):
+        inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
+                  if x is not None]
+        kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
+                  "paralleltype": args.paralleltype,
+                  "scheduler": args.scheduler,
+                  "queue": args.queue,
+                  "timeout": args.timeout,
+                  "retries": args.retries,
+                  "resources": args.resources,
+                  "profile": args.profile,
+                  "upgrade": args.upgrade,
+                  "workflow": args.workflow,
+                  "inputs": inputs}
+    else:
+        args.global_config = None
+        args.fc_dir = None
+        kwargs = {"args": args,
+                  "upgrade": args.upgrade}
     if args.fc_dir is not None and len(args.run_config) == 1:
         kwargs["fc_dir"] = args.fc_dir
         kwargs["run_info_yaml"] = args.run_config[0]
