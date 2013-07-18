@@ -8,7 +8,6 @@ import shutil
 import subprocess
 from contextlib import closing
 import glob
-import pprint
 
 from py_descriptive_statistics import Enum as Stats
 import pysam
