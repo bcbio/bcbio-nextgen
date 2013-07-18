@@ -50,21 +50,24 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
 
 def can_pipe(fastq_file):
     """bwa-mem handle longer (> 75bp) reads with improved piping.
+    Default to no piping if more than half the first 500 reads are small.
     """
     min_size = 75
+    thresh = 0.5
+    tocheck = 500
+    shorter = 0
     if fastq_file.endswith(".gz"):
         handle = gzip.open(fastq_file, "rb")
     else:
         handle = open(fastq_file)
-    supports_piping = True
     with contextlib.closing(handle) as in_handle:
         fqit = FastqGeneralIterator(in_handle)
-        for i, (_, seq, qual) in enumerate(fqit):
+        for i, (_, seq, _) in enumerate(fqit):
             if len(seq) < min_size:
-                supports_piping = False
-            if i > 100:
+                shorter += 1
+            if i > tocheck:
                 break
-    return supports_piping
+    return (float(shorter) / float(tocheck)) <= thresh
 
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
