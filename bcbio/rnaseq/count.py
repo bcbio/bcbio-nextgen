@@ -30,11 +30,13 @@ def htseq_count(data):
 
     return out_file
 
+
 def _get_files(data):
     in_file = _get_sam_file(data)
     gtf_file = _get_gtf_file(data)
     out_file = _get_out_file(in_file, data)
     return in_file, gtf_file, out_file
+
 
 def _get_out_file(in_file, config):
     work_dir = config["dirs"].get("work", "work")
@@ -43,22 +45,28 @@ def _get_out_file(in_file, config):
     base, _ = os.path.splitext(os.path.basename(in_file))
     return os.path.join(out_dir, base + ".counts")
 
+
 def _choose_htseq_count_executable(data):
-    htseq = get_in(data["config"], ("resources", "htseq-count", "cmd"), "htseq-count")
+    htseq = get_in(data["config"], ("resources", "htseq-count", "cmd"),
+                   "htseq-count")
     return which(htseq)
+
 
 def _htseq_is_installed(config):
     if _choose_htseq_count_executable(config):
         return True
     return False
 
+
 def _get_gtf_file(data):
     ref_file = data["sam_ref"]
     return configured_ref_file("transcripts", data["config"], ref_file)
 
+
 def _gtf_exists(config):
     gtf_file = _get_gtf_file(config)
     return file_exists(gtf_file)
+
 
 def is_countfile(in_file):
     with open(in_file) as in_handle:
