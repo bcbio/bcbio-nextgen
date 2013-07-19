@@ -34,7 +34,7 @@ custom_algorithms:
     aligner: ""
 # Define resources to be used for individual programs on multicore machines.
 # These can be defined specifically for memory and processor availability.
-# Distributed systems 
+# Distributed systems
 # - Specify usage for memory intensive programs
 # - Define cores that can be used for multicore programs.
 resources:
@@ -45,7 +45,7 @@ resources:
   bowtie:
     cores:
   tophat:
-    cores: 
+    cores:
   bwa:
     cores: 4
   novoalign:
@@ -67,6 +67,8 @@ resources:
     dir: /usr/share/java/varscan
   cram:
     dir: /usr/share/java/cram
+  rnaseqc:
+    dir: /usr/share/java/RNA-SeQC
   stampy:
     dir: ~/install/stampy-1.0.18
   cortex:

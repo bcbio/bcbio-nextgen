@@ -30,7 +30,7 @@ import os
 import sys
 import subprocess
 
-from bcbio import workflow
+from bcbio import install, workflow
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
 from bcbio.pipeline.config_utils import load_config
@@ -113,25 +113,11 @@ def _needed_workers(run_info):
             names.append(x.get("name", (x["lane"], x["barcode_id"])))
     return len(set(names))
 
-def _upgrade_bcbio(method):
-    """Perform upgrade of bcbio to latest release, or from GitHub development version.
-    """
-    url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt"
-    git_repo = "git://github.com/chapmanb/bcbio-nextgen.git"
-    pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
-    if method in ["stable", "system"]:
-        sudo_cmd = [] if method == "stable" else ["sudo"]
-        subprocess.check_call(sudo_cmd + [pip_bin, "install", "--upgrade", "distribute"])
-        subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", url])
-    else:
-        subprocess.check_call([pip_bin, "install", "--upgrade",
-                               "git+%s#egg=bcbio-nextgen" % git_repo])
-
 if __name__ == "__main__":
     config_file, kwargs = parse_cl_args(sys.argv[1:])
     kwargs["config_file"] = config_file
-    if kwargs["upgrade"] and config_file is None:
-        _upgrade_bcbio(kwargs["upgrade"])
+    if kwargs["upgrade"]:
+        install.upgrade_bcbio(kwargs["args"])
     else:
         if kwargs["workflow"]:
             setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])
