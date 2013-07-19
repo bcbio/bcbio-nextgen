@@ -2,13 +2,13 @@
 count number of reads mapping to features of transcripts
 
 """
-from bcbio.log import logger
+import os
+
 from bcbio.utils import (which, file_exists, get_in, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
-import subprocess
-import os
 from bcbio.pipeline.shared import configured_ref_file
 from bcbio.pipeline.alignment import sam_to_querysort_sam
+from bcbio.provenance import do
 
 
 def htseq_count(data):
@@ -24,9 +24,8 @@ def htseq_count(data):
                      "--idattr=gene_id {in_file} {gtf_file} > {tmp_out_file}")
 
         cmd = htseq_cmd.format(**locals())
-        logger.info("Running htseq-count on {in_file} with command: "
-                    "{cmd}".format(**locals()))
-        subprocess.check_call(cmd, shell=True)
+        do.run(cmd, "Running htseq-count on %s." % (in_file),
+               data["config"], None)
 
     return out_file
 
