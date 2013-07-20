@@ -32,7 +32,9 @@ def htseq_count(data):
 def _get_files(data):
     in_file = _get_sam_file(data)
     gtf_file = _get_gtf_file(data)
-    out_file = data['info']['rgnames']['sample']
+    work_dir = data["dirs"].get("work", "work")
+    out_dir = os.path.join(work_dir, "htseq-count")
+    out_file = os.path.join(out_dir, data['info']['rgnames']['sample']) + ".counts"
     return in_file, gtf_file, out_file
 
 
