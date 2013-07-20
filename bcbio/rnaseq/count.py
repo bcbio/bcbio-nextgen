@@ -24,8 +24,7 @@ def htseq_count(data):
                      "--idattr=gene_id {in_file} {gtf_file} > {tmp_out_file}")
 
         cmd = htseq_cmd.format(**locals())
-        do.run(cmd, "Running htseq-count on %s." % (in_file),
-               data["config"], None)
+        do.run(cmd, "Running htseq-count on %s." % (in_file), None)
 
     return out_file
 
@@ -33,16 +32,8 @@ def htseq_count(data):
 def _get_files(data):
     in_file = _get_sam_file(data)
     gtf_file = _get_gtf_file(data)
-    out_file = _get_out_file(in_file, data)
+    out_file = data['info']['rgnames']['sample']
     return in_file, gtf_file, out_file
-
-
-def _get_out_file(in_file, config):
-    work_dir = config["dirs"].get("work", "work")
-    out_dir = os.path.join(work_dir, "htseq-count")
-    safe_makedir(out_dir)
-    base, _ = os.path.splitext(os.path.basename(in_file))
-    return os.path.join(out_dir, base + ".counts")
 
 
 def _choose_htseq_count_executable(data):
