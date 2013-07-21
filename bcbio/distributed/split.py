@@ -136,28 +136,49 @@ def _add_combine_extras(args, extras):
     assert added + no_combine_extras >= len(extras), (added, len(extras))
     return out
 
+def _get_extra_args(extra_args, arg_keys):
+    """Retrieve extra arguments to pass along to combine function.
+
+    Special cases like reference files and configuration information
+    are passed as single items, the rest as lists mapping to each data
+    item combined.
+    """
+    # XXX back compatible hack -- should have a way to specify these.
+    single_keys = set(["sam_ref", "config"])
+    out = []
+    for i, arg_key in enumerate(arg_keys):
+        vals = [xs[i] for xs in extra_args]
+        if arg_key in single_keys:
+            out.append(vals[-1])
+        else:
+            out.append(vals)
+    return out
+
 def _organize_output(output, combine_map, file_key, combine_arg_keys):
     """Combine output details for parallelization.
 
     file_key is the key name of the output file used in merging. We extract
     this file from the output data.
+
+    combine_arg_keys are extra items to pass along to the combine function.
     """
     out_map = collections.defaultdict(list)
-    extra_args = {}
+    extra_args = collections.defaultdict(list)
     final_args = {}
     already_added = []
     for data in output:
         cur_file = data[file_key]
         cur_out = combine_map[cur_file]
         out_map[cur_out].append(cur_file)
-        extra_args[cur_out] = [data[x] for x in combine_arg_keys]
+        extra_args[cur_out].append([data[x] for x in combine_arg_keys])
         data[file_key] = cur_out
         if cur_out not in already_added:
             already_added.append(cur_out)
             final_args[cur_out] = data
         elif data.has_key("combine"):
             final_args = _add_combine_parts(final_args, cur_out, data)
-    combine_args = [[v, k] + extra_args[k] for (k, v) in out_map.iteritems()]
+    combine_args = [[v, k] + _get_extra_args(extra_args[k], combine_arg_keys)
+                    for (k, v) in out_map.iteritems()]
     return combine_args, [[final_args[x]] for x in already_added]
 
 def _get_split_tasks(args, split_fn, file_key):

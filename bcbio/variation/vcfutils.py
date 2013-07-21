@@ -1,6 +1,9 @@
 """Utilities for manipulating variant files in standard VCF format.
 """
+import contextlib
 import os
+
+import pysam
 
 from bcbio import broad
 from bcbio.utils import file_exists
@@ -54,10 +57,43 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             broad_runner.run_gatk(params)
     return out_file
 
-def concat_variant_files(orig_files, out_file, ref_file, config):
+def _ref_file_contigs(ref_file, config):
+    """Iterator of sequence contigs from a reference file.
+    """
+    broad_runner = broad.runner_from_config(config)
+    ref_dict = broad_runner.run_fn("picard_index_ref", ref_file)
+    with contextlib.closing(pysam.Samfile(ref_dict, "r")) as ref_sam:
+        for sq in ref_sam.header["SQ"]:
+            yield sq
+
+def _sort_by_region(fnames, regions, ref_file, config):
+    """Sort a set of regionally split files by region for ordered output.
+    """
+    contig_order = {}
+    for i, sq in enumerate(_ref_file_contigs(ref_file, config)):
+        contig_order[sq["SN"]] = i
+    sitems = []
+    for region, fname in zip(regions, fnames):
+        c, s, e = region
+        sitems.append(((contig_order[c], s, e), fname))
+    sitems.sort()
+    return [x[1] for x in sitems]
+
+def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
 
-    Lightweight approach to merging VCF files split by regions.
+    Lightweight approach to merging VCF files split by regions with same
+    sample information so no complex merging needed.
     """
-    # XXX defaults to more general approach until implemented
-    return combine_variant_files(orig_files, out_file, ref_file, config)
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for i, orig_file in enumerate(_sort_by_region(orig_files, regions, ref_file, config)):
+                    with open(orig_file) as in_handle:
+                        for line in in_handle:
+                            if line.startswith("#"):
+                                if i == 0:
+                                    out_handle.write(line)
+                            else:
+                                out_handle.write(line)
+    return out_file
