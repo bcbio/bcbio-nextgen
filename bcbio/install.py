@@ -26,16 +26,20 @@ def upgrade_bcbio(args):
     if args.upgrade in ["skip"]:
         pass
     elif args.upgrade in ["stable", "system"]:
+        print("Upgrading bcbio-nextgen to latest stable version")
         sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
     else:
+        print("Upgrading bcbio-nextgen to latest development version")
         subprocess.check_call([pip_bin, "install", "--upgrade",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
     if args.tooldir:
         with bcbio_tmpdir():
+            print("Upgrading third party tools to latest versions")
             upgrade_thirdparty_tools(args, REMOTES)
     if args.install_data:
         with bcbio_tmpdir():
+            print("Upgrading bcbio-nextgen data files")
             upgrade_bcbio_data(args, REMOTES)
 
 def _default_deploy_args(args):
@@ -57,7 +61,7 @@ def upgrade_bcbio_data(args, remotes):
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
     s["fabricrc_overrides"]["data_files"] = data_dir
-    s["fabricrc_overrides"]["galaxu"] = os.path.join(data_dir, "galaxy")
+    s["fabricrc_overrides"]["galaxy_home"] = os.path.join(data_dir, "galaxy")
     cbl = get_cloudbiolinux(remotes)
     s["genomes"] = _get_biodata(cbl["biodata"], args)
     sys.path.insert(0, cbl["dir"])
@@ -75,7 +79,6 @@ def _get_biodata(base_file, args):
 def upgrade_thirdparty_tools(args, remotes):
     """Install and update third party tools used in the pipeline.
     """
-    base_dir = os.path.dirname(os.path.dirname(sys.executable))
     s = {"fabricrc_overrides": {"system_install": args.tooldir,
                                 "local_install": os.path.join(args.tooldir, "local_install"),
                                 "distribution": args.distribution,
@@ -101,7 +104,7 @@ def add_subparser(subparsers):
                         default="ubuntu",
                         choices=["ubuntu", "debian", "centos", "scientificlinux"])
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["hg19", "GRCh37"])
+                        action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"])
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
