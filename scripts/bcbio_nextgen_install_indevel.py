@@ -24,7 +24,7 @@ remotes = {"requirements":
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
-           "http://repo.continuum.io/pkgs/miniconda/Miniconda-1.6.2-%s-x86_64.sh"}
+           "http://repo.continuum.io/miniconda/Miniconda-1.6.2-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_dependencies()
@@ -36,6 +36,8 @@ def main(args, sys_argv):
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
         print("Installing data and third party dependencies")
+        # Temporary upgrade until next release
+        subprocess.check_call([bcbio["bcbio_nextgen.py"], "-u", "development"])
         subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + sys_argv[1:])
         system_config = write_system_config(remotes["system_config"], args.datadir,
                                             args.tooldir)
@@ -49,6 +51,8 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
     """
     subprocess.check_call([anaconda["pip"], "install", "fabric"])
+    subprocess.check_call([anaconda["pip"], "install",
+                           "https://github.com/ipython/ipython/tarball/master#egg=ipython-1.0.dev"])
     subprocess.check_call([anaconda["pip"], "install", "-r", remotes["requirements"]])
     out = {}
     for script in ["bcbio_nextgen.py"]:
@@ -152,6 +156,10 @@ if __name__ == "__main__":
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=os.path.abspath, default=None)
+    parser.add_argument("--tooldist",
+                        help="Type of tool distribution to install. Defaults to a minimum install.",
+                        default="minimal",
+                        choices=["minimal", "full"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",

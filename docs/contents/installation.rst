@@ -18,6 +18,7 @@ for configuring the installation process. Some useful arguments are:
   privileges.
 - ``--distribution`` Specifies the operating system distribution
   (ubuntu, centos, debian, scientificlinux).
+- ``--nodata`` Do not install genome data.
 
 To bootstrap installation, the machine will need to have some basic
 requirements:
@@ -44,6 +45,34 @@ use ``https://`` globally instead of ``git://``::
 
 If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
+
+Upgrade
+~~~~~~~
+We use the same automated installation process for performing upgrades
+in place. With a recent version of bcbio-nextgen (0.7.0+), update with::
+
+  bcbio_nextgen.py upgrade --tooldir=/usr/local
+
+In addition to the installation options mentioned above, tune the
+upgrade with these options:
+
+- ``-u`` Type of upgrade to do for bcbio-nextgen code. The default is
+  ``stable`` but you can also specify ``development`` to get the
+  latest code from GitHub and ``skip`` to only upgrade tools and data
+  without the library.
+
+- ``--tooldist`` Specify whether you want to install a minimal set of
+  commonly used packages (``minimal``) or full set of all possible
+  used packages (``full``). Installs the minimal by default.
+
+- ``--genomes`` and ``--aligners`` options add additional aligner
+  indexes to download and prepare.
+
+- Leave out the ``--tooldir`` option if you don't want to upgrade
+  tools.
+
+Manual process
+--------------
 
 Python code
 ~~~~~~~~~~~

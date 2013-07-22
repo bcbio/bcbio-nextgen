@@ -43,7 +43,9 @@ def upgrade_bcbio(args):
             upgrade_bcbio_data(args, REMOTES)
 
 def _default_deploy_args(args):
-    return {"flavor": "ngs_pipeline",
+    flavors = {"minimal": "ngs_pipeline_minimal",
+               "full": "ngs_pipeline"}
+    return {"flavor": flavors[args.tooldist],
             "vm_provider": "novm",
             "hostname": "localhost",
             "fabricrc_overrides" : {"edition": "minimal",
@@ -98,6 +100,10 @@ def add_subparser(subparsers):
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=os.path.abspath, default=None)
+    parser.add_argument("--tooldist",
+                        help="Type of tool distribution to install. Defaults to a minimum install.",
+                        default="minimal",
+                        choices=["minimal", "full"])
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
                         choices = ["stable", "development", "system", "skip"], default="stable")
     parser.add_argument("--distribution", help="Operating system distribution",
@@ -121,9 +127,11 @@ def get_cloudbiolinux(remotes):
 
 @contextlib.contextmanager
 def bcbio_tmpdir():
+    orig_dir = os.getcwd()
     work_dir = os.path.join(os.getcwd(), "tmpbcbio-install")
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
     os.chdir(work_dir)
     yield work_dir
+    os.chdir(orig_dir)
     shutil.rmtree(work_dir)
