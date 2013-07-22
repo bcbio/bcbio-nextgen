@@ -8,7 +8,10 @@ import collections
 import os
 import shutil
 
-from bcbio import utils, broad
+from bcbio import broad, utils
+from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 
 def combine_fastq_files(in_files, work_dir, config):
     if len(in_files) == 1:
@@ -58,31 +61,27 @@ def organize_samples(items, dirs, config_file):
     out = [[x] for x in out]
     return out
 
-def merge_bam_files(bam_files, work_dir, config, batch=0, out_file=None):
+def merge_bam_files(bam_files, work_dir, config, out_file=None):
     """Merge multiple BAM files from a sample into a single BAM for processing.
 
-    Avoids too many open file issues by merging large numbers of files in batches.
+    Uses bamtools for merging, which handles large numbers of input BAMs.
     """
-    max_merge = 500
-    bam_files.sort()
-    i = 1
-    while len(bam_files) > max_merge:
-        bam_files = [merge_bam_files(xs, work_dir, config, batch=batch + i)
-                     for xs in utils.partition_all(max_merge, bam_files)]
-        i += 1
-    if batch > 0:
-        out_dir = utils.safe_makedir(os.path.join(work_dir, "batchmerge%s" % batch))
-    else:
-        out_dir = work_dir
-    if out_file is None:
-        out_file = os.path.join(out_dir, os.path.basename(sorted(bam_files)[0]))
-    picard = broad.runner_from_config(config)
     if len(bam_files) == 1:
-        if not os.path.exists(out_file):
-            os.symlink(bam_files[0], out_file)
+        return bam_files[0]
     else:
-        picard.run_fn("picard_merge", bam_files, out_file)
-        for b in bam_files:
-            utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
-    picard.run_fn("picard_index", out_file)
-    return out_file
+        if out_file is None:
+            out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
+        if not utils.file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
+                    with open(bam_file_list, "w") as out_handle:
+                        for f in bam_files:
+                            out_handle.write("%s\n" % f)
+                    cmd = [config_utils.get_program("bamtools", config),
+                           "merge", "-list", bam_file_list, "-out", tx_out_file]
+                    do.run(cmd, "Merge bam files", None)
+            for b in bam_files:
+                utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
+        picard = broad.runner_from_config(config)
+        picard.run_fn("picard_index", out_file)
+        return out_file
