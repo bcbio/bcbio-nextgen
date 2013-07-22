@@ -19,8 +19,8 @@ class BroadRunner:
     def __init__(self, picard_ref, gatk_dir, config):
         resources = config_utils.get_resources("gatk", config)
         self._jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
-        self._picard_ref = picard_ref
-        self._gatk_dir = gatk_dir or picard_ref
+        self._picard_ref = config_utils.expand_path(picard_ref)
+        self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
         self._resources = resources
         self._gatk_version = None
