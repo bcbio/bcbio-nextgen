@@ -1,0 +1,20 @@
+language: python
+
+python:
+    - 2.7
+
+install:
+    - wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+    - python bcbio_nextgen_install.py /usr/local /usr/local/share/bcbio-nextgen
+
+notifications:
+    email: false
+
+before_script:
+    - cd tests
+    #Export some environment variables
+    - export PICARD_HOME=/usr/share/java/picard
+    - export SNPEFF_HOME=/usr/share/java/snpeff
+    - export GATK_HOME=/usr/share/java/gatk
+
+script: nosetests -s -v --with-xunit -a standard
