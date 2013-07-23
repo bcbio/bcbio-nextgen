@@ -4,7 +4,8 @@ python:
     - 2.7
 
 install:
-    - wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+    - pip install -r requirements.txt --use-mirrors
+    - wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.python
     - python bcbio_nextgen_install.py /usr/local /usr/local/share/bcbio-nextgen
 
 notifications:
