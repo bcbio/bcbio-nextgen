@@ -27,15 +27,16 @@ def parallel_runner(parallel, dirs, config, config_file=None):
     def run_parallel(fn_name, items, metadata=None):
         items = [x for x in items if x is not None]
         items = diagnostics.track_parallel(items, fn_name)
+        imodule = parallel.get("module", "bcbio.distributed")
         if parallel["type"].startswith("messaging"):
-            task_module = "{base}.tasks".format(base=parallel["module"])
+            task_module = "{base}.tasks".format(base=imodule)
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
         elif parallel["type"] == "ipython":
             return ipython.runner(parallel, fn_name, items, dirs["work"], config)
         else:
             logger.info("multiprocessing: %s" % fn_name)
-            fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
+            fn = getattr(__import__("{base}.multitasks".format(base=imodule),
                                     fromlist=["multitasks"]),
                          fn_name)
             num_jobs, cores_per_job = ipython.find_cores_per_job([fn], parallel, items, config)

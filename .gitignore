@@ -11,6 +11,7 @@ tests/data/110907*
 tests/data/genomes*
 tests/test_automated_output/
 tests/data/automated/*-sorted.bed
+tests/data/variants/S1_S2-combined*
 tests/unit/data/
 tests/unit/unit_test_data.tar.gz
 .DS_Store
