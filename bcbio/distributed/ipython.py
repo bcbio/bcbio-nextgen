@@ -212,7 +212,7 @@ def runner(parallel, fn_name, items, work_dir, config):
                     if data:
                         out.extend(data)
             else:
-                with _view_from_parallel(parallel) as view:
+                with _view_from_parallel(parallel, work_dir, config) as view:
                     for data in view.map_sync(fn, items, track=False):
                         if data:
                             out.extend(data)

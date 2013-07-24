@@ -16,7 +16,7 @@ details:
       variantcaller: gatk
       quality_format: Standard
       coverage_interval: genome
-      coverage_depth: high
+      coverage_depth: low
       validate: NA12878-illumina-example.vcf
     analysis: variant2
     description: NA12878
