@@ -10,20 +10,6 @@ steps. The goal is to provide a shared community resource that handles
 the data processing component of sequencing analysis, providing
 researchers with more time to focus on the downstream biology.
 
-The advantages of a community developed framework over in house custom
-scripts include:
-
-- `Automated validation`_ of variant calls against common reference
-  materials or sample specific SNP arrays to ensure call correctness.
-  Incorporation of multiple approaches for alignment, preparation and
-  variant calling enable unbiased comparisons of algorithms.
-
-- Focus on `parallel analysis and scaling`_ to handle large population
-  studies and whole genome analysis.
-
-.. _parallel analysis and scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
-.. _Automated validation: http://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
-
 Features
 --------
 
@@ -32,24 +18,30 @@ Features
   that face individual developers. See our `users page`_ for examples
   of bcbio-nextgen deployments.
 
-- Automated installation: `A single installer script`_ prepares all
+- Installation: `A single installer script`_ prepares all
   third party software, data libraries and configuration scripts.
 
-- Distributed: Run on single multicore computers, in
-  compute clusters using `IPython parallel`_, or on the Amazon cloud.
-  See the `parallel documentation`_ for full details on options.
+- `Automated validation`_: Compare variant calls against common reference
+  materials or sample specific SNP arrays to ensure call correctness.
+  Incorporation of multiple approaches for alignment, preparation and
+  variant calling enable unbiased comparisons of algorithms.
+
+- Distributed: Focus on `parallel analysis and scaling`_ to handle
+  large population studies and whole genome analysis. Runs on single
+  multicore computers, in compute clusters using `IPython parallel`_,
+  or on the Amazon cloud. See the `parallel documentation`_ for full
+  details.
 
 - Multiple analysis algorithms: bcbio-nextgen provides configurable
   `variant calling and RNA-seq pipelines`_.
 
-.. _system configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
-.. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
-.. _full documentation at ReadTheDocs: https://bcbio-nextgen.readthedocs.org
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
 .. _parallel documentation: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
 .. _A single installer script: https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#automated
 .. _users page: https://bcbio-nextgen.readthedocs.org/en/latest/contents/introduction.html#users
 .. _variant calling and RNA-seq pipelines: https://bcbio-nextgen.readthedocs.org/en/latest/contents/pipelines.html
+.. _parallel analysis and scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _Automated validation: http://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
 
 Quick start
 -----------
@@ -70,6 +62,9 @@ software and data.
 
          bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -n 8
 
+.. _system configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
+.. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+
 Documentation
 -------------
 
@@ -77,6 +72,7 @@ See the `full documentation at ReadTheDocs`_. We welcome enhancements
 or problem reports using `GitHub`_ and discussion on the
 `biovalidation mailing list`_.
 
+.. _full documentation at ReadTheDocs: https://bcbio-nextgen.readthedocs.org
 .. _GitHub: https://github.com/chapmanb/bcbio-nextgen/issues
 .. _biovalidation mailing list: https://groups.google.com/d/forum/biovalidation
 
