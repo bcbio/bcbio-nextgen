@@ -9,6 +9,9 @@
 # to use for naming the output files.
 fc_date: '110812'
 fc_name: unique_name
+# Directory to upload final results to. It also supports galaxy and S3 upload.
+upload:
+  dir: ../final
 details:
   # For each flowcell, you specify either the lane if the files follow standard
   # naming conventions (1_110729_A81UJUABXX) or the names of the files if they
@@ -17,7 +20,7 @@ details:
   - files: [/path/to/1_1-fastq.txt, /path/to/1_2-fastq.txt]
     description: 'Sample 1'
     genome_build: GRCh37
-    analysis: variant
+    analysis: variant2
     algorithm:
       aligner: novoalign
       variantcaller: gatk
@@ -34,8 +37,3 @@ details:
         barcode_id: 2
         name: 'Another Barcode Sample'
         sequence: CGATGT 
-# Information on uploading back into Galaxy. Need the user name to upload as
-# and the Galaxy Data Library to write to. These are not needed if not
-# interoperating with Galaxy.
-galaxy_user: chapmanb@test.com
-galaxy_library: Upload Folder Name

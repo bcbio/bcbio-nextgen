@@ -1,6 +1,9 @@
 Installation
 ------------
 
+Automated
+=========
+
 We provide an automated script that installs 3rd party analysis tools,
 required genome data, python library dependencies bundled into a
 virtual environment, and produces a ready to use system configuration
@@ -12,18 +15,68 @@ file::
 By default the script downloads genomes, indexes and associated data
 files for human variant and RNA-seq analysis. Run
 ``python bcbio_nextgen_install.py`` with no arguments to see options
-for configuring the installation process. There is a ``--nosudo``
-argument for running in environments where you lack administrator
-privileges. 
+for configuring the installation process. Some useful arguments are:
 
-This script requires that you can do a ``ssh localhost`` to your
+- ``--nosudo`` For running in environments where you lack administrator
+  privileges.
+- ``--distribution`` Specifies the operating system distribution
+  (ubuntu, centos, debian, scientificlinux).
+- ``--nodata`` Do not install genome data.
+
+To bootstrap installation, the machine will need to have some basic
+requirements:
+
+- Python 2.6 or 2.7, with the development libraries
+  installed (the python-dev or python-devel packages).
+- A compiler like gcc.
+- The git version control (http://git-scm.com/).
+- PyYAML: install with ``pip install pyyaml`` or ``easy_install pyyaml``
+
+The script requires that you can do a ``ssh localhost`` to your
 installation machine. If you'd like to do this without any passwords
 you can setup your ssh keys with::
 
     $ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
+(Use `ssh-keygen` if your user doesn't have an ssh key)
+
+Some steps retrieve third party tools from GitHub, which can run into
+issues if you're behind a proxy or block git ports. To instruct git to
+use ``https://`` globally instead of ``git://``::
+
+    $ git config --global url.https://github.com/.insteadOf git://github.com/
+
 If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
+
+Upgrade
+=======
+
+We use the same automated installation process for performing upgrades
+in place. With a recent version of bcbio-nextgen (0.7.0+), update with::
+
+  bcbio_nextgen.py upgrade --tooldir=/usr/local
+
+In addition to the installation options mentioned above, tune the
+upgrade with these options:
+
+- ``-u`` Type of upgrade to do for bcbio-nextgen code. The default is
+  ``stable`` but you can also specify ``development`` to get the
+  latest code from GitHub and ``skip`` to only upgrade tools and data
+  without the library.
+
+- ``--tooldist`` Specify whether you want to install a minimal set of
+  commonly used packages (``minimal``) or full set of all possible
+  used packages (``full``). Installs the minimal by default.
+
+- ``--genomes`` and ``--aligners`` options add additional aligner
+  indexes to download and prepare.
+
+- Leave out the ``--tooldir`` option if you don't want to upgrade
+  tools.
+
+Manual process
+==============
 
 Python code
 ~~~~~~~~~~~
@@ -68,7 +121,6 @@ as needed.
 The code uses a number of Python modules, installed with the code:
 
 -  `biopython`_
--  `numpy`_
 -  `pysam`_
 -  `ipython`_
 -  `sh`_
@@ -95,6 +147,9 @@ The code uses a number of Python modules, installed with the code:
 .. _virtualenv: http://www.virtualenv.org/en/latest/
 .. _ipython: http://ipython.org/
 .. _sh: http://amoffat.github.com/sh/
+
+
+.. _data-requirements:
 
 Data requirements
 ~~~~~~~~~~~~~~~~~

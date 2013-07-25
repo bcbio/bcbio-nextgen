@@ -29,6 +29,22 @@ def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
                 picard.run("CollectRnaSeqMetrics", opts)
     return out_file
 
+def picard_insert_metrics(picard, align_bam, out_file=None):
+    """ Collect insert size metrics for a bam file """
+    base, ext = os.path.splitext(align_bam)
+    if out_file is None:
+        out_file = "%s-insert-metrics.txt" % (base)
+    histogram = "%s-insert-histogram.pdf" % (base)
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", align_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("HISTOGRAM_FILE", histogram),
+                        ("TMP_DIR", tmp_dir)]
+                picard.run("CollectInsertSizeMetrics", opts)
+    return out_file
+
 
 def picard_sort(picard, align_bam, sort_order="coordinate",
                 out_file=None, compression_level=None, pipe=False):
@@ -71,12 +87,46 @@ def picard_merge(picard, in_files, out_file=None,
 
 def picard_index(picard, in_bam):
     index_file = "%s.bai" % in_bam
-    if not file_exists(index_file):
+    alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
+    if not file_exists(index_file) and not file_exists(alt_index_file):
         with file_transaction(index_file) as tx_index_file:
             opts = [("INPUT", in_bam),
                     ("OUTPUT", tx_index_file)]
             picard.run("BuildBamIndex", opts)
-    return index_file
+    return index_file if file_exists(index_file) else alt_index_file
+
+def picard_reorder(picard, in_bam, ref_file, out_file):
+    """Reorder BAM file to match reference file ordering.
+    """
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("REFERENCE", ref_file),
+                        ("ALLOW_INCOMPLETE_DICT_CONCORDANCE", "true"),
+                        ("TMP_DIR", tmp_dir)]
+                picard.run("ReorderSam", opts)
+    return out_file
+
+def picard_fix_rgs(picard, in_bam, names):
+    """Add read group information to BAM files and coordinate sort.
+    """
+    out_file = "%s-fixrgs.bam" % os.path.splitext(in_bam)[0]
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("SORT_ORDER", "coordinate"),
+                        ("RGID", names["rg"]),
+                        ("RGLB", names.get("library", "unknown")),
+                        ("RGPL", names["pl"]),
+                        ("RGPU", names["pu"]),
+                        ("RGSM", names["sample"]),
+                        ("TMP_DIR", tmp_dir)]
+                picard.run("AddOrReplaceReadGroups", opts)
+    return out_file
 
 def picard_index_ref(picard, ref_file):
     """Provide a Picard style dict index file for a reference genome.

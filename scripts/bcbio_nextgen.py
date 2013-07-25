@@ -23,13 +23,14 @@ Usage:
           - ipython: IPython distributed processing
           - messaging: RabbitMQ distributed messaging queue
      -n total number of processes to use
-     -s scheduler for ipython parallelization (lsf, sge)
+     -s scheduler for ipython parallelization (lsf, sge, slurm)
      -q queue to submit jobs for ipython parallelization
 """
 import os
 import sys
 import subprocess
 
+from bcbio import install, workflow
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
 from bcbio.pipeline.config_utils import load_config
@@ -37,7 +38,8 @@ from bcbio.pipeline.main import run_main, parse_cl_args
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
          paralleltype=None, queue=None, scheduler=None, upgrade=None,
-         profile=None):
+         profile=None, workflow=None, inputs=None, resources="",
+         timeout=15, retries=None):
     work_dir = os.getcwd()
     config = load_config(config_file)
     if config.get("log_dir", None) is None:
@@ -46,7 +48,9 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
                                                  numcores, paralleltype)
     parallel = {"type": paralleltype, "cores": numcores,
                 "scheduler": scheduler, "queue": queue,
-                "profile": profile, "module": "bcbio.distributed"}
+                "profile": profile, "module": "bcbio.distributed",
+                "resources": resources, "timeout": timeout,
+                "retries": retries}
     if parallel["type"] in ["local", "messaging-main"]:
         if numcores is None:
             config["algorithm"]["num_cores"] = numcores
@@ -59,7 +63,8 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
             args.append(run_info_yaml)
         messaging.run_and_monitor(config, config_file, args, parallel)
     elif parallel["type"] == "ipython":
-        assert parallel["queue"] is not None, "Ipython parallel requires a specified queue (-q)"
+        assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
+        assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
         run_main(config, config_file, work_dir, parallel,
                  fc_dir, run_info_yaml)
     else:
@@ -88,7 +93,7 @@ def _get_cores_and_type(config, fc_dir, run_info_yaml,
         paralleltype = "local"
 
     if numcores is None:
-        if config["distributed"].get("num_workers", "") == "all":
+        if config.get("distributed", {}).get("num_workers", "") == "all":
             cp = config["distributed"]["cluster_platform"]
             cluster = __import__("bcbio.distributed.{0}".format(cp), fromlist=[cp])
             numcores = cluster.available_nodes(config["distributed"]["platform_args"]) - 1
@@ -108,21 +113,17 @@ def _needed_workers(run_info):
             names.append(x.get("name", (x["lane"], x["barcode_id"])))
     return len(set(names))
 
-def _upgrade_bcbio(method):
-    """Perform upgrade of bcbio to latest release, or from GitHub development version.
-    """
-    url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt"
-    pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
-    if method in ["stable", "system"]:
-        sudo_cmd = [] if method == "stable" else ["sudo"]
-        subprocess.check_call(sudo_cmd + [pip_bin, "install", "--upgrade", "distribute"])
-        subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", url])
-    else:
-        raise NotImplementedError("Development upgrade")
-
 if __name__ == "__main__":
     config_file, kwargs = parse_cl_args(sys.argv[1:])
-    if kwargs["upgrade"] and config_file is None:
-        _upgrade_bcbio(kwargs["upgrade"])
+    kwargs["config_file"] = config_file
+    if kwargs["upgrade"]:
+        install.upgrade_bcbio(kwargs["args"])
     else:
-        main(config_file, **kwargs)
+        if kwargs["workflow"]:
+            setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])
+            if setup_info is None: # no automated run after setup
+                sys.exit(0)
+            workdir, new_kwargs = setup_info
+            os.chdir(workdir)
+            kwargs.update(new_kwargs)
+        main(**kwargs)

@@ -11,30 +11,43 @@ import multiprocessing
 import psutil
 
 from mako.template import Template
+try:
+    import joblib
+except ImportError:
+    joblib = False
 
 from bcbio import utils
 from bcbio.distributed import ipython
+from bcbio.log import logger
+from bcbio.provenance import diagnostics
 
-def parallel_runner(parallel, dirs, config, config_file):
+def parallel_runner(parallel, dirs, config, config_file=None):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):
+        items = [x for x in items if x is not None]
+        items = diagnostics.track_parallel(items, fn_name)
+        imodule = parallel.get("module", "bcbio.distributed")
         if parallel["type"].startswith("messaging"):
-            task_module = "{base}.tasks".format(base=parallel["module"])
+            task_module = "{base}.tasks".format(base=imodule)
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
         elif parallel["type"] == "ipython":
             return ipython.runner(parallel, fn_name, items, dirs["work"], config)
         else:
-            out = []
-            fn = getattr(__import__("{base}.multitasks".format(base=parallel["module"]),
+            logger.info("multiprocessing: %s" % fn_name)
+            fn = getattr(__import__("{base}.multitasks".format(base=imodule),
                                     fromlist=["multitasks"]),
                          fn_name)
-            cores = cores_including_resources(int(parallel["cores"]), metadata, config)
-            with utils.cpmap(cores) as cpmap:
-                for data in cpmap(fn, filter(lambda x: x is not None, items)):
-                    if data:
-                        out.extend(data)
+            num_jobs, cores_per_job = ipython.find_cores_per_job([fn], parallel, items, config)
+            items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
+            num_jobs = cores_including_resources(num_jobs, metadata, config)
+            if joblib is None:
+                raise ImportError("Need joblib for multiprocessing parallelization")
+            out = []
+            for data in joblib.Parallel(num_jobs)(joblib.delayed(fn)(x) for x in items):
+                if data:
+                    out.extend(data)
             return out
     return run_parallel
 

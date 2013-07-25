@@ -3,58 +3,76 @@
 This works as part of the lane/flowcell process step of the pipeline.
 """
 import os
-import re
 from collections import namedtuple
-
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils, broad
 from bcbio.bam import cram
-from bcbio.ngsalign import bowtie, bwa, tophat, bowtie2, mosaik, novoalign
+from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, mosaik,
+                            novoalign, star)
 from bcbio.distributed.transaction import file_transaction
 
 # Define a next-generation sequencing tool to plugin:
 # align_fn -- runs an aligner and generates SAM output
 # galaxy_loc_file -- name of a Galaxy location file to retrieve
 #  the genome index location
+# bam_align_fn -- runs an aligner on a BAM file
 # remap_index_fn -- Function that will take the location provided
 #  from galaxy_loc_file and find the actual location of the index file.
 #  This is useful for indexes that don't have an associated location file
 #  but are stored in the same directory structure.
-NgsTool = namedtuple("NgsTool", ["align_fn", "bam_align_fn", "galaxy_loc_file",
-                                 "remap_index_fn"])
+NgsTool = namedtuple("NgsTool", ["align_fn", "pipe_align_fn", "bam_align_fn",
+                                 "galaxy_loc_file", "remap_index_fn", "can_pipe"])
 
 base_location_file = "sam_fa_indices.loc"
 _tools = {
-    "bowtie": NgsTool(bowtie.align, None, bowtie.galaxy_location_file, None),
-    "bowtie2": NgsTool(bowtie2.align, None, base_location_file, bowtie2.remap_index_fn),
-    "bwa": NgsTool(bwa.align, None, bwa.galaxy_location_file, None),
-    "mosaik": NgsTool(mosaik.align, None, mosaik.galaxy_location_file, None),
-    "novoalign": NgsTool(novoalign.align, novoalign.align_bam, base_location_file, novoalign.remap_index_fn),
-    "tophat": NgsTool(tophat.align, None, base_location_file, bowtie2.remap_index_fn),
-    "samtools": NgsTool(None, None, base_location_file, None),
-    }
+    "bowtie": NgsTool(bowtie.align, None, None, bowtie.galaxy_location_file, None, None),
+    "bowtie2": NgsTool(bowtie2.align, None, None, base_location_file, bowtie2.remap_index_fn,
+                       None),
+    "bwa": NgsTool(bwa.align, bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None,
+                   bwa.can_pipe),
+    "mosaik": NgsTool(mosaik.align, None, None, mosaik.galaxy_location_file, None,
+                      None),
+    "novoalign": NgsTool(novoalign.align, novoalign.align_pipe, novoalign.align_bam,
+                         base_location_file, novoalign.remap_index_fn, novoalign.can_pipe),
+    "tophat": NgsTool(tophat.align, None, None, base_location_file, bowtie2.remap_index_fn,
+                      None),
+    "samtools": NgsTool(None, None, None, base_location_file, None, None),
+    "star": NgsTool(star.align, None, None, base_location_file,
+                    star.remap_index_fn, None)}
 
 metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}
 
-def align_to_sort_bam(fastq1, fastq2, genome_build, aligner,
-                      lane_name, sample_name, dirs, config, dir_ext=""):
+def align_to_sort_bam(fastq1, fastq2, names, genome_build, aligner,
+                      dirs, config, dir_ext=""):
     """Align to the named genome build, returning a sorted BAM file.
     """
-    names = {"rg": lane_name.split("_")[0],
-             "sample": sample_name,
-             "lane": lane_name,
-             "pl": config["algorithm"]["platform"].lower(),
-             "pu": (lane_name.rsplit("_", 1)[0]
-                    if re.search(r"_s\d+$", lane_name) is not None
-                    else lane_name)}
-    align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", sample_name, dir_ext))
+    align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", names["sample"], dir_ext))
     align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
     if fastq1.endswith(".bam"):
-        return _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)
+        out_bam = _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)
+    elif _can_pipe(aligner, fastq1):
+        out_bam = _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names,
+                                         align_dir, config)
     else:
-        return _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
-                                 align_dir, config)
+        out_bam = _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
+                                    align_dir, config)
+    return out_bam, sam_ref
+
+def _can_pipe(aligner, fastq_file):
+    """Check if current aligner support piping for a particular input fastq file.
+    """
+    if _tools[aligner].can_pipe and _tools[aligner].pipe_align_fn:
+        return _tools[aligner].can_pipe(fastq_file)
+    return False
+
+def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, config):
+    """Align longer reads using new piped strategies that avoid disk IO.
+    """
+    align_fn = _tools[aligner].pipe_align_fn
+    if align_fn is None:
+        raise NotImplementedError("Do not yet support piped alignment with %s" % aligner)
+    return align_fn(fastq1, fastq2, align_ref, names, align_dir, config)
 
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config):
     qual_bin_method = config["algorithm"].get("quality_bin")
@@ -63,6 +81,8 @@ def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, confi
         out_dir = utils.safe_makedir(os.path.join(align_dir, "qualbin"))
         fastq1 = cram.illumina_qual_bin(fastq1, sam_ref, out_dir, config)
     align_fn = _tools[aligner].bam_align_fn
+    if align_fn is None:
+        raise NotImplementedError("Do not yet support BAM alignment with %s" % aligner)
     return align_fn(fastq1, align_ref, names, align_dir, config)
 
 def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
@@ -71,7 +91,7 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
     """
     align_fn = _tools[aligner].align_fn
     sam_file = align_fn(fastq1, fastq2, align_ref, names["lane"], align_dir, config,
-                        rg_name=names["rg"])
+                        names=names)
     if fastq2 is None and aligner in ["bwa", "bowtie2"]:
         fastq1 = _remove_read_number(fastq1, sam_file)
     sort_method = config["algorithm"].get("bam_sort", "coordinate")
@@ -113,7 +133,16 @@ def sam_to_querysort_bam(sam_file, config):
     This allows merging of multiple mappers which do not work with MergeBamAlignment.
     """
     runner = broad.runner_from_config(config)
-    out_file = "{}.bam".format(os.path.splitext(sam_file)[0])
+    out_file = "{}-querysorted.bam".format(os.path.splitext(sam_file)[0])
+    return runner.run_fn("picard_sort", sam_file, "queryname", out_file)
+
+def sam_to_querysort_sam(sam_file, config):
+    """Convert SAM file directly to a query sorted SAM without merging of FASTQ reads.
+
+    This allows merging of multiple mappers which do not work with MergeBamAlignment.
+    """
+    runner = broad.runner_from_config(config)
+    out_file = "{}-querysorted.sam".format(os.path.splitext(sam_file)[0])
     return runner.run_fn("picard_sort", sam_file, "queryname", out_file)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,

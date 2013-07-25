@@ -7,7 +7,13 @@ bcbio-nextgen
 =============
 
 A python toolkit providing best-practice pipelines for fully automated
-high throughput sequencing analysis.
+high throughput sequencing analysis. You write a high level
+configuration file specifying your inputs and analysis parameters.
+This input drives a parallel pipeline that handles distributed
+execution, idempotent processing restarts and safe transactional
+steps. The goal is to provide a shared community resource that handles
+the data processing component of sequencing analysis, providing
+researchers with more time to focus on the downstream biology.
 
 Contents:
 
@@ -19,6 +25,8 @@ Contents:
    contents/configuration
    contents/parallel
    contents/internals
+   contents/code
+   contents/deprecated
 
 
 Indices and tables

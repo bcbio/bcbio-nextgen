@@ -4,31 +4,36 @@ Samples may include multiple lanes, or barcoded subsections of lanes,
 processed together.
 """
 import os
+import copy
 import subprocess
 
-
-from bcbio.utils import file_exists, save_diskspace
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline.lane import _update_config_w_custom
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
-from bcbio.pipeline.qcsummary import generate_align_summary
-from bcbio.pipeline.variation import (finalize_genotyper, variation_effects)
 from bcbio.rnaseq.cufflinks import assemble_transcripts
-from bcbio.pipeline.shared import ref_genome_info
+from bcbio.pipeline import config_utils, shared
+from bcbio.rnaseq import count
+
+# ## Merging
 
 def merge_sample(data):
     """Merge fastq and BAM files for multiple samples.
     """
-    logger.info("Combining fastq and BAM files %s" % str(data["name"]))
-    config = _update_config_w_custom(data["config"], data["info"])
-    genome_build, sam_ref = ref_genome_info(data["info"], config, data["dirs"])
+    logger.debug("Combining fastq and BAM files %s" % str(data["name"]))
+    config = config_utils.update_w_custom(data["config"], data["info"])
+    config = config_utils.add_cached_versions(config)
+    genome_build, sam_ref = shared.ref_genome_info(data["info"], config, data["dirs"])
     if config["algorithm"].get("upload_fastq", False):
         fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
                                              config)
     else:
         fastq1, fastq2 = None, None
-    sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"], config)
+
+    out_file = os.path.join(data["dirs"]["work"],
+                            data["info"]["rgnames"]["sample"] + ".bam")
+    sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"],
+                               config, out_file=out_file)
     return [[{"name": data["name"], "metadata": data["info"].get("metadata", {}),
               "info": data["info"],
               "genome_build": genome_build, "sam_ref": sam_ref,
@@ -36,44 +41,49 @@ def merge_sample(data):
               "dirs": data["dirs"], "config": config,
               "config_file": data["config_file"]}]]
 
-# ## General processing
-
-def postprocess_variants(data):
-    """Provide post-processing of variant calls.
+def delayed_bam_merge(data):
+    """Perform a merge on previously prepped files, delayed in processing.
     """
-    if data["config"]["algorithm"]["snpcall"]:
-        logger.info("Finalizing variant calls: %s" % str(data["name"]))
-        data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
-                                              data["sam_ref"], data["config"])
-        logger.info("Calculating variation effects for %s" % str(data["name"]))
-        ann_vrn_file = variation_effects(data["vrn_file"], data["sam_ref"],
-                                         data["genome_build"], data["config"])
-        if ann_vrn_file:
-            data["vrn_file"] = ann_vrn_file
+    if data.get("combine"):
+        assert len(data["combine"].keys()) == 1
+        file_key = data["combine"].keys()[0]
+        in_files = list(set([data[file_key]] + data["combine"][file_key].get("extras", [])))
+        out_file = data["combine"][file_key]["out"]
+        logger.debug("Combining BAM files to %s" % out_file)
+        config = copy.deepcopy(data["config"])
+        config["algorithm"]["save_diskspace"] = False
+        merged_file = merge_bam_files(in_files, os.path.dirname(out_file), config,
+                                      out_file=out_file)
+        if data.has_key("region"):
+            del data["region"]
+        data[file_key] = merged_file
     return [[data]]
 
-def process_sample(data):
+# ## General processing
+
+def parallel_transcript_assemble(data):
     """Finalize processing for a sample, potentially multiplexed.
     """
     if data["config"]["algorithm"].get("transcript_assemble", False):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
                                                data["config"])
-    if data["sam_ref"] is not None:
-        logger.info("Generating summary files: %s" % str(data["name"]))
-        data["summary"] = generate_align_summary(data["work_bam"], data["fastq2"] is not None,
-                                                 data["sam_ref"], data["name"],
-                                                 data["config"], data["dirs"])
+    return [[data]]
+
+def generate_transcript_counts(data):
+    """Generate counts per transcript from an alignment"""
+    data["count_file"] = count.htseq_count(data)
     return [[data]]
 
 def generate_bigwig(data):
     """Provide a BigWig coverage file of the sorted alignments.
     """
-    logger.info("Preparing BigWig file %s" % str(data["name"]))
-    bam_file = data["work_bam"]
-    wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
-    if not file_exists(wig_file):
-        with file_transaction(wig_file) as tx_file:
-            cl = ["bam_to_wiggle.py", bam_file,
-                  data["config_file"], "--outfile=%s" % tx_file]
-            subprocess.check_call(cl)
+    if data["config"]["algorithm"].get("coverage_bigwig", True):
+        logger.info("Preparing BigWig file %s" % str(data["name"]))
+        bam_file = data["work_bam"]
+        wig_file = "%s.bigwig" % os.path.splitext(bam_file)[0]
+        if not file_exists(wig_file):
+            with file_transaction(wig_file) as tx_file:
+                cl = ["bam_to_wiggle.py", bam_file,
+                      data["config_file"], "--outfile=%s" % tx_file]
+                subprocess.check_call(cl)
     return [[data]]

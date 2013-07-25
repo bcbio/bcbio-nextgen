@@ -35,6 +35,7 @@ def group_batches(xs):
         batch_fname = utils.append_stem(cur_fname, "-" + batch)
         batch_data = copy.deepcopy(cur_data)
         batch_data["work_bam"] = [x[0]["work_bam"] for x in xs]
+        batch_data["work_items"] = [x[0] for x in xs]
         batch_data["group"] = batch_fname
         batches.append((batch_data, region, batch_fname))
         remap_batches[batch_fname] = xs
@@ -50,7 +51,7 @@ def split_variants_by_sample(data):
         if is_multisample(vrn_file):
             select_sample_from_vcf(vrn_file, sub_data["name"][-1], sub_vrn_file,
                                    data["sam_ref"], config)
-        else:
+        elif not os.path.exists(sub_vrn_file):
             os.symlink(vrn_file, sub_vrn_file)
         sub_data["vrn_file"] = sub_vrn_file
         out.append(sub_data)

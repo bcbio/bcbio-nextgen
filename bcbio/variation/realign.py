@@ -3,6 +3,7 @@
 import os
 import shutil
 from contextlib import closing
+import subprocess
 
 import pysam
 
@@ -11,11 +12,49 @@ from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    write_nochr_reads, subset_bam_by_region,
                                    subset_variant_regions)
 
-# ## Realignment runners with GATK specific arguments
+# ## gkno Marth lab realignment
+
+def gkno_realigner_cl(ref_file, config):
+    """Prepare commandline for Marth lab realignment tools.
+    Assumes feeding to piped input and output so doesn't not manage
+    readying or writing from disk.
+    """
+    ogap = config_utils.get_program("ogap", config)
+    bamleftalign = config_utils.get_program("bamleftalign", config)
+    cmd = ("{ogap} --repeat-gap-extend 25 --soft-clip-qsum 20 "
+           "  --fasta-reference {ref_file} --entropy-gap-open "
+           "  --mismatch-qsum 20 --soft-clip-limit 0 "
+           "| {bamleftalign} --fasta-reference {ref_file} ")
+    return cmd.format(**locals())
+
+def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
+                   out_file=None, deep_coverage=False):
+    """Perform realignment using commandline tools from the Marth lab.
+
+    Runs bamtools filter -> ogap -> bamleftalign
+
+    http://blog.gkno.me/post/32258606906/call-short-variants
+    """
+    if not out_file:
+        base, ext = os.path.splitext(align_bam)
+        out_file = "%s-realign%s%s" % (base, ("-%s" % region if region else ""), ext)
+    bamtools = config_utils.get_program("bamtools", config)
+    realign_cmd = gkno_realigner_cl(ref_file, config)
+    region = "-region %s" % region if region else ""
+
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            cmd = ("{bamtools} filter -in {align_bam} {region} "
+                   "| {realign_cmd} > {tx_out_file}")
+            subprocess.check_call(cmd.format(**locals()), shell=True)
+    return out_file
+
+# ## GATK realignment
 
 def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
                            region=None, out_file=None, deep_coverage=False,
@@ -30,8 +69,8 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
     # on small chromosomes, so don't rerun in those cases
     if not os.path.exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            logger.info("GATK RealignerTargetCreator: %s %s" %
-                        (os.path.basename(align_bam), region))
+            logger.debug("GATK RealignerTargetCreator: %s %s" %
+                         (os.path.basename(align_bam), region))
             params = ["-T", "RealignerTargetCreator",
                       "-I", align_bam,
                       "-R", ref_file,
@@ -49,6 +88,24 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
             runner.run_gatk(params)
     return out_file
 
+def gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
+                              tmp_dir, region=None, deep_coverage=False):
+    """Prepare input arguments for GATK indel realignment.
+    """
+    params = ["-T", "IndelRealigner",
+              "-I", align_bam,
+              "-R", ref_file,
+              "-targetIntervals", intervals,
+              ]
+    if region:
+        params += ["-L", region]
+    if deep_coverage:
+        params += ["--maxReadsInMemory", "300000",
+                   "--maxReadsForRealignment", str(int(5e5)),
+                   "--maxReadsForConsensuses", "500",
+                   "--maxConsensuses", "100"]
+    return runner.cl_gatk(params, tmp_dir)
+
 def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                            region=None, out_file=None, deep_coverage=False):
     """Perform realignment of BAM file in specified regions
@@ -60,26 +117,10 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
             with file_transaction(out_file) as tx_out_file:
                 logger.info("GATK IndelRealigner: %s %s" %
                             (os.path.basename(align_bam), region))
-                params = ["-T", "IndelRealigner",
-                          "-I", align_bam,
-                          "-R", ref_file,
-                          "-targetIntervals", intervals,
-                          "-o", tx_out_file,
-                          "-l", "INFO",
-                          ]
-                if region:
-                    params += ["-L", region]
-                if deep_coverage:
-                    params += ["--maxReadsInMemory", "300000",
-                               "--maxReadsForRealignment", str(int(5e5)),
-                               "--maxReadsForConsensuses", "500",
-                               "--maxConsensuses", "100"]
-                try:
-                    runner.run_gatk(params, tmp_dir)
-                except:
-                    logger.exception("Running GATK IndelRealigner failed: {} {}".format(
-                        os.path.basename(align_bam), region))
-                    raise
+                cl = gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
+                                                   tmp_dir, region, deep_coverage)
+                cl += ["-o", tx_out_file]
+                subprocess.check_call(cl)
     return out_file
 
 def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
@@ -112,23 +153,38 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     else:
         return align_bam
 
+# ## High level functionality to run realignments in parallel
+
 def has_aligned_reads(align_bam, region=None):
     """Check if the aligned BAM file has any reads in the region.
+
+    region can be a chromosome string ("chr22"),
+    a tuple region (("chr22", 1, 100)) or a file of regions.
     """
     has_items = False
+    if region is not None:
+        if isinstance(region, basestring) and os.path.isfile(region):
+            with open(region) as in_handle:
+                regions = [tuple(line.split()[:3]) for line in in_handle]
+        else:
+            regions = [region]
     with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
         if region is not None:
-            for item in cur_bam.fetch(region):
-                has_items = True
-                break
+            for region in regions:
+                if isinstance(region, basestring):
+                    for item in cur_bam.fetch(region):
+                        has_items = True
+                        break
+                else:
+                    for item in cur_bam.fetch(region[0], int(region[1]), int(region[2])):
+                        has_items = True
+                        break
         else:
             for item in cur_bam:
                 if not item.is_unmapped:
                     has_items = True
                     break
     return has_items
-
-# ## High level functionality to run realignments in parallel
 
 def parallel_realign_sample(sample_info, parallel_fn):
     """Realign samples, running in parallel over individual chromosomes.
@@ -151,22 +207,28 @@ def parallel_realign_sample(sample_info, parallel_fn):
         finished.extend(processed)
     return finished
 
+_realign_approaches = {"gatk": gatk_realigner,
+                       "gkno": gkno_realigner}
+
 def realign_sample(data, region=None, out_file=None):
     """Realign sample BAM file at indels.
     """
-    logger.info("Realigning %s with GATK: %s %s" % (data["name"],
-                                                    os.path.basename(data["work_bam"]),
-                                                    region))
-    if (data["config"]["algorithm"]["snpcall"] and
-        data["config"]["algorithm"].get("realign", True)):
+    realigner = data["config"]["algorithm"].get("realign", True)
+    realigner = "gatk" if realigner is True else realigner
+    realign_fn = _realign_approaches[realigner] if realigner else None
+
+    if data["config"]["algorithm"]["snpcall"] and realign_fn:
+        logger.info("Realigning %s with %s: %s %s" % (data["name"], realigner,
+                                                      os.path.basename(data["work_bam"]),
+                                                      region))
         sam_ref = data["sam_ref"]
         config = data["config"]
         if region == "nochr":
             realign_bam = write_nochr_reads(data["work_bam"], out_file)
         else:
-            realign_bam = gatk_realigner(data["work_bam"], sam_ref, config,
-                                         configured_ref_file("dbsnp", config, sam_ref),
-                                         region, out_file)
+            realign_bam = realign_fn(data["work_bam"], sam_ref, config,
+                                     configured_ref_file("dbsnp", config, sam_ref),
+                                     region, out_file)
         if region is None:
             save_diskspace(data["work_bam"], "Realigned to %s" % realign_bam,
                            config)

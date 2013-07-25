@@ -12,13 +12,18 @@ import subprocess
 import yaml
 
 from bcbio import utils
+from bcbio.bam import callable
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
+
+def _has_ensemble(data):
+    return len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble")
 
 def combine_calls(data):
     """Combine multiple callsets into a final set of merged calls.
     """
-    if len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble"):
+    if _has_ensemble(data):
         logger.info("Ensemble consensus calls for {0}: {1}".format(
             ",".join(x["variantcaller"] for x in data["variants"]), data["work_bam"]))
         sample = data["name"][-1].replace(" ", "_")
@@ -30,26 +35,60 @@ def combine_calls(data):
         _write_config_file(data, sample, base_dir, "compare")
     return [[data]]
 
-def _run_bcbio_variation(config_file, base_dir, sample, data):
+def combine_calls_parallel(samples, run_parallel):
+    """Combine calls using Ensemble approach, skipping cluster creation if nothing to do.
+    """
+    need_combine = False
+    for data in samples:
+        if _has_ensemble(data[0]):
+            need_combine = True
+            break
+    if need_combine:
+        return run_parallel("combine_calls", samples)
+    else:
+        return samples
+
+def bcbio_variation_comparison(config_file, base_dir, data):
+    """Run a variant comparison using the bcbio.variation toolkit, given an input configuration.
+    """
     tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))
+    bv_jar = config_utils.get_jar("bcbio.variation",
+                                  config_utils.get_program("bcbio_variation",
+                                                           data["config"], "dir"))
+    resources = config_utils.get_resources("bcbio_variation", data["config"])
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
+    java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
+    cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-compare", config_file]
+    do.run(cmd, "Comparing variant calls using bcbio.variation", data)
+    subprocess.check_call(cmd)
+
+def _run_bcbio_variation(config_file, base_dir, sample, data):
     out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(sample))
     out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(sample))
     if not utils.file_exists(out_vcf_file):
-        bv_jar = config_utils.get_jar("bcbio.variation",
-                                      config_utils.get_program("bcbio_variation",
-                                                               data["config"], "dir"))
-        java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
-        subprocess.check_call(["java"] + java_args + ["-jar", bv_jar, "variant-compare", config_file])
+        bcbio_variation_comparison(config_file, base_dir, data)
         base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
                                           "*-cfilter.vcf"))[0]
-        base_bed = glob.glob(os.path.join(base_dir, sample, "work", "prep",
-                                          "*-multicombine.bed"))[0]
         os.symlink(base_vcf, out_vcf_file)
-        os.symlink(base_bed, out_bed_file)
+        multi_beds = glob.glob(os.path.join(base_dir, sample, "work", "prep",
+                                            "*-multicombine.bed"))
+        if len(multi_beds) > 0:
+            os.symlink(multi_beds[0], out_bed_file)
 
     return {"variantcaller": "ensemble",
             "vrn_file": out_vcf_file,
-            "bed_file": out_bed_file}
+            "bed_file": out_bed_file if os.path.exists(out_bed_file) else None}
+
+def get_analysis_intervals(data):
+    """Retrieve analysis regions for the current variant calling pipeline.
+    """
+    if data.get("callable_bam"):
+        return callable.sample_callable_bed(data["callable_bam"], data["sam_ref"], data["config"])
+    else:
+        for key in ["callable_regions", "variant_regions"]:
+            intervals = data["config"]["algorithm"].get(key)
+            if intervals:
+                return intervals
 
 def _write_config_file(data, sample, base_dir, config_name):
     """Write YAML configuration to generate an ensemble set of combined calls.
@@ -60,8 +99,9 @@ def _write_config_file(data, sample, base_dir, config_name):
     prep_fns = {"ensemble": _prep_config_ensemble, "compare": _prep_config_compare}
 
     econfig = prep_fns[config_name](sample, data["variants"],
-                                    data["work_bam"], data["sam_ref"], sample_dir,
-                                    data["config"]["algorithm"].get("variant_regions", None),
+                                    data.get("callable_bam", data["work_bam"]),
+                                    data["sam_ref"], sample_dir,
+                                    get_analysis_intervals(data),
                                     data["config"]["algorithm"])
     with open(config_file, "w") as out_handle:
         yaml.dump(econfig, out_handle, allow_unicode=False, default_flow_style=False)

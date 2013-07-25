@@ -1,8 +1,14 @@
+"""Utilities for working with fastq files.
+"""
+
+import difflib
+from itertools import izip
+
+from Bio import SeqIO
+
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import utils
-from Bio import SeqIO
-from itertools import izip
-from bcbio.distributed.transaction import file_transaction
 
 
 @utils.memoize_outfile(stem=".groom")
@@ -72,3 +78,36 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
                     fq2_single_handle.write(fq2_record.format(quality_format))
 
     return [fq1_out, fq2_out]
+
+def combine_pairs(input_files):
+    """ calls files pairs if they are completely the same except
+    for one has _1 and the other has _2 returns a list of tuples
+    of pairs or singles.
+    From bipy.utils (https://github.com/roryk/bipy/blob/master/bipy/utils.py)"""
+    PAIR_FILE_IDENTIFIERS = ["1", "2"]
+
+    pairs = []
+    used = []
+    for in_file in input_files:
+        if in_file in used:
+            continue
+        for comp_file in input_files:
+            if comp_file in used:
+                continue
+            s = difflib.SequenceMatcher(a=in_file, b=comp_file)
+            blocks = s.get_matching_blocks()
+            # length 3 means on match in the middle of the string
+            if len(s.get_matching_blocks()) is not 3:
+                continue
+            if comp_file[blocks[0][2]] in PAIR_FILE_IDENTIFIERS:
+                # e.g. _R1, _R2 or _1, _2
+                if comp_file[blocks[0][2] - 1] in ("R", "_"):
+                    used.append(in_file)
+                    used.append(comp_file)
+                    pairs.append([in_file, comp_file])
+                    break
+        if in_file not in used:
+            pairs.append([in_file])
+            used.append(in_file)
+
+    return pairs

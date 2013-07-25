@@ -9,10 +9,12 @@ import itertools
 import functools
 import ConfigParser
 try:
-    import multiprocessing
-    from multiprocessing.pool import IMapIterator
+    from concurrent import futures
 except ImportError:
-    multiprocessing = None
+    try:
+        import futures
+    except ImportError:
+        futures = None
 import collections
 import yaml
 import fnmatch
@@ -29,22 +31,11 @@ def cpmap(cores=1):
     if int(cores) == 1:
         yield itertools.imap
     else:
-        if multiprocessing is None:
-            raise ImportError("multiprocessing not available")
-        # Fix to allow keyboard interrupts in multiprocessing: https://gist.github.com/626518
-        def wrapper(func):
-            def wrap(self, timeout=None):
-                return func(self, timeout=timeout if timeout is not None else 1e100)
-            return wrap
-        IMapIterator.next = wrapper(IMapIterator.next)
-        # recycle threads on Python 2.7; remain compatible with Python 2.6
-        try:
-            pool = multiprocessing.Pool(int(cores), maxtasksperchild=1)
-        except TypeError:
-            pool = multiprocessing.Pool(int(cores))
-        yield pool.imap_unordered
-        pool.terminate()
-
+        if futures is None:
+            raise ImportError("concurrent.futures not available")
+        pool = futures.ProcessPoolExecutor(cores)
+        yield pool.map
+        pool.shutdown()
 
 def map_wrap(f):
     """Wrap standard function to easily pass into 'map' processing.
@@ -219,6 +210,12 @@ def file_exists(fname):
     """
     return os.path.exists(fname) and os.path.getsize(fname) > 0
 
+def file_uptodate(fname, cmp_fname):
+    """Check if a file exists, is non-empty and is more recent than cmp_fname.
+    """
+    return (file_exists(fname) and file_exists(cmp_fname) and
+            os.path.getmtime(fname) >= os.path.getmtime(cmp_fname))
+
 def create_dirs(config, names=None):
     if names is None:
         names = config["dir"].keys()
@@ -309,7 +306,7 @@ def partition_all(n, iterable):
         if not chunk:
             break
         yield chunk
-
+        
 # ## Dealing with configuration files
 
 def merge_config_files(fnames):
@@ -449,3 +446,21 @@ def replace_directory(out_files, dest_dir):
     else:
         raise ValueError("in_files must either be a sequence of filenames "
                          "or a string")
+
+def which(program):
+    """ returns the path to an executable or None if it can't be found"""
+
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None

@@ -9,50 +9,53 @@ import subprocess
 from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
-from bcbio.variation import annotation, genotype
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
+
+def region_to_freebayes(region):
+    if isinstance(region, (list, tuple)):
+        chrom, start, end = region
+        return "%s:%s..%s" % (chrom, start, end)
+    else:
+        return region
 
 def _freebayes_options_from_config(aconfig, out_file, region=None):
     opts = []
     ploidy = aconfig.get("ploidy", 2)
     opts += ["--ploidy", str(ploidy)]
-    if ploidy == 2:
-        opts += ["--min-alternate-fraction", "0.2"]
 
     variant_regions = aconfig.get("variant_regions", None)
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
-        opts += ["--region" if target == region else "--targets", target]
+        opts += ["--region" if target == region else "--targets",
+                 region_to_freebayes(target)]
     background = aconfig.get("call_background", None)
     if background and os.path.exists(background):
         opts += ["--variant-input", background]
     return opts
 
-def run_freebayes(align_bams, ref_file, config, dbsnp=None, region=None,
+def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
-    """Detect small polymorphisms with FreeBayes.
+    """Detect SNPs and indels with FreeBayes.
     """
-    if len(align_bams) == 1:
-        align_bam = align_bams[0]
-    else:
-        raise NotImplementedError("Need to add multisample calling for freebayes")
+    config = items[0]["config"]
     broad_runner = broad.runner_from_config(config)
-    broad_runner.run_fn("picard_index", align_bam)
     if out_file is None:
-        out_file = "%s-variants.vcf" % os.path.splitext(align_bam)[0]
+        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         logger.info("Genotyping with FreeBayes: {region} {fname}".format(
-            region=region, fname=os.path.basename(align_bam)))
+            region=region, fname=", ".join(os.path.basename(x) for x in align_bams)))
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("freebayes", config),
-                  "-b", align_bam, "-v", tx_out_file, "-f", ref_file,
-                  "--use-mapping-quality", "--min-alternate-count", "2"]
+                  "-v", tx_out_file, "-f", ref_file,
+                  "--use-mapping-quality", "--pvar", "0.7"]
+            for align_bam in align_bams:
+                broad_runner.run_fn("picard_index", align_bam)
+                cl += ["-b", align_bam]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             subprocess.check_call(cl)
-        _remove_freebayes_refalt_dups(out_file)
-        _post_filter_freebayes(out_file, ref_file, broad_runner)
+        _clean_freebayes_output(out_file)
     return out_file
 
 def _move_vcf(orig_file, new_file):
@@ -63,19 +66,10 @@ def _move_vcf(orig_file, new_file):
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
 
-def _post_filter_freebayes(orig_file, ref_file, broad_runner):
-    """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
-    """
-    in_file = apply("{0}-raw{1}".format, os.path.splitext(orig_file))
-    _move_vcf(orig_file, in_file)
-    filters = ["QUAL < 20.0", "DP < 5"]
-    filter_file = genotype.variant_filtration_with_exp(broad_runner,
-                                                       in_file, ref_file, "", filters)
-    _move_vcf(filter_file, orig_file)
-
-def _remove_freebayes_refalt_dups(in_file):
-    """Remove lines from FreeBayes outputs where REF/ALT are identical.
-    2       22816178        .       G       G       0.0339196
+def _clean_freebayes_output(in_file):
+    """Clean FreeBayes output to make post-processing with GATK happy.
+    - Remove lines from FreeBayes outputs where REF/ALT are identical:
+      2       22816178        .       G       G       0.0339196
     """
     out_file = apply("{0}-nodups{1}".format, os.path.splitext(in_file))
     if not file_exists(out_file):
@@ -92,32 +86,3 @@ def _remove_freebayes_refalt_dups(in_file):
         _move_vcf(out_file, in_file)
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(in_file))
-
-def postcall_annotate(in_file, bam_file, ref_file, vrn_files, config):
-    """Perform post-call annotation of FreeBayes calls in preparation for filtering.
-    """
-    #out_file = _check_file_gatk_merge(in_file)
-    out_file = annotation.annotate_nongatk_vcf(in_file, bam_file, vrn_files.dbsnp,
-                                               ref_file, config)
-    return out_file
-
-def _check_file_gatk_merge(vcf_file):
-    """Remove problem lines generated by GATK merging from FreeBayes calls.
-
-    Works around this issue until next GATK release:
-    http://getsatisfaction.com/gsa/topics/
-    variantcontext_creates_empty_allele_from_vcf_input_with_multiple_alleles
-    """
-    def _not_empty_allele(line):
-        parts = line.split("\t")
-        alt = parts[4]
-        return not alt[0] == ","
-    orig_file = "{0}.orig".format(vcf_file)
-    if not file_exists(orig_file):
-        shutil.move(vcf_file, orig_file)
-        with open(orig_file) as in_handle:
-            with open(vcf_file, "w") as out_handle:
-                for line in in_handle:
-                    if line.startswith("#") or _not_empty_allele(line):
-                        out_handle.write(line)
-    return vcf_file

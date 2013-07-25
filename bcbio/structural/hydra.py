@@ -10,12 +10,13 @@ import collections
 import subprocess
 from contextlib import nested, closing
 
-import pysam
-import numpy
 from Bio.Seq import Seq
+import pysam
+from py_descriptive_statistics import Enum as Stats
 
 from bcbio import utils, broad
 from bcbio.pipeline.alignment import align_to_sort_bam
+from bcbio.pipeline import lane
 from bcbio.distributed.transaction import file_transaction
 
 ## Prepare alignments to identify discordant pair mappings
@@ -77,12 +78,12 @@ def calc_paired_insert_stats(in_bam):
             if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize))
     # remove outliers
-    med = numpy.median(dists)
+    med = Stats(dists).median()
     filter_dists = filter(lambda x: x < med + 10 * med, dists)
-    median = numpy.median(filter_dists)
-    return {"mean": numpy.mean(filter_dists), "std": numpy.std(filter_dists),
+    median = Stats(filter_dists).median()
+    return {"mean": Stats(filter_dists).mean(), "std": Stats(filter_dists).standard_deviation(),
             "median": median,
-            "mad": numpy.median([abs(x - median) for x in filter_dists])}
+            "mad": Stats([abs(x - median) for x in filter_dists]).median()}
 
 def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                      genome_build, pair_stats,
@@ -100,9 +101,12 @@ def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
         config["algorithm"]["multiple_mappers"] = multi_mappers
         config["algorithm"]["extra_align_args"] = ["-i", int(pair_stats["mean"]),
                                                int(pair_stats["std"])] + extra_args
-        return align_to_sort_bam(nomap_fq1, nomap_fq2, genome_build, "novoalign",
-                                 base_name, base_name,
-                                 dirs, config, dir_ext=os.path.join("hydra", os.path.split(nomap_fq1)[0]))
+        out_bam, ref_file = align_to_sort_bam(nomap_fq1, nomap_fq2,
+                                              lane.rg_names(base_name, base_name, config),
+                                              genome_build, "novoalign",
+                                              dirs, config,
+                                              dir_ext=os.path.join("hydra", os.path.split(nomap_fq1)[0]))
+        return out_bam
     else:
         return None
 

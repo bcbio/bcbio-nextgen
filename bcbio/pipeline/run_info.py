@@ -3,12 +3,13 @@
 This handles two methods of getting processing information: from a Galaxy
 next gen LIMS system or an on-file YAML configuration.
 """
-import os
-import time
-import copy
-import string
-import datetime
 import collections
+import copy
+import datetime
+import itertools
+import os
+import string
+import time
 
 import yaml
 
@@ -21,7 +22,7 @@ def get_run_info(fc_dir, config, run_info_yaml):
     """
     if run_info_yaml and os.path.exists(run_info_yaml):
         logger.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
-        fc_name, fc_date, run_info = _run_info_from_yaml(fc_dir, run_info_yaml)
+        fc_name, fc_date, run_info = _run_info_from_yaml(fc_dir, run_info_yaml, config)
     else:
         logger.info("Fetching run details from Galaxy instance")
         fc_name, fc_date = get_flowcell_info(fc_dir)
@@ -72,7 +73,76 @@ def _normalize_barcodes(items):
             split_items.append(item)
     return split_items
 
-def _run_info_from_yaml(fc_dir, run_info_yaml):
+def _clean_characters(x):
+    """Clean problem characters in sample lane or descriptions.
+    """
+    for problem in [" "]:
+        x = x.replace(problem, "_")
+    return x
+
+def prep_rg_names(item, config, fc_name, fc_date):
+    """Generate read group names from item inputs.
+    """
+    lane_name = "%s_%s_%s" % (item["lane"], fc_date, fc_name)
+    return {"rg": item["lane"],
+            "sample": item["description"],
+            "lane": lane_name,
+            "pl": item.get("algorithm", {}).get("platform",
+                    config.get("algorithm", {}).get("platform", "illumina")).lower(),
+            "pu": lane_name}
+
+def _check_for_duplicates(xs, attr, check_fn=None):
+    """Identify and raise errors on duplicate items.
+    """
+    dups = []
+    for key, vals in itertools.groupby(x[attr] for x in xs):
+        if len(list(vals)) > 1:
+            dups.append(key)
+    if len(dups) > 0:
+        psamples = []
+        for x in xs:
+            if x[attr] in dups:
+                psamples.append(x)
+        # option to skip problem based on custom input function.
+        if check_fn and check_fn(psamples):
+            return
+        descrs = [x["description"] for x in psamples]
+        raise ValueError("Duplicate '%s' found in input sample configuration.\n"
+                         "Required to be unique for a project: %s\n"
+                         "Problem found in these samples: %s" % (attr, dups, descrs))
+
+def _okay_with_multiplex(xs):
+    for x in xs:
+        if "multiplex" not in x and "barcode" not in x:
+            return False
+    return True
+
+def _check_for_misplaced(xs, subkey, other_keys):
+    """Ensure configuration keys are not incorrectly nested under other keys.
+    """
+    problems = []
+    for x in xs:
+        check_dict = x.get(subkey, {})
+        for to_check in other_keys:
+            if to_check in check_dict:
+                problems.append((x["description"], to_check, subkey))
+    if len(problems) > 0:
+        raise ValueError("\n".join(["Incorrectly nested keys found in sample YAML. These should be top level:",
+                                    " sample         |   key name      |   nested under ",
+                                    "----------------+-----------------+----------------"] +
+                                   ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
+
+def _check_sample_config(items, in_file):
+    """Identify common problems in input sample configuration files.
+    """
+    logger.info("Checking sample YAML configuration: %s" % in_file)
+    _check_for_duplicates(items, "lane", _okay_with_multiplex)
+    _check_for_duplicates(items, "description", _okay_with_multiplex)
+    _check_for_misplaced(items, "algorithm",
+                         ["resources", "metadata", "analysis",
+                          "description", "genome_build", "lane", "files"])
+
+def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.
     """
     with open(run_info_yaml) as in_handle:
@@ -96,46 +166,22 @@ def _run_info_from_yaml(fc_dir, run_info_yaml):
     run_details = []
     for i, item in enumerate(loaded):
         if not item.has_key("lane"):
-            if item.has_key("description"):
-                item["lane"] = item["description"]
-            elif item.has_key("files"):
-                item["lane"] = _generate_lane(item["files"], i)
-            else:
-                raise ValueError("Unable to generate lane info for input %s" % item)
+            item["lane"] = str(i+1)
+        item["lane"] = _clean_characters(str(item["lane"]))
         if not item.has_key("description"):
             item["description"] = str(item["lane"])
+        item["description"] = _clean_characters(str(item["description"]))
         item["description_filenames"] = global_config.get("description_filenames", False)
         upload = global_config.get("upload")
         if upload:
             upload["fc_name"] = fc_name
             upload["fc_date"] = fc_date
         item["upload"] = upload
+        item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
+    _check_sample_config(run_details, run_info_yaml)
     run_info = dict(details=run_details, run_id="")
     return fc_name, fc_date, run_info
-
-def _clean_extra_whitespace(s):
-    while s.endswith(("_", "-", " ", ".")):
-        s = s[:-1]
-    return s
-
-def _generate_lane(fnames, index):
-    """Generate a lane identifier from filenames.
-    """
-    to_remove = ["s_", "sequence"]
-    work_names = []
-    if isinstance(fnames, basestring):
-        fnames = [fnames]
-    for fname in fnames:
-        n = os.path.splitext(os.path.basename(fname))[0]
-        for r in to_remove:
-            n = n.replace(r, "")
-        work_names.append(n)
-    if len(work_names) == 1:
-        return _clean_extra_whitespace(work_names[0])
-    else:
-        prefix = _clean_extra_whitespace(os.path.commonprefix(work_names))
-        return prefix if prefix else str(index+1)
 
 def _unique_flowcell_info():
     """Generate data and unique identifier for non-barcoded flowcell.

@@ -16,13 +16,15 @@ from bcbio.pipeline import config_utils
 # ## snpEff variant effects
 
 # remap Galaxy genome names to the ones used by snpEff. Not nice code.
-SnpEffGenome = collections.namedtuple("SnpEffGenome", ["base", "default_version"])
+SnpEffGenome = collections.namedtuple("SnpEffGenome", ["base", "default_version", "is_human"])
 SNPEFF_GENOME_REMAP = {
-        "GRCh37": SnpEffGenome("GRCh37.", "68"),
-        "hg19" : SnpEffGenome("hg19", ""),
-        "mm9" : SnpEffGenome("NCBIM37.", "68"),
-        "araTha_tair9": SnpEffGenome("athalianaTair9", ""),
-        "araTha_tair10": SnpEffGenome("athalianaTair10", ""),
+        "GRCh37": SnpEffGenome("GRCh37.", "68", True),
+        "b37": SnpEffGenome("GRCh37.", "68", True),
+        "hg19" : SnpEffGenome("hg19", "", True),
+        "mm9" : SnpEffGenome("NCBIM37.", "68", False),
+        "mm10" : SnpEffGenome("GRCm38.", "71", False),
+        "araTha_tair9": SnpEffGenome("athalianaTair9", "", False),
+        "araTha_tair10": SnpEffGenome("athalianaTair10", "", False),
         }
 
 def _find_snpeff_datadir(config_file):
@@ -31,7 +33,7 @@ def _find_snpeff_datadir(config_file):
             if line.startswith("data_dir"):
                 data_dir = config_utils.expand_path(line.split("=")[-1].strip())
                 if not data_dir.startswith("/"):
-                    data_dir = os.path.join(os.path.dirname(config_file, data_dir))
+                    data_dir = os.path.join(os.path.dirname(config_file), data_dir)
                 return data_dir
     raise ValueError("Did not find data directory in snpEff config file: %s" % config_file)
 
@@ -39,7 +41,8 @@ def _installed_snpeff_genome(config_file, base_name):
     """Find the most recent installed genome for snpEff with the given name.
     """
     data_dir = _find_snpeff_datadir(config_file)
-    dbs = sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+    dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+           if os.path.isdir(d)]
     if len(dbs) == 0:
         raise ValueError("No database found in %s for %s" % (data_dir, base_name))
     else:
@@ -87,7 +90,7 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
     out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
     if not file_exists(out_file):
         cl = ["java"]
-        cl += resources.get("jvm_opts", [])
+        cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
         cl += ["-jar", snpeff_jar, "eff", "-c", config_file,
                "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
         if se_interval:

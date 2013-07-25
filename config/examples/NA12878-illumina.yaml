@@ -1,0 +1,25 @@
+# Example configuration for running a whole genome variant calling
+# pipeline on public NA12878 data from Illumina's Platinum Genome project
+# http://www.illumina.com/platinumgenomes/
+#
+# For a quick-start guide to running this analysis, see the example
+# pipeline section of the documentation:
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#example-pipelines
+---
+upload:
+  dir: ../final
+fc_date: '130327'
+fc_name: iplat
+details:
+  - algorithm:
+      aligner: bwa
+      variantcaller: gatk
+      quality_format: Standard
+      coverage_interval: genome
+      coverage_depth: low
+      validate: NA12878-illumina-example.vcf
+    analysis: variant2
+    description: NA12878
+    genome_build: GRCh37
+    lane: 1
+    files: [ERR091571_1.fastq.gz, ERR091571_2.fastq.gz]

@@ -10,7 +10,6 @@ algorithm:
   bc_read: 1
   bc_position: 3
   bc_illumina_no_trailing: true
-  java_memory: 3g
   save_diskspace: true
   upload_fastq: false
 
@@ -35,7 +34,7 @@ custom_algorithms:
     aligner: ""
 # Define resources to be used for individual programs on multicore machines.
 # These can be defined specifically for memory and processor availability.
-# Distributed systems 
+# Distributed systems
 # - Specify usage for memory intensive programs
 # - Define cores that can be used for multicore programs.
 resources:
@@ -46,24 +45,30 @@ resources:
   bowtie:
     cores:
   tophat:
-    cores: 
+    cores:
   bwa:
-    cores: 2
+    cores: 4
   novoalign:
-    cores: 2
+    cores: 4
     memory: 4G
+  gemini:
+    cores: 4
   gatk:
     cores: 2
     dir: /usr/share/java/gatk
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
   picard:
     cores: 1
     dir: /usr/share/java/picard
   snpEff:
     dir: /usr/share/java/snpeff
+    jvm_opts: ["-Xms750m", "-Xmx3g"]
   varscan:
     dir: /usr/share/java/varscan
   cram:
     dir: /usr/share/java/cram
+  rnaseqc:
+    dir: /usr/share/java/RNA-SeQC
   stampy:
     dir: ~/install/stampy-1.0.18
   cortex:

@@ -3,12 +3,11 @@
 http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 """
 import os
-import subprocess
 
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
-from bcbio.ngsalign import bowtie
+from bcbio.provenance import do
 
 def _bowtie2_args_from_config(config):
     """Configurable high level options for bowtie2.
@@ -18,12 +17,12 @@ def _bowtie2_args_from_config(config):
         qual_flags = ["--phred64-quals"]
     else:
         qual_flags = []
-    cores = config.get("resources", {}).get("bowtie", {}).get("cores", None)
-    core_flags = ["-p", str(cores)] if cores else []
+    num_cores = config["algorithm"].get("num_cores", 1)
+    core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     return core_flags + qual_flags
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-          extra_args=None, rg_name=None):
+          extra_args=None, names=None):
     """Alignment with bowtie2.
     """
     out_file = os.path.join(align_dir, "%s.sam" % out_base)
@@ -42,7 +41,8 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                 cl += ["-U", fastq_file]
             cl += ["-S", tx_out_file]
             cl = [str(i) for i in cl]
-            subprocess.check_call(cl)
+            do.run(cl, "Aligning %s and %s with Bowtie2." % (fastq_file, pair_file),
+                   None)
     return out_file
 
 def remap_index_fn(ref_file):

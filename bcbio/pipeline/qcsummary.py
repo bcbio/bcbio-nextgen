@@ -1,33 +1,91 @@
 """Quality control and summary metrics for next-gen alignments and analysis.
 """
-import os
-import csv
+import contextlib
 import copy
+import csv
 import glob
+import os
 import subprocess
 import xml.etree.ElementTree as ET
 
 import yaml
 from mako.template import Template
+import pysam
 
-from bcbio.broad import runner_from_config
-from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser
 from bcbio import utils
+from bcbio.broad import runner_from_config
+from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser, RNASeqPicardMetrics
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 
 # ## High level functions to generate summary PDF
 
-def generate_align_summary(bam_file, is_paired, sam_ref, sample_name,
-                           config, dirs):
+def generate_parallel(samples, run_parallel):
+    """Provide parallel preparation of summary information for alignment and variant calling.
+    """
+    need_summary = False
+    for data in samples:
+        if data[0]["config"]["algorithm"].get("write_summary", True):
+            need_summary = True
+    if need_summary:
+        sum_samples = run_parallel("pipeline_summary", samples)
+        summary_csv = write_project_summary(sum_samples)
+        samples = []
+        for data in sum_samples:
+            if summary_csv:
+                if "summary" not in data[0]:
+                    data[0]["summary"] = {}
+                data[0]["summary"]["project"] = summary_csv
+            samples.append(data)
+    return samples
+
+def pipeline_summary(data):
+    """Provide summary information on processing sample.
+    """
+    work_bam = (data.get("work_bam")
+                if data["config"]["algorithm"].get("merge_bamprep", True)
+                else data.get("callable_bam"))
+    if data["sam_ref"] is not None and work_bam:
+        logger.info("Generating summary files: %s" % str(data["name"]))
+        data["summary"] = generate_align_summary(work_bam, data)
+    return [[data]]
+
+def generate_align_summary(bam_file, data):
+    if data["info"]["analysis"].lower() == "rna-seq":
+        return rnaseq_align_summary(bam_file, data["sam_ref"],
+                                    data["name"], data["config"], data["dirs"])
+    else:
+        return variant_align_summary(bam_file, data["sam_ref"], data["name"],
+                                     data["config"], data["dirs"])
+
+def variant_align_summary(bam_file, sam_ref, sample_name, config, dirs):
     """Run alignment summarizing script to produce a pdf with align details.
     """
-    with utils.chdir(dirs["work"]):
-        with utils.curdir_tmpdir() as tmp_dir:
-            graphs, summary, overrep = \
-                    _graphs_and_summary(bam_file, sam_ref, is_paired,
-                                        tmp_dir, config)
+    qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
+    with utils.curdir_tmpdir() as tmp_dir:
+        graphs, summary, overrep = \
+                _graphs_and_summary(bam_file, sam_ref, qc_dir, tmp_dir, config)
+    with utils.chdir(qc_dir):
         return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
-                                     dirs, config)}
+                                     qc_dir, config),
+                "metrics": summary}
+
+def rnaseq_align_summary(bam_file, sam_ref, sample_name, config, dirs):
+    qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
+    genome_dir = os.path.dirname(os.path.dirname(sam_ref))
+    refflat_file = config_utils.get_transcript_refflat(genome_dir)
+    rrna_file = config_utils.get_rRNA_interval(genome_dir)
+    if not utils.file_exists(rrna_file):
+        rrna_file = "null"
+    with utils.curdir_tmpdir() as tmp_dir:
+        graphs, summary, overrep = \
+                _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
+                                           qc_dir, tmp_dir, config)
+    with utils.chdir(qc_dir):
+        return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
+                                     qc_dir, config),
+                "metrics": summary}
+
 
 def _safe_latex(to_fix):
     """Escape characters that make LaTeX unhappy.
@@ -38,20 +96,17 @@ def _safe_latex(to_fix):
     return to_fix
 
 def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
-                  dirs, config):
+                  qc_dir, config):
     base = os.path.splitext(os.path.basename(bam_file))[0]
     sample_name = base if sample_name is None else " : ".join(sample_name)
     tmpl = Template(_section_template)
     sample_name = "%s (%s)" % (_safe_latex(sample_name),
                                _safe_latex(base))
-    recal_plots = sorted(glob.glob(os.path.join(dirs["work"], "reports", "images",
-                                                "%s*-plot.pdf" % base)))
     section = tmpl.render(name=sample_name, summary=None,
                           summary_table=summary,
                           figures=[(f, c, i) for (f, c, i) in graphs if f],
-                          overrep=overrep,
-                          recal_figures=recal_plots)
-    out_file = os.path.join(dirs["work"], "%s-summary.tex" % base)
+                          overrep=overrep)
+    out_file = os.path.join(qc_dir, "%s-summary.tex" % base)
     out_tmpl = Template(_base_template)
     with open(out_file, "w") as out_handle:
         out_handle.write(out_tmpl.render(parts=[section]))
@@ -62,18 +117,35 @@ def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
         subprocess.check_call(cl)
     return pdf_file
 
-def _graphs_and_summary(bam_file, sam_ref, is_paired, tmp_dir, config):
+def _graphs_and_summary(bam_file, sam_ref, qc_dir, tmp_dir, config):
     """Prepare picard/FastQC graphs and summary details.
     """
-    bait = config["algorithm"].get("hybrid_bait", None)
-    target = config["algorithm"].get("hybrid_target", None)
     broad_runner = runner_from_config(config)
     metrics = PicardMetrics(broad_runner, tmp_dir)
     summary_table, metrics_graphs = \
-                   metrics.report(bam_file, sam_ref, is_paired, bait, target)
+                   metrics.report(bam_file, sam_ref, is_paired(bam_file),
+                                  config["algorithm"].get("hybrid_bait"),
+                                  config["algorithm"].get("hybrid_target"),
+                                  config["algorithm"].get("variant_regions"),
+                                  config)
     metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
     fastqc_graphs, fastqc_stats, fastqc_overrep = \
-                   fastqc_report(bam_file, config)
+                   fastqc_report(bam_file, qc_dir, config)
+    all_graphs = fastqc_graphs + metrics_graphs
+    summary_table = _update_summary_table(summary_table, sam_ref, fastqc_stats)
+    return all_graphs, summary_table, fastqc_overrep
+
+def _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
+                               qc_dir, tmp_dir, config):
+    """Prepare picard/FastQC graphs and summary details.
+    """
+    broad_runner = runner_from_config(config)
+    metrics = RNASeqPicardMetrics(broad_runner, tmp_dir)
+    summary_table, metrics_graphs = metrics.report(bam_file, sam_ref, refflat_file,
+                                                   is_paired(bam_file), rrna_file)
+    metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
+    fastqc_graphs, fastqc_stats, fastqc_overrep = \
+                   fastqc_report(bam_file, qc_dir, config)
     all_graphs = fastqc_graphs + metrics_graphs
     summary_table = _update_summary_table(summary_table, sam_ref, fastqc_stats)
     return all_graphs, summary_table, fastqc_overrep
@@ -123,16 +195,15 @@ def write_project_summary(samples):
             writer = csv.writer(out_handle)
             for row in rows:
                 writer.writerow(row)
+        return out_file
 
 def _get_sample_summaries(samples):
     """Retrieve high level summary information for each sample.
     """
     out = []
-    with utils.curdir_tmpdir() as tmp_dir:
-        for sample in (x[0] for x in samples):
-            is_paired = sample.get("fastq2", None) not in ["", None]
-            _, summary, _ = _graphs_and_summary(sample["work_bam"], sample["sam_ref"],
-                                            is_paired, tmp_dir, sample["config"])
+    for sample in (x[0] for x in samples):
+        summary = sample.get("summary", {}).get("metrics")
+        if summary:
             sample_info = {}
             for xs in summary:
                 n = xs[0]
@@ -142,12 +213,19 @@ def _get_sample_summaries(samples):
             out.append((sample_name, sample_info))
     return out
 
+def is_paired(bam_file):
+    """Determine if a BAM file has paired reads.
+    """
+    with contextlib.closing(pysam.Samfile(bam_file, "rb")) as in_pysam:
+        for read in in_pysam:
+            return read.is_paired
+
 # ## Run and parse read information from FastQC
 
-def fastqc_report(bam_file, config):
+def fastqc_report(bam_file, qc_dir, config):
     """Calculate statistics about a read using FastQC.
     """
-    out_dir = _run_fastqc(bam_file, config)
+    out_dir = _run_fastqc(bam_file, qc_dir, config)
     parser = FastQCParser(out_dir)
     graphs = parser.get_fastqc_graphs()
     stats, overrep = parser.get_fastqc_summary()
@@ -209,10 +287,8 @@ class FastQCParser:
                         out.append(line.rstrip("\r\n"))
         return out
 
-
-def _run_fastqc(bam_file, config):
-    out_base = "fastqc"
-    utils.safe_makedir(out_base)
+def _run_fastqc(bam_file, qc_dir, config):
+    out_base = utils.safe_makedir(os.path.join(qc_dir, "fastqc"))
     fastqc_out = os.path.join(out_base, "%s_fastqc" %
                               os.path.splitext(os.path.basename(bam_file))[0])
     if not os.path.exists(fastqc_out):
@@ -222,7 +298,6 @@ def _run_fastqc(bam_file, config):
     if os.path.exists("%s.zip" % fastqc_out):
         os.remove("%s.zip" % fastqc_out)
     return fastqc_out
-
 
 # ## High level summary in YAML format for loading into Galaxy.
 
@@ -395,16 +470,6 @@ _section_template = r"""
     \end{table}
 % endif
 
-\FloatBarrier
-% if len(recal_figures) > 0:
-    \subsubsection*{Quality score recalibration}
-    % for figure in recal_figures:
-        \begin{figure}[htbp]
-          \centering
-          \includegraphics[width=0.48\linewidth]{${figure}}
-        \end{figure}
-    % endfor
-% endif
 \FloatBarrier
 """
 

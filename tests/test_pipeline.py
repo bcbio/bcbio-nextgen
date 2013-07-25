@@ -1,24 +1,20 @@
 """Test individual components of the analysis pipeline.
 """
 import os
+import shutil
 import unittest
 
 from nose.plugins.attrib import attr
 
-from bcbio.pipeline.run_info import _generate_lane, get_run_info
+from bcbio.distributed.messaging import parallel_runner
+from bcbio.pipeline.config_utils import load_config
+from bcbio.pipeline.run_info import get_run_info
+from bcbio.provenance import programs
+from bcbio.variation import vcfutils
 
 class RunInfoTest(unittest.TestCase):
     def setUp(self):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data")
-
-    @attr(speed="std")
-    def test_lanename(self):
-        """Generate lane names from supplied filenames.
-        """
-        assert _generate_lane(["s_1_sequence.txt"], 2) == "1"
-        assert _generate_lane(["aname-sequence.fastq"], 2) == "aname"
-        assert _generate_lane(["s_1_1-sequence.txt", "s_1_2-sequence.txt"], 2) == "1"
-        assert _generate_lane(["one.txt", "two.txt"], 2) == "3"
 
     @attr(speed=1)
     def test_run_info_combine(self):
@@ -34,3 +30,35 @@ class RunInfoTest(unittest.TestCase):
         assert x3["genome_build"] == "mm9"
         x1 = run_info["details"][1][0]
         assert x1["barcode_id"] is None
+
+    @attr(speed=1)
+    def test_programs(self):
+        """Identify programs and versions used in analysis.
+        """
+        config = load_config(os.path.join(self.data_dir, "automated",
+                                          "post_process-sample.yaml"))
+        print programs.get_versions(config)
+
+class VCFUtilTest(unittest.TestCase):
+    """Test various utilities for dealing with VCF files.
+    """
+    def setUp(self):
+        self.data_dir = os.path.join(os.path.dirname(__file__), "data")
+
+    @attr(speed=1)
+    def test_parallel_vcf_combine(self):
+        """Parallel combination of VCF files, split by chromosome.
+        """
+        var_dir = os.path.join(self.data_dir, "variants")
+        files = [os.path.join(var_dir, "S1-variants.vcf"), os.path.join(var_dir, "S2-variants.vcf")]
+        out_file = os.path.join(var_dir, "S1_S2-combined.vcf")
+        ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
+        config = load_config(os.path.join(self.data_dir, "automated",
+                                          "post_process-sample.yaml"))
+        run_parallel = parallel_runner({"type": "local", "cores": 1}, {}, config)
+        region_dir = os.path.join(var_dir, "S1_S2-combined-regions")
+        if os.path.exists(region_dir):
+            shutil.rmtree(region_dir)
+        if os.path.exists(out_file):
+            os.remove(out_file)
+        vcfutils.parallel_combine_variants(files, out_file, ref_file, config, run_parallel)

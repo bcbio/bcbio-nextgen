@@ -3,6 +3,7 @@
 import os
 import collections
 from contextlib import closing
+import subprocess
 
 import pysam
 
@@ -39,7 +40,7 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ex
         out_dir = os.path.dirname(bam_file)
         if dir_ext_fn:
             out_dir = os.path.join(out_dir, dir_ext_fn(data))
-            
+
         out_file = os.path.join(out_dir, "{base}{ext}".format(
                 base=os.path.splitext(os.path.basename(bam_file))[0],
                 ext=output_ext))
@@ -72,7 +73,16 @@ def write_nochr_reads(in_file, out_file):
                             out_bam.write(read)
     return out_file
 
-def subset_bam_by_region(in_file, region, out_file_base = None):
+def write_noanalysis_reads(in_file, region_file, out_file):
+    """Write a BAM file of reads in the specified region file that
+    """
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            cl = "samtools view -b -L {region_file} {in_file} > {tx_out_file}"
+            subprocess.check_call(cl.format(**locals()), shell=True)
+    return out_file
+
+def subset_bam_by_region(in_file, region, out_file_base=None):
     """Subset BAM files based on specified chromosome region.
     """
     if out_file_base is not None:
@@ -93,26 +103,49 @@ def subset_bam_by_region(in_file, region, out_file_base = None):
                             out_bam.write(read)
     return out_file
 
+def _line_in_region(line, chrom, start, end):
+    """Check if the region defined by the BED line falls into chrom, start, end
+    """
+    if start is not None:
+        start = int(start)
+        end = int(end)
+    if line.startswith(chrom):
+        parts = line.split()
+        if parts[0] == chrom:
+            cur_start = int(parts[1])
+            cur_end = int(parts[2])
+            if (start is None or
+                    (cur_start >= start and cur_start <= end) or
+                    (cur_end >= start and cur_end <= end)):
+                return cur_start
+    return None
+
 def subset_variant_regions(variant_regions, region, out_file):
     """Return BED file subset by a specified chromosome region.
 
-    variant_regions is a BED file, region is a chromosome name.
+    variant_regions is a BED file, region is a chromosome name or tuple
+    of (name, start, end) for a genomic region.
     """
     if region is None:
         return variant_regions
     elif variant_regions is None:
         return region
-    elif region.find(":") > 0:
+    elif not isinstance(region, (list, tuple)) and region.find(":") > 0:
         raise ValueError("Partial chromosome regions not supported")
     else:
+        if isinstance(region, (list, tuple)):
+            chrom, rstart, rend = region
+        else:
+            chrom = region
+            rstart, rend = None, None
         # create an ordered subset file for processing
         subset_file = "{0}-regions.bed".format(os.path.splitext(out_file)[0])
         items = []
         with open(variant_regions) as in_handle:
             for line in in_handle:
-                if line.startswith(region) and line.split("\t")[0] == region:
-                    start = int(line.split("\t")[1])
-                    items.append((start, line))
+                cur_start = _line_in_region(line, chrom, rstart, rend)
+                if cur_start is not None:
+                    items.append((cur_start, line))
         if len(items) > 0:
             if not os.path.exists(subset_file):
                 with open(subset_file, "w") as out_handle:

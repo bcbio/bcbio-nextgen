@@ -2,16 +2,28 @@
 """
 import os
 import json
-import subprocess
 
-from bcbio.variation.genotype import variant_filtration, gatk_evaluate_variants
-from bcbio.variation.effects import snpeff_effects
-from bcbio.variation.annotation import annotate_effects
-from bcbio.variation import freebayes, phasing
-from bcbio.pipeline.shared import (configured_vrn_files, configured_ref_file)
+from bcbio.log import logger
+from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
+from bcbio.variation.genotype import variant_filtration
+from bcbio.variation import annotation, effects
 
 # ## Genotyping
+
+def postprocess_variants(data):
+    """Provide post-processing of variant calls.
+    """
+    logger.info("Finalizing variant calls: %s" % str(data["name"]))
+    if data["work_bam"] and data.get("vrn_file"):
+        data["vrn_file"] = finalize_genotyper(data["vrn_file"], data["work_bam"],
+                                              data["sam_ref"], data["config"])
+        logger.info("Calculating variation effects for %s" % str(data["name"]))
+        ann_vrn_file = effects.snpeff_effects(data["vrn_file"], data["genome_build"],
+                                              data["config"])
+        if ann_vrn_file:
+            data["vrn_file"] = ann_vrn_file
+    return [[data]]
 
 def finalize_genotyper(call_file, bam_file, ref_file, config):
     """Perform SNP genotyping and analysis.
@@ -19,32 +31,10 @@ def finalize_genotyper(call_file, bam_file, ref_file, config):
     vrn_files = configured_vrn_files(config, ref_file)
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     if variantcaller in ["freebayes", "cortex", "samtools", "gatk-haplotype", "varscan"]:
-        call_file = freebayes.postcall_annotate(call_file, bam_file, ref_file, vrn_files, config)
+        call_file = annotation.annotate_nongatk_vcf(call_file, bam_file, vrn_files.dbsnp,
+                                                    ref_file, config)
     filter_snp = variant_filtration(call_file, ref_file, vrn_files, config)
-    phase_snp = phasing.read_backed_phasing(filter_snp, bam_file, ref_file, config)
-    _eval_genotyper(phase_snp, ref_file, vrn_files.dbsnp, config)
-    return phase_snp
-
-def _eval_genotyper(vrn_file, ref_file, dbsnp_file, config):
-    """Evaluate variant genotyping, producing a JSON metrics file with values.
-    """
-    metrics_file = "%s.eval_metrics" % vrn_file
-    target = config["algorithm"].get("hybrid_target", None)
-    if not os.path.exists(metrics_file):
-        stats = gatk_evaluate_variants(vrn_file, ref_file, config, dbsnp_file, target)
-        with open(metrics_file, "w") as out_handle:
-            json.dump(stats, out_handle)
-    return metrics_file
-
-# ## Calculate variation effects
-
-def variation_effects(vrn_file, genome_file, genome_build, config):
-    """Calculate effects of variations, associating them with transcripts.
-
-    Runs snpEff, returning the resulting effects file. No longer runs the GATK
-    annotator, since it requires an old version of snpEff.
-    """
-    return snpeff_effects(vrn_file, genome_build, config)
+    return filter_snp
 
 # ## Structural variation
 

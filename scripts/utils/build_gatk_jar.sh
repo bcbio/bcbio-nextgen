@@ -7,7 +7,7 @@ cd gatk
 ant
 cd dist
 mkdir -p nodeps
-for x in GenomeAnalysisTK.jar Aligner.jar Queue.jar StingUtils.jar vcf.jar picard-private-parts*jar 
+for x in GenomeAnalysisTK.jar Aligner.jar Queue.jar StingUtils.jar picard-private-parts*jar
 do
     cp $x nodeps
 done

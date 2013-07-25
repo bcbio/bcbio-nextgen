@@ -4,8 +4,8 @@ import time
 
 from celery.task import task
 
-from bcbio.pipeline import sample, lane, toplevel, storage, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
+from bcbio.pipeline import sample, lane, qcsummary, toplevel, storage, shared, variation, validate
+from bcbio.variation import realign, genotype, ensemble, population, multi, recalibrate, vcfutils
 
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
@@ -43,6 +43,10 @@ def process_alignment(*args):
 def merge_sample(*args):
     return sample.merge_sample(*args)
 
+@tasks
+def delayed_bam_merge(*args):
+    return sample.delayed_bam_merge(*args)
+
 @task
 def prep_recal(*args):
     return recalibrate.prep_recal(*args)
@@ -56,8 +60,12 @@ def realign_sample(*args):
     return realign.realign_sample(*args)
 
 @task
-def process_sample(*args):
-    return sample.process_sample(*args)
+def pipeline_summary(*args):
+    return qcsummary.pipeline_summary(*args)
+
+@task
+def generate_transcript_counts(*args):
+    return sample.generate_transcript_counts(*args)
 
 @task
 def split_variants_by_sample(*args):
@@ -65,7 +73,7 @@ def split_variants_by_sample(*args):
 
 @task
 def postprocess_variants(*args):
-    return sample.postprocess_variants(*args)
+    return variation.postprocess_variants(*args)
 
 @task
 def generate_bigwig(*args):
@@ -81,7 +89,11 @@ def variantcall_sample(*args):
 
 @task
 def combine_variant_files(*args):
-    return genotype.combine_variant_files(*args)
+    return vcfutils.combine_variant_files(*args)
+
+@task
+def concat_variant_files(*args):
+    return vcfutils.concat_variant_files(*args)
 
 @task
 def detect_sv(*args):
@@ -90,6 +102,14 @@ def detect_sv(*args):
 @task
 def combine_calls(*args):
     return ensemble.combine_calls(*args)
+
+@task
+def prep_gemini_db(*args):
+    return population.prep_gemini_db(*args)
+
+@task
+def compare_to_rm(*args):
+    return validate.compare_to_rm(*args)
 
 @task
 def test(x):

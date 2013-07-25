@@ -1,22 +1,64 @@
-# upload:
+upload:
+  dir: upload
 #   method: galaxy
-#   dir: upload
 #   galaxy_url: http://localhost:8080
 #   galaxy_api_key: 57c5786d6a6665e5afc045d73ef3ee94
 #   galaxy_library: test
 details:
+  - description: VarOnly
+    analysis: variant2
+    vrn_file: [../data/reference_material/7_100326_FC6107FAAXX-grade.vcf]
+    genome_build: hg19
+    algorithm:
+      variant_regions: ../data/automated/variant_regions-bam.bed
+      validate_genome_build: hg19
+      validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
   - algorithm:
       #aligner: false
+      #mark_duplicates: false
       #recalibrate: false
       #realign: false
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
-      aligner: novoalign
-      variantcaller: gatk
+      #aligner: novoalign
+      aligner: bwa
+      #mark_duplicates: samtools
+      #realign: gkno
+      realign: gatk
+      recalibrate: gatk
+      variantcaller: freebayes
+      #realign: gatk
+      #variantcaller: gatk
       quality_format: Standard
       coverage_interval: regional
-    analysis: variant
+      nomap_split_size: 50
+      nomap_split_targets: 20
+      variant_regions: ../data/automated/variant_regions-bam.bed
+      validate: ../reference_material/7_100326_FC6107FAAXX-grade.vcf
+    resources:
+      novoalign:
+        options: [-o, FullNW]
+      #gatk:
+      #  dir: /usr/share/java/gatk-1.6-13-g91f02df
+    metadata:
+      batch: TestBatch1
+    analysis: variant2
     description: Test1
     genome_build: hg19
     lane: 7
-    files: [7_100326_FC6107FAAXX.bam]
+    files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
+    #files: [7_100326_FC6107FAAXX.bam]
+  # - algorithm:
+  #     aligner: novoalign
+  #     variantcaller: [gatk, freebayes]
+  #     quality_format: Standard
+  #     coverage_interval: regional
+  #     variant_regions: ../data/automated/variant_regions-bam.bed
+  #     nomap_split_size: 500
+  #   metadata:
+  #     batch: TestBatch1
+  #   analysis: variant2
+  #   description: Test2
+  #   genome_build: hg19
+  #   lane: 8
+  #   files: [7_100326_FC6107FAAXX.bam]

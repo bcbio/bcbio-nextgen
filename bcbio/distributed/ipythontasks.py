@@ -4,25 +4,31 @@ import contextlib
 
 from IPython.parallel import require
 
-from bcbio.pipeline import sample, lane, shared, variation
-from bcbio.variation import realign, genotype, ensemble, recalibrate, multi
-from bcbio.log import setup_logging, logger
+from bcbio.distributed import ipython
+from bcbio.pipeline import sample, lane, qcsummary, shared, variation
+from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+                             recalibrate, validate, vcfutils)
+from bcbio.log import logger, setup_local_logging
 
 @contextlib.contextmanager
 def _setup_logging(args):
-    if len(args) > 0:
-        for check_i in [0, -1]:
-            config = args[0][check_i]
-            if isinstance(config, dict) and config.has_key("config"):
-                config = config["config"]
-                break
-            elif isinstance(config, dict) and config.has_key("algorithm"):
-                break
-            else:
-                config = None
-        setup_logging(config)
+    config = None
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        args = args[0]
+    for arg in args:
+        if ipython.is_nested_config_arg(arg):
+            config = arg["config"]
+            break
+        elif ipython.is_std_config_arg(arg):
+            config = arg
+            break
+    if config is None:
+        raise NotImplementedError("No config in %s:" % args[0])
+    handler = setup_local_logging(config, config.get("parallel", {}))
     try:
         yield None
+        if hasattr(handler, "close"):
+            handler.close()
     except:
         logger.exception("Unexpected error")
         raise
@@ -41,12 +47,23 @@ def trim_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
-process_alignment.metadata = {"resources": ["novoalign"]}
+process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
+
+@require(lane)
+def align_prep_full(*args):
+    with _setup_logging(args):
+        return apply(lane.align_prep_full, *args)
+align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
 
 @require(sample)
 def merge_sample(*args):
     with _setup_logging(args):
         return apply(sample.merge_sample, *args)
+
+@require(sample)
+def delayed_bam_merge(*args):
+    with _setup_logging(args):
+        return apply(sample.delayed_bam_merge, *args)
 
 @require(sample)
 def recalibrate_sample(*args):
@@ -74,15 +91,25 @@ def split_variants_by_sample(*args):
     with _setup_logging(args):
         return apply(multi.split_variants_by_sample, *args)
 
-@require(sample)
+@require(bamprep)
+def piped_bamprep(*args):
+    with _setup_logging(args):
+        return apply(bamprep.piped_bamprep, *args)
+
+@require(variation)
 def postprocess_variants(*args):
     with _setup_logging(args):
-        return apply(sample.postprocess_variants, *args)
+        return apply(variation.postprocess_variants, *args)
+
+@require(qcsummary)
+def pipeline_summary(*args):
+    with _setup_logging(args):
+        return apply(qcsummary.pipeline_summary, *args)
 
 @require(sample)
-def process_sample(*args):
+def generate_transcript_counts(*args):
     with _setup_logging(args):
-        return apply(sample.process_sample, *args)
+        return apply(sample.generate_transcript_counts, *args)
 
 @require(sample)
 def generate_bigwig(*args):
@@ -99,10 +126,21 @@ def variantcall_sample(*args):
     with _setup_logging(args):
         return apply(genotype.variantcall_sample, *args)
 
-@require(genotype)
+@require(vcfutils)
 def combine_variant_files(*args):
     with _setup_logging(args):
-        return apply(genotype.combine_variant_files, *args)
+        return apply(vcfutils.combine_variant_files, *args)
+
+@require(vcfutils)
+def concat_variant_files(*args):
+    with _setup_logging(args):
+        return apply(vcfutils.concat_variant_files, *args)
+
+@require(population)
+def prep_gemini_db(*args):
+    with _setup_logging(args):
+        return apply(population.prep_gemini_db, *args)
+prep_gemini_db.metadata = {"resources": ["gemini"]}
 
 @require(variation)
 def detect_sv(*args):
@@ -113,3 +151,8 @@ def detect_sv(*args):
 def combine_calls(*args):
     with _setup_logging(args):
         return apply(ensemble.combine_calls, *args)
+
+@require(validate)
+def compare_to_rm(*args):
+    with _setup_logging(args):
+        return apply(validate.compare_to_rm, *args)

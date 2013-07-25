@@ -17,15 +17,35 @@ from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (configured_ref_file, process_bam_by_chromosome,
                                    subset_bam_by_region, write_nochr_reads,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
 
+# ## BAMutil recalibration
+
+def bamutil_dedup_recal_cl(in_file, out_file, data, do_recal):
+    """Prepare commandline for running deduplication and recalibration with bamutil.
+    http://genome.sph.umich.edu/wiki/BamUtil:_dedup
+    """
+    raise NotImplementedError("Not functional for piped BAM analysis")
+    config = data["config"]
+    bam_cmd = config_utils.get_program("bam", config)
+    ref_file = data["sam_ref"]
+    dbsnp_file = configured_ref_file("dbsnp", config, ref_file)
+
+    cmd = "{bam_cmd} dedup --in {in_file} --out {out_file} --oneChrom"
+    if do_recal:
+        cmd += " --recab --refFile {ref_file} --dbsnp {dbsnp_file}"
+    return cmd.format(**locals())
+
+# ## GATK recalibration
+
 def prep_recal(data):
     """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
     """
-    if data["config"]["algorithm"].get("recalibrate", True):
+    if data["config"]["algorithm"].get("recalibrate", True) in [True, "gatk"]:
         logger.info("Recalibrating %s with GATK" % str(data["name"]))
         ref_file = data["sam_ref"]
         config = data["config"]
@@ -34,8 +54,7 @@ def prep_recal(data):
         platform = config["algorithm"]["platform"]
         broad_runner.run_fn("picard_index_ref", ref_file)
         if config["algorithm"].get("mark_duplicates", True):
-            (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"],
-                                                     remove_dups=True)
+            (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])
         else:
             dup_align_bam = data["work_bam"]
         broad_runner.run_fn("picard_index", dup_align_bam)
@@ -69,16 +88,16 @@ def _get_downsample_pct(runner, in_bam):
 def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
         dbsnp_file, intervals):
     """Step 1 of GATK recalibration process, producing table of covariates.
+
+    TODO: Use new GATK 2.6+ AnalyzeCovariates tool to plot recalibration results.
     """
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
-    plot_file = "%s-plots.pdf" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
-        if has_aligned_reads(dup_align_bam):
+        if has_aligned_reads(dup_align_bam, intervals):
             with curdir_tmpdir() as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
                     params = ["-T", "BaseRecalibrator",
                               "-o", tx_out_file,
-                              "--plot_pdf_file", plot_file,
                               "-I", dup_align_bam,
                               "-R", ref_file,
                               ]
@@ -88,7 +107,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                                    "--downsampling_type", "ALL_READS"]
                     # GATK-lite does not have support for
                     # insertion/deletion quality modeling
-                    if not broad_runner.has_gatk_full():
+                    if broad_runner.gatk_type() == "lite":
                         params += ["--disable_indel_quals"]
                     if dbsnp_file:
                         params += ["--knownSites", dbsnp_file]

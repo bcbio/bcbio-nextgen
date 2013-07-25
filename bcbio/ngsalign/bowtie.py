@@ -1,11 +1,11 @@
 """Next gen sequence alignments with Bowtie (http://bowtie-bio.sourceforge.net).
 """
 import os
-import subprocess
 
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance import do
 
 galaxy_location_file = "bowtie_indices.loc"
 
@@ -20,11 +20,12 @@ def _bowtie_args_from_config(config):
     multi_mappers = config["algorithm"].get("multiple_mappers", True)
     multi_flags = ["-M", 1] if multi_mappers else ["-m", 1]
     cores = config.get("resources", {}).get("bowtie", {}).get("cores", None)
-    core_flags = ["-p", str(cores)] if cores else []
+    num_cores = config["algorithm"].get("num_cores", 1)
+    core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     return core_flags + qual_flags + multi_flags
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-          extra_args=None, rg_name=None):
+          extra_args=None, names=None):
     """Do standard or paired end alignment with bowtie.
     """
     out_file = os.path.join(align_dir, "%s.sam" % out_base)
@@ -47,6 +48,5 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                 cl += [fastq_file]
             cl += [tx_out_file]
             cl = [str(i) for i in cl]
-            subprocess.check_call(cl)
+            do.run(cl)
     return out_file
-

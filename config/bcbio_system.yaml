@@ -5,6 +5,46 @@
 
 # -- Base setup
 
+# Define resources to be used for individual programs on multicore machines.
+# These can be defined specifically for memory and processor availability.
+# - memory: Specify usage for memory intensive programs
+# - cores: Define cores that can be used for multicore programs.
+# - jvm_opts: specify details
+# - cmd: Command to launch the program, if not located on PATH.
+# - dir: Directory containing program associated data. Especially useful for
+#        java jars
+resources:
+  log:
+    dir: log
+  ucsc_bigwig:
+    memory: 36g
+  bwa:
+    cmd: bwa
+    cores: 16
+  samtools:
+    memory: 768M
+  novoalign:
+    cores: 16
+    memory: 2G
+  gemini:
+    cores: 16
+  gatk:
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    dir: /usr/share/java/gatk
+  picard:
+    dir: /usr/share/java/picard
+  snpEff:
+    jvm_opts: ["-Xms750m", "-Xmx6g"]
+    dir: /usr/share/java/snpeff
+  bcbio_variation:
+    dir: /usr/share/java/bcbio_variation
+
+# -- Default algorithm setup
+
+# Define default algorithmic details for processing. These are generally
+# adjusted per sample in the sample.yaml input files. The defaults here
+# apply if not overridden for a specific sample
+
 # General attributes that apply across multiple pipelines.
 algorithm:
   aligner: bowtie
@@ -23,7 +63,7 @@ algorithm:
 
 # Configuration algorithm changes for specific pipelines.
 custom_algorithms:
-  variant:
+  variant2:
     aligner: bwa
     recalibrate: true
     snpcall: true
@@ -42,38 +82,6 @@ custom_algorithms:
   'Minimal':
     aligner: ""
     
-# Define resources to be used for individual programs on multicore machines.
-# These can be defined specifically for memory and processor availability.
-# - memory: Specify usage for memory intensive programs
-# - cores: Define cores that can be used for multicore programs.
-# - jvm_opts: specify details
-# - cmd: Command to launch the program, if not located on PATH.
-# - dir: Directory containing program associated data. Especially useful for
-#        java jars
-resources:
-  log:
-    dir: log
-  ucsc_bigwig:
-    memory: 36g
-  bwa:
-    cores:
-    cmd: bwa
-  novoalign:
-    cores: 16
-    memory: 4G
-  gatk:
-    jvm_opts: ["-Xms2g", "-Xmx4g"]
-    dir: /usr/share/java/gatk
-    cores: 12
-  picard:
-    jvm_opts: ["-Xms2g", "-Xmx4g"]
-    dir: /usr/share/java/picard
-  snpEff:
-    jvm_opts: ["-Xms2g", "-Xmx6g"]
-    dir: /usr/share/java/snpeff
-  bcbio_variation:
-    dir: /usr/share/java/bcbio_variation
-
 # -- Additional options for specific integration, not required for standalone usage.
 
 # Galaxy integration. Required for upload/download from a Galaxy instance.
@@ -83,21 +91,21 @@ galaxy_config: universe_wsgi.ini
 
 # Distribution details for RabbitMQ/celery distribution on a cluster.
 # Only required if using this method, which is deprecated in favor of IPython clusters.
-distributed:
-  cluster_platform: lsf
-  platform_args: '-q your_queue_name'
-  cores_per_host: 1 # 0 uses all cores, otherwise can configure for architecture
-  # num_workers: 2 # only required if cores_per_host is 0, otherwise use all needed
-  rabbitmq_vhost: bionextgen
+# distributed:
+#   cluster_platform: lsf
+#   platform_args: '-q your_queue_name'
+#   cores_per_host: 1 # 0 uses all cores, otherwise can configure for architecture
+#   # num_workers: 2 # only required if cores_per_host is 0, otherwise use all needed
+#   rabbitmq_vhost: bionextgen
 
 # Details for hooking automated processing to a sequencer machine.
 # Not required if running standalone pipelines.
-analysis:
-  # Can specify a different remote host to initiate
-  # the copy from. This is useful for NFS shared filesystems
-  # where you want to manage the copy from the base machine.
-  copy_user:
-  copy_host:
-  store_dir: /store4/solexadata
-  base_dir: /array0/projects/Sequencing
-  worker_program: nextgen_analysis_server.py
+# analysis:
+#   # Can specify a different remote host to initiate
+#   # the copy from. This is useful for NFS shared filesystems
+#   # where you want to manage the copy from the base machine.
+#   copy_user:
+#   copy_host:
+#   store_dir: /store4/solexadata
+#   base_dir: /array0/projects/Sequencing
+#   worker_program: nextgen_analysis_server.py

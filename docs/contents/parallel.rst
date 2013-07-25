@@ -26,93 +26,58 @@ IPython parallel
 `IPython parallel`_ provides a distributed framework for performing
 parallel computation in standard cluster environments. The
 bcbio-nextgen setup script installs both IPython and `pyzmq`_, which
-provides Python bindings for the `ZeroMQ`_ messaging library.
+provides Python bindings for the `ZeroMQ`_ messaging library. The only
+additional requirement is that the work directory where you run the
+analysis is accessible to all processing nodes. This is typically
+accomplished with a distributed file system like
+`NFS`_, `Gluster`_ or `Lustre`_.
 
 Run an analysis using ipython for parallel execution::
 
     bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
-The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge)``.
+The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque)``.
+
 The ``-q`` flag specifies the queue to submit jobs to.
-  
-Celery and RabbitMQ
-~~~~~~~~~~~~~~~~~~~
 
-We still support celery and RabbitMQ messaging, but please try IPython
-when setting up a new cluster. The IPython approach is under active
-development and supports additional cluster and parallel approaches.
+The ``-n`` flag defines the total number of cores to use on the
+cluster during processing. The framework will select the appropriate
+number of cores and type of cluster (single core versus multi-core) to
+use based on the pipeline stage (see the :ref:`internals-parallel`
+section in the internals documentation for more details). For
+multiple core steps, the number of cores to use for programs like
+``bwa``, ``novoalign`` and ``gatk`` comes from the
+:ref:`config-resources` section of the configuration.
+Ensure the ``cores`` specification matches the physical cores
+available on machines in your cluster, and the pipeline will divide
+the total cores specified by ``-n`` into the appropriate number of
+multicore jobs to run.
 
-To enable parallel messaging:
+The pipeline default parameters assume a system with minimal time to
+obtain processing cores and consistent file system accessibility. These
+defaults allow the system to fail fast in the case of cluster issues
+which need diagnosis. For running on shared systems with high resource
+usage and potential failures due to intermittent cluster issues, there
+are turning parameters that increase resiliency. The ``--timeout``
+flag specifies the numbers of minutes to wait for a cluster to start
+up before timing out. This defaults to 15 minutes. The ``--retries``
+flag specify the number of times to retry a job on failure. In systems
+with transient distributed file system hiccups like lock errors or disk
+availability, this will provide recoverability at the cost of
+resubmitting jobs that may have failed for reproducible reasons.
 
-1. Configure RabbitMQ as described below. Ensure all processing machines
-   can talk to the RabbitMQ server on port 5672. Update
-   ``universe_wsgi.ini`` to contain the server details.
+Finally, the ``-r resources`` flag specifies resource options to pass along
+to the underlying queue scheduler. This currently supports SGE's
+``-l`` parameter and SLURM native flags. This allows specification
+or resources to the scheduler (see the `qsub man page`_). You may specify multiple
+resources separated with a ``;``, so a ``-r mem=4g;ct=01:40:00``
+translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or 
+``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for instance.
 
-2. Edit your ``post_process.yaml`` file to set parameters in the
-   ``distributed`` section corresponding to your environment: this
-   includes the type of cluster management and arguments to start jobs.
-
-3. Run ``bcbio_nextgen.py`` with parameters for a distributed cluster
-   environment. It takes care of starting worker nodes, running the
-   processing, and then cleaning up after jobs::
-
-      bcbio_nextgen.py post_process.yaml flowcell_dir run_info.yaml
-                       -t messaging -n 20
-
-RabbitMQ configuration
-**********************
-
-RabbitMQ messaging manages communication between the sequencing machine
-and the analysis machine. This allows complete separation between all of
-the machines. The RabbitMQ server can run anywhere; an easy solution is
-to install it on the Galaxy and analysis server::
-
-        (yum or apt-get) install rabbitmq-server
-
-Setup rabbitmq for passing Galaxy and processing messages::
-
-        rabbitmqctl add_user <username> <password>
-        rabbitmqctl add_vhost bionextgen
-        rabbitmqctl set_permissions -p bionextgen <username> ".*" ".*" ".*"
-
-Then adjust the ``[galaxy_amqp]`` section of your ``universe_wsgi.ini``
-Galaxy configuration file. An example configuration is available in the
-config directory; you'll need to specifically change these three values::
-
-        [galaxy_amqp]
-        host = <host you installed the RabbitMQ server on>
-        userid = <username>
-        password = <password>
-
-ssh keys
-********
-
-The sequencing, analysis and storage machines transfer files using
-secure copy. This requires that you can securely copy files between
-machines without passwords, using `ssh public key`_ authentication.
-You want to enable password-less ssh for the following machine
-combinations:
-
--  Analysis server to ``illumina_finished_msg`` machine
--  Storage server to ``illumina_finished_msg`` machine
-
-Sequencing machines
-*******************
-
-The sequencer automation has been fully tested using Illumina GAII and
-HiSeq sequencing machines. The framework is general and supports other
-platforms; we welcome feedback from researchers with different machines
-at their institutions.
-
-Illumina machines produce run directories that include the date, machine
-identifier, and flowcell ID::
-
-    110216_HWI-EAS264_00035_FC638NPAAXX
-
-A shortened name, with just date and flowcell ID, is used to uniquely
-identify each flowcell during processing.
-
-.. _ssh public key: http://macnugget.org/projects/publickeys/
+.. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
 .. _pyzmq: https://github.com/zeromq/pyzmq
 .. _ZeroMQ: http://www.zeromq.org/
+.. _Gluster: http://www.gluster.org/
+.. _Lustre: http://wiki.lustre.org/index.php/Main_Page
+.. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29

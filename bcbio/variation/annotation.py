@@ -61,18 +61,27 @@ def _general_snpeff_version(snpeff_file):
                         out_handle.write(line)
     return safe_snpeff
 
+def get_gatk_annotations(config):
+    broad_runner = broad.runner_from_config(config)
+    anns = ["BaseQualityRankSumTest", "FisherStrand",
+            "GCContent", "HaplotypeScore", "HomopolymerRun",
+            "MappingQualityRankSumTest", "MappingQualityZero",
+            "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality",
+            "DepthPerAlleleBySample"]
+    if broad_runner.gatk_type() == "restricted":
+        anns += ["Coverage"]
+    else:
+        anns += ["DepthOfCoverage"]
+    return anns
+
 def annotate_nongatk_vcf(orig_file, bam_file, dbsnp_file, ref_file, config):
     """Annotate a VCF file with dbSNP and standard GATK called annotations.
     """
     broad_runner = broad.runner_from_config(config)
     out_file = "%s-gatkann%s" % os.path.splitext(orig_file)
-    annotations = ["BaseQualityRankSumTest", "DepthOfCoverage", "FisherStrand",
-                   "GCContent", "HaplotypeScore", "HomopolymerRun",
-                   "MappingQualityRankSumTest", "MappingQualityZero",
-                   "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality",
-                   "DepthPerAlleleBySample"]
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            annotations = get_gatk_annotations(config)
             params = ["-T", "VariantAnnotator",
                       "-R", ref_file,
                       "-I", bam_file,

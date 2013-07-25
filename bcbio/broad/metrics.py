@@ -1,17 +1,16 @@
 """Handle running, parsing and manipulating metrics available through Picard.
 """
-import os
+import contextlib
 import glob
 import json
-import contextlib
-import pprint
+import os
+import subprocess
 
 from bcbio.utils import tmpfile, file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.broad.picardrun import picard_rnaseq_metrics
 
 import pysam
-
 
 class PicardMetricsParser(object):
     """Read metrics files produced by Picard analyses.
@@ -29,8 +28,11 @@ class PicardMetricsParser(object):
         """
         with open(align_metrics) as in_handle:
             align_vals = self._parse_align_metrics(in_handle)
-        with open(dup_metrics) as in_handle:
-            dup_vals = self._parse_dup_metrics(in_handle)
+        if dup_metrics:
+            with open(dup_metrics) as in_handle:
+                dup_vals = self._parse_dup_metrics(in_handle)
+        else:
+            dup_vals = {}
         (insert_vals, hybrid_vals, rnaseq_vals) = (None, None, None)
         if insert_metrics and file_exists(insert_metrics):
             with open(insert_metrics) as in_handle:
@@ -76,7 +78,6 @@ class PicardMetricsParser(object):
         paired = insert_vals is not None
 
         total = align_vals["TOTAL_READS"]
-        dup_total = int(dup_vals["READ_PAIRS_EXAMINED"])
         align_total = int(align_vals["PF_READS_ALIGNED"])
         out.append(("Total", _add_commas(str(total)),
                     ("paired" if paired else "")))
@@ -87,12 +88,11 @@ class PicardMetricsParser(object):
                                            align_vals["READS_ALIGNED_IN_PAIRS"],
                                            total))
             align_total = int(align_vals["READS_ALIGNED_IN_PAIRS"])
-            if align_total != dup_total:
-                out.append(("Alignment combinations",
-                            _add_commas(str(dup_total)), ""))
-            out.append(self._count_percent("Pair duplicates",
-                                           dup_vals["READ_PAIR_DUPLICATES"],
-                                           dup_total))
+            dup_total = dup_vals.get("READ_PAIR_DUPLICATES")
+            if dup_total is not None:
+                out.append(self._count_percent("Pair duplicates",
+                                               dup_vals["READ_PAIR_DUPLICATES"],
+                                               align_total))
             std = insert_vals.get("STANDARD_DEVIATION", "?")
             std_dev = "+/- %.1f" % float(std.replace(",", ".")) if (std and std != "?") else ""
             out.append(("Insert size",
@@ -229,12 +229,19 @@ class PicardMetricsParser(object):
         return vals
 
     def _parse_dup_metrics(self, in_handle):
-        want_stats = ["READ_PAIRS_EXAMINED", "READ_PAIR_DUPLICATES",
-                "PERCENT_DUPLICATION", "ESTIMATED_LIBRARY_SIZE"]
-        header = self._read_off_header(in_handle)
-        info = in_handle.readline().rstrip("\n").split("\t")
-        vals = self._read_vals_of_interest(want_stats, header, info)
-        return vals
+        if in_handle.readline().find("picard.metrics") > 0:
+            want_stats = ["READ_PAIRS_EXAMINED", "READ_PAIR_DUPLICATES",
+                    "PERCENT_DUPLICATION", "ESTIMATED_LIBRARY_SIZE"]
+            header = self._read_off_header(in_handle)
+            info = in_handle.readline().rstrip("\n").split("\t")
+            vals = self._read_vals_of_interest(want_stats, header, info)
+            return vals
+        else:
+            vals = {}
+            for line in in_handle:
+                metric, val = line.rstrip().split("\t")
+                vals[metric] = val
+            return vals
 
     def _parse_insert_metrics(self, in_handle):
         want_stats = ["MEDIAN_INSERT_SIZE", "MIN_INSERT_SIZE",
@@ -277,22 +284,30 @@ class PicardMetrics(object):
         self._tmp_dir = tmp_dir
         self._parser = PicardMetricsParser()
 
-    def report(self, align_bam, ref_file, is_paired, bait_file, target_file):
+    def report(self, align_bam, ref_file, is_paired, bait_file, target_file,
+               variant_region_file, config):
         """Produce report metrics using Picard with sorted aligned BAM file.
         """
-        dup_bam, dup_metrics = self._get_current_dup_metrics(align_bam)
-        align_metrics = self._collect_align_metrics(dup_bam, ref_file)
+        dup_metrics = self._get_current_dup_metrics(align_bam)
+        align_metrics = self._collect_align_metrics(align_bam, ref_file)
         # Prefer the GC metrics in FastQC instead of Picard
-        # gc_graph, gc_metrics = self._gc_bias(dup_bam, ref_file)
+        # gc_graph, gc_metrics = self._gc_bias(align_bam, ref_file)
         gc_graph = None
         insert_graph, insert_metrics, hybrid_metrics = (None, None, None)
         if is_paired:
-            insert_graph, insert_metrics = self._insert_sizes(dup_bam)
+            insert_graph, insert_metrics = self._insert_sizes(align_bam)
         if bait_file and target_file:
-            hybrid_metrics = self._hybrid_select_metrics(dup_bam,
+            assert os.path.exists(bait_file), (bait_file, "does not exist!")
+            assert os.path.exists(target_file), (target_file, "does not exist!")
+            hybrid_metrics = self._hybrid_select_metrics(align_bam,
                                                          bait_file, target_file)
+        elif (variant_region_file and 
+              config["algorithm"].get("coverage_interval", "").lower() in ["exome"]):
+            assert os.path.exists(variant_region_file), (variant_region_file, "does not exist")
+            hybrid_metrics = self._hybrid_select_metrics(
+                align_bam, variant_region_file, variant_region_file)
 
-        vrn_vals = self._variant_eval_metrics(dup_bam)
+        vrn_vals = self._variant_eval_metrics(align_bam)
         summary_info = self._parser.get_summary_metrics(align_metrics,
                 dup_metrics, insert_metrics, hybrid_metrics,
                 vrn_vals)
@@ -304,16 +319,20 @@ class PicardMetrics(object):
         return summary_info, graphs
 
     def _get_current_dup_metrics(self, align_bam):
-        """Retrieve existing duplication metrics file, or generate if not present.
+        """Retrieve duplicate information from input BAM file.
         """
-        dup_fname_pos = align_bam.find("-dup")
-        if dup_fname_pos > 0:
-            base_name = align_bam[:dup_fname_pos]
-            metrics = glob.glob("{0}*.dup_metrics".format(base_name))
-            assert len(metrics) > 0, "Appear to have deduplication but did not find metrics file"
-            return align_bam, metrics[0]
-        else:
-            return self._picard.run_fn("picard_mark_duplicates", align_bam)
+        metrics_file = "%s.dup_metrics" % os.path.splitext(align_bam)[0]
+        if not file_exists(metrics_file):
+            dups = 0
+            with contextlib.closing(pysam.Samfile(align_bam, "rb")) as bam_handle:
+                for read in bam_handle:
+                    if (read.is_paired and read.is_read1) or not read.is_paired:
+                        if read.is_duplicate:
+                            dups += 1
+            with open(metrics_file, "w") as out_handle:
+                out_handle.write("# custom bcbio-nextgen metrics\n")
+                out_handle.write("READ_PAIR_DUPLICATES\t%s\n" % dups)
+        return metrics_file
 
     def _check_metrics_file(self, bam_name, metrics_ext):
         """Check for an existing metrics file for the given BAM.
@@ -344,7 +363,13 @@ class PicardMetrics(object):
                                 ("TARGET_INTERVALS", ready_target),
                                 ("INPUT", dup_bam),
                                 ("OUTPUT", tx_metrics)]
-                        self._picard.run("CalculateHsMetrics", opts)
+                        try:
+                            self._picard.run("CalculateHsMetrics", opts)
+                        # HsMetrics fails regularly with memory errors
+                        # so we catch and skip instead of aborting the
+                        # full process
+                        except subprocess.CalledProcessError:
+                            return None
         return metrics
 
     def _variant_eval_metrics(self, dup_bam):
@@ -423,7 +448,7 @@ def bed_to_interval(orig_bed, bam_file):
         bam_handle = pysam.Samfile(bam_file, "rb")
         with contextlib.closing(bam_handle):
             header = bam_handle.text
-        with tmpfile(dir=os.getcwd(), prefix="picardbed") as tmp_bed:
+        with tmpfile(dir=os.path.dirname(orig_bed), prefix="picardbed") as tmp_bed:
             with open(tmp_bed, "w") as out_handle:
                 out_handle.write(header)
                 with open(orig_bed) as in_handle:
@@ -438,15 +463,14 @@ def bed_to_interval(orig_bed, bam_file):
 
 class RNASeqPicardMetrics(PicardMetrics):
 
-    def report(self, align_bam, ref_file, gtf_file, is_paired=False,
-               rrna_file="null"):
+    def report(self, align_bam, ref_file, gtf_file, is_paired=False, rrna_file="null"):
         """Produce report metrics for a RNASeq experiment using Picard
         with a sorted aligned BAM file.
 
         """
 
         # collect duplication metrics
-        dup_bam, dup_metrics = self._get_current_dup_metrics(align_bam)
+        dup_metrics = self._get_current_dup_metrics(align_bam)
         align_metrics = self._collect_align_metrics(align_bam, ref_file)
         insert_graph, insert_metrics = (None, None)
         if is_paired:

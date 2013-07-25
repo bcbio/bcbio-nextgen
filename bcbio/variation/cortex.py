@@ -22,15 +22,16 @@ from bcbio import broad
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.utils import file_exists, safe_makedir, partition_all
-from bcbio.variation.genotype import combine_variant_files, write_empty_vcf
+from bcbio.utils import file_exists, safe_makedir
+from bcbio.variation.genotype import write_empty_vcf
 
-def run_cortex(align_bams, ref_file, config, dbsnp=None, region=None,
+def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
                out_file=None):
     """Top level entry to regional de-novo based variant calling with cortex_var.
     """
     if len(align_bams) == 1:
         align_bam = align_bams[0]
+        config = items[0]["config"]
     else:
         raise NotImplementedError("Need to add multisample calling for cortex_var")
     broad_runner = broad.runner_from_config(config)
@@ -108,7 +109,7 @@ def _combine_variants(in_vcfs, out_file, ref_file, config):
                 header = list(itertools.takewhile(lambda x: x.startswith("#"),
                                                   in_handle))
                 if not header[0].startswith("##fileformat=VCFv4"):
-                    raise ValueError("Unexpected VCF file: %s" % x)
+                    raise ValueError("Unexpected VCF file: %s" % in_vcf)
                 for line in in_handle:
                     if not wrote_header:
                         wrote_header = True
@@ -142,7 +143,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
                 local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
                 indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
                 cortex_out = _run_cortex(fastq, indexes, {"kmers": kmers, "genome_size": genome_size,
-                                                          "sample": _get_sample_name(align_bam)},
+                                                          "sample": get_sample_name(align_bam)},
                                          out_vcf_base, {"cortex": cortex_dir, "stampy": stampy_dir,
                                                         "vcftools": vcftools_dir},
                                          config)
@@ -303,7 +304,7 @@ def _get_fastq_in_region(region, align_bam, out_base):
     if not file_exists(out_file):
         with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
             with file_transaction(out_file) as tx_out_file:
-                with open(out_file, "w") as out_handle:
+                with open(tx_out_file, "w") as out_handle:
                     contig, start, end = region
                     for read in in_pysam.fetch(contig, int(start), int(end)):
                         seq = Seq.Seq(read.seq)
@@ -325,6 +326,6 @@ def _count_fastq_reads(in_fastq, min_reads):
                                          (i for i, _ in enumerate(FastqGeneralIterator(in_handle)))))
     return len(items)
 
-def _get_sample_name(align_bam):
+def get_sample_name(align_bam):
     with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
         return in_pysam.header["RG"][0]["SM"]

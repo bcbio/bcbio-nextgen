@@ -6,15 +6,21 @@ Required configurable variables in upload:
 import collections
 import os
 
-from bioblend.galaxy import GalaxyInstance
-
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.upload import filesystem
 
+# Avoid bioblend import errors, raising at time of use
+try:
+    from bioblend.galaxy import GalaxyInstance
+except ImportError:
+    GalaxyInstance = None
+
 def update_file(finfo, sample_info, config):
     """Update file in Galaxy data libraries.
     """
+    if GalaxyInstance is None:
+        raise ImportError("Could not import bioblend.galaxy")
     folder_name = "%s_%s" % (config["fc_name"], config["fc_date"])
     storage_dir = utils.safe_makedir(os.path.join(config["dir"], folder_name))
     storage_file = filesystem.copy_finfo(finfo, storage_dir)
@@ -22,7 +28,7 @@ def update_file(finfo, sample_info, config):
         gi = GalaxyInstance(config["galaxy_url"], config["galaxy_api_key"])
     else:
         raise ValueError("Galaxy upload requires `galaxy_url` and `galaxy_api_key` in config")
-    if storage_file:
+    if storage_file and sample_info:
         _to_datalibrary(storage_file, gi, folder_name, sample_info, config)
 
 def _to_datalibrary(fname, gi, folder_name, sample_info, config):
