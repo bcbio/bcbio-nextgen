@@ -295,7 +295,11 @@ and memory and compute resources to devote to them::
 - ``cores`` Cores to use for multi-proccessor enabled software. On
   cluster systems, match this with the number of physical cores
   available on individual machines.
-- ``jvm_opts`` Specific memory usage options for Java software.
+- ``jvm_opts`` Specific memory usage options for Java software. For
+  memory usage on programs like GATK, specify the maximum usage per
+  core. On multicore machines, that's machine-memory divided by cores.
+  This avoids memory errors when running multiple jobs simultaneously,
+  while the framework will adjust memory up when running multicore jobs.
 
 Resources will continue to expand to allow direct customization of
 commandline options as well as fine grained control over research
