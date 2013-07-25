@@ -1,6 +1,9 @@
 Installation
 ------------
 
+Automated
+=========
+
 We provide an automated script that installs 3rd party analysis tools,
 required genome data, python library dependencies bundled into a
 virtual environment, and produces a ready to use system configuration
@@ -47,7 +50,8 @@ If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
 
 Upgrade
-~~~~~~~
+=======
+
 We use the same automated installation process for performing upgrades
 in place. With a recent version of bcbio-nextgen (0.7.0+), update with::
 
@@ -72,7 +76,7 @@ upgrade with these options:
   tools.
 
 Manual process
---------------
+==============
 
 Python code
 ~~~~~~~~~~~
