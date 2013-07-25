@@ -85,6 +85,11 @@ Finally run the analysis, distributed on 8 local cores, with::
 The ``grading-summary.csv`` contains detailed comparisons of the results
 to the NIST reference materials.
 
+Note that this example requires a full licensed version of novoalign,
+since it uses gzipped inputs and multicore processing. You can still
+run the example with only bwa alignments by removing lanes 1 and 3
+from the ``NA12878-exome-methodcmp.yaml`` sample configuration file.
+
 Whole genome
 ~~~~~~~~~~~~
 An input configuration for running whole gnome variant calling with
