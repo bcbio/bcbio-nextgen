@@ -1,9 +1,16 @@
 ## 0.7.0 (in development)
 
 - RNA-seq pipeline updated.
+- Updated installation and upgrade procedures, to make it easier to build an
+  initial analysis pipeline and upgrade bcbio-nextgen plus tools in place.
+- Add support for MuTect tumor/normal variant caller, contributed by Luca
+  Beltrame.
 - Generalize variant calling to support alternative callers like cancer-specific
   calling: provide additional associated files to variant calls and pass along
   sample specific metadata. Document implementation of new variant callers.
+- Improve algorithms around post-variant calling preparation. Avoid unnecessary
+  tries for VQSR on low coverage whole genome reads, and concatenate VCF files to
+  avoid locking penalties.
 - Fix logging and memory usage for multicore jobs run within ipython clusters.
 - Improve logging for IPython cluster issues, including moving IPython logs
   inside project logging directory for better access.

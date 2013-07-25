@@ -494,7 +494,7 @@ def parallel_variantcall(sample_info, parallel_fn):
                                              dir_ext_fn=get_variantcaller)
         processed = grouped_parallel_split_combine(
             to_process, split_fn, multi.group_batches, parallel_fn,
-            "variantcall_sample", "split_variants_by_sample", "concat_variant_files",
+            "variantcall_sample", "split_variants_by_sample", "combine_variant_files",
             "vrn_file", ["sam_ref", "config"])
         finished.extend(processed)
     return finished

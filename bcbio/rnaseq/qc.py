@@ -7,6 +7,7 @@ from bcbio.pipeline.qcsummary import is_paired
 from bcbio.broad import runner_from_config
 from bcbio.broad.picardrun import picard_index
 
+
 class RNASeQCRunner(object):
     """
     Runs the Broad's RNA-SeQC tool:
@@ -22,12 +23,15 @@ class RNASeQCRunner(object):
                           "-r {ref_file} -o {out_dir} -BWArRNA {rna_file} "
                           "-bwa {bwa_path} -ttype 2")
 
-    def run(self, sample_file, ref_file, rna_file, gtf_file, out_dir, single_end=False):
+    def run(self, sample_file, ref_file, rna_file, gtf_file, out_dir,
+            single_end=False):
         if single_end:
             self._base_cmd += " -singleEnd"
-        cmd = self._base_cmd.format(rnaseqc_path=self._rnaseqc_path, bwa_path=self._bwa_path,
-                                    jvm_opts = self._jvm_opts, **locals())
+        cmd = self._base_cmd.format(rnaseqc_path=self._rnaseqc_path,
+                                    bwa_path=self._bwa_path,
+                                    jvm_opts=self._jvm_opts, **locals())
         do.run(cmd, "RNASeqQC on %s." % sample_file, None)
+
 
 def rnaseqc_runner_from_config(config):
     """
@@ -37,7 +41,8 @@ def rnaseqc_runner_from_config(config):
     resources = config_utils.get_resources("rnaseqc", config)
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
     bwa_path = config_utils.get_program("bwa", config)
-    rnaseqc_path = config_utils.get_program("rnaseqc", config, "dir")
+    rnaseqc_dir = config_utils.get_program("rnaseqc", config, "dir")
+    rnaseqc_path = config_utils.get_jar("RNA-SeQC", rnaseqc_dir)
     return RNASeQCRunner(rnaseqc_path, bwa_path, jvm_opts)
 
 
@@ -60,6 +65,7 @@ def sample_summary(samples):
 
     return samples
 
+
 def _write_sample_id_file(samples, out_file):
     HEADER = "\t".join(["Sample ID", "Bam File", "Notes"]) + "\n"
     sample_ids = _extract_sample_ids(samples)
@@ -68,6 +74,7 @@ def _write_sample_id_file(samples, out_file):
         for sample_id in sample_ids:
             out_handle.write(sample_id)
     return out_file
+
 
 def _index_samples(samples):
     for data in samples:
@@ -80,5 +87,6 @@ def _extract_sample_ids(samples):
     for data in samples:
         names = data[0]["info"]["rgnames"]
         description = data[0]["info"].get("description", "")
-        sample_ids.append("\t".join([names["pu"], data[0]["work_bam"], description]) + "\n")
+        sample_ids.append("\t".join([names["pu"],
+                                     data[0]["work_bam"], description]) + "\n")
     return sample_ids

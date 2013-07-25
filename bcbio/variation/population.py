@@ -49,6 +49,8 @@ def _do_db_build(samples):
         p = subprocess.Popen([gemini, "-h"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         p.wait()
         p.stdout.close()
+        if p.returncode not in [0, 1]:
+            return False
     except OSError:
         return False
     genomes = set()

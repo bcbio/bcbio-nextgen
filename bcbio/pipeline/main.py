@@ -83,7 +83,7 @@ def parse_cl_args(in_args):
     """
     parser = argparse.ArgumentParser(
         description= "Best-practice pipelines for fully automated high throughput sequencing analysis.")
-    if in_args[0] in ["upgrade"]:
+    if len(in_args) > 0 and in_args[0] in ["upgrade"]:
         subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
         install.add_subparser(subparsers)
     else:

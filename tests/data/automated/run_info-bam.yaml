@@ -22,9 +22,10 @@ details:
       #quality_bin: [prealignment, postrecal]
       #aligner: novoalign
       aligner: bwa
-      mark_duplicates: samtools
+      #mark_duplicates: samtools
+      #realign: gkno
+      realign: gatk
       recalibrate: gatk
-      realign: gkno
       variantcaller: freebayes
       #realign: gatk
       #variantcaller: gatk
