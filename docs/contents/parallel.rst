@@ -81,3 +81,30 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 .. _Gluster: http://www.gluster.org/
 .. _Lustre: http://wiki.lustre.org/index.php/Main_Page
 .. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
+
+Cloud support
+~~~~~~~~~~~~~
+
+`Amazon Web Services`_ provide a flexible cloud based environment for
+running analyses. Cloud approaches offer the ability to perform
+analyses at scale with no investment in local hardware. In addition to
+the potential advantages for traditional cluster users, shared images
+on top of this infrastructure can make these analysis pipelines
+available to anyone. `This tutorial`_ describes running the pipeline
+on Amazon with `CloudBioLinux`_ and `CloudMan`_.
+
+The scripts can also be tightly integrated with the `Galaxy`_ web-based
+analysis tool. Tracking of samples occurs via a web based LIMS system,
+and processed results are uploading into Galaxy Data Libraries for
+researcher access and additional analysis. See the `installation
+instructions for the front end`_ and a `detailed description of the full
+system`_.
+
+.. _Amazon Web Services: https://aws.amazon.com/
+.. _This tutorial: http://bcbio.wordpress.com/2011/08/19/distributed-exome-analysis-pipeline-with-cloudbiolinux-and-cloudman/
+.. _CloudBioLinux: http://cloudbiolinux.org
+.. _CloudMan: http://wiki.g2.bx.psu.edu/Admin/Cloud
+
+.. _Galaxy: http://galaxy.psu.edu/
+.. _installation instructions for the front end: https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
+.. _detailed description of the full system: http://bcbio.wordpress.com/2011/01/11/next-generation-sequencing-information-management-and-analysis-system-for-galaxy/

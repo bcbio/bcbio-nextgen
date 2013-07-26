@@ -45,6 +45,9 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                    None)
     return out_file
 
+# Optional galaxy location file. Falls back on remap_index_fn if not found
+galaxy_location_file = "bowtie2_indices.loc"
+
 def remap_index_fn(ref_file):
     """Map sequence references to equivalent bowtie2 indexes.
     """
