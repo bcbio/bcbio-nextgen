@@ -23,7 +23,7 @@ remotes = {"system_config":
            "requirements":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
            "virtualenv":
-           "https://raw.github.com/pypa/virtualenv/master/virtualenv.py"}
+           "https://pypi.python.org/packages/source/v/virtualenv/virtualenv-1.10.tar.gz"}
 
 def main(args):
     check_dependencies()
@@ -58,13 +58,14 @@ def install_virtualenv_base(remotes, datadir):
     virtualenv_dir = os.path.join(datadir, "bcbio-nextgen-virtualenv")
     if not os.path.exists(virtualenv_dir):
         subprocess.check_call(["wget", remotes["virtualenv"]])
-        subprocess.check_call([sys.executable, "virtualenv.py", "--no-site-packages",
-                               "--distribute", virtualenv_dir])
-        os.remove("virtualenv.py")
+        virtualenv_arc = os.path.basename(remotes["virtualenv"])
+        subprocess.check_call(["tar", "xvfz", virtualenv_arc])
+        subprocess.check_call(["mv", virtualenv_arc[:-len(".tar.gz")], virtualenv_dir])
+        subprocess.check_call([sys.executable, os.path.join(virtualenv_dir, "virtualenv.py"), 
+                               "--no-site-packages", virtualenv_dir])
+        os.remove(virtualenv_arc)
+
     pip_cmd = os.path.join(virtualenv_dir, "bin", "pip")
-    # work around issue with latest version of pip on MacOSX: https://github.com/pypa/pip/issues/829
-    ei_cmd = os.path.join(virtualenv_dir, "bin", "easy_install")
-    subprocess.check_call([ei_cmd, "pip==1.2.1"])
     subprocess.check_call([pip_cmd, "install", "--upgrade", "fabric"])
     subprocess.check_call([pip_cmd, "install", "--upgrade", "distribute"])
     subprocess.check_call([pip_cmd, "install", "--upgrade", "cython"])
