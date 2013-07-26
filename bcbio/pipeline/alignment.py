@@ -2,8 +2,10 @@
 
 This works as part of the lane/flowcell process step of the pipeline.
 """
-import os
 from collections import namedtuple
+import ConfigParser
+import os
+
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils, broad
@@ -24,22 +26,21 @@ from bcbio.distributed.transaction import file_transaction
 NgsTool = namedtuple("NgsTool", ["align_fn", "pipe_align_fn", "bam_align_fn",
                                  "galaxy_loc_file", "remap_index_fn", "can_pipe"])
 
-base_location_file = "sam_fa_indices.loc"
+BASE_LOCATION_FILE = "sam_fa_indices.loc"
 _tools = {
     "bowtie": NgsTool(bowtie.align, None, None, bowtie.galaxy_location_file, None, None),
-    "bowtie2": NgsTool(bowtie2.align, None, None, base_location_file, bowtie2.remap_index_fn,
+    "bowtie2": NgsTool(bowtie2.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
                        None),
     "bwa": NgsTool(bwa.align, bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None,
                    bwa.can_pipe),
     "mosaik": NgsTool(mosaik.align, None, None, mosaik.galaxy_location_file, None,
                       None),
     "novoalign": NgsTool(novoalign.align, novoalign.align_pipe, novoalign.align_bam,
-                         base_location_file, novoalign.remap_index_fn, novoalign.can_pipe),
-    "tophat": NgsTool(tophat.align, None, None, base_location_file, bowtie2.remap_index_fn,
+                         novoalign.galaxy_location_file, novoalign.remap_index_fn, novoalign.can_pipe),
+    "tophat": NgsTool(tophat.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
                       None),
-    "samtools": NgsTool(None, None, None, base_location_file, None, None),
-    "star": NgsTool(star.align, None, None, base_location_file,
-                    star.remap_index_fn, None)}
+    "samtools": NgsTool(None, None, None, BASE_LOCATION_FILE, None, None),
+    "star": NgsTool(star.align, None, None, None, star.remap_index_fn, None)}
 
 metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}
 
@@ -174,35 +175,75 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
             utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)
     return sort_bam
 
+# ## Galaxy integration -- *.loc files
+
+def _get_galaxy_loc_file(name, ref_dir):
+    """Retrieve Galaxy *.loc file for the given reference/aligner name.
+
+    First tries to find an aligner specific *.loc file. If not defined
+    or does not exist, then we need to try and remap it from the
+    default reference file
+    """
+    if _tools[name].galaxy_loc_file is None:
+        loc_file = os.path.join(ref_dir, BASE_LOCATION_FILE)
+        need_remap = True
+    else:
+        loc_file = os.path.join(ref_dir, _tools[name].galaxy_loc_file)
+        need_remap = False
+    if not os.path.exists(loc_file):
+        loc_file = os.path.join(ref_dir, BASE_LOCATION_FILE)
+        need_remap = True
+    return loc_file, need_remap
+
+def _get_ref_from_galaxy_loc(name, genome_build, loc_file, need_remap):
+    """Retrieve reference genome file from Galaxy *.loc file.
+    """
+    cur_ref = None
+    with open(loc_file) as in_handle:
+        for line in in_handle:
+            if line.strip() and not line.startswith("#"):
+                parts = line.strip().split()
+                if parts[0] == "index":
+                    parts = parts[1:]
+                if parts[0] == genome_build:
+                    cur_ref = parts[-1]
+                    break
+    if cur_ref is None:
+        raise IndexError("Genome %s not found in %s" % (genome_build, loc_file))
+    if need_remap:
+        remap_fn = _tools[name].remap_index_fn
+        assert remap_fn is not None, "%s requires remapping function from base location file" % name
+        cur_ref = remap_fn(cur_ref)
+    return cur_ref
+
+def _get_galaxy_tool_info(galaxy_base):
+    """Retrieve Galaxy tool-data information from defaults or galaxy config file.
+    """
+    ini_file = os.path.join(galaxy_base, "universe_wsgi.ini")
+    info = {"tool_data_table_config_path": os.path.join(galaxy_base, "tool_data_table_conf.xml"),
+            "tool_data_path": os.path.join(galaxy_base, "tool-data")}
+    config = ConfigParser.ConfigParser()
+    config.read(ini_file)
+    if "app:main" in config.sections():
+        for option in config.options("app:main"):
+            if option in info:
+                info[option] = os.path.join(galaxy_base, config.get("app:main", option))
+    return info
+
 def get_genome_ref(genome_build, aligner, galaxy_base):
     """Retrieve the reference genome file location from galaxy configuration.
     """
     if not genome_build:
         return (None, None)
-    ref_dir = os.path.join(galaxy_base, "tool-data")
+    galaxy_config = _get_galaxy_tool_info(galaxy_base)
     out_info = []
-    for ref_get in [aligner, "samtools"]:
-        if not ref_get:
+    for name in [aligner, "samtools"]:
+        if not name:
             out_info.append(None)
             continue
-        ref_file = os.path.join(ref_dir, _tools[ref_get].galaxy_loc_file)
-        cur_ref = None
-        with open(ref_file) as in_handle:
-            for line in in_handle:
-                if line.strip() and not line.startswith("#"):
-                    parts = line.strip().split()
-                    if parts[0] == "index":
-                        parts = parts[1:]
-                    if parts[0] == genome_build:
-                        cur_ref = parts[-1]
-                        break
-        if cur_ref is None:
-            raise IndexError("Genome %s not found in %s" % (genome_build,
-                ref_file))
-        remap_fn = _tools[ref_get].remap_index_fn
-        if remap_fn:
-            cur_ref = remap_fn(cur_ref)
-        out_info.append(utils.add_full_path(cur_ref, ref_dir))
+        loc_file, need_remap = _get_galaxy_loc_file(name, galaxy_config["tool_data_path"])
+        cur_ref = _get_ref_from_galaxy_loc(name, genome_build, loc_file, need_remap)
+        out_info.append(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
 
     if len(out_info) != 2:
         raise ValueError("Did not find genome reference for %s %s" %
