@@ -56,7 +56,7 @@ def _default_deploy_args(args):
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
     """
-    base_dir = os.path.dirname(os.path.dirname(sys.executable))
+    base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
     if "anaconda" not in os.path.basename(base_dir) and "virtualenv" not in os.path.basename(base_dir):
         raise ValueError("Cannot update data for bcbio-nextgen not installed by installer.")
     data_dir = os.path.dirname(base_dir)
