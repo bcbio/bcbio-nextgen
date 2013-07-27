@@ -38,7 +38,7 @@ def main(args, sys_argv):
         print("Installing data and third party dependencies")
         # Temporary upgrade until next release
         subprocess.check_call([bcbio["bcbio_nextgen.py"], "-u", "development"])
-        subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + sys_argv[1:])
+        subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade", "-u", "development"] + sys_argv[1:])
         system_config = write_system_config(remotes["system_config"], args.datadir,
                                             args.tooldir)
         print("Finished: bcbio-nextgen, tools and data installed")
@@ -67,7 +67,8 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["biopython", "boto", "cython", "numpy", "pycrypto", "pip", "pysam", "pyyaml"]
+    pkgs = ["biopython", "boto", "cython", "nose", "numpy", "pycrypto", "pip",
+            "pysam", "pyyaml", "requests"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
 
 def install_anaconda_python(args, remotes):
