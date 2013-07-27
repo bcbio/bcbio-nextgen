@@ -1,5 +1,5 @@
-bioblend==0.2.4
-git+https://github.com/chapmanb/biopython.git@f48cb557a2#egg=biopython
+bioblend>=0.3.3
+biopython>=1.61
 boto>=2.9.6
 cutadapt==1.2.1
 Cython>=0.19

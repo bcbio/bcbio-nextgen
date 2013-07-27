@@ -61,6 +61,9 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
             final_script = os.path.join(args.tooldir, "bin", script)
             sudo_cmd = ["sudo"] if args.sudo else []
             subprocess.check_call(sudo_cmd + ["mkdir", "-p", os.path.dirname(final_script)])
+            if os.path.exists(final_script):
+                cmd = ["rm", "-f", final_script]
+                subprocess.check_call(sudo_cmd + cmd)
             cmd = ["ln", "-s", ve_script, final_script]
             subprocess.check_call(sudo_cmd + cmd)
         out[script] = ve_script
