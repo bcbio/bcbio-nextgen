@@ -27,6 +27,25 @@ SNPEFF_GENOME_REMAP = {
         "araTha_tair10": SnpEffGenome("athalianaTair10", "", False),
         }
 
+
+def _get_snpeff_additional_options(config):
+
+    extra_parameters = []
+
+    use_canonical = config["algorithm"].get("annotate_canonical_only", False)
+    use_hgvs_notations = config["algorithm"].get("hgvs_notations", False)
+
+    #FIXME: Add options for splice acceptor / donor length?
+
+    if use_canonical:
+        extra_parameters.append("-canon")
+
+    if use_hgvs_notations:
+        extra_parameters.append("-hgvs")
+
+    return extra_parameters
+
+
 def _find_snpeff_datadir(config_file):
     with open(config_file) as in_handle:
         for line in in_handle:
@@ -88,6 +107,7 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
     resources = config_utils.get_resources("snpEff", config)
     ext = "vcf" if out_format == "vcf" else "tsv"
     out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
+
     if not file_exists(out_file):
         cl = ["java"]
         cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
@@ -95,6 +115,9 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
                "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
+
+        cl += _get_snpeff_additional_options(config)
+
         print " ".join(cl)
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
