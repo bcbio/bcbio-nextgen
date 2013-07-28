@@ -8,8 +8,28 @@ import unittest
 import shutil
 import contextlib
 import collections
+import functools
 
+from nose import SkipTest
 from nose.plugins.attrib import attr
+
+
+def expected_failure(test):
+
+    """Small decorator to mark tests as expected failure.
+    Useful for tests that are work-in-progress.
+    """
+
+    @functools.wraps(test)
+    def inner(*args, **kwargs):
+        try:
+            test(*args, **kwargs)
+        except Exception:
+            raise SkipTest
+        else:
+            raise AssertionError('Failure expected')
+    return inner
+
 
 @contextlib.contextmanager
 def make_workdir():
@@ -146,4 +166,16 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   self._get_post_process_yaml(),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bamclean.yaml")]
+            subprocess.check_call(cl)
+
+    @expected_failure
+    @attr(speed=2)
+    def test_7_mutect(self):
+        """Test paired tumor-normal calling using MuTect"""
+        self._install_test_files(self.data_dir)
+        with make_workdir():
+            cl = ["bcbio_nextgen.py",
+                  self._get_post_process_yaml(),
+                  os.path.join(self.data_dir, os.pardir, "REPLACEME"),
+                  os.path.join(self.data_dir, "run_info-paired.yaml")]
             subprocess.check_call(cl)
