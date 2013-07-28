@@ -81,6 +81,14 @@ def snpeff_effects(vcf_in, genome, config):
                     os.remove(fname)
         return vcf_file
 
+def _snpeff_args_from_config(config):
+    args = []
+    resources = config_utils.get_resources("snpEff", config)
+    if resources.get("options"):
+        args += [str(x) for x in resources.get("options", [])]
+
+    return args
+
 def _run_snpeff(snp_in, genome, se_interval, out_format, config):
     snpeff_jar = config_utils.get_jar("snpEff",
                                       config_utils.get_program("snpEff", config, "dir"))
@@ -95,7 +103,7 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
                "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
-        print " ".join(cl)
+        cl += _snpeff_args_from_config(config)
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 subprocess.check_call(cl, stdout=out_handle)
