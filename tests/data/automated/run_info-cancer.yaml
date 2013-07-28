@@ -1,0 +1,29 @@
+fc_date: '130728'
+fc_name: tcancer
+details:
+  - analysis: variant2
+    description: c-normal
+    files: [HCC1143-normal.bam]
+    genome_build: hg19
+    metadata:
+      batch: PairedBatch
+      phenotype: normal
+    algorithm:
+      aligner: false
+      mark_duplicates: false
+      recalibrate: false
+      realign: false
+      variantcaller: mutect
+  - analysis: variant2
+    description: c-tumor
+    files: [HCC1143-tumor.bam]
+    genome_build: hg19
+    metadata:
+      batch: PairedBatch
+      phenotype: tumor
+    algorithm:
+      aligner: false
+      mark_duplicates: false
+      recalibrate: false
+      realign: false
+      variantcaller: mutect

@@ -2,7 +2,8 @@
 
 - RNA-seq pipeline updated.
 - Updated installation and upgrade procedures, to make it easier to build an
-  initial analysis pipeline and upgrade bcbio-nextgen plus tools in place.
+  initial analysis pipeline and upgrade bcbio-nextgen and third-parts tools and
+  data in place.
 - Add support for MuTect tumor/normal variant caller, contributed by Luca
   Beltrame.
 - Generalize variant calling to support alternative callers like cancer-specific

@@ -14,23 +14,6 @@ from nose import SkipTest
 from nose.plugins.attrib import attr
 
 
-def expected_failure(test):
-
-    """Small decorator to mark tests as expected failure.
-    Useful for tests that are work-in-progress.
-    """
-
-    @functools.wraps(test)
-    def inner(*args, **kwargs):
-        try:
-            test(*args, **kwargs)
-        except Exception:
-            raise SkipTest
-        else:
-            raise AssertionError('Failure expected')
-    return inner
-
-
 @contextlib.contextmanager
 def make_workdir():
     remove_old_dir = True
@@ -47,6 +30,20 @@ def make_workdir():
     finally:
         os.chdir(orig_dir)
 
+def expected_failure(test):
+    """Small decorator to mark tests as expected failure.
+    Useful for tests that are work-in-progress.
+    """
+    @functools.wraps(test)
+    def inner(*args, **kwargs):
+        try:
+            test(*args, **kwargs)
+        except Exception:
+            raise SkipTest
+        else:
+            raise AssertionError('Failure expected')
+    return inner
+
 class AutomatedAnalysisTest(unittest.TestCase):
     """Setup a full automated analysis and run the pipeline.
     """
@@ -60,7 +57,8 @@ class AutomatedAnalysisTest(unittest.TestCase):
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
                          DlInfo("genomes_automated_test.tar.gz", "genomes", 8),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
-                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 4)]
+                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 4),
+                         DlInfo("tcga_benchmark.tar.gz", None, 1)]
         for dl in download_data:
             url = "http://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
             dirname = os.path.join(data_dir, os.pardir,
@@ -168,14 +166,15 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-bamclean.yaml")]
             subprocess.check_call(cl)
 
-    @expected_failure
     @attr(speed=2)
-    def test_7_mutect(self):
-        """Test paired tumor-normal calling using MuTect"""
+    @attr(cancer=True)
+    def test_7_cancer(self):
+        """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan
+        """
         self._install_test_files(self.data_dir)
         with make_workdir():
             cl = ["bcbio_nextgen.py",
                   self._get_post_process_yaml(),
-                  os.path.join(self.data_dir, os.pardir, "REPLACEME"),
-                  os.path.join(self.data_dir, "run_info-paired.yaml")]
+                  os.path.join(self.data_dir, os.pardir, "tcga_benchmark"),
+                  os.path.join(self.data_dir, "run_info-cancer.yaml")]
             subprocess.check_call(cl)

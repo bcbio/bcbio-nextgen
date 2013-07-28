@@ -70,7 +70,7 @@ def _group_by_batches(samples):
     out_retrieve = []
     extras = []
     for data in [x[0] for x in samples]:
-        if data["work_bam"] and data.get("vrn_file"):
+        if data["work_bam"] and data.get("vrn_file") and effects.vcf_has_items(data["vrn_file"]):
             batch = data.get("metadata", {}).get("batch")
             if batch:
                 out_retrieve.append((batch, data))

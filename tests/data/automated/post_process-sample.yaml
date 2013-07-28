@@ -65,6 +65,8 @@ resources:
     jvm_opts: ["-Xms750m", "-Xmx3g"]
   varscan:
     dir: /usr/share/java/varscan
+  mutect:
+    dir: /usr/share/java/mutect
   cram:
     dir: /usr/share/java/cram
   rnaseqc:

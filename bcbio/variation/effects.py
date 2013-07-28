@@ -69,7 +69,7 @@ def snpeff_effects(vcf_in, genome, config):
     """Annotate input VCF file with effects calculated by snpEff.
     """
     interval_file = config["algorithm"].get("hybrid_target", None)
-    if _vcf_has_items(vcf_in):
+    if vcf_has_items(vcf_in):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
@@ -109,7 +109,7 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
                 subprocess.check_call(cl, stdout=out_handle)
     return out_file
 
-def _vcf_has_items(in_file):
+def vcf_has_items(in_file):
     if os.path.exists(in_file):
         with open(in_file) as in_handle:
             for line in in_handle:
