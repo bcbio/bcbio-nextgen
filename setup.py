@@ -27,7 +27,7 @@ setup(name="bcbio-nextgen",
                  'scripts/solexa_qseq_to_fastq.py',
                  ],
       install_requires=[
-          "bioblend >= :0.3.3",
+          "bioblend >= 0.3.3",
           "biopython >= 1.61",
           "boto >= 2.9.6",
           "cutadapt >= 1.2.1",
