@@ -31,8 +31,7 @@ def upgrade_bcbio(args):
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
     else:
         print("Upgrading bcbio-nextgen to latest development version")
-        subprocess.check_call([pip_bin, "install", "--upgrade",
-                               "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
+        subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
     if args.tooldir:
         with bcbio_tmpdir():
             print("Upgrading third party tools to latest versions")
