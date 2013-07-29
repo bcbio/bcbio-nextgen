@@ -65,31 +65,42 @@ def _get_snpeff_genome(gname, config):
     else:
         return "%s%s" % (ginfo.base, ginfo.default_version)
 
-def snpeff_effects(vcf_in, genome, config):
+def snpeff_effects(data):
     """Annotate input VCF file with effects calculated by snpEff.
     """
-    interval_file = config["algorithm"].get("hybrid_target", None)
+    vcf_in = data["vrn_file"]
+    interval_file = data["config"]["algorithm"].get("hybrid_target", None)
     if vcf_has_items(vcf_in):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
-            vcf_file = _run_snpeff(vcf_in, _get_snpeff_genome(genome, config),
-                                   se_interval, "vcf", config)
+            vcf_file = _run_snpeff(vcf_in, _get_snpeff_genome(data["genome_build"], data["config"]),
+                                   se_interval, "vcf", data)
         finally:
             for fname in [se_interval]:
                 if fname and os.path.exists(fname):
                     os.remove(fname)
         return vcf_file
 
-def _snpeff_args_from_config(config):
+def _snpeff_args_from_config(data):
+    """Retrieve snpEff arguments supplied through input configuration.
+    """
+    config = data["config"]
     args = []
+    # General supplied arguments
     resources = config_utils.get_resources("snpEff", config)
     if resources.get("options"):
         args += [str(x) for x in resources.get("options", [])]
-
+    # cancer specific calling arguments
+    if data.get("metadata", {}).get("phenotype") in ["tumor", "normal"]:
+        args += ["-cancer"]
+    # Provide options tuned to reporting variants in clinical environments
+    if config["algorithm"].get("clinical_reporting"):
+        args += ["-canon", "-hgvs"]
     return args
 
-def _run_snpeff(snp_in, genome, se_interval, out_format, config):
+def _run_snpeff(snp_in, genome, se_interval, out_format, data):
+    config = data["config"]
     snpeff_jar = config_utils.get_jar("snpEff",
                                       config_utils.get_program("snpEff", config, "dir"))
     config_file = "%s.config" % os.path.splitext(snpeff_jar)[0]
@@ -100,10 +111,10 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, config):
         cl = ["java"]
         cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
         cl += ["-jar", snpeff_jar, "eff", "-c", config_file,
-               "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
+               "-noLog", "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
         if se_interval:
             cl.extend(["-filterInterval", se_interval])
-        cl += _snpeff_args_from_config(config)
+        cl += _snpeff_args_from_config(data)
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 subprocess.check_call(cl, stdout=out_handle)

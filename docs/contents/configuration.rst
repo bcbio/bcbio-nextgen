@@ -208,6 +208,9 @@ Variant calling
 - ``validate_genome_build``: Genome build of the validation file, if
   different than the samples genome build. Helps manage hg19/GRCh37
   chromosome naming differences.
+- ``clinical_reporting`` Tune output for clinical reporting.
+  Modifies snpEff parameters to use HGVS notational on canonical
+  transcripts [false, true].
 
 Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
 This requires some associated data files, and also has some configurable
