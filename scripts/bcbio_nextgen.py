@@ -23,7 +23,7 @@ Usage:
           - ipython: IPython distributed processing
           - messaging: RabbitMQ distributed messaging queue
      -n total number of processes to use
-     -s scheduler for ipython parallelization (lsf, sge)
+     -s scheduler for ipython parallelization (lsf, sge, slurm)
      -q queue to submit jobs for ipython parallelization
 """
 import os

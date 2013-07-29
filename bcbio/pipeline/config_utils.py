@@ -146,7 +146,7 @@ def _get_program_dir(name, config):
 def get_jar(base_name, dname):
     """Retrieve a jar in the provided directory
     """
-    jars = glob.glob(os.path.join(dname, "%s*.jar" % base_name))
+    jars = glob.glob(os.path.join(expand_path(dname), "%s*.jar" % base_name))
     if len(jars) == 1:
         return jars[0]
     else:

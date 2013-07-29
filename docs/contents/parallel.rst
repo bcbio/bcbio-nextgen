@@ -66,12 +66,13 @@ with transient distributed file system hiccups like lock errors or disk
 availability, this will provide recoverability at the cost of
 resubmitting jobs that may have failed for reproducible reasons.
 
-An the ``-r resources`` flag specifies resource options to pass along
+Finally, the ``-r resources`` flag specifies resource options to pass along
 to the underlying queue scheduler. This currently supports SGE's
-``-l`` parameter, which allows specification or resources to the
-scheduler (see the `qsub man page`_). You may specify multiple
+``-l`` parameter and SLURM native flags. This allows specification
+or resources to the scheduler (see the `qsub man page`_). You may specify multiple
 resources separated with a ``;``, so a ``-r mem=4g;ct=01:40:00``
-translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub``.
+translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or 
+``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for instance.
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
