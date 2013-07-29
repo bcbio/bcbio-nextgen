@@ -79,7 +79,7 @@ or problem reports using `GitHub`_ and discussion on the
 Contributors
 ------------
 
-- `Luca Beltrame`_, Mario Negri Research Institute
+- `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
@@ -88,7 +88,7 @@ Contributors
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 
-.. _Luca Beltrame: https://github.com/cswegger
+.. _Luca Beltrame: https://github.com/lbeltrame
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Brad Chapman: https://github.com/chapmanb
 .. _Peter Cock: https://github.com/peterjc

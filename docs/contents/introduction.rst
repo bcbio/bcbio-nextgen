@@ -50,3 +50,12 @@ your own research.
 
 .. _Massachusetts General Hospital: http://molbio.mgh.harvard.edu/
 .. _Galaxy: http://galaxyproject.org/
+
+- `IRCCS "Mario Negri" Institute for Pharmacological Research`_: The 
+   Translational Genomics Unit in the Department of Oncology uses
+   bcbio-nextgen for targeted resequencing (using an Illumina MiSeq) to
+   identify mutations and other variants in tumor samples to investigate their
+   link to tumor progression, patient survival and drug 
+   sensitivity and resistance.
+
+.. _IRCCS "Mario Negri" Institute for Pharmacological Research: http://www.marionegri.it
