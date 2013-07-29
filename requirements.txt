@@ -14,6 +14,6 @@ py_descriptive_statistics==0.2
 pysam>=0.6
 PyYAML==3.10
 joblib==0.7.0d
-pyzmq==13.1.0
+pyzmq>=2.1.11
 sh==1.07
 bcbio-nextgen==0.6.5
