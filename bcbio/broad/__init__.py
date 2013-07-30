@@ -218,20 +218,15 @@ class BroadRunner:
         dirs = []
         for bdir in [self._gatk_dir, self._picard_ref]:
             dirs.extend([bdir,
-                         os.path.join(bdir, os.pardir, "gatk"),
-                         os.path.join(bdir, "dist"),
-                         os.path.join(bdir, "GATK"),
-                         os.path.join(bdir, "GATK", "dist"),
-                         os.path.join(bdir, "muTect"),
-                         os.path.join(bdir, "MuTect"),
-                         os.path.join(bdir, "muTect"),
-                         os.path.join(bdir, "Picard-private", "dist")])
+                         os.path.join(bdir, os.pardir, "gatk")])
         if alts is None: alts = []
         for check_cmd in [command] + alts:
             for dir_check in dirs:
-                check_file = os.path.join(dir_check, "%s.jar" % check_cmd)
-                if os.path.exists(check_file):
+                try:
+                    check_file = config_utils.get_jar(command, dir_check)
                     return check_file
+                except ValueError:
+                    pass
         raise ValueError("Could not find jar %s in %s:%s" % (command, self._picard_ref, self._gatk_dir))
 
 def _get_picard_ref(config):

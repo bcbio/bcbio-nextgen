@@ -1,0 +1,73 @@
+<tables>
+    <!-- Locations of MAF files that have been indexed with bx-python -->    
+    <table name="indexed_maf_files">
+        <columns>name, value, dbkey, species</columns>
+        <file path="tool-data/maf_index.loc" />
+    </table>
+    <!-- Locations of indexes in the BWA mapper format -->
+    <table name="bwa_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/bwa_index.loc" />
+    </table>
+    <!-- Locations of indexes in the Bowtie mapper format -->
+    <table name="bowtie_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/bowtie_indices.loc" />
+    </table>
+    <!-- Locations of indexes in the Bowtie2 mapper format -->
+    <table name="bowtie2_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/bowtie2_indices.loc" />
+    </table>
+    <!-- Locations of indexes in the Bowtie mapper format for TopHat to use -->
+    <table name="tophat_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/bowtie_indices.loc" />
+    </table>
+    <!-- Locations of indexes in the Bowtie2 mapper format for TopHat2 to use -->
+    <table name="tophat2_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/bowtie2_indices.loc" />
+    </table>
+    <!-- Location of SAMTools indexes and other files -->
+    <table name="sam_fa_indexes" comment_char="#">
+        <columns>index, value, path</columns>
+        <file path="tool-data/sam_fa_indices.loc" />
+    </table>
+    <!-- Location of Picard dict file and other files -->
+    <table name="picard_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/picard_index.loc" />
+    </table>
+    <!-- Location of Picard dict files valid for GATK -->
+    <table name="gatk_picard_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/gatk_sorted_picard_index.loc" />
+    </table>
+    <!-- Alignment and sequence data -->
+    <table name="alignseq">
+       <!-- XXX This has two different types of columns -->
+        <columns>index, dbkey, value</columns>
+        <file path="tool-data/alignseq.loc" />
+    </table>
+    <!-- UCSC twoBit indexed files -->
+    <table name="twobit">
+        <columns>dbkey, value</columns>
+        <file path="tool-data/twobit.loc" />
+    </table>
+    <!-- liftOver files -->
+    <table name="lift_over">
+        <columns>dbkey1, dbkey2, value</columns>
+        <file path="tool-data/liftOver.loc" />
+    </table>
+    <!-- Location of Mosaik files -->
+    <table name="mosaik_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/mosaik_index.loc" />
+    </table>
+    <!-- Novoalign indexes, not part of default Galaxy configurations -->
+    <table name="novoalign_indexes" comment_char="#">
+        <columns>value, dbkey, name, path</columns>
+        <file path="tool-data/novoalign_indices.loc" />
+    </table>
+</tables>

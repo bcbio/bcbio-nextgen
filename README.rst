@@ -52,7 +52,7 @@ Quick start
 1. Install ``bcbio-nextgen`` with all tool dependencies and data files::
 
          wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-         python bcbio_nextgen_install.py /usr/local /usr/local/share/bcbio-nextgen
+         python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
 
 producing a `system configuration file`_ referencing the installed
 software and data.
@@ -82,7 +82,7 @@ or problem reports using `GitHub`_ and discussion on the
 Contributors
 ------------
 
-- `Luca Beltrame`_, Mario Negri Research Institute
+- `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
@@ -91,7 +91,7 @@ Contributors
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 
-.. _Luca Beltrame: https://github.com/cswegger
+.. _Luca Beltrame: https://github.com/lbeltrame
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Brad Chapman: https://github.com/chapmanb
 .. _Peter Cock: https://github.com/peterjc
