@@ -1,9 +1,6 @@
 bcbio-nextgen
 -------------
 
-.. image:: https://secure.travis-ci.org/brainstorm/bcbio-nextgen.png?branch=master
-   :target: http://travis-ci.org/brainstorm/bcbio-nextgen
-
 A python toolkit providing best-practice pipelines for fully automated
 high throughput sequencing analysis. You write a high level
 configuration file specifying your inputs and analysis parameters.
