@@ -1,6 +1,9 @@
 ## 0.7.0 (July 30, 2013)
 
-- RNA-seq pipeline updated.
+- RNA-seq pipeline updated: deprecate Tophat 1 in favor of Tophat 2. Perform 
+  automatic adapter trimming of common adapter sequences. STAR aligner support. 
+  RNA-SeQC support for RNA-seq specific quality control. Transcript quantitation
+  with htseq-count.
 - Updated installation and upgrade procedures, to make it easier to build an
   initial analysis pipeline and upgrade bcbio-nextgen and third-parts tools and
   data in place.
