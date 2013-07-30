@@ -10,11 +10,15 @@ virtual environment, and produces a ready to use system configuration
 file::
 
      wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-     python bcbio_nextgen_install.py install_directory data_directory
+     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
 
-By default the script downloads genomes, indexes and associated data
-files for human variant and RNA-seq analysis. Run
-``python bcbio_nextgen_install.py`` with no arguments to see options
+This installs bcbio-nextgen along with third party tools and
+biological data for running human variant and RNA-seq analysis.
+It places genomes, indexes and associated data files in
+``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``.
+The installation is highly customizable, and you can install
+additional software and data later using ``bcbio_nextgen.py upgrade``.
+Run ``python bcbio_nextgen_install.py`` with no arguments to see options
 for configuring the installation process. Some useful arguments are:
 
 - ``--nosudo`` For running in environments where you lack administrator
@@ -28,17 +32,8 @@ requirements:
 
 - Python 2.6 or 2.7, with the development libraries
   installed (the python-dev or python-devel packages).
-- A compiler like gcc.
-- The git version control (http://git-scm.com/).
-- PyYAML: install with ``pip install pyyaml`` or ``easy_install pyyaml``
-
-The script requires that you can do a ``ssh localhost`` to your
-installation machine. If you'd like to do this without any passwords
-you can setup your ssh keys with::
-
-    $ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-
-(Use `ssh-keygen` if your user doesn't have an ssh key)
+- A compiler: gcc and g++.
+- The git version control system (http://git-scm.com/).
 
 Some steps retrieve third party tools from GitHub, which can run into
 issues if you're behind a proxy or block git ports. To instruct git to
@@ -53,7 +48,8 @@ Upgrade
 =======
 
 We use the same automated installation process for performing upgrades
-in place. With a recent version of bcbio-nextgen (0.7.0+), update with::
+of tools, software and data in place. With a recent version of
+bcbio-nextgen (0.7.0+), update with::
 
   bcbio_nextgen.py upgrade --tooldir=/usr/local
 
@@ -75,8 +71,16 @@ upgrade with these options:
 - Leave out the ``--tooldir`` option if you don't want to upgrade
   tools.
 
+To upgrade older bcbio-nextgen versions to be able to use this
+feature, do ``bcbio_nextgen.py -u stable`` to get the latest release
+code.
+
 Manual process
 ==============
+
+The manual process does not allow the in-place updates that the
+automated installer makes possible, but is useful for customized
+environments.
 
 Python code
 ~~~~~~~~~~~
