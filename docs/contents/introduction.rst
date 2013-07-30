@@ -50,3 +50,7 @@ your own research.
 
 .. _Massachusetts General Hospital: http://molbio.mgh.harvard.edu/
 .. _Galaxy: http://galaxyproject.org/
+
+- `Institute of Human Genetics, UCSF`_: The Genomics Core Facility utilizes bcbio-nextgen in processing more than 2000 whole genome, exome, RNA-seq, ChIP-seq on various projects. This pipeline tremendously lowers the barrier of getting access to next generation sequencing technology. The community engaged here is also very helpful in providing best practices advices and up-to-date solution to ease scientific discovery.
+
+.. _Institute of Human Genetics, UCSF: http://humangenetics.ucsf.edu/
