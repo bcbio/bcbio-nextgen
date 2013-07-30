@@ -57,7 +57,7 @@ your own research.
   from the beggining of 2013 until the end of July. `UPPMAX`_, our
   cluster located in Uppsala runs the pipeline in production since 2010.
 
-.. _Science for Life Laboratory`_: http://scilifelab.se/
+.. _Science for Life Laboratory: http://scilifelab.se/
 .. _NGI: https://portal.scilifelab.se/genomics/
 .. _UPPMAX: http://www.uppmax.uu.se/uppnex
 
@@ -71,11 +71,11 @@ your own research.
 
 .. _Institute of Human Genetics, UCSF: http://humangenetics.ucsf.edu/
 
-- `IRCCS "Mario Negri" Institute for Pharmacological Research`_: The
-   Translational Genomics Unit in the Department of Oncology uses
-   bcbio-nextgen for targeted resequencing (using an Illumina MiSeq) to
-   identify mutations and other variants in tumor samples to investigate their
-   link to tumor progression, patient survival and drug
-   sensitivity and resistance.
+- `IRCCS "Mario Negri" Institute for Pharmacological Research`_:
+  The Translational Genomics Unit in the Department of Oncology uses
+  bcbio-nextgen for targeted resequencing (using an Illumina MiSeq) to
+  identify mutations and other variants in tumor samples to
+  investigate their link to tumor progression, patient survival and
+  drug sensitivity and resistance.
 
 .. _IRCCS "Mario Negri" Institute for Pharmacological Research: http://www.marionegri.it
