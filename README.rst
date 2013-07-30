@@ -52,7 +52,7 @@ Quick start
 1. Install ``bcbio-nextgen`` with all tool dependencies and data files::
 
          wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-         python bcbio_nextgen_install.py /usr/local /usr/local/share/bcbio-nextgen
+         python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
 
 producing a `system configuration file`_ referencing the installed
 software and data.
