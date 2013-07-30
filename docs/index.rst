@@ -19,13 +19,15 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
+   contents/introduction
    contents/installation
    contents/testing
    contents/configuration
    contents/parallel
-   contents/internals
+   contents/pipelines
    contents/code
+   contents/internals
    contents/deprecated
 
 

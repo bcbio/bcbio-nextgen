@@ -208,6 +208,9 @@ Variant calling
 - ``validate_genome_build``: Genome build of the validation file, if
   different than the samples genome build. Helps manage hg19/GRCh37
   chromosome naming differences.
+- ``clinical_reporting`` Tune output for clinical reporting.
+  Modifies snpEff parameters to use HGVS notational on canonical
+  transcripts [false, true].
 
 Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
 This requires some associated data files, and also has some configurable
@@ -295,7 +298,11 @@ and memory and compute resources to devote to them::
 - ``cores`` Cores to use for multi-proccessor enabled software. On
   cluster systems, match this with the number of physical cores
   available on individual machines.
-- ``jvm_opts`` Specific memory usage options for Java software.
+- ``jvm_opts`` Specific memory usage options for Java software. For
+  memory usage on programs like GATK, specify the maximum usage per
+  core. On multicore machines, that's machine-memory divided by cores.
+  This avoids memory errors when running multiple jobs simultaneously,
+  while the framework will adjust memory up when running multicore jobs.
 
 Resources will continue to expand to allow direct customization of
 commandline options as well as fine grained control over research

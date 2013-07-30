@@ -1,7 +1,8 @@
 Code
 ----
 This section provides useful concepts for getting started digging into
-the code and contributing new functionality.
+the code and contributing new functionality. We welcome contributors
+and hope these notes help make it easier to get started.
 
 Development goals
 =================

@@ -1,16 +1,12 @@
 """Provide support for MuTect and other paired analysis tools."""
 
 import os
-import collections
-import copy
 import itertools
 from subprocess import CalledProcessError
 
 from bcbio import broad
-from bcbio.log import logger
-from bcbio.utils import file_exists, safe_makedir
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
-from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation.genotype import write_empty_vcf
 from bcbio.pipeline.shared import subset_variant_regions
