@@ -51,6 +51,16 @@ your own research.
 .. _Massachusetts General Hospital: http://molbio.mgh.harvard.edu/
 .. _Galaxy: http://galaxyproject.org/
 
+- `Science for Life Laboratory`_: The genomics core platform in
+  the Swedish National Infrastructure (`NGI`_) for genomics, has crunched
+  over 16TBp (terabasepairs) and processed almost 7000+ samples
+  from the beggining of 2013 until the end of July. `UPPMAX`_, our
+  cluster located in Uppsala runs the pipeline in production since 2010.
+
+.. _Science for Life Laboratory`_: http://scilifelab.se/
+.. _NGI: https://portal.scilifelab.se/genomics/
+.. _UPPMAX: http://www.uppmax.uu.se/uppnex
+
 - `Institute of Human Genetics, UCSF`_: The Genomics Core Facility
   utilizes bcbio-nextgen in processing more than 2000 whole genome,
   exome, RNA-seq, ChIP-seq on various projects. This pipeline
