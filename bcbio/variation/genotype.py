@@ -510,7 +510,6 @@ def variantcall_sample(data, region=None, out_file=None):
                   "cortex": cortex.run_cortex,
                   "samtools": samtools.run_samtools,
                   "varscan": varscan.run_varscan,
-                  "varscan-paired": varscan.run_varscan_paired,
                   "mutect": mutect.mutect_caller}
     sam_ref = data["sam_ref"]
     config = data["config"]
