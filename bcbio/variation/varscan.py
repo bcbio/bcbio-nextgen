@@ -5,10 +5,11 @@ http://varscan.sourceforge.net/
 import contextlib
 import itertools
 import os
-import tempfile
 
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
+from bcbio.utils import file_exists
 from bcbio.variation import samtools
 from bcbio.variation.genotype import write_empty_vcf
 from bcbio.variation.vcfutils import combine_variant_files
@@ -18,22 +19,23 @@ import pysam
 
 def run_varscan(align_bams, items, ref_file, assoc_files,
                 region=None, out_file=None):
-    call_file = samtools.shared_variantcall(_varscan_work, "varscan", align_bams,
-                                            ref_file, items[0]["config"], assoc_files, region, out_file)
-    return call_file
 
-
-def run_varscan_paired(align_bams, items, ref_file, assoc_files,
-                       region=None, out_file=None):
-
-    call_file = samtools.shared_variantcall(_varscan_paired, "varscan",
+    if len(align_bams) == 2 and all(item["metadata"].get("phenotype")
+                                    is not None for item in items):
+        call_file = samtools.shared_variantcall(_varscan_paired, "varscan",
                                             align_bams, items[0]["config"],
                                             assoc_files, region, out_file)
-
+    else:
+        call_file = samtools.shared_variantcall(_varscan_work, "varscan",
+                                                align_bams, ref_file,
+                                                 items[0]["config"],
+                                                 assoc_files, region, out_file)
     return call_file
 
 
 def _varscan_paired(align_bams, items, ref_file, target_regions, out_file):
+
+    """Run a paired VarScan analysis, also known as "somatic". """
 
     max_read_depth = "1000"
     config = items[0]["config"]
@@ -51,40 +53,60 @@ def _varscan_paired(align_bams, items, ref_file, target_regions, out_file):
     jvm_opts = " ".join(resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"]))
     remove_zerocoverage = "grep -v -P '\t0\t\t$'"
 
-    with (tempfile.NamedTemporaryFile(), tempfile.NamedTemporaryFile()) as (
-        normal_tmp_mpileup, tumor_tmp_mpilpeup):
-        for bamfile, item in itertools.izip(align_bams, items):
+    for bamfile, item in itertools.izip(align_bams, items):
+        metadata = item["metadata"]
 
-            metadata = item["metadata"]
+        if metadata["phenotype"] == "normal":
+            normal_bam = bamfile
+        elif metadata["phenotype"] == "tumor":
+            tumor_bam = bamfile
 
-            mpileup = samtools.prep_mpileup([bamfile], ref_file,
-                                            max_read_depth, config,
-                                            target_regions=target_regions,
-                                            want_bcf=False)
+    if tumor_bam is None or normal_bam is None:
+        raise ValueError("Missing phenotype definition (tumor or normal) "
+                         "in samples")
 
-            if metadata["phenotype"] == "normal":
-                cmd = "{mpileup} | {remove_zerocoverage} > {normal_tmp_pileup}"
-            elif metadata["phenotype"] == "tumor":
-                cmd = "{mpileup} | {remove_zerocoverage} > {tumor_tmp_pileup}"
+    if not file_exists(out_file):
+        base, ext = os.path.splitext(out_file)
+        cleanup_files = []
+        for fname, mpext in [(normal_bam, "normal"), (tumor_bam, "tumor")]:
+            mpfile = "%s-%s.mpileup" % (base, mpext)
+            cleanup_files.append(mpfile)
+            with file_transaction(mpfile) as mpfile_tx:
+                mpileup = samtools.prep_mpileup([mpfile_tx], ref_file,
+                                                max_read_depth, config,
+                                                target_regions=target_regions,
+                                                want_bcf=False)
+                cmd = "{mpileup} | {remove_zerocoverage} > {mpfile_tx}"
+                cmd = cmd.format(**locals())
+                do.run(cmd)
 
-            cmd = cmd.format(**locals())
-            do.run(cmd)
-            # FIXME How to check for success?
+        # First index is normal, second is tumor
+        normal_tmp_mpileup = cleanup_files[0]
+        tumor_tmp_mpileup = cleanup_files[1]
 
         varscan_cmd = ("java {jvm_opts} -jar {varscan_jar} somatic"
-                       " {normal_tmp_mpileup} {tumor_tmp_mpileup} {out_file}"
+                       " {normal_tmp_mpileup} {tumor_tmp_mpileup} {base}"
                        "--output-vcf --min-coverage 5 --p-value 0.98")
-        #FIXME This currently generates *two* files that need to be merged!
 
-        out_file_snp = out_file + ".snp"
-        out_file_indel = out_file + ".indel"
+        indel_file = base + ".indel"
+        snp_file = base + ".snp"
 
-        out_file = combine_variant_files([out_file_snp, out_file_indel],
+        cleanup_files.append(indel_file)
+        cleanup_files.append(snp_file)
+
+        with (file_transaction(indel_file), file_transaction(snp_file)) as (
+            tx_indel, tx_snp):
+            varscan_cmd = varscan_cmd.format(**locals())
+            do.run(varscan_cmd)
+
+        out_file = combine_variant_files([snp_file, indel_file],
                                          out_file, ref_file, config,
                                          region=target_regions)
 
-        os.remove(out_file_snp)
-        os.remove(out_file_indel)
+        # Remove cleanup files
+
+        for extra_file in cleanup_files:
+            os.remove(extra_file)
 
         if os.path.getsize(out_file) == 0:
             write_empty_vcf(out_file)
@@ -101,9 +123,11 @@ def _create_sample_list(in_bams, vcf_file):
                     out_handle.write("%s\n" % rg["SM"])
     return out_file
 
+
 def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
     """Perform SNP and indel genotyping with VarScan.
     """
+
     max_read_depth = "1000"
     version = programs.jar_versioner("varscan", "VarScan")(config)
     if version < "v2.3.5":
@@ -113,6 +137,7 @@ def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
                                        config_utils.get_program("varscan", config, "dir"))
     resources = config_utils.get_resources("varscan", config)
     jvm_opts = " ".join(resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"]))
+
     sample_list = _create_sample_list(align_bams, out_file)
     mpileup = samtools.prep_mpileup(align_bams, ref_file, max_read_depth, config,
                                     target_regions=target_regions, want_bcf=False)
