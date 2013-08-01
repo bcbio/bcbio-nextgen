@@ -102,7 +102,7 @@ with ``ulimit -a | grep open``. Setting open file handle limits is
 open system and cluster specific and below are tips for specific
 setups.
 
-SGE needs configuration at the qmaster level. Ivoke ``qconf -mconf``
+SGE needs configuration at the qmaster level. Invoke ``qconf -mconf``
 from a host with admin privileges, and edit ``execd_params``::
 
     execd_params                 S_DESCRIPTORS=20000
