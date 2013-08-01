@@ -11,8 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.variation.genotype import write_empty_vcf
-from bcbio.variation import bamprep, realign
+from bcbio.variation import bamprep, realign, vcfutils
 
 def shared_variantcall(call_fn, name, align_bams, ref_file, config,
                        assoc_files, region=None, out_file=None):
@@ -31,7 +30,7 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, config,
         if ((variant_regions is not None and isinstance(target_regions, basestring)
               and not os.path.isfile(target_regions))
               or not all(realign.has_aligned_reads(x, region) for x in align_bams)):
-            write_empty_vcf(out_file)
+            vcfutils.write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:
                 call_fn(align_bams, ref_file, config, target_regions,

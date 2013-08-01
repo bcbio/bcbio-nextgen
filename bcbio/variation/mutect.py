@@ -8,9 +8,8 @@ from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation.genotype import write_empty_vcf
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.variation import bamprep
+from bcbio.variation import bamprep, vcfutils
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
                         "java.lang.IllegalArgumentException: "
@@ -114,7 +113,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
         if (not isinstance(region, (list, tuple)) and
             not all(has_aligned_reads(x, region) for x in align_bams)):
 
-                write_empty_vcf(out_file)
+                vcfutils.write_empty_vcf(out_file)
                 return
 
         with file_transaction(out_file) as tx_out_file:
@@ -130,7 +129,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                 # will be ignored. All the other exceptions will be raised
                 # correctly.
                 if java_exception in _PASS_EXCEPTIONS:
-                    write_empty_vcf(tx_out_file)
+                    vcfutils.write_empty_vcf(tx_out_file)
                     return
                 else:
                     raise
