@@ -82,6 +82,31 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 .. _Lustre: http://wiki.lustre.org/index.php/Main_Page
 .. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
 
+Tuning systems for scale
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio-nextgen scales out on clusters including hundreds of cores and is
+stress tested on systems with 1000 simultaneous processes. Scaling up
+often requires system specific tuning to handle simultaneous
+processes. This section collects useful tips and tricks for fixing
+scaling issues.
+
+Open file handles
+=================
+
+A common failure mode is having too many open file handles. This
+error report can come from the IPython infrastructure logs as ZeroMQ
+attempts to open sockets, or from the processing logs as third party
+software gets file handles. You can check your available file handles
+with ``ulimit -a | grep open``. Setting open file handle limits is
+open system and cluster specific and below are tips for specific
+setups.
+
+SGE needs configuration at the qmaster level. Ivoke ``qconf -mconf``
+from a host with admin privileges, and edit ``execd_params``::
+
+    execd_params                 S_DESCRIPTORS=20000
+
 Cloud support
 ~~~~~~~~~~~~~
 
