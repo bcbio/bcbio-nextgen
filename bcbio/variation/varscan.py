@@ -64,7 +64,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             mpfile = "%s-%s.mpileup" % (base, mpext)
             cleanup_files.append(mpfile)
             with file_transaction(mpfile) as mpfile_tx:
-                mpileup = samtools.prep_mpileup([mpfile_tx], ref_file,
+                mpileup = samtools.prep_mpileup([fname], ref_file,
                                                 max_read_depth, config,
                                                 target_regions=target_regions,
                                                 want_bcf=False)
