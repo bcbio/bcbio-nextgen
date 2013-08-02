@@ -87,8 +87,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         cleanup_files.append(indel_file)
         cleanup_files.append(snp_file)
 
-        with (file_transaction(indel_file), file_transaction(snp_file)) as (
-            tx_indel, tx_snp):
+        with file_transaction(indel_file, snp_file) as (tx_indel, tx_snp):
             varscan_cmd = varscan_cmd.format(**locals())
             do.run(varscan_cmd, "Varscan".format(**locals()), None,
                    [do.file_exists(tx_indel), do.file_exists(tx_snp)])
