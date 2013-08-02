@@ -150,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("datadir", help="Directory to install genome data",
                         type=os.path.abspath)
     parser.add_argument("--distribution", help="Operating system distribution",
-                        default="ubuntu",
+                        default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux"])
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
