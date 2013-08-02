@@ -70,7 +70,8 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                                                 want_bcf=False)
                 cmd = "{mpileup} | {remove_zerocoverage} > {mpfile_tx}"
                 cmd = cmd.format(**locals())
-                do.run(cmd)
+                do.run(cmd, "samtools mpileup".format(**locals()), None,
+                       [do.file_exists(mpfile_tx)])
 
         # First index is normal, second is tumor
         normal_tmp_mpileup = cleanup_files[0]
@@ -89,7 +90,8 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         with (file_transaction(indel_file), file_transaction(snp_file)) as (
             tx_indel, tx_snp):
             varscan_cmd = varscan_cmd.format(**locals())
-            do.run(varscan_cmd)
+            do.run(varscan_cmd, "Varscan".format(**locals()), None,
+                   [do.file_exists(tx_indel), do.file_exists(tx_snp)])
 
         out_file = combine_variant_files([snp_file, indel_file],
                                          out_file, ref_file, config,
