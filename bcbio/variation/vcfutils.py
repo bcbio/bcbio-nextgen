@@ -2,6 +2,7 @@
 """
 import contextlib
 import copy
+import itertools
 import os
 
 import pysam
@@ -11,6 +12,40 @@ from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.variation import bamprep
+
+
+def is_sample_pair(align_bams, items):
+
+    """Determine if bams are from a sample pair or  not"""
+
+    return (len(align_bams) == 2 and all(item["metadata"].get("phenotype")
+                                    is not None for item in items))
+
+
+def get_paired_bams(align_bams, items):
+
+    """Split aligned bams imn tumor / normal pairs."""
+
+    tumor_bam = None
+    normal_bam = None
+
+    for bamfile, item in itertools.izip(align_bams, items):
+
+        metadata = item["metadata"]
+
+        if metadata["phenotype"] == "normal":
+            normal_bam = bamfile
+            normal_sample_name = item["name"][1]
+        elif metadata["phenotype"] == "tumor":
+            tumor_bam = bamfile
+            tumor_sample_name = item["name"][1]
+
+    if tumor_bam is None or normal_bam is None:
+        raise ValueError("Missing phenotype definition (tumor or normal) "
+                         "in samples")
+
+    return (tumor_bam, tumor_sample_name, normal_bam, normal_sample_name)
+
 
 def write_empty_vcf(out_file):
     with open(out_file, "w") as out_handle:
