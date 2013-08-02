@@ -68,10 +68,19 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                                                 max_read_depth, config,
                                                 target_regions=target_regions,
                                                 want_bcf=False)
-                cmd = "{mpileup} | {remove_zerocoverage} > {mpfile_tx}"
+                cmd = "{mpileup} > {mpfile_tx}"
                 cmd = cmd.format(**locals())
                 do.run(cmd, "samtools mpileup".format(**locals()), None,
                        [do.file_exists(mpfile_tx)])
+
+
+        # Sometimes mpileup writes an empty file: in this case we
+        # just skip the rest of the analysis (VarScan will hang otherwise)
+
+        if any(os.stat(filename).st_size == 0 for filename in cleanup_files):
+            write_empty_vcf(out_file)
+            return
+
 
         # First index is normal, second is tumor
         normal_tmp_mpileup = cleanup_files[0]
@@ -79,10 +88,10 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
         varscan_cmd = ("java {jvm_opts} -jar {varscan_jar} somatic"
                        " {normal_tmp_mpileup} {tumor_tmp_mpileup} {base}"
-                       "--output-vcf --min-coverage 5 --p-value 0.98")
+                       " --output-vcf --min-coverage 5 --p-value 0.98")
 
-        indel_file = base + ".indel"
-        snp_file = base + ".snp"
+        indel_file = base + ".indel.vcf"
+        snp_file = base + ".snp.vcf"
 
         cleanup_files.append(indel_file)
         cleanup_files.append(snp_file)
@@ -93,7 +102,6 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             varscan_cmd = varscan_cmd.format(**locals())
             do.run(varscan_cmd, "Varscan".format(**locals()), None,
                    None)
-
 
         if do.file_exists(snp_file):
             to_combine.append(snp_file)
