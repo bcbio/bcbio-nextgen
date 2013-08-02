@@ -22,17 +22,17 @@ def run_varscan(align_bams, items, ref_file, assoc_files,
     if len(align_bams) == 2 and all(item["metadata"].get("phenotype")
                                     is not None for item in items):
         call_file = samtools.shared_variantcall(_varscan_paired, "varscan",
-                                            align_bams, items[0]["config"],
+                                            align_bams, ref_file, items,
                                             assoc_files, region, out_file)
     else:
         call_file = samtools.shared_variantcall(_varscan_work, "varscan",
                                                 align_bams, ref_file,
-                                                 items[0]["config"],
-                                                 assoc_files, region, out_file)
+                                                items, assoc_files,
+                                                region, out_file)
     return call_file
 
 
-def _varscan_paired(align_bams, items, ref_file, target_regions, out_file):
+def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
     """Run a paired VarScan analysis, also known as "somatic". """
 
@@ -123,9 +123,11 @@ def _create_sample_list(in_bams, vcf_file):
     return out_file
 
 
-def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
+def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     """Perform SNP and indel genotyping with VarScan.
     """
+
+    config = items[0]["config"]
 
     max_read_depth = "1000"
     version = programs.jar_versioner("varscan", "VarScan")(config)
