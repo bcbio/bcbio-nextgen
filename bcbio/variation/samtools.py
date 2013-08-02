@@ -25,7 +25,11 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
     for x in align_bams:
         broad_runner.run_fn("picard_index", x)
     if out_file is None:
-        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
+
+        if vcfutils.is_sample_pair(align_bams, items):
+            out_file = "%s-paired-variants.vcf" % config["metdata"]["batch"]
+        else:
+            out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         logger.info("Genotyping with {name}: {region} {fname}".format(name=name,
             region=region, fname=os.path.basename(align_bams[0])))

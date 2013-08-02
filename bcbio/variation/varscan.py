@@ -11,7 +11,8 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import file_exists
 from bcbio.variation import samtools
-from bcbio.variation.vcfutils import combine_variant_files, write_empty_vcf
+from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
+                                      is_sample_pair, get_paired_bams)
 
 import pysam
 
@@ -52,17 +53,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
     jvm_opts = " ".join(resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"]))
     remove_zerocoverage = "grep -v -P '\t0\t\t$'"
 
-    for bamfile, item in itertools.izip(align_bams, items):
-        metadata = item["metadata"]
+    # No need for names in VarScan, hence the "_"
 
-        if metadata["phenotype"] == "normal":
-            normal_bam = bamfile
-        elif metadata["phenotype"] == "tumor":
-            tumor_bam = bamfile
-
-    if tumor_bam is None or normal_bam is None:
-        raise ValueError("Missing phenotype definition (tumor or normal) "
-                         "in samples")
+    tumor_bam, _, normal_bam, _ = get_paired_bams(align_bams, items)
 
     if not file_exists(out_file):
         base, ext = os.path.splitext(out_file)
