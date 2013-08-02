@@ -214,7 +214,7 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
     with open(loc_file) as in_handle:
         for line in in_handle:
             if line.strip() and not line.startswith("#"):
-                parts = line.strip().split()
+                parts = line.strip().split("\t")
                 if dbkey_i is not None:
                     if parts[dbkey_i] == genome_build:
                         cur_ref = parts[path_i]
