@@ -1,5 +1,8 @@
 ## 0.7.1 (in progress)
 
+- Bug fixes for new approach to parsing *.loc files: handle Galaxy *.loc files
+  with mixed tabs and spaces correctly and fall back to previous approaches
+  when aligner specific *.loc files are missing.
 - Bug fix for concatenating files when first file in empty.
 
 ## 0.7.0 (July 30, 2013)
