@@ -97,7 +97,7 @@ def fix_vcf_line(parts, ref_base):
         varinfo[4] = ref
         genotypes = [swap[x] for x in genotypes]
     # reference is on alternate strand
-    elif ref_base != ref and complements[ref] == ref_base:
+    elif ref_base != ref and complements.get(ref) == ref_base:
         varinfo[3] = complements[ref]
         varinfo[4] = complements[var]
     # unspecified alternative base
@@ -106,7 +106,7 @@ def fix_vcf_line(parts, ref_base):
         varinfo[4] = ref
         genotypes = [swap[x] for x in genotypes]
     # swapped and on alternate strand
-    elif ref_base != ref and complements[var] == ref_base:
+    elif ref_base != ref and complements.get(var) == ref_base:
         varinfo[3] = complements[var]
         varinfo[4] = complements[ref]
         genotypes = [swap[x] for x in genotypes]
