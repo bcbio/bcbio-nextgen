@@ -50,6 +50,7 @@ def _get_exclude_samples(in_file, to_exclude):
                 for s in parts[9:]:
                     if s in to_exclude:
                         out.append(s)
+                break
     return out
 
 def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
