@@ -149,9 +149,12 @@ def get_jar(base_name, dname):
     jars = glob.glob(os.path.join(expand_path(dname), "%s*.jar" % base_name))
     if len(jars) == 1:
         return jars[0]
+    elif len(jars) > 1:
+        raise ValueError("Found multiple jars for %s in %s. Need single jar: %s" %
+                         (base_name, dname, jars))
     else:
-        raise ValueError("Could not find java jar %s in %s: %s" % (
-            base_name, dname, jars))
+        raise ValueError("Could not find java jar %s in %s" %
+                         (base_name, dname))
 
 ## functions for navigating through the standard galaxy directory of files
 
