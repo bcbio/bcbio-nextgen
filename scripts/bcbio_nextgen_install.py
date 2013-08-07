@@ -32,15 +32,15 @@ def main(args, sys_argv):
         print("Installing bcbio-nextgen")
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
-        print("Installing data and third party dependencies")
-        subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + sys_argv[1:])
-        system_config = write_system_config(remotes["system_config"], args.datadir,
-                                            args.tooldir)
-        print("Finished: bcbio-nextgen, tools and data installed")
-        print(" Ready to use system configuration at:\n  %s" % system_config)
-        if args.tooldir:
-            print(" Tools installed in:\n  %s" % args.tooldir)
-        print(" Genome data installed in:\n  %s" % args.datadir)
+    print("Installing data and third party dependencies")
+    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + sys_argv[1:])
+    system_config = write_system_config(remotes["system_config"], args.datadir,
+                                        args.tooldir)
+    print("Finished: bcbio-nextgen, tools and data installed")
+    print(" Ready to use system configuration at:\n  %s" % system_config)
+    if args.tooldir:
+        print(" Tools installed in:\n  %s" % args.tooldir)
+    print(" Genome data installed in:\n  %s" % args.datadir)
 
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
@@ -128,11 +128,13 @@ def setup_data_dir(args):
 
 @contextlib.contextmanager
 def bcbio_tmpdir():
+    orig_dir = os.getcwd()
     work_dir = os.path.join(os.getcwd(), "tmpbcbio-install")
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
     os.chdir(work_dir)
     yield work_dir
+    os.chdir(orig_dir)
     shutil.rmtree(work_dir)
 
 def check_dependencies():
@@ -148,13 +150,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines")
     parser.add_argument("datadir", help="Directory to install genome data",
-                        type=os.path.abspath)
+                        type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux"])
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
-                        type=os.path.abspath, default=None)
+                        type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",

@@ -100,7 +100,7 @@ def add_subparser(subparsers):
     parser = subparsers.add_parser("upgrade", help="Install or upgrade bcbio-nextgen")
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
-                        type=os.path.abspath, default=None)
+                        type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",
