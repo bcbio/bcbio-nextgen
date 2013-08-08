@@ -23,7 +23,7 @@ from bcbio.provenance import programs
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
-from bcbio.variation import ensemble, population, recalibrate, validate
+from bcbio.variation import coverage, ensemble, population, recalibrate, validate
 
 def run_main(config, config_file, work_dir, parallel,
          fc_dir=None, run_info_yaml=None):
@@ -220,6 +220,8 @@ class Variant2Pipeline(AbstractPipeline):
             regions = callable.combine_sample_regions(samples)
             samples = region.add_region_info(samples, regions)
             samples = region.clean_sample_data(samples)
+            logger.info("Timing: coverage")
+            samples = coverage.summarize_samples(samples, run_parallel)
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with global_parallel(parallel, "full", ["piped_bamprep", "variantcall_sample"],

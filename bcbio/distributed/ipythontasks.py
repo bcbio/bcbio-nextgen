@@ -6,7 +6,7 @@ from IPython.parallel import require
 
 from bcbio.distributed import ipython
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
-from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
 
@@ -156,3 +156,9 @@ def combine_calls(*args):
 def compare_to_rm(*args):
     with _setup_logging(args):
         return apply(validate.compare_to_rm, *args)
+
+@require(coverage)
+def coverage_summary(*args):
+    with _setup_logging(args):
+        return apply(coverage.summary, *args)
+coverage_summary.metadata = {"resources": ["bcbio_coverage"]}

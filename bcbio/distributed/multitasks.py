@@ -3,7 +3,7 @@
 from bcbio import utils
 from bcbio.bam import callable
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
-from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 
 @utils.map_wrap
@@ -109,3 +109,8 @@ def calc_callable_loci(*args):
 @utils.map_wrap
 def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
+
+@utils.map_wrap
+def coverage_summary(*args):
+    return coverage.summary(*args)
+coverage_summary.metadata = {"resources": ["bcbio_coverage"]}

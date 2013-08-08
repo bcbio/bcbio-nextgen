@@ -44,7 +44,8 @@ def _get_resource_programs(fn, algs):
     Helps avoid requiring core information from unused programs.
     """
     # standard list of programs we always use
-    used_progs = set(["gatk", "gemini"])
+    # XXX Need to expose this in a top-level way to allow more multiprocessing
+    used_progs = set(["gatk", "gemini", "bcbio_coverage"])
     for alg in algs:
         # get aligners used
         aligner = alg.get("aligner")

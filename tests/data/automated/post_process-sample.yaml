@@ -40,6 +40,9 @@ custom_algorithms:
 resources:
   bcbio_variation:
     dir: /usr/share/java/bcbio_variation
+  bcbio_coverage:
+    dir: /usr/share/java/bcbio_coverage
+    cores: 4
   ucsc_bigwig:
     memory: 36g
   bowtie:
