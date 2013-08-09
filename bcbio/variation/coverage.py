@@ -41,6 +41,7 @@ def _prep_coverage_config(samples, config):
     species = BUILD_TO_ENSEMBL[samples[0]["genome_build"]]
     cov_file, cov_kw = _prep_coverage_file(species, covdir, config)
     out = {"params": {"species": species,
+                      "build": samples[0]["genome_build"],
                       "coverage": 13,
                       "transcripts": "canonical",
                       "block": {"min": 100, "distance": 10}},
