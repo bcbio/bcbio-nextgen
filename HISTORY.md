@@ -4,6 +4,7 @@
   with mixed tabs and spaces correctly and fall back to previous approaches
   when aligner specific *.loc files are missing.
 - Bug fix for concatenating files when first file in empty.
+- Recover from ZeroMQ logging errors, avoiding loss of logging output.
 
 ## 0.7.0 (July 30, 2013)
 
