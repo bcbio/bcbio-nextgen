@@ -4,7 +4,9 @@ Getting started
 Overview
 ========
 
-1. Create a `sample configuration file`_ for your samples::
+1. Create a `sample configuration file`_ for your project
+   (substitute the example BAM and fastq names below with the full
+   path to your sample files)::
 
          bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
 
@@ -19,7 +21,7 @@ Overview
 
 2. Run analysis, distributed across 8 local cores::
 
-         bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -n 8
+         bcbio_nextgen.py bcbio_sample.yaml -n 8
 
 .. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 
@@ -80,7 +82,7 @@ Then the fastq reads, reference materials and analysis regions::
 Finally run the analysis, distributed on 8 local cores, with::
 
     $ mkdir work && cd work
-    $ bcbio_nextgen.py bcbio_system.yaml ../input ../config/NA12878-exome-methodcmp.yaml -n 8
+    $ bcbio_nextgen.py ../input ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
 to the NIST reference materials.
@@ -117,9 +119,9 @@ bwa and GATK, using Illumina's `Platinum genomes project`_
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
 
 - Run analysis on 16 core machine::
-    
+
     cd work
-    bcbio_nextgen.py /path/to/your/bcbio_system.yaml ../input ../config/NA12878-illumina.yaml -n 16
+    bcbio_nextgen.py ../input ../config/NA12878-illumina.yaml -n 16
 
 - Examine summary of concordance and discordance to comparison calls
   from the ``grading-summary.csv`` file in the work directory.

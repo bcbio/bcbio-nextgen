@@ -3,6 +3,7 @@
 import copy
 import glob
 import os
+import sys
 import yaml
 
 
@@ -45,6 +46,23 @@ def add_cached_versions(config):
     return config
 
 # ## Retrieval functions
+
+def load_system_config(config_file):
+    """Load bcbio_system.yaml configuration file, handling standard defaults.
+
+    Looks for configuration file in default location within
+    final base directory from a standard installation.
+    """
+    if not os.path.exists(config_file):
+        base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+        test_config = os.path.join(base_dir, "galaxy", config_file)
+        if os.path.exists(test_config):
+            config_file = test_config
+        else:
+            raise ValueError("Could not find input system configuration file %s, "
+                             "including inside standard directory %s" %
+                             (config_file, os.path.join(base_dir, "galaxy")))
+    return load_config(config_file), config_file
 
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.

@@ -1,5 +1,7 @@
 ## 0.7.1 (in progress)
 
+- Remove requirement for bcbio_system.yaml passed in on command line, defaulting
+  to default file prepared by installer unless specified.
 - Bug fixes for new approach to parsing *.loc files: handle Galaxy *.loc files
   with mixed tabs and spaces correctly and fall back to previous approaches
   when aligner specific *.loc files are missing.

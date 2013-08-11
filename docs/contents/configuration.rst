@@ -7,7 +7,10 @@ details about your system and samples to run:
 - ``bcbio_system.yaml`` High level information about the system,
   including locations of installed programs like Picard and GATK.
   These apply across multiple runs. The automated installer creates
-  a ready to go system configuration file.
+  a ready to go system configuration file that can be manually
+  edited to match the system. Find the file in the galaxy sub-directory
+  within your installation data location
+  (ie. ``/usr/local/share/bcbio-nextgen/galaxy``).
 
 - ``bcbio_sample.yaml`` Details about a set of samples to process,
   including input files and analysis options. You configure these for
@@ -42,7 +45,8 @@ multiple samples using the template workflow command::
 - The remaining arguments are input BAM or fastq files. The script
   pairs fastq files (identified by ``_1`` and ``_2``) and extracts
   sample names from input BAMs, populating the ``files`` and
-  ``description`` field in the final configuration file.
+  ``description`` field in the final configuration file. Specify the
+  full path to sample files on your current machine.
 
 To make it easier to define your own project specific template, an
 optional first step is to download and edit a local template. First

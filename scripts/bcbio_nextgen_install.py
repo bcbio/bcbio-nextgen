@@ -37,10 +37,11 @@ def main(args, sys_argv):
     system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
     print("Finished: bcbio-nextgen, tools and data installed")
-    print(" Ready to use system configuration at:\n  %s" % system_config)
+    print(" Genome data installed in:\n  %s" % args.datadir)
     if args.tooldir:
         print(" Tools installed in:\n  %s" % args.tooldir)
-    print(" Genome data installed in:\n  %s" % args.datadir)
+    print(" Ready to use system configuration at:\n  %s" % system_config)
+    print(" Edit configuration file as needed to match your machine or cluster")
 
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.

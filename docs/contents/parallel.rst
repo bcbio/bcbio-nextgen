@@ -18,7 +18,7 @@ Multiple cores
 Running using multiple cores only requires setting the ``-n``
 command line flag::
 
-    bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t local -n 12
+    bcbio_nextgen.py bcbio_sample.yaml -t local -n 12
 
 IPython parallel
 ~~~~~~~~~~~~~~~~
@@ -34,7 +34,7 @@ accomplished with a distributed file system like
 
 Run an analysis using ipython for parallel execution::
 
-    bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
+    bcbio_nextgen.py bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
 The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque)``.
 
