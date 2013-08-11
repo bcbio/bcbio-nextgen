@@ -50,6 +50,44 @@ Example pipelines
 We supply example input configuration files for comparison purposes
 and to help in understanding the pipeline.
 
+Whole genome
+~~~~~~~~~~~~
+An input configuration for running whole gnome variant calling with
+bwa and GATK, using Illumina's `Platinum genomes project`_
+(`NA12878-illumina.yaml`_). To run the analysis:
+
+- Create an input directory structure like::
+
+    ├── config
+    │   └── NA12878-illumina.yaml
+    ├── input
+    └── work
+
+- Retrieve inputs and comparison calls::
+
+    cd input
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
+    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-illumina-example.vcf.gz
+    gunzip NA12878-illumina-example.vcf.gz
+
+- Retrieve configuration input file::
+
+    cd config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+
+- Run analysis on 16 core machine::
+
+    cd work
+    bcbio_nextgen.py ../input ../config/NA12878-illumina.yaml -n 16
+
+- Examine summary of concordance and discordance to comparison calls
+  from the ``grading-summary.csv`` file in the work directory.
+
+.. _EdgeBio's: http://www.edgebio.com/
+.. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
+.. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+
 Exome with validation against reference materials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -91,44 +129,6 @@ Note that this example requires a full licensed version of novoalign,
 since it uses gzipped inputs and multicore processing. You can still
 run the example with only bwa alignments by removing lanes 1 and 3
 from the ``NA12878-exome-methodcmp.yaml`` sample configuration file.
-
-Whole genome
-~~~~~~~~~~~~
-An input configuration for running whole gnome variant calling with
-bwa and GATK, using Illumina's `Platinum genomes project`_
-(`NA12878-illumina.yaml`_). To run the analysis:
-
-- Create an input directory structure like::
-
-    ├── config
-    │   └── NA12878-illumina.yaml
-    ├── input
-    └── work
-
-- Retrieve inputs and comparison calls::
-
-    cd input
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
-    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-illumina-example.vcf.gz
-    gunzip NA12878-illumina-example.vcf.gz
-
-- Retrieve configuration input file::
-
-    cd config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
-
-- Run analysis on 16 core machine::
-
-    cd work
-    bcbio_nextgen.py ../input ../config/NA12878-illumina.yaml -n 16
-
-- Examine summary of concordance and discordance to comparison calls
-  from the ``grading-summary.csv`` file in the work directory.
-
-.. _EdgeBio's: http://www.edgebio.com/
-.. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
-.. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
 
 Exome with Ensemble calling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
