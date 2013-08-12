@@ -54,7 +54,7 @@ def _general_snpeff_version(snpeff_file):
     if not file_exists(safe_snpeff):
         with file_transaction(safe_snpeff) as tx_safe:
             with open(snpeff_file) as in_handle:
-                with open(safe_snpeff, "w") as out_handle:
+                with open(tx_safe, "w") as out_handle:
                     for line in in_handle:
                         if line.startswith("##SnpEffVersion"):
                             line = _fix_snpeff_version_line(line, gatk_versions)
