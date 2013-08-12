@@ -5,6 +5,8 @@
 - Bug fixes for new approach to parsing *.loc files: handle Galaxy *.loc files
   with mixed tabs and spaces correctly and fall back to previous approaches
   when aligner specific *.loc files are missing.
+- Bug fixes for preparing merged BAM files using bamtools: correctly sort after
+  merging and avoid duplication of reads in noanalysis files.
 - Bug fix for concatenating files when first file in empty.
 - Recover from ZeroMQ logging errors, avoiding loss of logging output.
 

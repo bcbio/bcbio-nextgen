@@ -208,7 +208,8 @@ def piped_bamprep(data, region=None, out_file=None):
     if region[0] == "nochrom":
         prep_bam = shared.write_nochr_reads(data["work_bam"], out_file)
     elif region[0] == "noanalysis":
-        prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file)
+        prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file,
+                                                 data["config"])
     else:
         if not utils.file_exists(out_file):
             with utils.curdir_tmpdir() as tmp_dir:
