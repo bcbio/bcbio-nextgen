@@ -1,3 +1,5 @@
+.. _docs-config:
+
 Configuration
 -------------
 
@@ -10,7 +12,10 @@ details about your system and samples to run:
   a ready to go system configuration file that can be manually
   edited to match the system. Find the file in the galaxy sub-directory
   within your installation data location
-  (ie. ``/usr/local/share/bcbio-nextgen/galaxy``).
+  (ie. ``/usr/local/share/bcbio-nextgen/galaxy``). By default, the
+  pipeline uses the standard pre-created configuration file but
+  multiple system configurations can be independently maintained
+  and passed as the first argument to ``bcbio_nextgen.py`` commands.
 
 - ``bcbio_sample.yaml`` Details about a set of samples to process,
   including input files and analysis options. You configure these for

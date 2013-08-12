@@ -23,6 +23,10 @@ Overview
 
          bcbio_nextgen.py bcbio_sample.yaml -n 8
 
+3. Read the :ref:`docs-config` documentation for full details on
+   adjusting both the sample and system configuration files to match
+   your experiment and computational setup.
+
 .. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 
 Logging
