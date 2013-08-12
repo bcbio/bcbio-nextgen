@@ -7,8 +7,7 @@ import os
 
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
-from bcbio.variation import samtools
-from bcbio.variation.genotype import write_empty_vcf
+from bcbio.variation import samtools, vcfutils
 
 import pysam
 
@@ -59,4 +58,4 @@ def _varscan_work(align_bams, ref_file, config, target_regions, out_file):
     # VarScan can create completely empty files in regions without
     # variants, so we create a correctly formatted empty file
     if os.path.getsize(out_file) == 0:
-        write_empty_vcf(out_file)
+        vcfutils.write_empty_vcf(out_file)

@@ -60,7 +60,6 @@ def bcbio_variation_comparison(config_file, base_dir, data):
     java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
     cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-compare", config_file]
     do.run(cmd, "Comparing variant calls using bcbio.variation", data)
-    subprocess.check_call(cmd)
 
 def _run_bcbio_variation(config_file, base_dir, sample, data):
     out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(sample))

@@ -71,15 +71,18 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
     else:
         if out_file is None:
             out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
-        if not utils.file_exists(out_file):
+        if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".bai"):
+            bamtools = config_utils.get_program("bamtools", config)
+            resources = config_utils.get_resources("bamtools", config)
+            max_mem = resources.get("memory", "2048")
             with file_transaction(out_file) as tx_out_file:
                 with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
                     with open(bam_file_list, "w") as out_handle:
-                        for f in bam_files:
+                        for f in sorted(bam_files):
                             out_handle.write("%s\n" % f)
-                    cmd = [config_utils.get_program("bamtools", config),
-                           "merge", "-list", bam_file_list, "-out", tx_out_file]
-                    do.run(cmd, "Merge bam files", None)
+                    cmd = ("{bamtools} merge -list {bam_file_list} | "
+                           "{bamtools} sort -mem {max_mem} -out {tx_out_file}")
+                    do.run(cmd.format(**locals()), "Merge bam files", None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         picard = broad.runner_from_config(config)

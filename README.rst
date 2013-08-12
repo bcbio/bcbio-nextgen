@@ -18,11 +18,12 @@ Features
 
 - Community developed: We welcome contributors with the goal of
   overcoming the biological, algorithmic and computational challenges
-  that face individual developers. See our `users page`_ for examples
+  that face individual developers working on complex pipelines in
+  quickly changing research areas. See our `users page`_ for examples
   of bcbio-nextgen deployments.
 
 - Installation: `A single installer script`_ prepares all
-  third party software, data libraries and configuration scripts.
+  third party software, data libraries and system configuration files.
 
 - `Automated validation`_: Compare variant calls against common reference
   materials or sample specific SNP arrays to ensure call correctness.
@@ -54,16 +55,18 @@ Quick start
          wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
          python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
 
-producing a `system configuration file`_ referencing the installed
-software and data.
+producing an editable `system configuration file`_ referencing the installed
+software, data and system information.
 
-2. Create a `sample configuration file`_ for your samples::
+2. Create a `sample configuration file`_ with samples from your
+   project (substitute the example BAM and fastq names below with the full
+   path to your sample files)::
 
          bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
 
 3. Run analysis, distributed across 8 local cores::
 
-         bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -n 8
+         bcbio_nextgen.py bcbio_sample.yaml -n 8
 
 .. _system configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml

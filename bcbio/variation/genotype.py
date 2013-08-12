@@ -66,7 +66,7 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
                                    region, out_file)
         if (not isinstance(region, (list, tuple)) and
                 not all(has_aligned_reads(x, region) for x in align_bams)):
-            write_empty_vcf(out_file)
+            vcfutils.write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "UnifiedGenotyper",
@@ -90,7 +90,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         assert broad_runner.gatk_type() == "restricted", \
             "Require full version of GATK 2.4+ for haplotype calling"
         if not all(has_aligned_reads(x, region) for x in align_bams):
-            write_empty_vcf(out_file)
+            vcfutils.write_empty_vcf(out_file)
         else:
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "HaplotypeCaller",
@@ -129,12 +129,6 @@ def _gatk_location_hack(args):
         elif chrom in exclude_args:
             extra_args.extend(exclude_args[chrom])
     return args + extra_args
-
-def write_empty_vcf(out_file):
-    with open(out_file, "w") as out_handle:
-        out_handle.write("##fileformat=VCFv4.1\n"
-                         "## No variants; no reads aligned in region\n"
-                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
 
 # ## Variant filtration -- shared functionality
 
@@ -526,10 +520,14 @@ def variantcall_sample(data, region=None, out_file=None):
               region, call_file)
     if data["config"]["algorithm"].get("phasing", False) == "gatk":
         call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
-    if not os.path.exists(out_file):
-        for ext in ["", ".idx"]:
+    for ext in ["", ".idx"]:
+        if not os.path.exists(out_file + ext):
             if os.path.exists(call_file + ext):
-                os.symlink(call_file + ext, out_file + ext)
+                try:
+                    os.symlink(call_file + ext, out_file + ext)
+                except OSError, msg:
+                    if  str(msg).find("File exists") == -1:
+                        raise
     if "work_items" in data:
         del data["work_items"]
     data["vrn_file"] = out_file

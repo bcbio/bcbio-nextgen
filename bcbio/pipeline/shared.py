@@ -8,6 +8,7 @@ import subprocess
 import pysam
 
 from bcbio import broad
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.alignment import get_genome_ref
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
@@ -73,12 +74,13 @@ def write_nochr_reads(in_file, out_file):
                             out_bam.write(read)
     return out_file
 
-def write_noanalysis_reads(in_file, region_file, out_file):
-    """Write a BAM file of reads in the specified region file that
+def write_noanalysis_reads(in_file, region_file, out_file, config):
+    """Write a BAM file of reads in the specified region file that are not analyzed.
     """
     if not file_exists(out_file):
+        bedtools = config_utils.get_program("bedtools", config)
         with file_transaction(out_file) as tx_out_file:
-            cl = "samtools view -b -L {region_file} {in_file} > {tx_out_file}"
+            cl = "{bedtools} intersect -abam {in_file} -b {region_file} -f 1.0 > {tx_out_file}"
             subprocess.check_call(cl.format(**locals()), shell=True)
     return out_file
 

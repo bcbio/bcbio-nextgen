@@ -61,7 +61,7 @@ def parallel_prep_region(samples, regions, run_parallel):
         if (not a.get("mark_duplicates") and not a.get("recalibrate") and
             not a.get("realign", "gatk") and not a.get("variantcaller", "gatk")):
             extras.append([data])
-        elif not data.get("work_bam"):
+        elif not data.get(file_key):
             extras.append([data])
         else:
             torun.append([data])

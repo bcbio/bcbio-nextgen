@@ -12,6 +12,13 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.variation import bamprep
 
+def write_empty_vcf(out_file):
+    with open(out_file, "w") as out_handle:
+        out_handle.write("##fileformat=VCFv4.1\n"
+                         "## No variants; no reads aligned in region\n"
+                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+
+
 def split_snps_indels(broad_runner, orig_file, ref_file):
     """Split a variant call file into SNPs and INDELs for processing.
     """
@@ -31,6 +38,39 @@ def split_snps_indels(broad_runner, orig_file, ref_file):
                     cur_params += ["--selectTypeToInclude", x]
                 broad_runner.run_gatk(cur_params)
     return snp_file, indel_file
+
+def _get_exclude_samples(in_file, to_exclude):
+    """Identify samples in the exclusion list which are actually in the VCF.
+    """
+    out = []
+    with open(in_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("#CHROM"):
+                parts = line.strip().split("\t")
+                for s in parts[9:]:
+                    if s in to_exclude:
+                        out.append(s)
+                break
+    return out
+
+def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
+    """Exclude specific samples from an input VCF file using GATK SelectVariants.
+    """
+    to_exclude = _get_exclude_samples(in_file, to_exclude)
+    # can use the input sample, all exclusions already gone
+    if len(to_exclude) == 0:
+        out_file = in_file
+    elif not utils.file_exists(out_file):
+        broad_runner = broad.runner_from_config(config)
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "SelectVariants",
+                      "-R", ref_file,
+                      "--variant", in_file,
+                      "--out", tx_out_file]
+            for x in to_exclude:
+                params += ["-xl_sn", x]
+            broad_runner.run_gatk(params)
+    return out_file
 
 def combine_variant_files(orig_files, out_file, ref_file, config,
                           quiet_out=True, region=None):
@@ -94,6 +134,13 @@ def _sort_by_region(fnames, regions, ref_file, config):
     sitems.sort()
     return [x[1] for x in sitems]
 
+def _has_variants(in_file):
+    with open(in_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith("#"):
+                return True
+    return False
+
 def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
 
@@ -103,7 +150,8 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                for i, orig_file in enumerate(_sort_by_region(orig_files, regions, ref_file, config)):
+                for i, orig_file in enumerate(f for f in _sort_by_region(orig_files, regions, ref_file, config)
+                                              if _has_variants(f)):
                     with open(orig_file) as in_handle:
                         for line in in_handle:
                             if line.startswith("#"):
@@ -111,6 +159,8 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                                     out_handle.write(line)
                             else:
                                 out_handle.write(line)
+            if os.path.getsize(tx_out_file) == 0:
+                write_empty_vcf(tx_out_file)
     return out_file
 
 # ## Parallel VCF file combining

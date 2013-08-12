@@ -23,7 +23,7 @@ from bcbio.provenance import programs
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
-from bcbio.variation import ensemble, population, recalibrate, validate
+from bcbio.variation import coverage, ensemble, population, recalibrate, validate
 
 def run_main(config, config_file, work_dir, parallel,
          fc_dir=None, run_info_yaml=None):
@@ -87,11 +87,13 @@ def parse_cl_args(in_args):
         subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
         install.add_subparser(subparsers)
     else:
-        parser.add_argument("global_config", help="Global YAML configuration file specifying details about the system",
+        parser.add_argument("global_config", help="Global YAML configuration file specifying details "
+                            "about the system (optional, defaults to installed bcbio_system.yaml)",
                             nargs="?")
         parser.add_argument("fc_dir", help="A directory of Illumina output or fastq files to process (optional)",
                             nargs="?")
-        parser.add_argument("run_config", help="YAML file with details about samples to process (optional)",
+        parser.add_argument("run_config", help="YAML file with details about samples to process "
+                            "(required, unless using Galaxy LIMS as input)",
                             nargs="*")
         parser.add_argument("-n", "--numcores", type=int, default=0)
         parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
@@ -116,8 +118,6 @@ def parse_cl_args(in_args):
         parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
     args = parser.parse_args(in_args)
     if hasattr(args, "fc_dir"):
-        inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
-                  if x is not None]
         kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
                   "paralleltype": args.paralleltype,
                   "scheduler": args.scheduler,
@@ -127,25 +127,52 @@ def parse_cl_args(in_args):
                   "resources": args.resources,
                   "profile": args.profile,
                   "upgrade": args.upgrade,
-                  "workflow": args.workflow,
-                  "inputs": inputs}
+                  "workflow": args.workflow}
+        kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
     else:
-        args.global_config = None
-        args.fc_dir = None
         kwargs = {"args": args,
+                  "config_file": None,
                   "upgrade": args.upgrade}
-    if args.fc_dir is not None and len(args.run_config) == 1:
-        kwargs["fc_dir"] = args.fc_dir
-        kwargs["run_info_yaml"] = args.run_config[0]
-    elif args.fc_dir is not None:
-        if os.path.isfile(args.fc_dir):
-            kwargs["run_info_yaml"] = args.fc_dir
+    return kwargs
+
+def _add_inputs_to_kwargs(args, kwargs, parser):
+    """Convert input system config, flow cell directory and sample yaml to kwargs.
+
+    Handles back compatibility with previous commandlines while allowing flexible
+    specification of input parameters.
+    """
+    inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
+              if x is not None]
+    global_config = "bcbio_system.yaml" # default configuration if not specified
+    if len(inputs) == 1:
+        if os.path.isfile(inputs[0]):
+            fc_dir = None
+            run_info_yaml = inputs[0]
         else:
-            kwargs["fc_dir"] = args.fc_dir
-    elif args.upgrade is None and args.workflow is None:
+            fc_dir = inputs[0]
+            run_info_yaml = None
+    elif len(inputs) == 2:
+        if os.path.isfile(inputs[0]):
+            global_config = inputs[0]
+            if os.path.isfile(inputs[1]):
+                fc_dir = None
+                run_info_yaml = inputs[1]
+            else:
+                fc_dir = inputs[1]
+                run_info_yaml = None
+        else:
+            fc_dir, run_info_yaml = inputs
+    elif len(inputs) == 3:
+        global_config, fc_dir, run_info_yaml = inputs
+    else:
+        print "Incorrect input arguments", inputs
         parser.print_help()
         sys.exit()
-    return args.global_config, kwargs
+    kwargs["inputs"] = inputs
+    kwargs["config_file"] = global_config
+    kwargs["fc_dir"] = fc_dir
+    kwargs["run_info_yaml"] = run_info_yaml
+    return kwargs
 
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.
@@ -220,6 +247,8 @@ class Variant2Pipeline(AbstractPipeline):
             regions = callable.combine_sample_regions(samples)
             samples = region.add_region_info(samples, regions)
             samples = region.clean_sample_data(samples)
+            logger.info("Timing: coverage")
+            samples = coverage.summarize_samples(samples, run_parallel)
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with global_parallel(parallel, "full", ["piped_bamprep", "variantcall_sample"],

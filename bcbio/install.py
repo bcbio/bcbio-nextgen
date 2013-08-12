@@ -51,8 +51,8 @@ def _default_deploy_args(args):
             "hostname": "localhost",
             "fabricrc_overrides" : {"edition": "minimal",
                                     "use_sudo": args.sudo,
-                                    "distribution": args.distribution,
-                                    "dist_name": ""}}
+                                    "distribution": args.distribution or "__auto__",
+                                    "dist_name": "__auto__"}}
 
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
@@ -100,7 +100,7 @@ def add_subparser(subparsers):
     parser = subparsers.add_parser("upgrade", help="Install or upgrade bcbio-nextgen")
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
-                        type=os.path.abspath, default=None)
+                        type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",
@@ -108,7 +108,7 @@ def add_subparser(subparsers):
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
                         choices = ["stable", "development", "system", "skip"], default="stable")
     parser.add_argument("--distribution", help="Operating system distribution",
-                        default="ubuntu",
+                        default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"])

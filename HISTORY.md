@@ -1,6 +1,21 @@
+## 0.7.1 (in progress)
+
+- Remove requirement for bcbio_system.yaml passed in on command line, defaulting
+  to default file prepared by installer unless specified.
+- Bug fixes for new approach to parsing *.loc files: handle Galaxy *.loc files
+  with mixed tabs and spaces correctly and fall back to previous approaches
+  when aligner specific *.loc files are missing.
+- Bug fixes for preparing merged BAM files using bamtools: correctly sort after
+  merging and avoid duplication of reads in noanalysis files.
+- Bug fix for concatenating files when first file in empty.
+- Recover from ZeroMQ logging errors, avoiding loss of logging output.
+
 ## 0.7.0 (July 30, 2013)
 
-- RNA-seq pipeline updated.
+- RNA-seq pipeline updated: deprecate Tophat 1 in favor of Tophat 2. Perform
+  automatic adapter trimming of common adapter sequences. STAR aligner support.
+  RNA-SeQC support for RNA-seq specific quality control. Transcript quantitation
+  with htseq-count.
 - Updated installation and upgrade procedures, to make it easier to build an
   initial analysis pipeline and upgrade bcbio-nextgen and third-parts tools and
   data in place.

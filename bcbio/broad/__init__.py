@@ -190,6 +190,9 @@ class BroadRunner:
         the latest 2.4+ restricted version of GATK.
         """
         full_version = self.get_gatk_version()
+        # Working with a recent version if using nightlies
+        if full_version.startswith("nightly-"):
+            return "restricted"
         try:
             version, subversion, githash = full_version.split("-")
             if version.startswith("v"):

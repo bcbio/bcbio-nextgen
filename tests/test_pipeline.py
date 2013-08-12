@@ -46,7 +46,7 @@ class VCFUtilTest(unittest.TestCase):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data")
 
     @attr(speed=1)
-    def test_parallel_vcf_combine(self):
+    def test_1_parallel_vcf_combine(self):
         """Parallel combination of VCF files, split by chromosome.
         """
         var_dir = os.path.join(self.data_dir, "variants")
@@ -62,3 +62,17 @@ class VCFUtilTest(unittest.TestCase):
         if os.path.exists(out_file):
             os.remove(out_file)
         vcfutils.parallel_combine_variants(files, out_file, ref_file, config, run_parallel)
+
+    @attr(speed=1)
+    def test_2_vcf_exclusion(self):
+        """Exclude samples from VCF files.
+        """
+        fname = os.path.join(self.data_dir, "variants", "S1_S2-combined.vcf")
+        ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
+        config = load_config(os.path.join(self.data_dir, "automated",
+                                          "post_process-sample.yaml"))
+        out_file = "%s-exclude%s" % os.path.splitext(fname)
+        to_exclude = ["S1"]
+        if os.path.exists(out_file):
+            os.remove(out_file)
+        vcfutils.exclude_samples(fname, out_file, to_exclude, ref_file, config)
