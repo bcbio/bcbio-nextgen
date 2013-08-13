@@ -73,15 +73,20 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
             out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
         if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".bai"):
             bamtools = config_utils.get_program("bamtools", config)
-            resources = config_utils.get_resources("bamtools", config)
-            max_mem = resources.get("memory", "2048")
+            samtools = config_utils.get_program("samtools", config)
+            resources = config_utils.get_resources("samtools", config)
+            # Could use multiple cores if we build multicore steps in here
+            #num_cores = config["algorithm"].get("num_cores", 1)
+            num_cores = 1
+            max_mem = resources.get("memory", "2048M")
             with file_transaction(out_file) as tx_out_file:
+                tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
                     with open(bam_file_list, "w") as out_handle:
                         for f in sorted(bam_files):
                             out_handle.write("%s\n" % f)
                     cmd = ("{bamtools} merge -list {bam_file_list} | "
-                           "{bamtools} sort -mem {max_mem} -out {tx_out_file}")
+                           "{samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                     do.run(cmd.format(**locals()), "Merge bam files", None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
