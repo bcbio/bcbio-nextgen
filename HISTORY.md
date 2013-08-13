@@ -1,3 +1,8 @@
+## 0.7.2 (in progress)
+
+- Improve BAM merging on large files using samtools for output sort.
+- Bug fix to re-enable template generation functionality.
+
 ## 0.7.1 (August 12, 2013)
 
 - Remove requirement for bcbio_system.yaml passed in on command line, defaulting

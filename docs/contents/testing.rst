@@ -58,7 +58,9 @@ Whole genome
 ~~~~~~~~~~~~
 An input configuration for running whole gnome variant calling with
 bwa and GATK, using Illumina's `Platinum genomes project`_
-(`NA12878-illumina.yaml`_). To run the analysis:
+(`NA12878-illumina.yaml`_). See this
+`blog post on whole genome scaling`_ for expected run times and more
+information about the pipeline. To run the analysis:
 
 - Create an input directory structure like::
 
@@ -91,6 +93,7 @@ bwa and GATK, using Illumina's `Platinum genomes project`_
 .. _EdgeBio's: http://www.edgebio.com/
 .. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
 .. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+.. _blog post on whole genome scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 
 Exome with validation against reference materials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,7 +103,9 @@ clinical sequencing pipeline, and compares them against
 reference materials from NIST's `Genome in a Bottle`_
 initiative. This supplies a full regression pipeline to ensure
 consistency of calling between releases and updates of third party
-software.
+software. This is a large full exome examples with multiple aligners
+and variant callers, so can take more than 24 hours on machines using
+multiple cores.
 
 First get the input configuration file::
 
