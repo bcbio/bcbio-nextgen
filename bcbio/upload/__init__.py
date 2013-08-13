@@ -37,7 +37,11 @@ def _get_files(sample):
         return []
 
 def _get_files_rnaseq(sample):
-    return []
+    out = []
+    algorithm = sample["config"]["algorithm"]
+    out = _maybe_add_summary(algorithm, sample, out)
+    out = _maybe_add_alignment(algorithm, sample, out)
+    return _add_meta(out, sample)
 
 def _add_meta(xs, sample=None, config=None):
     out = []
