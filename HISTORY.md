@@ -1,4 +1,4 @@
-## 0.7.1 (in progress)
+## 0.7.1 (August 12, 2013)
 
 - Remove requirement for bcbio_system.yaml passed in on command line, defaulting
   to default file prepared by installer unless specified.
