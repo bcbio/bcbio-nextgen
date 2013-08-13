@@ -164,10 +164,14 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
             fc_dir, run_info_yaml = inputs
     elif len(inputs) == 3:
         global_config, fc_dir, run_info_yaml = inputs
+    elif kwargs.get("workflow", "") == "template":
+        kwargs["inputs"] = inputs
+        return kwargs
     else:
         print "Incorrect input arguments", inputs
         parser.print_help()
-        sys.exit()
+        sys.exit() 
+    
     kwargs["inputs"] = inputs
     kwargs["config_file"] = global_config
     kwargs["fc_dir"] = fc_dir
