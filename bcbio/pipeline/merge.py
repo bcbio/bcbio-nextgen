@@ -82,6 +82,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
+                    bam_file_file = "%s.list" % os.path.splitext(out_file)
                     with open(bam_file_list, "w") as out_handle:
                         for f in sorted(bam_files):
                             out_handle.write("%s\n" % f)
