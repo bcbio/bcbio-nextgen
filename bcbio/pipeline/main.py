@@ -18,7 +18,7 @@ from bcbio.log import logger
 from bcbio.pipeline.run_info import get_run_info
 from bcbio.pipeline.demultiplex import add_multiplex_across_lanes
 from bcbio.pipeline.merge import organize_samples
-from bcbio.pipeline import lane, region, qcsummary
+from bcbio.pipeline import lane, region, qcsummary, version
 from bcbio.provenance import programs
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
@@ -116,6 +116,8 @@ def parse_cl_args(in_args):
         parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
                             choices = ["stable", "development", "system"])
         parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
+        parser.add_argument("-v", "--version", help="Print current version",
+                            action="store_true")
     args = parser.parse_args(in_args)
     if hasattr(args, "fc_dir"):
         kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
@@ -167,11 +169,13 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
     elif kwargs.get("workflow", "") == "template":
         kwargs["inputs"] = inputs
         return kwargs
+    elif args.version:
+        print version.__version__
+        sys.exit()
     else:
         print "Incorrect input arguments", inputs
         parser.print_help()
-        sys.exit() 
-    
+        sys.exit()
     kwargs["inputs"] = inputs
     kwargs["config_file"] = global_config
     kwargs["fc_dir"] = fc_dir
