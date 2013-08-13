@@ -26,7 +26,7 @@ custom_algorithms:
     train_1000g_omni: variation/1000G_omni2.5.vcf
     train_indels: variation/Mills_Devine_2hit.indels.vcf
   'RNA-seq':
-    aligner: tophat
+    aligner: tophat2
     transcript_assemble: true
     transcripts: rnaseq/ref-transcripts.gtf
     transcripts_mask: rnaseq/ref-transcripts-mask.gtf
@@ -39,9 +39,9 @@ custom_algorithms:
 # - Define cores that can be used for multicore programs.
 resources:
   bcbio_variation:
-    dir: /usr/share/java/bcbio_variation
+    dir: /usr/local/share/java/bcbio_variation
   bcbio_coverage:
-    dir: /usr/share/java/bcbio_coverage
+    dir: /usr/local/share/java/bcbio_coverage
     cores: 4
   ucsc_bigwig:
     memory: 36g
@@ -58,22 +58,22 @@ resources:
     cores: 4
   gatk:
     cores: 2
-    dir: /usr/share/java/gatk
+    dir: /usr/local/share/java/gatk
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
   picard:
     cores: 1
-    dir: /usr/share/java/picard
+    dir: /usr/local/share/java/picard
   snpEff:
-    dir: /usr/share/java/snpeff
+    dir: /usr/local/share/java/snpeff
     jvm_opts: ["-Xms750m", "-Xmx3g"]
   varscan:
-    dir: /usr/share/java/varscan
+    dir: /usr/local/share/java/varscan
   mutect:
-    dir: /usr/share/java/mutect
+    dir: /usr/local/share/java/mutect
   cram:
-    dir: /usr/share/java/cram
+    dir: /usr/local/share/java/cram
   rnaseqc:
-    dir: /usr/share/java/RNA-SeQC
+    dir: /usr/local/share/java/RNA-SeQC
   stampy:
     dir: ~/install/stampy-1.0.18
   cortex:

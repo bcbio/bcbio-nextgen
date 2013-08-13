@@ -41,7 +41,9 @@ _tools = {
     "tophat": NgsTool(tophat.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
                       None),
     "samtools": NgsTool(None, None, None, BASE_LOCATION_FILE, None, None),
-    "star": NgsTool(star.align, None, None, None, star.remap_index_fn, None)}
+    "star": NgsTool(star.align, None, None, None, star.remap_index_fn, None),
+    "tophat2": NgsTool(tophat.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
+                      None)}
 
 metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}
 
