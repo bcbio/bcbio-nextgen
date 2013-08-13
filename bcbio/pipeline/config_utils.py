@@ -174,6 +174,28 @@ def get_jar(base_name, dname):
         raise ValueError("Could not find java jar %s in %s" %
                          (base_name, dname))
 
+def adjust_opts(in_opts, config):
+    """Establish JVM opts, adjusting memory for the context if needed.
+
+    This allows using less or more memory for highly parallel or multicore
+    supporting processes, respectively.
+    """
+    memory_adjust = config["algorithm"].get("memory_adjust", {})
+    out_opts = []
+    for opt in in_opts:
+        if opt.startswith(("-Xmx", "-Xms")):
+            arg = opt[:4]
+            modifier = opt[-1:]
+            amount = int(opt[4:-1])
+            if memory_adjust.get("direction") == "decrease":
+                amount = amount / memory_adjust.get("magnitude", 1)
+            elif memory_adjust.get("direction") == "increase":
+                amount = amount * memory_adjust.get("magnitude", 1)
+            opt = "{arg}{amount}{modifier}".format(arg=arg, amount=amount,
+                                                   modifier=modifier)
+        out_opts.append(opt)
+    return out_opts
+
 ## functions for navigating through the standard galaxy directory of files
 
 def get_transcript_gtf(genome_dir):
