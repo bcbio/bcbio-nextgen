@@ -173,8 +173,16 @@ Alignment
    queryname. For additional processing through standard pipelines
    requires coordinate sorted inputs. The default is to not do
    additional sorting and assume pre-sorted BAMs.
--  ``trim_reads`` Whether to trim off 3' B-only ends from fastq reads
-   [false, true]
+-  ``trim_reads`` Can be set to trim low quality ends or to also trim off,
+    in conjunction with the ``adapters`` field a set of adapter sequences or
+    poly-A tails that could appear on the ends of reads:
+    [low_quality, read_through, False]
+-  ``adapters`` If trimming adapter read through, trim a set of stock
+   adapter sequences. Allows specification of multiple items in a list,
+   for example [truseq, polya] will trim both TruSeq adapter sequences
+   and polyA tails. Valid items are [truseq, illumina, nextera, polya]
+-  ``custom_trim`` A list of sequences to trim from the end of reads,
+   for example: [AAAATTTT, GGGGCCCC]
 -  ``align_split_size``: Split FASTQ files into specified number of
    records per file. Allows parallelization at the cost of increased
    temporary disk space usage.
