@@ -17,3 +17,4 @@ joblib>=0.7.0d
 pyzmq>=2.1.11
 sh>=1.07
 bcbio-nextgen==0.7.1
+HTSeq >= 0.5.3p5
