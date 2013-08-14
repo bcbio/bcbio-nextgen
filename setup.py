@@ -45,6 +45,7 @@ setup(name="bcbio-nextgen",
           "pyzmq >= 2.1.11",
           "joblib >= 0.7.0d",
           "sh >= 1.07",
+          "HTSeq >= 0.5.3p5"
           #"paramiko >= 1.9.0",
           #"celery >= 2.2.7,<3.0.0",
           #"rpy2 >= 2.0.7"
