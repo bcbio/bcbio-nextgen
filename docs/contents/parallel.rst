@@ -102,10 +102,17 @@ with ``ulimit -a | grep open``. Setting open file handle limits is
 open system and cluster specific and below are tips for specific
 setups.
 
+For a Ubuntu system, edit ``/etc/security/limits.conf`` to set the
+soft and hard ``nofile`` descriptors, and edit
+``/etc/pam.d/common-session`` to add ``pam_limits.so``. See
+`this blog post`_ for more details.
+
 SGE needs configuration at the qmaster level. Invoke ``qconf -mconf``
 from a host with admin privileges, and edit ``execd_params``::
 
     execd_params                 S_DESCRIPTORS=20000
+
+.. _this blog post: https://viewsby.wordpress.com/2013/01/29/ubuntu-increase-number-of-open-files/
 
 Cloud support
 ~~~~~~~~~~~~~
