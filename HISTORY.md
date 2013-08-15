@@ -1,5 +1,6 @@
 ## 0.7.2 (in progress)
 
+- Uploading results works with the RNA-seq pipeline
 - Improve BAM merging on large files using samtools for output sort.
 - Bug fix to re-enable template generation functionality.
 
