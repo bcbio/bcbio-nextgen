@@ -5,6 +5,7 @@ import shutil
 from contextlib import closing
 import subprocess
 
+import pybedtools
 import pysam
 
 from bcbio import broad
@@ -164,8 +165,7 @@ def has_aligned_reads(align_bam, region=None):
     has_items = False
     if region is not None:
         if isinstance(region, basestring) and os.path.isfile(region):
-            with open(region) as in_handle:
-                regions = [tuple(line.split()[:3]) for line in in_handle]
+            regions = [tuple(r) for r in pybedtools.BedTool(region)]
         else:
             regions = [region]
     with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
