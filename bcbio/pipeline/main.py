@@ -35,19 +35,19 @@ def run_main(config, config_file, work_dir, parallel,
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
-    fc_name, fc_date, run_info = get_run_info(fc_dir, config, run_info_yaml)
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir)
                                                         if fc_dir else None,
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+    run_info = get_run_info(dirs, config, run_info_yaml)
     run_parallel = parallel_runner(parallel, dirs, config, config_file)
 
     # process each flowcell lane
     run_items = add_multiplex_across_lanes(run_info["details"],
-                                           dirs["fastq"], fc_name)
-    lanes = ((info, fc_name, fc_date, dirs, config) for info in run_items)
+                                           dirs["fastq"], run_info["fc_name"])
+    lanes = ((info, run_info["fc_name"], run_info["fc_date"], dirs, config) for info in run_items)
     lane_items = lane.process_all_lanes(lanes, run_parallel)
     pipelines = _pair_lanes_with_pipelines(lane_items)
     for pipeline, pipeline_items in pipelines.items():
@@ -55,7 +55,7 @@ def run_main(config, config_file, work_dir, parallel,
         for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
             if len(xs) == 1:
                 upload.from_sample(xs[0])
-    qcsummary.write_metrics(run_info, fc_name, fc_date, dirs)
+    qcsummary.write_metrics(run_info, dirs)
 
 def _add_provenance(items, dirs, config):
     p = programs.write_versions(dirs, config)

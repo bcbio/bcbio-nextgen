@@ -301,11 +301,11 @@ def _run_fastqc(bam_file, qc_dir, config):
 
 # ## High level summary in YAML format for loading into Galaxy.
 
-def write_metrics(run_info, fc_name, fc_date, dirs):
+def write_metrics(run_info, dirs):
     """Write an output YAML file containing high level sequencing metrics.
     """
     lane_stats, sample_stats, tab_metrics = summary_metrics(run_info,
-            dirs["work"], fc_name, fc_date, dirs["fastq"])
+            dirs["work"], dirs["fastq"])
     out_file = os.path.join(dirs["work"], "run_summary.yaml")
     with open(out_file, "w") as out_handle:
         metrics = dict(lanes=lane_stats, samples=sample_stats)
@@ -323,8 +323,11 @@ def write_metrics(run_info, fc_name, fc_date, dirs):
             pass
     return out_file
 
-def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
+def summary_metrics(run_info, analysis_dir, fastq_dir):
     """Reformat run and analysis statistics into a YAML-ready format.
+
+    XXX Needs a complete re-working to be less sequencer specific and
+    work with more general output structure in work directory.
     """
     tab_out = []
     lane_info = []
@@ -339,14 +342,13 @@ def summary_metrics(run_info, analysis_dir, fc_name, fc_date, fastq_dir):
                 lane = run["lane"],
                 request = run_info["run_id"])
         cur_lane_info = copy.deepcopy(base_info)
-        cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
-                                                  fc_date, analysis_dir)
+        cur_lane_info["metrics"] = {}
+        #cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
+        #                                          fc_date, analysis_dir)
         lane_info.append(cur_lane_info)
         for lane_x in lane_xs:
-            cur_name = "%s_%s_%s" % (run["lane"], fc_date, fc_name)
-            if lane_x["barcode_id"]:
-                cur_name = "%s_%s-" % (cur_name, lane_x["barcode_id"])
-            stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
+            #stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
+            stats = None
             if stats:
                 cur_run_info = copy.deepcopy(base_info)
                 cur_run_info["metrics"] = stats

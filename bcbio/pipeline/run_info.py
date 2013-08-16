@@ -17,18 +17,30 @@ from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.solexa.flowcell import get_flowcell_info
 
-def get_run_info(fc_dir, config, run_info_yaml):
+def organize(run_info, dirs, config):
+    """Organize inputs into data dictionaries for processing.
+
+    Creates the high level structure used for subsequent processing.
+    """
+    out = []
+    for item in run_info["details"]:
+        pass
+    return out
+
+def get_run_info(dirs, config, run_info_yaml):
     """Retrieve run information from a passed YAML file or the Galaxy API.
     """
     if run_info_yaml and os.path.exists(run_info_yaml):
         logger.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
-        fc_name, fc_date, run_info = _run_info_from_yaml(fc_dir, run_info_yaml, config)
+        run_info = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
     else:
         logger.info("Fetching run details from Galaxy instance")
-        fc_name, fc_date = get_flowcell_info(fc_dir)
+        fc_name, fc_date = get_flowcell_info(dirs["flowcell"])
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_info = galaxy_api.run_details(fc_name, fc_date)
-    return fc_name, fc_date, _organize_runs_by_lane(run_info)
+        run_info["fc_name"] = fc_name
+        run_info["fc_date"] = fc_date
+    return _organize_runs_by_lane(run_info)
 
 def _organize_runs_by_lane(run_info):
     """Organize run information collapsing multiplexed items by lane.
@@ -180,8 +192,8 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
-    run_info = dict(details=run_details, run_id="")
-    return fc_name, fc_date, run_info
+    run_info = dict(details=run_details, run_id="", fc_name=fc_name, fc_date=fc_date)
+    return run_info
 
 def _unique_flowcell_info():
     """Generate data and unique identifier for non-barcoded flowcell.
