@@ -34,7 +34,7 @@ def _get_files(data):
     gtf_file = _get_gtf_file(data)
     work_dir = data["dirs"].get("work", "work")
     out_dir = os.path.join(work_dir, "htseq-count")
-    out_file = os.path.join(out_dir, data['info']['rgnames']['sample']) + ".counts"
+    out_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
     return in_file, gtf_file, out_file
 
 

@@ -51,7 +51,7 @@ def pipeline_summary(data):
     return [[data]]
 
 def generate_align_summary(bam_file, data):
-    if data["info"]["analysis"].lower() == "rna-seq":
+    if data["analysis"].lower() == "rna-seq":
         return rnaseq_align_summary(bam_file, data["sam_ref"],
                                     data["name"], data["config"], data["dirs"])
     else:
@@ -323,7 +323,7 @@ def write_metrics(run_info, dirs):
             pass
     return out_file
 
-def summary_metrics(run_info, analysis_dir, fastq_dir):
+def summary_metrics(items, analysis_dir, fastq_dir):
     """Reformat run and analysis statistics into a YAML-ready format.
 
     XXX Needs a complete re-working to be less sequencer specific and
@@ -332,29 +332,20 @@ def summary_metrics(run_info, analysis_dir, fastq_dir):
     tab_out = []
     lane_info = []
     sample_info = []
-    for lane_xs in run_info["details"]:
-        run = lane_xs[0]
+    for run in items:
         tab_out.append([run["lane"], run.get("researcher", ""),
             run.get("name", ""), run.get("description")])
         base_info = dict(
                 researcher = run.get("researcher_id", ""),
                 sample = run.get("sample_id", ""),
                 lane = run["lane"],
-                request = run_info["run_id"])
+                request = run["upload"].get("run_id"))
         cur_lane_info = copy.deepcopy(base_info)
         cur_lane_info["metrics"] = {}
         #cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
         #                                          fc_date, analysis_dir)
         lane_info.append(cur_lane_info)
-        for lane_x in lane_xs:
-            #stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
-            stats = None
-            if stats:
-                cur_run_info = copy.deepcopy(base_info)
-                cur_run_info["metrics"] = stats
-                cur_run_info["barcode_id"] = str(lane_x["barcode_id"])
-                cur_run_info["barcode_type"] = str(lane_x.get("barcode_type", ""))
-                sample_info.append(cur_run_info)
+        #stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
     return lane_info, sample_info, tab_out
 
 def _metrics_from_stats(stats):

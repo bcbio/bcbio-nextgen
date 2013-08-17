@@ -12,11 +12,11 @@ _approaches = {"filesystem": filesystem,
 def from_sample(sample):
     """Upload results of processing from an analysis pipeline sample.
     """
-    upload_config = sample["info"].get("upload")
+    upload_config = sample.get("upload")
     if upload_config:
         approach = _approaches[upload_config.get("method", "filesystem")]
         for finfo in _get_files(sample):
-            approach.update_file(finfo, sample["info"], upload_config)
+            approach.update_file(finfo, sample, upload_config)
         for finfo in _get_files_project(sample, upload_config):
             approach.update_file(finfo, None, upload_config)
 
@@ -28,7 +28,7 @@ def _get_files(sample):
     Each file is a dictionary containing the path plus associated
     metadata about the file and pipeline versions.
     """
-    analysis = sample["info"].get("analysis")
+    analysis = sample.get("analysis")
     if analysis in ["variant", "SNP calling", "variant2"]:
         return _get_files_variantcall(sample)
     elif analysis in ["RNA-seq"]:
@@ -109,7 +109,7 @@ def _has_alignment_file(algorithm, sample):
 def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
-    out = [{"path": sample["info"]["provenance"]["programs"]}]
+    out = [{"path": sample["provenance"]["programs"]}]
     if sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
     for x in sample.get("variants", []):

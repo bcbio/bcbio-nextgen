@@ -30,7 +30,6 @@ import os
 import sys
 
 from bcbio import install, workflow
-from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.pipeline.main import run_main, parse_cl_args
@@ -71,13 +70,10 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
 
 def _get_cores_and_type(config, fc_dir, run_info_yaml,
                         numcores=None, paralleltype=None):
-    """Return core and parallelization approach from combo of config and commandline.
+    """Return core and parallelization approach from commandline.
 
     Prefers passed commandline parameters over pre-configured, defaulting
     to a local run on a single core.
-
-    The preferred approach is to pass in values explicitly on the commandline
-    and this helps maintain back compatibility.
     """
     config_cores = config["algorithm"].get("num_cores", None)
     if config_cores:
@@ -90,17 +86,8 @@ def _get_cores_and_type(config, fc_dir, run_info_yaml,
                 paralleltype = config_cores
     if paralleltype is None:
         paralleltype = "local"
-
     if numcores is None:
-        if config.get("distributed", {}).get("num_workers", "") == "all":
-            cp = config["distributed"]["cluster_platform"]
-            cluster = __import__("bcbio.distributed.{0}".format(cp), fromlist=[cp])
-            numcores = cluster.available_nodes(config["distributed"]["platform_args"]) - 1
-        if numcores is None:
-            if paralleltype == "local":
-                numcores = 1
-            else:
-                numcores = _needed_workers(get_run_info(fc_dir, config, run_info_yaml)[-1])
+        numcores = 1
     return paralleltype, int(numcores)
 
 def _needed_workers(run_info):

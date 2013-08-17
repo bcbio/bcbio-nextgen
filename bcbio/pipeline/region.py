@@ -134,10 +134,7 @@ def clean_sample_data(samples):
                         "fastq": data["dirs"].get("fastq")}
         data["config"] = {"algorithm": data["config"]["algorithm"],
                           "resources": data["config"]["resources"]}
-        data["info"] = {"upload": data["info"].get("upload"),
-                        "provenance": data["info"]["provenance"],
-                        "analysis": data["info"].get("analysis")}
-        for remove_attr in ["config_file", "regions"]:
+        for remove_attr in ["config_file", "regions", "algorithm"]:
             if data.has_key(remove_attr):
                 del data[remove_attr]
         out.append([data])

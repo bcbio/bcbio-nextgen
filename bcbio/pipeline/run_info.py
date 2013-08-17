@@ -3,7 +3,6 @@
 This handles two methods of getting processing information: from a Galaxy
 next gen LIMS system or an on-file YAML configuration.
 """
-import collections
 import copy
 import datetime
 import itertools
@@ -15,75 +14,35 @@ import yaml
 
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
+from bcbio.pipeline import config_utils
 from bcbio.solexa.flowcell import get_flowcell_info
 
-def organize(run_info, dirs, config):
-    """Organize inputs into data dictionaries for processing.
+def organize(dirs, config, run_info_yaml):
+    """Organize run information from a passed YAML file or the Galaxy API.
 
     Creates the high level structure used for subsequent processing.
     """
-    out = []
-    for item in run_info["details"]:
-        pass
-    return out
-
-def get_run_info(dirs, config, run_info_yaml):
-    """Retrieve run information from a passed YAML file or the Galaxy API.
-    """
     if run_info_yaml and os.path.exists(run_info_yaml):
         logger.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
-        run_info = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
+        run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
     else:
         logger.info("Fetching run details from Galaxy instance")
         fc_name, fc_date = get_flowcell_info(dirs["flowcell"])
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name, fc_date)
-        run_info["fc_name"] = fc_name
-        run_info["fc_date"] = fc_date
-    return _organize_runs_by_lane(run_info)
-
-def _organize_runs_by_lane(run_info):
-    """Organize run information collapsing multiplexed items by lane.
-
-    Lane is the unique identifier in a run and used to combine multiple
-    run items on a fastq lane, separable by barcodes.
-    """
-    items = _normalize_barcodes(run_info["details"])
-    items_by_lane = collections.defaultdict(list)
-    for x in items:
-        items_by_lane[x["lane"]].append(x)
+        run_details = []
+        galaxy_info = galaxy_api.run_details(fc_name, fc_date)
+        for item in galaxy_info["details"]:
+            item["upload"] = {"method": "galaxy", "run_id": galaxy_info["run_id"],
+                              "fc_name": fc_name, "fc_date": fc_date}
+            run_details.append(item)
     out = []
-    for grouped_items in [items_by_lane[x] for x in sorted(items_by_lane.keys())]:
-        bcs = [x["barcode_id"] for x in grouped_items]
-        assert len(bcs) == len(set(bcs)), "Duplicate barcodes {0} in lane {1}".format(
-            bcs, grouped_items[0]["lane"])
-        assert len(bcs) == 1 or None not in bcs, "Barcode and non-barcode in lane {0}".format(
-            grouped_items[0]["lane"])
-        out.append(grouped_items)
-    run_info["details"] = out
-    return run_info
-
-def _normalize_barcodes(items):
-    """Normalize barcode specification methods into individual items.
-    """
-    split_items = []
-    for item in items:
-        if item.has_key("multiplex"):
-            for multi in item["multiplex"]:
-                base = copy.deepcopy(item)
-                base["description"] += ": {0}".format(multi["name"])
-                del multi["name"]
-                del base["multiplex"]
-                base.update(multi)
-                split_items.append(base)
-        elif item.has_key("barcode"):
-            item.update(item["barcode"])
-            del item["barcode"]
-            split_items.append(item)
-        else:
-            item["barcode_id"] = None
-            split_items.append(item)
-    return split_items
+    for item in run_details:
+        item["config"] = config_utils.update_w_custom(config, item)
+        item["dirs"] = dirs
+        if "name" not in item:
+            item["name"] = ["", item["description"]]
+        out.append(item)
+    return out
 
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
@@ -184,16 +143,15 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             item["description"] = str(item["lane"])
         item["description"] = _clean_characters(str(item["description"]))
         item["description_filenames"] = global_config.get("description_filenames", False)
-        upload = global_config.get("upload")
-        if upload:
-            upload["fc_name"] = fc_name
-            upload["fc_date"] = fc_date
+        upload = global_config.get("upload", {})
+        upload["fc_name"] = fc_name
+        upload["fc_date"] = fc_date
+        upload["run_id"] = ""
         item["upload"] = upload
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
-    run_info = dict(details=run_details, run_id="", fc_name=fc_name, fc_date=fc_date)
-    return run_info
+    return run_details
 
 def _unique_flowcell_info():
     """Generate data and unique identifier for non-barcoded flowcell.

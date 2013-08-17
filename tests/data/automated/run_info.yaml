@@ -1,4 +1,4 @@
-- analysis: variant 
+- analysis: variant2
   description: Test1
   algorithm:
     coverage_interval: regional
@@ -57,7 +57,7 @@
     barcode_type: Illumina
     name: Keep unmatched test
     sequence: NNNNNN
-- analysis: variant 
+- analysis: variant2
   description: Test2
   algorithm:
     coverage_interval: regional
@@ -112,7 +112,7 @@
     barcode_type: Illumina
     name: BAC02
     sequence: CTTGTA
-- analysis: Standard
+- analysis: variant2
   algorithm:
     coverage_interval: regional
   description: Test3

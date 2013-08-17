@@ -94,8 +94,10 @@ class AutomatedAnalysisTest(unittest.TestCase):
             return sample
 
     @attr(speed=3)
-    def test_3_full_pipeline(self):
+    def IGNOREtest_3_full_pipeline(self):
         """Run full automated analysis pipeline with multiplexing.
+
+        XXX Multiplexing not supporting in latest versions.
         """
         self._install_test_files(self.data_dir)
         with make_workdir():
@@ -106,8 +108,10 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=3)
-    def test_4_empty_fastq(self):
+    def IGNOREtest_4_empty_fastq(self):
         """Handle analysis of empty fastq inputs from failed runs.
+
+        XXX Multiplexing not supporting in latest versions.
         """
         with make_workdir():
             cl = ["bcbio_nextgen.py",

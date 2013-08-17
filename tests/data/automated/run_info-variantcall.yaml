@@ -1,5 +1,5 @@
 details:
-  - analysis: variant
+  - analysis: variant2
     algorithm:
       #aligner: bwa
       aligner: novoalign

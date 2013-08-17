@@ -21,7 +21,7 @@ def update_w_custom(config, lane_info):
     config = copy.deepcopy(config)
     base_name = lane_info.get("analysis")
     for analysis_type in name_remaps.get(base_name, [base_name]):
-        custom = config["custom_algorithms"].get(analysis_type, None)
+        custom = config.get("custom_algorithms", {}).get(analysis_type)
         if custom:
             for key, val in custom.iteritems():
                 config["algorithm"][key] = val
