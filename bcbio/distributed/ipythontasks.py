@@ -64,6 +64,7 @@ def merge_sample(*args):
 def delayed_bam_merge(*args):
     with _setup_logging(args):
         return apply(sample.delayed_bam_merge, *args)
+delayed_bam_merge.metadata = {"resources": ["samtools"]}
 
 @require(sample)
 def recalibrate_sample(*args):

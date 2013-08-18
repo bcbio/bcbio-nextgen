@@ -22,7 +22,8 @@ resources:
     cmd: bwa
     cores: 16
   samtools:
-    memory: 768M
+    memory: 1G
+    cores: 16
   novoalign:
     cores: 16
     memory: 2G

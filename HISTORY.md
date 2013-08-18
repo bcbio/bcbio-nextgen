@@ -5,6 +5,8 @@
 - Remove original `variant` pipeline, replacing with the all around better
   `variant2` analysis method. Plan for the next version is to automatically
   redirect to `variant2`.
+- Improve parallelization of BAM preparation and gemini database creation by
+  moving to multicore versions.
 - Remove sequencer-specific integration functionality which is poorly maintained
   and better done with third party tools: demultiplexing and statistics from
   Illumina directories.

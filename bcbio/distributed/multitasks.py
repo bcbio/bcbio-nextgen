@@ -31,6 +31,7 @@ def merge_sample(*args):
 @utils.map_wrap
 def delayed_bam_merge(*args):
     return sample.delayed_bam_merge(*args)
+delayed_bam_merge.metadata = {"resources": ["samtools"]}
 
 @utils.map_wrap
 def piped_bamprep(*args):

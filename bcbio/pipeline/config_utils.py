@@ -174,6 +174,17 @@ def get_jar(base_name, dname):
         raise ValueError("Could not find java jar %s in %s" %
                          (base_name, dname))
 
+def adjust_memory(val, magnitude, direction="increase"):
+    """Adjust memory based on number of cores utilized.
+    """
+    modifier = val[-1:]
+    amount = int(val[:-1])
+    if direction == "decrease":
+        amount = amount / magnitude
+    elif direction == "increase":
+        amount = amount * magnitude
+    return "{amount}{modifier}".format(amount=amount, modifier=modifier)
+
 def adjust_opts(in_opts, config):
     """Establish JVM opts, adjusting memory for the context if needed.
 
@@ -185,14 +196,10 @@ def adjust_opts(in_opts, config):
     for opt in in_opts:
         if opt.startswith(("-Xmx", "-Xms")):
             arg = opt[:4]
-            modifier = opt[-1:]
-            amount = int(opt[4:-1])
-            if memory_adjust.get("direction") == "decrease":
-                amount = amount / memory_adjust.get("magnitude", 1)
-            elif memory_adjust.get("direction") == "increase":
-                amount = amount * memory_adjust.get("magnitude", 1)
-            opt = "{arg}{amount}{modifier}".format(arg=arg, amount=amount,
-                                                   modifier=modifier)
+            opt = "{arg}{val}".format(arg=arg,
+                                      val=adjust_memory(opt[4:],
+                                                        memory_adjust.get("magnitude", 1),
+                                                        memory_adjust.get("direction")))
         out_opts.append(opt)
     return out_opts
 

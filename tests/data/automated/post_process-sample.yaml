@@ -51,6 +51,9 @@ resources:
     cores:
   bwa:
     cores: 4
+  samtools:
+    cores: 4
+    memory: 1G
   novoalign:
     cores: 4
     memory: 4G

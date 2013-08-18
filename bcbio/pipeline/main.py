@@ -272,16 +272,20 @@ class Variant2Pipeline(AbstractPipeline):
             samples = combine_multiple_callers(samples)
             logger.info("Timing: ensemble calling")
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            logger.info("Timing: prepped BAM merging")
-            samples = region.delayed_bamprep_merge(samples, run_parallel)
             logger.info("Timing: validation")
             samples = run_parallel("compare_to_rm", samples)
             samples = validate.summarize_grading(samples)
-            logger.info("Timing: population database")
-            samples = population.prep_db_parallel(samples, run_parallel)
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)
-            logger.info("Timing: finished")
+        ## Finalizing BAMs and population databases, handle multicore computation
+        with global_parallel(parallel, "multicore2", ["prep_gemini_db"],
+                             samples, dirs["work"], config) as parallel:
+            run_parallel = parallel_runner(parallel, dirs, config)
+            logger.info("Timing: prepped BAM merging")
+            samples = region.delayed_bamprep_merge(samples, run_parallel)
+            logger.info("Timing: population database")
+            samples = population.prep_db_parallel(samples, run_parallel)
+        logger.info("Timing: finished")
         return samples
 
 class SNPCallingPipeline(VariantPipeline):

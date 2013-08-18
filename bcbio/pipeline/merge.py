@@ -48,10 +48,8 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
             bamtools = config_utils.get_program("bamtools", config)
             samtools = config_utils.get_program("samtools", config)
             resources = config_utils.get_resources("samtools", config)
-            # Could use multiple cores if we build multicore steps in here
-            #num_cores = config["algorithm"].get("num_cores", 1)
-            num_cores = 1
-            max_mem = resources.get("memory", "2048M")
+            num_cores = config["algorithm"].get("num_cores", 1)
+            max_mem = config_utils.adjust_memory(resources.get("memory", "1G"), num_cores)
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
