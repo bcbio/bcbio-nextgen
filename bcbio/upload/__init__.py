@@ -1,6 +1,6 @@
 """Handle extraction of final files from processing pipelines into storage.
 """
-import os
+import datetime
 
 from bcbio.upload import shared, filesystem, galaxy, s3
 from bcbio.utils import file_exists
@@ -50,7 +50,10 @@ def _add_meta(xs, sample=None, config=None):
         if sample:
             x["sample"] = sample["name"][-1]
         if config:
-            x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
+            if "fc_name" in config and "fc_date" in config:
+                x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
+            else:
+                x["run"] = "project_%s" % datetime.datetime.now().strftime("%Y-%m-%d")
         out.append(x)
     return out
 

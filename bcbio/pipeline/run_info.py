@@ -23,7 +23,7 @@ def organize(dirs, config, run_info_yaml):
     Creates the high level structure used for subsequent processing.
     """
     if run_info_yaml and os.path.exists(run_info_yaml):
-        logger.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
+        logger.info("Using input YAML configuration: %s" % run_info_yaml)
         run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
     else:
         logger.info("Fetching run details from Galaxy instance")
@@ -54,7 +54,10 @@ def _clean_characters(x):
 def prep_rg_names(item, config, fc_name, fc_date):
     """Generate read group names from item inputs.
     """
-    lane_name = "%s_%s_%s" % (item["lane"], fc_date, fc_name)
+    if fc_name and fc_date:
+        lane_name = "%s_%s_%s" % (item["lane"], fc_date, fc_name)
+    else:
+        lane_name = item["description"]
     return {"rg": item["lane"],
             "sample": item["description"],
             "lane": lane_name,
@@ -118,7 +121,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """
     with open(run_info_yaml) as in_handle:
         loaded = yaml.load(in_handle)
-    fc_name = None
+    fc_name, fc_date = None, None
     if fc_dir:
         try:
             fc_name, fc_date = get_flowcell_info(fc_dir)
@@ -132,8 +135,6 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             fc_name = loaded["fc_name"].replace(" ", "_")
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
         loaded = loaded["details"]
-    if fc_name is None:
-        fc_name, fc_date = _unique_flowcell_info()
     run_details = []
     for i, item in enumerate(loaded):
         if not item.has_key("lane"):
@@ -144,8 +145,9 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["description"] = _clean_characters(str(item["description"]))
         item["description_filenames"] = global_config.get("description_filenames", False)
         upload = global_config.get("upload", {})
-        upload["fc_name"] = fc_name
-        upload["fc_date"] = fc_date
+        if fc_name and fc_date:
+            upload["fc_name"] = fc_name
+            upload["fc_date"] = fc_date
         upload["run_id"] = ""
         item["upload"] = upload
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)

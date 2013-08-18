@@ -1,5 +1,7 @@
 ## 0.7.2 (in progress)
 
+- Drop requirement for fc_name and fc_date in input YAML file. Individual sample
+  names are instead used and required to be unique within a processing run.
 - Remove original `variant` pipeline, replacing with the all around better
   `variant2` analysis method. Plan for the next version is to automatically
   redirect to `variant2`.
