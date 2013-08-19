@@ -105,6 +105,9 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
                                    "--downsampling_type", "ALL_READS"]
+                    if platform.lower() == "solid":
+                        params += ["--solid_nocall_strategy", "PURGE_READ",
+                                   "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
                     # GATK-lite does not have support for
                     # insertion/deletion quality modeling
                     if broad_runner.gatk_type() == "lite":
