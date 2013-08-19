@@ -33,7 +33,6 @@ def prep_gemini_db(fnames, call_id, samples, data):
             cmd = "{gemini} load -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % str(call_id), data)
-            subprocess.check_call(cmd, shell=True)
     return [[call_id, {"db": gemini_db if use_gemini else None,
                        "vcf": gemini_vcf if is_population else None}]]
 
