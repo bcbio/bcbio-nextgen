@@ -11,6 +11,7 @@ import argparse
 import contextlib
 import datetime
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -70,13 +71,22 @@ def install_conda_pkgs(anaconda):
             "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
 
+def _guess_distribution():
+    """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.
+    """
+    if platform.mac_ver()[0]:
+        return "macosx"
+    else:
+        return "linux"
+
 def install_anaconda_python(args, remotes):
     """Provide isolated installation of Anaconda python for running bcbio-nextgen.
     http://docs.continuum.io/anaconda/index.html
     """
     anaconda_dir = os.path.join(args.datadir, "anaconda")
     if not os.path.exists(anaconda_dir):
-        url = remotes["anaconda"] % ("MacOSX" if args.distribution.lower() == "macosx" else "Linux")
+        dist = args.distribution if args.distribution else _guess_distribution()
+        url = remotes["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", url])
         subprocess.check_call("echo -e '\nyes\n%s\nno\n' | bash %s" %
@@ -154,7 +164,7 @@ if __name__ == "__main__":
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
-                        choices=["ubuntu", "debian", "centos", "scientificlinux"])
+                        choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
