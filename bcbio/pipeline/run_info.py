@@ -14,8 +14,9 @@ import yaml
 
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import alignment, config_utils
 from bcbio.solexa.flowcell import get_flowcell_info
+from bcbio.variation import genotype
 
 def organize(dirs, config, run_info_yaml):
     """Organize run information from a passed YAML file or the Galaxy API.
@@ -106,6 +107,50 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                     "----------------+-----------------+----------------"] +
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
+def _check_algorithm_keys(item):
+    """Check for unexpected keys in the algorithm section.
+
+    Needs to be manually updated when introducing new keys, but avoids silent bugs
+    with typos in key names.
+    """
+    url = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
+    supported = set(["platform", "aligner", "bam_clean", "bam_sort", "trim_reads", "adapters",
+                     "custom_trim", "align_split_size", "quality_bin", "quality_format",
+                     "write_summary", "merge_bamprep", "coverage", "coverage_bigwig",
+                     "coverage_interval", "hybrid_target", "hybrid_bait", "ploidy",
+                     "variantcaller", "variant_regions", "mark_duplicates",
+                     "recalibrate", "realign",
+                     "phasing", "validate", "validate_regions", "validate_genome_build",
+                     "clinical_reporting",
+                     "nomap_split_size", "nomap_split_targets",
+                     "ensemble"])
+    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in supported]
+    if len(problem_keys) > 0:
+        raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
+                         "See configuration documentation for supported options:\n%s\n"
+                         % (problem_keys, url))
+
+def _check_aligner(item):
+    """Ensure specified aligner is valid choice.
+    """
+    allowed = set(alignment._tools.keys() + [None, False])
+    if item["algorithm"].get("aligner") not in allowed:
+        raise ValueError("Unexpected algorithm 'aligner' parameter: %s\n"
+                         "Supported options: %s\n" %
+                         (item["algorithm"].get("aligner"), sorted(list(allowed))))
+
+def _check_variantcaller(item):
+    """Ensure specified variantcaller is a valid choice.
+    """
+    allowed = set(genotype.get_variantcallers().keys() + [None, False])
+    vcs = item["algorithm"].get("variantcaller", "gatk")
+    if not isinstance(vcs, (tuple, list)):
+        vcs = [vcs]
+    problem = [x for x in vcs if x not in allowed]
+    if len(problem) > 0:
+        raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
+                         "Supported options: %s\n" % (problem, sorted(list(allowed))))
+
 def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
@@ -115,6 +160,9 @@ def _check_sample_config(items, in_file):
     _check_for_misplaced(items, "algorithm",
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
+    [_check_algorithm_keys(x) for x in items]
+    [_check_aligner(x) for x in items]
+    [_check_variantcaller(x) for x in items]
 
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.

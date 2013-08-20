@@ -1,5 +1,8 @@
 ## 0.7.2 (in progress)
 
+- Provide error checking of input YAML configuration at run start. Avoids
+  accidental typos or incorrect settings that won't error out until later in the
+  process.
 - Drop requirement for fc_name and fc_date in input YAML file. Individual sample
   names are instead used and required to be unique within a processing run.
 - Remove original `variant` pipeline, replacing with the all around better

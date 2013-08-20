@@ -493,20 +493,23 @@ def parallel_variantcall(sample_info, parallel_fn):
         finished.extend(processed)
     return finished
 
+def get_variantcallers():
+    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect
+    return {"gatk": unified_genotyper,
+            "gatk-haplotype": haplotype_caller,
+            "freebayes": freebayes.run_freebayes,
+            "cortex": cortex.run_cortex,
+            "samtools": samtools.run_samtools,
+            "varscan": varscan.run_varscan,
+            "mutect": mutect.mutect_caller}
+
 def variantcall_sample(data, region=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
-    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect
     safe_makedir(os.path.dirname(out_file))
-    caller_fns = {"gatk": unified_genotyper,
-                  "gatk-haplotype": haplotype_caller,
-                  "freebayes": freebayes.run_freebayes,
-                  "cortex": cortex.run_cortex,
-                  "samtools": samtools.run_samtools,
-                  "varscan": varscan.run_varscan,
-                  "mutect": mutect.mutect_caller}
     sam_ref = data["sam_ref"]
     config = data["config"]
+    caller_fns = get_variantcallers()
     caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
     if isinstance(data["work_bam"], basestring):
         align_bams = [data["work_bam"]]
