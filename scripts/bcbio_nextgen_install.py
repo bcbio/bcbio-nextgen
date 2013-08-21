@@ -84,15 +84,18 @@ def install_anaconda_python(args, remotes):
     http://docs.continuum.io/anaconda/index.html
     """
     anaconda_dir = os.path.join(args.datadir, "anaconda")
-    if not os.path.exists(anaconda_dir):
+    bindir = os.path.join(anaconda_dir, "bin")
+    conda = os.path.join(bindir, "conda")
+    if not os.path.exists(anaconda_dir) or not os.path.exists(conda):
+        if os.path.exists(anaconda_dir):
+            shutil.rmtree(anaconda_dir)
         dist = args.distribution if args.distribution else _guess_distribution()
         url = remotes["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", url])
         subprocess.check_call("echo -e '\nyes\n%s\nno\n' | bash %s" %
                               (anaconda_dir, os.path.basename(url)), shell=True)
-    bindir = os.path.join(anaconda_dir, "bin")
-    return {"conda": os.path.join(bindir, "conda"),
+    return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}
 
