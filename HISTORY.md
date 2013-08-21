@@ -18,6 +18,8 @@
 - Uploading results works with the RNA-seq pipeline.
 - Rework internals to provide a consistent dictionary of sample attributes up
   front, avoiding lane/sample dichotomy which provided confusing internal code.
+- Drop calling htseq-count from the command line in favor of an internal
+  implementation.
 
 ## 0.7.1 (August 12, 2013)
 
