@@ -52,7 +52,7 @@ on a virtual machine is a great way to go and is dead simple to boot,
 using `Vagrant`_.
 
 OSX
----
+~~~
 - Download and install `VirtualBox`_
 - Download and install `Vagrant for OSX`_
 - Get installer script::
