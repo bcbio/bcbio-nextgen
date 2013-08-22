@@ -44,6 +44,29 @@ use ``https://`` globally instead of ``git://``::
 If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
 
+On a Virtual Machine
+====================
+If you are looking to quickly try out bcbio-nextgen on your personal
+machine before installing it on your cluster, installing bcbio-nextgen
+on a virtual machine is a great way to go and is dead simple to boot,
+using `Vagrant`_.
+
+OSX
+---
+- Download and install `VirtualBox`_
+- Download and install `Vagrant for OSX`_
+- Get installer script::
+
+    curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
+
+- Run the installer and follow the instructions::
+
+    sh vagrant_osx.sh
+
+.. _Vagrant for OSX: http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/Vagrant-1.2.7.dmg
+.. _VirtualBox: http://download.virtualbox.org/virtualbox/4.2.16/VirtualBox-4.2.16-86992-OSX.dmg
+.. _Vagrant: http://www.vagrantup.com/
+
 Upgrade
 =======
 
@@ -225,7 +248,7 @@ automatically::
         |   `-- phix.fa.fai
         `-- ucsc
             `-- phix.2bit
-    
+
 .. _fabricrc.txt: https://github.com/chapmanb/cloudbiolinux/blob/master/config/fabricrc.txt
 .. _biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
-    
+
