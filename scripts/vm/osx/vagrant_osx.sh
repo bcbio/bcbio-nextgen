@@ -3,7 +3,7 @@ mkdir bcbio
 cd bcbio
 vagrant box add ubuntu_nextgen http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-vagrant-amd64-disk1.box
 curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/Vagrantfile
-curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/bootstrap.sh
+curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/bootstrap.sh
 vagrant up
 
 echo "Your VM is all set up. You can connect to the VM by typing 'vagrant ssh'."
