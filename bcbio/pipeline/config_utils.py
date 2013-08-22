@@ -89,12 +89,7 @@ def expand_path(path):
 def get_resources(name, config):
     """Retrieve resources for a program, pulling from multiple config sources.
     """
-    resources = config.get("resources", {}).get(name, {})
-    if "jvm_opts" not in resources:
-        java_memory = config["algorithm"].get("java_memory", None)
-        if java_memory:
-            resources["jvm_opts"] = ["-Xms%s" % java_memory, "-Xmx%s" % java_memory]
-    return resources
+    return config.get("resources", {}).get(name, {})
 
 def get_program(name, config, ptype="cmd", default=None):
     """Retrieve program information from the configuration.

@@ -9,8 +9,10 @@ Cluster implementation from ipython-cluster-helper:
 https://github.com/roryk/ipython-cluster-helper
 """
 import os
+import collections
 import contextlib
 import copy
+import math
 
 from bcbio import utils
 from bcbio.log import logger, get_log_dir
@@ -63,7 +65,39 @@ def _get_resource_programs(fn, algs):
         if prog in used_progs:
             yield prog
 
-def find_cores_per_job(fns, parallel, items, sysinfo, config, multiplier=1):
+def _str_memory_to_gb(memory):
+    val = float(memory[:-1])
+    units = memory[-1]
+    if units.lower() == "m":
+        val = val / 1000.0
+    else:
+        assert units.lower() == "g", "Unexpected memory units: %s" % memory
+    return val
+
+def _get_prog_memory(resources):
+    """Get expected memory usage, in Gb per core, for a program from resource specification.
+    """
+    out = None
+    for jvm_opt in resources.get("jvm_opts", []):
+        if jvm_opt.startswith("-Xmx"):
+            out = _str_memory_to_gb(jvm_opt[4:])
+    memory = resources.get("memory")
+    if memory:
+        out = _str_memory_to_gb(memory)
+    return out
+
+def _scale_cores_to_memory(cores, mem_per_core, sysinfo):
+    """Scale core usage to avoid excessive memory usage based on system information.
+    """
+    if cores > sysinfo["cores"]:
+        cores = sysinfo["cores"]
+    total_mem = int(math.floor(cores * mem_per_core))
+    if total_mem > sysinfo["memory"]:
+        total_mem = sysinfo["memory"]
+    cores = min(cores, int(math.ceil(float(total_mem) / mem_per_core)))
+    return cores, total_mem
+
+def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
     """Determine cores and workers to use for this stage based on function metadata.
     multiplier specifies the number of regions items will be split into during
     processing.
@@ -71,6 +105,7 @@ def find_cores_per_job(fns, parallel, items, sysinfo, config, multiplier=1):
     jobs for available resources.
     """
     all_cores = [1]
+    all_memory = [2] # Use modest 2Gb memory usage per core as min baseline
     algs = [get_algorithm_config(x) for x in items]
     for fn in fns:
         for prog in _get_resource_programs(fn, algs):
@@ -78,12 +113,19 @@ def find_cores_per_job(fns, parallel, items, sysinfo, config, multiplier=1):
             cores = resources.get("cores")
             if cores:
                 all_cores.append(cores)
+            memory = _get_prog_memory(resources)
+            if memory:
+                all_memory.append(memory)
     cores_per_job = max(all_cores)
+    memory_per_core = max(all_memory)
     total = parallel["cores"]
+    JobResources = collections.namedtuple("JobResources", "num_jobs cores_per_job memory_per_job")
     if total > cores_per_job:
-        return min(total // cores_per_job, len(items) * multiplier), cores_per_job
+        num_jobs = min(total // cores_per_job, len(items) * multiplier)
     else:
-        return 1, total
+        num_jobs, cores_per_job = 1, total
+    cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job, memory_per_core, sysinfo)
+    return JobResources(num_jobs, cores_per_job, str(memory_per_job))
 
 cur_num = 0
 def _get_checkpoint_file(cdir, fn_name):
@@ -145,7 +187,8 @@ def _view_from_parallel(parallel, work_dir, config):
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                         parallel["num_jobs"], parallel["cores_per_job"],
                                         profile=profile_dir, start_wait=parallel["timeout"],
-                                        extra_params={"resources": parallel["resources"]},
+                                        extra_params={"resources": parallel["resources"],
+                                                      "mem": parallel["mem"]},
                                         retries=parallel.get("retries"))
 
 def _get_ipython_fn(fn_name, parallel):
@@ -170,10 +213,11 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
             yield parallel
         else:
             items = [x for x in items if x is not None]
-            num_jobs, cores_per_job = find_cores_per_job([_get_ipython_fn(x, parallel) for x in fn_names],
-                                                         parallel, items, sysinfo, config, multiplier=multiplier)
-            parallel = dictadd(parallel, "cores_per_job", cores_per_job)
-            parallel = dictadd(parallel, "num_jobs", num_jobs)
+            jobr = find_job_resources([_get_ipython_fn(x, parallel) for x in fn_names],
+                                      parallel, items, sysinfo, config, multiplier=multiplier)
+            parallel = dictadd(parallel, "cores_per_job", jobr.cores_per_job)
+            parallel = dictadd(parallel, "num_jobs", jobr.num_jobs)
+            parallel = dictadd(parallel, "mem", jobr.memory_per_job)
             with _view_from_parallel(parallel, dirs["work"], config) as view:
                 parallel["view"] = view
                 yield parallel
@@ -207,9 +251,10 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
         checkpoint_file = _get_checkpoint_file(checkpoint_dir, fn_name)
     fn = _get_ipython_fn(fn_name, parallel)
     if parallel.get("view") is None:
-        num_jobs, cores_per_job = find_cores_per_job([fn], parallel, items, sysinfo, config)
-        parallel = dictadd(parallel, "cores_per_job", cores_per_job)
-        parallel = dictadd(parallel, "num_jobs", num_jobs)
+        jobr = find_job_resources([fn], parallel, items, sysinfo, config)
+        parallel = dictadd(parallel, "cores_per_job", jobr.cores_per_job)
+        parallel = dictadd(parallel, "num_jobs", jobr.num_jobs)
+        parallel = dictadd(parallel, "mem", jobr.memory_per_job)
     # already finished, run locally on current machine to collect details
     if checkpoint_file and os.path.exists(checkpoint_file):
         logger.info("ipython: %s -- local; checkpoint passed" % fn_name)

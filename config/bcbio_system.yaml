@@ -29,6 +29,8 @@ resources:
     memory: 2G
   gemini:
     cores: 16
+  freebayes:
+    memory: 7g
   gatk:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/gatk
@@ -58,7 +60,6 @@ algorithm:
   bc_illumina_no_trailing: true
   bc_read: 1
   bc_position: 3
-  java_memory: 6g
   upload_fastq: false
   save_diskspace: true
 

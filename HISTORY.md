@@ -1,5 +1,9 @@
 ## 0.7.2 (in progress)
 
+- Report memory usage for processes to cluster schedulers and use predicted
+  memory usage to schedule cores per machine. Gets core and memory information
+  for machines and uses to ensure submitted jobs can schedule with available
+  resources.
 - Provide error checking of input YAML configuration at run start. Avoids
   accidental typos or incorrect settings that won't error out until later in the
   process.
