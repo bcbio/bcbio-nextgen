@@ -25,6 +25,15 @@ class BroadRunner:
         self._resources = resources
         self._gatk_version = None
 
+    def new_resources(self, program):
+        """Set new resource usage for the given program.
+        This allows customization of memory usage for particular sub-programs
+        of GATK like HaplotypeCaller.
+        """
+        resources = config_utils.get_resources(program, self._config)
+        if resources.get("jvm_opts"):
+            self._jvm_opts = resources.get("jvm_opts")
+
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
 

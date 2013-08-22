@@ -25,6 +25,8 @@ def parallel_runner(parallel, dirs, config, config_file=None):
     """
     def run_parallel(fn_name, items, metadata=None):
         items = [x for x in items if x is not None]
+        if len(items) == 0:
+            return []
         items = diagnostics.track_parallel(items, fn_name)
         imodule = parallel.get("module", "bcbio.distributed")
         sysinfo = system.get_info(dirs, parallel)

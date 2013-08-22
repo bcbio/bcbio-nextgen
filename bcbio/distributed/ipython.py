@@ -87,7 +87,7 @@ def _get_prog_memory(resources):
     return out
 
 def _scale_cores_to_memory(cores, mem_per_core, sysinfo):
-    """Scale core usage to avoid excessive memory usage based on system information.
+    """Scale multicore usage to avoid excessive memory usage based on system information.
     """
     if cores > sysinfo["cores"]:
         cores = sysinfo["cores"]
@@ -97,6 +97,17 @@ def _scale_cores_to_memory(cores, mem_per_core, sysinfo):
     cores = min(cores, int(math.ceil(float(total_mem) / mem_per_core)))
     return cores, total_mem
 
+def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
+    """When scheduling jobs with single cores, avoid overscheduling due to memory.
+    """
+    sys_mem_per_core = float(sysinfo["memory"]) / float(sysinfo["cores"])
+    if sys_mem_per_core < mem_per_core:
+        pct = sys_mem_per_core / float(mem_per_core)
+        target_jobs = int(math.floor(jobs * pct))
+        return max(target_jobs, 1)
+    else:
+        return jobs
+
 def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
     """Determine cores and workers to use for this stage based on function metadata.
     multiplier specifies the number of regions items will be split into during
@@ -104,6 +115,7 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
     sysinfo specifies cores and memory on processing nodes, allowing us to tailor
     jobs for available resources.
     """
+    assert len(items) > 0, "Finding job resources but no items to process"
     all_cores = [1]
     all_memory = [2] # Use modest 2Gb memory usage per core as min baseline
     algs = [get_algorithm_config(x) for x in items]
@@ -124,7 +136,11 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
         num_jobs = min(total // cores_per_job, len(items) * multiplier)
     else:
         num_jobs, cores_per_job = 1, total
-    cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job, memory_per_core, sysinfo)
+    if cores_per_job == 1:
+        memory_per_job = int(math.floor(memory_per_core))
+        num_jobs = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
+    else:
+        cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job, memory_per_core, sysinfo)
     return JobResources(num_jobs, cores_per_job, str(memory_per_job))
 
 cur_num = 0

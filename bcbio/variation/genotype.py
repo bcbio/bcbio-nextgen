@@ -96,6 +96,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 params += ["-T", "HaplotypeCaller",
                            "-o", tx_out_file]
                 params = _gatk_location_hack(params)
+                broad_runner.new_resources("gatk-haplotype")
                 broad_runner.run_gatk(params)
     return out_file
 
