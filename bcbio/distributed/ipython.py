@@ -15,6 +15,7 @@ import copy
 from bcbio import utils
 from bcbio.log import logger, get_log_dir
 from bcbio.pipeline import config_utils
+from bcbio.provenance import system
 
 from cluster_helper import cluster as ipython_cluster
 
@@ -51,14 +52,23 @@ def _get_resource_programs(fn, algs):
         aligner = alg.get("aligner")
         if aligner:
             used_progs.add(aligner)
+        vc = alg.get("variantcaller")
+        if vc:
+            if isinstance(vc, (list, tuple)):
+                for x in vc:
+                    used_progs.add(x)
+            else:
+                used_progs.add(vc)
     for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
         if prog in used_progs:
             yield prog
 
-def find_cores_per_job(fns, parallel, items, config, multiplier=1):
+def find_cores_per_job(fns, parallel, items, sysinfo, config, multiplier=1):
     """Determine cores and workers to use for this stage based on function metadata.
     multiplier specifies the number of regions items will be split into during
     processing.
+    sysinfo specifies cores and memory on processing nodes, allowing us to tailor
+    jobs for available resources.
     """
     all_cores = [1]
     algs = [get_algorithm_config(x) for x in items]
@@ -144,7 +154,7 @@ def _get_ipython_fn(fn_name, parallel):
                    fn_name)
 
 @contextlib.contextmanager
-def global_parallel(parallel, name, fn_names, items, work_dir, config,
+def global_parallel(parallel, name, fn_names, items, dirs, config,
                     multiplier=1):
     """Add an IPython cluster to be used for multiple remote functions.
 
@@ -152,18 +162,19 @@ def global_parallel(parallel, name, fn_names, items, work_dir, config,
     identical resource requirements. Falls back into local execution for
     non-distributed clusters or completed jobs.
     """
-    checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
+    checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"], "checkpoints_ipython"))
     checkpoint_file = os.path.join(checkpoint_dir, "global-%s.done" % name)
+    sysinfo = system.get_info(dirs, parallel)
     try:
         if parallel["type"] != "ipython" or os.path.exists(checkpoint_file):
             yield parallel
         else:
             items = [x for x in items if x is not None]
             num_jobs, cores_per_job = find_cores_per_job([_get_ipython_fn(x, parallel) for x in fn_names],
-                                                         parallel, items, config, multiplier=multiplier)
+                                                         parallel, items, sysinfo, config, multiplier=multiplier)
             parallel = dictadd(parallel, "cores_per_job", cores_per_job)
             parallel = dictadd(parallel, "num_jobs", num_jobs)
-            with _view_from_parallel(parallel, work_dir, config) as view:
+            with _view_from_parallel(parallel, dirs["work"], config) as view:
                 parallel["view"] = view
                 yield parallel
     except:
@@ -173,7 +184,7 @@ def global_parallel(parallel, name, fn_names, items, work_dir, config,
         with open(checkpoint_file, "w") as out_handle:
             out_handle.write("done\n")
 
-def runner(parallel, fn_name, items, work_dir, config):
+def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
 
     This will spawn clusters for parallel and custom queue types like multicore
@@ -187,16 +198,20 @@ def runner(parallel, fn_name, items, work_dir, config):
     instead of creating a new cluster.
     """
     out = []
-    checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
-    checkpoint_file = _get_checkpoint_file(checkpoint_dir, fn_name)
-    fn = _get_ipython_fn(fn_name, parallel)
     items = [x for x in items if x is not None]
+    algs = [get_algorithm_config(x) for x in items]
+    if len(algs) > 0 and not algs[0].get("resource_check", True):
+        checkpoint_file = None
+    else:
+        checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
+        checkpoint_file = _get_checkpoint_file(checkpoint_dir, fn_name)
+    fn = _get_ipython_fn(fn_name, parallel)
     if parallel.get("view") is None:
-        num_jobs, cores_per_job = find_cores_per_job([fn], parallel, items, config)
+        num_jobs, cores_per_job = find_cores_per_job([fn], parallel, items, sysinfo, config)
         parallel = dictadd(parallel, "cores_per_job", cores_per_job)
         parallel = dictadd(parallel, "num_jobs", num_jobs)
     # already finished, run locally on current machine to collect details
-    if os.path.exists(checkpoint_file):
+    if checkpoint_file and os.path.exists(checkpoint_file):
         logger.info("ipython: %s -- local; checkpoint passed" % fn_name)
         for args in items:
             if args:
@@ -217,6 +232,7 @@ def runner(parallel, fn_name, items, work_dir, config):
                     for data in view.map_sync(fn, items, track=False):
                         if data:
                             out.extend(data)
-    with open(checkpoint_file, "w") as out_handle:
-        out_handle.write("done\n")
+    if checkpoint_file:
+        with open(checkpoint_file, "w") as out_handle:
+            out_handle.write("done\n")
     return out

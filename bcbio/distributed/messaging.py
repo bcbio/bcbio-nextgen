@@ -19,7 +19,7 @@ except ImportError:
 from bcbio import utils
 from bcbio.distributed import ipython
 from bcbio.log import logger
-from bcbio.provenance import diagnostics
+from bcbio.provenance import diagnostics, system
 
 def parallel_runner(parallel, dirs, config, config_file=None):
     """Process a supplied function: single, multi-processor or distributed.
@@ -28,18 +28,19 @@ def parallel_runner(parallel, dirs, config, config_file=None):
         items = [x for x in items if x is not None]
         items = diagnostics.track_parallel(items, fn_name)
         imodule = parallel.get("module", "bcbio.distributed")
+        sysinfo = system.get_info(dirs, parallel)
         if parallel["type"].startswith("messaging"):
             task_module = "{base}.tasks".format(base=imodule)
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
         elif parallel["type"] == "ipython":
-            return ipython.runner(parallel, fn_name, items, dirs["work"], config)
+            return ipython.runner(parallel, fn_name, items, dirs["work"], sysinfo, config)
         else:
             logger.info("multiprocessing: %s" % fn_name)
             fn = getattr(__import__("{base}.multitasks".format(base=imodule),
                                     fromlist=["multitasks"]),
                          fn_name)
-            num_jobs, cores_per_job = ipython.find_cores_per_job([fn], parallel, items, config)
+            num_jobs, cores_per_job = ipython.find_cores_per_job([fn], parallel, items, sysinfo, config)
             items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
             num_jobs = cores_including_resources(num_jobs, metadata, config)
             if joblib is None:

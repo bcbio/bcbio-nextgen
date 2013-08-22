@@ -77,6 +77,7 @@ def combine_bam(*args):
 @utils.map_wrap
 def variantcall_sample(*args):
     return genotype.variantcall_sample(*args)
+variantcall_sample.metadata = {"resources": ["gatk", "freebayes", "gatk-haplotype"]}
 
 @utils.map_wrap
 def combine_variant_files(*args):

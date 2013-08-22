@@ -16,7 +16,7 @@ from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
 from bcbio.pipeline import lane, region, run_info, qcsummary, version
-from bcbio.provenance import programs
+from bcbio.provenance import programs, system
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
@@ -46,15 +46,16 @@ def run_main(config, config_file, work_dir, parallel,
     pipelines = _pair_lanes_with_pipelines(lane_items)
     final = []
     for pipeline, pipeline_items in pipelines.items():
-        pipeline_items = _add_provenance(pipeline_items, dirs, config)
+        pipeline_items = _add_provenance(pipeline_items, dirs, run_parallel, parallel, config)
         for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
             if len(xs) == 1:
                 upload.from_sample(xs[0])
                 final.append(xs[0])
     qcsummary.write_metrics(final, dirs)
 
-def _add_provenance(items, dirs, config):
+def _add_provenance(items, dirs, run_parallel, parallel, config):
     p = programs.write_versions(dirs, config)
+    p = system.write_info(dirs, run_parallel, parallel, config)
     out = []
     for item in items:
         if item.get("upload") and item["upload"].get("fc_name"):
@@ -243,7 +244,7 @@ class Variant2Pipeline(AbstractPipeline):
     def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with global_parallel(parallel, "multicore", ["align_prep_full"],
-                             lane_items, dirs["work"], config) as parallel:
+                             lane_items, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment")
             samples = run_parallel("align_prep_full", [list(x) + [config_file] for x in lane_items])
@@ -255,7 +256,7 @@ class Variant2Pipeline(AbstractPipeline):
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with global_parallel(parallel, "full", ["piped_bamprep", "variantcall_sample"],
-                             samples, dirs["work"], config,
+                             samples, dirs, config,
                              multiplier=len(regions["analysis"])) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment post-processing")
@@ -265,7 +266,7 @@ class Variant2Pipeline(AbstractPipeline):
 
         ## Finalize variants (per-sample cluster)
         with global_parallel(parallel, "persample", ["postprocess_variants"],
-                             samples, dirs["work"], config) as parallel:
+                             samples, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: variant post-processing")
             samples = run_parallel("postprocess_variants", samples)
@@ -279,7 +280,7 @@ class Variant2Pipeline(AbstractPipeline):
             samples = qcsummary.generate_parallel(samples, run_parallel)
         ## Finalizing BAMs and population databases, handle multicore computation
         with global_parallel(parallel, "multicore2", ["prep_gemini_db"],
-                             samples, dirs["work"], config) as parallel:
+                             samples, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
