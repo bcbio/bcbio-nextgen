@@ -139,28 +139,19 @@ def picard_index_ref(picard, ref_file):
             picard.run("CreateSequenceDictionary", opts)
     return dict_file
 
-def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir,
-                        platform, sample_name="", rg_name="", pu_name="",
-                        qual_format=None):
+def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir, names):
     """Convert fastq file(s) to BAM, adding sample, run group and platform information.
     """
-    qual_formats = {"illumina": "Illumina"}
-    if qual_format is None:
-        try:
-            qual_format = qual_formats[platform.lower()]
-        except KeyError:
-            raise ValueError("Need to specify quality format for %s" % platform)
     out_bam = os.path.join(out_dir, "%s-fastq.bam" %
                            os.path.splitext(os.path.basename(fastq_one))[0])
     if not file_exists(out_bam):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:
                 opts = [("FASTQ", fastq_one),
-                        ("QUALITY_FORMAT", qual_format),
-                        ("READ_GROUP_NAME", rg_name),
-                        ("SAMPLE_NAME", sample_name),
-                        ("PLATFORM_UNIT", pu_name),
-                        ("PLATFORM", platform),
+                        ("READ_GROUP_NAME", names["rg"]),
+                        ("SAMPLE_NAME", names["sample"]),
+                        ("PLATFORM_UNIT", names["pu"]),
+                        ("PLATFORM", names["pl"]),
                         ("TMP_DIR", tmp_dir),
                         ("OUTPUT", tx_out_bam)]
                 if fastq_two:

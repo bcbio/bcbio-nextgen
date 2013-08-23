@@ -102,9 +102,7 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
     if sort_method == "queryname":
         return sam_to_querysort_bam(sam_file, config)
     else:
-        # remove split information if present for platform unit
-        return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, names["sample"],
-                               names["rg"], names["pu"], config)
+        return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, names, config)
 
 def _remove_read_number(in_file, sam_file):
     """Work around problem with MergeBamAlignment with BWA and single end reads.
@@ -149,19 +147,14 @@ def sam_to_querysort_sam(sam_file, config):
     out_file = "{}-querysorted.sam".format(os.path.splitext(sam_file)[0])
     return runner.run_fn("picard_sort", sam_file, "queryname", out_file)
 
-def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, sample_name,
-                    rg_name, lane_name, config):
+def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
     """Convert SAM file to merged and sorted BAM file.
     """
     picard = broad.runner_from_config(config)
-    platform = config["algorithm"]["platform"]
-    qual_format = config["algorithm"].get("quality_format", None)
     base_dir = os.path.dirname(sam_file)
 
     picard.run_fn("picard_index_ref", ref_file)
-    out_fastq_bam = picard.run_fn("picard_fastq_to_bam", fastq1, fastq2,
-                                  base_dir, platform, sample_name, rg_name, lane_name,
-                                  qual_format)
+    out_fastq_bam = picard.run_fn("picard_fastq_to_bam", fastq1, fastq2, base_dir, names)
     out_bam = picard.run_fn("picard_sam_to_bam", sam_file, out_fastq_bam, ref_file,
                             fastq2 is not None)
     sort_bam = picard.run_fn("picard_sort", out_bam)
