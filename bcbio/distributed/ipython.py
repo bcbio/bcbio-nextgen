@@ -89,9 +89,11 @@ def _get_prog_memory(resources):
 def _scale_cores_to_memory(cores, mem_per_core, sysinfo):
     """Scale multicore usage to avoid excessive memory usage based on system information.
     """
+    total_mem = int(math.floor(cores * mem_per_core))
+    if "cores" not in sysinfo:
+        return cores, total_mem
     if cores > sysinfo["cores"]:
         cores = sysinfo["cores"]
-    total_mem = int(math.floor(cores * mem_per_core))
     if total_mem > sysinfo["memory"]:
         total_mem = sysinfo["memory"]
     cores = min(cores, int(math.ceil(float(total_mem) / mem_per_core)))
@@ -100,6 +102,8 @@ def _scale_cores_to_memory(cores, mem_per_core, sysinfo):
 def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     """When scheduling jobs with single cores, avoid overscheduling due to memory.
     """
+    if "cores" not in sysinfo:
+        return jobs
     sys_mem_per_core = float(sysinfo["memory"]) / float(sysinfo["cores"])
     if sys_mem_per_core < mem_per_core:
         pct = sys_mem_per_core / float(mem_per_core)

@@ -55,7 +55,7 @@ def run_main(config, config_file, work_dir, parallel,
 
 def _add_provenance(items, dirs, run_parallel, parallel, config):
     p = programs.write_versions(dirs, config)
-    p = system.write_info(dirs, run_parallel, parallel, config)
+    system.write_info(dirs, run_parallel, parallel, config)
     out = []
     for item in items:
         if item.get("upload") and item["upload"].get("fc_name"):
