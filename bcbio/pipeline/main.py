@@ -113,7 +113,7 @@ def parse_cl_args(in_args):
         parser.add_argument("-v", "--version", help="Print current version",
                             action="store_true")
     args = parser.parse_args(in_args)
-    if args.fc_dir:
+    if hasattr(args, "fc_dir") and args.fc_dir:
         kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
                   "paralleltype": args.paralleltype,
                   "scheduler": args.scheduler,

@@ -47,7 +47,7 @@ Features
 Quick start
 -----------
 
-1. Install ``bcbio-nextgen`` with all tool dependencies and data files::
+1. `Install`_ ``bcbio-nextgen`` with all tool dependencies and data files::
 
          wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
          python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
@@ -67,6 +67,7 @@ software, data and system information.
 
 .. _system configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+.. _Install: https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#automated
 
 Documentation
 -------------

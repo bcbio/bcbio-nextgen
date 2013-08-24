@@ -109,7 +109,7 @@ def add_subparser(subparsers):
                         choices = ["stable", "development", "system", "skip"], default="stable")
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
-                        choices=["ubuntu", "debian", "centos", "scientificlinux"])
+                        choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",

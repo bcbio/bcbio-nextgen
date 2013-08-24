@@ -34,7 +34,7 @@ def main(args, sys_argv):
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
     print("Installing data and third party dependencies")
-    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + sys_argv[1:])
+    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args))
     system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
     print("Finished: bcbio-nextgen, tools and data installed")
@@ -43,6 +43,12 @@ def main(args, sys_argv):
         print(" Tools installed in:\n  %s" % args.tooldir)
     print(" Ready to use system configuration at:\n  %s" % system_config)
     print(" Edit configuration file as needed to match your machine or cluster")
+
+def _clean_args(sys_argv, args):
+    """Remove data directory from arguments to pass to upgrade function.
+    """
+    return [x for x in sys_argv if
+            x.startswith("--") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
 
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
