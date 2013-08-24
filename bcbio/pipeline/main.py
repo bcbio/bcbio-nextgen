@@ -294,11 +294,29 @@ class SNPCallingPipeline(VariantPipeline):
     """
     name = "SNP calling"
 
-class MinimalPipeline(VariantPipeline):
-    name = "Minimal"
-
-class StandardPipeline(VariantPipeline):
+class StandardPipeline(AbstractPipeline):
+    """Minimal pipeline with alignment and QC.
+    """
     name = "Standard"
+    @classmethod
+    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
+        ## Alignment and preparation requiring the entire input file (multicore cluster)
+        with global_parallel(parallel, "multicore", ["align_prep_full"],
+                             lane_items, dirs, config) as parallel:
+            run_parallel = parallel_runner(parallel, dirs, config)
+            logger.info("Timing: alignment")
+            samples = run_parallel("process_alignment", lane_items)
+        ## Finalize (per-sample cluster)
+        with global_parallel(parallel, "persample", ["postprocess_variants"],
+                             samples, dirs, config) as parallel:
+            run_parallel = parallel_runner(parallel, dirs, config)
+            logger.info("Timing: quality control")
+            samples = qcsummary.generate_parallel(samples, run_parallel)
+        logger.info("Timing: finished")
+        return samples
+
+class MinimalPipeline(StandardPipeline):
+    name = "Minimal"
 
 class RnaseqPipeline(AbstractPipeline):
     name = "RNA-seq"
@@ -315,9 +333,9 @@ class RnaseqPipeline(AbstractPipeline):
 
 def _get_pipeline(item):
     from bcbio.log import logger
-    SUPPORTED_PIPELINES = {x.name: x for x in
+    SUPPORTED_PIPELINES = {x.name.lower(): x for x in
                            utils.itersubclasses(AbstractPipeline)}
-    analysis_type = item.get("analysis")
+    analysis_type = item.get("analysis", "").lower()
     if analysis_type not in SUPPORTED_PIPELINES:
         logger.error("Cannot determine which type of analysis to run, "
                       "set in the run_info under details.")
