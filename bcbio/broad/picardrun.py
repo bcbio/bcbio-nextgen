@@ -177,6 +177,7 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                       is_paired=False):
     """Convert SAM to BAM, including unmapped reads from fastq BAM file.
     """
+    to_retain = ["XS", "XG", "XM", "XN", "XO", "YT"]
     if align_sam.endswith(".sam"):
         out_bam = "%s.bam" % os.path.splitext(align_sam)[0]
     elif align_sam.endswith("-align.bam"):
@@ -193,6 +194,7 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                         ("TMP_DIR", tmp_dir),
                         ("PAIRED_RUN", ("true" if is_paired else "false")),
                         ]
+                opts += [("ATTRIBUTES_TO_RETAIN", x) for x in to_retain]
                 picard.run("MergeBamAlignment", opts)
     return out_bam
 
