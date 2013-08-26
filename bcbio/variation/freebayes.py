@@ -29,9 +29,9 @@ def _freebayes_options_from_config(aconfig, out_file, region=None):
     if target:
         opts += ["--region" if target == region else "--targets",
                  region_to_freebayes(target)]
-    background = aconfig.get("call_background", None)
-    if background and os.path.exists(background):
-        opts += ["--variant-input", background]
+    #background = aconfig.get("call_background", None)
+    #if background and os.path.exists(background):
+    #    opts += ["--variant-input", background]
     return opts
 
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
