@@ -3,7 +3,6 @@
 http://samtools.sourceforge.net/mpileup.shtml
 """
 import os
-import subprocess
 
 from bcbio import broad
 from bcbio.utils import file_exists
@@ -11,6 +10,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
+from bcbio.provenance import do
 from bcbio.variation import bamprep, realign, vcfutils
 
 def shared_variantcall(call_fn, name, align_bams, ref_file, config,
@@ -74,4 +74,4 @@ def _call_variants_samtools(align_bams, ref_file, config, target_regions, out_fi
            "| {vcfutils} varFilter -D {max_read_depth} "
            "> {out_file}")
     logger.info(cmd.format(**locals()))
-    subprocess.check_call(cmd.format(**locals()), shell=True)
+    do.run(cmd.format(**locals()), "Variant calling with samtools", {})

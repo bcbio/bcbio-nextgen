@@ -3,7 +3,6 @@
 import os
 import shutil
 from contextlib import closing
-import subprocess
 
 import pybedtools
 import pysam
@@ -17,6 +16,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    write_nochr_reads, subset_bam_by_region,
                                    subset_variant_regions)
+from bcbio.provenance import do
 
 # ## gkno Marth lab realignment
 
@@ -52,7 +52,7 @@ def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{bamtools} filter -in {align_bam} {region} "
                    "| {realign_cmd} > {tx_out_file}")
-            subprocess.check_call(cmd.format(**locals()), shell=True)
+            do.run(cmd.format(**locals()), "gkno realignment", {})
     return out_file
 
 # ## GATK realignment
@@ -121,7 +121,7 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                 cl = gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
                                                    tmp_dir, region, deep_coverage)
                 cl += ["-o", tx_out_file]
-                subprocess.check_call(cl)
+                do.run(cl, "GATK indel realignment", {})
     return out_file
 
 def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
