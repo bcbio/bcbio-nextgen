@@ -148,7 +148,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         exit(1)
 
     out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
-                             align_dir, config, names=None)
+                             align_dir, config, names)
 
     return out_files
 
