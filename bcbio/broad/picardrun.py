@@ -279,7 +279,7 @@ def bed2interval(align_file, bed, out_file=None):
 
     def reorder_line(line):
         splitline = line.strip().split("\t")
-        reordered = "\t".join([splitline[0], splitline[1], splitline[2],
+        reordered = "\t".join([splitline[0], splitline[1]+1, splitline[2],
                                splitline[5], splitline[3]])
         return reordered + "\n"
 
