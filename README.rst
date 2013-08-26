@@ -91,6 +91,7 @@ Contributors
 - `Brent Pedersen`_, University of Colorado Denver
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
+- `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
 
 .. _Luca Beltrame: https://github.com/lbeltrame
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
@@ -100,6 +101,7 @@ Contributors
 .. _Brent Pedersen: https://github.com/brentp
 .. _Valentine Svensson: https://github.com/vals
 .. _Roman Valls: https://github.com/brainstorm
+.. _Kevin Ying: https://github.com/kevyin
 
 License
 -------
