@@ -67,6 +67,7 @@ def _clean_freebayes_output(in_file):
     """Clean FreeBayes output to make post-processing with GATK happy.
     - Remove lines from FreeBayes outputs where REF/ALT are identical:
       2       22816178        .       G       G       0.0339196
+    - Remove Type=Int specifications which are not valid VCF and GATK chokes on.
     """
     out_file = apply("{0}-nodups{1}".format, os.path.splitext(in_file))
     if not file_exists(out_file):
@@ -74,6 +75,7 @@ def _clean_freebayes_output(in_file):
             with open(out_file, "w") as out_handle:
                 for line in in_handle:
                     if line.startswith("#"):
+                        line = line.replace("Type=Int,D", "Type=Integer,D")
                         out_handle.write(line)
                     else:
                         parts = line.split("\t")
