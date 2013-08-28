@@ -23,6 +23,8 @@ def upgrade_bcbio(args):
     Handles bcbio, third party tools and data.
     """
     pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
+    if args.upgrade not in ["skip"]:
+        _update_conda_packages()
     if args.upgrade in ["skip"]:
         pass
     elif args.upgrade in ["stable", "system"]:
@@ -53,6 +55,15 @@ def _default_deploy_args(args):
                                     "use_sudo": args.sudo,
                                     "distribution": args.distribution or "__auto__",
                                     "dist_name": "__auto__"}}
+
+def _update_conda_packages():
+    """If installed in an anaconda directory, upgrade conda packages.
+    """
+    conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
+    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
+            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
+    if os.path.exists(conda_bin):
+        subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
 
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.

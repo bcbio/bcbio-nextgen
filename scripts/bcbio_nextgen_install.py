@@ -54,8 +54,6 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
     """
     subprocess.check_call([anaconda["pip"], "install", "fabric"])
-    subprocess.check_call([anaconda["pip"], "install",
-                           "https://github.com/ipython/ipython/tarball/master#egg=ipython-1.0.dev"])
     subprocess.check_call([anaconda["pip"], "install", "-r", remotes["requirements"]])
     out = {}
     for script in ["bcbio_nextgen.py"]:
@@ -64,7 +62,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
             final_script = os.path.join(args.tooldir, "bin", script)
             sudo_cmd = ["sudo"] if args.sudo else []
             subprocess.check_call(sudo_cmd + ["mkdir", "-p", os.path.dirname(final_script)])
-            if os.path.exists(final_script):
+            if os.path.lexists(final_script):
                 cmd = ["rm", "-f", final_script]
                 subprocess.check_call(sudo_cmd + cmd)
             cmd = ["ln", "-s", ve_script, final_script]
@@ -73,7 +71,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["biopython", "boto", "cython", "distribute", "nose", "numpy",
+    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
             "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
 
