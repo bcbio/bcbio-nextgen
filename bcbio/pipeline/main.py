@@ -7,7 +7,7 @@ import os
 import sys
 import argparse
 from collections import defaultdict
-
+import tempfile
 
 from bcbio import install, log, utils, upload
 from bcbio.bam import callable
@@ -45,13 +45,15 @@ def run_main(config, config_file, work_dir, parallel,
     lane_items = lane.process_all_lanes(run_items, run_parallel)
     pipelines = _pair_lanes_with_pipelines(lane_items)
     final = []
-    for pipeline, pipeline_items in pipelines.items():
-        pipeline_items = _add_provenance(pipeline_items, dirs, run_parallel, parallel, config)
-        for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
-            if len(xs) == 1:
-                upload.from_sample(xs[0])
-                final.append(xs[0])
-    qcsummary.write_metrics(final, dirs)
+    with utils.curdir_tmpdir() as tmpdir:
+        tempfile.tempdir = tmpdir
+        for pipeline, pipeline_items in pipelines.items():
+            pipeline_items = _add_provenance(pipeline_items, dirs, run_parallel, parallel, config)
+            for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
+                if len(xs) == 1:
+                    upload.from_sample(xs[0])
+                    final.append(xs[0])
+        qcsummary.write_metrics(final, dirs)
 
 def _add_provenance(items, dirs, run_parallel, parallel, config):
     p = programs.write_versions(dirs, config)
