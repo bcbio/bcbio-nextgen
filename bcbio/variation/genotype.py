@@ -519,9 +519,9 @@ def variantcall_sample(data, region=None, out_file=None):
         align_bams = data["work_bam"]
         items = data["work_items"]
     call_file = "%s-raw%s" % os.path.splitext(out_file)
-    caller_fn(align_bams, items, sam_ref,
-              configured_vrn_files(config, sam_ref),
-              region, call_file)
+    call_file = caller_fn(align_bams, items, sam_ref,
+                          configured_vrn_files(config, sam_ref),
+                          region, call_file)
     if data["config"]["algorithm"].get("phasing", False) == "gatk":
         call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
     for ext in ["", ".idx"]:

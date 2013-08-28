@@ -11,6 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
+from bcbio.variation import annotation
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -53,7 +54,9 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             do.run(cl, "Genotyping with FreeBayes", {})
         _clean_freebayes_output(out_file)
-    return out_file
+    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files.dbsnp,
+                                               ref_file, config)
+    return ann_file
 
 def _move_vcf(orig_file, new_file):
     """Move a VCF file with associated index.

@@ -117,7 +117,6 @@ class BroadRunner:
 
         gatk_jar = self._get_jar("muTect")
         local_args = []
-        cores = self._config["algorithm"].get("num_cores", 1)
         config = copy.deepcopy(self._config)
 
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
