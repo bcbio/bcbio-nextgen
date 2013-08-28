@@ -14,6 +14,8 @@
   redirect to `variant2`.
 - Improve parallelization of BAM preparation and gemini database creation by
   moving to multicore versions.
+- Move variant annotation to work on called sub-regions, to avoid bottlenecks
+  when annotating a full whole genome VCF.
 - Remove sequencer-specific integration functionality which is poorly maintained
   and better done with third party tools: demultiplexing and statistics from
   Illumina directories.
