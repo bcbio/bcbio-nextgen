@@ -1,7 +1,11 @@
 """Top level driver functionality for processing a sequencing lane.
 """
+import contextlib
 import copy
+import itertools
 import os
+
+import pysam
 
 from bcbio import utils, broad
 from bcbio.log import logger
@@ -11,7 +15,7 @@ from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
 from bcbio.pipeline import cleanbam
 from bcbio.ngsalign.split import split_read_files
-from bcbio.variation import recalibrate
+from bcbio.variation import recalibrate, vcfutils
 
 def _item_needs_compute(lane_items):
     """Determine if any item needs computing resources to spin up a cluster.
@@ -105,6 +109,29 @@ def link_bam_file(orig_file, new_dir):
             update_files.append(sym_file)
     return update_files[0]
 
+def _check_prealigned_bam(in_bam, ref_file, config):
+    """Ensure a pre-aligned BAM file matches the expected reference genome.
+    """
+    ref_contigs = [c["SN"] for c in vcfutils.ref_file_contigs(ref_file, config)]
+    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+        bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
+    problems = []
+    warnings = []
+    for bc, rc in itertools.izip_longest(bam_contigs, ref_contigs):
+        if bc != rc:
+            if bc and rc:
+                problems.append("Reference mismatch. BAM: %s Reference: %s" (bc, rc))
+            elif bc:
+                problems.append("Extra BAM chromosomes: %s" % bc)
+            elif rc:
+                warnings.append("Extra reference chromosomes: %s" % rc)
+    if problems:
+        raise ValueError("Unexpected order, name or contig mismatches between input BAM and reference file:\n%s\n"
+                         % "\n".join(problems))
+    if warnings:
+        print("*** Potential problems in input BAM compared to reference:\n%s\n" %
+              "\n".join(warnings))
+
 def process_alignment(data):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
@@ -130,6 +157,7 @@ def process_alignment(data):
         else:
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))
+        _check_prealigned_bam(fastq1, data["sam_ref"], config)
     if not out_bam and not os.path.exists(fastq1):
         raise ValueError("Could not find input file: %s" % fastq1)
     data["sam_ref"] = get_genome_ref(data["genome_build"], None, data["dirs"]["galaxy"])[-1]

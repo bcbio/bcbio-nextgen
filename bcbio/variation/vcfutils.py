@@ -109,7 +109,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
     else:
         return out_file
 
-def _ref_file_contigs(ref_file, config):
+def ref_file_contigs(ref_file, config):
     """Iterator of sequence contigs from a reference file.
     """
     broad_runner = broad.runner_from_config(config)
@@ -122,7 +122,7 @@ def _sort_by_region(fnames, regions, ref_file, config):
     """Sort a set of regionally split files by region for ordered output.
     """
     contig_order = {}
-    for i, sq in enumerate(_ref_file_contigs(ref_file, config)):
+    for i, sq in enumerate(ref_file_contigs(ref_file, config)):
         contig_order[sq["SN"]] = i
     sitems = []
     for region, fname in zip(regions, fnames):
