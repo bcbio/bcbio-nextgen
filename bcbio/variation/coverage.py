@@ -26,7 +26,7 @@ def _prep_coverage_file(species, covdir, config):
         cov_kw = cov_file
         cov_file = os.path.join(covdir, "%s-%s.txt" % (species, cov_kw))
     else:
-        cov_file = os.path.abspath(cov_file)
+        cov_file = os.path.normpath(os.path.join(os.path.split(covdir)[0], cov_file))
         assert os.path.exists(cov_file), \
             "Did not find input file for coverage: %s" % cov_file
     return cov_file, cov_kw

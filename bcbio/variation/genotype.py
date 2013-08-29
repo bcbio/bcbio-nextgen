@@ -95,7 +95,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "HaplotypeCaller",
                            "-o", tx_out_file]
-                params = _gatk_location_hack(params)
+                #params = _gatk_location_hack(params)
                 broad_runner.new_resources("gatk-haplotype")
                 broad_runner.run_gatk(params)
     return out_file
@@ -138,9 +138,11 @@ def _get_coverage_params(config):
     return Cov(config["algorithm"].get("coverage_interval", "exome").lower(),
                config["algorithm"].get("coverage_depth", "high").lower())
 
-def _no_vqsr(config):
+def use_vqsr(config):
     cov = _get_coverage_params(config)
-    return cov.interval in ["regional", "exome"] or cov.depth == "low"
+    caller = config["algorithm"].get("variantcaller", "gatk")
+    return (cov.interval not in ["regional", "exome"] and cov.depth != "low"
+            and caller in ["gatk", "gatk-haplotype"])
 
 def variant_filtration(call_file, ref_file, vrn_files, config):
     """Filter variant calls using Variant Quality Score Recalibration.
@@ -149,10 +151,7 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
     """
     broad_runner = broad.runner_from_config(config)
     caller = config["algorithm"].get("variantcaller")
-    if caller in ["gatk-haplotype"] and not _no_vqsr(config):
-        return _variant_filtration_both(broad_runner, call_file, ref_file, vrn_files,
-                                        config)
-    elif caller in ["freebayes"]:
+    if caller in ["freebayes"]:
         return filter_freebayes(broad_runner, call_file, ref_file, vrn_files, config)
     # no additional filtration for callers that filter as part of call process
     elif caller in ["samtools", "varscan"]:
@@ -269,7 +268,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     # resulting in excessive filtering, so avoid this metric
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
-    if _no_vqsr(config):
+    if not use_vqsr(config):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            filters)
     else:
@@ -304,7 +303,7 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
         filter_type, snp_file, ref_file, vrn_files, variantcaller)
-    if _no_vqsr(config):
+    if not use_vqsr(config):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
     else:
@@ -315,24 +314,6 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
                 broad_runner.run_gatk(params)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
-
-# ## Variant filtration for combined indels and SNPs
-
-def _variant_filtration_both(broad_runner, snp_file, ref_file, vrn_files,
-                              config):
-    """Filter SNP and indel variant calls using GATK best practice recommendations.
-    """
-    filter_type = "BOTH"
-    variantcaller = config["algorithm"].get("variantcaller", "gatk")
-    params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file, vrn_files, variantcaller)
-    if not file_exists(recal_file):
-        with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
-            params.extend(["--recal_file", tx_recal,
-                           "--tranches_file", tx_tranches])
-            broad_runner.run_gatk(params)
-    return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
-                                tranches_file, filter_type)
 
 # ## Variant evaluation
 

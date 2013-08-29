@@ -177,7 +177,11 @@ def adjust_memory(val, magnitude, direction="increase"):
     if direction == "decrease":
         amount = amount / magnitude
     elif direction == "increase":
-        amount = amount * magnitude
+        # for increases with multiple cores, leave small percentage of
+        # memory for system to maintain process running resource and
+        # avoid OOM killers
+        adjuster = 0.91
+        amount = amount * (adjuster * magnitude)
     return "{amount}{modifier}".format(amount=amount, modifier=modifier)
 
 def adjust_opts(in_opts, config):
