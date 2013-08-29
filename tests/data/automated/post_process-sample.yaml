@@ -5,11 +5,6 @@ algorithm:
   num_cores: 1
   platform: illumina
   recalibrate: false
-  snpcall: false
-  bc_mismatch: 2
-  bc_read: 1
-  bc_position: 3
-  bc_illumina_no_trailing: true
   save_diskspace: true
   upload_fastq: false
 
@@ -17,7 +12,7 @@ algorithm:
 custom_algorithms:
   variant:
     aligner: bwa
-    recalibrate: true
+    recalibrate: gatk
     snpcall: true
     coverage_depth: "low" # other options: high
     coverage_interval: "exome" # other options: genome

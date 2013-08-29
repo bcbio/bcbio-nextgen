@@ -203,10 +203,6 @@ It also contains information the genome build, sample name and
 reference genome file throughout. Here's an example of these inputs::
 
     {'config': {'algorithm': {'aligner': 'bwa',
-                              'bc_illumina_no_trailing': True,
-                              'bc_mismatch': 2,
-                              'bc_position': 3,
-                              'bc_read': 1,
                               'callable_regions': 'analysis_blocks.bed',
                               'coverage_depth': 'low',
                               'coverage_interval': 'regional',
@@ -221,7 +217,6 @@ reference genome file throughout. Here's an example of these inputs::
                               'realign': 'gkno',
                               'recalibrate': 'gatk',
                               'save_diskspace': True,
-                              'snpcall': True,
                               'train_1000g_omni': 'variation/1000G_omni2.5.vcf',
                               'train_hapmap': 'variation/hapmap_3.3.vcf',
                               'train_indels': 'variation/Mills_Devine_2hit.indels.vcf',

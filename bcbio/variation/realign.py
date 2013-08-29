@@ -192,8 +192,7 @@ def parallel_realign_sample(sample_info, parallel_fn):
     to_process = []
     finished = []
     for x in sample_info:
-        if (x[0]["config"]["algorithm"]["snpcall"] and
-            x[0]["config"]["algorithm"].get("realign", True)):
+        if x[0]["config"]["algorithm"].get("realign", True):
             to_process.append(x)
         else:
             finished.append(x)
@@ -217,7 +216,7 @@ def realign_sample(data, region=None, out_file=None):
     realigner = "gatk" if realigner is True else realigner
     realign_fn = _realign_approaches[realigner] if realigner else None
 
-    if data["config"]["algorithm"]["snpcall"] and realign_fn:
+    if realign_fn:
         logger.info("Realigning %s with %s: %s %s" % (data["name"], realigner,
                                                       os.path.basename(data["work_bam"]),
                                                       region))

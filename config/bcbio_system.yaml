@@ -59,12 +59,6 @@ algorithm:
   max_errors: 2
   platform: illumina
   recalibrate: false
-  snpcall: false
-  bc_mismatch: 2
-  bc_allow_indels: true
-  bc_illumina_no_trailing: true
-  bc_read: 1
-  bc_position: 3
   upload_fastq: false
   save_diskspace: true
 
@@ -72,8 +66,8 @@ algorithm:
 custom_algorithms:
   variant2:
     aligner: bwa
-    recalibrate: true
-    snpcall: true
+    recalibrate: "gatk"
+    variantcaller: "gatk"
     coverage_depth: "high" # other options: low
     coverage_interval: "exome" # other options: genome, regional
     dbsnp: variation/dbsnp_137.vcf
