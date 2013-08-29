@@ -63,6 +63,8 @@ resources:
     cores: 2
     dir: /usr/local/share/java/gatk
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
+  gatk-vqsr:
+    jvm_opts: ["-Xms1000m", "-Xmx2500m"]
   picard:
     cores: 1
     dir: /usr/local/share/java/picard

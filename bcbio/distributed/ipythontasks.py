@@ -102,6 +102,7 @@ def piped_bamprep(*args):
 def postprocess_variants(*args):
     with _setup_logging(args):
         return apply(variation.postprocess_variants, *args)
+postprocess_variants.metadata = {"resources": ["gatk-vqsr"]}
 
 @require(qcsummary)
 def pipeline_summary(*args):

@@ -61,6 +61,8 @@ def _get_resource_programs(fn, algs):
                     used_progs.add(x)
             else:
                 used_progs.add(vc)
+        if config_utils.use_vqsr(algs):
+            used_progs.add("gatk-vqsr")
     for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
         if prog in used_progs:
             yield prog

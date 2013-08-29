@@ -19,6 +19,7 @@ from bcbio.log import logger
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import grouped_parallel_split_combine
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_vrn_files,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
@@ -133,42 +134,29 @@ def _gatk_location_hack(args):
 
 # ## Variant filtration -- shared functionality
 
-def _get_coverage_params(config):
-    Cov = collections.namedtuple("Cov", ["interval", "depth"])
-    return Cov(config["algorithm"].get("coverage_interval", "exome").lower(),
-               config["algorithm"].get("coverage_depth", "high").lower())
-
-def use_vqsr(config):
-    cov = _get_coverage_params(config)
-    caller = config["algorithm"].get("variantcaller", "gatk")
-    return (cov.interval not in ["regional", "exome"] and cov.depth != "low"
-            and caller in ["gatk", "gatk-haplotype"])
-
 def variant_filtration(call_file, ref_file, vrn_files, config):
     """Filter variant calls using Variant Quality Score Recalibration.
 
     Newer GATK with Haplotype calling has combined SNP/indel filtering.
     """
-    broad_runner = broad.runner_from_config(config)
     caller = config["algorithm"].get("variantcaller")
     if caller in ["freebayes"]:
-        return filter_freebayes(broad_runner, call_file, ref_file, vrn_files, config)
+        return filter_freebayes(call_file, ref_file, vrn_files, config)
     # no additional filtration for callers that filter as part of call process
     elif caller in ["samtools", "varscan"]:
         return call_file
     else:
-        snp_file, indel_file = vcfutils.split_snps_indels(broad_runner, call_file, ref_file)
-        snp_filter_file = _variant_filtration_snp(broad_runner, snp_file, ref_file,
-                                                  vrn_files, config)
-        indel_filter_file = _variant_filtration_indel(broad_runner, indel_file,
-                                                      ref_file, vrn_files, config)
+        snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, config)
+        snp_filter_file = _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
+        indel_filter_file = _variant_filtration_indel(indel_file, ref_file, vrn_files, config)
         orig_files = [snp_filter_file, indel_filter_file]
         out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
         return vcfutils.combine_variant_files(orig_files, out_file, ref_file, config)
 
-def filter_freebayes(broad_runner, in_file, ref_file, vrn_files, config):
+def filter_freebayes(in_file, ref_file, vrn_files, config):
     """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
     """
+    broad_runner = broad.runner_from_config(config)
     filters = ["QUAL < 20.0", "DP < 5"]
     return variant_filtration_with_exp(broad_runner, in_file, ref_file, "", filters)
 
@@ -252,10 +240,10 @@ def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
 
 # ## SNP specific variant filtration
 
-def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
-                            config):
+def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
     """Filter SNP variant calls using GATK best practice recommendations.
     """
+    broad_runner = broad.runner_from_config(config)
     filter_type = "SNP"
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
@@ -268,7 +256,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     # resulting in excessive filtering, so avoid this metric
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
-    if not use_vqsr(config):
+    if not config_utils.use_vqsr([config["algorithm"]]):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            filters)
     else:
@@ -276,34 +264,33 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
         filter_file = "{base}-filterSNP.vcf".format(base=os.path.splitext(snp_file)[0])
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
-            return _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
-                                           config)
+            return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
         if not file_exists(recal_file):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
                 try:
+                    broad_runner.new_resources("gatk-vqsr")
                     broad_runner.run_gatk(params)
                 # Can fail to run if not enough values are present to train. Rerun with regional
                 # filtration approach instead
                 except:
                     config["algorithm"]["coverage_interval"] = "regional"
-                    return _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
-                                                   config)
+                    return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
 
 # ## Indel specific variant filtration
 
-def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
-                              config):
+def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
     """Filter indel variant calls using GATK best practice recommendations.
     """
+    broad_runner = broad.runner_from_config(config)
     filter_type = "INDEL"
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
         filter_type, snp_file, ref_file, vrn_files, variantcaller)
-    if not use_vqsr(config):
+    if not config_utils.use_vqsr([config["algorithm"]]):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
     else:
@@ -311,6 +298,7 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
+                broad_runner.new_resources("gatk-vqsr")
                 broad_runner.run_gatk(params)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)

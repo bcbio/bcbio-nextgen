@@ -36,6 +36,8 @@ resources:
     dir: /usr/share/java/gatk
   gatk-haplotype:
     jvm_opts: ["-Xms2g", "-Xmx5500m"]
+  gatk-vqsr:
+    jvm_opts: ["-Xms2g", "-Xmx4000m"]
   picard:
     dir: /usr/share/java/picard
   snpEff:

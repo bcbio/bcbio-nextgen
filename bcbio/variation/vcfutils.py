@@ -19,9 +19,10 @@ def write_empty_vcf(out_file):
                          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
 
 
-def split_snps_indels(broad_runner, orig_file, ref_file):
+def split_snps_indels(orig_file, ref_file, config):
     """Split a variant call file into SNPs and INDELs for processing.
     """
+    broad_runner = broad.runner_from_config(config)
     base, ext = os.path.splitext(orig_file)
     snp_file = "{base}-snp{ext}".format(base=base, ext=ext)
     indel_file = "{base}-indel{ext}".format(base=base, ext=ext)
