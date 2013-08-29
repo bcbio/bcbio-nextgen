@@ -192,7 +192,8 @@ def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
             broad_runner.run_gatk(params)
     return out_file
 
-def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files):
+def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files,
+                               variantcaller):
     """Share functionality for filtering variants.
     """
     recal_file = "{base}.recal".format(base=os.path.splitext(snp_file)[0])
@@ -201,12 +202,15 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files):
               "-R", ref_file,
               "--input", snp_file,
               "--mode", filter_type,
-              "-an", "QD",
+              "-an", "DP",
               "-an", "FS",
-              "-an", "ReadPosRankSum"]
+              "-an", "ReadPosRankSum",
+              "-an", "MQRankSum"]
     if filter_type in ["SNP", "BOTH"]:
         # Haplotype Score no longer calculated for indels as of GATK 2.4
-        params.extend(["-an", "HaplotypeScore"])
+        # and only used for GATK Unified Genotyper calls
+        if variantcaller == "gatk":
+            params.extend(["-an", "HaplotypeScore"])
         params.extend(
             ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
              vrn_files.train_hapmap,
@@ -214,14 +218,12 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files):
              vrn_files.train_1000g_omni,
              "-resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0",
              vrn_files.dbsnp,
-              "-an", "MQRankSum",
-              "-an", "MQ"])
+             "-an", "QD"])
     if filter_type in ["INDEL", "BOTH"]:
         assert vrn_files.train_indels, "Need indel training file specified"
         params.extend(
             ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
              vrn_files.train_indels])
-    params.extend(["-an", "DP"])
     return params, recal_file, tranches_file
 
 def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
@@ -258,7 +260,7 @@ def _variant_filtration_snp(broad_runner, snp_file, ref_file, vrn_files,
     filter_type = "SNP"
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file, vrn_files)
+        filter_type, snp_file, ref_file, vrn_files, variantcaller)
     assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
            "Need HapMap and 1000 genomes training files"
     filters = ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
@@ -299,8 +301,9 @@ def _variant_filtration_indel(broad_runner, snp_file, ref_file, vrn_files,
     """Filter indel variant calls using GATK best practice recommendations.
     """
     filter_type = "INDEL"
+    variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file, vrn_files)
+        filter_type, snp_file, ref_file, vrn_files, variantcaller)
     if _no_vqsr(config):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
@@ -320,8 +323,9 @@ def _variant_filtration_both(broad_runner, snp_file, ref_file, vrn_files,
     """Filter SNP and indel variant calls using GATK best practice recommendations.
     """
     filter_type = "BOTH"
+    variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file, vrn_files)
+        filter_type, snp_file, ref_file, vrn_files, variantcaller)
     if not file_exists(recal_file):
         with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
             params.extend(["--recal_file", tx_recal,
