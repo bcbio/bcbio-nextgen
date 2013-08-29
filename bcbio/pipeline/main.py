@@ -281,7 +281,7 @@ class Variant2Pipeline(AbstractPipeline):
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)
         ## Finalizing BAMs and population databases, handle multicore computation
-        with global_parallel(parallel, "multicore2", ["prep_gemini_db"],
+        with global_parallel(parallel, "multicore2", ["prep_gemini_db", "delayed_bam_merge"],
                              samples, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: prepped BAM merging")

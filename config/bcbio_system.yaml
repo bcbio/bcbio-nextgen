@@ -44,6 +44,7 @@ resources:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
     dir: /usr/share/java/snpeff
   bcbio_variation:
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/bcbio_variation
 
 # -- Default algorithm setup

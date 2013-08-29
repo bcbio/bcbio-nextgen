@@ -57,7 +57,7 @@ def split_variants_by_sample(*args):
 @utils.map_wrap
 def postprocess_variants(*args):
     return variation.postprocess_variants(*args)
-postprocess_variants.metadata = {"resources": ["gatk-vqsr"]}
+postprocess_variants.metadata = {"resources": ["gatk-vqsr", "gatk", "snpEff"]}
 
 @utils.map_wrap
 def pipeline_summary(*args):

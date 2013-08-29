@@ -48,7 +48,7 @@ def _get_resource_programs(fn, algs):
     """
     # standard list of programs we always use
     # XXX Need to expose this in a top-level way to allow more multiprocessing
-    used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools"])
+    used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools", "snpEff"])
     for alg in algs:
         # get aligners used
         aligner = alg.get("aligner")
