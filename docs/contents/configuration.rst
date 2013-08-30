@@ -319,6 +319,9 @@ and memory and compute resources to devote to them::
       bwa:
         cores: 12
         cmd: /an/alternative/path/to/bwa
+      samtools:
+        cores: 16
+        memory: 2G
       gatk:
         jvm_opts: ["-Xms2g", "-Xmx4g"]
         dir: /usr/share/java/gatk
@@ -334,11 +337,12 @@ and memory and compute resources to devote to them::
   memory usage on programs like GATK, specify the maximum usage per
   core. On multicore machines, that's machine-memory divided by cores.
   This avoids memory errors when running multiple jobs simultaneously,
-  while the framework will adjust memory up when running multicore jobs.
-
-Resources will continue to expand to allow direct customization of
-commandline options as well as fine grained control over research
-usage.
+  while the framework will adjust memory up when running multicore
+  jobs.
+- ``memory`` Specify the memory per core used by a process. For programs
+  where memory control is available, like ``samtools sort``,
+  this limits memory usage. For other programs this is an estimate of
+  usage, used by :ref:`memory-management` to avoid over-scheduling memory.
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
