@@ -99,8 +99,13 @@ The sample configuration file defines ``details`` of each sample to process::
 Upload
 ~~~~~~
 
-The ``upload`` section of the sample configuration file defines a
-method to extract the final pipeline outputs::
+The ``upload`` section of the sample configuration file describes where to put
+the final output files of the pipeline. At its simplest, you can configure
+bcbio-nextgen to upload results to a local directory, for example a folder
+shared amongst collaborators or a Dropbox account. You can also configure
+it to upload results automatically to a Galaxy instance or to
+`Amazon S3`_. Here is the simplest configuration, uploading to a local
+directory::
 
      upload:
        dir: /local/filesystem/directory
@@ -125,7 +130,16 @@ Galaxy parameters:
   uploaded datasets. This is optional and will default to the access
   of the parent data library if not supplied. You can specify this
   globally for a project in ``upload`` or for individual samples in
-  the sample details section.
+  the sample details section. The `Galaxy Admin`_ documentation
+  has more details about roles.
+
+Here is an example configuration for uploading to a Galaxy instance::
+
+      upload:
+	method: galaxy
+	galaxy_url: http://url-to-galaxy-instance
+	galaxy_api_key: YOURAPIKEY
+	galaxy_library: data_library_to_upload_to
 
 S3 parameters:
 
@@ -134,6 +148,7 @@ S3 parameters:
 - ``secret_access_key`` AWS secret key ID from Amazon credentials page
 - ``reduced_redundancy`` Flag to determine if we should store S3 data
   with reduced redundancy: cheaper but less reliable [false, true]
+
 
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~
@@ -158,8 +173,16 @@ Alignment
    queryname. For additional processing through standard pipelines
    requires coordinate sorted inputs. The default is to not do
    additional sorting and assume pre-sorted BAMs.
--  ``trim_reads`` Whether to trim off 3' B-only ends from fastq reads
-   [false, true]
+-  ``trim_reads`` Can be set to trim low quality ends or to also trim off,
+    in conjunction with the ``adapters`` field a set of adapter sequences or
+    poly-A tails that could appear on the ends of reads:
+    [low_quality, read_through, False]
+-  ``adapters`` If trimming adapter read through, trim a set of stock
+   adapter sequences. Allows specification of multiple items in a list,
+   for example [truseq, polya] will trim both TruSeq adapter sequences
+   and polyA tails. Valid items are [truseq, illumina, nextera, polya]
+-  ``custom_trim`` A list of sequences to trim from the end of reads,
+   for example: [AAAATTTT, GGGGCCCC]
 -  ``align_split_size``: Split FASTQ files into specified number of
    records per file. Allows parallelization at the cost of increased
    temporary disk space usage.
@@ -261,7 +284,7 @@ consolidation. An example configuration in the ``algorithm`` section is::
       format-filters: [DP < 4]
       classifier-params:
         type: svm
-      classifiers: 
+      classifiers:
         balance: [AD, FS, Entropy]
         calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
       trusted-pct: 0.65
@@ -285,7 +308,7 @@ the multiple methods:
   filtering.
 
 .. _config-resources:
-   
+
 Resources
 ~~~~~~~~~
 
@@ -325,7 +348,8 @@ usage.
 .. _system: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _sample: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 .. _Galaxy API: http://wiki.galaxyproject.org/Learn/API
-
+.. _Amazon S3: http://aws.amazon.com/s3/
+.. _Galaxy Admin: http://wiki.galaxyproject.org/Admin/DataLibraries/LibrarySecurity
 
 Reference genome files
 ~~~~~~~~~~~~~~~~~~~~~~

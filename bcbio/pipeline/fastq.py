@@ -23,38 +23,36 @@ def needs_fastq_conversion(item, config):
             return True
     return False
 
-def get_fastq_files(directory, work_dir, item, fc_name, bc_name=None,
-                    config=None, dirs=None):
+def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    if "files" in item and bc_name is None:
+    fastq_dir = item["dirs"]["fastq"]
+    if "files" in item:
         names = item["files"]
         if isinstance(names, basestring):
             names = [names]
-        files = [x if os.path.isabs(x) else os.path.join(directory, x) for x in names]
+        files = [x if os.path.isabs(x) else os.path.join(fastq_dir, x) for x in names]
     elif "vrn_file" in item:
         files = []
     else:
-        assert fc_name is not None
+        assert item["upload"].get("fc_name") is not None
         lane = item["lane"]
-        if bc_name:
-            glob_str = "%s_*%s_%s_*_fastq.txt" % (lane, fc_name, bc_name)
-        else:
-            glob_str = "%s_*%s*_fastq.txt" % (lane, fc_name)
-        files = glob.glob(os.path.join(directory, glob_str))
+        glob_str = "%s_*%s*_fastq.txt" % (lane, item["upload"]["fc_name"])
+        files = glob.glob(os.path.join(fastq_dir, glob_str))
         files.sort()
         if len(files) > 2 or len(files) == 0:
             raise ValueError("Did not find correct files for %s %s %s %s" %
-                             (directory, lane, fc_name, files))
+                             (fastq_dir, lane, item["upload"]["fc_name"], files))
     ready_files = []
     for fname in files:
-        if fname.endswith(".gz") and _pipeline_needs_fastq(config, item):
+        if fname.endswith(".gz") and _pipeline_needs_fastq(item["config"], item):
             cl = ["gunzip", fname]
             subprocess.check_call(cl)
             ready_files.append(os.path.splitext(fname)[0])
         elif fname.endswith(".bam"):
-            if _pipeline_needs_fastq(config, item):
-                ready_files = convert_bam_to_fastq(fname, work_dir, item, dirs, config)
+            if _pipeline_needs_fastq(item["config"], item):
+                ready_files = convert_bam_to_fastq(fname, item["dirs"]["work"],
+                                                   item, item["dirs"], item["config"])
             else:
                 ready_files = [fname]
         else:

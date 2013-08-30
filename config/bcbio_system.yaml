@@ -22,21 +22,29 @@ resources:
     cmd: bwa
     cores: 16
   samtools:
-    memory: 768M
+    memory: 1G
+    cores: 16
   novoalign:
     cores: 16
     memory: 2G
   gemini:
     cores: 16
+  freebayes:
+    memory: 2g
   gatk:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/gatk
+  gatk-haplotype:
+    jvm_opts: ["-Xms2g", "-Xmx5500m"]
+  gatk-vqsr:
+    jvm_opts: ["-Xms2g", "-Xmx4000m"]
   picard:
     dir: /usr/share/java/picard
   snpEff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
     dir: /usr/share/java/snpeff
   bcbio_variation:
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/bcbio_variation
 
 # -- Default algorithm setup
@@ -51,13 +59,6 @@ algorithm:
   max_errors: 2
   platform: illumina
   recalibrate: false
-  snpcall: false
-  bc_mismatch: 2
-  bc_allow_indels: true
-  bc_illumina_no_trailing: true
-  bc_read: 1
-  bc_position: 3
-  java_memory: 6g
   upload_fastq: false
   save_diskspace: true
 
@@ -65,15 +66,15 @@ algorithm:
 custom_algorithms:
   variant2:
     aligner: bwa
-    recalibrate: true
-    snpcall: true
+    recalibrate: "gatk"
+    variantcaller: "gatk"
     coverage_depth: "high" # other options: low
     coverage_interval: "exome" # other options: genome, regional
     dbsnp: variation/dbsnp_137.vcf
     train_hapmap: variation/hapmap_3.3.vcf
     train_1000g_omni: variation/1000G_omni2.5.vcf
     train_indels: variation/Mills_and_1000G_gold_standard.indels.vcf
-    call_background: variation/background-diversity-1000g.vcf.gz
+    # call_background: variation/background-diversity-1000g.vcf.gz
   'RNA-seq':
     aligner: tophat
     transcript_assemble: true

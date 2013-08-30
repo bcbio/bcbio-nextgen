@@ -22,6 +22,9 @@ def copy_finfo(finfo, storage_dir):
 def update_file(finfo, sample_info, config):
     """Update the file in local filesystem storage.
     """
+    # skip if we have no directory to upload to
+    if "dir" not in config:
+        return
     if finfo.has_key("sample"):
         storage_dir = utils.safe_makedir(os.path.join(config["dir"], finfo["sample"]))
     elif finfo.has_key("run"):

@@ -85,8 +85,8 @@ def _index_samples(samples):
 def _extract_sample_ids(samples):
     sample_ids = []
     for data in samples:
-        names = data[0]["info"]["rgnames"]
-        description = data[0]["info"].get("description", "")
+        names = data[0]["rgnames"]
+        description = data[0]["description"]
         sample_ids.append("\t".join([names["pu"],
                                      data[0]["work_bam"], description]) + "\n")
     return sample_ids

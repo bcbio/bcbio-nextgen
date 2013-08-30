@@ -3,8 +3,8 @@
 import os
 import shutil
 from contextlib import closing
-import subprocess
 
+import pybedtools
 import pysam
 
 from bcbio import broad
@@ -16,6 +16,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
                                    write_nochr_reads, subset_bam_by_region,
                                    subset_variant_regions)
+from bcbio.provenance import do
 
 # ## gkno Marth lab realignment
 
@@ -51,7 +52,7 @@ def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{bamtools} filter -in {align_bam} {region} "
                    "| {realign_cmd} > {tx_out_file}")
-            subprocess.check_call(cmd.format(**locals()), shell=True)
+            do.run(cmd.format(**locals()), "gkno realignment", {})
     return out_file
 
 # ## GATK realignment
@@ -120,7 +121,7 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                 cl = gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
                                                    tmp_dir, region, deep_coverage)
                 cl += ["-o", tx_out_file]
-                subprocess.check_call(cl)
+                do.run(cl, "GATK indel realignment", {})
     return out_file
 
 def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
@@ -164,8 +165,7 @@ def has_aligned_reads(align_bam, region=None):
     has_items = False
     if region is not None:
         if isinstance(region, basestring) and os.path.isfile(region):
-            with open(region) as in_handle:
-                regions = [tuple(line.split()[:3]) for line in in_handle]
+            regions = [tuple(r) for r in pybedtools.BedTool(region)]
         else:
             regions = [region]
     with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
@@ -192,8 +192,7 @@ def parallel_realign_sample(sample_info, parallel_fn):
     to_process = []
     finished = []
     for x in sample_info:
-        if (x[0]["config"]["algorithm"]["snpcall"] and
-            x[0]["config"]["algorithm"].get("realign", True)):
+        if x[0]["config"]["algorithm"].get("realign", True):
             to_process.append(x)
         else:
             finished.append(x)
@@ -217,7 +216,7 @@ def realign_sample(data, region=None, out_file=None):
     realigner = "gatk" if realigner is True else realigner
     realign_fn = _realign_approaches[realigner] if realigner else None
 
-    if data["config"]["algorithm"]["snpcall"] and realign_fn:
+    if realign_fn:
         logger.info("Realigning %s with %s: %s %s" % (data["name"], realigner,
                                                       os.path.basename(data["work_bam"]),
                                                       region))

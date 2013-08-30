@@ -1,8 +1,9 @@
 """Handle extraction of final files from processing pipelines into storage.
 """
-import os
+import datetime
 
 from bcbio.upload import shared, filesystem, galaxy, s3
+from bcbio.utils import file_exists
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -11,11 +12,11 @@ _approaches = {"filesystem": filesystem,
 def from_sample(sample):
     """Upload results of processing from an analysis pipeline sample.
     """
-    upload_config = sample["info"].get("upload")
+    upload_config = sample.get("upload")
     if upload_config:
         approach = _approaches[upload_config.get("method", "filesystem")]
         for finfo in _get_files(sample):
-            approach.update_file(finfo, sample["info"], upload_config)
+            approach.update_file(finfo, sample, upload_config)
         for finfo in _get_files_project(sample, upload_config):
             approach.update_file(finfo, None, upload_config)
 
@@ -27,11 +28,20 @@ def _get_files(sample):
     Each file is a dictionary containing the path plus associated
     metadata about the file and pipeline versions.
     """
-    analysis = sample["info"].get("analysis")
+    analysis = sample.get("analysis")
     if analysis in ["variant", "SNP calling", "variant2"]:
         return _get_files_variantcall(sample)
+    elif analysis in ["RNA-seq"]:
+        return _get_files_rnaseq(sample)
     else:
         return []
+
+def _get_files_rnaseq(sample):
+    out = []
+    algorithm = sample["config"]["algorithm"]
+    out = _maybe_add_summary(algorithm, sample, out)
+    out = _maybe_add_alignment(algorithm, sample, out)
+    return _add_meta(out, sample)
 
 def _add_meta(xs, sample=None, config=None):
     out = []
@@ -40,7 +50,10 @@ def _add_meta(xs, sample=None, config=None):
         if sample:
             x["sample"] = sample["name"][-1]
         if config:
-            x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
+            if "fc_name" in config and "fc_date" in config:
+                x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
+            else:
+                x["run"] = "project_%s" % datetime.datetime.now().strftime("%Y-%m-%d")
         out.append(x)
     return out
 
@@ -49,20 +62,12 @@ def _get_files_variantcall(sample):
     """
     out = []
     algorithm = sample["config"]["algorithm"]
-    if algorithm.get("write_summary", True) and "summary" in sample:
-        if sample["summary"].get("pdf"):
-            out = [{"path": sample["summary"]["pdf"],
-                    "type": "pdf",
-                    "ext": "summary"}]
-    if ((algorithm.get("aligner") or algorithm.get("realign") or algorithm.get("recalibrate"))
-          and algorithm.get("merge_bamprep", True)) and sample["work_bam"] is not None:
-        out.append({"path": sample["work_bam"],
-                    "type": "bam",
-                    "ext": "ready"})
-        if os.path.exists(sample["work_bam"] + ".bai"):
-            out.append({"path": sample["work_bam"] + ".bai",
-                        "type": "bai",
-                        "ext": "ready"})
+    out = _maybe_add_summary(algorithm, sample, out)
+    out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_variant_file(algorithm, sample, out)
+    return _add_meta(out, sample)
+
+def _maybe_add_variant_file(algorithm, sample, out):
     if sample["work_bam"] is not None and sample.get("vrn_file"):
         for x in sample["variants"]:
             out.append({"path": x["vrn_file"],
@@ -74,14 +79,40 @@ def _get_files_variantcall(sample):
                             "type": "bed",
                             "ext": "%s-callregions" % x["variantcaller"],
                             "variantcaller": x["variantcaller"]})
-    return _add_meta(out, sample)
+    return out
+
+
+def _maybe_add_summary(algorithm, sample, out):
+    if algorithm.get("write_summary", True) and "summary" in sample:
+        if sample["summary"].get("pdf"):
+            out = [{"path": sample["summary"]["pdf"],
+                    "type": "pdf",
+                    "ext": "summary"}]
+    return out
+
+def _maybe_add_alignment(algorithm, sample, out):
+    if _has_alignment_file(algorithm, sample):
+        out.append({"path": sample["work_bam"],
+                    "type": "bam",
+                    "ext": "ready"})
+        if file_exists(sample["work_bam"] + ".bai"):
+            out.append({"path": sample["work_bam"] + ".bai",
+                        "type": "bai",
+                        "ext": "ready"})
+    return out
+
+def _has_alignment_file(algorithm, sample):
+    return (((algorithm.get("aligner") or algorithm.get("realign")
+              or algorithm.get("recalibrate")) and
+              algorithm.get("merge_bamprep", True)) and
+              sample["work_bam"] is not None)
 
 # ## File information from full project
 
 def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
-    out = [{"path": sample["info"]["provenance"]["programs"]}]
+    out = [{"path": sample["provenance"]["programs"]}]
     if sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
     for x in sample.get("variants", []):

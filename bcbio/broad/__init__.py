@@ -25,27 +25,14 @@ class BroadRunner:
         self._resources = resources
         self._gatk_version = None
 
-    def _context_jvm_opts(self, config):
-        """Establish JVM opts, adjusting memory for the context if needed.
-
-        This allows using less or more memory for highly parallel or multicore
-        supporting processes, respectively.
+    def new_resources(self, program):
+        """Set new resource usage for the given program.
+        This allows customization of memory usage for particular sub-programs
+        of GATK like HaplotypeCaller.
         """
-        jvm_opts = []
-        memory_adjust = config["algorithm"].get("memory_adjust", {})
-        for opt in self._jvm_opts:
-            if opt.startswith(("-Xmx", "-Xms")):
-                arg = opt[:4]
-                modifier = opt[-1:]
-                amount = int(opt[4:-1])
-                if memory_adjust.get("direction") == "decrease":
-                    amount = amount / memory_adjust.get("magnitude", 1)
-                elif memory_adjust.get("direction") == "increase":
-                    amount = amount * memory_adjust.get("magnitude", 1)
-                opt = "{arg}{amount}{modifier}".format(arg=arg, amount=amount,
-                                                       modifier=modifier)
-            jvm_opts.append(opt)
-        return jvm_opts
+        resources = config_utils.get_resources(program, self._config)
+        if resources.get("jvm_opts"):
+            self._jvm_opts = resources.get("jvm_opts")
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.
@@ -121,7 +108,7 @@ class BroadRunner:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-        return ["java"] + self._context_jvm_opts(config) + local_args + \
+        return ["java"] + config_utils.adjust_opts(self._jvm_opts, config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
 
     def cl_mutect(self, params, tmp_dir):
@@ -130,11 +117,10 @@ class BroadRunner:
 
         gatk_jar = self._get_jar("muTect")
         local_args = []
-        cores = self._config["algorithm"].get("num_cores", 1)
         config = copy.deepcopy(self._config)
 
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-        return ["java"] + self._context_jvm_opts(config) + local_args + \
+        return ["java"] + config_utils.adjust_opts(self._jvm_opts, config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None):

@@ -115,6 +115,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                 files.append(pair_file)
             options["output-dir"] = tx_out_dir
             options["no-convert-bam"] = True
+            options["no-coverage-search"] = True
             tophat_runner = sh.Command(config_utils.get_program("tophat",
                                                                 config))
             ready_options = {}
@@ -148,7 +149,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         exit(1)
 
     out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
-                             align_dir, config, names=None)
+                             align_dir, config, names)
 
     return out_files
 

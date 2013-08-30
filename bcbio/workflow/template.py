@@ -10,6 +10,7 @@ import datetime
 import itertools
 import os
 import urllib2
+import glob
 
 import yaml
 
@@ -58,6 +59,9 @@ def _prep_items_from_base(base, in_files):
     details = []
     fq_exts = [".fq", ".fastq", ".txt", ".gz"]
     gz_exts = tuple(["%s.gz" % ext for ext in fq_exts if ext != ".gz"])
+    in_files = _expand_dirs(in_files)
+    in_files = _expand_wildcards(in_files)
+
     for ext, files in itertools.groupby(in_files, lambda x: os.path.splitext(x)[-1].lower()):
         if ext == ".bam":
             for f in files:
@@ -67,9 +71,29 @@ def _prep_items_from_base(base, in_files):
             if ext == ".gz": assert all(f.endswith(gz_exts) for f in files), (files, gz_exts)
             for fs in fastq.combine_pairs(files):
                 details.append(_prep_fastq_input(fs, base))
-        else:
-            raise ValueError("File type not yet implemented: %s" % ext)
+        # else:
+        #     raise ValueError("File type not yet implemented: %s" % ext)
     return details
+
+def _expand_dirs(in_files):
+    def _is_dir(in_file):
+        return os.path.isdir(os.path.expanduser(in_file))
+    files, dirs = utils.partition(_is_dir, in_files)
+    for dir in dirs:
+        wildcard = os.path.join(os.path.expanduser(dir), "*")
+        files = itertools.chain(glob.glob(wildcard), files)
+    return list(files)
+
+def _expand_wildcards(in_files):
+    def _has_wildcard(in_file):
+        return "*" in in_file
+
+    files, wildcards = utils.partition(_has_wildcard, in_files)
+    for wc in wildcards:
+        abs_path = os.path.expanduser(wc)
+        files = itertools.chain(glob.glob(abs_path), files)
+    return list(files)
+
 
 # ## Read and write configuration files
 

@@ -11,6 +11,7 @@ import argparse
 import contextlib
 import datetime
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -33,7 +34,7 @@ def main(args, sys_argv):
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
     print("Installing data and third party dependencies")
-    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + sys_argv[1:])
+    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args))
     system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
     print("Finished: bcbio-nextgen, tools and data installed")
@@ -43,12 +44,16 @@ def main(args, sys_argv):
     print(" Ready to use system configuration at:\n  %s" % system_config)
     print(" Edit configuration file as needed to match your machine or cluster")
 
+def _clean_args(sys_argv, args):
+    """Remove data directory from arguments to pass to upgrade function.
+    """
+    return [x for x in sys_argv if
+            x.startswith("--") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
+
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
     """
     subprocess.check_call([anaconda["pip"], "install", "fabric"])
-    subprocess.check_call([anaconda["pip"], "install",
-                           "https://github.com/ipython/ipython/tarball/master#egg=ipython-1.0.dev"])
     subprocess.check_call([anaconda["pip"], "install", "-r", remotes["requirements"]])
     out = {}
     for script in ["bcbio_nextgen.py"]:
@@ -57,7 +62,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
             final_script = os.path.join(args.tooldir, "bin", script)
             sudo_cmd = ["sudo"] if args.sudo else []
             subprocess.check_call(sudo_cmd + ["mkdir", "-p", os.path.dirname(final_script)])
-            if os.path.exists(final_script):
+            if os.path.lexists(final_script):
                 cmd = ["rm", "-f", final_script]
                 subprocess.check_call(sudo_cmd + cmd)
             cmd = ["ln", "-s", ve_script, final_script]
@@ -66,23 +71,35 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["biopython", "boto", "cython", "distribute", "nose", "numpy",
+    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
             "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
+
+def _guess_distribution():
+    """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.
+    """
+    if platform.mac_ver()[0]:
+        return "macosx"
+    else:
+        return "linux"
 
 def install_anaconda_python(args, remotes):
     """Provide isolated installation of Anaconda python for running bcbio-nextgen.
     http://docs.continuum.io/anaconda/index.html
     """
     anaconda_dir = os.path.join(args.datadir, "anaconda")
-    if not os.path.exists(anaconda_dir):
-        url = remotes["anaconda"] % ("MacOSX" if args.distribution.lower() == "macosx" else "Linux")
+    bindir = os.path.join(anaconda_dir, "bin")
+    conda = os.path.join(bindir, "conda")
+    if not os.path.exists(anaconda_dir) or not os.path.exists(conda):
+        if os.path.exists(anaconda_dir):
+            shutil.rmtree(anaconda_dir)
+        dist = args.distribution if args.distribution else _guess_distribution()
+        url = remotes["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", url])
         subprocess.check_call("echo -e '\nyes\n%s\nno\n' | bash %s" %
                               (anaconda_dir, os.path.basename(url)), shell=True)
-    bindir = os.path.join(anaconda_dir, "bin")
-    return {"conda": os.path.join(bindir, "conda"),
+    return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}
 
@@ -154,7 +171,7 @@ if __name__ == "__main__":
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
-                        choices=["ubuntu", "debian", "centos", "scientificlinux"])
+                        choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)

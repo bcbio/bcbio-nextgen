@@ -10,6 +10,7 @@ genome and avoid extremes of large blocks or large numbers of
 small blocks.
 """
 import contextlib
+import copy
 import operator
 import os
 import shutil
@@ -27,6 +28,7 @@ from bcbio.pipeline import shared
 
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
+    config = copy.deepcopy(config)
     config["algorithm"]["memory_adjust"] = {"direction": "decrease", "magnitude": 2}
     data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
@@ -159,6 +161,10 @@ def _add_config_regions(nblock_regions, ref_regions, config):
             input_regions = pybedtools.BedTool("%s\n%s" % (str_regions, str_regions),
                                                from_string=True)
         input_nblock = ref_regions.subtract(input_regions)
+        if input_nblock == ref_regions:
+            raise ValueError("Input variant_region file (%s) "
+                             "excludes all genomic regions. Do the chromosome names "
+                             "in the BED file match your genome (chr1 vs 1)?" % input_regions_bed)
         all_intervals = _combine_regions([input_nblock, nblock_regions], ref_regions)
         return all_intervals.merge()
     else:
@@ -209,8 +215,8 @@ def block_regions(in_bam, ref_file, config):
         ref_regions = get_ref_bedtool(ref_file, config)
         nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
-        ref_regions.subtract(nblock_regions).merge(d=min_n_size).saveas(callblock_bed)
         nblock_regions.saveas(nblock_bed)
+        ref_regions.subtract(nblock_bed).merge(d=min_n_size).saveas(callblock_bed)
     return callblock_bed, nblock_bed
 
 def _write_bed_regions(sample, final_regions, out_file, out_file_ref):
