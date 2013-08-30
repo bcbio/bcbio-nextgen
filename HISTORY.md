@@ -1,4 +1,4 @@
-## 0.7.2 (in progress)
+## 0.7.2 (August 30, 2013)
 
 - Report memory usage for processes to cluster schedulers and use predicted
   memory usage to schedule cores per machine. Gets core and memory information

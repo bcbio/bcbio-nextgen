@@ -115,7 +115,7 @@ def parse_cl_args(in_args):
         parser.add_argument("-v", "--version", help="Print current version",
                             action="store_true")
     args = parser.parse_args(in_args)
-    if hasattr(args, "global_config") and args.global_config:
+    if hasattr(args, "global_config"):
         kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
                   "paralleltype": args.paralleltype,
                   "scheduler": args.scheduler,
