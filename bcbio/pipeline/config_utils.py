@@ -177,7 +177,15 @@ def adjust_memory(val, magnitude, direction="increase"):
     modifier = val[-1:]
     amount = int(val[:-1])
     if direction == "decrease":
-        amount = amount / magnitude
+        new_amount = amount / magnitude
+        # dealing with a specifier like 1G, need to scale to Mb
+        if new_amount < 1:
+            if modifier.upper().startswith("G"):
+                new_amount = (amount * 1024) / magnitude
+                modifier = "M" + modifier[1:]
+            else:
+                raise ValueError("Unexpected decrease in memory: %s by %s" % (val, magnitude))
+        amount = new_amount
     elif direction == "increase":
         # for increases with multiple cores, leave small percentage of
         # memory for system to maintain process running resource and
