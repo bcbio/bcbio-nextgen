@@ -9,6 +9,7 @@ import os
 import yaml
 
 from bcbio import utils
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -74,10 +75,12 @@ def summary(samples, config):
     config["algorithm"]["memory_adjust"] = {"direction": "increase",
                                             "magnitude": config["algorithm"]["num_cores"]}
     jvm_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]), config)
-    java_args = ["-Djava.io.tmpdir=%s" % tmp_dir, "-Djava.awt.headless=true"]
-    cmd = ["java"] + jvm_opts + java_args + ["-jar", bc_jar, "multicompare", config_file,
-                                             out_file, "-c", str(config["algorithm"]["num_cores"])]
-    do.run(cmd, "Summarizing coverage with bcbio.coverage", samples[0])
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            java_args = ["-Djava.io.tmpdir=%s" % tmp_dir, "-Djava.awt.headless=true"]
+            cmd = ["java"] + jvm_opts + java_args + ["-jar", bc_jar, "multicompare", config_file,
+                                                     tx_out_file, "-c", str(config["algorithm"]["num_cores"])]
+            do.run(cmd, "Summarizing coverage with bcbio.coverage", samples[0])
     out = []
     for x in samples:
         x["coverage"] = {"summary": out_file}
