@@ -14,7 +14,7 @@ import yaml
 
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
-from bcbio.pipeline import alignment, config_utils
+from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.solexa.flowcell import get_flowcell_info
 from bcbio.variation import genotype
 
@@ -42,8 +42,22 @@ def organize(dirs, config, run_info_yaml):
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
+        item = _add_reference_resources(item)
         out.append(item)
     return out
+
+# ## Genome reference information
+
+def _add_reference_resources(data):
+    """Add genome reference information to the item to process.
+    """
+    aligner = data["config"]["algorithm"].get("aligner", None)
+    align_ref, sam_ref = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
+    data["align_ref"] = align_ref
+    data["sam_ref"] = sam_ref
+    return data
+
+# ## Sample and BAM read group naming
 
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
@@ -65,6 +79,8 @@ def prep_rg_names(item, config, fc_name, fc_date):
             "pl": item.get("algorithm", {}).get("platform",
                     config.get("algorithm", {}).get("platform", "illumina")).lower(),
             "pu": lane_name}
+
+# ## Configuration file validation
 
 def _check_for_duplicates(xs, attr, check_fn=None):
     """Identify and raise errors on duplicate items.
@@ -134,7 +150,7 @@ def _check_algorithm_keys(item):
 def _check_aligner(item):
     """Ensure specified aligner is valid choice.
     """
-    allowed = set(alignment._tools.keys() + [None, False])
+    allowed = set(alignment.TOOLS.keys() + [None, False])
     if item["algorithm"].get("aligner") not in allowed:
         raise ValueError("Unexpected algorithm 'aligner' parameter: %s\n"
                          "Supported options: %s\n" %
@@ -164,6 +180,8 @@ def _check_sample_config(items, in_file):
     [_check_algorithm_keys(x) for x in items]
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
+
+# ## Read bcbio_sample.yaml files
 
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.

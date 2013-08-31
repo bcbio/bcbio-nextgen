@@ -3,17 +3,15 @@
 This works as part of the lane/flowcell process step of the pipeline.
 """
 from collections import namedtuple
-import ConfigParser
 import os
-from xml.etree import ElementTree
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 from bcbio import utils, broad
 from bcbio.bam import cram
+from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, mosaik,
                             novoalign, star)
-from bcbio.distributed.transaction import file_transaction
 
 # Define a next-generation sequencing tool to plugin:
 # align_fn -- runs an aligner and generates SAM output
@@ -28,7 +26,8 @@ NgsTool = namedtuple("NgsTool", ["align_fn", "pipe_align_fn", "bam_align_fn",
                                  "galaxy_loc_file", "remap_index_fn", "can_pipe"])
 
 BASE_LOCATION_FILE = "sam_fa_indices.loc"
-_tools = {
+
+TOOLS = {
     "bowtie": NgsTool(bowtie.align, None, None, bowtie.galaxy_location_file, None, None),
     "bowtie2": NgsTool(bowtie2.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
                        None),
@@ -45,35 +44,35 @@ _tools = {
     "tophat2": NgsTool(tophat.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
                       None)}
 
-metadata = {"support_bam": [k for k, v in _tools.iteritems() if v.bam_align_fn is not None]}
+metadata = {"support_bam": [k for k, v in TOOLS.iteritems() if v.bam_align_fn is not None]}
 
-def align_to_sort_bam(fastq1, fastq2, names, genome_build, aligner,
-                      dirs, config, dir_ext=""):
+def align_to_sort_bam(fastq1, fastq2, aligner, data):
     """Align to the named genome build, returning a sorted BAM file.
     """
-    align_dir = utils.safe_makedir(os.path.join(dirs["work"], "align", names["sample"], dir_ext))
-    align_ref, sam_ref = get_genome_ref(genome_build, aligner, dirs["galaxy"])
+    names = data["rgnames"]
+    align_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align", names["sample"]))
     if fastq1.endswith(".bam"):
-        out_bam = _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config)
+        out_bam = _align_from_bam(fastq1, aligner, data["align_ref"], data["sam_ref"],
+                                  names, align_dir, data["config"])
     elif _can_pipe(aligner, fastq1):
-        out_bam = _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names,
-                                         align_dir, config)
+        out_bam = _align_from_fastq_pipe(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
+                                         names, align_dir, data["config"])
     else:
-        out_bam = _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
-                                    align_dir, config)
-    return out_bam, sam_ref
+        out_bam = _align_from_fastq(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
+                                    names, align_dir, data["config"])
+    return out_bam
 
 def _can_pipe(aligner, fastq_file):
     """Check if current aligner support piping for a particular input fastq file.
     """
-    if _tools[aligner].can_pipe and _tools[aligner].pipe_align_fn:
-        return _tools[aligner].can_pipe(fastq_file)
+    if TOOLS[aligner].can_pipe and TOOLS[aligner].pipe_align_fn:
+        return TOOLS[aligner].can_pipe(fastq_file)
     return False
 
 def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, config):
     """Align longer reads using new piped strategies that avoid disk IO.
     """
-    align_fn = _tools[aligner].pipe_align_fn
+    align_fn = TOOLS[aligner].pipe_align_fn
     if align_fn is None:
         raise NotImplementedError("Do not yet support piped alignment with %s" % aligner)
     return align_fn(fastq1, fastq2, align_ref, names, align_dir, config)
@@ -84,7 +83,7 @@ def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, confi
          (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
         out_dir = utils.safe_makedir(os.path.join(align_dir, "qualbin"))
         fastq1 = cram.illumina_qual_bin(fastq1, sam_ref, out_dir, config)
-    align_fn = _tools[aligner].bam_align_fn
+    align_fn = TOOLS[aligner].bam_align_fn
     if align_fn is None:
         raise NotImplementedError("Do not yet support BAM alignment with %s" % aligner)
     return align_fn(fastq1, align_ref, names, align_dir, config)
@@ -93,7 +92,7 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
                       align_dir, config):
     """Align from fastq inputs, producing sorted BAM output.
     """
-    align_fn = _tools[aligner].align_fn
+    align_fn = TOOLS[aligner].align_fn
     sam_file = align_fn(fastq1, fastq2, align_ref, names["lane"], align_dir, config,
                         names)
     if fastq2 is None and aligner in ["bwa", "bowtie2"]:
@@ -172,110 +171,3 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
             utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)
     return sort_bam
 
-# ## Galaxy integration -- *.loc files
-
-def _get_galaxy_loc_file(name, galaxy_dt, ref_dir, galaxy_base):
-    """Retrieve Galaxy *.loc file for the given reference/aligner name.
-
-    First tries to find an aligner specific *.loc file. If not defined
-    or does not exist, then we need to try and remap it from the
-    default reference file
-    """
-    if "file" in galaxy_dt and os.path.exists(os.path.join(galaxy_base, galaxy_dt["file"])):
-        loc_file = os.path.join(galaxy_base, galaxy_dt["file"])
-        need_remap = False
-    elif _tools[name].galaxy_loc_file is None:
-        loc_file = os.path.join(ref_dir, BASE_LOCATION_FILE)
-        need_remap = True
-    else:
-        loc_file = os.path.join(ref_dir, _tools[name].galaxy_loc_file)
-        need_remap = False
-    if not os.path.exists(loc_file):
-        loc_file = os.path.join(ref_dir, BASE_LOCATION_FILE)
-        need_remap = True
-    return loc_file, need_remap
-
-def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap):
-    """Retrieve reference genome file from Galaxy *.loc file.
-
-    Reads from tool_data_table_conf.xml information for the index if it
-    exists, otherwise uses heuristics to find line based on most common setups.
-    """
-    if "column" in galaxy_dt:
-        dbkey_i = galaxy_dt["column"].index("dbkey")
-        path_i = galaxy_dt["column"].index("path")
-    else:
-        dbkey_i = None
-    cur_ref = None
-    with open(loc_file) as in_handle:
-        for line in in_handle:
-            if line.strip() and not line.startswith("#"):
-                parts = line.strip().split("\t")
-                if len(parts) == 1: # spaces instead of tabs
-                    parts = [x.strip() for x in line.strip().split("  ") if x.strip()]
-                if dbkey_i is not None and not need_remap:
-                    if parts[dbkey_i] == genome_build:
-                        cur_ref = parts[path_i]
-                        break
-                else:
-                    if parts[0] == "index":
-                        parts = parts[1:]
-                    if parts[0] == genome_build:
-                        cur_ref = parts[-1]
-                        break
-    if cur_ref is None:
-        raise IndexError("Genome %s not found in %s" % (genome_build, loc_file))
-    if need_remap:
-        remap_fn = _tools[name].remap_index_fn
-        assert remap_fn is not None, "%s requires remapping function from base location file" % name
-        cur_ref = remap_fn(cur_ref)
-    return cur_ref
-
-def _get_galaxy_tool_info(galaxy_base):
-    """Retrieve Galaxy tool-data information from defaults or galaxy config file.
-    """
-    ini_file = os.path.join(galaxy_base, "universe_wsgi.ini")
-    info = {"tool_data_table_config_path": os.path.join(galaxy_base, "tool_data_table_conf.xml"),
-            "tool_data_path": os.path.join(galaxy_base, "tool-data")}
-    config = ConfigParser.ConfigParser()
-    config.read(ini_file)
-    if "app:main" in config.sections():
-        for option in config.options("app:main"):
-            if option in info:
-                info[option] = os.path.join(galaxy_base, config.get("app:main", option))
-    return info
-
-def _get_galaxy_data_table(name, dt_config_file):
-    """Parse data table config file for details on tool *.loc location and columns.
-    """
-    out = {}
-    if os.path.exists(dt_config_file):
-        tdtc = ElementTree.parse(dt_config_file)
-        for t in tdtc.getiterator("table"):
-            if t.attrib.get("name", "") in [name, "%s_indexes" % name]:
-                out["column"] = [x.strip() for x in t.find("columns").text.split(",")]
-                out["file"] = t.find("file").attrib.get("path", "")
-    return out
-
-def get_genome_ref(genome_build, aligner, galaxy_base):
-    """Retrieve the reference genome file location from galaxy configuration.
-    """
-    if not genome_build:
-        return (None, None)
-    galaxy_config = _get_galaxy_tool_info(galaxy_base)
-    out_info = []
-    for name in [aligner, "samtools"]:
-        if not name:
-            out_info.append(None)
-            continue
-        galaxy_dt = _get_galaxy_data_table(name, galaxy_config["tool_data_table_config_path"])
-        loc_file, need_remap = _get_galaxy_loc_file(name, galaxy_dt, galaxy_config["tool_data_path"],
-                                                    galaxy_base)
-        cur_ref = _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap)
-        out_info.append(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
-
-    if len(out_info) != 2:
-        raise ValueError("Did not find genome reference for %s %s" %
-                (genome_build, aligner))
-    else:
-        return tuple(out_info)

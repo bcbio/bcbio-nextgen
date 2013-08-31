@@ -51,7 +51,7 @@ def get_fastq_files(item):
             ready_files.append(os.path.splitext(fname)[0])
         elif fname.endswith(".bam"):
             if _pipeline_needs_fastq(item["config"], item):
-                ready_files = convert_bam_to_fastq(fname, item["dirs"]["work"],
+                ready_files = _convert_bam_to_fastq(fname, item["dirs"]["work"],
                                                    item, item["dirs"], item["config"])
             else:
                 ready_files = [fname]
@@ -72,7 +72,7 @@ def _pipeline_needs_fastq(config, item):
     return (has_multiplex or
             (aligner and not do_split and not support_bam))
 
-def convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
+def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     """Convert BAM input file into FASTQ files.
     """
     out_dir = safe_makedir(os.path.join(work_dir, "fastq_convert"))
@@ -80,9 +80,8 @@ def convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     qual_bin_method = config["algorithm"].get("quality_bin")
     if (qual_bin_method == "prealignment" or
          (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
-        _, sam_ref = alignment.get_genome_ref(item["genome_build"], None, dirs["galaxy"])
         out_bindir = safe_makedir(os.path.join(out_dir, "qualbin"))
-        in_file = cram.illumina_qual_bin(in_file, sam_ref, out_bindir, config)
+        in_file = cram.illumina_qual_bin(in_file, item["sam_ref"], out_bindir, config)
 
     out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
                  os.path.splitext(os.path.basename(in_file))[0], x))

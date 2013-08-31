@@ -9,7 +9,6 @@ import pysam
 
 from bcbio import broad
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.alignment import get_genome_ref
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 
@@ -178,11 +177,3 @@ def configured_vrn_files(config, sam_ref):
     names = ["dbsnp", "train_hapmap", "train_1000g_omni", "train_indels"]
     VrnFiles = collections.namedtuple("VrnFiles", names)
     return apply(VrnFiles, [configured_ref_file(n, config, sam_ref) for n in names])
-
-def ref_genome_info(info, config, dirs):
-    """Retrieve reference genome information from configuration variables.
-    """
-    genome_build = info.get("genome_build", None)
-    (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
-                                  dirs["galaxy"])
-    return genome_build, sam_ref
