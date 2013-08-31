@@ -6,9 +6,8 @@ import os
 import subprocess
 
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import configured_ref_file
 
-def assemble_transcripts(align_file, ref_file, config):
+def assemble_transcripts(align_file, ref_file, config, data):
     """Create transcript assemblies using Cufflinks.
     """
     work_dir, fname = os.path.split(align_file)
@@ -22,8 +21,8 @@ def assemble_transcripts(align_file, ref_file, config):
           "-b", ref_file,
           "-u"]
     cl += core_flags
-    tx_file = configured_ref_file("transcripts", config, ref_file)
-    tx_mask_file = configured_ref_file("transcripts_mask", config, ref_file)
+    tx_file = data["genome_resources"]["rnaseq"]["transcripts"]
+    tx_mask_file = data["genome_resources"]["rnaseq"]["transcripts_mask"]
     if tx_file:
         cl += ["-g", tx_file]
     if tx_mask_file:

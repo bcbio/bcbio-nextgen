@@ -35,7 +35,7 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, config,
             with file_transaction(out_file) as tx_out_file:
                 call_fn(align_bams, ref_file, config, target_regions,
                         tx_out_file)
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files.dbsnp,
+    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files["dbsnp"],
                                                ref_file, config)
     return ann_file
 

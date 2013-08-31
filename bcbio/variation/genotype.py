@@ -20,8 +20,7 @@ from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_vrn_files,
-                                   subset_variant_regions)
+from bcbio.pipeline.shared import (process_bam_by_chromosome, subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation import annotation, bamprep, multi, phasing, vcfutils
 
@@ -63,7 +62,7 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files.dbsnp,
+            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files["dbsnp"],
                                    region, out_file)
         if (not isinstance(region, (list, tuple)) and
                 not all(has_aligned_reads(x, region) for x in align_bams)):
@@ -86,7 +85,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files.dbsnp,
+            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files["dbsnp"],
                                    region, out_file)
         assert broad_runner.gatk_type() == "restricted", \
             "Require full version of GATK 2.4+ for haplotype calling"
@@ -179,8 +178,7 @@ def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
             broad_runner.run_gatk(params)
     return out_file
 
-def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files,
-                               variantcaller):
+def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files, variantcaller):
     """Share functionality for filtering variants.
     """
     recal_file = "{base}.recal".format(base=os.path.splitext(snp_file)[0])
@@ -198,19 +196,17 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files,
         # and only used for GATK Unified Genotyper calls
         if variantcaller == "gatk":
             params.extend(["-an", "HaplotypeScore"])
-        params.extend(
-            ["-resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0",
-             vrn_files.train_hapmap,
-             "-resource:omni,VCF,known=false,training=true,truth=false,prior=12.0",
-             vrn_files.train_1000g_omni,
-             "-resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0",
-             vrn_files.dbsnp,
-             "-an", "QD"])
+        for name, train_info in [("train_hapmap", "known=false,training=true,truth=true,prior=15.0"),
+                                 ("train_1000g_omni", "known=false,training=true,truth=false,prior=12.0"),
+                                 ("dbsnp", "known=true,training=false,truth=false,prior=8.0")]:
+            if name in vrn_files:
+                params.extend(["-resource:%s,VCF,%s" % (name.replace("train_", ""), train_info),
+                               vrn_files[name]])
     if filter_type in ["INDEL", "BOTH"]:
-        assert vrn_files.train_indels, "Need indel training file specified"
+        assert "train_indels" in vrn_files, "Need indel training file specified"
         params.extend(
             ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
-             vrn_files.train_indels])
+             vrn_files["train_indels"]])
     return params, recal_file, tranches_file
 
 def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
@@ -248,8 +244,6 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     params, recal_file, tranches_file = _shared_variant_filtration(
         filter_type, snp_file, ref_file, vrn_files, variantcaller)
-    assert vrn_files.train_hapmap and vrn_files.train_1000g_omni, \
-           "Need HapMap and 1000 genomes training files"
     filters = ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
                "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
@@ -266,6 +260,8 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
             config["algorithm"]["coverage_interval"] = "regional"
             return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
         if not file_exists(recal_file):
+            assert "train_hapmap" in vrn_files and "train_1000g_omin" in vrn_files, \
+                "Need HapMap and 1000 genomes training files"
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
@@ -493,7 +489,7 @@ def variantcall_sample(data, region=None, out_file=None):
         items = data["work_items"]
     call_file = "%s-raw%s" % os.path.splitext(out_file)
     call_file = caller_fn(align_bams, items, sam_ref,
-                          configured_vrn_files(config, sam_ref),
+                          data["genome_resources"]["variation"],
                           region, call_file)
     if data["config"]["algorithm"].get("phasing", False) == "gatk":
         call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)

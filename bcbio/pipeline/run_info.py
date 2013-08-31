@@ -55,6 +55,7 @@ def _add_reference_resources(data):
     align_ref, sam_ref = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
     data["align_ref"] = align_ref
     data["sam_ref"] = sam_ref
+    data["genome_resources"] = genome.get_resources(data["genome_build"], sam_ref)
     return data
 
 # ## Sample and BAM read group naming

@@ -65,7 +65,7 @@ def parallel_transcript_assemble(data):
     """
     if data["config"]["algorithm"].get("transcript_assemble", False):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
-                                               data["config"])
+                                               data["config"], data)
     return [[data]]
 
 def generate_transcript_counts(data):

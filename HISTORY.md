@@ -1,3 +1,10 @@
+## 0.7.3 (in progress)
+
+- Move specification of supporting genome files for variation (dbSNP, training
+  files) and RNA-seq (transcript GTF files) analyses into an organism specific
+  resources file. Improves ability to support additional organisms and genome
+  builds.
+
 ## 0.7.2 (August 30, 2013)
 
 - Report memory usage for processes to cluster schedulers and use predicted

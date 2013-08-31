@@ -4,8 +4,44 @@ import ConfigParser
 import os
 from xml.etree import ElementTree
 
+import yaml
+
 from bcbio import utils
 from bcbio.pipeline import alignment
+
+# ## bcbio-nextgen genome resource files
+
+def _abs_file_paths(xs, base_dir):
+    """Normalize any file paths found in a subdirectory of configuration input.
+    """
+    if not isinstance(xs, dict):
+        return xs
+    orig_dir = os.getcwd()
+    out = {}
+    os.chdir(base_dir)
+    for k, v in xs.iteritems():
+        if v and isinstance(v, basestring) and os.path.exists(v):
+            out[k] = os.path.normpath(os.path.join(base_dir, v))
+        else:
+            out[k] = v
+    os.chdir(orig_dir)
+    return out
+
+def get_resources(genome, ref_file):
+    """Retrieve genome information from a genome-references.yaml file.
+    """
+    base_dir = os.path.normpath(os.path.dirname(ref_file))
+    resource_file = os.path.join(base_dir, "%s-resources.yaml" % genome)
+    if not os.path.exists(resource_file):
+        raise IOError("Did not find resource file for %s: %s\n"
+                      "To update bcbio_nextgen.py with genome resources for standard builds, run:\n"
+                      "bcbio_nextgen.py upgrade -u skip"
+                      % (genome, resource_file))
+    with open(resource_file) as in_handle:
+        resources = yaml.load(in_handle)
+    for cat in resources.keys():
+        resources[cat] = _abs_file_paths(resources[cat], base_dir)
+    return resources
 
 # ## Galaxy integration -- *.loc files
 

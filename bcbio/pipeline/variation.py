@@ -4,7 +4,6 @@ import os
 import json
 
 from bcbio.log import logger
-from bcbio.pipeline.shared import configured_vrn_files
 from bcbio.structural import hydra
 from bcbio.variation.genotype import variant_filtration
 from bcbio.variation import effects
@@ -16,8 +15,8 @@ def postprocess_variants(data):
     """
     logger.info("Finalizing variant calls: %s" % str(data["name"]))
     if data["work_bam"] and data.get("vrn_file"):
-        vrn_files = configured_vrn_files(data["config"], data["sam_ref"])
-        data["vrn_file"] = variant_filtration(data["vrn_file"], data["sam_ref"], vrn_files,
+        data["vrn_file"] = variant_filtration(data["vrn_file"], data["sam_ref"],
+                                              data["genome_resources"]["variation"],
                                               data["config"])
         logger.info("Calculating variation effects for %s" % str(data["name"]))
         ann_vrn_file = effects.snpeff_effects(data)
