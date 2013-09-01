@@ -66,18 +66,14 @@ def _get_galaxy_loc_file(name, galaxy_dt, ref_dir, galaxy_base):
         need_remap = True
     return loc_file, need_remap
 
-def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap):
-    """Retrieve reference genome file from Galaxy *.loc file.
-
-    Reads from tool_data_table_conf.xml information for the index if it
-    exists, otherwise uses heuristics to find line based on most common setups.
+def _galaxy_loc_iter(loc_file, galaxy_dt, need_remap=False):
+    """Iterator returning genome build and references from Galaxy *.loc file.
     """
     if "column" in galaxy_dt:
         dbkey_i = galaxy_dt["column"].index("dbkey")
         path_i = galaxy_dt["column"].index("path")
     else:
         dbkey_i = None
-    cur_ref = None
     with open(loc_file) as in_handle:
         for line in in_handle:
             if line.strip() and not line.startswith("#"):
@@ -85,17 +81,29 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
                 if len(parts) == 1: # spaces instead of tabs
                     parts = [x.strip() for x in line.strip().split("  ") if x.strip()]
                 if dbkey_i is not None and not need_remap:
-                    if parts[dbkey_i] == genome_build:
-                        cur_ref = parts[path_i]
-                        break
+                    dbkey = parts[dbkey_i]
+                    cur_ref = parts[path_i]
                 else:
                     if parts[0] == "index":
                         parts = parts[1:]
-                    if parts[0] == genome_build:
-                        cur_ref = parts[-1]
-                        break
-    if cur_ref is None:
+                    dbkey = parts[0]
+                    cur_ref = parts[-1]
+                yield (dbkey, cur_ref)
+
+def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap):
+    """Retrieve reference genome file from Galaxy *.loc file.
+
+    Reads from tool_data_table_conf.xml information for the index if it
+    exists, otherwise uses heuristics to find line based on most common setups.
+    """
+    refs = [ref for dbkey, ref in _galaxy_loc_iter(loc_file, galaxy_dt, need_remap)
+            if dbkey == genome_build]
+    if len(refs) == 0:
         raise IndexError("Genome %s not found in %s" % (genome_build, loc_file))
+    elif len(refs) > 1:
+        raise IndexError("Genome %s found multiple times in %s" % (genome_build, loc_file))
+    else:
+        cur_ref = refs[0]
     if need_remap:
         remap_fn = alignment.TOOLS[name].remap_index_fn
         assert remap_fn is not None, "%s requires remapping function from base location file" % name
@@ -150,3 +158,14 @@ def get_refs(genome_build, aligner, galaxy_base):
                 (genome_build, aligner))
     else:
         return tuple(out_info)
+
+def get_builds(galaxy_base):
+    """Retrieve configured genome builds and reference files, using Galaxy configuration files.
+    """
+    name = "samtools"
+    galaxy_config = _get_galaxy_tool_info(galaxy_base)
+    galaxy_dt = _get_galaxy_data_table(name, galaxy_config["tool_data_table_config_path"])
+    loc_file, need_remap = _get_galaxy_loc_file(name, galaxy_dt, galaxy_config["tool_data_path"],
+                                                galaxy_base)
+    assert not need_remap, "Should not need to remap reference files"
+    return _galaxy_loc_iter(loc_file, galaxy_dt)

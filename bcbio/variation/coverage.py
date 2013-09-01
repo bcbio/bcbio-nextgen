@@ -14,9 +14,6 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 
-BUILD_TO_ENSEMBL = {"hg19": "human", "GRCh37": "human",
-                    "mm10": "mouse"}
-
 def _prep_coverage_file(species, covdir, config):
     """Ensure input coverage file is correct, handling special keywords for whole exome.
     Returns the input coverage file and keyword for special cases.
@@ -40,7 +37,7 @@ def _prep_coverage_config(samples, config):
     cur_covdir = utils.safe_makedir(os.path.join(covdir, name))
     out_file = os.path.join(cur_covdir, "coverage_summary.csv")
     config_file = os.path.join(cur_covdir, "coverage-in.yaml")
-    species = BUILD_TO_ENSEMBL[samples[0]["genome_build"]]
+    species = samples[0]["genome_resources"]["aliases"]["ensembl"]
     cov_file, cov_kw = _prep_coverage_file(species, covdir, config)
     out = {"params": {"species": species,
                       "build": samples[0]["genome_build"],
@@ -93,7 +90,8 @@ def summarize_samples(samples, run_parallel):
     to_run = collections.defaultdict(list)
     extras = []
     for data in [x[0] for x in samples]:
-        if "coverage" in data["config"]["algorithm"] and data["genome_build"] in BUILD_TO_ENSEMBL:
+        if ("coverage" in data["config"]["algorithm"] and
+              data["genome_resources"].get("aliases", {}).get("ensembl")):
             to_run[(data["genome_build"], data["config"]["algorithm"]["coverage"])].append(data)
         else:
             extras.append([data])

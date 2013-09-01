@@ -7,25 +7,12 @@ import os
 import csv
 import glob
 import subprocess
-import collections
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 
 # ## snpEff variant effects
-
-# remap Galaxy genome names to the ones used by snpEff. Not nice code.
-SnpEffGenome = collections.namedtuple("SnpEffGenome", ["base", "default_version", "is_human"])
-SNPEFF_GENOME_REMAP = {
-        "GRCh37": SnpEffGenome("GRCh37.", "68", True),
-        "b37": SnpEffGenome("GRCh37.", "68", True),
-        "hg19" : SnpEffGenome("hg19", "", True),
-        "mm9" : SnpEffGenome("NCBIM37.", "68", False),
-        "mm10" : SnpEffGenome("GRCm38.", "71", False),
-        "araTha_tair9": SnpEffGenome("athalianaTair9", "", False),
-        "araTha_tair10": SnpEffGenome("athalianaTair10", "", False),
-        }
 
 def _find_snpeff_datadir(config_file):
     with open(config_file) as in_handle:
@@ -48,22 +35,18 @@ def _installed_snpeff_genome(config_file, base_name):
     else:
         return os.path.split(dbs[0])[-1]
 
-def _get_snpeff_genome(gname, config):
+def _get_snpeff_genome(data):
     """Generalize retrieval of the snpEff genome to use for an input name.
 
     This tries to find the snpEff configuration file and identify the
     installed genome corresponding to the input genome name.
     """
-    try:
-        ginfo = SNPEFF_GENOME_REMAP[gname]
-    except KeyError:
-        ginfo = SNPEFF_GENOME_REMAP[gname.split("-")[0]]
-    snpeff_config_file = os.path.join(config_utils.get_program("snpEff", config, "dir"),
+    snpeff_db = data["genome_resources"]["aliases"]["snpeff"]
+    snpeff_config_file = os.path.join(config_utils.get_program("snpEff", data["config"], "dir"),
                                       "snpEff.config")
-    if os.path.exists(snpeff_config_file):
-        return _installed_snpeff_genome(snpeff_config_file, ginfo.base)
-    else:
-        return "%s%s" % (ginfo.base, ginfo.default_version)
+    assert os.path.exists(snpeff_config_file), \
+        "Did not find snpEff configuration file: %s" % snpeff_config_file
+    return _installed_snpeff_genome(snpeff_config_file, snpeff_db)
 
 def snpeff_effects(data):
     """Annotate input VCF file with effects calculated by snpEff.
@@ -74,7 +57,7 @@ def snpeff_effects(data):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
-            vcf_file = _run_snpeff(vcf_in, _get_snpeff_genome(data["genome_build"], data["config"]),
+            vcf_file = _run_snpeff(vcf_in, _get_snpeff_genome(data),
                                    se_interval, "vcf", data)
         finally:
             for fname in [se_interval]:

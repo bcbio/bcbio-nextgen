@@ -59,7 +59,7 @@ def _do_db_build(samples):
     if len(genomes) == 0 or len(genomes) > 1:
         return False
     else:
-        return effects.SNPEFF_GENOME_REMAP[genomes.pop()].is_human
+        return samples[0]["genome_resources"].get("aliases", {}).get("human", False)
 
 def _group_by_batches(samples):
     """Group data items into batches, providing details to retrieve results.
