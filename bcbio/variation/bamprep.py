@@ -79,7 +79,7 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
             cmd = "{cl} {pipe} {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
     broad_runner.run_fn("picard_index", pa_bam)
-    dbsnp_vcf = shared.configured_ref_file("dbsnp", data["config"], data["sam_ref"])
+    dbsnp_vcf = data["genome_resources"]["variation"]["dbsnp"]
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
                                                 dbsnp=dbsnp_vcf, region=region_to_gatk(region))
     recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],
@@ -208,7 +208,8 @@ def piped_bamprep(data, region=None, out_file=None):
     if region[0] == "nochrom":
         prep_bam = shared.write_nochr_reads(data["work_bam"], out_file)
     elif region[0] == "noanalysis":
-        prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file)
+        prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file,
+                                                 data["config"])
     else:
         if not utils.file_exists(out_file):
             with utils.curdir_tmpdir() as tmp_dir:

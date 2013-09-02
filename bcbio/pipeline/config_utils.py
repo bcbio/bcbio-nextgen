@@ -1,8 +1,11 @@
 """Loads configurations from .yaml files and expands environment variables.
 """
 import copy
+import collections
 import glob
+import math
 import os
+import sys
 import yaml
 
 
@@ -20,7 +23,7 @@ def update_w_custom(config, lane_info):
     config = copy.deepcopy(config)
     base_name = lane_info.get("analysis")
     for analysis_type in name_remaps.get(base_name, [base_name]):
-        custom = config["custom_algorithms"].get(analysis_type, None)
+        custom = config.get("custom_algorithms", {}).get(analysis_type)
         if custom:
             for key, val in custom.iteritems():
                 config["algorithm"][key] = val
@@ -45,6 +48,23 @@ def add_cached_versions(config):
     return config
 
 # ## Retrieval functions
+
+def load_system_config(config_file):
+    """Load bcbio_system.yaml configuration file, handling standard defaults.
+
+    Looks for configuration file in default location within
+    final base directory from a standard installation.
+    """
+    if not os.path.exists(config_file):
+        base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+        test_config = os.path.join(base_dir, "galaxy", config_file)
+        if os.path.exists(test_config):
+            config_file = test_config
+        else:
+            raise ValueError("Could not find input system configuration file %s, "
+                             "including inside standard directory %s" %
+                             (config_file, os.path.join(base_dir, "galaxy")))
+    return load_config(config_file), config_file
 
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
@@ -71,12 +91,7 @@ def expand_path(path):
 def get_resources(name, config):
     """Retrieve resources for a program, pulling from multiple config sources.
     """
-    resources = config.get("resources", {}).get(name, {})
-    if "jvm_opts" not in resources:
-        java_memory = config["algorithm"].get("java_memory", None)
-        if java_memory:
-            resources["jvm_opts"] = ["-Xms%s" % java_memory, "-Xmx%s" % java_memory]
-    return resources
+    return config.get("resources", {}).get(name, {})
 
 def get_program(name, config, ptype="cmd", default=None):
     """Retrieve program information from the configuration.
@@ -149,9 +164,79 @@ def get_jar(base_name, dname):
     jars = glob.glob(os.path.join(expand_path(dname), "%s*.jar" % base_name))
     if len(jars) == 1:
         return jars[0]
+    elif len(jars) > 1:
+        raise ValueError("Found multiple jars for %s in %s. Need single jar: %s" %
+                         (base_name, dname, jars))
     else:
-        raise ValueError("Could not find java jar %s in %s: %s" % (
-            base_name, dname, jars))
+        raise ValueError("Could not find java jar %s in %s" %
+                         (base_name, dname))
+
+def adjust_memory(val, magnitude, direction="increase"):
+    """Adjust memory based on number of cores utilized.
+    """
+    modifier = val[-1:]
+    amount = int(val[:-1])
+    if direction == "decrease":
+        new_amount = amount / magnitude
+        # dealing with a specifier like 1G, need to scale to Mb
+        if new_amount < 1:
+            if modifier.upper().startswith("G"):
+                new_amount = (amount * 1024) / magnitude
+                modifier = "M" + modifier[1:]
+            else:
+                raise ValueError("Unexpected decrease in memory: %s by %s" % (val, magnitude))
+        amount = new_amount
+    elif direction == "increase":
+        # for increases with multiple cores, leave small percentage of
+        # memory for system to maintain process running resource and
+        # avoid OOM killers
+        adjuster = 0.91
+        amount = int(math.ceil(amount * (adjuster * magnitude)))
+    return "{amount}{modifier}".format(amount=amount, modifier=modifier)
+
+def adjust_opts(in_opts, config):
+    """Establish JVM opts, adjusting memory for the context if needed.
+
+    This allows using less or more memory for highly parallel or multicore
+    supporting processes, respectively.
+    """
+    memory_adjust = config["algorithm"].get("memory_adjust", {})
+    out_opts = []
+    for opt in in_opts:
+        if opt.startswith(("-Xmx", "-Xms")):
+            arg = opt[:4]
+            opt = "{arg}{val}".format(arg=arg,
+                                      val=adjust_memory(opt[4:],
+                                                        memory_adjust.get("magnitude", 1),
+                                                        memory_adjust.get("direction")))
+        out_opts.append(opt)
+    return out_opts
+
+# specific program usage
+
+def _get_coverage_params(alg):
+    Cov = collections.namedtuple("Cov", ["interval", "depth"])
+    return Cov(alg.get("coverage_interval", "exome").lower(),
+               alg.get("coverage_depth", "high").lower())
+
+def use_vqsr(algs):
+    """Processing uses GATK's Variant Quality Score Recalibration.
+    """
+    for alg in algs:
+        cov = _get_coverage_params(alg)
+        callers = alg.get("variantcaller", "gatk")
+        if isinstance(callers, basestring):
+            callers = [callers]
+        vqsr_supported_caller = False
+        for c in callers:
+            if c in ["gatk", "gatk-haplotype"]:
+                vqsr_supported_caller = True
+                break
+        if (cov.interval not in ["regional", "exome"] and cov.depth != "low"
+            and vqsr_supported_caller):
+            return True
+    return False
+
 
 ## functions for navigating through the standard galaxy directory of files
 

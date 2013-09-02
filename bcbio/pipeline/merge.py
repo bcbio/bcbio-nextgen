@@ -3,15 +3,13 @@
 Merges samples located in multiple lanes on a flowcell. Unique sample names identify
 items to combine within a group.
 """
-import copy
-import collections
 import os
 import shutil
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.provenance import do
+from bcbio.provenance import do, system
 
 def combine_fastq_files(in_files, work_dir, config):
     if len(in_files) == 1:
@@ -36,31 +34,6 @@ def combine_fastq_files(in_files, work_dir, config):
                 utils.save_diskspace(f2, "fastq merged to %s" % out2, config)
         return out1, out2
 
-def organize_samples(items, dirs, config_file):
-    """Organize BAM output files by sample name.
-    """
-    def _sort_by_lane_barcode(x):
-        """Index a sample by lane and barcode.
-        """
-        return (x["info"]["lane"], x["info"]["barcode_id"])
-    items_by_name = collections.defaultdict(list)
-    for item in items:
-        name = (item["info"].get("name", ""), item["info"]["description"])
-        items_by_name[name].append(item)
-    out = []
-    for name, item_group in items_by_name.iteritems():
-        fastq_files = [x["fastq"] for x in item_group]
-        bam_files = [x["work_bam"] for x in item_group]
-        item_group.sort(key=_sort_by_lane_barcode)
-
-        out.append({"name": name, "info": item_group[0]["info"],
-                    "fastq_files": fastq_files, "bam_files": bam_files,
-                    "dirs": copy.deepcopy(dirs), "config": item_group[0]["config"],
-                    "config_file": config_file})
-    out.sort(key=_sort_by_lane_barcode)
-    out = [[x] for x in out]
-    return out
-
 def merge_bam_files(bam_files, work_dir, config, out_file=None):
     """Merge multiple BAM files from a sample into a single BAM for processing.
 
@@ -71,15 +44,28 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
     else:
         if out_file is None:
             out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
-        if not utils.file_exists(out_file):
+        if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".bai"):
+            bamtools = config_utils.get_program("bamtools", config)
+            samtools = config_utils.get_program("samtools", config)
+            resources = config_utils.get_resources("samtools", config)
+            num_cores = config["algorithm"].get("num_cores", 1)
+            max_mem = resources.get("memory", "1G")
+            if len(bam_files) > system.open_file_limit():
+                raise IOError("More files to merge (%s) then available open file descriptors (%s)\n"
+                              "See documentation on tips for changing file limits:\n"
+                              "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
+                              "parallel.html#tuning-systems-for-scale"
+                              % (len(bam_files), system.open_file_limit()))
             with file_transaction(out_file) as tx_out_file:
+                tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
+                    bam_file_list = "%s.list" % os.path.splitext(out_file)[0]
                     with open(bam_file_list, "w") as out_handle:
-                        for f in bam_files:
+                        for f in sorted(bam_files):
                             out_handle.write("%s\n" % f)
-                    cmd = [config_utils.get_program("bamtools", config),
-                           "merge", "-list", bam_file_list, "-out", tx_out_file]
-                    do.run(cmd, "Merge bam files", None)
+                    cmd = ("{bamtools} merge -list {bam_file_list} | "
+                           "{samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
+                    do.run(cmd.format(**locals()), "Merge bam files", None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         picard = broad.runner_from_config(config)

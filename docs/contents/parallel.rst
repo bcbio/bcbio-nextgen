@@ -18,7 +18,7 @@ Multiple cores
 Running using multiple cores only requires setting the ``-n``
 command line flag::
 
-    bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t local -n 12
+    bcbio_nextgen.py bcbio_sample.yaml -t local -n 12
 
 IPython parallel
 ~~~~~~~~~~~~~~~~
@@ -34,7 +34,7 @@ accomplished with a distributed file system like
 
 Run an analysis using ipython for parallel execution::
 
-    bcbio_nextgen.py bcbio_system.yaml bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
+    bcbio_nextgen.py bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
 The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque)``.
 
@@ -82,13 +82,47 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 .. _Lustre: http://wiki.lustre.org/index.php/Main_Page
 .. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
 
+.. _memory-management:
+
+Memory management
+~~~~~~~~~~~~~~~~~
+
+The memory information specified in the system configuration
+:ref:`config-resources` enables scheduling of memory intensive
+processes. bcbio-nextgen handle memory scheduling by:
+
+- Determining available cores and memory per machine. It uses the
+  local machine for multicore runs. For parallel runs, it spawns a job
+  on the schedule queue and extracts the system information from that
+  machine. This requires a homogeneous set of machines within a
+  cluster queue.
+
+- Calculating the memory and core usage for a subset of the process runs.
+  The system configuration :ref:`config-resources` contains the
+  expected core and memory usage of external programs.
+
+- Adjusting the specified number of total cores to avoid
+  over-scheduling memory. This allows running programs with more than
+  the available memory per core without getting out of memory system
+  errors.
+
+- Passing total memory usage along to schedulers. The Torque, SGE and
+  SLURM schedulers use this information to allocate memory to
+  processes, avoiding issues with other scheduled programs using
+  available memory on a shared machine.
+
+As a result of these calculations, the cores used during processing
+will not always correspond to the maximum cores provided in the input
+`-n` parameter. The goal is rather to intelligently maximize cores
+and memory while staying within system resources.
+
 Tuning systems for scale
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 bcbio-nextgen scales out on clusters including hundreds of cores and is
 stress tested on systems with 1000 simultaneous processes. Scaling up
 often requires system specific tuning to handle simultaneous
-processes. This section collects useful tips and tricks for fixing
+processes. This section collects useful tips and tricks for managing
 scaling issues.
 
 Open file handles
@@ -102,10 +136,17 @@ with ``ulimit -a | grep open``. Setting open file handle limits is
 open system and cluster specific and below are tips for specific
 setups.
 
+For a Ubuntu system, edit ``/etc/security/limits.conf`` to set the
+soft and hard ``nofile`` descriptors, and edit
+``/etc/pam.d/common-session`` to add ``pam_limits.so``. See
+`this blog post`_ for more details.
+
 SGE needs configuration at the qmaster level. Invoke ``qconf -mconf``
 from a host with admin privileges, and edit ``execd_params``::
 
     execd_params                 S_DESCRIPTORS=20000
+
+.. _this blog post: https://viewsby.wordpress.com/2013/01/29/ubuntu-increase-number-of-open-files/
 
 Cloud support
 ~~~~~~~~~~~~~

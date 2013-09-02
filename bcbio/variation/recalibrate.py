@@ -18,7 +18,7 @@ from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import (configured_ref_file, process_bam_by_chromosome,
+from bcbio.pipeline.shared import (process_bam_by_chromosome,
                                    subset_bam_by_region, write_nochr_reads,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
@@ -33,7 +33,7 @@ def bamutil_dedup_recal_cl(in_file, out_file, data, do_recal):
     config = data["config"]
     bam_cmd = config_utils.get_program("bam", config)
     ref_file = data["sam_ref"]
-    dbsnp_file = configured_ref_file("dbsnp", config, ref_file)
+    dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
 
     cmd = "{bam_cmd} dedup --in {in_file} --out {out_file} --oneChrom"
     if do_recal:
@@ -49,7 +49,7 @@ def prep_recal(data):
         logger.info("Recalibrating %s with GATK" % str(data["name"]))
         ref_file = data["sam_ref"]
         config = data["config"]
-        dbsnp_file = configured_ref_file("dbsnp", config, ref_file)
+        dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
         broad_runner = broad.runner_from_config(config)
         platform = config["algorithm"]["platform"]
         broad_runner.run_fn("picard_index_ref", ref_file)
@@ -105,6 +105,9 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
                                    "--downsampling_type", "ALL_READS"]
+                    if platform.lower() == "solid":
+                        params += ["--solid_nocall_strategy", "PURGE_READ",
+                                   "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
                     # GATK-lite does not have support for
                     # insertion/deletion quality modeling
                     if broad_runner.gatk_type() == "lite":

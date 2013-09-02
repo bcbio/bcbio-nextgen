@@ -3,7 +3,7 @@
 from bcbio import utils
 from bcbio.bam import callable
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
-from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 
 @utils.map_wrap
@@ -31,6 +31,7 @@ def merge_sample(*args):
 @utils.map_wrap
 def delayed_bam_merge(*args):
     return sample.delayed_bam_merge(*args)
+delayed_bam_merge.metadata = {"resources": ["samtools"]}
 
 @utils.map_wrap
 def piped_bamprep(*args):
@@ -56,6 +57,7 @@ def split_variants_by_sample(*args):
 @utils.map_wrap
 def postprocess_variants(*args):
     return variation.postprocess_variants(*args)
+postprocess_variants.metadata = {"resources": ["gatk-vqsr", "gatk", "snpEff"]}
 
 @utils.map_wrap
 def pipeline_summary(*args):
@@ -76,6 +78,7 @@ def combine_bam(*args):
 @utils.map_wrap
 def variantcall_sample(*args):
     return genotype.variantcall_sample(*args)
+variantcall_sample.metadata = {"resources": ["gatk", "freebayes", "gatk-haplotype"]}
 
 @utils.map_wrap
 def combine_variant_files(*args):
@@ -109,3 +112,8 @@ def calc_callable_loci(*args):
 @utils.map_wrap
 def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
+
+@utils.map_wrap
+def coverage_summary(*args):
+    return coverage.summary(*args)
+coverage_summary.metadata = {"resources": ["bcbio_coverage"]}

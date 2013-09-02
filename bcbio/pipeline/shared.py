@@ -8,7 +8,7 @@ import subprocess
 import pysam
 
 from bcbio import broad
-from bcbio.pipeline.alignment import get_genome_ref
+from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 
@@ -73,12 +73,13 @@ def write_nochr_reads(in_file, out_file):
                             out_bam.write(read)
     return out_file
 
-def write_noanalysis_reads(in_file, region_file, out_file):
-    """Write a BAM file of reads in the specified region file that
+def write_noanalysis_reads(in_file, region_file, out_file, config):
+    """Write a BAM file of reads in the specified region file that are not analyzed.
     """
     if not file_exists(out_file):
+        bedtools = config_utils.get_program("bedtools", config)
         with file_transaction(out_file) as tx_out_file:
-            cl = "samtools view -b -L {region_file} {in_file} > {tx_out_file}"
+            cl = "{bedtools} intersect -abam {in_file} -b {region_file} -f 1.0 > {tx_out_file}"
             subprocess.check_call(cl.format(**locals()), shell=True)
     return out_file
 
@@ -155,32 +156,3 @@ def subset_variant_regions(variant_regions, region, out_file):
             return subset_file
         else:
             return region
-
-# ## Retrieving file information from configuration variables
-
-def configured_ref_file(name, config, sam_ref):
-    """Full path to a reference file specified in the configuration.
-
-    Resolves non-absolute paths relative to the base genome reference directory.
-    """
-    ref_file = config["algorithm"].get(name, None)
-    if ref_file:
-        if not os.path.isabs(ref_file):
-            base_dir = os.path.dirname(os.path.dirname(sam_ref))
-            ref_file = os.path.join(base_dir, ref_file)
-    return ref_file
-
-def configured_vrn_files(config, sam_ref):
-    """Full path to all configured files for variation assessment.
-    """
-    names = ["dbsnp", "train_hapmap", "train_1000g_omni", "train_indels"]
-    VrnFiles = collections.namedtuple("VrnFiles", names)
-    return apply(VrnFiles, [configured_ref_file(n, config, sam_ref) for n in names])
-
-def ref_genome_info(info, config, dirs):
-    """Retrieve reference genome information from configuration variables.
-    """
-    genome_build = info.get("genome_build", None)
-    (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
-                                  dirs["galaxy"])
-    return genome_build, sam_ref

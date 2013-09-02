@@ -54,9 +54,10 @@ def write_empty_vcf(out_file):
                          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
 
 
-def split_snps_indels(broad_runner, orig_file, ref_file):
+def split_snps_indels(orig_file, ref_file, config):
     """Split a variant call file into SNPs and INDELs for processing.
     """
+    broad_runner = broad.runner_from_config(config)
     base, ext = os.path.splitext(orig_file)
     snp_file = "{base}-snp{ext}".format(base=base, ext=ext)
     indel_file = "{base}-indel{ext}".format(base=base, ext=ext)
@@ -85,6 +86,7 @@ def _get_exclude_samples(in_file, to_exclude):
                 for s in parts[9:]:
                     if s in to_exclude:
                         out.append(s)
+                break
     return out
 
 def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
@@ -142,7 +144,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
     else:
         return out_file
 
-def _ref_file_contigs(ref_file, config):
+def ref_file_contigs(ref_file, config):
     """Iterator of sequence contigs from a reference file.
     """
     broad_runner = broad.runner_from_config(config)
@@ -155,7 +157,7 @@ def _sort_by_region(fnames, regions, ref_file, config):
     """Sort a set of regionally split files by region for ordered output.
     """
     contig_order = {}
-    for i, sq in enumerate(_ref_file_contigs(ref_file, config)):
+    for i, sq in enumerate(ref_file_contigs(ref_file, config)):
         contig_order[sq["SN"]] = i
     sitems = []
     for region, fname in zip(regions, fnames):

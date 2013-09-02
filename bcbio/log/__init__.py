@@ -34,6 +34,18 @@ class CloseableNestedSetup(logbook.NestedSetup):
             if hasattr(obj, "close"):
                 obj.close()
 
+class IOSafeMultiProcessingSubscriber(logbook.queues.MultiProcessingSubscriber):
+    """Recover from zeromq interrupted system call IOErrors that stop logging.
+    """
+    def recv(self, timeout=None):
+        try:
+            return super(IOSafeMultiProcessingSubscriber, self).recv(timeout)
+        except IOError, e:
+            if "Interrupted system call" in str(e):
+                return None
+            else:
+                raise
+
 def _create_log_handler(config, add_hostname=False):
     handlers = [logbook.NullHandler()]
     format_str = " ".join(["[{record.time:%Y-%m-%d %H:%M}]",
@@ -87,7 +99,7 @@ def create_base_logger(config, parallel=None):
         parallel["log_queue"] = wport_uri
         subscriber.dispatch_in_background(_create_log_handler(config, True))
     elif cores > 1:
-        subscriber = logbook.queues.MultiProcessingSubscriber(mpq)
+        subscriber = IOSafeMultiProcessingSubscriber(mpq)
         subscriber.dispatch_in_background(_create_log_handler(config))
     else:
         # Do not need to setup anything for local logging

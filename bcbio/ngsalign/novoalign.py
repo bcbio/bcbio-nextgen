@@ -60,10 +60,11 @@ def can_pipe(fastq_file):
     """
     return True
 
-def check_samtools_version():
+def check_samtools_version(config):
     """Ensure samtools has parallel processing required for piped analysis.
     """
-    p = subprocess.Popen(["samtools", "sort"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    samtools = config_utils.get_program("samtools", config)
+    p = subprocess.Popen([samtools, "sort"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
     p.stdout.close()
     if output.find("-@") == -1:
@@ -85,7 +86,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
     rg_info = get_rg_info(names)
     if not utils.file_exists(out_file):
-        check_samtools_version()
+        check_samtools_version(config)
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]

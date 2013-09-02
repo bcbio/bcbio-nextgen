@@ -1,7 +1,7 @@
 fc_date: 110221
 fc_name: 'FC withspace'
 details:
-  - analysis: variant
+  - analysis: variant2
     algorithm:
       coverage_interval: regional
     description: Test1
@@ -57,7 +57,7 @@ details:
       barcode_type: Illumina
       name: BAC02
       sequence: CTTGTA
-  - analysis: variant
+  - analysis: variant2
     algorithm:
       coverage_interval: regional
     description: Test2
@@ -113,7 +113,7 @@ details:
       barcode_type: Illumina
       name: BAC02
       sequence: CTTGTA
-  - analysis: Standard
+  - analysis: variant2
     algorithm:
       coverage_interval: regional
     description: Test3

@@ -8,7 +8,6 @@ import sys
 import time
 import contextlib
 import multiprocessing
-import psutil
 
 from mako.template import Template
 try:
@@ -19,33 +18,35 @@ except ImportError:
 from bcbio import utils
 from bcbio.distributed import ipython
 from bcbio.log import logger
-from bcbio.provenance import diagnostics
+from bcbio.provenance import diagnostics, system
 
 def parallel_runner(parallel, dirs, config, config_file=None):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):
         items = [x for x in items if x is not None]
+        if len(items) == 0:
+            return []
         items = diagnostics.track_parallel(items, fn_name)
         imodule = parallel.get("module", "bcbio.distributed")
+        sysinfo = system.get_info(dirs, parallel)
         if parallel["type"].startswith("messaging"):
             task_module = "{base}.tasks".format(base=imodule)
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
         elif parallel["type"] == "ipython":
-            return ipython.runner(parallel, fn_name, items, dirs["work"], config)
+            return ipython.runner(parallel, fn_name, items, dirs["work"], sysinfo, config)
         else:
             logger.info("multiprocessing: %s" % fn_name)
             fn = getattr(__import__("{base}.multitasks".format(base=imodule),
                                     fromlist=["multitasks"]),
                          fn_name)
-            num_jobs, cores_per_job = ipython.find_cores_per_job([fn], parallel, items, config)
-            items = [ipython.add_cores_to_config(x, cores_per_job) for x in items]
-            num_jobs = cores_including_resources(num_jobs, metadata, config)
+            jobr = ipython.find_job_resources([fn], parallel, items, sysinfo, config)
+            items = [ipython.add_cores_to_config(x, jobr.cores_per_job) for x in items]
             if joblib is None:
                 raise ImportError("Need joblib for multiprocessing parallelization")
             out = []
-            for data in joblib.Parallel(num_jobs)(joblib.delayed(fn)(x) for x in items):
+            for data in joblib.Parallel(jobr.num_jobs)(joblib.delayed(fn)(x) for x in items):
                 if data:
                     out.extend(data)
             return out
@@ -99,37 +100,6 @@ def _close_taskset(ts):
                 ts.revoke()
             except:
                 pass
-
-# ## Handle memory bound processes on multi-core machines
-
-def cores_including_resources(cores, metadata, config):
-    """Retrieve number of cores to use, considering program resources.
-    """
-    if metadata is None: metadata = {}
-    required_memory = -1
-    for program in metadata.get("programs", []):
-        presources = config.get("resources", {}).get(program, {})
-        memory = presources.get("memory", None)
-        if memory:
-            if memory.endswith("g"):
-                memory = int(memory[:-1])
-            else:
-                raise NotImplementedError("Unpexpected units on memory: %s", memory)
-            if memory > required_memory:
-                required_memory = memory
-    if required_memory > 0:
-        cur_memory = _machine_memory()
-        cores = min(cores,
-                    int(round(float(cur_memory) / float(required_memory))))
-    if cores < 1:
-        cores = 1
-    return cores
-
-
-def _machine_memory():
-    BYTES_IN_GIG = 1073741824
-    free_bytes = psutil.virtual_memory().available
-    return free_bytes / BYTES_IN_GIG
 
 # ## Utility functions
 

@@ -6,7 +6,8 @@ from IPython.parallel import require
 
 from bcbio.distributed import ipython
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
-from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+from bcbio.provenance import system
+from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
 
@@ -64,6 +65,7 @@ def merge_sample(*args):
 def delayed_bam_merge(*args):
     with _setup_logging(args):
         return apply(sample.delayed_bam_merge, *args)
+delayed_bam_merge.metadata = {"resources": ["samtools"]}
 
 @require(sample)
 def recalibrate_sample(*args):
@@ -100,6 +102,7 @@ def piped_bamprep(*args):
 def postprocess_variants(*args):
     with _setup_logging(args):
         return apply(variation.postprocess_variants, *args)
+postprocess_variants.metadata = {"resources": ["gatk-vqsr", "gatk", "snpEff"]}
 
 @require(qcsummary)
 def pipeline_summary(*args):
@@ -125,6 +128,7 @@ def combine_bam(*args):
 def variantcall_sample(*args):
     with _setup_logging(args):
         return apply(genotype.variantcall_sample, *args)
+variantcall_sample.metadata = {"resources": ["gatk", "freebayes", "gatk-haplotype"]}
 
 @require(vcfutils)
 def combine_variant_files(*args):
@@ -156,3 +160,13 @@ def combine_calls(*args):
 def compare_to_rm(*args):
     with _setup_logging(args):
         return apply(validate.compare_to_rm, *args)
+
+@require(coverage)
+def coverage_summary(*args):
+    with _setup_logging(args):
+        return apply(coverage.summary, *args)
+coverage_summary.metadata = {"resources": ["bcbio_coverage"]}
+
+@require(system)
+def machine_info(*args):
+    return system.machine_info()

@@ -30,10 +30,12 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
     bwa = config_utils.get_program("bwa", config)
     resources = config_utils.get_resources("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    max_mem = resources.get("memory", "768M")
+    # adjust memory for samtools since used for input and output
+    max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
+                                         3, "decrease")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
-        novoalign.check_samtools_version()
+        novoalign.check_samtools_version(config)
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
@@ -78,10 +80,12 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     bwa = config_utils.get_program("bwa", config)
     resources = config_utils.get_resources("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    max_mem = resources.get("memory", "768M")
+    # adjust memory for samtools since used alongside alignment
+    max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
+                                         3, "decrease")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
-        novoalign.check_samtools_version()
+        novoalign.check_samtools_version(config)
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]

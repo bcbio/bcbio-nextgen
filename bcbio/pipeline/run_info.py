@@ -3,7 +3,6 @@
 This handles two methods of getting processing information: from a Galaxy
 next gen LIMS system or an on-file YAML configuration.
 """
-import collections
 import copy
 import datetime
 import itertools
@@ -15,63 +14,51 @@ import yaml
 
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
+from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.solexa.flowcell import get_flowcell_info
+from bcbio.variation import genotype
 
-def get_run_info(fc_dir, config, run_info_yaml):
-    """Retrieve run information from a passed YAML file or the Galaxy API.
+def organize(dirs, config, run_info_yaml):
+    """Organize run information from a passed YAML file or the Galaxy API.
+
+    Creates the high level structure used for subsequent processing.
     """
     if run_info_yaml and os.path.exists(run_info_yaml):
-        logger.info("Found YAML samplesheet, using %s instead of Galaxy API" % run_info_yaml)
-        fc_name, fc_date, run_info = _run_info_from_yaml(fc_dir, run_info_yaml, config)
+        logger.info("Using input YAML configuration: %s" % run_info_yaml)
+        run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
     else:
         logger.info("Fetching run details from Galaxy instance")
-        fc_name, fc_date = get_flowcell_info(fc_dir)
+        fc_name, fc_date = get_flowcell_info(dirs["flowcell"])
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_info = galaxy_api.run_details(fc_name, fc_date)
-    return fc_name, fc_date, _organize_runs_by_lane(run_info)
-
-def _organize_runs_by_lane(run_info):
-    """Organize run information collapsing multiplexed items by lane.
-
-    Lane is the unique identifier in a run and used to combine multiple
-    run items on a fastq lane, separable by barcodes.
-    """
-    items = _normalize_barcodes(run_info["details"])
-    items_by_lane = collections.defaultdict(list)
-    for x in items:
-        items_by_lane[x["lane"]].append(x)
+        run_details = []
+        galaxy_info = galaxy_api.run_details(fc_name, fc_date)
+        for item in galaxy_info["details"]:
+            item["upload"] = {"method": "galaxy", "run_id": galaxy_info["run_id"],
+                              "fc_name": fc_name, "fc_date": fc_date}
+            run_details.append(item)
     out = []
-    for grouped_items in [items_by_lane[x] for x in sorted(items_by_lane.keys())]:
-        bcs = [x["barcode_id"] for x in grouped_items]
-        assert len(bcs) == len(set(bcs)), "Duplicate barcodes {0} in lane {1}".format(
-            bcs, grouped_items[0]["lane"])
-        assert len(bcs) == 1 or None not in bcs, "Barcode and non-barcode in lane {0}".format(
-            grouped_items[0]["lane"])
-        out.append(grouped_items)
-    run_info["details"] = out
-    return run_info
+    for item in run_details:
+        item["config"] = config_utils.update_w_custom(config, item)
+        item["dirs"] = dirs
+        if "name" not in item:
+            item["name"] = ["", item["description"]]
+        item = _add_reference_resources(item)
+        out.append(item)
+    return out
 
-def _normalize_barcodes(items):
-    """Normalize barcode specification methods into individual items.
+# ## Genome reference information
+
+def _add_reference_resources(data):
+    """Add genome reference information to the item to process.
     """
-    split_items = []
-    for item in items:
-        if item.has_key("multiplex"):
-            for multi in item["multiplex"]:
-                base = copy.deepcopy(item)
-                base["description"] += ": {0}".format(multi["name"])
-                del multi["name"]
-                del base["multiplex"]
-                base.update(multi)
-                split_items.append(base)
-        elif item.has_key("barcode"):
-            item.update(item["barcode"])
-            del item["barcode"]
-            split_items.append(item)
-        else:
-            item["barcode_id"] = None
-            split_items.append(item)
-    return split_items
+    aligner = data["config"]["algorithm"].get("aligner", None)
+    align_ref, sam_ref = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
+    data["align_ref"] = align_ref
+    data["sam_ref"] = sam_ref
+    data["genome_resources"] = genome.get_resources(data["genome_build"], sam_ref)
+    return data
+
+# ## Sample and BAM read group naming
 
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
@@ -83,13 +70,18 @@ def _clean_characters(x):
 def prep_rg_names(item, config, fc_name, fc_date):
     """Generate read group names from item inputs.
     """
-    lane_name = "%s_%s_%s" % (item["lane"], fc_date, fc_name)
+    if fc_name and fc_date:
+        lane_name = "%s_%s_%s" % (item["lane"], fc_date, fc_name)
+    else:
+        lane_name = item["description"]
     return {"rg": item["lane"],
             "sample": item["description"],
             "lane": lane_name,
             "pl": item.get("algorithm", {}).get("platform",
                     config.get("algorithm", {}).get("platform", "illumina")).lower(),
             "pu": lane_name}
+
+# ## Configuration file validation
 
 def _check_for_duplicates(xs, attr, check_fn=None):
     """Identify and raise errors on duplicate items.
@@ -132,6 +124,51 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                     "----------------+-----------------+----------------"] +
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
+def _check_algorithm_keys(item):
+    """Check for unexpected keys in the algorithm section.
+
+    Needs to be manually updated when introducing new keys, but avoids silent bugs
+    with typos in key names.
+    """
+    url = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
+    supported = set(["platform", "aligner", "bam_clean", "bam_sort", "trim_reads", "adapters",
+                     "custom_trim", "align_split_size", "quality_bin", "quality_format",
+                     "write_summary", "merge_bamprep", "coverage", "coverage_bigwig",
+                     "coverage_depth", "coverage_interval", "hybrid_target", "hybrid_bait",
+                     "ploidy",
+                     "variantcaller", "variant_regions", "mark_duplicates",
+                     "recalibrate", "realign",
+                     "phasing", "validate", "validate_regions", "validate_genome_build",
+                     "clinical_reporting",
+                     "nomap_split_size", "nomap_split_targets",
+                     "ensemble"])
+    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in supported]
+    if len(problem_keys) > 0:
+        raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
+                         "See configuration documentation for supported options:\n%s\n"
+                         % (problem_keys, url))
+
+def _check_aligner(item):
+    """Ensure specified aligner is valid choice.
+    """
+    allowed = set(alignment.TOOLS.keys() + [None, False])
+    if item["algorithm"].get("aligner") not in allowed:
+        raise ValueError("Unexpected algorithm 'aligner' parameter: %s\n"
+                         "Supported options: %s\n" %
+                         (item["algorithm"].get("aligner"), sorted(list(allowed))))
+
+def _check_variantcaller(item):
+    """Ensure specified variantcaller is a valid choice.
+    """
+    allowed = set(genotype.get_variantcallers().keys() + [None, False])
+    vcs = item["algorithm"].get("variantcaller", "gatk")
+    if not isinstance(vcs, (tuple, list)):
+        vcs = [vcs]
+    problem = [x for x in vcs if x not in allowed]
+    if len(problem) > 0:
+        raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
+                         "Supported options: %s\n" % (problem, sorted(list(allowed))))
+
 def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
@@ -141,13 +178,18 @@ def _check_sample_config(items, in_file):
     _check_for_misplaced(items, "algorithm",
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
+    [_check_algorithm_keys(x) for x in items]
+    [_check_aligner(x) for x in items]
+    [_check_variantcaller(x) for x in items]
+
+# ## Read bcbio_sample.yaml files
 
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.
     """
     with open(run_info_yaml) as in_handle:
         loaded = yaml.load(in_handle)
-    fc_name = None
+    fc_name, fc_date = None, None
     if fc_dir:
         try:
             fc_name, fc_date = get_flowcell_info(fc_dir)
@@ -161,8 +203,6 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             fc_name = loaded["fc_name"].replace(" ", "_")
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
         loaded = loaded["details"]
-    if fc_name is None:
-        fc_name, fc_date = _unique_flowcell_info()
     run_details = []
     for i, item in enumerate(loaded):
         if not item.has_key("lane"):
@@ -172,16 +212,16 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             item["description"] = str(item["lane"])
         item["description"] = _clean_characters(str(item["description"]))
         item["description_filenames"] = global_config.get("description_filenames", False)
-        upload = global_config.get("upload")
-        if upload:
+        upload = global_config.get("upload", {})
+        if fc_name and fc_date:
             upload["fc_name"] = fc_name
             upload["fc_date"] = fc_date
+        upload["run_id"] = ""
         item["upload"] = upload
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
-    run_info = dict(details=run_details, run_id="")
-    return fc_name, fc_date, run_info
+    return run_details
 
 def _unique_flowcell_info():
     """Generate data and unique identifier for non-barcoded flowcell.

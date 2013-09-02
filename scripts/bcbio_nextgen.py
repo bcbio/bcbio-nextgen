@@ -28,12 +28,10 @@ Usage:
 """
 import os
 import sys
-import subprocess
 
 from bcbio import install, workflow
-from bcbio.pipeline.run_info import get_run_info
 from bcbio.distributed import manage as messaging
-from bcbio.pipeline.config_utils import load_config
+from bcbio.pipeline.config_utils import load_system_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
@@ -41,7 +39,7 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
          profile=None, workflow=None, inputs=None, resources="",
          timeout=15, retries=None):
     work_dir = os.getcwd()
-    config = load_config(config_file)
+    config, config_file = load_system_config(config_file)
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(work_dir, "log")
     paralleltype, numcores = _get_cores_and_type(config, fc_dir, run_info_yaml,
@@ -72,13 +70,10 @@ def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
 
 def _get_cores_and_type(config, fc_dir, run_info_yaml,
                         numcores=None, paralleltype=None):
-    """Return core and parallelization approach from combo of config and commandline.
+    """Return core and parallelization approach from commandline.
 
     Prefers passed commandline parameters over pre-configured, defaulting
     to a local run on a single core.
-
-    The preferred approach is to pass in values explicitly on the commandline
-    and this helps maintain back compatibility.
     """
     config_cores = config["algorithm"].get("num_cores", None)
     if config_cores:
@@ -91,17 +86,8 @@ def _get_cores_and_type(config, fc_dir, run_info_yaml,
                 paralleltype = config_cores
     if paralleltype is None:
         paralleltype = "local"
-
     if numcores is None:
-        if config.get("distributed", {}).get("num_workers", "") == "all":
-            cp = config["distributed"]["cluster_platform"]
-            cluster = __import__("bcbio.distributed.{0}".format(cp), fromlist=[cp])
-            numcores = cluster.available_nodes(config["distributed"]["platform_args"]) - 1
-        if numcores is None:
-            if paralleltype == "local":
-                numcores = 1
-            else:
-                numcores = _needed_workers(get_run_info(fc_dir, config, run_info_yaml)[-1])
+        numcores = 1
     return paralleltype, int(numcores)
 
 def _needed_workers(run_info):
@@ -114,12 +100,11 @@ def _needed_workers(run_info):
     return len(set(names))
 
 if __name__ == "__main__":
-    config_file, kwargs = parse_cl_args(sys.argv[1:])
-    kwargs["config_file"] = config_file
+    kwargs = parse_cl_args(sys.argv[1:])
     if kwargs["upgrade"]:
         install.upgrade_bcbio(kwargs["args"])
     else:
-        if kwargs["workflow"]:
+        if kwargs.get("workflow"):
             setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])
             if setup_info is None: # no automated run after setup
                 sys.exit(0)

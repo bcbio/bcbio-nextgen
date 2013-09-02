@@ -33,7 +33,6 @@ def prep_gemini_db(fnames, call_id, samples, data):
             cmd = "{gemini} load -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % str(call_id), data)
-            subprocess.check_call(cmd, shell=True)
     return [[call_id, {"db": gemini_db if use_gemini else None,
                        "vcf": gemini_vcf if is_population else None}]]
 
@@ -60,7 +59,7 @@ def _do_db_build(samples):
     if len(genomes) == 0 or len(genomes) > 1:
         return False
     else:
-        return effects.SNPEFF_GENOME_REMAP[genomes.pop()].is_human
+        return samples[0]["genome_resources"].get("aliases", {}).get("human", False)
 
 def _group_by_batches(samples):
     """Group data items into batches, providing details to retrieve results.

@@ -34,6 +34,7 @@ details:
       nomap_split_size: 50
       nomap_split_targets: 20
       variant_regions: ../data/automated/variant_regions-bam.bed
+      coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../reference_material/7_100326_FC6107FAAXX-grade.vcf
     resources:
       novoalign:
