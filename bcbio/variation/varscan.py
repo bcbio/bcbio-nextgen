@@ -73,7 +73,6 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                 do.run(cmd, "samtools mpileup".format(**locals()), None,
                        [do.file_exists(mpfile_tx)])
 
-
         # Sometimes mpileup writes an empty file: in this case we
         # just skip the rest of the analysis (VarScan will hang otherwise)
 
@@ -125,6 +124,47 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         if os.path.getsize(out_file) == 0:
             write_empty_vcf(out_file)
 
+        _fix_varscan_vcf(out_file, align_bams)
+
+
+def _fix_varscan_vcf(orig_file, in_bams):
+    """Fixes issues with the standard VarScan VCF output.
+
+    - Remap sample names back to those defined in the input BAM file.
+    - Convert indels into correct VCF representation.
+    """
+    tmp_file = utils.append_stem(orig_file, "-origsample")
+
+    if not utils.file_exists(tmp_file):
+        shutil.move(orig_file, tmp_file)
+
+        with file_transaction(orig_file) as tx_out_file:
+
+            with (open(tmp_file), open(orig_file, "w")) as (in_handle,
+                                                            out_handle):
+                
+                for line in in_handle:
+                    parts = line.split("\t")
+                    if line.startswith("#CHROM"):
+                        line = _fix_sample_line(line, in_bams)
+                    out_handle.write(line)
+
+def _fix_sample_line(line, in_bams):
+    """Pull sample names from input BAMs and replace VCF file header.
+    """
+    samples = []
+    for in_bam in in_bams:
+        with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
+            for rg in work_bam.header.get("RG", []):
+                samples.append(rg["SM"])
+    parts = line.split("\t")
+    standard = parts[:9]
+    old_samples = parts[9:]
+    if len(old_samples) == 0:
+        return line
+    else:
+        assert len(old_samples) == len(samples), (old_samples, samples)
+        return "\t".join(standard + samples) + "\n"
 
 def _create_sample_list(in_bams, vcf_file):
     """Pull sample names from input BAMs and create input sample list.
