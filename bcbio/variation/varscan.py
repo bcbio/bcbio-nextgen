@@ -5,11 +5,12 @@ http://varscan.sourceforge.net/
 import contextlib
 import itertools
 import os
+import shutil
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, append_stem
 from bcbio.variation import samtools
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
                                       is_sample_pair, get_paired_bams)
@@ -80,7 +81,6 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             write_empty_vcf(out_file)
             return
 
-
         # First index is normal, second is tumor
         normal_tmp_mpileup = cleanup_files[0]
         tumor_tmp_mpileup = cleanup_files[1]
@@ -133,16 +133,16 @@ def _fix_varscan_vcf(orig_file, in_bams):
     - Remap sample names back to those defined in the input BAM file.
     - Convert indels into correct VCF representation.
     """
-    tmp_file = utils.append_stem(orig_file, "-origsample")
+    tmp_file = append_stem(orig_file, "-origsample")
 
-    if not utils.file_exists(tmp_file):
+    if not file_exists(tmp_file):
         shutil.move(orig_file, tmp_file)
 
         with file_transaction(orig_file) as tx_out_file:
 
             with (open(tmp_file), open(orig_file, "w")) as (in_handle,
                                                             out_handle):
-                
+
                 for line in in_handle:
                     parts = line.split("\t")
                     if line.startswith("#CHROM"):
