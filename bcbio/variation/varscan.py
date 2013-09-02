@@ -139,15 +139,14 @@ def _fix_varscan_vcf(orig_file, in_bams):
         shutil.move(orig_file, tmp_file)
 
         with file_transaction(orig_file) as tx_out_file:
+            with open(tmp_file) as in_handle:
+                with open(orig_file, "w") as out_handle:
 
-            with (open(tmp_file), open(orig_file, "w")) as (in_handle,
-                                                            out_handle):
-
-                for line in in_handle:
-                    parts = line.split("\t")
-                    if line.startswith("#CHROM"):
-                        line = _fix_sample_line(line, in_bams)
-                    out_handle.write(line)
+                    for line in in_handle:
+                        parts = line.split("\t")
+                        if line.startswith("#CHROM"):
+                            line = _fix_sample_line(line, in_bams)
+                        out_handle.write(line)
 
 def _fix_sample_line(line, in_bams):
     """Pull sample names from input BAMs and replace VCF file header.
