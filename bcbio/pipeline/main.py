@@ -66,6 +66,7 @@ def _add_provenance(items, dirs, run_parallel, parallel, config):
                                       item["description"])
         else:
             entity_id = item["description"]
+        item["config"]["resources"]["program_versions"] = p
         item["provenance"] = {"programs": p, "entity": entity_id}
         out.append([item])
     return out

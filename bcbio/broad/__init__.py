@@ -10,7 +10,7 @@ from contextlib import closing
 
 from bcbio.broad import picardrun
 from bcbio.pipeline import config_utils
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 from bcbio.utils import curdir_tmpdir
 
 class BroadRunner:
@@ -22,8 +22,20 @@ class BroadRunner:
         self._picard_ref = config_utils.expand_path(picard_ref)
         self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
-        self._resources = resources
-        self._gatk_version = None
+        self._gatk_version, self._picard_version = self._default_versions(config)
+
+    def _default_versions(self, config):
+        """Retrieve pre-computed version information for expensive to retrieve versions.
+        Starting up GATK takes a lot of resources so we do it once at start of analysis.
+        """
+        out = []
+        for name in ["gatk", "picard"]:
+            try:
+                v = programs.get_version(name, config=config)
+            except KeyError:
+                v = None
+            out.append(v)
+        return out
 
     def new_resources(self, program):
         """Set new resource usage for the given program.
@@ -73,6 +85,8 @@ class BroadRunner:
             do.run(cl, "Picard {0}".format(command), None)
 
     def get_picard_version(self, command):
+        if self._picard_version:
+            return self._picard_version
         if os.path.isdir(self._picard_ref):
             picard_jar = self._get_jar(command)
             cl = ["java", "-Xms5m", "-Xmx5m", "-jar", picard_jar]
@@ -81,6 +95,7 @@ class BroadRunner:
         cl += ["--version"]
         p = subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         version = float(p.stdout.read().split("(")[0])
+        self._picard_version = version
         p.wait()
         p.stdout.close()
         return version
@@ -149,8 +164,6 @@ class BroadRunner:
         """
         if self._gatk_version is not None:
             return self._gatk_version
-        elif self._resources.get("version"):
-            return self._resources["version"]
         else:
             gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
             cl = ["java", "-Xms5m", "-Xmx5m", "-jar", gatk_jar, "-version"]
