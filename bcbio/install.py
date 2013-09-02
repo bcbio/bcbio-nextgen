@@ -92,7 +92,6 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
     """
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
-        print dbkey, ref_file
         # Check for a remote genome resources file
         remote_url = base_url % dbkey
         r = requests.get(remote_url)
