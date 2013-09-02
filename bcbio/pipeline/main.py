@@ -43,9 +43,6 @@ def run_main(config, config_file, work_dir, parallel,
 
     # process each flowcell lane
     lane_items = lane.process_all_lanes(run_items, run_parallel)
-    import pprint
-    pprint.pprint(lane_items[0])
-    raise NotImplementedError
     pipelines = _pair_lanes_with_pipelines(lane_items)
     final = []
     with utils.curdir_tmpdir() as tmpdir:

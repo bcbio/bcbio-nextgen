@@ -15,10 +15,7 @@ from bcbio.utils import file_exists, safe_makedir
 def needs_fastq_conversion(item, config):
     """Check if an item needs conversion to fastq files.
     """
-    files = item.get("files", [])
-    if isinstance(files, basestring):
-        files = [files]
-    for f in files:
+    for f in item.get("files", []):
         if f.endswith(".bam") and _pipeline_needs_fastq(config, item):
             return True
     return False
@@ -26,16 +23,13 @@ def needs_fastq_conversion(item, config):
 def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    fastq_dir = item["dirs"]["fastq"]
     if "files" in item:
-        names = item["files"]
-        if isinstance(names, basestring):
-            names = [names]
-        files = [x if os.path.isabs(x) else os.path.join(fastq_dir, x) for x in names]
+        files = item["files"]
     elif "vrn_file" in item:
         files = []
     else:
         assert item["upload"].get("fc_name") is not None
+        fastq_dir = item["dirs"]["fastq"]
         lane = item["lane"]
         glob_str = "%s_*%s*_fastq.txt" % (lane, item["upload"]["fc_name"])
         files = glob.glob(os.path.join(fastq_dir, glob_str))
