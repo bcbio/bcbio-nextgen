@@ -449,7 +449,7 @@ def parallel_variantcall(sample_info, parallel_fn):
     to_process = []
     finished = []
     for x in sample_info:
-        if x[0]["config"]["algorithm"].get("variantcaller", "gatk"):
+        if get_variantcaller(x[0]):
             to_process.extend(handle_multiple_variantcallers(x))
         else:
             finished.append(x)
