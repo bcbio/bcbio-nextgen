@@ -195,8 +195,10 @@ def _normalize_files(item, fc_dir):
             files = [files]
         if fc_dir:
             fastq_dir = get_fastq_dir(fc_dir)
-            files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
-                     for x in files]
+        else:
+            fastq_dir = os.getcwd()
+        files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
+                 for x in files]
         item["files"] = files
     return item
 
@@ -237,6 +239,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             upload["fc_date"] = fc_date
         upload["run_id"] = ""
         item["upload"] = upload
+        item["algorithm"] = genome.abs_file_paths(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)

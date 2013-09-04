@@ -70,13 +70,13 @@ def summary(samples, config):
     resources = config_utils.get_resources("bcbio_coverage", config)
     config = copy.deepcopy(config)
     config["algorithm"]["memory_adjust"] = {"direction": "increase",
-                                            "magnitude": config["algorithm"]["num_cores"]}
+                                            "magnitude": config["algorithm"].get("num_cores", 1)}
     jvm_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]), config)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             java_args = ["-Djava.io.tmpdir=%s" % tmp_dir, "-Djava.awt.headless=true"]
             cmd = ["java"] + jvm_opts + java_args + ["-jar", bc_jar, "multicompare", config_file,
-                                                     tx_out_file, "-c", str(config["algorithm"]["num_cores"])]
+                                                     tx_out_file, "-c", str(config["algorithm"].get("num_cores", 1))]
             do.run(cmd, "Summarizing coverage with bcbio.coverage", samples[0])
     out = []
     for x in samples:

@@ -120,16 +120,16 @@ Then the fastq reads, reference materials and analysis regions::
        CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_1.fastq.gz
     $ wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
        CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_2.fastq.gz
-    $ wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-nist-v2_13-NGv3-pass.vcf.gz
-    $ wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-nist-v2_13-NGv3-regions.bed.gz
-    $ gunzip NA12878-nist-*.gz
     $ wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
-    $ gunzip NGv3.bed.gz
+    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf.gz
+    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed.gz
+    $ gunzip *.vcf.gz
+    $ gunzip *.bed.gz
 
 Finally run the analysis, distributed on 8 local cores, with::
 
     $ mkdir work && cd work
-    $ bcbio_nextgen.py ../input ../config/NA12878-exome-methodcmp.yaml -n 8
+    $ bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
 to the NIST reference materials.
