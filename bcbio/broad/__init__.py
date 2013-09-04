@@ -89,7 +89,7 @@ class BroadRunner:
             return self._picard_version
         if os.path.isdir(self._picard_ref):
             picard_jar = self._get_jar(command)
-            cl = ["java", "-Xms5m", "-Xmx5m", "-jar", picard_jar]
+            cl = ["java", "-Xms64m", "-Xmx128m", "-jar", picard_jar]
         else:
             cl = [self._picard_ref, command]
         cl += ["--version"]
@@ -166,7 +166,7 @@ class BroadRunner:
             return self._gatk_version
         else:
             gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-            cl = ["java", "-Xms5m", "-Xmx5m", "-jar", gatk_jar, "-version"]
+            cl = ["java", "-Xms64m", "-Xmx128m", "-jar", gatk_jar, "-version"]
             with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
                 out = stdout.read().strip()
                 # versions earlier than 2.4 do not have explicit version command,
