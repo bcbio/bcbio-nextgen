@@ -7,7 +7,7 @@ import os
 import contextlib
 import subprocess
 
-from bcbio import broad, utils
+from bcbio import utils
 from bcbio.pipeline import config_utils, version
 
 _cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
@@ -24,6 +24,7 @@ _cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"}
 
 def _broad_versioner(type):
     def get_version(config):
+        from bcbio import broad
         runner = broad.runner_from_config(config)
         if type == "gatk":
             return runner.get_gatk_version()
@@ -55,7 +56,9 @@ _alt_progs = [{"name": "gatk", "version_fn": _broad_versioner("gatk")},
               {"name": "bcbio.variation",
                "version_fn": jar_versioner("bcbio_variation", "bcbio.variation")},
               {"name": "varscan",
-               "version_fn": jar_versioner("varscan", "VarScan")}]
+               "version_fn": jar_versioner("varscan", "VarScan")},
+              {"name": "mutect",
+               "version_fn": jar_versioner("mutect", "muTect")}]
 # TODO: cortex_var
 
 def _parse_from_stdoutflag(stdout, x):
@@ -93,7 +96,7 @@ def _get_cl_version(p, config):
             raise NotImplementedError("Don't know how to extract version")
     return v
 
-def get_versions(config):
+def _get_versions(config):
     """Retrieve details on all programs available on the system.
     """
     out = [{"program": "bcbio-nextgen",
@@ -106,13 +109,29 @@ def get_versions(config):
                     "version": p["version_fn"](config)})
     return out
 
+def _get_program_file(dirs):
+    base_dir = utils.safe_makedir(os.path.join(dirs["work"], "provenance"))
+    return os.path.join(base_dir, "programs.txt")
+
 def write_versions(dirs, config):
     """Write CSV file with versions used in analysis pipeline.
     """
-    base_dir = utils.safe_makedir(os.path.join(dirs["work"], "provenance"))
-    out_file = os.path.join(base_dir, "programs.txt")
-    if not utils.file_exists(out_file):
-        with open(out_file, "w") as out_handle:
-            for p in get_versions(config):
-                out_handle.write("{program},{version}\n".format(**p))
+    out_file = _get_program_file(dirs)
+    with open(out_file, "w") as out_handle:
+        for p in _get_versions(config):
+            out_handle.write("{program},{version}\n".format(**p))
     return out_file
+
+def get_version(name, dirs=None, config=None):
+    """Retrieve the current version of the given program from cached names.
+    """
+    if dirs:
+        p = _get_program_file(dirs)
+    else:
+        p = config["resources"]["program_versions"]
+    with open(p) as in_handle:
+        for line in in_handle:
+            prog, version = line.rstrip().split(",")
+            if prog == name and version:
+                return version
+    raise KeyError("Version information not found for %s in %s" % (name, p))

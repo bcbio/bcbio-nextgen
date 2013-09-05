@@ -260,7 +260,7 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
             config["algorithm"]["coverage_interval"] = "regional"
             return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
         if not file_exists(recal_file):
-            assert "train_hapmap" in vrn_files and "train_1000g_omin" in vrn_files, \
+            assert "train_hapmap" in vrn_files and "train_1000g_omni" in vrn_files, \
                 "Need HapMap and 1000 genomes training files"
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
@@ -449,7 +449,7 @@ def parallel_variantcall(sample_info, parallel_fn):
     to_process = []
     finished = []
     for x in sample_info:
-        if x[0]["config"]["algorithm"].get("variantcaller", "gatk"):
+        if get_variantcaller(x[0]):
             to_process.extend(handle_multiple_variantcallers(x))
         else:
             finished.append(x)

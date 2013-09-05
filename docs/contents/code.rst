@@ -198,6 +198,11 @@ step, but some of the most useful key/values available throughout are:
   inputs.
 - ``metadata`` -- Top level metadata associated with a sample, specified
   in the initial configuration.
+- ``genome_resources`` -- Naming aliases and associated files
+  associated with the current genome build. Retrieved from organism
+  specific configuration files (``buildname-resources.yaml``) this
+  specifies the location of supplemental organism specific files like
+  support files for variation and RNA-seq analysis.
 
 It also contains information the genome build, sample name and
 reference genome file throughout. Here's an example of these inputs::
@@ -206,7 +211,6 @@ reference genome file throughout. Here's an example of these inputs::
                               'callable_regions': 'analysis_blocks.bed',
                               'coverage_depth': 'low',
                               'coverage_interval': 'regional',
-                              'dbsnp': 'variation/dbsnp_132.vcf',
                               'mark_duplicates': 'samtools',
                               'max_errors': 2,
                               'nomap_split_size': 50,
@@ -217,9 +221,6 @@ reference genome file throughout. Here's an example of these inputs::
                               'realign': 'gkno',
                               'recalibrate': 'gatk',
                               'save_diskspace': True,
-                              'train_1000g_omni': 'variation/1000G_omni2.5.vcf',
-                              'train_hapmap': 'variation/hapmap_3.3.vcf',
-                              'train_indels': 'variation/Mills_Devine_2hit.indels.vcf',
                               'upload_fastq': False,
                               'validate': '../reference_material/7_100326_FC6107FAAXX-grade.vcf',
                               'variant_regions': '../data/automated/variant_regions-bam.bed',
@@ -246,9 +247,19 @@ reference genome file throughout. Here's an example of these inputs::
                               'ucsc_bigwig': {'memory': '36g'},
                               'varscan': {'dir': '/usr/share/java/varscan'},
                               'vcftools': {'dir': '~/install/vcftools_0.1.9'}}},
+    'genome_resources': {'aliases': {'ensembl': 'human',
+                                      'human': True,
+                                      'snpeff': 'hg19'},
+                          'rnaseq': {'transcripts': '/path/to/rnaseq/ref-transcripts.gtf',
+                                     'transcripts_mask': '/path/to/rnaseq/ref-transcripts-mask.gtf'},
+                          'variation': {'dbsnp': '/path/to/variation/dbsnp_132.vcf',
+                                        'train_1000g_omni': '/path/to/variation/1000G_omni2.5.vcf',
+                                        'train_hapmap': '/path/to/hg19/variation/hapmap_3.3.vcf',
+                                        'train_indels': '/path/to/variation/Mills_Devine_2hit.indels.vcf'},
+                          'version': 1},
      'dirs': {'fastq': 'input fastq directory',
-              'galaxy': 'directory with galaxy loc and other files',
-              'work': 'base work directory'},
+                  'galaxy': 'directory with galaxy loc and other files',
+                  'work': 'base work directory'},
      'metadata': {'batch': 'TestBatch1'},
      'genome_build': 'hg19',
      'name': ('', 'Test1'),

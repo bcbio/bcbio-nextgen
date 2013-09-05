@@ -60,6 +60,8 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     else:
         out_bam = _align_from_fastq(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
                                     names, align_dir, data["config"])
+    runner = broad.runner_from_config(data["config"])
+    runner.run_fn("picard_index", out_bam)
     return out_bam
 
 def _can_pipe(aligner, fastq_file):

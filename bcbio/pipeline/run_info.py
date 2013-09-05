@@ -15,8 +15,9 @@ import yaml
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.pipeline import alignment, config_utils, genome
-from bcbio.solexa.flowcell import get_flowcell_info
+from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
 from bcbio.variation import genotype
+from bcbio.variation.cortex import get_sample_name
 
 def organize(dirs, config, run_info_yaml):
     """Organize run information from a passed YAML file or the Galaxy API.
@@ -184,6 +185,23 @@ def _check_sample_config(items, in_file):
 
 # ## Read bcbio_sample.yaml files
 
+def _normalize_files(item, fc_dir):
+    """Ensure the files argument is a list of absolute file names.
+    Handles BAM, single and paired end fastq.
+    """
+    files = item.get("files")
+    if files:
+        if isinstance(files, basestring):
+            files = [files]
+        if fc_dir:
+            fastq_dir = get_fastq_dir(fc_dir)
+        else:
+            fastq_dir = os.getcwd()
+        files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
+                 for x in files]
+        item["files"] = files
+    return item
+
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.
     """
@@ -205,19 +223,24 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         loaded = loaded["details"]
     run_details = []
     for i, item in enumerate(loaded):
+        item = _normalize_files(item, fc_dir)
         if not item.has_key("lane"):
             item["lane"] = str(i+1)
         item["lane"] = _clean_characters(str(item["lane"]))
         if not item.has_key("description"):
-            item["description"] = str(item["lane"])
+            if len(item.get("files", [])) == 1 and item["files"][0].endswith(".bam"):
+                item["description"] = get_sample_name(item["files"][0])
+            else:
+                raise ValueError("No `description` sample name provided for input #%s" % (i+1))
         item["description"] = _clean_characters(str(item["description"]))
-        item["description_filenames"] = global_config.get("description_filenames", False)
         upload = global_config.get("upload", {})
         if fc_name and fc_date:
             upload["fc_name"] = fc_name
             upload["fc_date"] = fc_date
         upload["run_id"] = ""
         item["upload"] = upload
+        item["algorithm"] = genome.abs_file_paths(item["algorithm"],
+                                                  ignore_keys=["variantcaller"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)

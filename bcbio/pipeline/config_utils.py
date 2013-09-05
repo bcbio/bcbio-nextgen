@@ -38,15 +38,6 @@ def update_w_custom(config, lane_info):
             config["resources"][prog][key] = val
     return config
 
-def add_cached_versions(config):
-    """Add version information to configuration, avoiding multiple access during parallel runs.
-    """
-    from bcbio import broad
-    # cache GATK version in sample information to avoid multiple retrievals later
-    if "gatk" in config["resources"]:
-        config["resources"]["gatk"]["version"] = broad.runner_from_config(config).get_gatk_version()
-    return config
-
 # ## Retrieval functions
 
 def load_system_config(config_file):
