@@ -103,7 +103,7 @@ materials from NIST's `Genome in a Bottle`_ initiative. This supplies
 a full regression pipeline to ensure consistency of calling between
 releases and updates of third party software. The pipeline performs
 alignment with bwa mem and variant calling with FreeBayes, GATK
-UnifiedGenotyper and GATK HaplotypeCaller. It also combines all 3
+UnifiedGenotyper and GATK HaplotypeCaller. Finally it integrates all 3
 variant calling approaches into a `combined ensemble callset`_.
 
 This is a large full exome example with multiple variant callers, so
@@ -123,8 +123,10 @@ Then the fastq reads, reference materials and analysis regions::
     $ wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
        CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_2.fastq.gz
     $ wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
-    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf.gz
-    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed.gz
+    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+       NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf.gz
+    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+       union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed.gz
     $ gunzip *.vcf.gz
     $ gunzip *.bed.gz
 
