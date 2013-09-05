@@ -239,7 +239,8 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             upload["fc_date"] = fc_date
         upload["run_id"] = ""
         item["upload"] = upload
-        item["algorithm"] = genome.abs_file_paths(item["algorithm"])
+        item["algorithm"] = genome.abs_file_paths(item["algorithm"],
+                                                  ignore_keys=["variantcaller"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)

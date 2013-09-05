@@ -22,9 +22,9 @@ class BroadRunner:
         self._picard_ref = config_utils.expand_path(picard_ref)
         self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
-        self._gatk_version, self._picard_version = self._default_versions(config)
+        self._gatk_version, self._picard_version = None, None
 
-    def _default_versions(self, config):
+    def _set_default_versions(self, config):
         """Retrieve pre-computed version information for expensive to retrieve versions.
         Starting up GATK takes a lot of resources so we do it once at start of analysis.
         """
@@ -35,7 +35,7 @@ class BroadRunner:
             except KeyError:
                 v = None
             out.append(v)
-        return out
+        self._gatk_version, self._picard_version = out
 
     def new_resources(self, program):
         """Set new resource usage for the given program.
@@ -85,6 +85,8 @@ class BroadRunner:
             do.run(cl, "Picard {0}".format(command), None)
 
     def get_picard_version(self, command):
+        if self._picard_version is None:
+            self._set_default_versions(self._config)
         if self._picard_version:
             return self._picard_version
         if os.path.isdir(self._picard_ref):
@@ -162,6 +164,8 @@ class BroadRunner:
         Calling version can be expensive due to all the startup and shutdown
         of JVMs, so we prefer cached version information.
         """
+        if self._gatk_version is None:
+            self._set_default_versions(self._config)
         if self._gatk_version is not None:
             return self._gatk_version
         else:

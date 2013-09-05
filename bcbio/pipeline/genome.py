@@ -29,9 +29,10 @@ def get_resources(genome, ref_file):
 
 # ## Utilities
 
-def abs_file_paths(xs, base_dir=None):
+def abs_file_paths(xs, base_dir=None, ignore_keys=None):
     """Normalize any file paths found in a subdirectory of configuration input.
     """
+    ignore_keys = set([]) if ignore_keys is None else set(ignore_keys)
     if not isinstance(xs, dict):
         return xs
     if base_dir is None:
@@ -40,7 +41,7 @@ def abs_file_paths(xs, base_dir=None):
     os.chdir(base_dir)
     out = {}
     for k, v in xs.iteritems():
-        if v and isinstance(v, basestring) and os.path.exists(v):
+        if k not in ignore_keys and v and isinstance(v, basestring) and os.path.exists(v):
             out[k] = os.path.normpath(os.path.join(base_dir, v))
         else:
             out[k] = v
