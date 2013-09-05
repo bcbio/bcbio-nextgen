@@ -23,3 +23,11 @@ details:
       validate: ../input/NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf
       validate_regions: ../input/union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed
       variant_regions: ../input/NGv3.bed
+      ensemble:
+        format-filters: [DP < 4]
+        classifiers: 
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        classifier-params:
+          type: svm
+        trusted-pct: 0.65
