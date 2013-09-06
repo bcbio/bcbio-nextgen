@@ -13,7 +13,7 @@ from bcbio.provenance import do, programs
 from bcbio.utils import file_exists, append_stem
 from bcbio.variation import samtools
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
-                                      is_sample_pair, get_paired_bams)
+                                      get_paired_bams)
 
 import pysam
 
@@ -140,10 +140,9 @@ def _fix_varscan_vcf(orig_file, in_bams):
 
         with file_transaction(orig_file) as tx_out_file:
             with open(tmp_file) as in_handle:
-                with open(orig_file, "w") as out_handle:
+                with open(tx_out_file, "w") as out_handle:
 
                     for line in in_handle:
-                        parts = line.split("\t")
                         if line.startswith("#CHROM"):
                             line = _fix_sample_line(line, in_bams)
                         out_handle.write(line)

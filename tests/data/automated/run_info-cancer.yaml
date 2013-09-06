@@ -15,7 +15,7 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: mutect
+      variantcaller: [mutect, varscan]
   - analysis: variant2
     description: c-tumor
     files: [HCC1143-tumor.bam]
@@ -28,30 +28,4 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: mutect
-  - analysis: variant2
-    description: c-normal varscan
-    files: [HCC1143-normal.bam]
-    genome_build: hg19
-    metadata:
-      batch: PairedBatch2
-      phenotype: normal
-    algorithm:
-      aligner: false
-      mark_duplicates: false
-      recalibrate: false
-      realign: false
-      variantcaller: varscan
-  - analysis: variant2
-    description: c-tumor varscan
-    files: [HCC1143-tumor.bam]
-    genome_build: hg19
-    metadata:
-      batch: PairedBatch2
-      phenotype: tumor
-    algorithm:
-      aligner: false
-      mark_duplicates: false
-      recalibrate: false
-      realign: false
-      variantcaller: varscan
+      variantcaller: [mutect, varscan]
