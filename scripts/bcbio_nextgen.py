@@ -104,7 +104,7 @@ if __name__ == "__main__":
     if kwargs["upgrade"]:
         install.upgrade_bcbio(kwargs["args"])
     else:
-        if kwargs["workflow"]:
+        if kwargs.get("workflow"):
             setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])
             if setup_info is None: # no automated run after setup
                 sys.exit(0)

@@ -9,12 +9,16 @@ import shutil
 import subprocess
 import sys
 
+import requests
 import yaml
+
+from bcbio.pipeline import genome
 
 REMOTES = {
     "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
     "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux.git",
+    "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
     }
 
 def upgrade_bcbio(args):
@@ -81,6 +85,31 @@ def upgrade_bcbio_data(args, remotes):
     sys.path.insert(0, cbl["dir"])
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
+    _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
+                              remotes["genome_resources"])
+
+def _upgrade_genome_resources(galaxy_dir, base_url):
+    """Retrieve latest version of genome resource YAML configuration files.
+    """
+    for dbkey, ref_file in genome.get_builds(galaxy_dir):
+        # Check for a remote genome resources file
+        remote_url = base_url % dbkey
+        r = requests.get(remote_url)
+        if r.status_code == requests.codes.ok:
+            local_file = os.path.join(os.path.dirname(ref_file), os.path.basename(remote_url))
+            if os.path.exists(local_file):
+                with open(local_file) as in_handle:
+                    local_config = yaml.load(in_handle)
+                remote_config = yaml.load(r.text)
+                needs_update = remote_config["version"] > local_config.get("version", 0)
+                if needs_update:
+                    shutil.move(local_file, local_file + ".old%s" % local_config.get("version", 0))
+            else:
+                needs_update = True
+            if needs_update:
+                print("Updating %s genome resources configuration" % dbkey)
+                with open(local_file, "w") as out_handle:
+                    out_handle.write(r.text)
 
 def _get_biodata(base_file, args):
     with open(base_file) as in_handle:

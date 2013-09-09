@@ -9,7 +9,7 @@ import shutil
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.provenance import do
+from bcbio.provenance import do, system
 
 def combine_fastq_files(in_files, work_dir, config):
     if len(in_files) == 1:
@@ -50,6 +50,12 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = resources.get("memory", "1G")
+            if len(bam_files) > system.open_file_limit():
+                raise IOError("More files to merge (%s) then available open file descriptors (%s)\n"
+                              "See documentation on tips for changing file limits:\n"
+                              "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
+                              "parallel.html#tuning-systems-for-scale"
+                              % (len(bam_files), system.open_file_limit()))
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:

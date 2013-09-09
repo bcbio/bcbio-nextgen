@@ -22,7 +22,7 @@ resources:
     cmd: bwa
     cores: 16
   samtools:
-    memory: 1G
+    memory: 2G
     cores: 16
   novoalign:
     cores: 16
@@ -70,16 +70,9 @@ custom_algorithms:
     variantcaller: "gatk"
     coverage_depth: "high" # other options: low
     coverage_interval: "exome" # other options: genome, regional
-    dbsnp: variation/dbsnp_137.vcf
-    train_hapmap: variation/hapmap_3.3.vcf
-    train_1000g_omni: variation/1000G_omni2.5.vcf
-    train_indels: variation/Mills_and_1000G_gold_standard.indels.vcf
-    # call_background: variation/background-diversity-1000g.vcf.gz
   'RNA-seq':
     aligner: tophat
     transcript_assemble: true
-    transcripts: rnaseq/ref-transcripts.gtf
-    transcripts_mask: rnaseq/ref-transcripts-mask.gtf
   'Minimal':
     aligner: ""
     

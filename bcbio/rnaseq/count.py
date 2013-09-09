@@ -9,23 +9,17 @@ import itertools
 
 from bcbio.utils import (which, file_exists, get_in, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline.shared import configured_ref_file
 from bcbio.pipeline.alignment import sam_to_querysort_sam
 from bcbio.provenance import do
 
 
 def _get_files(data):
     in_file = _get_sam_file(data)
-    gtf_file = _get_gtf_file(data)
+    gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
     work_dir = data["dirs"].get("work", "work")
     out_dir = os.path.join(work_dir, "htseq-count")
     out_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
     return in_file, gtf_file, out_file
-
-
-def _get_gtf_file(data):
-    ref_file = data["sam_ref"]
-    return configured_ref_file("transcripts", data["config"], ref_file)
 
 
 def is_countfile(in_file):

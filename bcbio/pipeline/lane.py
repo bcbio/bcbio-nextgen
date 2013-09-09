@@ -12,7 +12,7 @@ from bcbio.log import logger
 from bcbio.bam import callable
 from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
-from bcbio.pipeline.alignment import align_to_sort_bam, get_genome_ref
+from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
 from bcbio.ngsalign.split import split_read_files
 from bcbio.variation import recalibrate, vcfutils
@@ -141,9 +141,7 @@ def process_alignment(data):
     out_bam = ""
     if os.path.exists(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
-        out_bam, ref_file = align_to_sort_bam(fastq1, fastq2, data["rgnames"],
-                                              data["genome_build"], aligner,
-                                              data["dirs"], data["config"])
+        out_bam = align_to_sort_bam(fastq1, fastq2, aligner, data)
     elif os.path.exists(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
         bamclean = config["algorithm"].get("bam_clean")
@@ -160,7 +158,6 @@ def process_alignment(data):
         _check_prealigned_bam(fastq1, data["sam_ref"], config)
     if not out_bam and not os.path.exists(fastq1):
         raise ValueError("Could not find input file: %s" % fastq1)
-    data["sam_ref"] = get_genome_ref(data["genome_build"], None, data["dirs"]["galaxy"])[-1]
     data["work_bam"] = out_bam
     return [[data]]
 
@@ -168,8 +165,6 @@ def align_prep_full(data, config_file):
     """Perform alignment and post-processing required on full BAM files.
     Prepare list of callable genome regions allowing subsequent parallelization.
     """
-    _, ref_file = get_genome_ref(data["genome_build"], None, data["dirs"]["galaxy"])
-    data["sam_ref"] = ref_file
     if data["files"][0] is None and "vrn_file" in data:
         data["config"]["algorithm"]["variantcaller"] = ""
         data["work_bam"] = None

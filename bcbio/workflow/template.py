@@ -162,4 +162,4 @@ def setup(args):
         print "Configuration file created at: %s" % out_config_file
         print "Edit to finalize and run with:"
         print "  cd %s" % work_dir
-        print "  bcbio_nextgen.py /path/to/bcbio_system.yaml %s" % out_config_file
+        print "  bcbio_nextgen.py ../config/%s" % os.path.basename(out_config_file)

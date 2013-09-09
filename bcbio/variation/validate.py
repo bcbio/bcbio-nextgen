@@ -10,7 +10,7 @@ import os
 import yaml
 
 from bcbio import utils
-from bcbio.pipeline import alignment
+from bcbio.pipeline import genome
 from bcbio.variation import ensemble
 
 # ## Individual sample comparisons
@@ -78,7 +78,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
     """Create a bcbio.variation configuration input for validation.
     """
     if rm_genome:
-        rm_genome = alignment.get_genome_ref(rm_genome, None, data["dirs"]["galaxy"])[-1]
+        rm_genome = genome.get_refs(rm_genome, None, data["dirs"]["galaxy"])[-1]
         if rm_genome != data["sam_ref"]:
             eval_genome = data["sam_ref"]
         else:
@@ -101,9 +101,9 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
            "calls": [ref_call, eval_call]}
     if data.get("callable_bam"):
         exp["align"] = data["callable_bam"]
-        intervals = ensemble.get_analysis_intervals(data)
-        if intervals:
-            exp["intervals"] = os.path.abspath(intervals)
+    intervals = ensemble.get_analysis_intervals(data)
+    if intervals:
+        exp["intervals"] = os.path.abspath(intervals)
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
 

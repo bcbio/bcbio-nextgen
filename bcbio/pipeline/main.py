@@ -66,6 +66,7 @@ def _add_provenance(items, dirs, run_parallel, parallel, config):
                                       item["description"])
         else:
             entity_id = item["description"]
+        item["config"]["resources"]["program_versions"] = p
         item["provenance"] = {"programs": p, "entity": entity_id}
         out.append([item])
     return out
@@ -115,7 +116,7 @@ def parse_cl_args(in_args):
         parser.add_argument("-v", "--version", help="Print current version",
                             action="store_true")
     args = parser.parse_args(in_args)
-    if hasattr(args, "fc_dir") and args.fc_dir:
+    if hasattr(args, "global_config"):
         kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
                   "paralleltype": args.paralleltype,
                   "scheduler": args.scheduler,
@@ -272,11 +273,11 @@ class Variant2Pipeline(AbstractPipeline):
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: variant post-processing")
             samples = run_parallel("postprocess_variants", samples)
+            logger.info("Timing: validation")
+            samples = run_parallel("compare_to_rm", samples)
             samples = combine_multiple_callers(samples)
             logger.info("Timing: ensemble calling")
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            logger.info("Timing: validation")
-            samples = run_parallel("compare_to_rm", samples)
             samples = validate.summarize_grading(samples)
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)

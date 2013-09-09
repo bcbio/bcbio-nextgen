@@ -12,7 +12,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.rnaseq.cufflinks import assemble_transcripts
-from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import config_utils
 from bcbio.rnaseq import count
 
 # ## Merging
@@ -22,8 +22,6 @@ def merge_sample(data):
     """
     logger.debug("Combining fastq and BAM files %s" % str(data["name"]))
     config = config_utils.update_w_custom(data["config"], data["info"])
-    config = config_utils.add_cached_versions(config)
-    genome_build, sam_ref = shared.ref_genome_info(data["info"], config, data["dirs"])
     if config["algorithm"].get("upload_fastq", False):
         fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
                                              config)
@@ -36,7 +34,7 @@ def merge_sample(data):
                                config, out_file=out_file)
     return [[{"name": data["name"], "metadata": data["info"].get("metadata", {}),
               "info": data["info"],
-              "genome_build": genome_build, "sam_ref": sam_ref,
+              "genome_build": data["genome_build"], "sam_ref": data["sam_ref"],
               "work_bam": sort_bam, "fastq1": fastq1, "fastq2": fastq2,
               "dirs": data["dirs"], "config": config,
               "config_file": data["config_file"]}]]
@@ -66,7 +64,7 @@ def parallel_transcript_assemble(data):
     """
     if data["config"]["algorithm"].get("transcript_assemble", False):
         data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
-                                               data["config"])
+                                               data["config"], data)
     return [[data]]
 
 def generate_transcript_counts(data):

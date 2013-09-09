@@ -41,11 +41,8 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     #FIXME: We assume all other bits in the config are shared
 
     base_config = items[0]["config"]
-    dbsnp = assoc_files.dbsnp
-    cosmic = None
-
-    if hasattr(assoc_files, "cosmic"):
-        cosmic = assoc_files.cosmic
+    dbsnp = assoc_files["dbsnp"]
+    cosmic = assoc_files.get("cosmic")
 
     broad_runner = broad.runner_from_config(base_config, "mutect")
 

@@ -1,0 +1,9 @@
+version: 1
+
+aliases:
+  snpeff: NCBIM37
+  ensembl: mouse
+
+rnaseq:
+  transcripts: ../rnaseq/ref-transcripts.gtf
+  transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf

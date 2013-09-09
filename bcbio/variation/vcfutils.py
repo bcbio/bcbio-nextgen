@@ -2,7 +2,9 @@
 """
 import contextlib
 import copy
+import itertools
 import os
+import shutil
 
 import pysam
 
@@ -11,6 +13,40 @@ from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.variation import bamprep
+
+
+def is_sample_pair(align_bams, items):
+
+    """Determine if bams are from a sample pair or  not"""
+
+    return (len(align_bams) == 2 and all(item["metadata"].get("phenotype")
+                                    is not None for item in items))
+
+
+def get_paired_bams(align_bams, items):
+
+    """Split aligned bams imn tumor / normal pairs."""
+
+    tumor_bam = None
+    normal_bam = None
+
+    for bamfile, item in itertools.izip(align_bams, items):
+
+        metadata = item["metadata"]
+
+        if metadata["phenotype"] == "normal":
+            normal_bam = bamfile
+            normal_sample_name = item["name"][1]
+        elif metadata["phenotype"] == "tumor":
+            tumor_bam = bamfile
+            tumor_sample_name = item["name"][1]
+
+    if tumor_bam is None or normal_bam is None:
+        raise ValueError("Missing phenotype definition (tumor or normal) "
+                         "in samples")
+
+    return (tumor_bam, tumor_sample_name, normal_bam, normal_sample_name)
+
 
 def write_empty_vcf(out_file):
     with open(out_file, "w") as out_handle:
@@ -135,11 +171,12 @@ def _sort_by_region(fnames, regions, ref_file, config):
     sitems.sort()
     return [x[1] for x in sitems]
 
-def _has_variants(in_file):
-    with open(in_file) as in_handle:
-        for line in in_handle:
-            if not line.startswith("#"):
-                return True
+def vcf_has_variants(in_file):
+    if os.path.exists(in_file):
+        with open(in_file) as in_handle:
+            for line in in_handle:
+                if line.strip() and not line.startswith("#"):
+                    return True
     return False
 
 def concat_variant_files(orig_files, out_file, regions, ref_file, config):
@@ -151,8 +188,10 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                for i, orig_file in enumerate(f for f in _sort_by_region(orig_files, regions, ref_file, config)
-                                              if _has_variants(f)):
+                sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
+                has_variants = False
+                for i, orig_file in enumerate(f for f in sorted_files if vcf_has_variants(f)):
+                    has_variants = True
                     with open(orig_file) as in_handle:
                         for line in in_handle:
                             if line.startswith("#"):
@@ -160,8 +199,9 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                                     out_handle.write(line)
                             else:
                                 out_handle.write(line)
-            if os.path.getsize(tx_out_file) == 0:
-                write_empty_vcf(tx_out_file)
+                # if all empty, copy the (empty of calls) first file
+                if not has_variants:
+                    shutil.copyfile(sorted_files[0], tx_out_file)
     return out_file
 
 # ## Parallel VCF file combining
@@ -174,7 +214,7 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
     def split_by_region(data):
         base, ext = os.path.splitext(os.path.basename(out_file))
         args = []
-        for region in [x["SN"] for x in _ref_file_contigs(ref_file, config)]:
+        for region in [x["SN"] for x in ref_file_contigs(ref_file, config)]:
             region_out = os.path.join(os.path.dirname(out_file), "%s-regions" % base,
                                       "%s-%s%s" % (base, region, ext))
             utils.safe_makedir(os.path.dirname(region_out))

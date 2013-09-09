@@ -6,6 +6,7 @@ jobs to be reasonably distributed in cases of higher memory usage.
 import copy
 import multiprocessing
 import os
+import resource
 import socket
 
 import psutil
@@ -57,3 +58,6 @@ def machine_info():
     free_bytes = psutil.virtual_memory().available
     return [{"memory": int(free_bytes / BYTES_IN_GIG), "cores": multiprocessing.cpu_count(),
              "name": socket.gethostname()}]
+
+def open_file_limit():
+    return resource.getrlimit(resource.RLIMIT_NOFILE)[0]

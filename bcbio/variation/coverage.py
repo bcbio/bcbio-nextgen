@@ -9,12 +9,10 @@ import os
 import yaml
 
 from bcbio import utils
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-
-BUILD_TO_ENSEMBL = {"hg19": "human", "GRCh37": "human",
-                    "mm10": "mouse"}
 
 def _prep_coverage_file(species, covdir, config):
     """Ensure input coverage file is correct, handling special keywords for whole exome.
@@ -39,7 +37,7 @@ def _prep_coverage_config(samples, config):
     cur_covdir = utils.safe_makedir(os.path.join(covdir, name))
     out_file = os.path.join(cur_covdir, "coverage_summary.csv")
     config_file = os.path.join(cur_covdir, "coverage-in.yaml")
-    species = BUILD_TO_ENSEMBL[samples[0]["genome_build"]]
+    species = samples[0]["genome_resources"]["aliases"]["ensembl"]
     cov_file, cov_kw = _prep_coverage_file(species, covdir, config)
     out = {"params": {"species": species,
                       "build": samples[0]["genome_build"],
@@ -72,12 +70,14 @@ def summary(samples, config):
     resources = config_utils.get_resources("bcbio_coverage", config)
     config = copy.deepcopy(config)
     config["algorithm"]["memory_adjust"] = {"direction": "increase",
-                                            "magnitude": config["algorithm"]["num_cores"]}
+                                            "magnitude": config["algorithm"].get("num_cores", 1)}
     jvm_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]), config)
-    java_args = ["-Djava.io.tmpdir=%s" % tmp_dir, "-Djava.awt.headless=true"]
-    cmd = ["java"] + jvm_opts + java_args + ["-jar", bc_jar, "multicompare", config_file,
-                                             out_file, "-c", str(config["algorithm"]["num_cores"])]
-    do.run(cmd, "Summarizing coverage with bcbio.coverage", samples[0])
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            java_args = ["-Djava.io.tmpdir=%s" % tmp_dir, "-Djava.awt.headless=true"]
+            cmd = ["java"] + jvm_opts + java_args + ["-jar", bc_jar, "multicompare", config_file,
+                                                     tx_out_file, "-c", str(config["algorithm"].get("num_cores", 1))]
+            do.run(cmd, "Summarizing coverage with bcbio.coverage", samples[0])
     out = []
     for x in samples:
         x["coverage"] = {"summary": out_file}
@@ -90,7 +90,8 @@ def summarize_samples(samples, run_parallel):
     to_run = collections.defaultdict(list)
     extras = []
     for data in [x[0] for x in samples]:
-        if "coverage" in data["config"]["algorithm"] and data["genome_build"] in BUILD_TO_ENSEMBL:
+        if ("coverage" in data["config"]["algorithm"] and
+              data["genome_resources"].get("aliases", {}).get("ensembl")):
             to_run[(data["genome_build"], data["config"]["algorithm"]["coverage"])].append(data)
         else:
             extras.append([data])

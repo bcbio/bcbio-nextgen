@@ -11,14 +11,14 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.variation import effects, vcfutils
+from bcbio.variation import vcfutils
 
 def prep_gemini_db(fnames, call_id, samples, data):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
     """
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     gemini_db = os.path.join(out_dir, "-".join(call_id) + ".db")
-    use_gemini = _do_db_build(samples)
+    use_gemini = _do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
     is_population = len(fnames) > 1
     if is_population:
         gemini_vcf = "%s.vcf" % os.path.splitext(gemini_db)[0]
@@ -59,7 +59,7 @@ def _do_db_build(samples):
     if len(genomes) == 0 or len(genomes) > 1:
         return False
     else:
-        return effects.SNPEFF_GENOME_REMAP[genomes.pop()].is_human
+        return samples[0]["genome_resources"].get("aliases", {}).get("human", False)
 
 def _group_by_batches(samples):
     """Group data items into batches, providing details to retrieve results.
@@ -69,7 +69,7 @@ def _group_by_batches(samples):
     out_retrieve = []
     extras = []
     for data in [x[0] for x in samples]:
-        if data["work_bam"] and data.get("vrn_file") and effects.vcf_has_items(data["vrn_file"]):
+        if data["work_bam"] and data.get("vrn_file") and vcfutils.vcf_has_variants(data["vrn_file"]):
             batch = data.get("metadata", {}).get("batch")
             if batch:
                 out_retrieve.append((batch, data))

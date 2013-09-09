@@ -9,7 +9,6 @@ import pysam
 
 from bcbio import broad
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.alignment import get_genome_ref
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 
@@ -157,32 +156,3 @@ def subset_variant_regions(variant_regions, region, out_file):
             return subset_file
         else:
             return region
-
-# ## Retrieving file information from configuration variables
-
-def configured_ref_file(name, config, sam_ref):
-    """Full path to a reference file specified in the configuration.
-
-    Resolves non-absolute paths relative to the base genome reference directory.
-    """
-    ref_file = config["algorithm"].get(name, None)
-    if ref_file:
-        if not os.path.isabs(ref_file):
-            base_dir = os.path.dirname(os.path.dirname(sam_ref))
-            ref_file = os.path.join(base_dir, ref_file)
-    return ref_file
-
-def configured_vrn_files(config, sam_ref):
-    """Full path to all configured files for variation assessment.
-    """
-    names = ["dbsnp", "train_hapmap", "train_1000g_omni", "train_indels"]
-    VrnFiles = collections.namedtuple("VrnFiles", names)
-    return apply(VrnFiles, [configured_ref_file(n, config, sam_ref) for n in names])
-
-def ref_genome_info(info, config, dirs):
-    """Retrieve reference genome information from configuration variables.
-    """
-    genome_build = info.get("genome_build", None)
-    (_, sam_ref) = get_genome_ref(genome_build, config["algorithm"]["aligner"],
-                                  dirs["galaxy"])
-    return genome_build, sam_ref

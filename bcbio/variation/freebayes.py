@@ -54,7 +54,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             do.run(cl, "Genotyping with FreeBayes", {})
         _clean_freebayes_output(out_file)
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files.dbsnp,
+    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files["dbsnp"],
                                                ref_file, config)
     return ann_file
 

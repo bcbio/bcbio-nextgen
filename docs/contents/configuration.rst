@@ -244,20 +244,6 @@ Variant calling
   Modifies snpEff parameters to use HGVS notational on canonical
   transcripts [false, true].
 
-Broad's `GATK`_ pipeline drives variant (SNP and Indel) analysis.
-This requires some associated data files, and also has some configurable
-options. The relevant section from the ``bcbio_system.yaml`` file is::
-
-    dbsnp: variation/dbsnp_132.vcf
-    train_hapmap: variation/hapmap_3.3.vcf
-    train_1000g_omni: variation/1000G_omni2.5.vcf
-    train_indels: variation/Mills_Devine_2hit.indels.vcf
-
-The dbSNP and training files are from the `GATK resource bundle`_. These
-are inputs into the training models for recalibration. The automated
-`CloudBioLinux`_ data scripts will download and install these in the
-variation subdirectory relative to the genome files.
-
 Parallelization
 ===============
 
@@ -319,6 +305,9 @@ and memory and compute resources to devote to them::
       bwa:
         cores: 12
         cmd: /an/alternative/path/to/bwa
+      samtools:
+        cores: 16
+        memory: 2G
       gatk:
         jvm_opts: ["-Xms2g", "-Xmx4g"]
         dir: /usr/share/java/gatk
@@ -334,22 +323,51 @@ and memory and compute resources to devote to them::
   memory usage on programs like GATK, specify the maximum usage per
   core. On multicore machines, that's machine-memory divided by cores.
   This avoids memory errors when running multiple jobs simultaneously,
-  while the framework will adjust memory up when running multicore jobs.
-
-Resources will continue to expand to allow direct customization of
-commandline options as well as fine grained control over research
-usage.
+  while the framework will adjust memory up when running multicore
+  jobs.
+- ``memory`` Specify the memory per core used by a process. For programs
+  where memory control is available, like ``samtools sort``,
+  this limits memory usage. For other programs this is an estimate of
+  usage, used by :ref:`memory-management` to avoid over-scheduling memory.
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
 .. _YAML format: https://en.wikipedia.org/wiki/YAML#Examples
-.. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
 .. _GATK: http://www.broadinstitute.org/gatk/
 .. _system: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _sample: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 .. _Galaxy API: http://wiki.galaxyproject.org/Learn/API
 .. _Amazon S3: http://aws.amazon.com/s3/
 .. _Galaxy Admin: http://wiki.galaxyproject.org/Admin/DataLibraries/LibrarySecurity
+
+Genome configuration files
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+Each genome build has an associated ``buildname-resources.yaml``
+configuration file which contains organism specific naming and
+resource files. bcbio-nextgen expects a resource file present next to
+the genome FASTA file. `Example genome configuration files`_ are available, and
+automatically installed for natively supported genomes. Create these
+by hand to support additional organisms or builds.
+
+The major sections of the file are:
+
+- `aliases` -- Names for third-party programs used as part of the
+  analysis, since naming expectations can differ between software
+  programs.
+
+- `variation` -- Supporting data files for variant analysis. For human
+  analyses, the dbSNP and training files are from the `GATK resource bundle`_.
+  These are inputs into the training models for
+  recalibration. The automated `CloudBioLinux`_ data scripts will
+  download and install these in the variation subdirectory relative to
+  the genome files.
+
+- `rnaseq` -- Supporting data files for RNA-seq analysis. The
+  automated installer and updater handles retrieval and installation
+  of these resources for supported genome builds.
+
+.. _Example genome configuration files: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/genomes
+.. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
 
 Reference genome files
 ~~~~~~~~~~~~~~~~~~~~~~

@@ -13,7 +13,7 @@ from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
+from bcbio.pipeline.shared import (process_bam_by_chromosome,
                                    write_nochr_reads, subset_bam_by_region,
                                    subset_variant_regions)
 from bcbio.provenance import do
@@ -226,7 +226,7 @@ def realign_sample(data, region=None, out_file=None):
             realign_bam = write_nochr_reads(data["work_bam"], out_file)
         else:
             realign_bam = realign_fn(data["work_bam"], sam_ref, config,
-                                     configured_ref_file("dbsnp", config, sam_ref),
+                                     data["genome_resources"]["variation"]["dbsnp"],
                                      region, out_file)
         if region is None:
             save_diskspace(data["work_bam"], "Realigned to %s" % realign_bam,
