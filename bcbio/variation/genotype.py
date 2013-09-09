@@ -12,6 +12,7 @@ http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval
 import os
 import collections
 import copy
+from distutils.version import LooseVersion
 import itertools
 
 from bcbio import broad
@@ -299,6 +300,8 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
+                if LooseVersion(broad_runner.get_gatk_version()) >= LooseVersion("2.7"):
+                    params.extend(["--numBadVariants", "3000"])
                 try:
                     broad_runner.new_resources("gatk-vqsr")
                     broad_runner.run_gatk(params)
