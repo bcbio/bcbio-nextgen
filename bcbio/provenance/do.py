@@ -9,7 +9,7 @@ from bcbio import utils
 from bcbio.log import logger, logger_cl
 from bcbio.provenance import diagnostics
 
-def run(cmd, descr, data, checks=None):
+def run(cmd, descr, data=None, checks=None):
     """Run the provided command, logging details and checking for errors.
     """
     if data:

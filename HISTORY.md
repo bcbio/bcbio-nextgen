@@ -8,6 +8,7 @@
 - Support for GATK 2.7
 - Pull `description` sample names from BAM files if not present in input
   configuration file. Thanks to Paul Tang for suggestion.
+- Add custom filtration of FreeBayes samples using bcbio.variation.
 
 ## 0.7.2 (August 30, 2013)
 
