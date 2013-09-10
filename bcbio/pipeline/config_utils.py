@@ -145,7 +145,7 @@ def _get_program_dir(name, config):
     elif isinstance(config, basestring):
         return config
     elif config.has_key("dir"):
-        return config["dir"]
+        return expand_path(config["dir"])
     else:
         raise ValueError("Could not find directory in config for %s" % name)
 
