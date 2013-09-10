@@ -11,6 +11,7 @@ import subprocess
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.variation import vcfutils
 
 # ## snpEff variant effects
 
@@ -53,7 +54,7 @@ def snpeff_effects(data):
     """
     vcf_in = data["vrn_file"]
     interval_file = data["config"]["algorithm"].get("hybrid_target", None)
-    if vcf_has_items(vcf_in):
+    if vcfutils.vcf_has_variants(vcf_in):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
@@ -102,14 +103,6 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, data):
             with open(tx_out_file, "w") as out_handle:
                 subprocess.check_call(cl, stdout=out_handle)
     return out_file
-
-def vcf_has_items(in_file):
-    if os.path.exists(in_file):
-        with open(in_file) as in_handle:
-            for line in in_handle:
-                if line.strip() and not line.startswith("#"):
-                    return True
-    return False
 
 def _convert_to_snpeff_interval(in_file, base_file):
     """Handle wide variety of BED-like inputs, converting to BED-3.

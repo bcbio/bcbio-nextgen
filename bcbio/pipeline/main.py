@@ -66,6 +66,7 @@ def _add_provenance(items, dirs, run_parallel, parallel, config):
                                       item["description"])
         else:
             entity_id = item["description"]
+        item["config"]["resources"]["program_versions"] = p
         item["provenance"] = {"programs": p, "entity": entity_id}
         out.append([item])
     return out
@@ -272,11 +273,11 @@ class Variant2Pipeline(AbstractPipeline):
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: variant post-processing")
             samples = run_parallel("postprocess_variants", samples)
+            logger.info("Timing: validation")
+            samples = run_parallel("compare_to_rm", samples)
             samples = combine_multiple_callers(samples)
             logger.info("Timing: ensemble calling")
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            logger.info("Timing: validation")
-            samples = run_parallel("compare_to_rm", samples)
             samples = validate.summarize_grading(samples)
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)

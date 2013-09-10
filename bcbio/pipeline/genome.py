@@ -11,22 +11,6 @@ from bcbio.pipeline import alignment
 
 # ## bcbio-nextgen genome resource files
 
-def _abs_file_paths(xs, base_dir):
-    """Normalize any file paths found in a subdirectory of configuration input.
-    """
-    if not isinstance(xs, dict):
-        return xs
-    orig_dir = os.getcwd()
-    out = {}
-    os.chdir(base_dir)
-    for k, v in xs.iteritems():
-        if v and isinstance(v, basestring) and os.path.exists(v):
-            out[k] = os.path.normpath(os.path.join(base_dir, v))
-        else:
-            out[k] = v
-    os.chdir(orig_dir)
-    return out
-
 def get_resources(genome, ref_file):
     """Retrieve genome information from a genome-references.yaml file.
     """
@@ -40,8 +24,29 @@ def get_resources(genome, ref_file):
     with open(resource_file) as in_handle:
         resources = yaml.load(in_handle)
     for cat in resources.keys():
-        resources[cat] = _abs_file_paths(resources[cat], base_dir)
+        resources[cat] = abs_file_paths(resources[cat], base_dir)
     return resources
+
+# ## Utilities
+
+def abs_file_paths(xs, base_dir=None, ignore_keys=None):
+    """Normalize any file paths found in a subdirectory of configuration input.
+    """
+    ignore_keys = set([]) if ignore_keys is None else set(ignore_keys)
+    if not isinstance(xs, dict):
+        return xs
+    if base_dir is None:
+        base_dir = os.getcwd()
+    orig_dir = os.getcwd()
+    os.chdir(base_dir)
+    out = {}
+    for k, v in xs.iteritems():
+        if k not in ignore_keys and v and isinstance(v, basestring) and os.path.exists(v):
+            out[k] = os.path.normpath(os.path.join(base_dir, v))
+        else:
+            out[k] = v
+    os.chdir(orig_dir)
+    return out
 
 # ## Galaxy integration -- *.loc files
 

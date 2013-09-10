@@ -61,8 +61,8 @@ def _get_resource_programs(fn, algs):
                     used_progs.add(x)
             else:
                 used_progs.add(vc)
-        if config_utils.use_vqsr(algs):
-            used_progs.add("gatk-vqsr")
+    if config_utils.use_vqsr(algs):
+        used_progs.add("gatk-vqsr")
     for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
         if prog in used_progs:
             yield prog
@@ -137,9 +137,8 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
     cores_per_job = max(all_cores)
     memory_per_core = max(all_memory)
     total = parallel["cores"]
-    JobResources = collections.namedtuple("JobResources", "num_jobs cores_per_job memory_per_job")
     if total > cores_per_job:
-        num_jobs = min(total // cores_per_job, len(items) * multiplier)
+        num_jobs = total // cores_per_job
     else:
         num_jobs, cores_per_job = 1, total
     if cores_per_job == 1:
@@ -147,6 +146,9 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
         num_jobs = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
     else:
         cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job, memory_per_core, sysinfo)
+    # do not overschedule if we don't have extra items to process
+    num_jobs = min(num_jobs, len(items) * multiplier)
+    JobResources = collections.namedtuple("JobResources", "num_jobs cores_per_job memory_per_job")
     return JobResources(num_jobs, cores_per_job, str(memory_per_job))
 
 cur_num = 0

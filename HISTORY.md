@@ -4,6 +4,10 @@
   files) and RNA-seq (transcript GTF files) analyses into an organism specific
   resources file. Improves ability to support additional organisms and genome
   builds.
+- Provide paired tumor/normal variant calling with VarScan. Thanks to Luca Beltrame.
+- Support for GATK 2.7
+- Pull `description` sample names from BAM files if not present in input
+  configuration file. Thanks to Paul Tang for suggestion.
 
 ## 0.7.2 (August 30, 2013)
 

@@ -13,7 +13,7 @@ from bcbio.provenance import do, programs
 from bcbio.utils import file_exists, append_stem
 from bcbio.variation import samtools
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
-                                      is_sample_pair, get_paired_bams)
+                                      get_paired_bams)
 
 import pysam
 
@@ -33,6 +33,15 @@ def run_varscan(align_bams, items, ref_file, assoc_files,
                                                 region, out_file)
     return call_file
 
+def _get_varscan_opts(config):
+    """Retrieve common options for running VarScan.
+    Handles jvm_opts, setting user and country to English to avoid issues
+    with different locales producing non-compliant VCF.
+    """
+    resources = config_utils.get_resources("varscan", config)
+    jvm_opts = resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"])
+    jvm_opts += ["-Duser.language=en", "-Duser.country=US"]
+    return " ".join(jvm_opts)
 
 def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
@@ -50,8 +59,6 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         "VarScan",
         config_utils.get_program("varscan", config, "dir"))
 
-    resources = config_utils.get_resources("varscan", config)
-    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"]))
     remove_zerocoverage = "grep -v -P '\t0\t\t$'"
 
     # No need for names in VarScan, hence the "_"
@@ -85,6 +92,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         normal_tmp_mpileup = cleanup_files[0]
         tumor_tmp_mpileup = cleanup_files[1]
 
+        jvm_opts = _get_varscan_opts(config)
         varscan_cmd = ("java {jvm_opts} -jar {varscan_jar} somatic"
                        " {normal_tmp_mpileup} {tumor_tmp_mpileup} {base}"
                        " --output-vcf --min-coverage 5 --p-value 0.98")
@@ -140,10 +148,9 @@ def _fix_varscan_vcf(orig_file, in_bams):
 
         with file_transaction(orig_file) as tx_out_file:
             with open(tmp_file) as in_handle:
-                with open(orig_file, "w") as out_handle:
+                with open(tx_out_file, "w") as out_handle:
 
                     for line in in_handle:
-                        parts = line.split("\t")
                         if line.startswith("#CHROM"):
                             line = _fix_sample_line(line, in_bams)
                         out_handle.write(line)
@@ -190,9 +197,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
                       "for multisample calling and indels in VCF format.")
     varscan_jar = config_utils.get_jar("VarScan",
                                        config_utils.get_program("varscan", config, "dir"))
-    resources = config_utils.get_resources("varscan", config)
-    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xmx750m", "-Xmx2g"]))
-
+    jvm_opts = _get_varscan_opts(config)
     sample_list = _create_sample_list(align_bams, out_file)
     mpileup = samtools.prep_mpileup(align_bams, ref_file, max_read_depth, config,
                                     target_regions=target_regions, want_bcf=False)

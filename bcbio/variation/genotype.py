@@ -12,6 +12,7 @@ http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval
 import os
 import collections
 import copy
+from distutils.version import LooseVersion
 import itertools
 
 from bcbio import broad
@@ -255,12 +256,12 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
                                            filters)
     else:
         # also check if we've failed recal and needed to do strict filtering
-        filter_file = "{base}-filterSNP.vcf".format(base=os.path.splitext(snp_file)[0])
+        filter_file = "{base}-filter{ext}.vcf".format(base=os.path.splitext(snp_file)[0], ext=filter_type)
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
             return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
         if not file_exists(recal_file):
-            assert "train_hapmap" in vrn_files and "train_1000g_omin" in vrn_files, \
+            assert "train_hapmap" in vrn_files and "train_1000g_omni" in vrn_files, \
                 "Need HapMap and 1000 genomes training files"
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
@@ -290,12 +291,23 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
         return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
                                            ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
     else:
+        # also check if we've failed recal and needed to do strict filtering
+        filter_file = "{base}-filter{ext}.vcf".format(base=os.path.splitext(snp_file)[0], ext=filter_type)
+        if file_exists(filter_file):
+            config["algorithm"]["coverage_interval"] = "regional"
+            return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
         if not file_exists(recal_file):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
-                broad_runner.new_resources("gatk-vqsr")
-                broad_runner.run_gatk(params)
+                if LooseVersion(broad_runner.get_gatk_version()) >= LooseVersion("2.7"):
+                    params.extend(["--numBadVariants", "3000"])
+                try:
+                    broad_runner.new_resources("gatk-vqsr")
+                    broad_runner.run_gatk(params)
+                except:
+                    config["algorithm"]["coverage_interval"] = "regional"
+                    return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
 
@@ -449,7 +461,7 @@ def parallel_variantcall(sample_info, parallel_fn):
     to_process = []
     finished = []
     for x in sample_info:
-        if x[0]["config"]["algorithm"].get("variantcaller", "gatk"):
+        if get_variantcaller(x[0]):
             to_process.extend(handle_multiple_variantcallers(x))
         else:
             finished.append(x)

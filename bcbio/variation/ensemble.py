@@ -26,11 +26,16 @@ def combine_calls(data):
     if _has_ensemble(data):
         logger.info("Ensemble consensus calls for {0}: {1}".format(
             ",".join(x["variantcaller"] for x in data["variants"]), data["work_bam"]))
-        sample = data["name"][-1].replace(" ", "_")
-        base_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "ensemble"))
-        config_file = _write_config_file(data, sample, base_dir, "ensemble")
-        callinfo = _run_bcbio_variation(config_file, base_dir, sample, data)
-        data = copy.deepcopy(data)
+        edata = copy.deepcopy(data)
+        edata["config"]["algorithm"]["variantcaller"] = "ensemble"
+        sample = edata["name"][-1].replace(" ", "_")
+        base_dir = utils.safe_makedir(os.path.join(edata["dirs"]["work"], "ensemble"))
+        config_file = _write_config_file(edata, sample, base_dir, "ensemble")
+        callinfo = _run_bcbio_variation(config_file, base_dir, sample, edata)
+        from bcbio.variation import validate
+        edata["vrn_file"] = callinfo["vrn_file"]
+        edata["ensemble_bed"] = callinfo["bed_file"]
+        callinfo["validate"] = validate.compare_to_rm(edata)[0][0].get("validate")
         data["variants"].insert(0, callinfo)
         _write_config_file(data, sample, base_dir, "compare")
     return [[data]]
@@ -74,14 +79,16 @@ def _run_bcbio_variation(config_file, base_dir, sample, data):
         if len(multi_beds) > 0:
             os.symlink(multi_beds[0], out_bed_file)
 
-    return {"variantcaller": "ensemble",
+    return {"variantcaller": data["config"]["algorithm"]["variantcaller"],
             "vrn_file": out_vcf_file,
             "bed_file": out_bed_file if os.path.exists(out_bed_file) else None}
 
 def get_analysis_intervals(data):
     """Retrieve analysis regions for the current variant calling pipeline.
     """
-    if data.get("callable_bam"):
+    if data.get("ensemble_bed"):
+        return data["ensemble_bed"]
+    elif data.get("callable_bam"):
         return callable.sample_callable_bed(data["callable_bam"], data["sam_ref"], data["config"])
     else:
         for key in ["callable_regions", "variant_regions"]:

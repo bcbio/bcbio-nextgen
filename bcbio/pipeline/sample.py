@@ -22,7 +22,6 @@ def merge_sample(data):
     """
     logger.debug("Combining fastq and BAM files %s" % str(data["name"]))
     config = config_utils.update_w_custom(data["config"], data["info"])
-    config = config_utils.add_cached_versions(config)
     if config["algorithm"].get("upload_fastq", False):
         fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
                                              config)
