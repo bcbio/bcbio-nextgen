@@ -211,9 +211,14 @@ class BroadRunner:
     def _get_picard_cmd(self, command):
         """Retrieve the base Picard command, handling both shell scripts and directory of jars.
         """
+        resources = config_utils.get_resources("picard", self._config)
+        if resources.get("jvm_opts"):
+            jvm_opts = resources.get("jvm_opts")
+        else:
+            jvm_opts = self._jvm_opts
         if os.path.isdir(self._picard_ref):
             dist_file = self._get_jar(command)
-            return ["java"] + self._jvm_opts + ["-jar", dist_file]
+            return ["java"] + jvm_opts + ["-jar", dist_file]
         else:
             # XXX Cannot currently set JVM opts with picard-tools script
             return [self._picard_ref, command]
