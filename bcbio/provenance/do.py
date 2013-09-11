@@ -27,10 +27,34 @@ def run(cmd, descr, data=None, checks=None):
     finally:
         diagnostics.end_cmd(cmd_id)
 
+def _find_bash():
+    try:
+        which_bash = subprocess.check_output(["which", "bash"]).strip()
+    except subprocess.CalledProcessError:
+        which_bash = None
+    for test_bash in [which_bash, "/bin/bash", "/usr/bin/bash", "/usr/local/bin/bash"]:
+        if test_bash and os.path.exists(test_bash):
+            return test_bash
+    raise IOError("Could not find bash in any standard location. Needed for unix pipes")
+
+def _normalize_cmd_args(cmd):
+    """Normalize subprocess arguments to handle list commands, string and pipes.
+    Piped commands set pipefail and require use of bash to help with debugging
+    intermediate errors.
+    """
+    if isinstance(cmd, basestring):
+        if cmd.find(" | ") > 0:
+            return "set -o pipefail; " + cmd, True, _find_bash()
+        else:
+            return cmd, True, None
+    else:
+        return cmd, False, None
+
 def _do_run(cmd, checks):
     """Perform running and check results, raising errors for issues.
     """
-    s = subprocess.Popen(cmd, shell=isinstance(cmd, basestring),
+    cmd, shell_arg, executable_arg = _normalize_cmd_args(cmd)
+    s = subprocess.Popen(cmd, shell=shell_arg, executable=executable_arg,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     debug_stdout = collections.deque(maxlen=100)
