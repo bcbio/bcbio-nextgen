@@ -279,14 +279,14 @@ class Variant2Pipeline(AbstractPipeline):
             logger.info("Timing: ensemble calling")
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
             samples = validate.summarize_grading(samples)
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
         ## Finalizing BAMs and population databases, handle multicore computation
         with global_parallel(parallel, "multicore2", ["prep_gemini_db", "delayed_bam_merge"],
                              samples, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
+            logger.info("Timing: quality control")
+            samples = qcsummary.generate_parallel(samples, run_parallel)
             logger.info("Timing: population database")
             samples = population.prep_db_parallel(samples, run_parallel)
         logger.info("Timing: finished")

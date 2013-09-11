@@ -301,7 +301,7 @@ class PicardMetrics(object):
             assert os.path.exists(target_file), (target_file, "does not exist!")
             hybrid_metrics = self._hybrid_select_metrics(align_bam,
                                                          bait_file, target_file)
-        elif (variant_region_file and 
+        elif (variant_region_file and
               config["algorithm"].get("coverage_interval", "").lower() in ["exome"]):
             assert os.path.exists(variant_region_file), (variant_region_file, "does not exist")
             hybrid_metrics = self._hybrid_select_metrics(
