@@ -218,6 +218,8 @@ def use_vqsr(algs):
         callers = alg.get("variantcaller", "gatk")
         if isinstance(callers, basestring):
             callers = [callers]
+        elif not callers: # no variant calling, no VQSR
+            continue
         vqsr_supported_caller = False
         for c in callers:
             if c in ["gatk", "gatk-haplotype"]:
