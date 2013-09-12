@@ -7,6 +7,7 @@ from subprocess import CalledProcessError
 from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance.programs import get_version
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils
@@ -45,6 +46,13 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     cosmic = assoc_files.get("cosmic")
 
     broad_runner = broad.runner_from_config(base_config, "mutect")
+
+    if broad_runner.get_mutect_version() == "1.1.4":
+        message = ("MuTect 1.1.4 is known to have incompatibilities with "
+                   "Java < 7, and this may lead to problems in analyses. "
+                   "Please use MuTect 1.1.5 or higher (note that it requires "
+                   "Java 7).")
+        raise ValueError(message)
 
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
