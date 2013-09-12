@@ -135,7 +135,11 @@ def _check_prealigned_bam(in_bam, ref_file, config):
 def process_alignment(data):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
-    fastq1, fastq2 = data["files"]
+    if len(data["files"]) == 2:
+        fastq1, fastq2 = data["files"]
+    else:
+        assert len(data["files"]) == 1, data["files"]
+        fastq1, fastq2 = data["files"][0], None
     config = data["config"]
     aligner = config["algorithm"].get("aligner", None)
     out_bam = ""
