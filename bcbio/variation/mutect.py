@@ -19,20 +19,6 @@ _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
                         "Comparison method violates its general contract!"])
 
 
-def _parse_gatk_java_error_string(error_string):
-
-    """Parse the GATK error string to get the stack trace"""
-
-    for line in error_string.split("##### ERROR "):
-        line = line.strip()
-        if "stack trace" in line:
-            line = line.split("\n")
-            # The name of the exception is immediately after "stack trace"
-            java_error = line[1].strip()
-
-            return java_error
-
-
 def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
     """
@@ -125,18 +111,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout,
             # which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
-            try:
-                broad_runner.run_mutect(params)
-            except CalledProcessError as error:
-                java_exception = _parse_gatk_java_error_string(error.cmd)
-                #HACK: Currently MuTect bails out on certain small BAM files
-                # Until the issue is fixed by Broad, this specific exception
-                # will be ignored. All the other exceptions will be raised
-                # correctly.
-                if java_exception in _PASS_EXCEPTIONS:
-                    vcfutils.write_empty_vcf(tx_out_file)
-                    return
-                else:
-                    raise
+
+            broad_runner.run_mutect(params)
 
     return out_file
