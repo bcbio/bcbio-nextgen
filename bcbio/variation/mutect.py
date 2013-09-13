@@ -1,5 +1,6 @@
 """Provide support for MuTect and other paired analysis tools."""
 
+from distutils.version import LooseVersion
 import os
 import itertools
 from subprocess import CalledProcessError
@@ -33,9 +34,10 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
 
     broad_runner = broad.runner_from_config(base_config, "mutect")
 
-    if broad_runner.get_mutect_version() == "1.1.4":
-        message = ("MuTect 1.1.4 is known to have incompatibilities with "
-                   "Java < 7, and this may lead to problems in analyses. "
+    if LooseVersion(broad_runner.get_mutect_version()) < LooseVersion("1.1.5"):
+
+        message = ("MuTect 1.1.4 and lower is known to have incompatibilities "
+                   "with Java < 7, and this may lead to problems in analyses. "
                    "Please use MuTect 1.1.5 or higher (note that it requires "
                    "Java 7).")
         raise ValueError(message)
