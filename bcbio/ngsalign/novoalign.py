@@ -60,18 +60,6 @@ def can_pipe(fastq_file):
     """
     return True
 
-def check_samtools_version(config):
-    """Ensure samtools has parallel processing required for piped analysis.
-    """
-    samtools = config_utils.get_program("samtools", config)
-    p = subprocess.Popen([samtools, "sort"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output, _ = p.communicate()
-    p.stdout.close()
-    if output.find("-@") == -1:
-        raise OSError("Installed version of samtools sort does not have support for multithreading (-@ option) "
-                      "required to support bwa piped alignment. Please upgrade to the latest version "
-                      "from http://samtools.sourceforge.net/")
-
 
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
@@ -86,7 +74,6 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
     extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
     rg_info = get_rg_info(names)
     if not utils.file_exists(out_file):
-        check_samtools_version(config)
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
