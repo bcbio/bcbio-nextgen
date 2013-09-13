@@ -22,20 +22,21 @@ class BroadRunner:
         self._picard_ref = config_utils.expand_path(picard_ref)
         self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
-        self._gatk_version, self._picard_version = None, None
+        self._gatk_version, self._picard_version, self._mutect_version = (
+            None, None, None)
 
     def _set_default_versions(self, config):
         """Retrieve pre-computed version information for expensive to retrieve versions.
         Starting up GATK takes a lot of resources so we do it once at start of analysis.
         """
         out = []
-        for name in ["gatk", "picard"]:
+        for name in ["gatk", "picard", "mutect"]:
             try:
                 v = programs.get_version(name, config=config)
             except KeyError:
                 v = None
             out.append(v)
-        self._gatk_version, self._picard_version = out
+        self._gatk_version, self._picard_version, self._mutect_version = out
 
     def new_resources(self, program):
         """Set new resource usage for the given program.
@@ -186,6 +187,15 @@ class BroadRunner:
                 version = version[1:]
             self._gatk_version = version
             return version
+
+    def get_mutect_version(self):
+
+        """Retrieve the Mutect version."""
+
+        if self._mutect_version is None:
+            self._set_default_versions(self._config)
+            assert self._mutect_version is not None
+            return self._mutect_version
 
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
