@@ -152,7 +152,6 @@ class BroadRunner:
             do.run(cl, "GATK: {0}".format(prog), None)
 
     def run_mutect(self, params, tmp_dir=None):
-
         with curdir_tmpdir() as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
@@ -189,13 +188,12 @@ class BroadRunner:
             return version
 
     def get_mutect_version(self):
-
-        """Retrieve the Mutect version."""
-
+        """Retrieve the Mutect version.
+        """
         if self._mutect_version is None:
             self._set_default_versions(self._config)
             assert self._mutect_version is not None
-            return self._mutect_version
+        return self._mutect_version
 
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
