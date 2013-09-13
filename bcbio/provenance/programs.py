@@ -100,7 +100,8 @@ def _get_versions(config):
     """Retrieve details on all programs available on the system.
     """
     out = [{"program": "bcbio-nextgen",
-            "version": version.__version__}]
+            "version": ("%s-%s" % (version.__version__, version.__git_revision__)
+                        if version.__git_revision__ else version.__version__)}]
     for p in _cl_progs:
         out.append({"program": p["cmd"],
                     "version": _get_cl_version(p, config)})
