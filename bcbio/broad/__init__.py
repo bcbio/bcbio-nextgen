@@ -190,39 +190,12 @@ class BroadRunner:
 
     def get_mutect_version(self):
 
-        """Retrieve the Mutect version. Like with GATK, querying is expensive,
-        so we use caching if possible."""
+        """Retrieve the Mutect version."""
 
         if self._mutect_version is None:
             self._set_default_versions(self._config)
-        if self._mutect_version is not None:
+            assert self._mutect_version is not None
             return self._mutect_version
-
-        mutect_jar = gatk_jar = self._get_jar("muTect")
-        cl = ["java", "-Xms64m", "-Xmx128m", "-jar", mutect_jar, "-version"]
-
-        # HACK: MuTect reports the GATK version instead of its own
-        # (https://github.com/broadinstitute/mutect/issues/5)
-        # So until it is fixed we rely on these assumptions:
-        # - MuTect 1.1.4 is based on GATK 2.2
-        # - MuTect 1.1.5 is based on GATK 2.7
-        # Therefore "old" versions will generate an error with "--version",
-        # while the others will return a string
-
-        with closing(subprocess.Popen(
-            cl, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT).stdout) as stdout:
-                out = stdout.read().strip()
-                # versions earlier than 2.4 do not have explicit version command,
-                # parse from error output from GATK
-                if out.find("ERROR") >= 0:
-                    version = "1.1.4"
-                else:
-                    # It is impossible to determine the version until the
-                    # issue (see above) is fixed, so it is hardcoded
-                    version = "1.1.5"
-        self._mutect_version = version
-        return version
 
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
