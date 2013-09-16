@@ -1,5 +1,6 @@
 """Provide support for MuTect and other paired analysis tools."""
 
+from distutils.version import LooseVersion
 import os
 import itertools
 from subprocess import CalledProcessError
@@ -7,6 +8,7 @@ from subprocess import CalledProcessError
 from bcbio import broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance.programs import get_version
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils
@@ -16,20 +18,6 @@ _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
                         "Comparison method violates its general contract!",
                         "java.lang.IllegalArgumentException: "
                         "Comparison method violates its general contract!"])
-
-
-def _parse_gatk_java_error_string(error_string):
-
-    """Parse the GATK error string to get the stack trace"""
-
-    for line in error_string.split("##### ERROR "):
-        line = line.strip()
-        if "stack trace" in line:
-            line = line.split("\n")
-            # The name of the exception is immediately after "stack trace"
-            java_error = line[1].strip()
-
-            return java_error
 
 
 def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
@@ -45,6 +33,14 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     cosmic = assoc_files.get("cosmic")
 
     broad_runner = broad.runner_from_config(base_config, "mutect")
+
+    if LooseVersion(broad_runner.get_mutect_version()) < LooseVersion("1.1.5"):
+
+        message = ("MuTect 1.1.4 and lower is known to have incompatibilities "
+                   "with Java < 7, and this may lead to problems in analyses. "
+                   "Please use MuTect 1.1.5 or higher (note that it requires "
+                   "Java 7).")
+        raise ValueError(message)
 
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
@@ -117,18 +113,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout,
             # which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
-            try:
-                broad_runner.run_mutect(params)
-            except CalledProcessError as error:
-                java_exception = _parse_gatk_java_error_string(error.cmd)
-                #HACK: Currently MuTect bails out on certain small BAM files
-                # Until the issue is fixed by Broad, this specific exception
-                # will be ignored. All the other exceptions will be raised
-                # correctly.
-                if java_exception in _PASS_EXCEPTIONS:
-                    vcfutils.write_empty_vcf(tx_out_file)
-                    return
-                else:
-                    raise
+
+            broad_runner.run_mutect(params)
 
     return out_file

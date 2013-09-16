@@ -87,6 +87,7 @@ Contributors
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
+- `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Rory Kirchner`_, Harvard School of Public Health
 - `Brent Pedersen`_, University of Colorado Denver
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
@@ -97,6 +98,7 @@ Contributors
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Brad Chapman: https://github.com/chapmanb
 .. _Peter Cock: https://github.com/peterjc
+.. _Mario Giovacchini: https://github.com/mariogiov
 .. _Rory Kirchner: https://github.com/roryk
 .. _Brent Pedersen: https://github.com/brentp
 .. _Valentine Svensson: https://github.com/vals

@@ -37,7 +37,9 @@ def combine_fastq_files(in_files, work_dir, config):
 def merge_bam_files(bam_files, work_dir, config, out_file=None):
     """Merge multiple BAM files from a sample into a single BAM for processing.
 
-    Uses bamtools for merging, which handles large numbers of input BAMs.
+    Uses samtools or bamtools for merging, both of which have some cavaets.
+    samtools can run into file system limits on command line length, while
+    bamtools runs into open file handle issues.
     """
     if len(bam_files) == 1:
         return bam_files[0]
@@ -50,12 +52,10 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = resources.get("memory", "1G")
-            if len(bam_files) > system.open_file_limit():
-                raise IOError("More files to merge (%s) then available open file descriptors (%s)\n"
-                              "See documentation on tips for changing file limits:\n"
-                              "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
-                              "parallel.html#tuning-systems-for-scale"
-                              % (len(bam_files), system.open_file_limit()))
+            if len(bam_files) < 4096:
+                merge_cl = _samtools_cat(bam_files)
+            else:
+                merge_cl = _bamtools_merge(bam_files)
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
@@ -63,7 +63,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
                     with open(bam_file_list, "w") as out_handle:
                         for f in sorted(bam_files):
                             out_handle.write("%s\n" % f)
-                    cmd = ("{bamtools} merge -list {bam_file_list} | "
+                    cmd = (merge_cl + " | "
                            "{samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                     do.run(cmd.format(**locals()), "Merge bam files", None)
             for b in bam_files:
@@ -71,3 +71,20 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
         picard = broad.runner_from_config(config)
         picard.run_fn("picard_index", out_file)
         return out_file
+
+def _samtools_cat(bam_files):
+    """Concatenate multiple BAM files together with samtools.
+    Creates relative paths to shorten the commandline.
+    """
+    return "{samtools} cat " + " ".join(os.path.relpath(b) for b in bam_files)
+
+def _bamtools_merge(bam_files):
+    """Use bamtools to merge multiple BAM files, requires a list from disk.
+    """
+    if len(bam_files) > system.open_file_limit():
+        raise IOError("More files to merge (%s) then available open file descriptors (%s)\n"
+                      "See documentation on tips for changing file limits:\n"
+                      "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
+                      "parallel.html#tuning-systems-for-scale"
+                      % (len(bam_files), system.open_file_limit()))
+    return "{bamtools} merge -list {bam_file_list}"

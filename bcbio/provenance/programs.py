@@ -10,16 +10,21 @@ import subprocess
 from bcbio import utils
 from bcbio.pipeline import config_utils, version
 
+import HTSeq
+
 _cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
              {"cmd": "bedtools", "args": "--version", "stdout_flag": "bedtools"},
              {"cmd": "bowtie2", "args": "--version", "stdout_flag": "bowtie2-align"},
              {"cmd": "bwa", "stdout_flag": "Version:"},
+             {"cmd": "cufflinks", "stdout_flag": "cufflinks"},
+             {"cmd": "cutadapt", "args": "--version"},
              {"cmd": "fastqc", "args": "--version", "stdout_flag": "FastQC"},
              {"cmd": "freebayes", "stdout_flag": "version:"},
              {"cmd": "gemini", "args": "--version", "stdout_flag": "gemini"},
              {"cmd": "novosort", "paren_flag": "novosort"},
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
-             {"cmd": "samtools", "stdout_flag": "Version"}]
+             {"cmd": "samtools", "stdout_flag": "Version"},
+             {"cmd": "tophat", "args": "--version", "stdout_flag": "TopHat"}]
 # TODO: ogap, bamleftalign
 
 def _broad_versioner(type):
@@ -51,14 +56,16 @@ def jar_versioner(program_name, jar_name):
         return jar
     return get_version
 
-_alt_progs = [{"name": "gatk", "version_fn": _broad_versioner("gatk")},
-              {"name": "picard", "version_fn": _broad_versioner("picard")},
-              {"name": "bcbio.variation",
+_alt_progs = [{"name": "bcbio.variation",
                "version_fn": jar_versioner("bcbio_variation", "bcbio.variation")},
-              {"name": "varscan",
-               "version_fn": jar_versioner("varscan", "VarScan")},
+              {"name": "gatk", "version_fn": _broad_versioner("gatk")},
               {"name": "mutect",
-               "version_fn": jar_versioner("mutect", "muTect")}]
+               "version_fn": jar_versioner("mutect", "muTect")},
+              {"name": "picard", "version_fn": _broad_versioner("picard")},
+              {"name": "rnaseqc",
+               "version_fn": jar_versioner("rnaseqc", "RNA-SeQC")},
+              {"name": "varscan",
+               "version_fn": jar_versioner("varscan", "VarScan")}]
 # TODO: cortex_var
 
 def _parse_from_stdoutflag(stdout, x):
@@ -79,7 +86,7 @@ def _get_cl_version(p, config):
     try:
         prog = config_utils.get_program(p["cmd"], config)
     except config_utils.CmdNotFound:
-        return "NA"
+        return ""
     args = p.get("args", "")
 
     cmd = "{prog} {args}"
@@ -92,15 +99,16 @@ def _get_cl_version(p, config):
         elif p.get("paren_flag"):
             v = _parse_from_parenflag(stdout, p["paren_flag"])
         else:
-            print stdout.read()
-            raise NotImplementedError("Don't know how to extract version")
+            v = stdout.read().strip()
     return v
 
 def _get_versions(config):
     """Retrieve details on all programs available on the system.
     """
     out = [{"program": "bcbio-nextgen",
-            "version": version.__version__}]
+            "version": ("%s-%s" % (version.__version__, version.__git_revision__)
+                        if version.__git_revision__ else version.__version__)},
+           {"program": "htseq", "version": HTSeq.__version__}]
     for p in _cl_progs:
         out.append({"program": p["cmd"],
                     "version": _get_cl_version(p, config)})
