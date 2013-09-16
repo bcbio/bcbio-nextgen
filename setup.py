@@ -4,10 +4,23 @@
 import os
 from setuptools import setup, find_packages
 
-version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',
-                          'version.py')
-version = open(version_py).read().strip().split('=')[-1].replace('"', '')
+version="0.7.3a"
 
+def write_version_py():
+    version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',
+                              'version.py')
+    try:
+        import subprocess
+        p = subprocess.Popen(["git", "rev-parse", "--short", "HEAD"],
+                             stdout=subprocess.PIPE)
+        githash = p.stdout.read().strip()
+    except:
+        githash = ""
+    with open(version_py, "w") as out_handle:
+        out_handle.write("\n".join(['__version__ = "%s"' % version,
+                                    '__git_revision__ = "%s"' % githash]))
+
+write_version_py()
 setup(name="bcbio-nextgen",
       version=version,
       author="Brad Chapman and bcbio-nextgen contributors",
