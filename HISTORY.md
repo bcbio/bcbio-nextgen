@@ -16,6 +16,7 @@
   configuration file. Thanks to Paul Tang for suggestion.
 - Bug fixes for non-paired RNA-seq analysis.
 - Add custom filtration of FreeBayes samples using bcbio.variation.
+- Default to phred33 format for Tophat alignment if none specified.
 
 ## 0.7.2 (August 30, 2013)
 
