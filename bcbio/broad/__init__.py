@@ -22,20 +22,21 @@ class BroadRunner:
         self._picard_ref = config_utils.expand_path(picard_ref)
         self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
-        self._gatk_version, self._picard_version = None, None
+        self._gatk_version, self._picard_version, self._mutect_version = (
+            None, None, None)
 
     def _set_default_versions(self, config):
         """Retrieve pre-computed version information for expensive to retrieve versions.
         Starting up GATK takes a lot of resources so we do it once at start of analysis.
         """
         out = []
-        for name in ["gatk", "picard"]:
+        for name in ["gatk", "picard", "mutect"]:
             try:
                 v = programs.get_version(name, config=config)
             except KeyError:
                 v = None
             out.append(v)
-        self._gatk_version, self._picard_version = out
+        self._gatk_version, self._picard_version, self._mutect_version = out
 
     def new_resources(self, program):
         """Set new resource usage for the given program.
@@ -151,7 +152,6 @@ class BroadRunner:
             do.run(cl, "GATK: {0}".format(prog), None)
 
     def run_mutect(self, params, tmp_dir=None):
-
         with curdir_tmpdir() as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
@@ -187,6 +187,14 @@ class BroadRunner:
             self._gatk_version = version
             return version
 
+    def get_mutect_version(self):
+        """Retrieve the Mutect version.
+        """
+        if self._mutect_version is None:
+            self._set_default_versions(self._config)
+            assert self._mutect_version is not None
+        return self._mutect_version
+
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
         Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,
@@ -211,9 +219,14 @@ class BroadRunner:
     def _get_picard_cmd(self, command):
         """Retrieve the base Picard command, handling both shell scripts and directory of jars.
         """
+        resources = config_utils.get_resources("picard", self._config)
+        if resources.get("jvm_opts"):
+            jvm_opts = resources.get("jvm_opts")
+        else:
+            jvm_opts = self._jvm_opts
         if os.path.isdir(self._picard_ref):
             dist_file = self._get_jar(command)
-            return ["java"] + self._jvm_opts + ["-jar", dist_file]
+            return ["java"] + jvm_opts + ["-jar", dist_file]
         else:
             # XXX Cannot currently set JVM opts with picard-tools script
             return [self._picard_ref, command]

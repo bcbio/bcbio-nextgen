@@ -145,7 +145,7 @@ def _get_program_dir(name, config):
     elif isinstance(config, basestring):
         return config
     elif config.has_key("dir"):
-        return config["dir"]
+        return expand_path(config["dir"])
     else:
         raise ValueError("Could not find directory in config for %s" % name)
 
@@ -218,6 +218,8 @@ def use_vqsr(algs):
         callers = alg.get("variantcaller", "gatk")
         if isinstance(callers, basestring):
             callers = [callers]
+        elif not callers: # no variant calling, no VQSR
+            continue
         vqsr_supported_caller = False
         for c in callers:
             if c in ["gatk", "gatk-haplotype"]:

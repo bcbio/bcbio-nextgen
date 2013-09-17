@@ -22,7 +22,7 @@ remotes = {"requirements":
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
-           "http://repo.continuum.io/miniconda/Miniconda-1.6.2-%s-x86_64.sh"}
+           "http://repo.continuum.io/miniconda/Miniconda-1.9.1-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_dependencies()

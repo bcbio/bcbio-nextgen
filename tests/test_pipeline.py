@@ -22,7 +22,7 @@ class RunInfoTest(unittest.TestCase):
         """
         config = load_config(os.path.join(self.data_dir, "automated",
                                           "post_process-sample.yaml"))
-        print programs.get_versions(config)
+        print programs._get_versions(config)
 
 class VCFUtilTest(unittest.TestCase):
     """Test various utilities for dealing with VCF files.

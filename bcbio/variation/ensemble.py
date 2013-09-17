@@ -7,7 +7,6 @@ toolkit: https://github.com/chapmanb/bcbio.variation
 import os
 import glob
 import copy
-import subprocess
 
 import yaml
 

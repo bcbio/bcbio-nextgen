@@ -16,7 +16,7 @@ from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
 from bcbio.pipeline import lane, region, run_info, qcsummary, version
-from bcbio.provenance import programs, system
+from bcbio.provenance import programs, system, versioncheck
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
@@ -49,6 +49,7 @@ def run_main(config, config_file, work_dir, parallel,
         tempfile.tempdir = tmpdir
         for pipeline, pipeline_items in pipelines.items():
             pipeline_items = _add_provenance(pipeline_items, dirs, run_parallel, parallel, config)
+            versioncheck.testall(pipeline_items)
             for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
@@ -279,14 +280,14 @@ class Variant2Pipeline(AbstractPipeline):
             logger.info("Timing: ensemble calling")
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
             samples = validate.summarize_grading(samples)
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
         ## Finalizing BAMs and population databases, handle multicore computation
         with global_parallel(parallel, "multicore2", ["prep_gemini_db", "delayed_bam_merge"],
                              samples, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
+            logger.info("Timing: quality control")
+            samples = qcsummary.generate_parallel(samples, run_parallel)
             logger.info("Timing: population database")
             samples = population.prep_db_parallel(samples, run_parallel)
         logger.info("Timing: finished")

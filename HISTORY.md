@@ -5,9 +5,15 @@
   resources file. Improves ability to support additional organisms and genome
   builds.
 - Provide paired tumor/normal variant calling with VarScan. Thanks to Luca Beltrame.
+- Require bash shell and use of pipefail for piped commands. Ensures rapid
+  detection of failures during piped steps like alignment.
+- Use samtools cat for post-BAM merging to avoid issues with bamtools
+  requirement for open file handles.
 - Support for GATK 2.7
 - Pull `description` sample names from BAM files if not present in input
   configuration file. Thanks to Paul Tang for suggestion.
+- Bug fixes for non-paired RNA-seq analysis.
+- Add custom filtration of FreeBayes samples using bcbio.variation.
 
 ## 0.7.2 (August 30, 2013)
 

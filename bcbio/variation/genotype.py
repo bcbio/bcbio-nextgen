@@ -16,14 +16,13 @@ from distutils.version import LooseVersion
 import itertools
 
 from bcbio import broad
-from bcbio.log import logger
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import annotation, bamprep, multi, phasing, vcfutils
+from bcbio.variation import annotation, bamprep, multi, phasing, vcfutils, vfilter
 
 # ## GATK Genotype calling
 
@@ -141,7 +140,7 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
     """
     caller = config["algorithm"].get("variantcaller")
     if caller in ["freebayes"]:
-        return filter_freebayes(call_file, ref_file, vrn_files, config)
+        return vfilter.freebayes(call_file, ref_file, vrn_files, config)
     # no additional filtration for callers that filter as part of call process
     elif caller in ["samtools", "varscan"]:
         return call_file
@@ -152,13 +151,6 @@ def variant_filtration(call_file, ref_file, vrn_files, config):
         orig_files = [snp_filter_file, indel_filter_file]
         out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
         return vcfutils.combine_variant_files(orig_files, out_file, ref_file, config)
-
-def filter_freebayes(in_file, ref_file, vrn_files, config):
-    """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
-    """
-    broad_runner = broad.runner_from_config(config)
-    filters = ["QUAL < 20.0", "DP < 5"]
-    return variant_filtration_with_exp(broad_runner, in_file, ref_file, "", filters)
 
 def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                          tranch_file, filter_type):
@@ -210,31 +202,6 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files, varia
              vrn_files["train_indels"]])
     return params, recal_file, tranches_file
 
-def variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
-                                expressions):
-    """Perform hard filtering with GATK using JEXL expressions.
-
-    Variant quality score recalibration will not work on some regions; it
-    requires enough positions to train the model. This provides a general wrapper
-    around GATK to do cutoff based filtering.
-    """
-    base, ext = os.path.splitext(snp_file)
-    out_file = "{base}-filter{ftype}{ext}".format(base=base, ext=ext,
-                                                  ftype=filter_type)
-    if not file_exists(out_file):
-        logger.debug("Hard filtering %s with %s" % (snp_file, expressions))
-        with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "VariantFiltration",
-                      "-R", ref_file,
-                      "-l", "ERROR",
-                      "--out", tx_out_file,
-                      "--variant", snp_file]
-            for exp in expressions:
-                params.extend(["--filterName", "GATKStandard{e}".format(e=exp.split()[0]),
-                               "--filterExpression", exp])
-            broad_runner.run_gatk(params)
-    return out_file
-
 # ## SNP specific variant filtration
 
 def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
@@ -252,11 +219,10 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
     if not config_utils.use_vqsr([config["algorithm"]]):
-        return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
-                                           filters)
+        return vfilter.jexl_hard(broad_runner, snp_file, ref_file, filter_type, filters)
     else:
         # also check if we've failed recal and needed to do strict filtering
-        filter_file = "{base}-filterSNP.vcf".format(base=os.path.splitext(snp_file)[0])
+        filter_file = "{base}-filter{ext}.vcf".format(base=os.path.splitext(snp_file)[0], ext=filter_type)
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
             return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
@@ -288,17 +254,26 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
     params, recal_file, tranches_file = _shared_variant_filtration(
         filter_type, snp_file, ref_file, vrn_files, variantcaller)
     if not config_utils.use_vqsr([config["algorithm"]]):
-        return variant_filtration_with_exp(broad_runner, snp_file, ref_file, filter_type,
-                                           ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
+        return vfilter.jexl_hard(broad_runner, snp_file, ref_file, filter_type,
+                                 ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
     else:
+        # also check if we've failed recal and needed to do strict filtering
+        filter_file = "{base}-filter{ext}.vcf".format(base=os.path.splitext(snp_file)[0], ext=filter_type)
+        if file_exists(filter_file):
+            config["algorithm"]["coverage_interval"] = "regional"
+            return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
         if not file_exists(recal_file):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
                 if LooseVersion(broad_runner.get_gatk_version()) >= LooseVersion("2.7"):
                     params.extend(["--numBadVariants", "3000"])
-                broad_runner.new_resources("gatk-vqsr")
-                broad_runner.run_gatk(params)
+                try:
+                    broad_runner.new_resources("gatk-vqsr")
+                    broad_runner.run_gatk(params)
+                except:
+                    config["algorithm"]["coverage_interval"] = "regional"
+                    return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
 

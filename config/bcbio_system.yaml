@@ -46,6 +46,8 @@ resources:
   bcbio_variation:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/share/java/bcbio_variation
+  rnaseqc:
+    dir: /usr/share/java/RNA-SeQC
 
 # -- Default algorithm setup
 
