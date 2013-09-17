@@ -27,9 +27,9 @@ _out_fnames = ["accepted_hits.sam", "junctions.bed",
 
 def _set_quality_flag(options, config):
     qual_format = config["algorithm"].get("quality_format", None)
-    if qual_format is None or qual_format.lower() == "illumina":
+    if qual_format.lower() == "illumina":
         options["solexa1.3-quals"] = True
-    elif qual_format == "solexa":
+    else:
         options["solexa-quals"] = True
     return options
 
