@@ -10,6 +10,8 @@
 - Use samtools cat for post-BAM merging to avoid issues with bamtools
   requirement for open file handles.
 - Support for GATK 2.7
+- Fixes for TopHat 2.0.9 support: remove extra non-mate match paired end reads
+  from alignment output.
 - Pull `description` sample names from BAM files if not present in input
   configuration file. Thanks to Paul Tang for suggestion.
 - Bug fixes for non-paired RNA-seq analysis.
