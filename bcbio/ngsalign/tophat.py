@@ -14,11 +14,10 @@ import pysam
 
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
-from bcbio.utils import safe_makedir, file_exists, get_in, flatten
+from bcbio.utils import safe_makedir, file_exists, get_in
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.provenance import do
-from bcbio.convert import bam2sam, bamindex
 from bcbio import broad
 from bcbio.broad.metrics import PicardMetricsParser
 
@@ -28,9 +27,9 @@ _out_fnames = ["accepted_hits.sam", "junctions.bed",
 
 def _set_quality_flag(options, config):
     qual_format = config["algorithm"].get("quality_format", None)
-    if qual_format is None or qual_format.lower() == "illumina":
+    if qual_format.lower() == "illumina":
         options["solexa1.3-quals"] = True
-    elif qual_format == "solexa":
+    else:
         options["solexa-quals"] = True
     return options
 
@@ -100,11 +99,10 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
     out_file = os.path.join(out_dir, _out_fnames[0])
-    if file_exists(out_file):
-        return os.path.join(out_dir, "%s.sam" % out_base)
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
+            _check_bowtie(ref_file, config)
             safe_makedir(tx_out_dir)
             if pair_file and not options.get("mate-inner-dist", None):
                 d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file,
@@ -126,28 +124,34 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             tophat_ready = tophat_runner.bake(**ready_options)
             cmd = str(tophat_ready.bake(*files))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
-    out_sam_final = os.path.join(out_dir, "%s.sam" % out_base)
-    os.symlink(os.path.basename(out_file), out_sam_final)
-    return out_sam_final
+    if pair_file:
+        final_out = _fix_mates(out_file, os.path.join(out_dir, "%s-align.bam" % out_base),
+                               ref_file, config)
+    else:
+        final_out = os.path.join(out_dir, "%s.sam" % out_base)
+        if not file_exists(final_out):
+            os.symlink(os.path.basename(out_file), final_out)
+    return final_out
+
+def _fix_mates(orig_file, out_file, ref_file, config):
+    """Fix problematic unmapped mate pairs in TopHat output.
+
+    TopHat 2.0.9 appears to have issues with secondary reads:
+    https://groups.google.com/forum/#!topic/tuxedo-tools-users/puLfDNbN9bo
+    This cleans the input file to only keep properly mapped pairs,
+    providing a general fix that will handle correctly mapped secondary
+    reads as well.
+    """
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            samtools = config_utils.get_program("samtools", config)
+            sort_name = "%s-sorttmp" % os.path.splitext(tx_out_file)[0]
+            cmd = "{samtools} view -bt {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
+    return out_file
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           names=None):
-
-    out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
-    out_file = os.path.join(out_dir, _out_fnames[0])
-
-    if file_exists(out_file):
-        return os.path.join(out_dir, "%s.sam" % out_base)
-
-    if not _bowtie_ref_match(ref_file, config):
-        logger.error("Bowtie version %d was detected but the reference "
-                     "file %s is built for version %d. Download version "
-                     "%d or build it with bowtie-build."
-                     % (_bowtie_major_version(config), ref_file,
-                        _ref_version(ref_file),
-                        _bowtie_major_version(config)))
-        exit(1)
-
     out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
                              align_dir, config, names)
 
@@ -227,6 +231,17 @@ def _calculate_average_read_length(sam_file):
             read_lengths.append(read.rlen)
     avg_read_length = int(float(sum(read_lengths)) / float(count))
     return avg_read_length
+
+
+def _check_bowtie(ref_file, config):
+    if not _bowtie_ref_match(ref_file, config):
+        logger.error("Bowtie version %d was detected but the reference "
+                     "file %s is built for version %d. Download version "
+                     "%d or build it with bowtie-build."
+                     % (_bowtie_major_version(config), ref_file,
+                        _ref_version(ref_file),
+                        _bowtie_major_version(config)))
+        exit(1)
 
 def _bowtie_major_version(config):
     bowtie_runner = sh.Command(config_utils.get_program("bowtie", config,

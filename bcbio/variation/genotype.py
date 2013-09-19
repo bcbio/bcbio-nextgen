@@ -196,7 +196,6 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files, varia
                 params.extend(["-resource:%s,VCF,%s" % (name.replace("train_", ""), train_info),
                                vrn_files[name]])
     if filter_type in ["INDEL", "BOTH"]:
-        assert "train_indels" in vrn_files, "Need indel training file specified"
         params.extend(
             ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
              vrn_files["train_indels"]])
@@ -210,8 +209,6 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
     broad_runner = broad.runner_from_config(config)
     filter_type = "SNP"
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
-    params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file, vrn_files, variantcaller)
     filters = ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
                "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
@@ -226,9 +223,11 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
             return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
+        assert "train_hapmap" in vrn_files and "train_1000g_omni" in vrn_files, \
+            "Need HapMap and 1000 genomes training files"
+        params, recal_file, tranches_file = _shared_variant_filtration(
+            filter_type, snp_file, ref_file, vrn_files, variantcaller)
         if not file_exists(recal_file):
-            assert "train_hapmap" in vrn_files and "train_1000g_omni" in vrn_files, \
-                "Need HapMap and 1000 genomes training files"
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
@@ -251,8 +250,6 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
     broad_runner = broad.runner_from_config(config)
     filter_type = "INDEL"
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
-    params, recal_file, tranches_file = _shared_variant_filtration(
-        filter_type, snp_file, ref_file, vrn_files, variantcaller)
     if not config_utils.use_vqsr([config["algorithm"]]):
         return vfilter.jexl_hard(broad_runner, snp_file, ref_file, filter_type,
                                  ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
@@ -262,6 +259,9 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
             return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
+        assert "train_indels" in vrn_files, "Need indel training file specified"
+        params, recal_file, tranches_file = _shared_variant_filtration(
+            filter_type, snp_file, ref_file, vrn_files, variantcaller)
         if not file_exists(recal_file):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
