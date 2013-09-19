@@ -19,7 +19,7 @@ details:
       variantcaller: [gatk, freebayes, gatk-haplotype]
       quality_format: Standard
       coverage_interval: regional
-      merge_bamprep: false
+      merge_bamprep: true
       validate: ../input/NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf
       validate_regions: ../input/union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed
       variant_regions: ../input/NGv3.bed
