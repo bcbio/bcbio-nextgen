@@ -172,10 +172,8 @@ if __name__ == "__main__":
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
-    parser.add_argument("--tooldist",
-                        help="Type of tool distribution to install. Defaults to a minimum install.",
-                        default="minimal",
-                        choices=["minimal", "full"])
+    parser.add_argument("--toolplus", help="Specify additional tool categories to install",
+                        action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
@@ -184,6 +182,10 @@ if __name__ == "__main__":
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--tooldist",
+                        help="Type of tool distribution to install. Defaults to a minimum install.",
+                        default="minimal",
+                        choices=["minimal", "full"])
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])

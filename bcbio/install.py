@@ -3,6 +3,7 @@
 Enables automated installation tool and in-place updates to install additional
 data and software.
 """
+import collections
 import contextlib
 import os
 import shutil
@@ -56,7 +57,14 @@ def upgrade_bcbio(args):
 def _default_deploy_args(args):
     flavors = {"minimal": "ngs_pipeline_minimal",
                "full": "ngs_pipeline"}
+    toolplus = {"protected": {"bio_nextgen": ["gatk-protected"]},
+                "data": {"bio_nextgen": ["gemini"]}}
+    custom_add = collections.defaultdict(list)
+    for x in args.toolplus:
+        for k, vs in toolplus[x].iteritems():
+            custom_add[k].extend(vs)
     return {"flavor": flavors[args.tooldist],
+            "custom_add": dict(custom_add),
             "vm_provider": "novm",
             "hostname": "localhost",
             "fabricrc_overrides" : {"edition": "minimal",
@@ -171,7 +179,7 @@ def save_install_defaults(args):
     if args.tooldir:
         cur_config["tooldir"] = args.tooldir
     cur_config["sudo"] = args.sudo
-    for attr in ["genomes", "aligners"]:
+    for attr in ["genomes", "aligners", "toolplus"]:
         if not cur_config.get(attr):
             cur_config[attr] = []
         for x in getattr(args, attr):
@@ -190,13 +198,14 @@ def add_install_defaults(args):
         default_args = yaml.load(in_handle)
     if default_args.get("tooldist") and args.tooldist == "minimal":
         args.tooldir = default_args["tooldist"]
-    for attr in ["genomes", "aligners"]:
+    for attr in ["genomes", "aligners", "toolplus"]:
         for x in default_args.get(attr, []):
             new_val =  getattr(args, attr)
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
-    args.sudo = default_args["sudo"]
+    if "sudo" in default_args:
+        args.sudo = default_args["sudo"]
     return args
 
 def add_subparser(subparsers):
@@ -204,12 +213,10 @@ def add_subparser(subparsers):
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
-    parser.add_argument("--tooldist",
-                        help="Type of tool distribution to install. Defaults to a minimum install.",
-                        default="minimal",
-                        choices=["minimal", "full"])
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
                         choices = ["stable", "development", "system", "skip"], default="stable")
+    parser.add_argument("--toolplus", help="Specify additional tool categories to install",
+                        action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
@@ -218,6 +225,10 @@ def add_subparser(subparsers):
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--tooldist",
+                        help="Type of tool distribution to install. Defaults to a minimum install.",
+                        default="minimal",
+                        choices=["minimal", "full"])
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
