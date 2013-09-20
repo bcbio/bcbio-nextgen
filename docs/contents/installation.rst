@@ -23,8 +23,6 @@ for configuring the installation process. Some useful arguments are:
 
 - ``--nosudo`` For running in environments where you lack administrator
   privileges.
-- ``--distribution`` Specifies the operating system distribution
-  (ubuntu, centos, debian, scientificlinux).
 - ``--nodata`` Do not install genome data.
 
 To bootstrap installation, the machine will need to have some basic
@@ -43,6 +41,47 @@ use ``https://`` globally instead of ``git://``::
 
 If you'd prefer more control over installation, follow the manual
 steps for installing each component detailed below.
+
+Upgrade
+=======
+
+We use the same automated installation process for performing upgrades
+of tools, software and data in place. With a recent version of
+bcbio-nextgen (0.7.0+), update with::
+
+  bcbio_nextgen.py upgrade --tooldir=/usr/local
+
+In addition to the installation options mentioned above, tune the
+upgrade with these options:
+
+- ``-u`` Type of upgrade to do for bcbio-nextgen code. The default is
+  ``stable`` but you can also specify ``development`` to get the
+  latest code from GitHub and ``skip`` to only upgrade tools and data
+  without the library.
+
+- ``--toolplus`` Specify additional categories of tools to include.
+  These may require manual intervention or be data intensive. You can
+  specify the argument multiple times to include multiple extra
+  classes of tools. Available choices are:
+
+  - ``protected`` Install software that requires licensing for
+    commerical use. This includes the latest versions of GATK, which
+    need a manual download from the GATK website. The installer
+    provides full directions.
+  - ``data`` Data rich supplemental tools. A good example is
+    GEMINI, which provides rich annotation of variant calls
+    but requires download of external data sources.
+
+- ``--genomes`` and ``--aligners`` options add additional aligner
+  indexes to download and prepare. By default we prepare a minimal
+  human genome setup.
+
+- Leave out the ``--tooldir`` option if you don't want to upgrade
+  third party tools.
+
+To upgrade older bcbio-nextgen versions to be able to use this
+feature, do ``bcbio_nextgen.py -u stable`` to get the latest release
+code.
 
 On a Virtual Machine
 ====================
@@ -66,37 +105,6 @@ OSX
 .. _Vagrant for OSX: http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/Vagrant-1.2.7.dmg
 .. _VirtualBox: http://download.virtualbox.org/virtualbox/4.2.16/VirtualBox-4.2.16-86992-OSX.dmg
 .. _Vagrant: http://www.vagrantup.com/
-
-Upgrade
-=======
-
-We use the same automated installation process for performing upgrades
-of tools, software and data in place. With a recent version of
-bcbio-nextgen (0.7.0+), update with::
-
-  bcbio_nextgen.py upgrade --tooldir=/usr/local
-
-In addition to the installation options mentioned above, tune the
-upgrade with these options:
-
-- ``-u`` Type of upgrade to do for bcbio-nextgen code. The default is
-  ``stable`` but you can also specify ``development`` to get the
-  latest code from GitHub and ``skip`` to only upgrade tools and data
-  without the library.
-
-- ``--tooldist`` Specify whether you want to install a minimal set of
-  commonly used packages (``minimal``) or full set of all possible
-  used packages (``full``). Installs the minimal by default.
-
-- ``--genomes`` and ``--aligners`` options add additional aligner
-  indexes to download and prepare.
-
-- Leave out the ``--tooldir`` option if you don't want to upgrade
-  tools.
-
-To upgrade older bcbio-nextgen versions to be able to use this
-feature, do ``bcbio_nextgen.py -u stable`` to get the latest release
-code.
 
 Manual process
 ==============

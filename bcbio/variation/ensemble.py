@@ -22,6 +22,7 @@ def _has_ensemble(data):
 def combine_calls(data):
     """Combine multiple callsets into a final set of merged calls.
     """
+    from bcbio.variation import effects, validate
     if _has_ensemble(data):
         logger.info("Ensemble consensus calls for {0}: {1}".format(
             ",".join(x["variantcaller"] for x in data["variants"]), data["work_bam"]))
@@ -31,10 +32,12 @@ def combine_calls(data):
         base_dir = utils.safe_makedir(os.path.join(edata["dirs"]["work"], "ensemble"))
         config_file = _write_config_file(edata, sample, base_dir, "ensemble")
         callinfo = _run_bcbio_variation(config_file, base_dir, sample, edata)
-        from bcbio.variation import validate
         edata["vrn_file"] = callinfo["vrn_file"]
         edata["ensemble_bed"] = callinfo["bed_file"]
         callinfo["validate"] = validate.compare_to_rm(edata)[0][0].get("validate")
+        ann_vrn_file = effects.snpeff_effects(edata)
+        if ann_vrn_file:
+            callinfo["vrn_file"] = ann_vrn_file
         data["variants"].insert(0, callinfo)
         _write_config_file(data, sample, base_dir, "compare")
     return [[data]]

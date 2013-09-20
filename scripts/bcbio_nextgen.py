@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -E
 """Run an automated analysis pipeline on nextgen sequencing information.
 
 Handles runs in local or distributed mode based on the command line or

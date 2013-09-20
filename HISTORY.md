@@ -9,6 +9,8 @@
   detection of failures during piped steps like alignment.
 - Use samtools cat for post-BAM merging to avoid issues with bamtools
   requirement for open file handles.
+- Add installation/upgrade options to enable commercially restricted and data
+  intensive third party tools.
 - Support for GATK 2.7
 - Fixes for TopHat 2.0.9 support: remove extra non-mate match paired end reads
   from alignment output.
