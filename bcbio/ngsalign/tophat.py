@@ -17,6 +17,7 @@ from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
+
 from bcbio.provenance import do
 from bcbio import broad
 from bcbio.broad.metrics import PicardMetricsParser
@@ -37,7 +38,8 @@ def _set_quality_flag(options, config):
 def _get_transcriptome_index(ref_file):
     base_dir = os.path.dirname(os.path.dirname(ref_file))
     base = os.path.basename(ref_file)
-    transcriptome_index = os.path.join(base_dir, "tophat", base + "_transcriptome")
+    transcriptome_index = os.path.join(base_dir, "rnaseq",
+                                      "tophat", base + "_transcriptome")
     if file_exists(transcriptome_index + ".1.bt2"):
         return transcriptome_index
     else:
