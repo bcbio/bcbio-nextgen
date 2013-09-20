@@ -192,7 +192,7 @@ def add_install_defaults(args):
     """Add any saved installation defaults to the upgrade.
     """
     install_config = _get_install_config()
-    if install_config is None:
+    if install_config is None or not utils.file_exists(install_config):
         return args
     with open(install_config) as in_handle:
         default_args = yaml.load(in_handle)
