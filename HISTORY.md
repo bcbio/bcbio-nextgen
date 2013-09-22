@@ -1,4 +1,4 @@
-## 0.7.3 (in progress)
+## 0.7.3 (September 22, 2013)
 
 - Move specification of supporting genome files for variation (dbSNP, training
   files) and RNA-seq (transcript GTF files) analyses into an organism specific
@@ -9,6 +9,8 @@
   detection of failures during piped steps like alignment.
 - Use samtools cat for post-BAM merging to avoid issues with bamtools
   requirement for open file handles.
+- Add installation/upgrade options to enable commercially restricted and data
+  intensive third party tools.
 - Support for GATK 2.7
 - Fixes for TopHat 2.0.9 support: remove extra non-mate match paired end reads
   from alignment output.
@@ -16,6 +18,7 @@
   configuration file. Thanks to Paul Tang for suggestion.
 - Bug fixes for non-paired RNA-seq analysis.
 - Add custom filtration of FreeBayes samples using bcbio.variation.
+- Default to phred33 format for Tophat alignment if none specified.
 
 ## 0.7.2 (August 30, 2013)
 

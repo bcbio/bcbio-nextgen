@@ -52,31 +52,38 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = resources.get("memory", "1G")
-            if len(bam_files) < 4096:
-                merge_cl = _samtools_cat(bam_files)
-            else:
-                merge_cl = _bamtools_merge(bam_files)
-            with file_transaction(out_file) as tx_out_file:
-                tx_out_prefix = os.path.splitext(tx_out_file)[0]
-                with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
-                    bam_file_list = "%s.list" % os.path.splitext(out_file)[0]
-                    with open(bam_file_list, "w") as out_handle:
-                        for f in sorted(bam_files):
-                            out_handle.write("%s\n" % f)
-                    cmd = (merge_cl + " | "
-                           "{samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                    do.run(cmd.format(**locals()), "Merge bam files", None)
+            with utils.curdir_tmpdir() as tmpdir:
+                with utils.chdir(tmpdir):
+                    if len(bam_files) < 4096:
+                        merge_cl = _samtools_cat(bam_files, tmpdir)
+                    else:
+                        merge_cl = _bamtools_merge(bam_files)
+                    with file_transaction(out_file) as tx_out_file:
+                        tx_out_prefix = os.path.splitext(tx_out_file)[0]
+                        with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
+                            bam_file_list = "%s.list" % os.path.splitext(out_file)[0]
+                            with open(bam_file_list, "w") as out_handle:
+                                for f in sorted(bam_files):
+                                    out_handle.write("%s\n" % f)
+                            cmd = (merge_cl + " | "
+                                   "{samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
+                            do.run(cmd.format(**locals()), "Merge bam files", None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         picard = broad.runner_from_config(config)
         picard.run_fn("picard_index", out_file)
         return out_file
 
-def _samtools_cat(bam_files):
+def _samtools_cat(bam_files, tmpdir):
     """Concatenate multiple BAM files together with samtools.
-    Creates relative paths to shorten the commandline.
+    Creates short paths to shorten the commandline.
     """
-    return "{samtools} cat " + " ".join(os.path.relpath(b) for b in bam_files)
+    short_bams = []
+    for i, bam_file in enumerate(bam_files):
+        short_bam = os.path.join(tmpdir, "%s.bam" % i)
+        os.symlink(bam_file, short_bam)
+        short_bams.append(short_bam)
+    return "{samtools} cat " + " ".join(os.path.relpath(b) for b in short_bams)
 
 def _bamtools_merge(bam_files):
     """Use bamtools to merge multiple BAM files, requires a list from disk.

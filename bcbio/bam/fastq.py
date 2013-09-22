@@ -110,4 +110,5 @@ def combine_pairs(input_files):
             pairs.append([in_file])
             used.append(in_file)
 
+    [p.sort() for p in pairs]
     return pairs
