@@ -1,4 +1,4 @@
-## 0.7.3 (in progress)
+## 0.7.3 (September 22, 2013)
 
 - Move specification of supporting genome files for variation (dbSNP, training
   files) and RNA-seq (transcript GTF files) analyses into an organism specific
