@@ -165,7 +165,7 @@ def process_alignment(data):
     data["work_bam"] = out_bam
     return [[data]]
 
-def align_prep_full(data, config_file):
+def align_prep_full(data):
     """Perform alignment and post-processing required on full BAM files.
     Prepare list of callable genome regions allowing subsequent parallelization.
     """

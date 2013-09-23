@@ -2,6 +2,7 @@
 """
 from bcbio import utils
 from bcbio.bam import callable
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
@@ -23,6 +24,10 @@ process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "topha
 def align_prep_full(*args):
     return lane.align_prep_full(*args)
 align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+
+@utils.map_wrap
+def prep_align_inputs(*args):
+    return alignprep.create_inputs(*args)
 
 @utils.map_wrap
 def merge_sample(*args):

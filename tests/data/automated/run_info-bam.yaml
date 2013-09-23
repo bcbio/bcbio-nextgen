@@ -21,6 +21,7 @@ details:
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
       #aligner: novoalign
+      align_split_size: 10000
       aligner: bwa
       #mark_duplicates: samtools
       #realign: gkno

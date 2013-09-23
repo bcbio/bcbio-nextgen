@@ -251,7 +251,8 @@ class Variant2Pipeline(AbstractPipeline):
                              lane_items, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment")
-            samples = run_parallel("align_prep_full", [list(x) + [config_file] for x in lane_items])
+            samples = run_parallel("prep_align_inputs", lane_items)
+            samples = run_parallel("align_prep_full", lane_items)
             regions = callable.combine_sample_regions(samples)
             samples = region.add_region_info(samples, regions)
             samples = region.clean_sample_data(samples)

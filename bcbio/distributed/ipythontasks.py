@@ -5,6 +5,7 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.distributed import ipython
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
 from bcbio.provenance import system
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
@@ -49,6 +50,11 @@ def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
 process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
+
+@require(alignprep)
+def prep_align_inputs(*args):
+    with _setup_logging(args):
+        return apply(alignprep.create_inputs, *args)
 
 @require(lane)
 def align_prep_full(*args):
