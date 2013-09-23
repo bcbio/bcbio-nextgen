@@ -204,7 +204,7 @@ def add_install_defaults(args):
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
-    if "sudo" in default_args:
+    if "sudo" in default_args and not args.sudo is False:
         args.sudo = default_args["sudo"]
     return args
 
