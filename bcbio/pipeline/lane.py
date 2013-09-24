@@ -22,10 +22,6 @@ def _item_needs_compute(lane_items):
     """
     for item in lane_items:
         config = item["config"]
-        split_size = config.get("distributed", {}).get("align_split_size",
-                                                       config["algorithm"].get("align_split_size", None))
-        if split_size is not None:
-            return True
         if needs_fastq_conversion(item, item["config"]):
             return True
     return False

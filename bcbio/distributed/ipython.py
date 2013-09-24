@@ -237,6 +237,7 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
             yield parallel
         elif os.path.exists(checkpoint_file):
             parallel["checkpoint"] = True
+            yield parallel
         else:
             items = [x for x in items if x is not None]
             jobr = find_job_resources([_get_ipython_fn(x, parallel) for x in fn_names],
@@ -252,6 +253,7 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
         raise
     else:
         parallel["view"] = None
+        parallel["checkpoint"] = False
         with open(checkpoint_file, "w") as out_handle:
             out_handle.write("done\n")
 
@@ -271,7 +273,8 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     out = []
     items = [x for x in items if x is not None]
     algs = [get_algorithm_config(x) for x in items]
-    if ((len(algs) > 0 and not algs[0].get("resource_check", True)) or parallel.get("view")):
+    if ((len(algs) > 0 and not algs[0].get("resource_check", True))
+        or parallel.get("view") or parallel.get("checkpoint")):
         checkpoint_file = None
     else:
         checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))

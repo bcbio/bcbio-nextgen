@@ -61,10 +61,9 @@ def _pipeline_needs_fastq(config, item):
     """
     aligner = config["algorithm"].get("aligner")
     has_multiplex = item.get("multiplex") is not None
-    do_split = config["algorithm"].get("align_split_size") is not None
     support_bam = aligner in alignment.metadata.get("support_bam", [])
     return (has_multiplex or
-            (aligner and not do_split and not support_bam))
+            (aligner and not support_bam))
 
 def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     """Convert BAM input file into FASTQ files.

@@ -76,7 +76,6 @@ class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
         """Overwrite standard recv for timeout calls to catch interrupt errors.
         """
         if timeout:
-            raise NotImplementedError
             try:
                 testsock = self._zmq.select([self.socket], [], [], timeout)[0]
             except zmq.ZMQError as e:
