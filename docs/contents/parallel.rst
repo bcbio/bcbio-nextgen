@@ -71,8 +71,16 @@ to the underlying queue scheduler. This currently supports SGE's
 ``-l`` parameter and SLURM native flags. This allows specification
 or resources to the scheduler (see the `qsub man page`_). You may specify multiple
 resources separated with a ``;``, so a ``-r mem=4g;ct=01:40:00``
-translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or 
-``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for instance.
+translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
+``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for
+instance.
+
+``-r pename=your_pe`` supports specifying the `SGE parallel environment`_
+to use for submitting multicore jobs. Since this setup is system
+specific it is hard to write general code. Specifically when there
+are multiple suitable parallel environments, it will select the first
+one which may not be correct. Manually specifying it with a ``pename=`
+flag to resources will ensure correct selection of the right environment.
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
@@ -81,7 +89,7 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 .. _Gluster: http://www.gluster.org/
 .. _Lustre: http://wiki.lustre.org/index.php/Main_Page
 .. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
-
+.. _SGE parallel environment: https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment
 .. _memory-management:
 
 Memory management

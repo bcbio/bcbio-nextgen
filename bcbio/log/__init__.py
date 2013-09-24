@@ -91,7 +91,7 @@ def create_base_logger(config, parallel=None):
     cores = parallel.get("cores", 1)
     if parallel_type == "ipython":
         ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
-               if not ip.startswith("127.")]
+               if not ip.startswith("127.0.0")]
         uri = "tcp://%s" % ips[0]
         subscriber = logbook_zmqpush.ZeroMQPullSubscriber()
         mport = subscriber.socket.bind_to_random_port(uri)
