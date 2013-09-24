@@ -233,8 +233,10 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
     checkpoint_file = os.path.join(checkpoint_dir, "global-%s.done" % name)
     sysinfo = system.get_info(dirs, parallel)
     try:
-        if parallel["type"] != "ipython" or os.path.exists(checkpoint_file):
+        if parallel["type"] != "ipython":
             yield parallel
+        elif os.path.exists(checkpoint_file):
+            parallel["checkpoint"] = True
         else:
             items = [x for x in items if x is not None]
             jobr = find_job_resources([_get_ipython_fn(x, parallel) for x in fn_names],
@@ -243,6 +245,7 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
             parallel = dictadd(parallel, "num_jobs", jobr.num_jobs)
             parallel = dictadd(parallel, "mem", jobr.memory_per_job)
             with _view_from_parallel(parallel, dirs["work"], config) as view:
+                parallel["checkpoint"] = False
                 parallel["view"] = view
                 yield parallel
     except:
@@ -268,7 +271,7 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     out = []
     items = [x for x in items if x is not None]
     algs = [get_algorithm_config(x) for x in items]
-    if len(algs) > 0 and not algs[0].get("resource_check", True):
+    if ((len(algs) > 0 and not algs[0].get("resource_check", True)) or parallel.get("view")):
         checkpoint_file = None
     else:
         checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
@@ -280,7 +283,7 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
         parallel = dictadd(parallel, "num_jobs", jobr.num_jobs)
         parallel = dictadd(parallel, "mem", jobr.memory_per_job)
     # already finished, run locally on current machine to collect details
-    if checkpoint_file and os.path.exists(checkpoint_file):
+    if parallel.get("checkpoint") or (checkpoint_file and os.path.exists(checkpoint_file)):
         logger.info("ipython: %s -- local; checkpoint passed" % fn_name)
         for args in items:
             if args:
