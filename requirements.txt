@@ -5,6 +5,7 @@ cutadapt==1.2.1
 Cython>=0.19
 fabric>=1.7.0
 ipython>=1.0
+pyzmq>=2.2.0
 ipython-cluster-helper>=0.1.13
 Logbook>=0.4.1
 Mako>=0.7.3
@@ -14,7 +15,6 @@ py_descriptive_statistics>=0.2
 pysam>=0.6
 PyYAML>=3.10
 joblib>=0.7.0d
-pyzmq>=2.1.11
 sh>=1.07
 HTSeq >= 0.5.3p5
 bcbio-nextgen==0.7.3

@@ -30,8 +30,7 @@ def upgrade_bcbio(args):
     """
     args = add_install_defaults(args)
     pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
-    if args.upgrade not in ["skip"]:
-        _update_conda_packages()
+    _update_conda_packages()
     if args.upgrade in ["skip"]:
         pass
     elif args.upgrade in ["stable", "system"]:
@@ -77,9 +76,13 @@ def _update_conda_packages():
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
     pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
+            "pycrypto", "pip", "pysam", "pyyaml", "requests"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
+        extra_pkgs = ["zeromq", "pyzmq"]
+        binstar_user = "minrk"
+        subprocess.check_call([conda_bin, "install", "--yes",
+                               "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))

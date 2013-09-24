@@ -1,3 +1,4 @@
+include *.txt
 include *.md
 include config/*.yaml
 include config/*.ini
