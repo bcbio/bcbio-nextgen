@@ -5,7 +5,6 @@ http://tophat.cbcb.umd.edu
 import sh
 import os
 import shutil
-import subprocess
 from contextlib import closing
 import glob
 
@@ -286,13 +285,11 @@ def _select_bowtie_version(config):
 
 
 def _ref_version(ref_file):
-    _, ext = os.path.splitext(glob.glob(ref_file + "*")[0])
-    if ext == ".ebwt":
-        return 1
-    elif ext == ".bt2":
-        return 2
-    else:
-        logger.error("Cannot detect which reference version %s is. "
+    for ext in [os.path.splitext(x)[1] for x in glob.glob(ref_file + "*")]:
+        if ext == ".ebwt":
+            return 1
+        elif ext == ".bt2":
+            return 2
+    raise ValueError("Cannot detect which reference version %s is. "
                      "Should end in either .ebwt (bowtie) or .bt2 "
                      "(bowtie2)." % (ref_file))
-        exit(1)
