@@ -1,3 +1,13 @@
+## 0.7.4 (in progress)
+
+- Framework for indexing input reads using bgzip and grabix, to handle
+  distributed alignment.
+- Move to pyzmq 13.1.0 to avoid intermittent issues with dropped messages on
+  earlier versions. Clean up logging handling code to be more resilient to
+  interrupt messages.
+- Bug fix for algorithm options incorrectly expanded to paths on re-runs. Thanks
+  to Brent Pedersen for report.
+
 ## 0.7.3 (September 22, 2013)
 
 - Move specification of supporting genome files for variation (dbSNP, training
