@@ -3,6 +3,7 @@
 Enables automated installation tool and in-place updates to install additional
 data and software.
 """
+import collections
 import contextlib
 import os
 import shutil
@@ -12,6 +13,7 @@ import sys
 import requests
 import yaml
 
+from bcbio import utils
 from bcbio.pipeline import genome
 
 REMOTES = {
@@ -26,6 +28,7 @@ def upgrade_bcbio(args):
 
     Handles bcbio, third party tools and data.
     """
+    args = add_install_defaults(args)
     pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
     if args.upgrade not in ["skip"]:
         _update_conda_packages()
@@ -40,6 +43,7 @@ def upgrade_bcbio(args):
         subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
+
     if args.tooldir:
         with bcbio_tmpdir():
             print("Upgrading third party tools to latest versions")
@@ -48,11 +52,19 @@ def upgrade_bcbio(args):
         with bcbio_tmpdir():
             print("Upgrading bcbio-nextgen data files")
             upgrade_bcbio_data(args, REMOTES)
+    save_install_defaults(args)
 
 def _default_deploy_args(args):
     flavors = {"minimal": "ngs_pipeline_minimal",
                "full": "ngs_pipeline"}
+    toolplus = {"protected": {"bio_nextgen": ["gatk-protected"]},
+                "data": {"bio_nextgen": ["gemini"]}}
+    custom_add = collections.defaultdict(list)
+    for x in args.toolplus:
+        for k, vs in toolplus[x].iteritems():
+            custom_add[k].extend(vs)
     return {"flavor": flavors[args.tooldist],
+            "custom_add": dict(custom_add),
             "vm_provider": "novm",
             "hostname": "localhost",
             "fabricrc_overrides" : {"edition": "minimal",
@@ -69,13 +81,16 @@ def _update_conda_packages():
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
 
-def upgrade_bcbio_data(args, remotes):
-    """Upgrade required genome data files in place.
-    """
+def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
     if "anaconda" not in os.path.basename(base_dir) and "virtualenv" not in os.path.basename(base_dir):
         raise ValueError("Cannot update data for bcbio-nextgen not installed by installer.")
-    data_dir = os.path.dirname(base_dir)
+    return os.path.dirname(base_dir)
+
+def upgrade_bcbio_data(args, remotes):
+    """Upgrade required genome data files in place.
+    """
+    data_dir = _get_data_dir()
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
     s["fabricrc_overrides"]["data_files"] = data_dir
@@ -136,20 +151,72 @@ def upgrade_thirdparty_tools(args, remotes):
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
 
+# ## Store a local configuration file with upgrade details
+
+def _get_install_config():
+    """Return the YAML configuration file used to store upgrade information.
+    """
+    try:
+        data_dir = _get_data_dir()
+    except ValueError:
+        return None
+    config_dir = utils.safe_makedir(os.path.join(data_dir, "config"))
+    return os.path.join(config_dir, "install-params.yaml")
+
+def save_install_defaults(args):
+    """Save installation information to make future upgrades easier.
+    """
+    install_config = _get_install_config()
+    if install_config is None:
+        return
+    if utils.file_exists(install_config):
+        with open(install_config) as in_handle:
+            cur_config = yaml.load(in_handle)
+    else:
+        cur_config = {}
+    if args.tooldist not in "minimal":
+        cur_config["tooldist"] = args.tooldist
+    if args.tooldir:
+        cur_config["tooldir"] = args.tooldir
+    cur_config["sudo"] = args.sudo
+    for attr in ["genomes", "aligners", "toolplus"]:
+        if not cur_config.get(attr):
+            cur_config[attr] = []
+        for x in getattr(args, attr):
+            if x not in cur_config[attr]:
+                cur_config[attr].append(x)
+    with open(install_config, "w") as out_handle:
+        yaml.dump(cur_config, out_handle, default_flow_style=False, allow_unicode=False)
+
+def add_install_defaults(args):
+    """Add any saved installation defaults to the upgrade.
+    """
+    install_config = _get_install_config()
+    if install_config is None or not utils.file_exists(install_config):
+        return args
+    with open(install_config) as in_handle:
+        default_args = yaml.load(in_handle)
+    if default_args.get("tooldist") and args.tooldist == "minimal":
+        args.tooldir = default_args["tooldist"]
+    for attr in ["genomes", "aligners", "toolplus"]:
+        for x in default_args.get(attr, []):
+            new_val =  getattr(args, attr)
+            if x not in getattr(args, attr):
+                new_val.append(x)
+            setattr(args, attr, new_val)
+    if "sudo" in default_args:
+        args.sudo = default_args["sudo"]
+    return args
+
 def add_subparser(subparsers):
     parser = subparsers.add_parser("upgrade", help="Install or upgrade bcbio-nextgen")
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
-    parser.add_argument("--tooldist",
-                        help="Type of tool distribution to install. Defaults to a minimum install.",
-                        default="minimal",
-                        choices=["minimal", "full"])
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
                         choices = ["stable", "development", "system", "skip"], default="stable")
-    parser.add_argument("--distribution", help="Operating system distribution",
-                        default="",
-                        choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
+    parser.add_argument("--toolplus", help="Specify additional tool categories to install",
+                        action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
@@ -158,6 +225,13 @@ def add_subparser(subparsers):
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--tooldist",
+                        help="Type of tool distribution to install. Defaults to a minimum install.",
+                        default="minimal",
+                        choices=["minimal", "full"])
+    parser.add_argument("--distribution", help="Operating system distribution",
+                        default="",
+                        choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
 
 def get_cloudbiolinux(remotes):
     base_dir = os.path.join(os.getcwd(), "cloudbiolinux")
