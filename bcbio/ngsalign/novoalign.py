@@ -50,7 +50,7 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        "  -o {tx_out_file} /dev/stdin")
                 cmd = cmd.format(**locals())
                 do.run(cmd, "Novoalign: %s" % names["sample"], None,
-                       [do.file_nonempty(tx_out_file)])
+                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
     return out_file
 
 # ## Fastq to BAM alignment
@@ -83,7 +83,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                 cmd = cmd.format(**locals())
                 do.run(cmd, "Novoalign: %s" % names["sample"], None,
-                       [do.file_nonempty(tx_out_file)])
+                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
     return out_file
 
 def _novoalign_args_from_config(config, need_quality=True):

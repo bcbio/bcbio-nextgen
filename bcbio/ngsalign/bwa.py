@@ -46,7 +46,7 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                 cmd = cmd.format(**locals())
                 do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
-                       [do.file_nonempty(tx_out_file)])
+                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
     return out_file
 
 def can_pipe(fastq_file):
@@ -93,7 +93,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                 cmd = cmd.format(**locals())
                 do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
-                       [do.file_nonempty(tx_out_file)])
+                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
     return out_file
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,

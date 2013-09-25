@@ -96,3 +96,20 @@ def file_exists(target_file):
             logger.info("Did not find output file {0}".format(target_file))
         return ok
     return check
+
+def file_reasonable_size(target_file, input_file):
+    def check():
+        if input_file.endswith((".bam", ".gz")):
+            scale = 5.0
+        else:
+            scale = 10.0
+        orig_size = os.path.getsize(input_file) / pow(1024.0, 3)
+        out_size = os.path.getsize(target_file) / pow(1024.0, 3)
+        if out_size < (orig_size / scale):
+            logger.info("Output file unexpectedly small. %.1fGb for output versus "
+                        "%.1fGb for the input file. This often indicates a memory "
+                        "error during samtools sorting." % (out_size, orig_size))
+            return False
+        else:
+            return True
+    return check
