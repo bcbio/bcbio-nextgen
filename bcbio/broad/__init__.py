@@ -192,7 +192,6 @@ class BroadRunner:
         """
         if self._mutect_version is None:
             self._set_default_versions(self._config)
-            assert self._mutect_version is not None
         return self._mutect_version
 
     def gatk_type(self):
