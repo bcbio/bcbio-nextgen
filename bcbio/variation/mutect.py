@@ -12,6 +12,7 @@ from bcbio.provenance.programs import get_version
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils
+from bcbio.log import logger
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
                         "java.lang.IllegalArgumentException: "
@@ -34,13 +35,25 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
 
     broad_runner = broad.runner_from_config(base_config, "mutect")
 
-    if LooseVersion(broad_runner.get_mutect_version()) < LooseVersion("1.1.5"):
+    mutect_version = broad_runner.get_mutect_version()
 
-        message = ("MuTect 1.1.4 and lower is known to have incompatibilities "
-                   "with Java < 7, and this may lead to problems in analyses. "
-                   "Please use MuTect 1.1.5 or higher (note that it requires "
-                   "Java 7).")
-        raise ValueError(message)
+    try:
+        assert mutect_version is not None
+    except AssertionError:
+        logger.warn("WARNING")
+        logger.warn("MuTect version could not be determined from jar file. "
+                    "Please ensure you are using at least version 1.1.5, "
+                    "as versions 1.1.4 and lower have known issues.")
+        logger.warn("Proceeding but assuming correct version 1.1.5.")
+    else:
+        try:
+            assert LooseVersion(mutect_version) >= LooseVersion("1.1.5")
+        except AssertionError:
+            message =  ("MuTect 1.1.4 and lower is known to have incompatibilities "
+                        "with Java < 7, and this may lead to problems in analyses. "
+                        "Please use MuTect 1.1.5 or higher (note that it requires "
+                        "Java 7).")
+            raise ValueError(message)
 
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
