@@ -9,7 +9,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from bcbio.pipeline import config_utils
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.ngsalign import novoalign
+from bcbio.ngsalign import alignprep, novoalign
 from bcbio.provenance import do
 
 galaxy_location_file = "bwa_index.loc"
@@ -70,20 +70,28 @@ def can_pipe(fastq_file):
                 break
     return (float(shorter) / float(tocheck)) <= thresh
 
-def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
+def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
     """
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
-    samtools = config_utils.get_program("samtools", config)
-    bwa = config_utils.get_program("bwa", config)
-    resources = config_utils.get_resources("samtools", config)
-    num_cores = config["algorithm"].get("num_cores", 1)
+    if data.get("align_split"):
+        final_file = out_file
+        out_file, data = alignprep.setup_combine(final_file, data)
+        fastq_file = alignprep.split_namedpipe_cl(fastq_file, data)
+        if pair_file:
+            pair_file = alignprep.split_namedpipe_cl(pair_file, data)
+    else:
+        final_file = None
+    samtools = config_utils.get_program("samtools", data["config"])
+    bwa = config_utils.get_program("bwa", data["config"])
+    resources = config_utils.get_resources("samtools", data["config"])
+    num_cores = data["config"]["algorithm"].get("num_cores", 1)
     # adjust memory for samtools since used alongside alignment
     max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                          3, "decrease")
     rg_info = novoalign.get_rg_info(names)
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
@@ -94,7 +102,8 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                 cmd = cmd.format(**locals())
                 do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
-    return out_file
+    data["work_bam"] = out_file
+    return data
 
 def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
           names=None):

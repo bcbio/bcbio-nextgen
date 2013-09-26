@@ -89,7 +89,7 @@ def _bamtools_merge(bam_files):
     """Use bamtools to merge multiple BAM files, requires a list from disk.
     """
     if len(bam_files) > system.open_file_limit():
-        raise IOError("More files to merge (%s) then available open file descriptors (%s)\n"
+        raise IOError("More files to merge (%s) than available open file descriptors (%s)\n"
                       "See documentation on tips for changing file limits:\n"
                       "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
                       "parallel.html#tuning-systems-for-scale"

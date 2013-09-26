@@ -137,10 +137,9 @@ def process_alignment(data):
         fastq1, fastq2 = data["files"][0], None
     config = data["config"]
     aligner = config["algorithm"].get("aligner", None)
-    out_bam = ""
     if fastq1 and os.path.exists(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
-        out_bam = align_to_sort_bam(fastq1, fastq2, aligner, data)
+        data = align_to_sort_bam(fastq1, fastq2, aligner, data)
     elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
         bamclean = config["algorithm"].get("bam_clean")
@@ -155,12 +154,12 @@ def process_alignment(data):
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))
         _check_prealigned_bam(fastq1, data["sam_ref"], config)
-    if fastq1 is None and "vrn_file" in data:
+        data["work_bam"] = out_bam
+    elif fastq1 is None and "vrn_file" in data:
         data["config"]["algorithm"]["variantcaller"] = ""
-        out_bam = None
-    elif not out_bam and not os.path.exists(fastq1):
-        raise ValueError("Could not find input file: %s" % fastq1)
-    data["work_bam"] = out_bam
+        data["work_bam"] = None
+    else:
+        raise ValueError("Could not process input file: %s" % fastq1)
     return [[data]]
 
 def postprocess_alignment(data):

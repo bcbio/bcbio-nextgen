@@ -61,17 +61,19 @@ def can_pipe(fastq_file):
     return True
 
 
-def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
+def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
     """
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
-    samtools = config_utils.get_program("samtools", config)
-    novoalign = config_utils.get_program("novoalign", config)
-    resources = config_utils.get_resources("novoalign", config)
-    num_cores = config["algorithm"].get("num_cores", 1)
+    if data.get("align_split"):
+        raise NotImplementedError("Do not yet handle split alignments with novoalign")
+    samtools = config_utils.get_program("samtools", data["config"])
+    novoalign = config_utils.get_program("novoalign", data["config"])
+    resources = config_utils.get_resources("novoalign", data["config"])
+    num_cores = data["config"]["algorithm"].get("num_cores", 1)
     max_mem = resources.get("memory", "1G")
-    extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
+    extra_novo_args = " ".join(_novoalign_args_from_config(data["config"], False))
     rg_info = get_rg_info(names)
     if not utils.file_exists(out_file):
         with utils.curdir_tmpdir() as work_dir:
@@ -84,7 +86,8 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                 cmd = cmd.format(**locals())
                 do.run(cmd, "Novoalign: %s" % names["sample"], None,
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
-    return out_file
+    data["work_bam"] = out_file
+    return data
 
 def _novoalign_args_from_config(config, need_quality=True):
     """Select novoalign options based on configuration parameters.

@@ -1,5 +1,6 @@
 """Prepare read inputs (fastq, gzipped fastq and BAM) for parallel NGS alignment.
 """
+import collections
 import copy
 import os
 import subprocess
@@ -31,18 +32,46 @@ def create_inputs(data):
             out.append([cur_data])
         return out
 
+def split_namedpipe_cl(in_file, data):
+    """Create a commandline suitable for use as a named pipe with reads in a given region.
+    """
+    grabix = config_utils.get_program("grabix", data["config"])
+    start, end = data["align_split"]
+    return "<({grabix} grab {in_file} {start} {end})".format(**locals())
+
 # ## merge
+
+def setup_combine(final_file, data):
+    """Setup the data and outputs to allow merging data back together.
+    """
+    align_dir = os.path.dirname(final_file)
+    base, ext = os.path.splitext(os.path.basename(final_file))
+    start, end = data["align_split"]
+    out_file = os.path.join(utils.safe_makedir(os.path.join(align_dir, "split")),
+                            "%s-%s_%s%s" % (base, start, end, ext))
+    data["combine"] = {"work_bam": {"out": final_file, "extras": []}}
+    return out_file, data
 
 def merge_split_alignments(samples, run_parallel):
     """Manage merging split alignments back into a final working BAM file.
     """
     ready = []
+    file_key = "work_bam"
+    to_merge = collections.defaultdict(list)
     for data in (xs[0] for xs in samples):
-        if data.get("align_split"):
-            raise NotImplementedError
+        if data.get("combine"):
+            to_merge[data["combine"][file_key]["out"]].append(data)
         else:
             ready.append([data])
-    return ready
+    ready_merge = []
+    for mgroup in to_merge.itervalues():
+        cur_data = mgroup[0]
+        del cur_data["align_split"]
+        for x in mgroup[1:]:
+            cur_data["combine"][file_key]["extras"].append(x[file_key])
+        ready_merge.append([cur_data])
+    merged = run_parallel("delayed_bam_merge", ready_merge)
+    return merged + ready
 
 # ## determine file sections
 
@@ -59,8 +88,13 @@ def _find_read_splits(in_file, split_size):
     assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
     split_lines = split_size * 4
     chunks = []
+    last = 1
     for chunki in range(num_lines // split_lines + min(1, num_lines % split_lines)):
-        chunks.append((chunki * split_lines + 1, min((chunki + 1) * split_lines, num_lines)))
+        new = last + split_lines - 1
+        chunks.append((last, min(new, num_lines - 1)))
+        last = new
+        if chunki > 0:
+            last += 1
     return chunks
 
 # ## bgzip and grabix

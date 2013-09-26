@@ -54,15 +54,18 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     if fastq1.endswith(".bam"):
         out_bam = _align_from_bam(fastq1, aligner, data["align_ref"], data["sam_ref"],
                                   names, align_dir, data)
+        data["work_bam"] = out_bam
     elif _can_pipe(aligner, fastq1):
-        out_bam = _align_from_fastq_pipe(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
-                                         names, align_dir, data)
+        data = _align_from_fastq_pipe(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
+                                      names, align_dir, data)
     else:
         out_bam = _align_from_fastq(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
                                     names, align_dir, data)
+        data["work_bam"] = out_bam
     runner = broad.runner_from_config(data["config"])
-    runner.run_fn("picard_index", out_bam)
-    return out_bam
+    if data["work_bam"] and utils.file_exists(data["work_bam"]):
+        runner.run_fn("picard_index", data["work_bam"])
+    return data
 
 def _can_pipe(aligner, fastq_file):
     """Check if current aligner support piping for a particular input fastq file.
@@ -74,13 +77,10 @@ def _can_pipe(aligner, fastq_file):
 def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, data):
     """Align longer reads using new piped strategies that avoid disk IO.
     """
-    if data.get("align_split"):
-        print data["align_split"]
-        raise NotImplementedError
     align_fn = TOOLS[aligner].pipe_align_fn
     if align_fn is None:
         raise NotImplementedError("Do not yet support piped alignment with %s" % aligner)
-    return align_fn(fastq1, fastq2, align_ref, names, align_dir, data["config"])
+    return align_fn(fastq1, fastq2, align_ref, names, align_dir, data)
 
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, data):
     assert not data.get("align_split"), "Do not handle split alignments with BAM yet"

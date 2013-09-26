@@ -99,6 +99,9 @@ def file_exists(target_file):
 
 def file_reasonable_size(target_file, input_file):
     def check():
+        # named pipes -- we can't calculate size
+        if input_file.strip().startswith("<("):
+            return True
         if input_file.endswith((".bam", ".gz")):
             scale = 5.0
         else:
