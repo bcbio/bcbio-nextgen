@@ -76,13 +76,14 @@ def _update_conda_packages():
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
     pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "requests"]
+            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
-        extra_pkgs = ["zeromq", "pyzmq"]
-        binstar_user = "minrk"
-        subprocess.check_call([conda_bin, "install", "--yes",
-                               "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
+        # Remove until can get 13.1.0 working cleanly on CentOS
+        #extra_pkgs = ["zeromq", "pyzmq"]
+        #binstar_user = "minrk"
+        #subprocess.check_call([conda_bin, "install", "--yes",
+        #                       "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))

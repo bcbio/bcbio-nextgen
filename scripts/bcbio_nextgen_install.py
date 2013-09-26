@@ -72,12 +72,13 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
 
 def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "requests"]
+            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
-    extra_pkgs = ["zeromq", "pyzmq"]
-    binstar_user = "minrk"
-    subprocess.check_call([anaconda["conda"], "install", "--yes",
-                           "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
+    # Remove until can get 13.1.0 working cleanly on CentOS
+    #extra_pkgs = ["zeromq", "pyzmq"]
+    #binstar_user = "minrk"
+    #subprocess.check_call([anaconda["conda"], "install", "--yes",
+    #                       "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
 
 def _guess_distribution():
     """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.
