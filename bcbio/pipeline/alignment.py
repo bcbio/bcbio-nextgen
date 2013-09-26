@@ -53,13 +53,13 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     align_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align", names["sample"]))
     if fastq1.endswith(".bam"):
         out_bam = _align_from_bam(fastq1, aligner, data["align_ref"], data["sam_ref"],
-                                  names, align_dir, data["config"])
+                                  names, align_dir, data)
     elif _can_pipe(aligner, fastq1):
         out_bam = _align_from_fastq_pipe(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
-                                         names, align_dir, data["config"])
+                                         names, align_dir, data)
     else:
         out_bam = _align_from_fastq(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
-                                    names, align_dir, data["config"])
+                                    names, align_dir, data)
     runner = broad.runner_from_config(data["config"])
     runner.run_fn("picard_index", out_bam)
     return out_bam
@@ -71,15 +71,20 @@ def _can_pipe(aligner, fastq_file):
         return TOOLS[aligner].can_pipe(fastq_file)
     return False
 
-def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, config):
+def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, data):
     """Align longer reads using new piped strategies that avoid disk IO.
     """
+    if data.get("align_split"):
+        print data["align_split"]
+        raise NotImplementedError
     align_fn = TOOLS[aligner].pipe_align_fn
     if align_fn is None:
         raise NotImplementedError("Do not yet support piped alignment with %s" % aligner)
-    return align_fn(fastq1, fastq2, align_ref, names, align_dir, config)
+    return align_fn(fastq1, fastq2, align_ref, names, align_dir, data["config"])
 
-def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, config):
+def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, data):
+    assert not data.get("align_split"), "Do not handle split alignments with BAM yet"
+    config = data["config"]
     qual_bin_method = config["algorithm"].get("quality_bin")
     if (qual_bin_method == "prealignment" or
          (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
@@ -91,9 +96,11 @@ def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, confi
     return align_fn(fastq1, align_ref, names, align_dir, config)
 
 def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
-                      align_dir, config):
+                      align_dir, data):
     """Align from fastq inputs, producing sorted BAM output.
     """
+    assert not data.get("align_split"), "Do not handle split alignments with non-piped fastq yet"
+    config = data["config"]
     align_fn = TOOLS[aligner].align_fn
     sam_file = align_fn(fastq1, fastq2, align_ref, names["lane"], align_dir, config,
                         names=names)

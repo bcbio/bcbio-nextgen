@@ -21,9 +21,9 @@ def process_alignment(*args):
 process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
 
 @utils.map_wrap
-def align_prep_full(*args):
-    return lane.align_prep_full(*args)
-align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+def postprocess_alignment(*args):
+    return lane.postprocess_alignment(*args)
+postprocess_alignment.metadata = {"resources": ["gatk"]}
 
 @utils.map_wrap
 def prep_align_inputs(*args):

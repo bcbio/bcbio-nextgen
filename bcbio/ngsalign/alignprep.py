@@ -1,5 +1,6 @@
 """Prepare read inputs (fastq, gzipped fastq and BAM) for parallel NGS alignment.
 """
+import copy
 import os
 import subprocess
 
@@ -19,7 +20,50 @@ def create_inputs(data):
         return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data["config"])
     data["files"] = ready_files
-    return [[data]]
+    splits = _find_read_splits(ready_files[0], data["algorithm"]["align_split_size"])
+    if len(splits) == 1:
+        return [[data]]
+    else:
+        out = []
+        for split in splits:
+            cur_data = copy.deepcopy(data)
+            cur_data["align_split"] = split
+            out.append([cur_data])
+        return out
+
+# ## merge
+
+def merge_split_alignments(samples, run_parallel):
+    """Manage merging split alignments back into a final working BAM file.
+    """
+    ready = []
+    for data in (xs[0] for xs in samples):
+        if data.get("align_split"):
+            raise NotImplementedError
+        else:
+            ready.append([data])
+    return ready
+
+# ## determine file sections
+
+def _find_read_splits(in_file, split_size):
+    """Determine sections of fastq files to process in splits.
+
+    Assumes a 4 line order to input files (name, read, name, quality).
+    grabix is 1-based inclusive, so return coordinates in that format.
+    """
+    gbi_file = in_file + ".gbi"
+    with open(gbi_file) as in_handle:
+        in_handle.next() # throw away
+        num_lines = int(in_handle.next().strip())
+    assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
+    split_lines = split_size * 4
+    chunks = []
+    for chunki in range(num_lines // split_lines + min(1, num_lines % split_lines)):
+        chunks.append((chunki * split_lines + 1, min((chunki + 1) * split_lines, num_lines)))
+    return chunks
+
+# ## bgzip and grabix
 
 def _prep_grabix_indexes(in_files, dirs, config):
     if in_files[0].endswith(".bam") and in_files[1] is None:

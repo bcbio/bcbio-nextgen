@@ -21,7 +21,6 @@ def _item_needs_compute(lane_items):
     """Determine if any item needs computing resources to spin up a cluster.
     """
     for item in lane_items:
-        config = item["config"]
         if needs_fastq_conversion(item, item["config"]):
             return True
     return False
@@ -139,10 +138,10 @@ def process_alignment(data):
     config = data["config"]
     aligner = config["algorithm"].get("aligner", None)
     out_bam = ""
-    if os.path.exists(fastq1) and aligner:
+    if fastq1 and os.path.exists(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         out_bam = align_to_sort_bam(fastq1, fastq2, aligner, data)
-    elif os.path.exists(fastq1) and fastq1.endswith(".bam"):
+    elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
         bamclean = config["algorithm"].get("bam_clean")
         if sort_method:
@@ -156,20 +155,19 @@ def process_alignment(data):
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))
         _check_prealigned_bam(fastq1, data["sam_ref"], config)
-    if not out_bam and not os.path.exists(fastq1):
+    if fastq1 is None and "vrn_file" in data:
+        data["config"]["algorithm"]["variantcaller"] = ""
+        out_bam = None
+    elif not out_bam and not os.path.exists(fastq1):
         raise ValueError("Could not find input file: %s" % fastq1)
     data["work_bam"] = out_bam
     return [[data]]
 
-def align_prep_full(data):
-    """Perform alignment and post-processing required on full BAM files.
-    Prepare list of callable genome regions allowing subsequent parallelization.
+def postprocess_alignment(data):
+    """Perform post-processing steps required on full BAM files.
+    Prepares list of callable genome regions allowing subsequent parallelization.
     """
-    if data["files"][0] is None and "vrn_file" in data:
-        data["config"]["algorithm"]["variantcaller"] = ""
-        data["work_bam"] = None
-    else:
-        data = process_alignment(data)[0][0]
+    if data["work_bam"]:
         callable_region_bed, nblock_bed = callable.block_regions(data["work_bam"],
                                                                  data["sam_ref"], data["config"])
         data["regions"] = {"nblock": nblock_bed}

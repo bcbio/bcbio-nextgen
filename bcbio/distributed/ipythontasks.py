@@ -57,10 +57,10 @@ def prep_align_inputs(*args):
         return apply(alignprep.create_inputs, *args)
 
 @require(lane)
-def align_prep_full(*args):
+def postprocess_alignment(*args):
     with _setup_logging(args):
-        return apply(lane.align_prep_full, *args)
-align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+        return apply(lane.postprocess_alignment, *args)
+postprocess_alignment.metadata = {"resources": ["gatk"]}
 
 @require(sample)
 def merge_sample(*args):

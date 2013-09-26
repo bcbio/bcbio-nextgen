@@ -15,6 +15,7 @@ from bcbio.rnaseq import qc
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import lane, region, run_info, qcsummary, version
 from bcbio.provenance import programs, system, versioncheck
 from bcbio.solexa.flowcell import get_fastq_dir
@@ -245,14 +246,16 @@ class Variant2Pipeline(AbstractPipeline):
     name = "variant2"
 
     @classmethod
-    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
+    def run(self, config, config_file, run_parallel, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with global_parallel(parallel, "multicore", ["align_prep_full"],
-                             lane_items, dirs, config) as parallel:
+        with global_parallel(parallel, "multicore", ["process_alignment", "postprocess_alignment"],
+                             samples, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment")
-            samples = run_parallel("prep_align_inputs", lane_items)
-            samples = run_parallel("align_prep_full", lane_items)
+            samples = run_parallel("prep_align_inputs", samples)
+            samples = run_parallel("process_alignment", samples)
+            samples = alignprep.merge_split_alignments(samples, run_parallel)
+            samples = run_parallel("postprocess_alignment", samples)
             regions = callable.combine_sample_regions(samples)
             samples = region.add_region_info(samples, regions)
             samples = region.clean_sample_data(samples)
@@ -306,7 +309,7 @@ class StandardPipeline(AbstractPipeline):
     @classmethod
     def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with global_parallel(parallel, "multicore", ["align_prep_full"],
+        with global_parallel(parallel, "multicore", ["process_alignment"],
                              lane_items, dirs, config) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment")
