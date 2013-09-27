@@ -64,7 +64,7 @@ def _add_reference_resources(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
-    for problem in [" "]:
+    for problem in [" ", "."]:
         x = x.replace(problem, "_")
     return x
 
