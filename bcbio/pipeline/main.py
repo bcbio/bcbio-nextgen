@@ -249,7 +249,8 @@ class Variant2Pipeline(AbstractPipeline):
     def run(self, config, config_file, run_parallel, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with global_parallel(parallel, "multicore", ["process_alignment", "postprocess_alignment"],
-                             samples, dirs, config) as parallel:
+                             samples, dirs, config,
+                             multiplier=alignprep.parallel_multiplier(samples)) as parallel:
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: alignment")
             samples = run_parallel("prep_align_inputs", samples)

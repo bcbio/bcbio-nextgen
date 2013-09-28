@@ -39,6 +39,17 @@ def split_namedpipe_cl(in_file, data):
     start, end = data["align_split"]
     return "<({grabix} grab {in_file} {start} {end})".format(**locals())
 
+# ## configuration
+
+def parallel_multiplier(items):
+    """Determine if we will be parallelizing items during processing.
+    """
+    multiplier = 1
+    for data in (x[0] for x in items):
+        if data["algorithm"].get("align_split_size"):
+            multiplier += 50
+    return multiplier
+
 # ## merge
 
 def setup_combine(final_file, data):
@@ -130,7 +141,12 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            bgzip = config_utils.get_program("bgzip", config)
+            # Try to use parallelized pbgzip, falling back on standard bgzip
+            try:
+                pbgzip = config_utils.get_program("pbgzip", config)
+                bgzip = "%s -n %s " % (pbgzip, config["algorithm"].get("num_cores", 1))
+            except config_utils.CmdNotFound:
+                bgzip = config_utils.get_program("bgzip", config)
             assert needs_bgzip
             if needs_gunzip:
                 gunzip_cmd = "gunzip -c {in_file} |".format(**locals())

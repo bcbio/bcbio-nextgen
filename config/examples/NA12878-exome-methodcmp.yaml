@@ -16,6 +16,7 @@ details:
     genome_build: GRCh37
     algorithm:
       aligner: bwa
+      align_split_size: 5000000
       variantcaller: [gatk, freebayes, gatk-haplotype]
       quality_format: Standard
       coverage_interval: regional
