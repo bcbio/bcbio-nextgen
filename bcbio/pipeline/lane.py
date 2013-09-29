@@ -14,7 +14,6 @@ from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
-from bcbio.ngsalign.split import split_read_files
 from bcbio.variation import recalibrate, vcfutils
 
 def _item_needs_compute(lane_items):
@@ -24,18 +23,6 @@ def _item_needs_compute(lane_items):
         if needs_fastq_conversion(item, item["config"]):
             return True
     return False
-
-def _prep_fastq_files(item, bc_files, dirs, config):
-    """Potentially prepare input FASTQ files for processing.
-    """
-    fastq1, fastq2 = bc_files[item["barcode_id"]]
-    split_size = config.get("distributed", {}).get("align_split_size",
-                                                   config["algorithm"].get("align_split_size", None))
-    if split_size:
-        split_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_splitprep", item["description"]))
-        return split_read_files(fastq1, fastq2, item, split_size, split_dir, dirs, config)
-    else:
-        return [[fastq1, fastq2, None]]
 
 def process_all_lanes(lanes, run_parallel):
     """Process all input lanes, avoiding starting a cluster if not needed.
