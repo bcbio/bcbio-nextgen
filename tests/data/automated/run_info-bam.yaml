@@ -48,8 +48,8 @@ details:
     description: Test1
     genome_build: hg19
     lane: 7
-    files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
-    #files: 7_100326_FC6107FAAXX.bam
+    #files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
+    files: 7_100326_FC6107FAAXX.bam
   # - algorithm:
   #     aligner: novoalign
   #     variantcaller: [gatk, freebayes]

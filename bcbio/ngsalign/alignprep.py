@@ -7,7 +7,7 @@ import subprocess
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, qcsummary
 from bcbio.provenance import do
 
 def create_inputs(data):
@@ -112,12 +112,51 @@ def _find_read_splits(in_file, split_size):
 
 def _prep_grabix_indexes(in_files, dirs, config):
     if in_files[0].endswith(".bam") and in_files[1] is None:
-        raise NotImplementedError("Prepare BAM indexed files.")
+        out = _bgzip_from_bam(in_files[0], dirs, config)
     else:
-        return [_grabix_from_fastq(x, dirs, config) if x else None for x in in_files]
+        out = [_bgzip_from_fastq(x, dirs, config) if x else None for x in in_files]
+    [_grabix_index(x, config) for x in out if x]
+    return out
 
-def _grabix_from_fastq(in_file, dirs, config):
-    """Prepare a bgzipped grabix indexed file from a fastq input.
+def _bgzip_from_bam(bam_file, dirs, config):
+    """Create bgzipped fastq files from an input BAM file.
+    """
+    # tools
+    bedtools = config_utils.get_program("bedtools", config)
+    bgzip = config_utils.get_program("bgzip", config)
+    #bgzip = _get_bgzip_cmd(config)
+    samtools = config_utils.get_program("samtools", config)
+    resources = config_utils.get_resources("samtools", config)
+    num_cores = config["algorithm"].get("num_cores", 1)
+    max_mem = resources.get("memory", "1G")
+    # files
+    work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
+    out_file_1 = os.path.join(work_dir, "%s-1.fq.gz" % os.path.splitext(os.path.basename(bam_file))[0])
+    if qcsummary.is_paired(bam_file):
+        out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
+        fq2 = "-fq2 >(%s -c /dev/stdin > %s)" % (bgzip, out_file_2)
+    else:
+        out_file_2 = None
+        fq2 = ""
+    if not utils.file_exists(out_file_1):
+        with file_transaction(out_file_1) as tx_out_file:
+            fq1_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, tx_out_file)
+            sortprefix = "%s-sort" % os.path.splitext(tx_out_file)[0]
+            cmd = ("{samtools} sort -n -o -l 0 -@ {num_cores} -m {max_mem} {bam_file} {sortprefix} "
+                   "| {bedtools} bamtofastq -i /dev/stdin "
+                   "-fq >({fq1_bgzip_cmd}) {fq2}")
+            do.run(cmd.format(**locals()), "BAM to bgzipped fastq")
+    return [x for x in [out_file_1, out_file_2] if x is not None]
+
+def _grabix_index(in_file, config):
+    grabix = config_utils.get_program("grabix", config)
+    gbi_file = in_file + ".gbi"
+    if not utils.file_exists(gbi_file):
+        do.run([grabix, "index", in_file], "Index input with grabix")
+    return gbi_file
+
+def _bgzip_from_fastq(in_file, dirs, config):
+    """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).
     """
     grabix = config_utils.get_program("grabix", config)
     if in_file.endswith(".gz"):
@@ -128,10 +167,16 @@ def _grabix_from_fastq(in_file, dirs, config):
         out_file = _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip)
     else:
         out_file = in_file
-    gbi_file = out_file + ".gbi"
-    if not utils.file_exists(gbi_file):
-        do.run([grabix, "index", out_file], "Index input with grabix")
     return out_file
+
+def _get_bgzip_cmd(config):
+    """Retrieve command to use for bgzip, trying to use parallel pbgzip if available.
+    """
+    try:
+        pbgzip = config_utils.get_program("pbgzip", config)
+        return "%s -n %s " % (pbgzip, config["algorithm"].get("num_cores", 1))
+    except config_utils.CmdNotFound:
+        return config_utils.get_program("bgzip", config)
 
 def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
     """Handle bgzip of input file, potentially gunzipping an existing file.
@@ -141,13 +186,8 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            # Try to use parallelized pbgzip, falling back on standard bgzip
-            try:
-                pbgzip = config_utils.get_program("pbgzip", config)
-                bgzip = "%s -n %s " % (pbgzip, config["algorithm"].get("num_cores", 1))
-            except config_utils.CmdNotFound:
-                bgzip = config_utils.get_program("bgzip", config)
             assert needs_bgzip
+            bgzip = _get_bgzip_cmd(config)
             if needs_gunzip:
                 gunzip_cmd = "gunzip -c {in_file} |".format(**locals())
                 bgzip_in = "/dev/stdin"
