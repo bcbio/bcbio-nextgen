@@ -10,6 +10,7 @@ import subprocess
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import (memoize_outfile, file_exists, curdir_tmpdir)
@@ -60,22 +61,27 @@ def can_pipe(fastq_file):
     """
     return True
 
-
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
     """
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
     if data.get("align_split"):
-        raise NotImplementedError("Do not yet handle split alignments with novoalign")
+        final_file = out_file
+        out_file, data = alignprep.setup_combine(final_file, data)
+        fastq_file = alignprep.split_namedpipe_cl(fastq_file, data)
+        if pair_file:
+            pair_file = alignprep.split_namedpipe_cl(pair_file, data)
+    else:
+        final_file = None
     samtools = config_utils.get_program("samtools", data["config"])
     novoalign = config_utils.get_program("novoalign", data["config"])
     resources = config_utils.get_resources("novoalign", data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     max_mem = resources.get("memory", "1G")
-    extra_novo_args = " ".join(_novoalign_args_from_config(data["config"], False))
+    extra_novo_args = " ".join(_novoalign_args_from_config(data["config"]))
     rg_info = get_rg_info(names)
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
