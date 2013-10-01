@@ -43,7 +43,8 @@ def _normalize_cmd_args(cmd):
     intermediate errors.
     """
     if isinstance(cmd, basestring):
-        if cmd.find(" | ") > 0:
+        # check for standard or anonymous named pipes
+        if cmd.find(" | ") > 0 or cmd.find(">(") or cmd.find("<("):
             return "set -o pipefail; " + cmd, True, _find_bash()
         else:
             return cmd, True, None

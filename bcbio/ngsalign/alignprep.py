@@ -122,29 +122,26 @@ def _bgzip_from_bam(bam_file, dirs, config):
     """Create bgzipped fastq files from an input BAM file.
     """
     # tools
-    bedtools = config_utils.get_program("bedtools", config)
-    bgzip = config_utils.get_program("bgzip", config)
-    #bgzip = _get_bgzip_cmd(config)
-    samtools = config_utils.get_program("samtools", config)
-    resources = config_utils.get_resources("samtools", config)
-    num_cores = config["algorithm"].get("num_cores", 1)
-    max_mem = resources.get("memory", "1G")
+    bamtofastq = config_utils.get_program("bamtofastq", config)
+    bgzip = _get_bgzip_cmd(config)
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
     out_file_1 = os.path.join(work_dir, "%s-1.fq.gz" % os.path.splitext(os.path.basename(bam_file))[0])
     if qcsummary.is_paired(bam_file):
         out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
-        fq2 = "-fq2 >(%s -c /dev/stdin > %s)" % (bgzip, out_file_2)
     else:
         out_file_2 = None
-        fq2 = ""
     if not utils.file_exists(out_file_1):
         with file_transaction(out_file_1) as tx_out_file:
             fq1_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, tx_out_file)
             sortprefix = "%s-sort" % os.path.splitext(tx_out_file)[0]
-            cmd = ("{samtools} sort -n -o -l 0 -@ {num_cores} -m {max_mem} {bam_file} {sortprefix} "
-                   "| {bedtools} bamtofastq -i /dev/stdin "
-                   "-fq >({fq1_bgzip_cmd}) {fq2}")
+            if qcsummary.is_paired(bam_file):
+                fq2_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, out_file_2)
+                out_str = ("F=>({fq1_bgzip_cmd}) F2=>({fq2_bgzip_cmd}) S=/dev/null O=/dev/null "
+                           "O2=/dev/null collate=1")
+            else:
+                out_str = "S=>({fq1_bgzip_cmd})"
+            cmd = "{bamtofastq} filename={bam_file} T={sortprefix} " + out_str
             do.run(cmd.format(**locals()), "BAM to bgzipped fastq")
     return [x for x in [out_file_1, out_file_2] if x is not None]
 
