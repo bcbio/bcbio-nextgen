@@ -9,6 +9,7 @@ import subprocess
 
 from bcbio import utils
 from bcbio.pipeline import config_utils, version
+from bcbio.log import logger
 
 import HTSeq
 
@@ -53,6 +54,9 @@ def jar_versioner(program_name, jar_name):
             jar = jar.replace(to_remove, "")
         if jar.startswith(("-", ".")):
             jar = jar[1:]
+        if jar is "":
+            logger.warn("Unable to determine version for program '{}' from jar file {}".format(program_name,
+                                                                              config_utils.get_jar(jar_name, pdir)))
         return jar
     return get_version
 
