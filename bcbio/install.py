@@ -51,6 +51,9 @@ def upgrade_bcbio(args):
         with bcbio_tmpdir():
             print("Upgrading bcbio-nextgen data files")
             upgrade_bcbio_data(args, REMOTES)
+    if args.isolate and args.tooldir:
+        print("Installation directory not added to current PATH")
+        print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
     save_install_defaults(args)
 
 def _default_deploy_args(args):
@@ -68,6 +71,7 @@ def _default_deploy_args(args):
             "hostname": "localhost",
             "fabricrc_overrides" : {"edition": "minimal",
                                     "use_sudo": args.sudo,
+                                    "keep_isolated": args.isolate,
                                     "distribution": args.distribution or "__auto__",
                                     "dist_name": "__auto__"}}
 
@@ -183,6 +187,7 @@ def save_install_defaults(args):
     if args.tooldir:
         cur_config["tooldir"] = args.tooldir
     cur_config["sudo"] = args.sudo
+    cur_config["isolate"] = args.isolate
     for attr in ["genomes", "aligners", "toolplus"]:
         if not cur_config.get(attr):
             cur_config[attr] = []
@@ -210,6 +215,8 @@ def add_install_defaults(args):
             setattr(args, attr, new_val)
     if "sudo" in default_args and not args.sudo is False:
         args.sudo = default_args["sudo"]
+    if "isolate" in default_args and not args.isolate is True:
+        args.isolate = default_args["isolate"]
     return args
 
 def add_subparser(subparsers):
@@ -225,10 +232,12 @@ def add_subparser(subparsers):
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"])
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
+                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
+                        dest="isolate", action="store_true", default=False)
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",

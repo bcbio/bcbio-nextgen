@@ -23,6 +23,9 @@ for configuring the installation process. Some useful arguments are:
 
 - ``--nosudo`` For running in environments where you lack administrator
   privileges.
+- ``--isolate`` Avoid updating users ``~/.bashrc`` if installing in a
+  non-standard PATH. This facilitates creation of isolated modules
+  without disrupting the user's environmental setup.
 - ``--nodata`` Do not install genome data.
 
 To bootstrap installation, the machine will need to have some basic

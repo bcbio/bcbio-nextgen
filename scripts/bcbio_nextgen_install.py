@@ -183,10 +183,12 @@ if __name__ == "__main__":
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"])
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
+                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
+                        dest="isolate", action="store_true", default=False)
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",
