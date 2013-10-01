@@ -50,10 +50,10 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
     return out_file
 
 def can_pipe(fastq_file):
-    """bwa-mem handle longer (> 75bp) reads with improved piping.
+    """bwa-mem handle longer (> 70bp) reads with improved piping.
     Default to no piping if more than half the first 500 reads are small.
     """
-    min_size = 75
+    min_size = 70
     thresh = 0.5
     tocheck = 500
     shorter = 0
