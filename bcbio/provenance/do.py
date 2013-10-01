@@ -111,8 +111,8 @@ def file_reasonable_size(target_file, input_file):
         out_size = os.path.getsize(target_file) / pow(1024.0, 3)
         if out_size < (orig_size / scale):
             logger.info("Output file unexpectedly small. %.1fGb for output versus "
-                        "%.1fGb for the input file. This often indicates a memory "
-                        "error during samtools sorting." % (out_size, orig_size))
+                        "%.1fGb for the input file. This often indicates a truncated "
+                        "BAM file or memory errors during the run." % (out_size, orig_size))
             return False
         else:
             return True

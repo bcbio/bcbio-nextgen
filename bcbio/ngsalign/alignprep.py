@@ -123,6 +123,9 @@ def _bgzip_from_bam(bam_file, dirs, config):
     """
     # tools
     bamtofastq = config_utils.get_program("bamtofastq", config)
+    resources = config_utils.get_resources("bamtofastq", config)
+    cores = config["algorithm"].get("num_cores", 1)
+    max_mem = int(resources.get("memory", "1073741824")) * cores # 1Gb/core default
     bgzip = _get_bgzip_cmd(config)
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
@@ -138,11 +141,12 @@ def _bgzip_from_bam(bam_file, dirs, config):
             if qcsummary.is_paired(bam_file):
                 fq2_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, out_file_2)
                 out_str = ("F=>({fq1_bgzip_cmd}) F2=>({fq2_bgzip_cmd}) S=/dev/null O=/dev/null "
-                           "O2=/dev/null collate=1")
+                           "O2=/dev/null collate=1 colsbs={max_mem}")
             else:
                 out_str = "S=>({fq1_bgzip_cmd})"
             cmd = "{bamtofastq} filename={bam_file} T={sortprefix} " + out_str
-            do.run(cmd.format(**locals()), "BAM to bgzipped fastq")
+            do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
+                   checks=[do.file_reasonable_size(tx_out_file, bam_file)])
     return [x for x in [out_file_1, out_file_2] if x is not None]
 
 def _grabix_index(in_file, config):
