@@ -24,6 +24,12 @@ and small indel calling:
    -  `FreeBayes`_
    -  `samtools mpileup`_
    -  `cortex\_var`_
+   -  `VarScan`_
+
+-  Paired tumor / normal variant calling:
+
+   - `MuTect`_ (version 1.1.5 and above)
+   - `VarScan`_
 
 -  Quality filtering, using either
    `GATK's Variant Quality Score Recalibrator`_ or hard filtering.
@@ -199,3 +205,5 @@ templating system.
 .. _parameters: http://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html
 .. _template: http://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
 .. _illumina-rnaseq: http://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml
+.. _VarScan: http://varscan.sourceforge.net
+.. _MuTect: http://www.broadinstitute.org/cancer/cga/mutect
