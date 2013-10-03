@@ -3,6 +3,8 @@
 - Framework for indexing input reads using parallel bgzip and grabix, to handle
   distributed alignment. Enables further distribution of alignment step beyond
   multicore nodes.
+- Rework of ensemble calling approach to generalize to population level ensemble
+  calls. Provide improved defaults for handle 3 caller consolidation.
 - Support for Mouse (mm10) variant calling and RNA-seq.
 - Improve specification of resource parameters, using multiple `-r` flags
   instead of single semi-colon separated input. Allow specification of pename
