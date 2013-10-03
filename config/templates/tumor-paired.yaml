@@ -1,0 +1,25 @@
+# Template for paired (tumor/normal) variant calling
+---
+details:
+  - analysis: variant2
+    genome_build: GRCh37
+    # In order to do paired variant calling, samples should belong to the
+    # same batch ("batch" under "metadata" below") and have a "phenotype"
+    # field stating either "normal" or tumor". For each batch there
+    # should be a sample with "tumor" phenotype and a sample with "normal"
+    # phenotype (no more than two samples per batch)
+    metadata:
+       batch: your-arbitrary-batch-name
+       phenotype: tumor # or "normal"
+    algorithm:
+      aligner: bwa
+      mark_duplicates: picard
+      recalibrate: gatk
+      realign: gatk
+      variantcaller: mutect # Valid values are "mutect" or "varscan"
+      platform: illumina
+      quality_format: Standard
+      coverage_interval: genome
+      coverage_depth: high
+      # for targetted projects, set the region
+      # variant_regions: /path/to/your.bed
