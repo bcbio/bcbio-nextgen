@@ -1,10 +1,14 @@
 ## 0.7.4 (in progress)
 
-- Framework for indexing input reads using bgzip and grabix, to handle
-  distributed alignment.
-- Move to pyzmq 13.1.0 to avoid intermittent issues with dropped messages on
-  earlier versions. Clean up logging handling code to be more resilient to
-  interrupt messages.
+- Framework for indexing input reads using parallel bgzip and grabix, to handle
+  distributed alignment. Enables further distribution of alignment step beyond
+  multicore nodes.
+- Support for Mouse (mm10) variant calling and RNA-seq.
+- Improve specification of resource parameters, using multiple `-r` flags
+  instead of single semi-colon separated input. Allow specification of pename
+  resource parameter for selecting correct SGE environment when not
+  automatically found.
+- Clean up logging handling code to be more resilient to interrupt messages.
 - Bug fix for algorithm options incorrectly expanded to paths on re-runs. Thanks
   to Brent Pedersen for report.
 

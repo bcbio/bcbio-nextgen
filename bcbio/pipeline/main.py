@@ -101,9 +101,9 @@ def parse_cl_args(in_args):
                             choices=["lsf", "sge", "torque", "slurm"])
         parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
         parser.add_argument("-r", "--resources",
-                            help=("Cluster specific resources specifications. Provide multiple specs separated by ';'\n"
-                                  "Supports SGE: translated to -l parameters"),
-                            default="")
+                            help=("Cluster specific resources specifications. Can be specified multiple times.\n"
+                                  "Supports SGE and SLURM parameters."),
+                            default=[], action="append")
         parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
                             default=15, type=int)
         parser.add_argument("--retries",

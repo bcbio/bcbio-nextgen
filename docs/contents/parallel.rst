@@ -70,17 +70,18 @@ Finally, the ``-r resources`` flag specifies resource options to pass along
 to the underlying queue scheduler. This currently supports SGE's
 ``-l`` parameter and SLURM native flags. This allows specification
 or resources to the scheduler (see the `qsub man page`_). You may specify multiple
-resources separated with a ``;``, so a ``-r mem=4g;ct=01:40:00``
+resources, so ``-r mem=4g -r ct=01:40:00``
 translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 ``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for
 instance.
 
-``-r pename=your_pe`` supports specifying the `SGE parallel environment`_
-to use for submitting multicore jobs. Since this setup is system
-specific it is hard to write general code. Specifically when there
-are multiple suitable parallel environments, it will select the first
-one which may not be correct. Manually specifying it with a ``pename=`
-flag to resources will ensure correct selection of the right environment.
+``-r pename=your_pe`` supports specifying the `SGE parallel
+environment`_ to use for submitting multicore jobs. Since this setup
+is system specific it is hard to write general code for find a
+suitable environment. Specifically, when there are multiple usable
+parallel environments, it will select the first one which may not be
+correct. Manually specifying it with a ``pename=` flag to resources
+will ensure correct selection of the right environment.
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
