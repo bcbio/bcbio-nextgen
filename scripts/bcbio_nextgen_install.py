@@ -72,7 +72,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
 
 def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
+            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests", "tornado"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
     # Remove until can get 13.1.0 working cleanly on CentOS
     #extra_pkgs = ["zeromq", "pyzmq"]

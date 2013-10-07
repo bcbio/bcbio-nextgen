@@ -18,6 +18,7 @@ from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import lane, region, run_info, qcsummary, version
 from bcbio.provenance import programs, system, versioncheck
+from bcbio.server import main as server_main
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
@@ -80,11 +81,15 @@ def parse_cl_args(in_args):
 
     Returns the main config file and set of kwargs.
     """
+    sub_cmds = {"upgrade": install.add_subparser,
+                "server": server_main.add_subparser}
     parser = argparse.ArgumentParser(
         description= "Best-practice pipelines for fully automated high throughput sequencing analysis.")
-    if len(in_args) > 0 and in_args[0] in ["upgrade"]:
+    sub_cmd = None
+    if len(in_args) > 0 and in_args[0] in sub_cmds:
         subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
-        install.add_subparser(subparsers)
+        sub_cmds[in_args[0]](subparsers)
+        sub_cmd = in_args[0]
     else:
         parser.add_argument("global_config", help="Global YAML configuration file specifying details "
                             "about the system (optional, defaults to installed bcbio_system.yaml)",
@@ -127,13 +132,13 @@ def parse_cl_args(in_args):
                   "retries": args.retries,
                   "resources": args.resources,
                   "profile": args.profile,
-                  "upgrade": args.upgrade,
                   "workflow": args.workflow}
         kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
     else:
+        assert sub_cmd is not None
         kwargs = {"args": args,
                   "config_file": None,
-                  "upgrade": args.upgrade}
+                  sub_cmd: True}
     return kwargs
 
 def _add_inputs_to_kwargs(args, kwargs, parser):

@@ -33,6 +33,7 @@ from bcbio import install, workflow
 from bcbio.distributed import manage as messaging
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.pipeline.main import run_main, parse_cl_args
+from bcbio.server import main as server_main
 
 def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
          paralleltype=None, queue=None, scheduler=None, upgrade=None,
@@ -101,8 +102,10 @@ def _needed_workers(run_info):
 
 if __name__ == "__main__":
     kwargs = parse_cl_args(sys.argv[1:])
-    if kwargs["upgrade"]:
+    if "upgrade" in kwargs and kwargs["upgrade"]:
         install.upgrade_bcbio(kwargs["args"])
+    elif "server" in kwargs and kwargs["server"]:
+        server_main.start(kwargs["args"])
     else:
         if kwargs.get("workflow"):
             setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])

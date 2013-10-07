@@ -17,4 +17,5 @@ PyYAML>=3.10
 joblib>=0.7.0d
 sh>=1.07
 HTSeq >= 0.5.3p5
+tornado>=3.1.0
 bcbio-nextgen==0.7.3
