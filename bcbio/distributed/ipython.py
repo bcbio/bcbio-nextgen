@@ -114,10 +114,13 @@ def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     else:
         return jobs
 
-def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
+def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
+                       max_multicore=None):
     """Determine cores and workers to use for this stage based on function metadata.
     multiplier specifies the number of regions items will be split into during
     processing.
+    max_multicore specifies an optional limit on the maximum cores. Can use to
+    force single core processing during specific tasks.
     sysinfo specifies cores and memory on processing nodes, allowing us to tailor
     jobs for available resources.
     """
@@ -135,6 +138,8 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1):
             if memory:
                 all_memory.append(memory)
     cores_per_job = max(all_cores)
+    if max_multicore:
+        cores_per_job = min(cores_per_job, max_multicore)
     memory_per_core = max(all_memory)
     total = parallel["cores"]
     if total > cores_per_job:
@@ -222,7 +227,7 @@ def _get_ipython_fn(fn_name, parallel):
 
 @contextlib.contextmanager
 def global_parallel(parallel, name, fn_names, items, dirs, config,
-                    multiplier=1):
+                    multiplier=1, max_multicore=None):
     """Add an IPython cluster to be used for multiple remote functions.
 
     Allows sharing of a single cluster across multiple functions with
@@ -241,7 +246,8 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
         else:
             items = [x for x in items if x is not None]
             jobr = find_job_resources([_get_ipython_fn(x, parallel) for x in fn_names],
-                                      parallel, items, sysinfo, config, multiplier=multiplier)
+                                      parallel, items, sysinfo, config, multiplier=multiplier,
+                                      max_multicore=max_multicore)
             parallel = dictadd(parallel, "cores_per_job", jobr.cores_per_job)
             parallel = dictadd(parallel, "num_jobs", jobr.num_jobs)
             parallel = dictadd(parallel, "mem", jobr.memory_per_job)
