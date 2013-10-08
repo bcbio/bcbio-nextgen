@@ -98,15 +98,15 @@ Memory management
 
 The memory information specified in the system configuration
 :ref:`config-resources` enables scheduling of memory intensive
-processes. bcbio-nextgen handle memory scheduling by:
+processes. bcbio-nextgen handles memory scheduling by:
 
 - Determining available cores and memory per machine. It uses the
   local machine for multicore runs. For parallel runs, it spawns a job
   on the schedule queue and extracts the system information from that
-  machine. This requires a homogeneous set of machines within a
+  machine. This expects a homogeneous set of machines within a
   cluster queue.
 
-- Calculating the memory and core usage for a subset of the process runs.
+- Calculating the memory and core usage.
   The system configuration :ref:`config-resources` contains the
   expected core and memory usage of external programs.
 
@@ -122,8 +122,10 @@ processes. bcbio-nextgen handle memory scheduling by:
 
 As a result of these calculations, the cores used during processing
 will not always correspond to the maximum cores provided in the input
-`-n` parameter. The goal is rather to intelligently maximize cores
-and memory while staying within system resources.
+`-n` parameter. The goal is rather to intelligently maximize cores and
+memory while staying within system resources. Note that memory
+specifications are for a single core, and the pipeline takes care of
+adjusting this to actual cores used during processing.
 
 Tuning systems for scale
 ~~~~~~~~~~~~~~~~~~~~~~~~

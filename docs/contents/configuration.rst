@@ -328,7 +328,10 @@ and memory and compute resources to devote to them::
 - ``memory`` Specify the memory per core used by a process. For programs
   where memory control is available, like ``samtools sort``,
   this limits memory usage. For other programs this is an estimate of
-  usage, used by :ref:`memory-management` to avoid over-scheduling memory.
+  usage, used by :ref:`memory-management` to avoid over-scheduling
+  memory. Always specify this as the memory usage for a single core,
+  and the pipeline handles scaling this when a process uses multiple
+  cores.
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
