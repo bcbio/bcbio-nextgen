@@ -3,7 +3,7 @@
 http://varscan.sourceforge.net/
 """
 import contextlib
-import itertools
+from distuils.version import LooseVersion
 import os
 import shutil
 
@@ -51,9 +51,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
     config = items[0]["config"]
 
     version = programs.jar_versioner("varscan", "VarScan")(config)
-    if version < "v2.3.5":
+    if LooseVersion(version) < LooseVersion("v2.3.6"):
         raise IOError(
-            "Please install version 2.3.5 or better of VarScan with support "
+            "Please install version 2.3.6 or better of VarScan with support "
             "for multisample calling and indels in VCF format.")
     varscan_jar = config_utils.get_jar(
         "VarScan",
