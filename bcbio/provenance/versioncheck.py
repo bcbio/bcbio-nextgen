@@ -1,5 +1,6 @@
 """Check specific required program versions required during the pipeline.
 """
+from distutils.version import LooseVersion
 import subprocess
 
 from bcbio.pipeline import config_utils
@@ -29,12 +30,34 @@ def pdflatex(config):
                     "Install a LaTeX package like TeX Live or set `write_summary` to false "
                     "in the `algorithm` section of your sample configuration.")
 
+def java(config):
+    """GATK requires Java 1.7 or better.
+    """
+    try:
+        java = config_utils.get_program("java", config)
+    except config_utils.CmdNotFound:
+        return ("java not found on PATH. Java 1.7 or better required.")
+    p = subprocess.Popen([java, "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output, _ = p.communicate()
+    p.stdout.close()
+    version = ""
+    for line in output.split("\n"):
+        if line.startswith("java version"):
+            version = line.strip().split()[-1]
+            if version.startswith('"'):
+                version = version[1:]
+            if version.endswith('"'):
+                version = version[:-1]
+    if not version or LooseVersion(version) < LooseVersion("1.7.0"):
+        return ("java version 1.7 or better required for running GATK and other tools. "
+                "Found version %s at %s" % (version, java))
+
 def testall(items):
     logger.info("Testing minimum versions of installed programs")
     items = [x[0] for x in items]
     config = items[0]["config"]
     msgs = []
-    for fn in [samtools, pdflatex]:
+    for fn in [samtools, pdflatex, java]:
         out = fn(config)
         if out:
             msgs.append(out)

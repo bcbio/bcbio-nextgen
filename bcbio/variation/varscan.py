@@ -3,7 +3,7 @@
 http://varscan.sourceforge.net/
 """
 import contextlib
-from distuils.version import LooseVersion
+from distutils.version import LooseVersion
 import os
 import shutil
 
