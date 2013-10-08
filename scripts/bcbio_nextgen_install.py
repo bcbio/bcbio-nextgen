@@ -123,17 +123,23 @@ def write_system_config(base_url, datadir, tooldir):
             shutil.copy(out_file, bak_file)
     if tooldir:
         java_basedir = os.path.join(tooldir, "share", "java")
-    to_rewrite = ("gatk", "picard", "snpEff", "bcbio_variation")
+    rewrite_ignore = ("log",)
     with contextlib.closing(urllib2.urlopen(base_url)) as in_handle:
         with open(out_file, "w") as out_handle:
+            in_resources = False
             in_prog = None
             for line in in_handle:
-                if line.strip().startswith(to_rewrite):
+                if line[0] != " ":
+                    in_resources = line.startswith("resources")
+                    in_prog = None
+                elif (in_resources and line[:2] == "  " and line[2] != " "
+                      and not line.strip().startswith(rewrite_ignore)):
                     in_prog = line.split(":")[0].strip()
                 elif line.strip().startswith("dir:") and in_prog:
+                    final_dir = os.path.basename(line.split()[-1])
                     if tooldir:
                         line = "%s: %s\n" % (line.split(":")[0],
-                                             os.path.join(java_basedir, in_prog.lower()))
+                                             os.path.join(java_basedir, final_dir))
                     in_prog = None
                 elif line.startswith("galaxy"):
                     line = "# %s" % line

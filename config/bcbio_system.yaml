@@ -33,21 +33,21 @@ resources:
     memory: 2g
   gatk:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
-    dir: /usr/share/java/gatk
+    dir: /usr/local/share/java/gatk
   gatk-haplotype:
     jvm_opts: ["-Xms2g", "-Xmx5500m"]
   gatk-vqsr:
     jvm_opts: ["-Xms2g", "-Xmx4000m"]
   picard:
-    dir: /usr/share/java/picard
+    dir: /usr/local/share/java/picard
   snpEff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
-    dir: /usr/share/java/snpeff
+    dir: /usr/local/share/java/snpeff
   bcbio_variation:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
-    dir: /usr/share/java/bcbio_variation
+    dir: /usr/local/share/java/bcbio_variation
   rnaseqc:
-    dir: /usr/share/java/RNA-SeQC
+    dir: /usr/local/share/java/RNA-SeQC
 
 # -- Default algorithm setup
 
