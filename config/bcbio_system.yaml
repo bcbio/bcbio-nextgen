@@ -48,6 +48,12 @@ resources:
     dir: /usr/local/share/java/bcbio_variation
   rnaseqc:
     dir: /usr/local/share/java/RNA-SeQC
+  mutect:
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    dir: /usr/local/share/java/mutect
+  varscan:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/varscan
 
 # -- Default algorithm setup
 
