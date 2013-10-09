@@ -30,45 +30,12 @@ import os
 import sys
 
 from bcbio import install, workflow
-from bcbio.pipeline.config_utils import load_system_config
 from bcbio.pipeline.main import run_main, parse_cl_args
 from bcbio.server import main as server_main
 
-def main(config_file, fc_dir=None, run_info_yaml=None, numcores=None,
-         paralleltype=None, queue=None, scheduler=None, upgrade=None,
-         profile=None, workflow=None, inputs=None, resources="",
-         timeout=15, retries=None):
-    work_dir = os.getcwd()
-    config, config_file = load_system_config(config_file)
-    if config.get("log_dir", None) is None:
-        config["log_dir"] = os.path.join(work_dir, "log")
-    paralleltype, numcores = _get_cores_and_type(numcores, paralleltype, scheduler)
-    parallel = {"type": paralleltype, "cores": numcores,
-                "scheduler": scheduler, "queue": queue,
-                "profile": profile, "module": "bcbio.distributed",
-                "resources": resources, "timeout": timeout,
-                "retries": retries}
-    if parallel["type"] in ["local"]:
-        run_main(config, config_file, work_dir, parallel,
-                 fc_dir, run_info_yaml)
-    elif parallel["type"] == "ipython":
-        assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
-        assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
-        run_main(config, config_file, work_dir, parallel,
-                 fc_dir, run_info_yaml)
-    else:
-        raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
-
-def _get_cores_and_type(numcores, paralleltype, scheduler):
-    """Return core and parallelization approach from command line providing sane defaults.
-    """
-    if scheduler is not None:
-        paralleltype = "ipython"
-    if paralleltype is None:
-        paralleltype = "local"
-    if numcores is None:
-        numcores = 1
-    return paralleltype, int(numcores)
+def main(**kwargs):
+    kwargs["work_dir"] = os.getcwd()
+    run_main(**kwargs)
 
 if __name__ == "__main__":
     kwargs = parse_cl_args(sys.argv[1:])

@@ -103,6 +103,7 @@ def split_variants_by_sample(*args):
 def piped_bamprep(*args):
     with _setup_logging(args):
         return apply(bamprep.piped_bamprep, *args)
+piped_bamprep.metadata = {"resources": ["gatk"]}
 
 @require(variation)
 def postprocess_variants(*args):

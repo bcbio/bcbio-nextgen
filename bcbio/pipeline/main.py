@@ -17,6 +17,7 @@ from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import lane, region, run_info, qcsummary, version
+from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, system, versioncheck
 from bcbio.server import main as server_main
 from bcbio.solexa.flowcell import get_fastq_dir
@@ -24,8 +25,45 @@ from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.variation import coverage, ensemble, population, recalibrate, validate
 
-def run_main(config, config_file, work_dir, parallel,
-         fc_dir=None, run_info_yaml=None):
+def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,
+             numcores=None, paralleltype=None, queue=None, scheduler=None,
+             upgrade=None, profile=None, workflow=None, inputs=None,
+             resources="", timeout=15, retries=None):
+    """Run variant analysis, handling command line options.
+    """
+    config, config_file = load_system_config(config_file)
+    if config.get("log_dir", None) is None:
+        config["log_dir"] = os.path.join(work_dir, "log")
+    paralleltype, numcores = _get_cores_and_type(numcores, paralleltype, scheduler)
+    parallel = {"type": paralleltype, "cores": numcores,
+                "scheduler": scheduler, "queue": queue,
+                "profile": profile, "module": "bcbio.distributed",
+                "resources": resources, "timeout": timeout,
+                "retries": retries}
+    if parallel["type"] in ["local"]:
+        _run_toplevel(config, config_file, work_dir, parallel,
+                      fc_dir, run_info_yaml)
+    elif parallel["type"] == "ipython":
+        assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
+        assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
+        _run_toplevel(config, config_file, work_dir, parallel,
+                      fc_dir, run_info_yaml)
+    else:
+        raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
+
+def _get_cores_and_type(numcores, paralleltype, scheduler):
+    """Return core and parallelization approach from command line providing sane defaults.
+    """
+    if scheduler is not None:
+        paralleltype = "ipython"
+    if paralleltype is None:
+        paralleltype = "local"
+    if numcores is None:
+        numcores = 1
+    return paralleltype, int(numcores)
+
+def _run_toplevel(config, config_file, work_dir, parallel,
+                  fc_dir=None, run_info_yaml=None):
     """
     Run toplevel analysis, processing a set of input files.
     config_file -- Main YAML configuration file with system parameters

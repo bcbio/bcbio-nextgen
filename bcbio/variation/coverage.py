@@ -52,7 +52,7 @@ def _prep_coverage_config(samples, config):
         out["params"]["regions"] = cov_kw
     for data in samples:
         out["experiments"].append({"name": data["name"][-1],
-                                   "samples": [{"coverage": data["work_bam"]}]})
+                                   "samples": [{"coverage": str(data["work_bam"])}]})
     with open(config_file, "w") as out_handle:
         yaml.dump(out, out_handle, allow_unicode=False, default_flow_style=False)
     return config_file, out_file
