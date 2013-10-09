@@ -206,7 +206,7 @@ def piped_bamprep(data, region=None, out_file=None):
     """
     utils.safe_makedir(os.path.dirname(out_file))
     if region[0] == "nochrom":
-        prep_bam = shared.write_nochr_reads(data["work_bam"], out_file)
+        prep_bam = shared.write_nochr_reads(data["work_bam"], out_file, data["config"])
     elif region[0] == "noanalysis":
         prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file,
                                                  data["config"])

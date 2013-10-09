@@ -11,6 +11,8 @@
   resource parameter for selecting correct SGE environment when not
   automatically found.
 - Clean up logging handling code to be more resilient to interrupt messages.
+- Speed improvements for selecting unanalyzed and unmapped reads to address
+  bottlenecks during BAM prep phase.
 - Bug fix for algorithm options incorrectly expanded to paths on re-runs. Thanks
   to Brent Pedersen for report.
 

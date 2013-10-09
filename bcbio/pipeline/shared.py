@@ -1,16 +1,16 @@
 """Pipeline functionality shared amongst multiple analysis types.
 """
 import os
-import collections
 from contextlib import closing
-import subprocess
 
+import pybedtools
 import pysam
 
 from bcbio import broad
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance import do
 
 # ## Split/Combine helpers
 
@@ -58,29 +58,36 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ex
         return out_file, part_info
     return _do_work
 
-def write_nochr_reads(in_file, out_file):
-    """Write a BAM file of reads that are not on a reference chromosome.
+def write_nochr_reads(in_file, out_file, config):
+    """Write a BAM file of reads that are not mapped on a reference chromosome.
 
     This is useful for maintaining non-mapped reads in parallel processes
     that split processing by chromosome.
     """
     if not file_exists(out_file):
-        with closing(pysam.Samfile(in_file, "rb")) as in_bam:
-            with file_transaction(out_file) as tx_out_file:
-                with closing(pysam.Samfile(tx_out_file, "wb", template=in_bam)) as out_bam:
-                    for read in in_bam:
-                        if read.tid < 0:
-                            out_bam.write(read)
+        with file_transaction(out_file) as tx_out_file:
+            samtools = config_utils.get_program("samtools", config)
+            cmd = "{samtools} view -b -f 4 {in_file} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Select unmapped reads")
     return out_file
 
 def write_noanalysis_reads(in_file, region_file, out_file, config):
     """Write a BAM file of reads in the specified region file that are not analyzed.
+
+    We want to get only reads not in analysis regions but also make use of
+    the BAM index to perform well on large files. The tricky part is avoiding
+    command line limits. There is a nice discussion on SeqAnswers:
+    http://seqanswers.com/forums/showthread.php?t=29538
     """
     if not file_exists(out_file):
-        bedtools = config_utils.get_program("bedtools", config)
         with file_transaction(out_file) as tx_out_file:
-            cl = "{bedtools} intersect -abam {in_file} -b {region_file} -f 1.0 > {tx_out_file}"
-            subprocess.check_call(cl.format(**locals()), shell=True)
+            bedtools = config_utils.get_program("bedtools", config)
+            samtools = config_utils.get_program("samtools", config)
+            region_str = " ".join("%s:%s-%s" % tuple(r) for r in pybedtools.BedTool(region_file))
+            cl = ("{samtools} view -b {in_file} {region_str} | "
+                  "{bedtools} intersect -abam - -b {region_file} -f 1.0 "
+                  "> {tx_out_file}")
+            do.run(cl.format(**locals()), "Select unanalyzed reads")
     return out_file
 
 def subset_bam_by_region(in_file, region, out_file_base=None):

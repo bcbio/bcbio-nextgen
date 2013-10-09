@@ -219,7 +219,7 @@ def realign_sample(data, region=None, out_file=None):
         sam_ref = data["sam_ref"]
         config = data["config"]
         if region == "nochr":
-            realign_bam = write_nochr_reads(data["work_bam"], out_file)
+            realign_bam = write_nochr_reads(data["work_bam"], out_file, data["config"])
         else:
             realign_bam = realign_fn(data["work_bam"], sam_ref, config,
                                      data["genome_resources"]["variation"]["dbsnp"],

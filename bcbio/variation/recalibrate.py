@@ -155,7 +155,7 @@ def write_recal_bam(data, region=None, out_file=None):
         out_file = "%s-gatkrecal.bam" % os.path.splitext(data["work_bam"])[0]
     logger.info("Writing recalibrated BAM for %s to %s" % (data["name"], out_file))
     if region == "nochr":
-        out_bam = write_nochr_reads(data["work_bam"], out_file)
+        out_bam = write_nochr_reads(data["work_bam"], out_file, data["config"])
     else:
         out_bam = _run_recal_bam(data["work_bam"], data["prep_recal"],
                                  region, data["sam_ref"], out_file, config)
