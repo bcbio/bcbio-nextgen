@@ -19,19 +19,23 @@ def run_async(func):
     return async_func
 
 @run_async
-def run_bcbio_nextgen(system_config, fc_dir, run_yaml, callback):
-    print system_config, fc_dir, run_yaml
-    callback("run_id")
+def run_bcbio_nextgen(system_config, fc_dir, run_yaml, work_dir, callback):
+    print work_dir, system_config, fc_dir, run_yaml
+    callback(work_dir)
+    import time
+    time.sleep(5)
+    print work_dir, system_config, fc_dir, run_yaml
 
 def get_handler(args):
     class RunHandler(tornado.web.RequestHandler):
         @tornado.web.asynchronous
         @tornado.gen.coroutine
         def get(self):
+            work_dir = self.get_argument("work_dir")
             run_yaml = self.get_argument("run_yaml", None)
             fc_dir = self.get_argument("fc_dir", None)
             system_config = args.config
-            response = yield tornado.gen.Task(run_bcbio_nextgen, system_config, fc_dir, run_yaml)
+            response = yield tornado.gen.Task(run_bcbio_nextgen, system_config, fc_dir, run_yaml, work_dir)
             self.write(response)
             self.finish()
 
