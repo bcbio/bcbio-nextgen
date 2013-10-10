@@ -70,6 +70,8 @@ def _clean_freebayes_output(in_file):
     """Clean FreeBayes output to make post-processing with GATK happy.
     - Remove lines from FreeBayes outputs where REF/ALT are identical:
       2       22816178        .       G       G       0.0339196
+      or there are multiple duplicate alleles:
+      4       60594753        .       TGAAA   T,T
     - Remove Type=Int specifications which are not valid VCF and GATK chokes on.
     """
     out_file = apply("{0}-nodups{1}".format, os.path.splitext(in_file))
@@ -82,7 +84,8 @@ def _clean_freebayes_output(in_file):
                         out_handle.write(line)
                     else:
                         parts = line.split("\t")
-                        if parts[3] != parts[4]:
+                        alleles = [x.strip() for x in parts[4].split(",")] + [parts[3].strip()]
+                        if len(alleles) == len(set(alleles)):
                             out_handle.write(line)
         _move_vcf(in_file, "{0}.orig".format(in_file))
         _move_vcf(out_file, in_file)
