@@ -96,6 +96,8 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``genome_build`` Genome build to align to, which references a genome
   keyword in Galaxy to find location build files.
 
+.. _upload-configuration:
+
 Upload
 ~~~~~~
 
