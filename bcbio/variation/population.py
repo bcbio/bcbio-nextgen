@@ -39,7 +39,7 @@ def get_multisample_vcf(fnames, name, caller, data):
     """Retrieve a multiple sample VCF file in a standard location.
     """
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
-    gemini_vcf = os.path.join(out_dir, "%s-%s.db" % (name, caller))
+    gemini_vcf = os.path.join(out_dir, "%s-%s.vcf" % (name, caller))
     return vcfutils.combine_variant_files(fnames, gemini_vcf, data["sam_ref"],
                                           data["config"])
 
