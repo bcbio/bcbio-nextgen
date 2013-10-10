@@ -158,6 +158,8 @@ def _fix_varscan_vcf(orig_file, in_bams):
 
                     for line in in_handle:
                         line = _fix_varscan_output(line, in_bams)
+                        if not line:
+                            continue
                         out_handle.write(line)
 
 
@@ -207,6 +209,12 @@ def _fix_varscan_output(line, in_bams):
     Ifreq = line[8].split(":").index("FREQ")
     ndat = line[9].split(":")
     tdat = line[10].split(":")
+    somatic_status = line[7].split(";")  # SS=<number>
+    # HACK: The position of the SS= changes, so we just search for it
+    somatic_status = [item for item in somatic_status
+                      if item.startswith("SS=")][0]
+    somatic_status = int(somatic_status.split("=")[1])  # Get the number
+
     ndat[Ifreq] = str(float(ndat[Ifreq].rstrip("%")) / 100)
     tdat[Ifreq] = str(float(tdat[Ifreq].rstrip("%")) / 100)
     line[9] = ":".join(ndat)
@@ -214,6 +222,13 @@ def _fix_varscan_output(line, in_bams):
 
     #FIXME: VarScan also produces invalid REF records (e.g. CAA/A)
     # This is not handled yet.
+
+    if somatic_status == 5:
+
+        # "Unknown" states are broken in current versions of VarScan
+        # so we just bail out here for now
+
+        return
 
     if "+" in ALT or "-" in ALT:
         if "/" not in ALT:
