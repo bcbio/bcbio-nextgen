@@ -17,6 +17,7 @@
   bottlenecks during BAM prep phase.
 - Bug fix for algorithm options incorrectly expanded to paths on re-runs. Thanks
   to Brent Pedersen for report.
+- Fix for Tophat 2.0.9 support: remove reads with empty read names.
 
 ## 0.7.3 (September 22, 2013)
 
