@@ -1,15 +1,15 @@
 ---
 # Example file for specifying run information to bcbio_nextgen.py
 # In a fully Galaxy automated setup this information can be retrieved
-# from the Galaxy server based on user inputs. This allows you to
+# from the Galaxy server based on user inputs. This YAML files allows you to
 # run the automated pipeline separately or from other external programs
 
 # If your folder naming is not standard Illumina style
-# (110729_SN728_0036_A81UJUABXX) you should specify the date and a unique name
-# to use for naming the output files.
+# (110729_SN728_0036_A81UJUABXX) you can optionally specify a date and a unique name
+# to use for naming the output files and project directories.
 fc_date: '110812'
 fc_name: unique_name
-# Directory to upload final results to. It also supports galaxy and S3 upload.
+# Directory to upload final results to. Also supports Galaxy and S3 upload.
 upload:
   dir: ../final
 details:
@@ -25,15 +25,3 @@ details:
       aligner: novoalign
       variantcaller: gatk
       quality_format: Standard
-  - description: 'Multiplex example'
-    analysis: Minimal
-    genome_build: hg19
-    multiplex:
-      - barcode_type: Illumina
-        barcode_id: 1
-        name: 'One Barcode Sample'
-        sequence: ATCACG
-      - barcode_type: Illumina
-        barcode_id: 2
-        name: 'Another Barcode Sample'
-        sequence: CGATGT 

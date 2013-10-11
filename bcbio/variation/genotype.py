@@ -19,6 +19,7 @@ from bcbio import broad
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import grouped_parallel_split_combine
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
@@ -233,10 +234,11 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
                                "--tranches_file", tx_tranches])
                 try:
                     broad_runner.new_resources("gatk-vqsr")
-                    broad_runner.run_gatk(params)
+                    broad_runner.run_gatk(params, log_error=False)
                 # Can fail to run if not enough values are present to train. Rerun with regional
                 # filtration approach instead
                 except:
+                    logger.info("VQSR failed due to lack of training data. Using hard filtering.")
                     config["algorithm"]["coverage_interval"] = "regional"
                     return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
@@ -270,8 +272,9 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
                     params.extend(["--numBadVariants", "3000"])
                 try:
                     broad_runner.new_resources("gatk-vqsr")
-                    broad_runner.run_gatk(params)
+                    broad_runner.run_gatk(params, log_error=False)
                 except:
+                    logger.info("VQSR failed due to lack of training data. Using hard filtering.")
                     config["algorithm"]["coverage_interval"] = "regional"
                     return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
