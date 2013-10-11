@@ -4,13 +4,14 @@ Uses the gemini framework (https://github.com/arq5x/gemini) to build SQLite
 database of variations for query and evaluation.
 """
 import collections
+from distutils.version import LooseVersion
 import os
 import subprocess
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
 def prep_gemini_db(fnames, call_id, samples, data):
@@ -28,8 +29,14 @@ def prep_gemini_db(fnames, call_id, samples, data):
     if use_gemini and not utils.file_exists(gemini_db):
         with file_transaction(gemini_db) as tx_gemini_db:
             gemini = config_utils.get_program("gemini", data["config"])
+            gemini_ver = programs.get_version("gemini", config=data["config"])
+            # Recent versions of gemini allow loading only passing variants
+            if LooseVersion(gemini_ver) >= LooseVersion("0.6.3"):
+                load_opts = "--passonly"
+            else:
+                load_opts = ""
             num_cores = data["config"]["algorithm"].get("num_cores", 1)
-            cmd = "{gemini} load -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
+            cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % str(call_id), data)
     return [[call_id, {"db": gemini_db if use_gemini else None,

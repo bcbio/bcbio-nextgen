@@ -6,6 +6,8 @@
 - Rework of ensemble calling approach to generalize to population level ensemble
   calls. Provide improved defaults for handle 3 caller consolidation.
 - Support for Mouse (mm10) variant calling and RNA-seq.
+- For recent versions of Gemini (0.6.3+) do not load filtered variants into
+  database, only including passed variants.
 - Improve specification of resource parameters, using multiple `-r` flags
   instead of single semi-colon separated input. Allow specification of pename
   resource parameter for selecting correct SGE environment when not
