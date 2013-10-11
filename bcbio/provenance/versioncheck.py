@@ -6,7 +6,7 @@ import subprocess
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
 
-def samtools(config):
+def samtools(config, items):
     """Ensure samtools has parallel processing required for piped analysis.
     """
     samtools = config_utils.get_program("samtools", config)
@@ -19,7 +19,7 @@ def samtools(config):
                 "Please upgrade to the latest version "
                 "from http://samtools.sourceforge.net/")
 
-def pdflatex(config):
+def pdflatex(config, items):
     """Check for pdflatex if write_summary enabled.
     """
     if config["algorithm"].get("write_summary", True):
@@ -30,13 +30,17 @@ def pdflatex(config):
                     "Install a LaTeX package like TeX Live or set `write_summary` to false "
                     "in the `algorithm` section of your sample configuration.")
 
-def java(config):
-    """GATK requires Java 1.7 or better.
+def _is_variant(items):
+    return any(item.get("analysis", "").lower().startswith("variant") for item in items)
+
+def java(config, items):
+    """GATK and derived tools requires Java 1.7 or better.
     """
+    want_version = "1.7" if _is_variant(items) else "1.6"
     try:
         java = config_utils.get_program("java", config)
     except config_utils.CmdNotFound:
-        return ("java not found on PATH. Java 1.7 or better required.")
+        return ("java not found on PATH. Java %s or better required." % want_version)
     p = subprocess.Popen([java, "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
     p.stdout.close()
@@ -48,9 +52,9 @@ def java(config):
                 version = version[1:]
             if version.endswith('"'):
                 version = version[:-1]
-    if not version or LooseVersion(version) < LooseVersion("1.7.0"):
-        return ("java version 1.7 or better required for running GATK and other tools. "
-                "Found version %s at %s" % (version, java))
+    if not version or LooseVersion(version) < LooseVersion(want_version):
+        return ("java version %s or better required for running GATK and other tools. "
+                "Found version %s at %s" % (want_version, version, java))
 
 def testall(items):
     logger.info("Testing minimum versions of installed programs")
@@ -58,7 +62,7 @@ def testall(items):
     config = items[0]["config"]
     msgs = []
     for fn in [samtools, pdflatex, java]:
-        out = fn(config)
+        out = fn(config, items)
         if out:
             msgs.append(out)
     if msgs:
