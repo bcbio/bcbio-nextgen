@@ -135,7 +135,7 @@ def _piped_dedup_recal_cmd(data, prep_params, tmp_dir, out_file):
         tmpfile = os.path.join(tmp_dir, "%s-md" % os.path.splitext(os.path.basename(out_file))[0])
         metrics_file = "%s-dupmetrics.txt" % (os.path.splitext(out_file)[0])
         return ("| {biobambam_md} level={compression_level} markthreads={num_cores} verbose=0 "
-                "I=/dev/stdin M={metrics_file} tmpfile={tmpfile}".format(**locals()))
+                "M={metrics_file} tmpfile={tmpfile}".format(**locals()))
     elif prep_params["dup"]:
         raise ValueError("Unexpected deduplication approach: %s" % prep_params["dup"])
     else:
