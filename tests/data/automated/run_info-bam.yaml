@@ -15,7 +15,7 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
   - algorithm:
       #aligner: false
-      #mark_duplicates: false
+      #mark_duplicates: biobambam
       #recalibrate: false
       #realign: false
       #align_split_size: 9000
@@ -28,7 +28,6 @@ details:
       realign: gatk
       recalibrate: gatk
       variantcaller: freebayes
-      #realign: gatk
       #variantcaller: gatk
       quality_format: Standard
       coverage_interval: regional

@@ -116,7 +116,7 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
 
 # ## Full-piped approaches
 
-def _piped_dedup_recal_cmd(data, prep_params, tmp_dir):
+def _piped_dedup_recal_cmd(data, prep_params, tmp_dir, out_file):
     """Generate de-duplication and recalibration commandline.
     """
     if prep_params["dup"] == "bamutil":
@@ -128,6 +128,14 @@ def _piped_dedup_recal_cmd(data, prep_params, tmp_dir):
     elif prep_params["dup"] == "samtools":
         samtools = config_utils.get_program("samtools", data["config"])
         return "| " + "{samtools} rmdup - -".format(**locals())
+    elif prep_params["dup"] == "biobambam":
+        biobambam_md = config_utils.get_program("bammarkduplicates2", data["config"])
+        num_cores = 1
+        compression_level = 1 if prep_params.get("realign") else 9
+        tmpfile = os.path.join(tmp_dir, "%s-md" % os.path.splitext(os.path.basename(out_file))[0])
+        metrics_file = "%s-dupmetrics.txt" % (os.path.splitext(out_file)[0])
+        return ("| {biobambam_md} level={compression_level} markthreads={num_cores} verbose=0 "
+                "I=/dev/stdin M={metrics_file} tmpfile={tmpfile}".format(**locals()))
     elif prep_params["dup"]:
         raise ValueError("Unexpected deduplication approach: %s" % prep_params["dup"])
     else:
@@ -168,7 +176,7 @@ def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
     """
     with file_transaction(out_file) as tx_out_file:
         extract_recal_cmd = _piped_extract_recal_cmd(data, region, prep_params, tmp_dir)
-        dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir)
+        dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir, out_file)
         realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
         cmd = "{extract_recal_cmd} {dedup_cmd} {realign_cmd}  > {tx_out_file}"
         cmd = cmd.format(**locals())

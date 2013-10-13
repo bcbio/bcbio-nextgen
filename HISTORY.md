@@ -12,6 +12,7 @@
   instead of single semi-colon separated input. Allow specification of pename
   resource parameter for selecting correct SGE environment when not
   automatically found.
+- Support biobambam's bammarkduplicates2 for duplicate removal.
 - Clean up logging handling code to be more resilient to interrupt messages.
 - Speed improvements for selecting unanalyzed and unmapped reads to address
   bottlenecks during BAM prep phase.
