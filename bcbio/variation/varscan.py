@@ -65,7 +65,8 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
     # No need for names in VarScan, hence the "_"
 
-    tumor_bam, _, normal_bam, _ = get_paired_bams(align_bams, items)
+    tumor_bam, tumor_name, normal_bam, normal_name = get_paired_bams(
+        align_bams, items)
 
     if not file_exists(out_file):
         base, ext = os.path.splitext(out_file)
@@ -118,11 +119,11 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
         if do.file_exists(snp_file):
             to_combine.append(snp_file)
-            _fix_varscan_vcf(snp_file, align_bams)
+            _fix_varscan_vcf(snp_file, normal_name, tumor_name)
 
         if do.file_exists(indel_file):
             to_combine.append(indel_file)
-            _fix_varscan_vcf(indel_file, align_bams)
+            _fix_varscan_vcf(indel_file, normal_name, tumor_name)
 
         if not to_combine:
             write_empty_vcf(out_file)
@@ -141,7 +142,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             write_empty_vcf(out_file)
 
 
-def _fix_varscan_vcf(orig_file, in_bams):
+def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
     """Fixes issues with the standard VarScan VCF output.
 
     - Remap sample names back to those defined in the input BAM file.
@@ -157,13 +158,14 @@ def _fix_varscan_vcf(orig_file, in_bams):
                 with open(tx_out_file, "w") as out_handle:
 
                     for line in in_handle:
-                        line = _fix_varscan_output(line, in_bams)
+                        line = _fix_varscan_output(line, normal_name,
+                                                   tumor_name)
                         if not line:
                             continue
                         out_handle.write(line)
 
 
-def _fix_varscan_output(line, in_bams):
+def _fix_varscan_output(line, normal_name, tumor_name):
     """Fix a varscan VCF line
 
     Fixes the ALT column and also fixes the FREQ field to be a floating point
@@ -184,22 +186,20 @@ def _fix_varscan_output(line, in_bams):
 
     line = line.split("\t")
 
+    mapping = {"NORMAL": normal_name, "TUMOR": tumor_name}
+
     if(line[0].startswith("#CHROM")):
 
-        samples = []
-        for in_bam in in_bams:
-            with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
-                for rg in work_bam.header.get("RG", []):
-                    samples.append(rg["SM"])
-
-        standard = line[:9]
+        base_header = line[:9]
         old_samples = line[9:]
 
         if len(old_samples) == 0:
             return "\t".join(line) + "\n"
 
-        assert len(old_samples) == len(samples), (old_samples, samples)
-        return "\t".join(standard + samples) + "\n"
+        samples = [mapping[sample_name] for sample_name in old_samples]
+
+        assert len(old_samples) == len(samples)
+        return "\t".join(base_header + samples) + "\n"
 
     try:
         REF, ALT = line[3:5]
