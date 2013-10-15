@@ -93,6 +93,12 @@ def create_base_logger(config, parallel=None):
     if parallel_type == "ipython":
         ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
                if not ip.startswith("127.0.0")]
+        if not ips:
+            sys.stderr.write("Cannot resolve a local IP address that isn't 127.0.0. "
+                             "Your machines might not have a local IP address "
+                             "assigned or are not able to resolve it.\n")
+            sys.exit(1)
+
         uri = "tcp://%s" % ips[0]
         subscriber = logbook_zmqpush.ZeroMQPullSubscriber()
         mport = subscriber.socket.bind_to_random_port(uri)

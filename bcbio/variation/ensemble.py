@@ -124,7 +124,8 @@ def _write_config_file(batch_id, caller_names, base_dir, data):
     config_file = os.path.join(config_dir, "{0}-ensemble.yaml".format(batch_id))
     algorithm = data["config"]["algorithm"]
     econfig = {"ensemble": algorithm["ensemble"],
-               "names": caller_names}
+               "names": caller_names,
+               "prep-inputs": False}
     intervals = validate.get_analysis_intervals(data)
     if intervals:
         econfig["intervals"] = os.path.abspath(intervals)
