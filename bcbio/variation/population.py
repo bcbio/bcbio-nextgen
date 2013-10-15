@@ -31,7 +31,7 @@ def prep_gemini_db(fnames, call_id, samples, data):
             gemini = config_utils.get_program("gemini", data["config"])
             gemini_ver = programs.get_version("gemini", config=data["config"])
             # Recent versions of gemini allow loading only passing variants
-            if LooseVersion(gemini_ver) >= LooseVersion("0.6.3"):
+            if LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
                 load_opts = "--passonly"
             else:
                 load_opts = ""
