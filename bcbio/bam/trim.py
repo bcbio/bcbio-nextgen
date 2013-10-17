@@ -7,6 +7,7 @@ from bcbio.utils import (file_exists, save_diskspace, safe_makedir,
                          replace_directory, map_wrap)
 from bcbio.log import logger
 from bcbio.bam import fastq
+from bcbio.provenance import do
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 import subprocess
@@ -208,7 +209,7 @@ def _run_cutadapt_on_single_file(base_cmd, fastq_file, out_file):
     with open(stat_file, "w") as stat_handle:
         cmd = list(base_cmd)
         cmd.extend(["--output=" + out_file, fastq_file])
-        _run_with_possible_error_message(cmd, stdout=stat_handle)
+        do.run(cmd, "Running cutadapt on %s." % (fastq_file), None)
 
 def _run_with_possible_error_message(cmd, **kwargs):
     try:
