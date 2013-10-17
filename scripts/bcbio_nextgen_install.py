@@ -5,9 +5,8 @@ This automates the steps required for installation and setup to make it
 easier to get started with bcbio-nextgen. The defaults provide data files
 for human variant calling.
 
-Requires: git
+Requires: git, Python 2.7 or argparse for earlier versions.
 """
-import argparse
 import contextlib
 import datetime
 import os
@@ -176,6 +175,12 @@ def check_dependencies():
         raise OSError("bcbio-nextgen installer requires Git (http://git-scm.com/)")
 
 if __name__ == "__main__":
+    try:
+        import argparse
+    except ImportError:
+        raise ImportError("bcbio-nextgen installer requires `argparse`, included in Python 2.7.\n"
+                          "Install for earlier versions with `pip install argparse` or "
+                          "`easy_install argparse`.")
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines")
     parser.add_argument("datadir", help="Directory to install genome data",
