@@ -93,6 +93,27 @@ will ensure correct selection of the right environment.
 .. _SGE parallel environment: https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment
 .. _memory-management:
 
+Troubleshooting
+===============
+Networking problems on clusters can prevent the IPython parallelization
+framework from working properly. Be sure that the compute nodes on your
+cluster are aware of IP addresses that they can use to communicate
+with each other (usually these will be local IP addresses). Running::
+
+    python -c 'import socket; print socket.gethostbyname(socket.gethostname())'
+    
+Should return such an IP address (as opposed to localhost). This can be
+fixed by adding an entry to the hosts file.
+
+The line::
+
+    host-ip hostname
+    
+where ``host-ip`` is replaced by the actual IP address of the machine
+and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
+on each compute node. This will probably involve contacting your local
+cluster admnistrator.
+
 Memory management
 ~~~~~~~~~~~~~~~~~
 
