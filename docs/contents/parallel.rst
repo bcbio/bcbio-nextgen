@@ -112,7 +112,7 @@ The line::
 where ``host-ip`` is replaced by the actual IP address of the machine
 and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
 on each compute node. This will probably involve contacting your local
-cluster admnistrator.
+cluster administrator.
 
 Memory management
 ~~~~~~~~~~~~~~~~~

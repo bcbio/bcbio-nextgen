@@ -90,6 +90,7 @@ Contributors
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Rory Kirchner`_, Harvard School of Public Health
 - `Brent Pedersen`_, University of Colorado Denver
+- `James Porter`_, The University of Chicago
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
@@ -101,6 +102,7 @@ Contributors
 .. _Mario Giovacchini: https://github.com/mariogiov
 .. _Rory Kirchner: https://github.com/roryk
 .. _Brent Pedersen: https://github.com/brentp
+.. _James Porter: https://github.com/porterjamesj
 .. _Valentine Svensson: https://github.com/vals
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
