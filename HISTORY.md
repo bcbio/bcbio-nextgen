@@ -1,4 +1,4 @@
-## 0.7.4 (in progress)
+## 0.7.4 (October 20, 3013)
 
 - Framework for indexing input reads using parallel bgzip and grabix, to handle
   distributed alignment. Enables further distribution of alignment step beyond
