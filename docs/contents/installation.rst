@@ -52,7 +52,7 @@ We use the same automated installation process for performing upgrades
 of tools, software and data in place. With a recent version of
 bcbio-nextgen (0.7.0+), update with::
 
-  bcbio_nextgen.py upgrade --tooldir=/usr/local
+  bcbio_nextgen.py upgrade --tools
 
 In addition to the installation options mentioned above, tune the
 upgrade with these options:
@@ -79,11 +79,13 @@ upgrade with these options:
   indexes to download and prepare. By default we prepare a minimal
   human genome setup.
 
-- Leave out the ``--tooldir`` option if you don't want to upgrade
-  third party tools.
+- Leave out the ``--tools`` option if you don't want to upgrade third
+  party tools. If using ``--tools``, it will use the same installation
+  directory as specified during installation. You can also pass
+  ``--tooldir`` to install to a different directory.
 
-To upgrade older bcbio-nextgen versions to be able to use this
-feature, do ``bcbio_nextgen.py -u stable`` to get the latest release
+To upgrade older bcbio-nextgen versions that don't have the ``upgrade``
+command, do ``bcbio_nextgen.py -u stable`` to get the latest release
 code.
 
 On a Virtual Machine

@@ -30,14 +30,15 @@ def upgrade_bcbio(args):
     """
     args = add_install_defaults(args)
     pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
-    _update_conda_packages()
     if args.upgrade in ["skip"]:
         pass
     elif args.upgrade in ["stable", "system"]:
+        _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest stable version")
         sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
     else:
+        _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
         subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
@@ -206,7 +207,9 @@ def add_install_defaults(args):
     with open(install_config) as in_handle:
         default_args = yaml.load(in_handle)
     if default_args.get("tooldist") and args.tooldist == "minimal":
-        args.tooldir = default_args["tooldist"]
+        args.tooldist = default_args["tooldist"]
+    if args.tools and args.tooldir is None:
+        args.tooldir = default_args["tooldir"]
     for attr in ["genomes", "aligners", "toolplus"]:
         for x in default_args.get(attr, []):
             new_val =  getattr(args, attr)
@@ -224,6 +227,9 @@ def add_subparser(subparsers):
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
+    parser.add_argument("--tools",
+                        help="Boolean argument specifying upgrade of tools. Uses previously saved install directory",
+                        action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
                         choices = ["stable", "development", "system", "skip"], default="stable")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",

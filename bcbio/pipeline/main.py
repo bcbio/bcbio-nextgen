@@ -155,8 +155,6 @@ def parse_cl_args(in_args):
                             default=0, type=int)
         parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
                             default="bcbio_nextgen")
-        parser.add_argument("-u", "--upgrade", help="Perform an upgrade of bcbio_nextgen in place.",
-                            choices = ["stable", "development", "system"])
         parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
         parser.add_argument("-v", "--version", help="Print current version",
                             action="store_true")
