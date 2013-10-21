@@ -124,10 +124,11 @@ def _novoalign_args_from_config(config, need_quality=True):
 # -k -t 200 -K quality calibration metrics
 # paired end sizes
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
           extra_args=None, names=None):
     """Align with novoalign.
     """
+    config = data["config"]
     rg_name = names.get("rg", None) if names else None
     out_file = os.path.join(align_dir, "{0}.sam".format(out_base))
     if not file_exists(out_file):

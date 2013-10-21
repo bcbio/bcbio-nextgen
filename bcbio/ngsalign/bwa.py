@@ -105,10 +105,11 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     data["work_bam"] = out_file
     return data
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
           names=None):
     """Perform a BWA alignment, generating a SAM file.
     """
+    config = data["config"]
     sai1_file = os.path.join(align_dir, "%s_1.sai" % out_base)
     sai2_file = (os.path.join(align_dir, "%s_2.sai" % out_base)
                  if pair_file else None)
