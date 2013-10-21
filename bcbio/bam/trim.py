@@ -152,6 +152,7 @@ def _remove_short_reads(fastq_files, dirs, lane_config):
         out_files = [fastq.filter_single_reads_by_length(fastq_files[0],
                                                         quality_format,
                                                         MIN_LENGTH)]
+    map(os.remove, fastq_files)
     return out_files
 
 def _get_read_through_trimmed_outfiles(fastq_files, dirs):
@@ -211,14 +212,6 @@ def _run_cutadapt_on_single_file(base_cmd, fastq_file, out_file):
         cmd.extend(["--output=" + out_file, fastq_file])
         do.run(cmd, "Running cutadapt on %s." % (fastq_file), None)
 
-def _run_with_possible_error_message(cmd, **kwargs):
-    try:
-        subprocess.check_call(cmd, **kwargs)
-    except subprocess.CalledProcessError:
-        cmd_string = subprocess.list2cmdline(cmd)
-        logger.error("Cutadapt returned an error. The command "
-                     "used to run cutadapt was: %s." % (cmd_string))
-        exit(1)
 
 def _get_quality_format(lane_config):
     SUPPORTED_FORMATS = ["illumina", "standard"]
