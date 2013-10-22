@@ -10,8 +10,6 @@ from bcbio.bam import fastq
 from bcbio.provenance import do
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
-import subprocess
-from multiprocessing import Pool
 from itertools import izip, repeat
 
 SUPPORTED_ADAPTERS = {
@@ -64,7 +62,7 @@ def trim_read_through(fastq_files, dirs, lane_config):
     cores = lane_config["algorithm"].get("num_cores", 1)
     out_files = _cutadapt_trim(fastq_files, quality_format,
                                to_trim, out_files, cores)
-    trimmed_files = _remove_short_reads(out_files, dirs, lane_config)
+    trimmed_files = remove_short_reads(out_files, dirs, lane_config)
     return trimmed_files
 
 
@@ -131,7 +129,7 @@ def _save_diskspace(in_file, out_file, config):
 
 
 
-def _remove_short_reads(fastq_files, dirs, lane_config):
+def remove_short_reads(fastq_files, dirs, lane_config):
     """
     remove reads from a single or pair of fastq files which fall below
     a length threshold (30 bases)
@@ -199,9 +197,9 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
     base_cmd.extend(adapter_cmd)
     if all(map(file_exists, out_files)):
         return out_files
-    pool = Pool(processes=cores)
-    pool.map(_run_cutadapt_on_single_file, izip(repeat(base_cmd), fastq_files,
-                                                out_files))
+
+    map(_run_cutadapt_on_single_file, izip(repeat(base_cmd), fastq_files,
+                                           out_files))
     return out_files
 
 @map_wrap
