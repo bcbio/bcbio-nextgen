@@ -209,7 +209,11 @@ def add_install_defaults(args):
     if default_args.get("tooldist") and args.tooldist == "minimal":
         args.tooldist = default_args["tooldist"]
     if args.tools and args.tooldir is None:
-        args.tooldir = default_args["tooldir"]
+        if "tooldir" in default_args:
+            args.tooldir = default_args["tooldir"]
+        else:
+            raise ValueError("Default tool directory not yet saved in config defaults. Specify the '--tooldir=/path/to/tools' to upgrade tools. "
+                             "After a successful upgrade, the '--tools' parameter should work for future upgrades.")
     for attr in ["genomes", "aligners", "toolplus"]:
         for x in default_args.get(attr, []):
             new_val =  getattr(args, attr)

@@ -81,7 +81,10 @@ upgrade with these options:
 
 - Leave out the ``--tools`` option if you don't want to upgrade third
   party tools. If using ``--tools``, it will use the same installation
-  directory as specified during installation. You can also pass
+  directory as specified during installation. If you're using an older
+  version that has not yet went through a successful upgrade or
+  installation and saved the tool directory, you should manually
+  specify ``--tooldir`` for the first upgrade. You can also pass
   ``--tooldir`` to install to a different directory.
 
 To upgrade older bcbio-nextgen versions that don't have the ``upgrade``
