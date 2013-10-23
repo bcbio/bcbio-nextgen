@@ -1,3 +1,6 @@
+## 0.7.5 (in development)
+- read_through trimming can now be interrupted.
+
 ## 0.7.4 (October 20, 3013)
 
 - Framework for indexing input reads using parallel bgzip and grabix, to handle
