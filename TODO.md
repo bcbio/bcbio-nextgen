@@ -28,19 +28,16 @@ These are roughly ordered by current priority and we welcome contributors.
   multiple runs. Prioritize options which allow accumulation across multiple
   analysis machines and already handle query and visualization.
 
-- Work on GATK-free pipeline with full piping of intermediates during
-  preparation. Evaluate against GATK best-practice using NA12878 reference data.
-
 - Performance improvements and testing on Amazon EC2. Make use of high speed
   local ephemeral storage for temporary space.
-
-- Implement and evaluate GATK's ReducedReads for use in large scale variant
-  calling projects ([#90][90]).
-
-[90]: https://github.com/chapmanb/bcbio-nextgen/issues/90
 
 - Correctly handle haplotype chromosomes (chrM, chrY) and setup calling based on
   sample sex ([#33][33]).
 
 [33]: https://github.com/chapmanb/bcbio-nextgen/issues/33
+
+- Implement and evaluate GATK's ReducedReads for use in large scale variant
+  calling projects ([#90][90]).
+
+[90]: https://github.com/chapmanb/bcbio-nextgen/issues/90
 

@@ -2,18 +2,12 @@
 """
 import copy
 import csv
-import glob
 import os
 import shutil
-import subprocess
-import xml.etree.ElementTree as ET
 
 import yaml
-from mako.template import Template
 
-from bcbio import bam, utils
-from bcbio.broad import runner_from_config
-from bcbio.broad.metrics import RNASeqPicardMetrics
+from bcbio import utils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -48,20 +42,17 @@ def pipeline_summary(data):
                 else data.get("callable_bam"))
     if data["sam_ref"] is not None and work_bam:
         logger.info("Generating summary files: %s" % str(data["name"]))
-        data["summary"] = generate_align_summary(work_bam, data)
+        data["summary"] = _run_qc_tools(work_bam, data)
     return [[data]]
 
-def generate_align_summary(bam_file, data):
+def _run_qc_tools(bam_file, data):
+    """Run a set of third party quality control tools, returning QC directory and metrics.
+    """
     to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
     else:
         to_run.append(("qualimap", _run_qualimap))
-    return run_qc_tools(bam_file, data, to_run)
-
-def run_qc_tools(bam_file, data, to_run):
-    """Run a set of third party quality control tools, returning QC directory and metrics.
-    """
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
     metrics = {}
     for program_name, qc_fn in to_run:
@@ -69,76 +60,6 @@ def run_qc_tools(bam_file, data, to_run):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     return {"qc": qc_dir, "metrics": metrics}
-    
-def rnaseq_align_summary(bam_file, sam_ref, sample_name, config, dirs):
-    qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
-    genome_dir = os.path.dirname(os.path.dirname(sam_ref))
-    refflat_file = config_utils.get_transcript_refflat(genome_dir)
-    rrna_file = config_utils.get_rRNA_interval(genome_dir)
-    if not utils.file_exists(rrna_file):
-        rrna_file = "null"
-    with utils.curdir_tmpdir() as tmp_dir:
-        graphs, summary, overrep = \
-                _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
-                                           qc_dir, tmp_dir, config)
-    with utils.chdir(qc_dir):
-        return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
-                                     qc_dir, config),
-                "metrics": summary}
-
-def _safe_latex(to_fix):
-    """Escape characters that make LaTeX unhappy.
-    """
-    chars = ["%", "_", "&", "#"]
-    for char in chars:
-        to_fix = to_fix.replace(char, "\\%s" % char)
-    return to_fix
-
-def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
-                  qc_dir, config):
-    base = os.path.splitext(os.path.basename(bam_file))[0]
-    sample_name = base if sample_name is None else " : ".join(sample_name)
-    tmpl = Template(_section_template)
-    sample_name = "%s (%s)" % (_safe_latex(sample_name),
-                               _safe_latex(base))
-    section = tmpl.render(name=sample_name, summary=None,
-                          summary_table=summary,
-                          figures=[(f, c, i) for (f, c, i) in graphs if f],
-                          overrep=overrep)
-    out_file = os.path.join(qc_dir, "%s-summary.tex" % base)
-    out_tmpl = Template(_base_template)
-    with open(out_file, "w") as out_handle:
-        out_handle.write(out_tmpl.render(parts=[section]))
-    pdf_file = "%s.pdf" % os.path.splitext(out_file)[0]
-    if (config["algorithm"].get("write_summary", True) and
-         not utils.file_exists(pdf_file)):
-        cl = [config_utils.get_program("pdflatex", config), out_file]
-        subprocess.check_call(cl)
-    return pdf_file
-
-def _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
-                               qc_dir, tmp_dir, config):
-    """Prepare picard/FastQC graphs and summary details.
-    """
-    broad_runner = runner_from_config(config)
-    metrics = RNASeqPicardMetrics(broad_runner, tmp_dir)
-    summary_table, metrics_graphs = metrics.report(bam_file, sam_ref, refflat_file,
-                                                   bam.is_paired(bam_file), rrna_file)
-    metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
-    all_graphs =  metrics_graphs
-    summary_table = _update_summary_table(summary_table, sam_ref, {})
-    return all_graphs, summary_table, []
-
-def _update_summary_table(summary_table, ref_file, fastqc_stats):
-    stats_want = []
-    summary_table[0] = (summary_table[0][0], summary_table[0][1],
-            "%sbp %s" % (fastqc_stats.get("Sequence length", "0"), summary_table[0][-1]))
-    for stat in stats_want:
-        summary_table.insert(0, (stat, fastqc_stats.get(stat, ""), ""))
-    ref_org = os.path.splitext(os.path.split(ref_file)[-1])[0]
-    summary_table.insert(0, ("Reference organism",
-        ref_org.replace("_", " "), ""))
-    return summary_table
 
 # ## Generate project level QC summary for quickly assessing large projects
 
@@ -200,26 +121,14 @@ class FastQCParser:
         self._max_seq_size = 45
         self._max_overrep = 20
 
-    def get_fastqc_graphs(self):
-        graphs = (("per_base_quality.png", "", 1.0),
-                  ("per_base_sequence_content.png", "", 0.85),
-                  ("per_sequence_gc_content.png", "", 0.85),
-                  ("kmer_profiles.png", "", 0.85),)
-        final_graphs = []
-        for f, caption, size in graphs:
-            full_f = os.path.join(self._dir, "Images", f)
-            if os.path.exists(full_f):
-                final_graphs.append((full_f, caption, size))
-        return final_graphs
-
     def get_fastqc_summary(self):
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
-            k, v = [_safe_latex(x) for x in stat_line.split("\t")[:2]]
+            k, v = stat_line.split("\t")[:2]
             stats[k] = v
         over_rep = []
         for line in self._fastqc_data_section("Overrepresented sequences")[1:]:
-            parts = [_safe_latex(x) for x in line.split("\t")]
+            parts = line.split("\t")
             over_rep.append(parts)
             over_rep[-1][0] = self._splitseq(over_rep[-1][0])
         return stats, over_rep[:self._max_overrep]
@@ -335,130 +244,5 @@ def summary_metrics(items, analysis_dir, fastq_dir):
                 request = run["upload"].get("run_id"))
         cur_lane_info = copy.deepcopy(base_info)
         cur_lane_info["metrics"] = {}
-        #cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
-        #                                          fc_date, analysis_dir)
         lane_info.append(cur_lane_info)
     return lane_info, sample_info, tab_out
-
-def _metrics_from_stats(stats):
-    """Remap Broad metrics names to our local names.
-    """
-    if stats:
-        s_to_m = dict(
-                AL_MEAN_READ_LENGTH = 'Read length',
-                AL_TOTAL_READS = 'Reads',
-                AL_PF_READS_ALIGNED = 'Aligned',
-                DUP_READ_PAIR_DUPLICATES = 'Pair duplicates'
-                )
-        metrics = dict()
-        for stat_name, metric_name in s_to_m.iteritems():
-            metrics[metric_name] = stats.get(stat_name, 0)
-        return metrics
-
-def _bustard_stats(lane_num, fastq_dir, fc_date, analysis_dir):
-    """Extract statistics about the flow cell from Bustard outputs.
-    """
-    stats = dict()
-    if fastq_dir:
-        sum_file = os.path.join(fastq_dir, os.pardir, "BustardSummary.xml")
-        #sum_file = os.path.join(fc_dir, "Data", "Intensities", "BaseCalls",
-        #        "BustardSummary.xml")
-        if os.path.exists(sum_file):
-            with open(sum_file) as in_handle:
-                results = ET.parse(in_handle).getroot().find("TileResultsByLane")
-                for lane in results:
-                    if lane.find("laneNumber").text == str(lane_num):
-                        stats = _collect_cluster_stats(lane)
-    read_stats = _calc_fastq_stats(analysis_dir, lane_num, fc_date)
-    stats.update(read_stats)
-    return stats
-
-def _calc_fastq_stats(analysis_dir, lane_num, fc_date):
-    """Grab read length from fastq; could provide distribution if non-equal.
-    """
-    stats = dict()
-    fastqc_dirs = glob.glob(os.path.join(analysis_dir, "fastqc",
-                                         "%s_%s*" % (lane_num, fc_date)))
-    if len(fastqc_dirs) > 0:
-        parser = FastQCParser(sorted(fastqc_dirs)[-1])
-        fastqc_stats, _ = parser.get_fastqc_summary()
-        stats["Read length"] = fastqc_stats["Sequence length"]
-    return stats
-
-def _collect_cluster_stats(lane):
-    """Retrieve total counts on cluster statistics.
-    """
-    stats = {"Clusters" : 0, "Clusters passed": 0}
-    for tile in lane.find("Read").findall("Tile"):
-        stats["Clusters"] += int(tile.find("clusterCountRaw").text)
-        stats["Clusters passed"] += int(tile.find("clusterCountPF").text)
-    return stats
-
-# ## LaTeX templates for output PDF
-
-_section_template = r"""
-\subsection*{${name}}
-
-% if summary_table:
-    \begin{table}[h]
-    \centering
-    \begin{tabular}{|l|rr|}
-    \hline
-    % for label, val, extra in summary_table:
-        %if label is not None:
-            ${label} & ${val} & ${extra} \\%
-        %else:
-            \hline
-        %endif
-    %endfor
-    \hline
-    \end{tabular}
-    \caption{Summary of lane results}
-    \end{table}
-% endif
-
-% if summary:
-    \begin{verbatim}
-    ${summary}
-    \end{verbatim}
-% endif
-
-% for i, (figure, caption, size) in enumerate(figures):
-    \begin{figure}[htbp]
-      \centering
-      \includegraphics[width=${size}\linewidth] {${figure}}
-      \caption{${caption}}
-    \end{figure}
-% endfor
-
-% if len(overrep) > 0:
-    \begin{table}[htbp]
-    \centering
-    \begin{tabular}{|p{8cm}rrp{4cm}|}
-    \hline
-    Sequence & Count & Percent & Match \\%
-    \hline
-    % for seq, count, percent, match in overrep:
-        \texttt{${seq}} & ${count} & ${"%.2f" % float(percent)} & ${match} \\%
-    % endfor
-    \hline
-    \end{tabular}
-    \caption{Overrepresented read sequences}
-    \end{table}
-% endif
-
-\FloatBarrier
-"""
-
-_base_template = r"""
-\documentclass{article}
-\usepackage{fullpage}
-\usepackage{graphicx}
-\usepackage{placeins}
-
-\begin{document}
-% for part in parts:
-    ${part}
-% endfor
-\end{document}
-"""

@@ -147,7 +147,7 @@ that you need to install on any machines involved in the processing. The
 `CloudBioLinux`_ toolkit provides automated scripts to help with installation
 for both software and associated data files::
 
-    fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline
+    fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline_minimal
 
 You can also install them manually, adjusting locations in the
 ``resources`` section of your ``bcbio_system.yaml`` configuration file
@@ -159,7 +159,6 @@ as needed.
 -  `FastQC`_ -- Generation of sequencing quality reports
 -  `GATK`_ -- Variant calling and BAM preparation
 -  `snpEff`_ -- Identify functional consequences of variants.
--  LaTeX and pdflatex for report generation
 
 The code uses a number of Python modules, installed with the code:
 
@@ -167,10 +166,8 @@ The code uses a number of Python modules, installed with the code:
 -  `pysam`_
 -  `ipython`_
 -  `sh`_
--  `mako`_
 -  `PyYAML`_
 -  `logbook`_
--  `celery`_
 
 .. _bwa: http://bio-bwa.sourceforge.net/
 .. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
@@ -181,10 +178,8 @@ The code uses a number of Python modules, installed with the code:
 .. _snpEff: http://sourceforge.net/projects/snpeff/
 .. _biopython: http://biopython.org
 .. _pysam: http://code.google.com/p/pysam/
-.. _mako: http://www.makotemplates.org/
 .. _PyYAML: http://pyyaml.org/
 .. _logbook: http://packages.python.org/Logbook
-.. _celery: http://celeryproject.org/
 .. _numpy: http://www.numpy.org/
 .. _CloudBioLinux: http://cloudbiolinux.org
 .. _virtualenv: http://www.virtualenv.org/en/latest/
