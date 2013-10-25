@@ -83,11 +83,16 @@ def _maybe_add_variant_file(algorithm, sample, out):
 
 
 def _maybe_add_summary(algorithm, sample, out):
+    out = []
     if algorithm.get("write_summary", True) and "summary" in sample:
         if sample["summary"].get("pdf"):
-            out = [{"path": sample["summary"]["pdf"],
-                    "type": "pdf",
-                    "ext": "summary"}]
+            out.append({"path": sample["summary"]["pdf"],
+                       "type": "pdf",
+                       "ext": "summary"})
+        if sample["summary"].get("qc"):
+            out.append({"path": sample["summary"]["qc"],
+                        "type": "directory",
+                        "ext": "qc"})
     return out
 
 def _maybe_add_alignment(algorithm, sample, out):

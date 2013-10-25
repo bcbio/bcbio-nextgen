@@ -3,11 +3,8 @@
 import os
 import glob
 import subprocess
-import contextlib
 
-import pysam
-
-from bcbio import broad
+from bcbio import bam, broad
 from bcbio.bam import cram
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
@@ -79,7 +76,7 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
                  os.path.splitext(os.path.basename(in_file))[0], x))
                  for x in ["1", "2"]]
-    if _is_paired(in_file):
+    if bam.is_paired(in_file):
         out1, out2 = out_files
     else:
         out1 = out_files[0]
@@ -90,12 +87,3 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     if os.path.getsize(out2) == 0:
         out2 = None
     return [out1, out2]
-
-def _is_paired(bam_file):
-    # XXX need development version of pysam for this to work on
-    # fastq files without headers (ie. FastqToSam)
-    # Instead return true by default and then check after output
-    return True
-    with contextlib.closing(pysam.Samfile(bam_file, "rb")) as work_bam:
-        for read in work_bam:
-            return read.is_paired

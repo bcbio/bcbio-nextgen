@@ -1,22 +1,23 @@
 """Quality control and summary metrics for next-gen alignments and analysis.
 """
-import contextlib
 import copy
 import csv
 import glob
 import os
+import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 
 import yaml
 from mako.template import Template
-import pysam
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.broad import runner_from_config
-from bcbio.broad.metrics import PicardMetrics, PicardMetricsParser, RNASeqPicardMetrics
+from bcbio.broad.metrics import RNASeqPicardMetrics
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
+import bcbio.rnaseq.qc
 
 # ## High level functions to generate summary PDF
 
@@ -51,25 +52,24 @@ def pipeline_summary(data):
     return [[data]]
 
 def generate_align_summary(bam_file, data):
+    to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower() == "rna-seq":
-        return rnaseq_align_summary(bam_file, data["sam_ref"],
-                                    data["name"], data["config"], data["dirs"])
+        to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
     else:
-        return variant_align_summary(bam_file, data["sam_ref"], data["name"],
-                                     data["config"], data["dirs"])
+        to_run.append(("qualimap", _run_qualimap))
+    return run_qc_tools(bam_file, data, to_run)
 
-def variant_align_summary(bam_file, sam_ref, sample_name, config, dirs):
-    """Run alignment summarizing script to produce a pdf with align details.
+def run_qc_tools(bam_file, data, to_run):
+    """Run a set of third party quality control tools, returning QC directory and metrics.
     """
-    qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
-    with utils.curdir_tmpdir() as tmp_dir:
-        graphs, summary, overrep = \
-                _graphs_and_summary(bam_file, sam_ref, qc_dir, tmp_dir, config)
-    with utils.chdir(qc_dir):
-        return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
-                                     qc_dir, config),
-                "metrics": summary}
-
+    qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
+    metrics = {}
+    for program_name, qc_fn in to_run:
+        cur_qc_dir = os.path.join(qc_dir, program_name)
+        cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
+        metrics.update(cur_metrics)
+    return {"qc": qc_dir, "metrics": metrics}
+    
 def rnaseq_align_summary(bam_file, sam_ref, sample_name, config, dirs):
     qc_dir = utils.safe_makedir(os.path.join(dirs["work"], "qc"))
     genome_dir = os.path.dirname(os.path.dirname(sam_ref))
@@ -85,7 +85,6 @@ def rnaseq_align_summary(bam_file, sam_ref, sample_name, config, dirs):
         return {"pdf": _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
                                      qc_dir, config),
                 "metrics": summary}
-
 
 def _safe_latex(to_fix):
     """Escape characters that make LaTeX unhappy.
@@ -117,24 +116,6 @@ def _generate_pdf(graphs, summary, overrep, bam_file, sample_name,
         subprocess.check_call(cl)
     return pdf_file
 
-def _graphs_and_summary(bam_file, sam_ref, qc_dir, tmp_dir, config):
-    """Prepare picard/FastQC graphs and summary details.
-    """
-    broad_runner = runner_from_config(config)
-    metrics = PicardMetrics(broad_runner, tmp_dir)
-    summary_table, metrics_graphs = \
-                   metrics.report(bam_file, sam_ref, is_paired(bam_file),
-                                  config["algorithm"].get("hybrid_bait"),
-                                  config["algorithm"].get("hybrid_target"),
-                                  config["algorithm"].get("variant_regions"),
-                                  config)
-    metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
-    fastqc_graphs, fastqc_stats, fastqc_overrep = \
-                   fastqc_report(bam_file, qc_dir, config)
-    all_graphs = fastqc_graphs + metrics_graphs
-    summary_table = _update_summary_table(summary_table, sam_ref, fastqc_stats)
-    return all_graphs, summary_table, fastqc_overrep
-
 def _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
                                qc_dir, tmp_dir, config):
     """Prepare picard/FastQC graphs and summary details.
@@ -142,13 +123,11 @@ def _rnaseq_graphs_and_summary(bam_file, sam_ref, refflat_file, rrna_file,
     broad_runner = runner_from_config(config)
     metrics = RNASeqPicardMetrics(broad_runner, tmp_dir)
     summary_table, metrics_graphs = metrics.report(bam_file, sam_ref, refflat_file,
-                                                   is_paired(bam_file), rrna_file)
+                                                   bam.is_paired(bam_file), rrna_file)
     metrics_graphs = [(p, c, 0.75) for p, c in metrics_graphs]
-    fastqc_graphs, fastqc_stats, fastqc_overrep = \
-                   fastqc_report(bam_file, qc_dir, config)
-    all_graphs = fastqc_graphs + metrics_graphs
-    summary_table = _update_summary_table(summary_table, sam_ref, fastqc_stats)
-    return all_graphs, summary_table, fastqc_overrep
+    all_graphs =  metrics_graphs
+    summary_table = _update_summary_table(summary_table, sam_ref, {})
+    return all_graphs, summary_table, []
 
 def _update_summary_table(summary_table, ref_file, fastqc_stats):
     stats_want = []
@@ -213,23 +192,7 @@ def _get_sample_summaries(samples):
             out.append((sample_name, sample_info))
     return out
 
-def is_paired(bam_file):
-    """Determine if a BAM file has paired reads.
-    """
-    with contextlib.closing(pysam.Samfile(bam_file, "rb")) as in_pysam:
-        for read in in_pysam:
-            return read.is_paired
-
 # ## Run and parse read information from FastQC
-
-def fastqc_report(bam_file, qc_dir, config):
-    """Calculate statistics about a read using FastQC.
-    """
-    out_dir = _run_fastqc(bam_file, qc_dir, config)
-    parser = FastQCParser(out_dir)
-    graphs = parser.get_fastqc_graphs()
-    stats, overrep = parser.get_fastqc_summary()
-    return graphs, stats, overrep
 
 class FastQCParser:
     def __init__(self, base_dir):
@@ -287,17 +250,47 @@ class FastQCParser:
                         out.append(line.rstrip("\r\n"))
         return out
 
-def _run_fastqc(bam_file, qc_dir, config):
-    out_base = utils.safe_makedir(os.path.join(qc_dir, "fastqc"))
-    fastqc_out = os.path.join(out_base, "%s_fastqc" %
-                              os.path.splitext(os.path.basename(bam_file))[0])
-    if not os.path.exists(fastqc_out):
-        cl = [config_utils.get_program("fastqc", config),
-              "-o", out_base, "-f", "bam", bam_file]
-        subprocess.check_call(cl)
-    if os.path.exists("%s.zip" % fastqc_out):
-        os.remove("%s.zip" % fastqc_out)
-    return fastqc_out
+def _run_fastqc(bam_file, data, fastqc_out):
+    """Run fastqc, generating report in specified directory and parsing metrics.
+    """
+    if not os.path.exists(os.path.join(fastqc_out, "fastqc_report.html")):
+        work_dir = os.path.dirname(fastqc_out)
+        utils.safe_makedir(work_dir)
+        num_cores = data["config"]["algorithm"].get("num_cores", 1)
+        cl = [config_utils.get_program("fastqc", data["config"]),
+              "-t", str(num_cores), "-o", work_dir, "-f", "bam", bam_file]
+        do.run(cl, "FastQC: %s" % data["name"][-1])
+        fastqc_outdir = os.path.join(work_dir, "%s_fastqc" % os.path.splitext(os.path.basename(bam_file))[0])
+        if os.path.exists("%s.zip" % fastqc_outdir):
+            os.remove("%s.zip" % fastqc_outdir)
+        shutil.move(fastqc_outdir, fastqc_out)
+    parser = FastQCParser(fastqc_out)
+    stats, _ = parser.get_fastqc_summary()
+    return stats
+
+# ## Qualimap
+
+def _run_qualimap(bam_file, data, out_dir):
+    """Run qualimap to assess alignment quality metrics.
+    """
+    if not os.path.exists(os.path.join(out_dir, "qualimapReport.html")):
+        num_cores = data["config"]["algorithm"].get("num_cores", 1)
+        qualimap = config_utils.get_program("qualimap", data["config"])
+        resources = config_utils.get_resources("qualimap", data["config"])
+        max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
+                                             num_cores)
+        cmd = ("unset DISPLAY && {qualimap} bamqc -bam {bam_file} -outdir {out_dir} "
+               "-nt {num_cores} --java-mem-size={max_mem}")
+        species = data["genome_resources"]["aliases"].get("ensembl", "").upper()
+        if species in ["HUMAN", "MOUSE"]:
+            cmd += " -gd {species}"
+        regions = data["config"]["algorithm"].get("variant_regions")
+        # Qualimap requires BED6 inputs. Potentially convert BED3 over.
+        #if regions:
+        #    cmd += " -gff {regions}"
+        do.run(cmd.format(**locals()), "Qualimap: %s" % data["name"][-1])
+    # XXX Need to parse out qualimap metrics
+    return {}
 
 # ## High level summary in YAML format for loading into Galaxy.
 
@@ -345,7 +338,6 @@ def summary_metrics(items, analysis_dir, fastq_dir):
         #cur_lane_info["metrics"] = _bustard_stats(run["lane"], fastq_dir,
         #                                          fc_date, analysis_dir)
         lane_info.append(cur_lane_info)
-        #stats = _metrics_from_stats(_lane_stats(cur_name, analysis_dir))
     return lane_info, sample_info, tab_out
 
 def _metrics_from_stats(stats):
@@ -401,14 +393,6 @@ def _collect_cluster_stats(lane):
         stats["Clusters"] += int(tile.find("clusterCountRaw").text)
         stats["Clusters passed"] += int(tile.find("clusterCountPF").text)
     return stats
-
-def _lane_stats(cur_name, work_dir):
-    """Parse metrics information from files in the working directory.
-    """
-    parser = PicardMetricsParser()
-    metrics_files = glob.glob(os.path.join(work_dir, "%s*metrics" % cur_name))
-    metrics = parser.extract_metrics(metrics_files)
-    return metrics
 
 # ## LaTeX templates for output PDF
 

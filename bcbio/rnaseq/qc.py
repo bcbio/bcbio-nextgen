@@ -1,9 +1,9 @@
 import os
 
+from bcbio import bam
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.utils import safe_makedir
-from bcbio.pipeline.qcsummary import is_paired
+from bcbio.utils import safe_makedir, file_exists
 from bcbio.broad import runner_from_config
 from bcbio.broad.picardrun import picard_index
 
@@ -46,47 +46,33 @@ def rnaseqc_runner_from_config(config):
     return RNASeQCRunner(rnaseqc_path, bwa_path, jvm_opts)
 
 
-def sample_summary(samples):
-    sample_config = samples[0]
-    config = sample_config[0]["config"]
-    work_dir = sample_config[0]["dirs"]["work"]
-    ref_file = sample_config[0]["sam_ref"]
-    genome_dir = os.path.dirname(os.path.dirname(ref_file))
-    gtf_file = config_utils.get_transcript_gtf(genome_dir)
-    rna_file = config_utils.get_rRNA_sequence(genome_dir)
+def sample_summary(bam_file, data, out_dir):
+    """Run RNA-SeQC on a single RNAseq sample, writing to specified output directory.
+    """
+    if not file_exists(os.path.join(out_dir, "report.html")):
+        config = data["config"]
+        ref_file = data["sam_ref"]
+        genome_dir = os.path.dirname(os.path.dirname(ref_file))
+        gtf_file = config_utils.get_transcript_gtf(genome_dir)
+        rna_file = config_utils.get_rRNA_sequence(genome_dir)
+        sample_file = os.path.join(safe_makedir(out_dir), "sample_file.txt")
+        _write_sample_id_file(data, bam_file, sample_file)
+        runner = rnaseqc_runner_from_config(config)
+        broad_runner = runner_from_config(config)
+        picard_index(broad_runner, bam_file)
+        single_end = bam.is_paired(bam_file)
+        runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
+    # XXX parse metrics of interest from output files for summary
+    return {}
 
-    out_dir = safe_makedir(os.path.join(work_dir, "qc", "rnaseqc"))
-    sample_file = os.path.join(out_dir, "sample_file.txt")
-    _write_sample_id_file(samples, sample_file)
-    _index_samples(samples)
-    runner = rnaseqc_runner_from_config(config)
-    single_end = is_paired(sample_config[0]["work_bam"])
-    runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
 
-    return samples
-
-
-def _write_sample_id_file(samples, out_file):
+def _write_sample_id_file(data, bam_file, out_file):
     HEADER = "\t".join(["Sample ID", "Bam File", "Notes"]) + "\n"
-    sample_ids = _extract_sample_ids(samples)
+    sample_ids = ["\t".join([data["rgnames"]["pu"], bam_file, data["description"]])]
     with open(out_file, "w") as out_handle:
         out_handle.write(HEADER)
         for sample_id in sample_ids:
-            out_handle.write(sample_id)
+            out_handle.write(sample_id + "\n")
     return out_file
 
 
-def _index_samples(samples):
-    for data in samples:
-        runner = runner_from_config(data[0]["config"])
-        picard_index(runner, data[0]["work_bam"])
-
-
-def _extract_sample_ids(samples):
-    sample_ids = []
-    for data in samples:
-        names = data[0]["rgnames"]
-        description = data[0]["description"]
-        sample_ids.append("\t".join([names["pu"],
-                                     data[0]["work_bam"], description]) + "\n")
-    return sample_ids

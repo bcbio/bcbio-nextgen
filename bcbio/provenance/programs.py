@@ -25,6 +25,7 @@ _cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"}
              {"cmd": "novosort", "paren_flag": "novosort"},
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
              {"cmd": "samtools", "stdout_flag": "Version"},
+             {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
              {"cmd": "tophat", "args": "--version", "stdout_flag": "TopHat"}]
 # TODO: ogap, bamleftalign
 

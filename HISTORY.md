@@ -1,5 +1,10 @@
 ## 0.7.5 (in development)
-- read_through trimming can now be interrupted.
+
+- Add Qualimap to generate plots and metrics for BAM alignments.
+- Update fastqc runs to use multiple threads if available.
+- Remove custom Picard metrics runs and pdf generation. Eliminates dependencies on
+  pdflatex and R.
+- Allow interruption of read_through trimming with Ctrl-C.
 
 ## 0.7.4 (October 20, 3013)
 

@@ -5,9 +5,9 @@ import copy
 import os
 import subprocess
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils, qcsummary
+from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 
 def create_inputs(data):
@@ -130,7 +130,7 @@ def _bgzip_from_bam(bam_file, dirs, config):
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
     out_file_1 = os.path.join(work_dir, "%s-1.fq.gz" % os.path.splitext(os.path.basename(bam_file))[0])
-    if qcsummary.is_paired(bam_file):
+    if bam.is_paired(bam_file):
         out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
     else:
         out_file_2 = None
@@ -138,7 +138,7 @@ def _bgzip_from_bam(bam_file, dirs, config):
         with file_transaction(out_file_1) as tx_out_file:
             fq1_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, tx_out_file)
             sortprefix = "%s-sort" % os.path.splitext(tx_out_file)[0]
-            if qcsummary.is_paired(bam_file):
+            if bam.is_paired(bam_file):
                 fq2_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, out_file_2)
                 out_str = ("F=>({fq1_bgzip_cmd}) F2=>({fq2_bgzip_cmd}) S=/dev/null O=/dev/null "
                            "O2=/dev/null collate=1 colsbs={max_mem}")

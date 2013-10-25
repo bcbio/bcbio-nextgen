@@ -377,7 +377,6 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("process_alignment", lane_items)
         samples = run_parallel("generate_transcript_counts", samples)
         samples = qcsummary.generate_parallel(samples, run_parallel)
-        samples = qc.sample_summary(samples)
         #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         return samples
 
