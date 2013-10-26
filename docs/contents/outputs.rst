@@ -18,17 +18,17 @@ batched population level variant calls.
 
 Project directory
 ~~~~~~~~~~~~~~~~~
-- ``project-summary.csv`` -- Top level summary file with statistics on
-  read alignments and duplications. This file is transitioning into a
-  new more flexible summary structure so may not be fully complete.
+- ``project-summary.yaml`` -- Top level YAML format summary file with
+  statistics on read alignments and duplications as well as analysis
+  specific metrics.
 - ``programs.txt`` -- Program versions for bcbio-nextgen and software
   run in the pipeline. This enables reproduction of analyses.
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
-- ``SAMPLE-summary.pdf`` -- A summary PDF of metrics and plots
-  associated with the run. This helps assess the quality of the
-  library preparation, sequencing run, alignment and processing.
+- ``SAMPLE/qc`` -- Directory of quality control runs for the sample.
+  These include charts and metrics for assessing quality of sequencing
+  and analysis.
 - ``SAMPLE-ready.bam`` -- A prepared BAM file of the aligned reads.
   Depending on the analysis used, this may include trimmed,
   recalibrated and realigned reads following alignment.
@@ -53,4 +53,3 @@ Project directory
 Sample directories
 ~~~~~~~~~~~~~~~~~~
 - ``SAMPLE-caller.vcf`` -- Variants calls for an individual sample.
-

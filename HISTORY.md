@@ -1,5 +1,7 @@
 ## 0.7.5 (in development)
 
+- Update overall project summary to move to a flexible YAML format that handles
+  multiple analysis types. Re-include target, duplication and variant metrics.
 - Add Qualimap to generate plots and metrics for BAM alignments.
 - Update fastqc runs to use multiple threads if available.
 - Remove custom Picard metrics runs and pdf generation. Eliminates dependencies on

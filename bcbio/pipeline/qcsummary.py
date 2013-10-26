@@ -1,9 +1,8 @@
 """Quality control and summary metrics for next-gen alignments and analysis.
 """
-import copy
-import csv
 import os
 import shutil
+import subprocess
 
 import lxml.html
 import pybedtools
@@ -48,7 +47,7 @@ def _run_qc_tools(bam_file, data):
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
     else:
-        to_run.append(("qualimap", _run_qualimap))
+        to_run += [("qualimap", _run_qualimap), ("gemini", _run_gemini_stats)]
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
     metrics = {}
     for program_name, qc_fn in to_run:
@@ -121,7 +120,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
 
 def _parse_num_pct(k, v):
     num, pct = v.split(" / ")
-    return {k: num.replace(",", ""), "%s pct" % k: pct}
+    return {k: num.replace(",", "").strip(), "%s pct" % k: pct.strip()}
 
 def _parse_qualimap_globals(table):
     """Retrieve metrics of interest from globals table.
@@ -133,6 +132,16 @@ def _parse_qualimap_globals(table):
         col, val = [x.text for x in row.xpath("td")]
         if col in want:
             out.update(want[col](col, val))
+    return out
+
+def _parse_qualimap_globals_inregion(table):
+    """Retrieve metrics from the global targeted region table.
+    """
+    out = {}
+    for row in table.xpath("table/tr"):
+        col, val = [x.text for x in row.xpath("td")]
+        if col == "Mapped reads":
+            out.update(_parse_num_pct("%s (in regions)" % col, val))
     return out
 
 def _parse_qualimap_coverage(table):
@@ -160,6 +169,7 @@ def _parse_qualimap_metrics(report_file):
     """
     out = {}
     parsers = {"Globals" : _parse_qualimap_globals,
+               "Globals (inside of regions)": _parse_qualimap_globals_inregion,
                "Coverage": _parse_qualimap_coverage,
                "Coverage (inside of regions)": _parse_qualimap_coverage,
                "Insert size": _parse_qualimap_insertsize,
@@ -205,3 +215,31 @@ def _run_qualimap(bam_file, data, out_dir):
             cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % data["name"][-1])
     return _parse_qualimap_metrics(report_file)
+
+## Variant statistics from gemini
+
+def _run_gemini_stats(bam_file, data, out_dir):
+    """Retrieve high level variant statistics from Gemini.
+    """
+    out = {}
+    gemini_db = data.get("variants", [{}])[0].get("population", {}).get("db")
+    if gemini_db:
+        gemini = config_utils.get_program("gemini", data["config"])
+        tstv = subprocess.check_output([gemini, "stats", "--tstv", gemini_db])
+        gt_counts = subprocess.check_output([gemini, "stats", "--gts-by-sample", gemini_db])
+        dbsnp_count = subprocess.check_output([gemini, "query", gemini_db, "-q",
+                                               "SELECT count(*) FROM variants WHERE in_dbsnp==1"])
+        out["Transition/Transversion"] = tstv.split("\n")[1].split()[-1]
+        for line in gt_counts.split("\n"):
+            parts = line.rstrip().split()
+            if len(parts) > 0 and parts[0] == data["name"][-1]:
+                _, hom_ref, het, hom_var, _, total = parts
+                out["Variations (total)"] = int(total)
+                out["Variations (heterozygous)"] = int(het)
+                out["Variations (homozygous)"] = int(hom_var)
+                break
+        out["Variations (in dbSNP)"] = int(dbsnp_count.strip())
+        if out.get("Variations (total)") > 0:
+            out["Variations (in dbSNP) pct"] = "%.1f%%" % (out["Variations (in dbSNP)"] /
+                                                           float(out["Variations (total)"]) * 100.0)
+    return out

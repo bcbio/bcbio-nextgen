@@ -331,10 +331,10 @@ class Variant2Pipeline(AbstractPipeline):
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
             logger.info("Timing: population database")
             samples = population.prep_db_parallel(samples, run_parallel)
+            logger.info("Timing: quality control")
+            samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
         return samples
 

@@ -32,7 +32,8 @@ These are roughly ordered by current priority and we welcome contributors.
   local ephemeral storage for temporary space.
 
 - Correctly handle haplotype chromosomes (chrM, chrY) and setup calling based on
-  sample sex ([#33][33]).
+  sample sex ([#33][33]). Need a post-calling run that walks through and handles
+  special cases for human-like calling
 
 [33]: https://github.com/chapmanb/bcbio-nextgen/issues/33
 

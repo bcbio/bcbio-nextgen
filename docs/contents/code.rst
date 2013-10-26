@@ -313,7 +313,7 @@ additional information supplied during a variant calling workflow::
                              ('Pair duplicates', '0', '(0.0\\%)'),
                              ('Insert size', '152.2', '+/- 31.4')],
                  'pdf': '7_100326_FC6107FAAXX-sort-prep-summary.pdf',
-                 'project': 'project-summary.csv'},
+                 'project': 'project-summary.yaml'},
      'validate': {'concordant': 'Test1-ref-eval-concordance.vcf',
                   'discordant': 'Test1-eval-ref-discordance-annotate.vcf',
                   'grading': 'validate-grading.yaml',
