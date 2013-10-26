@@ -1,3 +1,7 @@
+"""Run Broad's RNA-SeqQC tool and handle reporting of useful summary metrics.
+"""
+
+import csv
 import os
 
 from bcbio import bam
@@ -49,7 +53,8 @@ def rnaseqc_runner_from_config(config):
 def sample_summary(bam_file, data, out_dir):
     """Run RNA-SeQC on a single RNAseq sample, writing to specified output directory.
     """
-    if not file_exists(os.path.join(out_dir, "report.html")):
+    metrics_file = os.path.join(out_dir, "metrics.tsv")
+    if not file_exists(metrics_file):
         config = data["config"]
         ref_file = data["sam_ref"]
         genome_dir = os.path.dirname(os.path.dirname(ref_file))
@@ -62,8 +67,7 @@ def sample_summary(bam_file, data, out_dir):
         picard_index(broad_runner, bam_file)
         single_end = bam.is_paired(bam_file)
         runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
-    # XXX parse metrics of interest from output files for summary
-    return {}
+    return _parse_rnaseqc_metrics(metrics_file, data["name"][-1])
 
 
 def _write_sample_id_file(data, bam_file, out_file):
@@ -75,4 +79,23 @@ def _write_sample_id_file(data, bam_file, out_file):
             out_handle.write(sample_id + "\n")
     return out_file
 
+# ## Parsing
 
+def _parse_rnaseqc_metrics(metrics_file, sample_name):
+    """Parse RNA-SeQC tab delimited metrics file.
+    """
+    out = {}
+    want = set(["Genes Detected", "Transcripts Detected",
+                "Mean Per Base Cov.", "Estimated Library Size", "Fragment Length Mean",
+                "Exonic Rate", "Intergenic Rate", "Intronic Rate",
+                "Mapped", "Mapping Rate", "Duplication Rate of Mapped",
+                "rRNA", "rRNA rate"])
+    with open(metrics_file) as in_handle:
+        reader = csv.reader(in_handle, dialect="excel-tab")
+        header = reader.next()
+        for metrics in reader:
+            if metrics[1] == sample_name:
+                for name, val in zip(header, metrics):
+                    if name in want:
+                        out[name] = val
+    return out

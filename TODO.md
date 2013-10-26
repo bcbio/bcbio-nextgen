@@ -1,12 +1,6 @@
 Current development goals and outstanding tasks for bcbio-nextgen development.
 These are roughly ordered by current priority and we welcome contributors.
 
-- Improve summary information. Leverage existing tools like Qualimap for
-  alignment metrics and remove custom scripts to call Picard and produce output
-  PDF. Remove dependency on pdflatex. ([#140][140]).
-
-[140]: https://github.com/chapmanb/bcbio-nextgen/issues/140
-
 - Integrated structural variant analysis, including CNV prediction. Current
   targets are [lumpy][lumpy] and [delly][delly].
 
