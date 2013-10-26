@@ -94,7 +94,6 @@ def _run_toplevel(config, config_file, work_dir, parallel,
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
                     final.append(xs[0])
-        qcsummary.write_metrics(final, dirs)
 
 def _add_provenance(items, dirs, run_parallel, parallel, config):
     p = programs.write_versions(dirs, config)

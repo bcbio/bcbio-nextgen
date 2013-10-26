@@ -193,7 +193,6 @@ Alignment
    of times to perform binning: [prealignment, postrecal]
 -  ``quality_format`` Quality format of fastq inputs [illumina,
    standard]
--  ``write_summary`` Write a PDF summary of results [true, false]
 -  ``merge_bamprep`` Merge regional BAM prepped files into a final
    prepared BAM. false avoids the time consuming merge when you only
    want variant calls [true, false]

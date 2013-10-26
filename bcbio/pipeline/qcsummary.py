@@ -5,6 +5,8 @@ import csv
 import os
 import shutil
 
+import lxml.html
+import pybedtools
 import yaml
 
 from bcbio import utils
@@ -18,20 +20,14 @@ import bcbio.rnaseq.qc
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
-    need_summary = False
-    for data in samples:
-        if data[0]["config"]["algorithm"].get("write_summary", True):
-            need_summary = True
-    if need_summary:
-        sum_samples = run_parallel("pipeline_summary", samples)
-        summary_csv = write_project_summary(sum_samples)
-        samples = []
-        for data in sum_samples:
-            if summary_csv:
-                if "summary" not in data[0]:
-                    data[0]["summary"] = {}
-                data[0]["summary"]["project"] = summary_csv
-            samples.append(data)
+    sum_samples = run_parallel("pipeline_summary", samples)
+    summary_file = write_project_summary(sum_samples)
+    samples = []
+    for data in sum_samples:
+        if "summary" not in data[0]:
+            data[0]["summary"] = {}
+        data[0]["summary"]["project"] = summary_file
+        samples.append(data)
     return samples
 
 def pipeline_summary(data):
@@ -59,6 +55,7 @@ def _run_qc_tools(bam_file, data):
         cur_qc_dir = os.path.join(qc_dir, program_name)
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
+    metrics["Name"] = data["name"][-1]
     return {"qc": qc_dir, "metrics": metrics}
 
 # ## Generate project level QC summary for quickly assessing large projects
@@ -66,83 +63,26 @@ def _run_qc_tools(bam_file, data):
 def write_project_summary(samples):
     """Write project summary information on the provided samples.
     """
-    def _nocommas(x):
-        return x.replace(",", "")
-    def _percent(x):
-        return x.replace("(", "").replace(")", "").replace("\\", "")
-    if len(samples) > 0:
-        out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.csv")
-        sample_info = _get_sample_summaries(samples)
-        header = ["Total", "Aligned", "Pair duplicates", "Insert size",
-                  "On target bases", "Mean target coverage", "10x coverage targets",
-                  "Zero coverage targets", "Total variations", "In dbSNP",
-                  "Transition/Transversion (all)", "Transition/Transversion (dbSNP)",
-                  "Transition/Transversion (novel)"]
-        select = [(0, _nocommas), (1, _percent), (1, _percent), (0, None),
-                  (1, _percent), (0, None), (0, _percent),
-                  (0, _percent), (0, None), (0, _percent),
-                  (0, None), (0, None), (0, None)]
-        rows = [["Sample"] + header]
-        for name, info in sample_info:
-            cur = [name]
-            for col, (i, prep_fn) in zip(header, select):
-                val = info.get(col, ["", ""])[i]
-                if prep_fn and val:
-                    val = prep_fn(val)
-                cur.append(val)
-            rows.append(cur)
-        with open(out_file, "w") as out_handle:
-            writer = csv.writer(out_handle)
-            for row in rows:
-                writer.writerow(row)
-        return out_file
-
-def _get_sample_summaries(samples):
-    """Retrieve high level summary information for each sample.
-    """
-    out = []
-    for sample in (x[0] for x in samples):
-        summary = sample.get("summary", {}).get("metrics")
-        if summary:
-            sample_info = {}
-            for xs in summary:
-                n = xs[0]
-                if n is not None:
-                    sample_info[n] = xs[1:]
-            sample_name = ";".join([x for x in sample["name"] if x])
-            out.append((sample_name, sample_info))
-    return out
+    out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.yaml")
+    with open(out_file, "w") as out_handle:
+        yaml.dump([data[0]["summary"]["metrics"] for data in samples if "summary" in data[0]],
+                  out_handle, default_flow_style=False, allow_unicode=False)
+    return out_file
 
 # ## Run and parse read information from FastQC
 
 class FastQCParser:
     def __init__(self, base_dir):
         self._dir = base_dir
-        self._max_seq_size = 45
-        self._max_overrep = 20
 
     def get_fastqc_summary(self):
+        ignore = set(["Filtered Sequences", "Filename", "File type"])
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
             k, v = stat_line.split("\t")[:2]
-            stats[k] = v
-        over_rep = []
-        for line in self._fastqc_data_section("Overrepresented sequences")[1:]:
-            parts = line.split("\t")
-            over_rep.append(parts)
-            over_rep[-1][0] = self._splitseq(over_rep[-1][0])
-        return stats, over_rep[:self._max_overrep]
-
-    def _splitseq(self, seq):
-        pieces = []
-        cur_piece = []
-        for s in seq:
-            if len(cur_piece) >= self._max_seq_size:
-                pieces.append("".join(cur_piece))
-                cur_piece = []
-            cur_piece.append(s)
-        pieces.append("".join(cur_piece))
-        return " ".join(pieces)
+            if k not in ignore:
+                stats[k] = v
+        return stats
 
     def _fastqc_data_section(self, section_name):
         out = []
@@ -174,15 +114,81 @@ def _run_fastqc(bam_file, data, fastqc_out):
             os.remove("%s.zip" % fastqc_outdir)
         shutil.move(fastqc_outdir, fastqc_out)
     parser = FastQCParser(fastqc_out)
-    stats, _ = parser.get_fastqc_summary()
+    stats = parser.get_fastqc_summary()
     return stats
 
 # ## Qualimap
 
+def _parse_num_pct(k, v):
+    num, pct = v.split(" / ")
+    return {k: num.replace(",", ""), "%s pct" % k: pct}
+
+def _parse_qualimap_globals(table):
+    """Retrieve metrics of interest from globals table.
+    """
+    out = {}
+    want = {"Mapped reads": _parse_num_pct,
+            "Duplication rate": lambda k, v: {k: v}}
+    for row in table.xpath("table/tr"):
+        col, val = [x.text for x in row.xpath("td")]
+        if col in want:
+            out.update(want[col](col, val))
+    return out
+
+def _parse_qualimap_coverage(table):
+    """Parse summary qualimap coverage metrics.
+    """
+    out = {}
+    for row in table.xpath("table/tr"):
+        col, val = [x.text for x in row.xpath("td")]
+        if col == "Mean":
+            out["Coverage (Mean)"] = val
+    return out
+
+def _parse_qualimap_insertsize(table):
+    """Parse insert size metrics.
+    """
+    out = {}
+    for row in table.xpath("table/tr"):
+        col, val = [x.text for x in row.xpath("td")]
+        if col == "Median":
+            out["Insert size (Median)"] = val
+    return out
+
+def _parse_qualimap_metrics(report_file):
+    """Extract useful metrics from the qualimap HTML report file.
+    """
+    out = {}
+    parsers = {"Globals" : _parse_qualimap_globals,
+               "Coverage": _parse_qualimap_coverage,
+               "Coverage (inside of regions)": _parse_qualimap_coverage,
+               "Insert size": _parse_qualimap_insertsize,
+               "Insert size (inside of regions)": _parse_qualimap_insertsize}
+    root = lxml.html.parse(report_file).getroot()
+    for table in root.xpath("//div[@class='table-summary']"):
+        header = table.xpath("h3")[0].text
+        if header in parsers:
+            out.update(parsers[header](table))
+    return out
+
+def _bed_to_bed6(orig_file, out_dir):
+    """Convert bed to required bed6 inputs.
+    """
+    bed6_file = os.path.join(out_dir, "%s-bed6%s" % os.path.splitext(orig_file))
+    if not utils.file_exists(bed6_file):
+        with open(bed6_file, "w") as out_handle:
+            for i, region in enumerate(list(x) for x in pybedtools.BedTool(orig_file)):
+                fillers = [str(i), "1.0", "+"]
+                full = region + fillers[:6-len(region)]
+                out_handle.write("\t".join(full) + "\n")
+    return bed6_file
+
 def _run_qualimap(bam_file, data, out_dir):
     """Run qualimap to assess alignment quality metrics.
     """
-    if not os.path.exists(os.path.join(out_dir, "qualimapReport.html")):
+    report_file = os.path.join(out_dir, "qualimapReport.html")
+    if not os.path.exists(report_file):
+        utils.safe_makedir(out_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         qualimap = config_utils.get_program("qualimap", data["config"])
         resources = config_utils.get_resources("qualimap", data["config"])
@@ -194,55 +200,8 @@ def _run_qualimap(bam_file, data, out_dir):
         if species in ["HUMAN", "MOUSE"]:
             cmd += " -gd {species}"
         regions = data["config"]["algorithm"].get("variant_regions")
-        # Qualimap requires BED6 inputs. Potentially convert BED3 over.
-        #if regions:
-        #    cmd += " -gff {regions}"
+        if regions:
+            bed6_regions = _bed_to_bed6(regions, out_dir)
+            cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % data["name"][-1])
-    # XXX Need to parse out qualimap metrics
-    return {}
-
-# ## High level summary in YAML format for loading into Galaxy.
-
-def write_metrics(run_info, dirs):
-    """Write an output YAML file containing high level sequencing metrics.
-    """
-    lane_stats, sample_stats, tab_metrics = summary_metrics(run_info,
-            dirs["work"], dirs["fastq"])
-    out_file = os.path.join(dirs["work"], "run_summary.yaml")
-    with open(out_file, "w") as out_handle:
-        metrics = dict(lanes=lane_stats, samples=sample_stats)
-        yaml.dump(metrics, out_handle, default_flow_style=False)
-    if dirs["flowcell"]:
-        tab_out_file = os.path.join(dirs["flowcell"], "run_summary.tsv")
-        try:
-            with open(tab_out_file, "w") as out_handle:
-                writer = csv.writer(out_handle, dialect="excel-tab")
-                for info in tab_metrics:
-                    writer.writerow(info)
-        # If on NFS mounted directory can fail due to filesystem or permissions
-        # errors. That's okay, we'll just not write the file.
-        except IOError:
-            pass
-    return out_file
-
-def summary_metrics(items, analysis_dir, fastq_dir):
-    """Reformat run and analysis statistics into a YAML-ready format.
-
-    XXX Needs a complete re-working to be less sequencer specific and
-    work with more general output structure in work directory.
-    """
-    tab_out = []
-    lane_info = []
-    sample_info = []
-    for run in items:
-        tab_out.append([run["lane"], run.get("researcher", ""),
-            run.get("name", ""), run.get("description")])
-        base_info = dict(
-                researcher = run.get("researcher_id", ""),
-                sample = run.get("sample_id", ""),
-                lane = run["lane"],
-                request = run["upload"].get("run_id"))
-        cur_lane_info = copy.deepcopy(base_info)
-        cur_lane_info["metrics"] = {}
-        lane_info.append(cur_lane_info)
-    return lane_info, sample_info, tab_out
+    return _parse_qualimap_metrics(report_file)

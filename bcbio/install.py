@@ -80,7 +80,7 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
-    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
+    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "lxml", "nose", "numpy",
             "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests", "tornado"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
