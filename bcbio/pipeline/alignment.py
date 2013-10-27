@@ -7,7 +7,7 @@ import os
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
-from bcbio import utils, broad
+from bcbio import bam, broad, utils
 from bcbio.bam import cram
 from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, mosaik,
@@ -62,9 +62,8 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         out_bam = _align_from_fastq(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
                                     names, align_dir, data)
         data["work_bam"] = out_bam
-    runner = broad.runner_from_config(data["config"])
     if data["work_bam"] and utils.file_exists(data["work_bam"]):
-        runner.run_fn("picard_index", data["work_bam"])
+        bam.index(data["work_bam"], data["config"])
     return data
 
 def _can_pipe(aligner, fastq_file):

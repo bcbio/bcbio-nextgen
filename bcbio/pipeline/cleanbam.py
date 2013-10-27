@@ -9,7 +9,7 @@ import os
 
 import pysam
 
-from bcbio import broad, utils
+from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
 
 def picard_prep(in_bam, names, ref_file, dirs, config):
@@ -26,7 +26,7 @@ def picard_prep(in_bam, names, ref_file, dirs, config):
                                os.path.splitext(os.path.basename(in_bam))[0])
     reorder_bam = runner.run_fn("picard_reorder", in_bam, ref_file, reorder_bam)
     rg_bam = _fix_rgs_and_sort(reorder_bam, names, ref_file, runner)
-    return _filter_bad_reads(rg_bam, ref_file, runner)
+    return _filter_bad_reads(rg_bam, ref_file, runner, config)
 
 def _fix_rgs_and_sort(in_bam, names, ref_file, runner):
     """Fix input read groups if missing and coordinate sort file.
@@ -38,10 +38,10 @@ def _fix_rgs_and_sort(in_bam, names, ref_file, runner):
     else:
         return runner.run_fn("picard_fix_rgs", in_bam, names)
 
-def _filter_bad_reads(in_bam, ref_file, runner):
+def _filter_bad_reads(in_bam, ref_file, runner, config):
     """Use GATK filter to remove problem reads which choke GATK and Picard.
     """
-    runner.run_fn("picard_index", in_bam)
+    bam.index(in_bam, config)
     out_file = "%s-gatkfilter.bam" % os.path.splitext(in_bam)[0]
     if not utils.file_exists(out_file):
         with utils.curdir_tmpdir() as tmp_dir:

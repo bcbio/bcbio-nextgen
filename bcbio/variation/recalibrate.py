@@ -11,7 +11,7 @@ from contextlib import closing
 
 import pysam
 
-from bcbio import broad, utils
+from bcbio import bam, broad, utils
 from bcbio.bam import cram
 from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists
@@ -57,7 +57,7 @@ def prep_recal(data):
             (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])
         else:
             dup_align_bam = data["work_bam"]
-        broad_runner.run_fn("picard_index", dup_align_bam)
+        bam.index(dup_align_bam, config)
         intervals = config["algorithm"].get("variant_regions", None)
         data["work_bam"] = dup_align_bam
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file,

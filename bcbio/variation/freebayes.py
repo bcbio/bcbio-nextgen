@@ -5,7 +5,7 @@ http://bioinformatics.bc.edu/marthlab/FreeBayes
 import os
 import shutil
 
-from bcbio import broad
+from bcbio import bam
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -40,7 +40,6 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
     """Detect SNPs and indels with FreeBayes.
     """
     config = items[0]["config"]
-    broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
@@ -49,7 +48,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   "-v", tx_out_file, "-f", ref_file,
                   "--use-mapping-quality", "--pvar", "0.7"]
             for align_bam in align_bams:
-                broad_runner.run_fn("picard_index", align_bam)
+                bam.index(align_bam, config)
                 cl += ["-b", align_bam]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             do.run(cl, "Genotyping with FreeBayes", {})

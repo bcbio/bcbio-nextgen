@@ -6,7 +6,7 @@ items to combine within a group.
 import os
 import shutil
 
-from bcbio import broad, utils
+from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, system
@@ -70,8 +70,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
                             do.run(cmd.format(**locals()), "Merge bam files", None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
-        picard = broad.runner_from_config(config)
-        picard.run_fn("picard_index", out_file)
+        bam.index(out_file, config)
         return out_file
 
 def _samtools_cat(bam_files, tmpdir):

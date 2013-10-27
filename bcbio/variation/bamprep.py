@@ -4,7 +4,7 @@ runs of this step.
 """
 import os
 
-from bcbio import broad, utils
+from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
@@ -64,7 +64,7 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
         sel_file = data["work_bam"]
     else:
         raise ValueError("Duplication approach not supported with GATK: %s" % prep_params["dup"])
-    broad_runner.run_fn("picard_index", sel_file)
+    bam.index(sel_file, data["config"])
     return sel_file, " ".join(cl)
 
 def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
@@ -78,7 +78,7 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
             pipe = ">" if prep_params["dup"] else "-o"
             cmd = "{cl} {pipe} {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
-    broad_runner.run_fn("picard_index", pa_bam)
+    bam.index(pa_bam, data["config"])
     dbsnp_vcf = data["genome_resources"]["variation"]["dbsnp"]
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
                                                 dbsnp=dbsnp_vcf, region=region_to_gatk(region))
@@ -223,8 +223,7 @@ def piped_bamprep(data, region=None, out_file=None):
             with utils.curdir_tmpdir() as tmp_dir:
                 _piped_bamprep_region(data, region, out_file, tmp_dir)
         prep_bam = out_file
-    broad_runner = broad.runner_from_config(data["config"])
-    broad_runner.run_fn("picard_index", prep_bam)
+    bam.index(prep_bam, data["config"])
     data["work_bam"] = prep_bam
     data["region"] = region
     return [data]

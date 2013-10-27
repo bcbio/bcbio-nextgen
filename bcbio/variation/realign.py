@@ -7,7 +7,7 @@ from contextlib import closing
 import pybedtools
 import pysam
 
-from bcbio import broad
+from bcbio import bam, broad
 from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
@@ -129,13 +129,13 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     """Realign a BAM file around indels using GATK, returning sorted BAM.
     """
     runner = broad.runner_from_config(config)
-    runner.run_fn("picard_index", align_bam)
+    bam.index(align_bam, config)
     runner.run_fn("picard_index_ref", ref_file)
     if not os.path.exists("%s.fai" % ref_file):
         pysam.faidx(ref_file)
     if region:
         align_bam = subset_bam_by_region(align_bam, region, out_file)
-        runner.run_fn("picard_index", align_bam)
+        bam.index(align_bam, config)
     if has_aligned_reads(align_bam, region):
         variant_regions = config["algorithm"].get("variant_regions", None)
         realign_target_file = gatk_realigner_targets(runner, align_bam,

@@ -15,7 +15,7 @@ import copy
 from distutils.version import LooseVersion
 import itertools
 
-from bcbio import broad
+from bcbio import bam, broad
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import grouped_parallel_split_combine
@@ -33,7 +33,7 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
     broad_runner = broad.runner_from_config(config)
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
-        broad_runner.run_fn("picard_index", x)
+        bam.index(x, config)
     coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
     variant_regions = config["algorithm"].get("variant_regions", None)
     confidence = "4.0" if coverage_depth in ["low"] else "30.0"

@@ -6,7 +6,7 @@ from contextlib import closing
 import pybedtools
 import pysam
 
-from bcbio import broad
+from bcbio import bam, broad
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
@@ -21,7 +21,7 @@ def combine_bam(in_files, out_file, config):
     runner.run_fn("picard_merge", in_files, out_file)
     for in_file in in_files:
         save_diskspace(in_file, "Merged into {0}".format(out_file), config)
-    runner.run_fn("picard_index", out_file)
+    bam.index(out_file, config)
     return out_file
 
 def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ext_fn=None):

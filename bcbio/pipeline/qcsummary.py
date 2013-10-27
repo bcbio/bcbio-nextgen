@@ -13,6 +13,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 import bcbio.rnaseq.qc
+from bcbio.variation.realign import has_aligned_reads
 
 # ## High level functions to generate summary PDF
 
@@ -35,7 +36,7 @@ def pipeline_summary(data):
     work_bam = (data.get("work_bam")
                 if data["config"]["algorithm"].get("merge_bamprep", True)
                 else data.get("callable_bam"))
-    if data["sam_ref"] is not None and work_bam:
+    if data["sam_ref"] is not None and work_bam and has_aligned_reads(work_bam):
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = _run_qc_tools(work_bam, data)
     return [[data]]

@@ -8,8 +8,6 @@ from bcbio import bam
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import safe_makedir, file_exists
-from bcbio.broad import runner_from_config
-from bcbio.broad.picardrun import picard_index
 
 
 class RNASeQCRunner(object):
@@ -63,8 +61,7 @@ def sample_summary(bam_file, data, out_dir):
         sample_file = os.path.join(safe_makedir(out_dir), "sample_file.txt")
         _write_sample_id_file(data, bam_file, sample_file)
         runner = rnaseqc_runner_from_config(config)
-        broad_runner = runner_from_config(config)
-        picard_index(broad_runner, bam_file)
+        bam.index(bam_file, config)
         single_end = bam.is_paired(bam_file)
         runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
     return _parse_rnaseqc_metrics(metrics_file, data["name"][-1])

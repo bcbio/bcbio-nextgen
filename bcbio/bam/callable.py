@@ -19,7 +19,7 @@ import pybedtools
 import pysam
 from py_descriptive_statistics import Enum as Stats
 
-from bcbio import utils, broad
+from bcbio import bam, broad, utils
 from bcbio.log import logger, setup_local_logging
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.split import parallel_split_combine
@@ -67,7 +67,7 @@ def calc_callable_loci(data, region=None, out_file=None):
     variant_regions = data["config"]["algorithm"].get("variant_regions", None)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            broad_runner.run_fn("picard_index", data["work_bam"])
+            bam.index(data["work_bam"], data["config"])
             params = ["-T", "CallableLoci",
                       "-R", data["sam_ref"],
                       "-I", data["work_bam"],
