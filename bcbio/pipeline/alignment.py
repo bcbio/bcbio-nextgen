@@ -102,7 +102,7 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
     assert not data.get("align_split"), "Do not handle split alignments with non-piped fastq yet"
     config = data["config"]
     align_fn = TOOLS[aligner].align_fn
-    sam_file = align_fn(fastq1, fastq2, align_ref, names["lane"], align_dir, config,
+    sam_file = align_fn(fastq1, fastq2, align_ref, names["lane"], align_dir, data,
                         names=names)
     if fastq2 is None and aligner in ["bwa", "bowtie2", "tophat2"]:
         fastq1 = _remove_read_number(fastq1, sam_file)
@@ -179,4 +179,3 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
         if fastq2:
             utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)
     return sort_bam
-

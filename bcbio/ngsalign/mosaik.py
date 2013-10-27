@@ -53,10 +53,11 @@ def _get_mosaik_nn_args(out_file):
         out += [arg, arg_fname]
     return out
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
           extra_args=None, names=None):
     """Alignment with MosaikAligner.
     """
+    config = data["config"]
     rg_name = names.get("rg", None) if names else None
     out_file = os.path.join(align_dir, "%s-align.bam" % out_base)
     if not file_exists(out_file):
