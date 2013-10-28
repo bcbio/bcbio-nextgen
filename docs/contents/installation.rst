@@ -33,7 +33,7 @@ requirements:
 
 - Python 2.6 or 2.7, with the development libraries
   installed (the python-dev or python-devel packages).
-- A compiler: gcc and g++.
+- Compilers: gcc and g++.
 - The git version control system (http://git-scm.com/).
 
 Some steps retrieve third party tools from GitHub, which can run into
@@ -42,8 +42,14 @@ use ``https://`` globally instead of ``git://``::
 
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
-If you'd prefer more control over installation, follow the manual
-steps for installing each component detailed below.
+The automated installer creates a fully integrated environment that
+allows simultaneous updates of the framework, third party tools and
+biological data. This offer the advantage over manual installation of
+being able to manage and evolve a consistent analysis environment as
+algorithms continue to evolve and improve. The installer is flexible
+enough to handle both system integrations into standard directories
+like /usr/local, as well as custom isolated installations in non-root
+directories.
 
 Upgrade
 =======
@@ -117,9 +123,11 @@ OSX
 Manual process
 ==============
 
-The manual process does not allow the in-place updates that the
-automated installer makes possible, but is useful for customized
-environments.
+The manual process does not allow the in-place updates and management
+of third party tools that the automated installer make possible. It's
+a more error-prone and labor intensive process. If you find you can't
+use the installer we'd love to hear why to make it more amenable to
+your system.
 
 Python code
 ~~~~~~~~~~~
@@ -133,7 +141,7 @@ Or the latest development version from GitHub::
       git clone https://github.com/chapmanb/bcbio-nextgen.git
       cd bcbio-nextgen && python setup.py build && sudo python setup.py install
 
-This requires either Python 2.6 or 2.7. The setup script installs
+This requires Python 2.7. The setup script installs
 required Python library dependencies. If you'd like to install the
 programs and libraries locally instead of globally, `virtualenv`_
 creates an isolated, local Python installation that does not require
