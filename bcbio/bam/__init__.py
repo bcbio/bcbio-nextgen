@@ -32,9 +32,17 @@ def index(in_bam, config):
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(index_file) as tx_index_file:
+            samtools_cmd = "{samtools} index {in_bam} {tx_index_file}"
             if sambamba:
                 cmd = "{sambamba} index -t {num_cores} {in_bam} {tx_index_file}"
             else:
-                cmd = "{samtools} index {in_bam} {tx_index_file}"
-            do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam))
+                cmd = samtools_cmd
+            # sambamba has intermittent multicore failures. Allow
+            # retries with single core
+            try:
+                do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam),
+                       log_error=False)
+            except:
+                do.run(samtools_cmd.format(**locals()),
+                       "Index BAM file (single core): %s" % os.path.basename(in_bam))
     return index_file if utils.file_exists(index_file) else alt_index_file
