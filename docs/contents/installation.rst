@@ -51,6 +51,23 @@ enough to handle both system integrations into standard directories
 like /usr/local, as well as custom isolated installations in non-root
 directories.
 
+Isolated installations
+======================
+
+To install bcbio-nextgen in an isolated non-root environment::
+
+    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --nosudo --isolate
+
+This requires some system requirements are already in place (Java,
+Ruby and compilers) but is as isolated and self-contained as possible
+without virtual machines or lightweight system containers. To ensure
+access to the executables, system libraries and Perl libraries update
+your `~/.bashrc` with::
+
+    export PATH=/path_to_bcbio/bin:$PATH
+    export LD_LIBRARY_PATH=/path/to/bcbio/lib:$LD_LIBRARY_PATH
+    export PERL5LIB=/path_to_bcbio/lib/perl5:path_to_bcbio/perl5/site_perl:${PERL5LIB}
+
 Upgrade
 =======
 
