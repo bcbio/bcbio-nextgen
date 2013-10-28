@@ -180,6 +180,28 @@ from a host with admin privileges, and edit ``execd_params``::
 
 .. _this blog post: https://viewsby.wordpress.com/2013/01/29/ubuntu-increase-number-of-open-files/
 
+IO and Network File Systems
+===========================
+
+bcbio-nextgen makes use of distributed network file systems to manage
+sharing large files between compute nodes. While we strive to minimize
+disk-based processing by making use of pipes, the pipeline still has a
+major IO component. To help manage IO and network bottlenecks, this
+section contains pointers on deployments and benchmarking. Please
+contribute your tips and thoughts.
+
+- Harvard and Dell: See the 'Distributed File Systems` section of our
+  `post on scaling bcbio-nextgen`_ for details about the setup within
+  `Harvard FAS Research Computing`_ and thoughts on scaling and
+  hardware. We also collaborate with Dell to
+  test the pipeline on `Dell's Active Infrastructure for Life Sciences`_.
+  We found the biggest initial factor limiting scaling was network
+  bandwidth between compute and storage nodes.
+
+.. _post on scaling bcbio-nextgen: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _Harvard FAS Research Computing: http://rc.fas.harvard.edu/
+.. _Dell's Active Infrastructure for Life Sciences: http://dell.com/ai-hpc-lifesciences
+
 Cloud support
 ~~~~~~~~~~~~~
 
