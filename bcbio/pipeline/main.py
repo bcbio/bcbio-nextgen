@@ -11,7 +11,6 @@ import tempfile
 
 from bcbio import install, log, utils, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import qc
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
