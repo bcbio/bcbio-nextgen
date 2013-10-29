@@ -40,9 +40,9 @@ def upgrade_bcbio(args):
     else:
         _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
+        subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
-        subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
 
     if args.tooldir:
         with bcbio_tmpdir():
