@@ -8,6 +8,7 @@ from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
 from bcbio.provenance import system
+from bcbio import structural
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
@@ -153,10 +154,10 @@ def prep_gemini_db(*args):
         return apply(population.prep_gemini_db, *args)
 prep_gemini_db.metadata = {"resources": ["gemini"]}
 
-@require(variation)
+@require(structural)
 def detect_sv(*args):
     with _setup_logging(args):
-        return apply(variation.detect_sv, *args)
+        return apply(structural.detect_sv, *args)
 
 @require(ensemble)
 def combine_calls(*args):

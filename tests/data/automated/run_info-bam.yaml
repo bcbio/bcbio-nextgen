@@ -28,6 +28,7 @@ details:
       realign: gatk
       recalibrate: gatk
       variantcaller: freebayes
+      svcaller: lumpy
       #variantcaller: gatk
       quality_format: Standard
       coverage_interval: regional

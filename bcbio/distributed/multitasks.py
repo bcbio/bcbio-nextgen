@@ -1,6 +1,6 @@
 """Multiprocessing ready entry points for sample analysis.
 """
-from bcbio import utils
+from bcbio import structural, utils
 from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
@@ -95,7 +95,7 @@ def concat_variant_files(*args):
 
 @utils.map_wrap
 def detect_sv(*args):
-    return variation.detect_sv(*args)
+    return structural.detect_sv(*args)
 
 @utils.map_wrap
 def combine_calls(*args):

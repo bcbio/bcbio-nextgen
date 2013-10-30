@@ -9,7 +9,7 @@ import argparse
 from collections import defaultdict
 import tempfile
 
-from bcbio import install, log, utils, upload
+from bcbio import install, log, structural, utils, upload
 from bcbio.bam import callable
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
@@ -330,6 +330,8 @@ class Variant2Pipeline(AbstractPipeline):
             run_parallel = parallel_runner(parallel, dirs, config)
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
+            logger.info("Timing: structural variation")
+            samples = structural.run(samples, run_parallel)
             logger.info("Timing: population database")
             samples = population.prep_db_parallel(samples, run_parallel)
             logger.info("Timing: quality control")

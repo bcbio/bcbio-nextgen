@@ -137,7 +137,7 @@ def _check_algorithm_keys(item):
                      "write_summary", "merge_bamprep", "coverage", "coverage_bigwig",
                      "coverage_depth", "coverage_interval", "hybrid_target", "hybrid_bait",
                      "ploidy",
-                     "variantcaller", "variant_regions", "mark_duplicates",
+                     "variantcaller", "variant_regions", "mark_duplicates", "svcaller",
                      "recalibrate", "realign",
                      "phasing", "validate", "validate_regions", "validate_genome_build",
                      "clinical_reporting",
