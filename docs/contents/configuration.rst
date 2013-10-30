@@ -226,9 +226,10 @@ Variant calling
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [picard,
    biobambam, samtools, false]
--  ``recalibrate`` Perform variant recalibration [gatk, false]
--  ``realign`` Type of variant alignment to perform, Defaults to
-   GATK realignment. [gatk, gkno, false]
+-  ``recalibrate`` Perform base quality score recalibration on the
+   aligned BAM file. [gatk, false]
+-  ``realign`` Perform realignment around indels on the aligned BAM
+   file. [gatk, gkno, false]
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 -  ``validate`` A VCF file of expected variant calls to perform
