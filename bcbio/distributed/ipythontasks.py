@@ -5,8 +5,10 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.distributed import ipython
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import sample, lane, qcsummary, shared, variation
 from bcbio.provenance import system
+from bcbio import structural
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
@@ -50,11 +52,16 @@ def process_alignment(*args):
         return apply(lane.process_alignment, *args)
 process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
 
-@require(lane)
-def align_prep_full(*args):
+@require(alignprep)
+def prep_align_inputs(*args):
     with _setup_logging(args):
-        return apply(lane.align_prep_full, *args)
-align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+        return apply(alignprep.create_inputs, *args)
+
+@require(lane)
+def postprocess_alignment(*args):
+    with _setup_logging(args):
+        return apply(lane.postprocess_alignment, *args)
+postprocess_alignment.metadata = {"resources": ["gatk"]}
 
 @require(sample)
 def merge_sample(*args):
@@ -97,6 +104,7 @@ def split_variants_by_sample(*args):
 def piped_bamprep(*args):
     with _setup_logging(args):
         return apply(bamprep.piped_bamprep, *args)
+piped_bamprep.metadata = {"resources": ["gatk"]}
 
 @require(variation)
 def postprocess_variants(*args):
@@ -146,10 +154,10 @@ def prep_gemini_db(*args):
         return apply(population.prep_gemini_db, *args)
 prep_gemini_db.metadata = {"resources": ["gemini"]}
 
-@require(variation)
+@require(structural)
 def detect_sv(*args):
     with _setup_logging(args):
-        return apply(variation.detect_sv, *args)
+        return apply(structural.detect_sv, *args)
 
 @require(ensemble)
 def combine_calls(*args):

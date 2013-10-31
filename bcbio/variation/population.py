@@ -4,13 +4,14 @@ Uses the gemini framework (https://github.com/arq5x/gemini) to build SQLite
 database of variations for query and evaluation.
 """
 import collections
+from distutils.version import LooseVersion
 import os
 import subprocess
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
 def prep_gemini_db(fnames, call_id, samples, data):
@@ -21,20 +22,33 @@ def prep_gemini_db(fnames, call_id, samples, data):
     use_gemini = _do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
     is_population = len(fnames) > 1
     if is_population:
-        gemini_vcf = "%s.vcf" % os.path.splitext(gemini_db)[0]
-        gemini_vcf = vcfutils.combine_variant_files(fnames, gemini_vcf, data["sam_ref"],
-                                                    data["config"])
+        name, caller = call_id
+        gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
     else:
         gemini_vcf = fnames[0]
     if use_gemini and not utils.file_exists(gemini_db):
         with file_transaction(gemini_db) as tx_gemini_db:
             gemini = config_utils.get_program("gemini", data["config"])
+            gemini_ver = programs.get_version("gemini", config=data["config"])
+            # Recent versions of gemini allow loading only passing variants
+            if LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
+                load_opts = "--passonly"
+            else:
+                load_opts = ""
             num_cores = data["config"]["algorithm"].get("num_cores", 1)
-            cmd = "{gemini} load -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
+            cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % str(call_id), data)
     return [[call_id, {"db": gemini_db if use_gemini else None,
                        "vcf": gemini_vcf if is_population else None}]]
+
+def get_multisample_vcf(fnames, name, caller, data):
+    """Retrieve a multiple sample VCF file in a standard location.
+    """
+    out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
+    gemini_vcf = os.path.join(out_dir, "%s-%s.vcf" % (name, caller))
+    return vcfutils.combine_variant_files(fnames, gemini_vcf, data["sam_ref"],
+                                          data["config"])
 
 def _do_db_build(samples):
     """Confirm we should build a gemini database: need gemini + human samples.
@@ -61,7 +75,7 @@ def _do_db_build(samples):
     else:
         return samples[0]["genome_resources"].get("aliases", {}).get("human", False)
 
-def _group_by_batches(samples):
+def _group_by_batches(samples, check_fn):
     """Group data items into batches, providing details to retrieve results.
     """
     batch_groups = collections.defaultdict(list)
@@ -69,7 +83,7 @@ def _group_by_batches(samples):
     out_retrieve = []
     extras = []
     for data in [x[0] for x in samples]:
-        if data["work_bam"] and data.get("vrn_file") and vcfutils.vcf_has_variants(data["vrn_file"]):
+        if check_fn(data):
             batch = data.get("metadata", {}).get("batch")
             if batch:
                 out_retrieve.append((batch, data))
@@ -84,10 +98,13 @@ def _group_by_batches(samples):
             extras.append(data)
     return batch_groups, singles, out_retrieve, extras
 
+def _has_variant_calls(data):
+    return data["work_bam"] and data.get("vrn_file") and vcfutils.vcf_has_variants(data["vrn_file"])
+
 def prep_db_parallel(samples, parallel_fn):
     """Prepares gemini databases in parallel, handling jointly called populations.
     """
-    batch_groups, singles, out_retrieve, extras = _group_by_batches(samples)
+    batch_groups, singles, out_retrieve, extras = _group_by_batches(samples, _has_variant_calls)
     to_process = []
     has_batches = False
     for (name, caller), info in batch_groups.iteritems():

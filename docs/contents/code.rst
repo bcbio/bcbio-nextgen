@@ -74,6 +74,43 @@ The most useful modules inside ``bcbio``, ordered by likely interest:
 - ``broad`` -- Code to handle calling Broad tools like GATK and
   Picard, as well as other Java-based programs.
 
+Development infrastructure
+==========================
+
+bcbio-nextgen uses GitHub for code development, and we welcome
+pull requests. GitHub makes it easy to establish custom forks of the
+code and contribute those back. The Biopython documentation has great
+information on `using git and GitHub`_ for a community developed
+project.
+
+The automated bcbio-nextgen installer creates an isolated Python
+environment using `Anaconda`_. This will be a subdirectory of your
+installation root, like ``/usr/local/share/bcbio_nextgen/anaconda``.
+You can manually use the ``bin/python`` within this subdirectory, or
+setup a Python virtual environment management system like
+`virtualenv-burrito`_ or `Python Env Wrapper`_ to switch in and out of
+this environment.
+
+You generally will want to make changes to your local copy of the
+bcbio-nextgen code and then install these into the code directory
+using ``/path/to/anaconda/bin/python setup.py install``. One tricky
+part that I don't yet know how to work around is that pip and standard
+``setup.py install`` have different ideas about how to write Python
+eggs. ``setup.py install`` will create an isolated python egg
+directory like ``bcbio_nextgen-0.7.5a-py2.7.egg``, while pip creates
+an egg pointing to a top level ``bcbio`` directory. Where this gets
+tricky is that the top level ``bcbio`` directory takes precedence. The
+best way to work around this problem is to manually remove the current
+pip installed bcbio-nextgen code (``rm -rf /path/to/anaconda/lib/python2.7/site-packages/bcbio*``)
+before managing it manually with ``python setup.py install``. We'd
+welcome tips about ways to force consistent installation across
+methods.
+
+.. _using git and GitHub: http://biopython.org/wiki/GitUsage
+.. _Anaconda: http://docs.continuum.io/anaconda/index.html
+.. _virtualenv-burrito: https://github.com/brainsik/virtualenv-burrito
+.. _Python Env Wrapper: https://github.com/berdario/invewrapper
+
 Adding tools
 ============
 
@@ -276,7 +313,7 @@ additional information supplied during a variant calling workflow::
                              ('Pair duplicates', '0', '(0.0\\%)'),
                              ('Insert size', '152.2', '+/- 31.4')],
                  'pdf': '7_100326_FC6107FAAXX-sort-prep-summary.pdf',
-                 'project': 'project-summary.csv'},
+                 'project': 'project-summary.yaml'},
      'validate': {'concordant': 'Test1-ref-eval-concordance.vcf',
                   'discordant': 'Test1-eval-ref-discordance-annotate.vcf',
                   'grading': 'validate-grading.yaml',

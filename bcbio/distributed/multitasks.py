@@ -1,7 +1,8 @@
 """Multiprocessing ready entry points for sample analysis.
 """
-from bcbio import utils
+from bcbio import structural, utils
 from bcbio.bam import callable
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import lane, qcsummary, sample, shared, variation
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
@@ -20,9 +21,13 @@ def process_alignment(*args):
 process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
 
 @utils.map_wrap
-def align_prep_full(*args):
-    return lane.align_prep_full(*args)
-align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+def postprocess_alignment(*args):
+    return lane.postprocess_alignment(*args)
+postprocess_alignment.metadata = {"resources": ["gatk"]}
+
+@utils.map_wrap
+def prep_align_inputs(*args):
+    return alignprep.create_inputs(*args)
 
 @utils.map_wrap
 def merge_sample(*args):
@@ -90,7 +95,7 @@ def concat_variant_files(*args):
 
 @utils.map_wrap
 def detect_sv(*args):
-    return variation.detect_sv(*args)
+    return structural.detect_sv(*args)
 
 @utils.map_wrap
 def combine_calls(*args):

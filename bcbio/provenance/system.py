@@ -9,7 +9,6 @@ import os
 import resource
 import socket
 
-import psutil
 import yaml
 
 from bcbio import utils
@@ -54,6 +53,7 @@ def get_info(dirs, parallel):
 def machine_info():
     """Retrieve core and memory information for the current machine.
     """
+    import psutil
     BYTES_IN_GIG = 1073741824
     free_bytes = psutil.virtual_memory().available
     return [{"memory": int(free_bytes / BYTES_IN_GIG), "cores": multiprocessing.cpu_count(),

@@ -5,7 +5,7 @@ http://bioinformatics.bc.edu/marthlab/FreeBayes
 import os
 import shutil
 
-from bcbio import broad
+from bcbio import bam
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -40,7 +40,6 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
     """Detect SNPs and indels with FreeBayes.
     """
     config = items[0]["config"]
-    broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
@@ -49,7 +48,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   "-v", tx_out_file, "-f", ref_file,
                   "--use-mapping-quality", "--pvar", "0.7"]
             for align_bam in align_bams:
-                broad_runner.run_fn("picard_index", align_bam)
+                bam.index(align_bam, config)
                 cl += ["-b", align_bam]
             cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
             do.run(cl, "Genotyping with FreeBayes", {})
@@ -70,6 +69,8 @@ def _clean_freebayes_output(in_file):
     """Clean FreeBayes output to make post-processing with GATK happy.
     - Remove lines from FreeBayes outputs where REF/ALT are identical:
       2       22816178        .       G       G       0.0339196
+      or there are multiple duplicate alleles:
+      4       60594753        .       TGAAA   T,T
     - Remove Type=Int specifications which are not valid VCF and GATK chokes on.
     """
     out_file = apply("{0}-nodups{1}".format, os.path.splitext(in_file))
@@ -82,7 +83,8 @@ def _clean_freebayes_output(in_file):
                         out_handle.write(line)
                     else:
                         parts = line.split("\t")
-                        if parts[3] != parts[4]:
+                        alleles = [x.strip() for x in parts[4].split(",")] + [parts[3].strip()]
+                        if len(alleles) == len(set(alleles)):
                             out_handle.write(line)
         _move_vcf(in_file, "{0}.orig".format(in_file))
         _move_vcf(out_file, in_file)

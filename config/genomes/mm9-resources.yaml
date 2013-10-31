@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 aliases:
   snpeff: NCBIM37
@@ -7,3 +7,5 @@ aliases:
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
+  transcriptome_index:
+    tophat: ../rnaseq/tophat/mm9_transcriptome

@@ -23,6 +23,9 @@ for configuring the installation process. Some useful arguments are:
 
 - ``--nosudo`` For running in environments where you lack administrator
   privileges.
+- ``--isolate`` Avoid updating users ``~/.bashrc`` if installing in a
+  non-standard PATH. This facilitates creation of isolated modules
+  without disrupting the user's environmental setup.
 - ``--nodata`` Do not install genome data.
 
 To bootstrap installation, the machine will need to have some basic
@@ -30,7 +33,7 @@ requirements:
 
 - Python 2.6 or 2.7, with the development libraries
   installed (the python-dev or python-devel packages).
-- A compiler: gcc and g++.
+- Compilers: gcc and g++.
 - The git version control system (http://git-scm.com/).
 
 Some steps retrieve third party tools from GitHub, which can run into
@@ -39,8 +42,31 @@ use ``https://`` globally instead of ``git://``::
 
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
-If you'd prefer more control over installation, follow the manual
-steps for installing each component detailed below.
+The automated installer creates a fully integrated environment that
+allows simultaneous updates of the framework, third party tools and
+biological data. This offer the advantage over manual installation of
+being able to manage and evolve a consistent analysis environment as
+algorithms continue to evolve and improve. The installer is flexible
+enough to handle both system integrations into standard directories
+like /usr/local, as well as custom isolated installations in non-root
+directories.
+
+Isolated installations
+======================
+
+To install bcbio-nextgen in an isolated non-root environment::
+
+    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --nosudo --isolate
+
+This requires some system requirements are already in place (Java,
+Ruby and compilers) but is as isolated and self-contained as possible
+without virtual machines or lightweight system containers. To ensure
+access to the executables, system libraries and Perl libraries update
+your `~/.bashrc` with::
+
+    export PATH=/path_to_bcbio/bin:$PATH
+    export LD_LIBRARY_PATH=/path_to_bcbio/lib:$LD_LIBRARY_PATH
+    export PERL5LIB=/path_to_bcbio/lib/perl5:/path_to_bcbio/perl5/site_perl:${PERL5LIB}
 
 Upgrade
 =======
@@ -49,7 +75,7 @@ We use the same automated installation process for performing upgrades
 of tools, software and data in place. With a recent version of
 bcbio-nextgen (0.7.0+), update with::
 
-  bcbio_nextgen.py upgrade --tooldir=/usr/local
+  bcbio_nextgen.py upgrade --tools
 
 In addition to the installation options mentioned above, tune the
 upgrade with these options:
@@ -76,11 +102,16 @@ upgrade with these options:
   indexes to download and prepare. By default we prepare a minimal
   human genome setup.
 
-- Leave out the ``--tooldir`` option if you don't want to upgrade
-  third party tools.
+- Leave out the ``--tools`` option if you don't want to upgrade third
+  party tools. If using ``--tools``, it will use the same installation
+  directory as specified during installation. If you're using an older
+  version that has not yet went through a successful upgrade or
+  installation and saved the tool directory, you should manually
+  specify ``--tooldir`` for the first upgrade. You can also pass
+  ``--tooldir`` to install to a different directory.
 
-To upgrade older bcbio-nextgen versions to be able to use this
-feature, do ``bcbio_nextgen.py -u stable`` to get the latest release
+To upgrade older bcbio-nextgen versions that don't have the ``upgrade``
+command, do ``bcbio_nextgen.py -u stable`` to get the latest release
 code.
 
 On a Virtual Machine
@@ -109,9 +140,11 @@ OSX
 Manual process
 ==============
 
-The manual process does not allow the in-place updates that the
-automated installer makes possible, but is useful for customized
-environments.
+The manual process does not allow the in-place updates and management
+of third party tools that the automated installer make possible. It's
+a more error-prone and labor intensive process. If you find you can't
+use the installer we'd love to hear why to make it more amenable to
+your system.
 
 Python code
 ~~~~~~~~~~~
@@ -125,7 +158,7 @@ Or the latest development version from GitHub::
       git clone https://github.com/chapmanb/bcbio-nextgen.git
       cd bcbio-nextgen && python setup.py build && sudo python setup.py install
 
-This requires either Python 2.6 or 2.7. The setup script installs
+This requires Python 2.7. The setup script installs
 required Python library dependencies. If you'd like to install the
 programs and libraries locally instead of globally, `virtualenv`_
 creates an isolated, local Python installation that does not require
@@ -139,7 +172,7 @@ that you need to install on any machines involved in the processing. The
 `CloudBioLinux`_ toolkit provides automated scripts to help with installation
 for both software and associated data files::
 
-    fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline
+    fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline_minimal
 
 You can also install them manually, adjusting locations in the
 ``resources`` section of your ``bcbio_system.yaml`` configuration file
@@ -151,7 +184,6 @@ as needed.
 -  `FastQC`_ -- Generation of sequencing quality reports
 -  `GATK`_ -- Variant calling and BAM preparation
 -  `snpEff`_ -- Identify functional consequences of variants.
--  LaTeX and pdflatex for report generation
 
 The code uses a number of Python modules, installed with the code:
 
@@ -159,10 +191,8 @@ The code uses a number of Python modules, installed with the code:
 -  `pysam`_
 -  `ipython`_
 -  `sh`_
--  `mako`_
 -  `PyYAML`_
 -  `logbook`_
--  `celery`_
 
 .. _bwa: http://bio-bwa.sourceforge.net/
 .. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
@@ -173,10 +203,8 @@ The code uses a number of Python modules, installed with the code:
 .. _snpEff: http://sourceforge.net/projects/snpeff/
 .. _biopython: http://biopython.org
 .. _pysam: http://code.google.com/p/pysam/
-.. _mako: http://www.makotemplates.org/
 .. _PyYAML: http://pyyaml.org/
 .. _logbook: http://packages.python.org/Logbook
-.. _celery: http://celeryproject.org/
 .. _numpy: http://www.numpy.org/
 .. _CloudBioLinux: http://cloudbiolinux.org
 .. _virtualenv: http://www.virtualenv.org/en/latest/

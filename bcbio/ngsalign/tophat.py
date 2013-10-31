@@ -5,7 +5,6 @@ http://tophat.cbcb.umd.edu
 import sh
 import os
 import shutil
-import subprocess
 from contextlib import closing
 import glob
 
@@ -34,33 +33,13 @@ def _set_quality_flag(options, config):
         options["solexa-quals"] = True
     return options
 
-
-def _get_transcriptome_index(ref_file):
-    base_dir = os.path.dirname(os.path.dirname(ref_file))
-    base = os.path.basename(ref_file)
-    transcriptome_index = os.path.join(base_dir, "rnaseq",
-                                      "tophat", base + "_transcriptome")
-    if file_exists(transcriptome_index + ".1.bt2"):
-        return transcriptome_index
-    else:
-        return None
-
-def _get_gtf(ref_file, config):
-    gtf_file = config.get("gtf", None)
-    if not gtf_file:
-        base_dir = os.path.dirname(os.path.dirname(ref_file))
-        gtf_file = os.path.join(base_dir, "rnaseq/ref-transcripts.gtf")
-        if not file_exists(gtf_file):
-            gtf_file = None
-    return gtf_file
-
-def _set_transcriptome_option(options, config, ref_file):
+def _set_transcriptome_option(options, data, ref_file):
     # prefer transcriptome-index vs a GTF file if available
-    transcriptome_index = _get_transcriptome_index(ref_file)
-    if transcriptome_index:
+    transcriptome_index = data["genome_resources"]["rnaseq"].get("transcriptome_index", {}).get("tophat")
+    if transcriptome_index and file_exists(transcriptome_index + ".1.bt2"):
         options["transcriptome-index"] = transcriptome_index
 
-    gtf_file = _get_gtf(ref_file, config)
+    gtf_file = data["genome_resources"]["rnaseq"].get("transcripts")
     if gtf_file:
         options["GTF"] = gtf_file
     return options
@@ -80,14 +59,15 @@ def _set_rg_options(options, names):
     options["rg-platform-unit"] = names["pu"]
     return options
 
-def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                  names=None):
     """
     run alignment using Tophat v2
     """
+    config = data["config"]
     options = get_in(config, ("resources", "tophat", "options"), {})
     options = _set_quality_flag(options, config)
-    options = _set_transcriptome_option(options, config, ref_file)
+    options = _set_transcriptome_option(options, data, ref_file)
     options = _set_cores(options, config)
     options = _set_rg_options(options, names)
 
@@ -109,7 +89,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             if pair_file and not options.get("mate-inner-dist", None):
                 d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file,
                                                         ref_file, out_base,
-                                                        tx_out_dir, config)
+                                                        tx_out_dir, data)
                 options["mate-inner-dist"] = d
                 options["mate-std-dev"] = d_stdev
                 files.append(pair_file)
@@ -126,6 +106,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
             tophat_ready = tophat_runner.bake(**ready_options)
             cmd = str(tophat_ready.bake(*files))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
+        _fix_empty_readnames(out_file)
     if pair_file:
         final_out = _fix_mates(out_file, os.path.join(out_dir, "%s-align.bam" % out_base),
                                ref_file, config)
@@ -134,6 +115,23 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
         if not file_exists(final_out):
             os.symlink(os.path.basename(out_file), final_out)
     return final_out
+
+
+def _fix_empty_readnames(orig_file):
+    """ Fix SAMfile reads with empty read names
+
+    Tophat 2.0.9 sometimes outputs empty read names, making the
+    FLAG field be the read name. This throws those reads away.
+    """
+    with file_transaction(orig_file) as tx_out_file:
+        logger.info("Removing reads with empty read names from Tophat output.")
+        with open(orig_file) as orig, open(tx_out_file, "w") as out:
+            for line in orig:
+                if line.split()[0].isdigit():
+                    continue
+                out.write(line)
+    return orig_file
+
 
 def _fix_mates(orig_file, out_file, ref_file, config):
     """Fix problematic unmapped mate pairs in TopHat output.
@@ -152,16 +150,16 @@ def _fix_mates(orig_file, out_file, ref_file, config):
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
     return out_file
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
           names=None):
     out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
-                             align_dir, config, names)
+                             align_dir, data, names)
 
     return out_files
 
 
 def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
-                               out_dir, config):
+                               out_dir, data):
     """Use Bowtie to estimate the inner distance of paired reads.
     """
     # skip initial reads for large file, but not for smaller
@@ -169,10 +167,10 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
     #                              out_base, out_dir, config)
     # if it is a small file, use the old method
     mean, stdev = _small_file_innerdist("100000", fastq_file, pair_file, ref_file,
-                                        out_base, out_dir, config, True)
+                                        out_base, out_dir, data, True)
     if not mean or not stdev:
         mean, stdev = _small_file_innerdist("1", fastq_file, pair_file, ref_file,
-                                            out_base, out_dir, config, True)
+                                            out_base, out_dir, data, True)
 
     assert mean, "mean insert size is not set."
     assert stdev, "stdev of insert size is not set."
@@ -204,15 +202,15 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
     return mean_insert, std_deviation
 
 def _small_file_innerdist(start, fastq_file, pair_file, ref_file, out_base,
-                          out_dir, config, remove_workdir=False):
+                          out_dir, data, remove_workdir=False):
     work_dir = os.path.join(out_dir, "innerdist_estimate")
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
     safe_makedir(work_dir)
     extra_args = ["-s", str(start), "-u", "250000"]
-    bowtie_runner = _select_bowtie_version(config)
+    bowtie_runner = _select_bowtie_version(data["config"])
     out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, out_base,
-                                  work_dir, config, extra_args)
+                                  work_dir, data, extra_args)
     dists = []
     with closing(pysam.Samfile(out_sam)) as work_sam:
         for read in work_sam:
@@ -286,13 +284,11 @@ def _select_bowtie_version(config):
 
 
 def _ref_version(ref_file):
-    _, ext = os.path.splitext(glob.glob(ref_file + "*")[0])
-    if ext == ".ebwt":
-        return 1
-    elif ext == ".bt2":
-        return 2
-    else:
-        logger.error("Cannot detect which reference version %s is. "
+    for ext in [os.path.splitext(x)[1] for x in glob.glob(ref_file + "*")]:
+        if ext == ".ebwt":
+            return 1
+        elif ext == ".bt2":
+            return 2
+    raise ValueError("Cannot detect which reference version %s is. "
                      "Should end in either .ebwt (bowtie) or .bt2 "
                      "(bowtie2)." % (ref_file))
-        exit(1)

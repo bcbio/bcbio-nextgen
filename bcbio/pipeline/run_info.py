@@ -64,7 +64,7 @@ def _add_reference_resources(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
-    for problem in [" "]:
+    for problem in [" ", "."]:
         x = x.replace(problem, "_")
     return x
 
@@ -137,7 +137,7 @@ def _check_algorithm_keys(item):
                      "write_summary", "merge_bamprep", "coverage", "coverage_bigwig",
                      "coverage_depth", "coverage_interval", "hybrid_target", "hybrid_bait",
                      "ploidy",
-                     "variantcaller", "variant_regions", "mark_duplicates",
+                     "variantcaller", "variant_regions", "mark_duplicates", "svcaller",
                      "recalibrate", "realign",
                      "phasing", "validate", "validate_regions", "validate_genome_build",
                      "clinical_reporting",
@@ -240,7 +240,8 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         upload["run_id"] = ""
         item["upload"] = upload
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
-                                                  ignore_keys=["variantcaller"])
+                                                  ignore_keys=["variantcaller", "realign", "recalibrate",
+                                                               "phasing"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)

@@ -1,11 +1,13 @@
+"""Run Broad's RNA-SeqQC tool and handle reporting of useful summary metrics.
+"""
+
+import csv
 import os
 
+from bcbio import bam
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.utils import safe_makedir
-from bcbio.pipeline.qcsummary import is_paired
-from bcbio.broad import runner_from_config
-from bcbio.broad.picardrun import picard_index
+from bcbio.utils import safe_makedir, file_exists
 
 
 class RNASeQCRunner(object):
@@ -46,47 +48,51 @@ def rnaseqc_runner_from_config(config):
     return RNASeQCRunner(rnaseqc_path, bwa_path, jvm_opts)
 
 
-def sample_summary(samples):
-    sample_config = samples[0]
-    config = sample_config[0]["config"]
-    work_dir = sample_config[0]["dirs"]["work"]
-    ref_file = sample_config[0]["sam_ref"]
-    genome_dir = os.path.dirname(os.path.dirname(ref_file))
-    gtf_file = config_utils.get_transcript_gtf(genome_dir)
-    rna_file = config_utils.get_rRNA_sequence(genome_dir)
+def sample_summary(bam_file, data, out_dir):
+    """Run RNA-SeQC on a single RNAseq sample, writing to specified output directory.
+    """
+    metrics_file = os.path.join(out_dir, "metrics.tsv")
+    if not file_exists(metrics_file):
+        config = data["config"]
+        ref_file = data["sam_ref"]
+        genome_dir = os.path.dirname(os.path.dirname(ref_file))
+        gtf_file = config_utils.get_transcript_gtf(genome_dir)
+        rna_file = config_utils.get_rRNA_sequence(genome_dir)
+        sample_file = os.path.join(safe_makedir(out_dir), "sample_file.txt")
+        _write_sample_id_file(data, bam_file, sample_file)
+        runner = rnaseqc_runner_from_config(config)
+        bam.index(bam_file, config)
+        single_end = bam.is_paired(bam_file)
+        runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
+    return _parse_rnaseqc_metrics(metrics_file, data["name"][-1])
 
-    out_dir = safe_makedir(os.path.join(work_dir, "qc", "rnaseqc"))
-    sample_file = os.path.join(out_dir, "sample_file.txt")
-    _write_sample_id_file(samples, sample_file)
-    _index_samples(samples)
-    runner = rnaseqc_runner_from_config(config)
-    single_end = is_paired(sample_config[0]["work_bam"])
-    runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
 
-    return samples
-
-
-def _write_sample_id_file(samples, out_file):
+def _write_sample_id_file(data, bam_file, out_file):
     HEADER = "\t".join(["Sample ID", "Bam File", "Notes"]) + "\n"
-    sample_ids = _extract_sample_ids(samples)
+    sample_ids = ["\t".join([data["rgnames"]["pu"], bam_file, data["description"]])]
     with open(out_file, "w") as out_handle:
         out_handle.write(HEADER)
         for sample_id in sample_ids:
-            out_handle.write(sample_id)
+            out_handle.write(sample_id + "\n")
     return out_file
 
+# ## Parsing
 
-def _index_samples(samples):
-    for data in samples:
-        runner = runner_from_config(data[0]["config"])
-        picard_index(runner, data[0]["work_bam"])
-
-
-def _extract_sample_ids(samples):
-    sample_ids = []
-    for data in samples:
-        names = data[0]["rgnames"]
-        description = data[0]["description"]
-        sample_ids.append("\t".join([names["pu"],
-                                     data[0]["work_bam"], description]) + "\n")
-    return sample_ids
+def _parse_rnaseqc_metrics(metrics_file, sample_name):
+    """Parse RNA-SeQC tab delimited metrics file.
+    """
+    out = {}
+    want = set(["Genes Detected", "Transcripts Detected",
+                "Mean Per Base Cov.", "Estimated Library Size", "Fragment Length Mean",
+                "Exonic Rate", "Intergenic Rate", "Intronic Rate",
+                "Mapped", "Mapping Rate", "Duplication Rate of Mapped",
+                "rRNA", "rRNA rate"])
+    with open(metrics_file) as in_handle:
+        reader = csv.reader(in_handle, dialect="excel-tab")
+        header = reader.next()
+        for metrics in reader:
+            if metrics[1] == sample_name:
+                for name, val in zip(header, metrics):
+                    if name in want:
+                        out[name] = val
+    return out

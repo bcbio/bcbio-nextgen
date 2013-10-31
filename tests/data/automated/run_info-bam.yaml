@@ -15,19 +15,20 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
   - algorithm:
       #aligner: false
-      #mark_duplicates: false
+      #mark_duplicates: biobambam
       #recalibrate: false
       #realign: false
       #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
       #aligner: novoalign
+      align_split_size: 15000
       aligner: bwa
       #mark_duplicates: samtools
       #realign: gkno
       realign: gatk
       recalibrate: gatk
       variantcaller: freebayes
-      #realign: gatk
+      svcaller: lumpy
       #variantcaller: gatk
       quality_format: Standard
       coverage_interval: regional
@@ -47,8 +48,8 @@ details:
     description: Test1
     genome_build: hg19
     lane: 7
-    files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
-    #files: 7_100326_FC6107FAAXX.bam
+    #files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
+    files: 7_100326_FC6107FAAXX.bam
   # - algorithm:
   #     aligner: novoalign
   #     variantcaller: [gatk, freebayes]

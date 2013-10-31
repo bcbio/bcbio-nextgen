@@ -18,7 +18,7 @@ import pysam
 from Bio import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
-from bcbio import broad
+from bcbio import bam
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
@@ -34,7 +34,6 @@ def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
         config = items[0]["config"]
     else:
         raise NotImplementedError("Need to add multisample calling for cortex_var")
-    broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-cortex.vcf" % os.path.splitext(align_bam)[0]
     if region is not None:
@@ -43,7 +42,7 @@ def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
     else:
         work_dir = os.path.dirname(out_file)
     if not file_exists(out_file):
-        broad_runner.run_fn("picard_index", align_bam)
+        bam.index(align_bam, config)
         variant_regions = config["algorithm"].get("variant_regions", None)
         if not variant_regions:
             raise ValueError("Only support regional variant calling with cortex_var: set variant_regions")

@@ -5,10 +5,9 @@ import os
 import itertools
 from subprocess import CalledProcessError
 
-from bcbio import broad
+from bcbio import bam, broad
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
-from bcbio.provenance.programs import get_version
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils
@@ -57,7 +56,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
 
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
-        broad_runner.run_fn("picard_index", x)
+        bam.index(x, base_config)
 
     variant_regions = base_config["algorithm"].get("variant_regions", None)
     contamination = base_config["algorithm"].get("fraction_contamination", 0)

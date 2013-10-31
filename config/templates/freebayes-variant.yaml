@@ -1,4 +1,6 @@
-# Template for whole genome Illumina variant calling with GATK pipeline
+# Template for whole genome Illumina variant calling with FreeBayes
+# This is a GATK-free pipeline without post-alignment BAM pre-processing
+# (recalibration and realignment)
 ---
 details:
   - analysis: variant2
@@ -8,10 +10,10 @@ details:
     #   batch: your-arbitrary-batch-name
     algorithm:
       aligner: bwa
-      mark_duplicates: picard
-      recalibrate: gatk
-      realign: gatk
-      variantcaller: gatk
+      mark_duplicates: samtools
+      recalibrate: false
+      realign: false
+      variantcaller: freebayes
       platform: illumina
       quality_format: Standard
       coverage_interval: genome

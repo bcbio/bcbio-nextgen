@@ -4,7 +4,7 @@ http://samtools.sourceforge.net/mpileup.shtml
 """
 import os
 
-from bcbio import broad
+from bcbio import bam
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -21,9 +21,8 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
 
     config = items[0]["config"]
 
-    broad_runner = broad.runner_from_config(config)
     for x in align_bams:
-        broad_runner.run_fn("picard_index", x)
+        bam.index(x, config)
     if out_file is None:
 
         if vcfutils.is_sample_pair(align_bams, items):

@@ -5,9 +5,8 @@ This automates the steps required for installation and setup to make it
 easier to get started with bcbio-nextgen. The defaults provide data files
 for human variant calling.
 
-Requires: git
+Requires: git, Python 2.7 or argparse for earlier versions.
 """
-import argparse
 import contextlib
 import datetime
 import os
@@ -22,7 +21,7 @@ remotes = {"requirements":
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
-           "http://repo.continuum.io/miniconda/Miniconda-1.9.1-%s-x86_64.sh"}
+           "http://repo.continuum.io/miniconda/Miniconda-2.0.3-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_dependencies()
@@ -71,9 +70,14 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
+    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "lxml", "nose", "numpy",
+            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests", "tornado"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
+    # Remove until can get 13.1.0 working cleanly on CentOS
+    #extra_pkgs = ["zeromq", "pyzmq"]
+    #binstar_user = "minrk"
+    #subprocess.check_call([anaconda["conda"], "install", "--yes",
+    #                       "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
 
 def _guess_distribution():
     """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.
@@ -118,17 +122,23 @@ def write_system_config(base_url, datadir, tooldir):
             shutil.copy(out_file, bak_file)
     if tooldir:
         java_basedir = os.path.join(tooldir, "share", "java")
-    to_rewrite = ("gatk", "picard", "snpEff", "bcbio_variation")
+    rewrite_ignore = ("log",)
     with contextlib.closing(urllib2.urlopen(base_url)) as in_handle:
         with open(out_file, "w") as out_handle:
+            in_resources = False
             in_prog = None
             for line in in_handle:
-                if line.strip().startswith(to_rewrite):
+                if line[0] != " ":
+                    in_resources = line.startswith("resources")
+                    in_prog = None
+                elif (in_resources and line[:2] == "  " and line[2] != " "
+                      and not line.strip().startswith(rewrite_ignore)):
                     in_prog = line.split(":")[0].strip()
                 elif line.strip().startswith("dir:") and in_prog:
+                    final_dir = os.path.basename(line.split()[-1])
                     if tooldir:
                         line = "%s: %s\n" % (line.split(":")[0],
-                                             os.path.join(java_basedir, in_prog.lower()))
+                                             os.path.join(java_basedir, final_dir))
                     in_prog = None
                 elif line.startswith("galaxy"):
                     line = "# %s" % line
@@ -165,6 +175,12 @@ def check_dependencies():
         raise OSError("bcbio-nextgen installer requires Git (http://git-scm.com/)")
 
 if __name__ == "__main__":
+    try:
+        import argparse
+    except ImportError:
+        raise ImportError("bcbio-nextgen installer requires `argparse`, included in Python 2.7.\n"
+                          "Install for earlier versions with `pip install argparse` or "
+                          "`easy_install argparse`.")
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines")
     parser.add_argument("datadir", help="Directory to install genome data",
@@ -178,10 +194,12 @@ if __name__ == "__main__":
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"])
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
+                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
+                        dest="isolate", action="store_true", default=False)
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",

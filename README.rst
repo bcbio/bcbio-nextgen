@@ -17,7 +17,8 @@ Features
   overcoming the biological, algorithmic and computational challenges
   that face individual developers working on complex pipelines in
   quickly changing research areas. See our `users page`_ for examples
-  of bcbio-nextgen deployments.
+  of bcbio-nextgen deployments, and the `developer documentation`_ for
+  tips on contributing.
 
 - Installation: `A single installer script`_ prepares all
   third party software, data libraries and system configuration files.
@@ -40,6 +41,7 @@ Features
 .. _parallel documentation: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
 .. _A single installer script: https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#automated
 .. _users page: https://bcbio-nextgen.readthedocs.org/en/latest/contents/introduction.html#users
+.. _developer documentation: https://bcbio-nextgen.readthedocs.org/en/latest/contents/code.html
 .. _variant calling and RNA-seq pipelines: https://bcbio-nextgen.readthedocs.org/en/latest/contents/pipelines.html
 .. _parallel analysis and scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 .. _Automated validation: http://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
@@ -90,6 +92,7 @@ Contributors
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Rory Kirchner`_, Harvard School of Public Health
 - `Brent Pedersen`_, University of Colorado Denver
+- `James Porter`_, The University of Chicago
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
@@ -101,6 +104,7 @@ Contributors
 .. _Mario Giovacchini: https://github.com/mariogiov
 .. _Rory Kirchner: https://github.com/roryk
 .. _Brent Pedersen: https://github.com/brentp
+.. _James Porter: https://github.com/porterjamesj
 .. _Valentine Svensson: https://github.com/vals
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin

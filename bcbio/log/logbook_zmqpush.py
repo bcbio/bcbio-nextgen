@@ -3,12 +3,13 @@
 Thanks to Zachary Voase: https://github.com/zacharyvoase/logbook-zmqpush
 Slightly modified to support Logbook 0.4.1.
 """
-
-import multiprocessing
+import errno
+import json
 import socket
 
 import zmq
 import logbook.queues
+from logbook.base import LogRecord
 
 class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
 
@@ -70,6 +71,24 @@ class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
         self.socket = self.context.socket(zmq.PULL)
         if addr is not None:
             self.socket.bind(addr)
+
+    def recv(self, timeout=None):
+        """Overwrite standard recv for timeout calls to catch interrupt errors.
+        """
+        if timeout:
+            try:
+                testsock = self._zmq.select([self.socket], [], [], timeout)[0]
+            except zmq.ZMQError as e:
+                if e.errno == errno.EINTR:
+                    testsock = None
+                else:
+                    raise
+            if not testsock:
+                return
+            rv = self.socket.recv(self._zmq.NOBLOCK)
+            return LogRecord.from_dict(json.loads(rv))
+        else:
+            return super(ZeroMQPullSubscriber, self).recv(timeout)
 
 @logbook.Processor
 def inject_hostname(log_record):

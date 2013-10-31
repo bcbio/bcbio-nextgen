@@ -96,6 +96,8 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``genome_build`` Genome build to align to, which references a genome
   keyword in Galaxy to find location build files.
 
+.. _upload-configuration:
+
 Upload
 ~~~~~~
 
@@ -191,7 +193,6 @@ Alignment
    of times to perform binning: [prealignment, postrecal]
 -  ``quality_format`` Quality format of fastq inputs [illumina,
    standard]
--  ``write_summary`` Write a PDF summary of results [true, false]
 -  ``merge_bamprep`` Merge regional BAM prepped files into a final
    prepared BAM. false avoids the time consuming merge when you only
    want variant calls [true, false]
@@ -223,11 +224,12 @@ Variant calling
    multiple options [gatk, freebayes, varscan, samtools,
    gatk-haplotype, cortex]
 -  ``variant_regions`` BED file of regions to call variants in.
--  ``mark_duplicates`` Identify and remove variants [picard, samtools,
-   false]
--  ``recalibrate`` Perform variant recalibration [gatk, false]
--  ``realign`` Type of variant alignment to perform, Defaults to
-   GATK realignment. [gatk, gkno, false]
+-  ``mark_duplicates`` Identify and remove variants [picard,
+   biobambam, samtools, false]
+-  ``recalibrate`` Perform base quality score recalibration on the
+   aligned BAM file. [gatk, false]
+-  ``realign`` Perform realignment around indels on the aligned BAM
+   file. [gatk, gkno, false]
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 -  ``validate`` A VCF file of expected variant calls to perform
@@ -328,7 +330,10 @@ and memory and compute resources to devote to them::
 - ``memory`` Specify the memory per core used by a process. For programs
   where memory control is available, like ``samtools sort``,
   this limits memory usage. For other programs this is an estimate of
-  usage, used by :ref:`memory-management` to avoid over-scheduling memory.
+  usage, used by :ref:`memory-management` to avoid over-scheduling
+  memory. Always specify this as the memory usage for a single core,
+  and the pipeline handles scaling this when a process uses multiple
+  cores.
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux

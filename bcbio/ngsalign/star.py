@@ -14,8 +14,9 @@ ref_file = "/Users/rory/tmp/GRCm38/STAR"
 out_base = "/Users/rory/tmp/star_test/test"
 
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
           names=None):
+    config = data["config"]
     out_prefix = path.join(align_dir, out_base)
     out_file = out_prefix + "Aligned.out.sam"
     if file_exists(out_file):

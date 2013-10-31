@@ -1,3 +1,42 @@
+## 0.7.5 (in development)
+
+- Generalize retrieval of RNA-seq resources (GTF files, transcriptome indexes) to use
+  genome-resources.yaml. Updates all genome resources files. Contributed by James Porter.
+- Update overall project summary to move to a flexible YAML format that handles
+  multiple analysis types. Re-include target, duplication and variant metrics.
+- Add Qualimap to generate plots and metrics for BAM alignments.
+- Use sambamba for indexing, which allows multicore indexing to speed up index
+  creation on large BAM processing. Falls back to samtools index if not available.
+- Update fastqc runs to use multiple threads if available.
+- Remove custom Picard metrics runs and pdf generation. Eliminates dependencies on
+  pdflatex and R.
+- Allow interruption of read_through trimming with Ctrl-C.
+
+## 0.7.4 (October 20, 3013)
+
+- Framework for indexing input reads using parallel bgzip and grabix, to handle
+  distributed alignment. Enables further distribution of alignment step beyond
+  multicore nodes.
+- Rework of ensemble calling approach to generalize to population level ensemble
+  calls. Provide improved defaults for handle 3 caller consolidation.
+- Support for Mouse (mm10) variant calling and RNA-seq.
+- For recent versions of Gemini (0.6.3+) do not load filtered variants into
+  database, only including passed variants.
+- Improve specification of resource parameters, using multiple `-r` flags
+  instead of single semi-colon separated input. Allow specification of pename
+  resource parameter for selecting correct SGE environment when not
+  automatically found.
+- Support biobambam's bammarkduplicates2 for duplicate removal.
+- Clean up logging handling code to be more resilient to interrupt messages.
+- Speed improvements for selecting unanalyzed and unmapped reads to address
+  bottlenecks during BAM prep phase.
+- Bug fix for algorithm options incorrectly expanded to paths on re-runs. Thanks
+  to Brent Pedersen for report.
+- Fix for Tophat 2.0.9 support: remove reads with empty read names.
+- Save installation and upgrade details to enable cleaner upgrades without
+  needing to respecify genomes, tool directory and other options from
+  installation.
+
 ## 0.7.3 (September 22, 2013)
 
 - Move specification of supporting genome files for variation (dbSNP, training

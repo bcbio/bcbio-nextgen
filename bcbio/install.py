@@ -30,19 +30,19 @@ def upgrade_bcbio(args):
     """
     args = add_install_defaults(args)
     pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
-    if args.upgrade not in ["skip"]:
-        _update_conda_packages()
     if args.upgrade in ["skip"]:
         pass
     elif args.upgrade in ["stable", "system"]:
+        _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest stable version")
         sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
     else:
+        _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
+        subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
-        subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
 
     if args.tooldir:
         with bcbio_tmpdir():
@@ -52,6 +52,9 @@ def upgrade_bcbio(args):
         with bcbio_tmpdir():
             print("Upgrading bcbio-nextgen data files")
             upgrade_bcbio_data(args, REMOTES)
+    if args.isolate and args.tooldir:
+        print("Installation directory not added to current PATH")
+        print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
     save_install_defaults(args)
 
 def _default_deploy_args(args):
@@ -69,6 +72,7 @@ def _default_deploy_args(args):
             "hostname": "localhost",
             "fabricrc_overrides" : {"edition": "minimal",
                                     "use_sudo": args.sudo,
+                                    "keep_isolated": args.isolate,
                                     "distribution": args.distribution or "__auto__",
                                     "dist_name": "__auto__"}}
 
@@ -76,10 +80,15 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
-    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests"]
+    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "lxml", "nose", "numpy",
+            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests", "tornado"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
+        # Remove until can get 13.1.0 working cleanly on CentOS
+        #extra_pkgs = ["zeromq", "pyzmq"]
+        #binstar_user = "minrk"
+        #subprocess.check_call([conda_bin, "install", "--yes",
+        #                       "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
@@ -179,6 +188,7 @@ def save_install_defaults(args):
     if args.tooldir:
         cur_config["tooldir"] = args.tooldir
     cur_config["sudo"] = args.sudo
+    cur_config["isolate"] = args.isolate
     for attr in ["genomes", "aligners", "toolplus"]:
         if not cur_config.get(attr):
             cur_config[attr] = []
@@ -197,15 +207,23 @@ def add_install_defaults(args):
     with open(install_config) as in_handle:
         default_args = yaml.load(in_handle)
     if default_args.get("tooldist") and args.tooldist == "minimal":
-        args.tooldir = default_args["tooldist"]
+        args.tooldist = default_args["tooldist"]
+    if args.tools and args.tooldir is None:
+        if "tooldir" in default_args:
+            args.tooldir = default_args["tooldir"]
+        else:
+            raise ValueError("Default tool directory not yet saved in config defaults. Specify the '--tooldir=/path/to/tools' to upgrade tools. "
+                             "After a successful upgrade, the '--tools' parameter should work for future upgrades.")
     for attr in ["genomes", "aligners", "toolplus"]:
         for x in default_args.get(attr, []):
             new_val =  getattr(args, attr)
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
-    if "sudo" in default_args:
+    if "sudo" in default_args and not args.sudo is False:
         args.sudo = default_args["sudo"]
+    if "isolate" in default_args and not args.isolate is True:
+        args.isolate = default_args["isolate"]
     return args
 
 def add_subparser(subparsers):
@@ -213,6 +231,9 @@ def add_subparser(subparsers):
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
+    parser.add_argument("--tools",
+                        help="Boolean argument specifying upgrade of tools. Uses previously saved install directory",
+                        action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
                         choices = ["stable", "development", "system", "skip"], default="stable")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
@@ -221,10 +242,12 @@ def add_subparser(subparsers):
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"])
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
+                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
+                        dest="isolate", action="store_true", default=False)
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",

@@ -45,7 +45,7 @@ def delayed_bam_merge(data):
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
         file_key = data["combine"].keys()[0]
-        in_files = list(set([data[file_key]] + data["combine"][file_key].get("extras", [])))
+        in_files = sorted(list(set([data[file_key]] + data["combine"][file_key].get("extras", []))))
         out_file = data["combine"][file_key]["out"]
         logger.debug("Combining BAM files to %s" % out_file)
         config = copy.deepcopy(data["config"])
@@ -54,6 +54,7 @@ def delayed_bam_merge(data):
                                       out_file=out_file)
         if data.has_key("region"):
             del data["region"]
+        del data["combine"]
         data[file_key] = merged_file
     return [[data]]
 
