@@ -214,6 +214,10 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
         print "Incorrect input arguments", inputs
         parser.print_help()
         sys.exit()
+    if fc_dir:
+        fc_dir = os.path.abspath(fc_dir)
+    if run_info_yaml:
+        run_info_yaml = os.path.abspath(run_info_yaml)
     kwargs["inputs"] = inputs
     kwargs["config_file"] = global_config
     kwargs["fc_dir"] = fc_dir

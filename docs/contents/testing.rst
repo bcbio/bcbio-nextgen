@@ -85,7 +85,7 @@ information about the pipeline. To run the analysis:
 - Run analysis on 16 core machine::
 
     cd work
-    bcbio_nextgen.py ../input ../config/NA12878-illumina.yaml -n 16
+    bcbio_nextgen.py ../config/NA12878-illumina.yaml -n 16
 
 - Examine summary of concordance and discordance to comparison calls
   from the ``grading-summary.csv`` file in the work directory.

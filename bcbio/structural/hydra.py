@@ -8,9 +8,8 @@ import os
 import copy
 import collections
 import subprocess
-from contextlib import nested, closing
+from contextlib import closing
 
-from Bio.Seq import Seq
 import pysam
 from py_descriptive_statistics import Enum as Stats
 
@@ -67,23 +66,28 @@ def remove_nopairs(in_bam, out_dir, config):
                             out_pysam.write(read)
     return runner.run_fn("picard_sort", out_bam, "queryname")
 
-def calc_paired_insert_stats(in_bam):
-    """Retrieve statistics for paired end read insert distances.
+def insert_size_stats(dists):
+    """Calcualtes mean/median and MAD from distances, avoiding outliers.
 
     MAD is the Median Absolute Deviation: http://en.wikipedia.org/wiki/Median_absolute_deviation
     """
-    dists = []
-    with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
-        for read in in_pysam:
-            if read.is_proper_pair and read.is_read1:
-                dists.append(abs(read.isize))
-    # remove outliers
     med = Stats(dists).median()
     filter_dists = filter(lambda x: x < med + 10 * med, dists)
     median = Stats(filter_dists).median()
     return {"mean": Stats(filter_dists).mean(), "std": Stats(filter_dists).standard_deviation(),
             "median": median,
             "mad": Stats([abs(x - median) for x in filter_dists]).median()}
+
+
+def calc_paired_insert_stats(in_bam):
+    """Retrieve statistics for paired end read insert distances.
+    """
+    dists = []
+    with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
+        for read in in_pysam:
+            if read.is_proper_pair and read.is_read1:
+                dists.append(abs(read.isize))
+    return insert_size_stats(dists)
 
 def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                      genome_build, pair_stats,
