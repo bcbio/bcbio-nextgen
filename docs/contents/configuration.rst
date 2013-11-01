@@ -371,6 +371,15 @@ The major sections of the file are:
   automated installer and updater handles retrieval and installation
   of these resources for supported genome builds.
 
+By default, we place the ``buildname-resources.yaml`` files next to
+the genome FASTA files in the reference directory. For custom setups,
+you specify an alternative directory in the ref:`config-resources`
+section of your ``bcbio_system.yaml`` file::
+
+  resources:
+    genome:
+      dir: /path/to/resources/files
+
 .. _Example genome configuration files: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/genomes
 .. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
 

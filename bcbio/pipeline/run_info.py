@@ -56,7 +56,7 @@ def _add_reference_resources(data):
     align_ref, sam_ref = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
     data["align_ref"] = align_ref
     data["sam_ref"] = sam_ref
-    ref_loc = data.get('config').get('species_resources') or sam_ref
+    ref_loc = data["config"].get("resources", {}).get("species", {}).get("dir", sam_ref)
     data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc)
     return data
 
