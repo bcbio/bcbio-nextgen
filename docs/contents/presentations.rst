@@ -78,7 +78,7 @@ Links from the presentation
 -  `HugeSeq`_
 -  `Genome Comparison & Analytic Testing`_ at Bioplanet
 -  `Peter Block’s “Community” book`_
--  `CloudBioLinux`_ and `Homebrew Sciene`_ as installation frameworks;
+-  `CloudBioLinux`_ and `Homebrew Science`_ as installation frameworks;
    `Conda`_ as Python environment
 -  bcbio `documentation`_ at ReadTheDocs
 -  `Arvados framework`_ for meta data tracking, NGS processing and data
@@ -109,7 +109,7 @@ Links from the presentation
 .. _Genome Comparison & Analytic Testing: http://www.bioplanet.com/gcat
 .. _Peter Block’s “Community” book: http://www.amazon.com/Community-Structure-Belonging-Peter-Block/dp/1605092770
 .. _CloudBioLinux: http://cloudbiolinux.org/
-.. _Homebrew Sciene: https://github.com/Homebrew/homebrew-science
+.. _Homebrew Science: https://github.com/Homebrew/homebrew-science
 .. _Conda: http://www.continuum.io/blog/conda
 .. _documentation: bcbio-nextgen.readthedocs.org
 .. _Arvados framework: https://arvados.org/
