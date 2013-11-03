@@ -78,6 +78,7 @@ The sample configuration file defines ``details`` of each sample to process::
         algorithm:
         metadata:
           batch: Batch1
+          sex: female
         lane: 1
         description: Example1
         genome_build: hg19
@@ -85,10 +86,12 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``analysis`` Analysis method to use [variant2, RNA-seq]
 - ``algorithm`` Parameters to configure algorithm inputs. Options
   described in more detail below.
-- ``metadata`` Additional descriptive metadata about the sample. The
-  ``batch`` input defines a batch that the sample falls in. We perform
-  multi-sample variant calling on all samples with the same batch
-  name.
+- ``metadata`` Additional descriptive metadata about the sample
+    - ``batch`` defines a group that the sample falls in. We perform
+       multi-sample variant calling on all samples with the same batch
+       name.
+    - ``sex`` specifies the sample sex used to correctly prepare X/Y
+      chromosomes.
 - ``lane`` A unique number within the project. Corresponds to the
   ``ID`` parameter in the BAM read group. Required.
 - ``description`` Unique name for this sample, corresponding to the

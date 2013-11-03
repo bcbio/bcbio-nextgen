@@ -11,7 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation
+from bcbio.variation import annotation, ploidy
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -20,10 +20,9 @@ def region_to_freebayes(region):
     else:
         return region
 
-def _freebayes_options_from_config(aconfig, out_file, region=None):
+def _freebayes_options_from_config(items, aconfig, out_file, region=None):
     opts = []
-    ploidy = aconfig.get("ploidy", 2)
-    opts += ["--ploidy", str(ploidy)]
+    opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
 
     variant_regions = aconfig.get("variant_regions", None)
     target = subset_variant_regions(variant_regions, region, out_file)
@@ -50,7 +49,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
             for align_bam in align_bams:
                 bam.index(align_bam, config)
                 cl += ["-b", align_bam]
-            cl += _freebayes_options_from_config(config["algorithm"], out_file, region)
+            cl += _freebayes_options_from_config(items, config["algorithm"], out_file, region)
             do.run(cl, "Genotyping with FreeBayes", {})
         _clean_freebayes_output(out_file)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files["dbsnp"],

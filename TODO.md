@@ -2,9 +2,9 @@ Current development goals and outstanding tasks for bcbio-nextgen development.
 These are roughly ordered by current priority and we welcome contributors.
 
 - Integrated structural variant analysis, including CNV prediction. Current
-  targets are [lumpy][lumpy] and [delly][delly].
+  targets are [lumpy][lumpy] and [cn.mops][cn.mops].
 
-[delly]: http://www.embl.de/~rausch/delly.html
+[cn.mops]: http://www.bioconductor.org/packages/release/bioc/html/cn.mops.html
 [lumpy]: https://github.com/arq5x/lumpy-sv
 
 - Improved support for cancer tumor/normal paired callers. Suggested callers
@@ -24,12 +24,6 @@ These are roughly ordered by current priority and we welcome contributors.
 
 - Performance improvements and testing on Amazon EC2. Make use of high speed
   local ephemeral storage for temporary space.
-
-- Correctly handle haplotype chromosomes (chrM, chrY) and setup calling based on
-  sample sex ([#33][33]). Need a post-calling run that walks through and handles
-  special cases for human-like calling
-
-[33]: https://github.com/chapmanb/bcbio-nextgen/issues/33
 
 - Implement and evaluate GATK's ReducedReads for use in large scale variant
   calling projects ([#90][90]).
