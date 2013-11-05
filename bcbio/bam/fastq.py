@@ -66,7 +66,14 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
     fq1_in = SeqIO.parse(fq1, quality_format)
     fq2_in = SeqIO.parse(fq2, quality_format)
 
-    with open(fq1_out, 'w') as fq1_out_handle, open(fq2_out, 'w') as fq2_out_handle, open(fq1_single, 'w') as fq1_single_handle, open(fq2_single, 'w') as fq2_single_handle:
+    out_files = [fq1_out, fq2_out, fq1_single, fq2_single]
+
+    with file_transaction(out_files) as tmp_out_files:
+        fq1_out_handle = open(tmp_out_files[0], "w")
+        fq2_out_handle = open(tmp_out_files[1], "w")
+        fq1_single_handle = open(tmp_out_files[2], "w")
+        fq2_single_handle = open(tmp_out_files[3], "w")
+
         for fq1_record, fq2_record in izip(fq1_in, fq2_in):
             if len(fq1_record.seq) >= min_length and len(fq2_record.seq) >= min_length:
                 fq1_out_handle.write(fq1_record.format(quality_format))
@@ -76,6 +83,10 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
                     fq1_single_handle.write(fq1_record.format(quality_format))
                 if len(fq2_record.seq) > min_length:
                     fq2_single_handle.write(fq2_record.format(quality_format))
+        fq1_out_handle.close()
+        fq2_out_handle.close()
+        fq1_single_handle.close()
+        fq2_single_handle.close()
 
     return [fq1_out, fq2_out]
 

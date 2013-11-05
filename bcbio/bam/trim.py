@@ -11,6 +11,8 @@ from bcbio.provenance import do
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 from itertools import izip, repeat
+from bcbio.distributed.transaction import file_transaction
+
 
 SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
@@ -60,11 +62,12 @@ def trim_read_through(fastq_files, dirs, lane_config):
                 "cutadapt." % (", ".join(to_trim),
                                ", ".join(fastq_files)))
     cores = lane_config["algorithm"].get("num_cores", 1)
-    out_files = _cutadapt_trim(fastq_files, quality_format,
-                               to_trim, out_files, cores)
+    with file_transaction(out_files) as tmp_out_files:
+        tmp_out_files = _cutadapt_trim(fastq_files, quality_format,
+                                       to_trim, tmp_out_files, cores)
+
     trimmed_files = remove_short_reads(out_files, dirs, lane_config)
     return trimmed_files
-
 
 
 def _trim_quality(seq, qual, to_trim, min_length):
