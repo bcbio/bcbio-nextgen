@@ -44,8 +44,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("freebayes", config),
-                  "-v", tx_out_file, "-f", ref_file,
-                  "--use-mapping-quality", "--pvar", "0.7"]
+                  "-v", tx_out_file, "-f", ref_file, "--pvar", "0.7"]
             for align_bam in align_bams:
                 bam.index(align_bam, config)
                 cl += ["-b", align_bam]
