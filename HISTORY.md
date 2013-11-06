@@ -4,6 +4,8 @@
   multiple analysis types. Re-include target, duplication and variant metrics.
 - Handle specification of sex in metadata and correctly call X,Y and
   mitochondrial chromosomes.
+- Avoid calling in regions with excessively deep coverage. Reduces variant calling
+  bottlenecks in repetitive regions with 100,000 or more reads.
 - Generalize retrieval of RNA-seq resources (GTF files, transcriptome indexes) to use
   genome-resources.yaml. Updates all genome resources files. Contributed by James Porter.
 - Add Qualimap to generate plots and metrics for BAM alignments.

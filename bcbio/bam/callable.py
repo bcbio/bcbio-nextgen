@@ -74,6 +74,8 @@ def calc_callable_loci(data, region=None, out_file=None):
             params = ["-T", "CallableLoci",
                       "-R", data["sam_ref"],
                       "-I", data["work_bam"],
+                      "--minDepth", "0",
+                      "--maxFractionOfReadsWithLowMAPQ", "1.0",
                       "--maxDepth", str(max_depth),
                       "--out", tx_out_file,
                       "--summary", out_summary]
