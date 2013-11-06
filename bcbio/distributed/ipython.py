@@ -239,6 +239,9 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
     sysinfo = system.get_info(dirs, parallel)
     try:
         if parallel["type"] != "ipython":
+            parallel = copy.deepcopy(parallel)
+            parallel["multiplier"] = multiplier
+            parallel["max_multicore"] = max_multicore
             yield parallel
         elif os.path.exists(checkpoint_file):
             parallel["checkpoint"] = True
