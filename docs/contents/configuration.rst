@@ -208,7 +208,8 @@ Experimental information
 -  ``coverage_interval`` Regions covered by sequencing. Influences GATK
    options for filtering [exome, genome, regional]
 -  ``coverage_depth`` Depth of sequencing coverage. Influences GATK
-   variant calling [high, low]
+   variant calling and selection of super-high coverage regions to
+   exclude [high, low, super-high]
 -  ``hybrid_target`` BED file with target regions for hybrid selection
    experiments. This is only a descriptive set of regions for metrics
    assessment. Use ``variant_regions`` to restrict calling and

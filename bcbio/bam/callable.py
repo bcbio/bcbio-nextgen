@@ -65,12 +65,16 @@ def calc_callable_loci(data, region=None, out_file=None):
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
     out_summary = "%s-callable-summary.txt" % os.path.splitext(data["work_bam"])[0]
     variant_regions = data["config"]["algorithm"].get("variant_regions", None)
+    # set a maximum depth to avoid calling in repetitive regions with excessive coverage
+    max_depth = int(1e7 if data["config"]["algorithm"].get("coverage_depth", "").lower() == "super-high"
+                    else 1e5)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             bam.index(data["work_bam"], data["config"])
             params = ["-T", "CallableLoci",
                       "-R", data["sam_ref"],
                       "-I", data["work_bam"],
+                      "--maxDepth", str(max_depth),
                       "--out", tx_out_file,
                       "--summary", out_summary]
             ready_region = shared.subset_variant_regions(variant_regions, region, tx_out_file)
@@ -126,7 +130,7 @@ def _get_nblock_regions(in_file, min_n_size):
     with open(in_file) as in_handle:
         for line in in_handle:
             contig, start, end, ctype = line.rstrip().split()
-            if (ctype in ["REF_N", "NO_COVERAGE"] and
+            if (ctype in ["REF_N", "NO_COVERAGE", "EXCESSIVE_COVERAGE"] and
                   int(end) - int(start) > min_n_size):
                 out_lines.append("%s\t%s\t%s\n" % (contig, start, end))
     return pybedtools.BedTool("\n".join(out_lines), from_string=True)
