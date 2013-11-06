@@ -280,14 +280,14 @@ def _needs_region_update(out_file, samples):
             return True
     return False
 
-def _combine_excessive_coverage(samples, min_n_size):
+def _combine_excessive_coverage(samples, ref_regions, min_n_size):
     """Provide a global set of regions with excessive coverage to avoid.
     """
     flag = "EXCESSIVE_COVERAGE"
-    ecs = reduce(operator.add,
-                 (pybedtools.BedTool(x["regions"]["callable"]).filter(lambda x: x.name == flag)
-                  for x in samples if "regions" in x))
-    return ecs.filter(lambda x: x.stop - x.start > min_n_size).saveas()
+    ecs = (pybedtools.BedTool(x["regions"]["callable"]).filter(lambda x: x.name == flag)
+           for x in samples if "regions" in x)
+    merge_ecs = _combine_regions(ecs, ref_regions)
+    return merge_ecs.merge(d=min_n_size).filter(lambda x: x.stop - x.start > min_n_size).saveas()
 
 def combine_sample_regions(samples):
     """Create global set of callable regions for multi-sample calling.
@@ -308,8 +308,8 @@ def combine_sample_regions(samples):
         nblock_regions = reduce(operator.add,
                                 (pybedtools.BedTool(x["regions"]["nblock"])
                                  for x in samples if "regions" in x))
-        ec_regions = _combine_excessive_coverage(samples, min_n_size)
         ref_regions = get_ref_bedtool(samples[0]["sam_ref"], config)
+        ec_regions = _combine_excessive_coverage(samples, ref_regions, min_n_size)
         block_filter = NBlockRegionPicker(ref_regions, config)
         nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
         if len(nblock_size_filtered) > len(ref_regions):
