@@ -66,8 +66,8 @@ def calc_callable_loci(data, region=None, out_file=None):
     out_summary = "%s-callable-summary.txt" % os.path.splitext(data["work_bam"])[0]
     variant_regions = data["config"]["algorithm"].get("variant_regions", None)
     # set a maximum depth to avoid calling in repetitive regions with excessive coverage
-    max_depth = int(1e7 if data["config"]["algorithm"].get("coverage_depth", "").lower() == "super-high"
-                    else 1e5)
+    max_depth = int(1e6 if data["config"]["algorithm"].get("coverage_depth", "").lower() == "super-high"
+                    else 2.5e4)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             bam.index(data["work_bam"], data["config"])
@@ -75,7 +75,9 @@ def calc_callable_loci(data, region=None, out_file=None):
                       "-R", data["sam_ref"],
                       "-I", data["work_bam"],
                       "--minDepth", "0",
-                      "--maxFractionOfReadsWithLowMAPQ", "1.0",
+                      "--downsample_to_coverage", str(max_depth + 1000),
+                      "--minMappingQuality", "0",
+                      "--maxFractionOfReadsWithLowMAPQ", "1.1",
                       "--maxDepth", str(max_depth),
                       "--out", tx_out_file,
                       "--summary", out_summary]
