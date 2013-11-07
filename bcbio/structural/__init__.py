@@ -6,6 +6,7 @@ import copy
 from bcbio.structural import lumpy
 
 _CALLERS = {"lumpy": lumpy.run}
+_BATCH_CALLERS = {"cn.mops": None}
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
@@ -48,22 +49,43 @@ def _combine_multiple_svcallers(samples):
 def run(samples, run_parallel):
     """Run structural variation detection using configured methods.
     """
-    to_process = []
+    to_process = collections.defaultdict(list)
     extras = []
     for data in (xs[0] for xs in samples):
         ready_data = _handle_multiple_svcallers(data)
         if len(ready_data) > 0:
             for x in ready_data:
-                to_process.append([x])
+                svcaller = x["config"]["algorithm"].get("svcaller_active")
+                batch = x.get("metadata", {}).get("batch")
+                if svcaller in _BATCH_CALLERS and batch:
+                    to_process[batch].append(x)
+                else:
+                    to_process[x["name"][-1]] = [x]
         else:
             extras.append([data])
-    processed = run_parallel("detect_sv", to_process)
+    processed = run_parallel("detect_sv", ([xs, xs[0]["config"]] for xs in to_process.itervalues()))
     return extras + _combine_multiple_svcallers(processed)
 
-def detect_sv(data):
+def detect_sv(items, config):
     """Top level parallel target for examining structural variation.
     """
-    svcaller = data["config"]["algorithm"].get("svcaller_active")
+    svcaller = config["algorithm"].get("svcaller_active")
+    out = []
     if svcaller:
-        data["sv"] = _CALLERS[svcaller](data)
-    return [[data]]
+        if svcaller in _CALLERS:
+            assert len(items) == 1
+            data = items[0]
+            data["sv"] = _CALLERS[svcaller](data)
+            out.append([data])
+        elif svcaller in _BATCH_CALLERS:
+            sv = _BATCH_CALLERS[svcaller](items)
+            svitems = []
+            for data in items:
+                data["sv"] = sv
+                svitems.append(data)
+            out.append(svitems)
+        else:
+            raise ValueError("Unexpected structural variant caller: %s" % svcaller)
+    else:
+        out.append(items)
+    return out
