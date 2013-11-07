@@ -293,14 +293,22 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # zerocoverage calls; strip these with grep, we're not going to
     # call on them
     remove_zerocoverage = "grep -v -P '\t0\t\t$'"
-    cmd = ("{mpileup} | {remove_zerocoverage} "
-           "| java {jvm_opts} -jar {varscan_jar} mpileup2cns --min-coverage 5 --p-value 0.98 "
-           "  --vcf-sample-list {sample_list} --output-vcf --variants "
-           "> {out_file}")
-    cmd = cmd.format(**locals())
-    do.run(cmd, "Varscan".format(**locals()), None,
-           [do.file_exists(out_file)])
+    # write a temporary mpileup file so we can check if empty
+    mpfile = "%s.mpileup" % os.path.splitext(out_file)[0]
+    with file_transaction(mpfile) as mpfile_tx:
+        cmd = ("{mpileup} | {remove_zerocoverage} > {mpfile_tx}")
+        do.run(cmd.format(**locals()), "mpileup for Varscan")
+    if os.path.getsize(mpfile) == 0:
+        write_empty_vcf(out_file)
+    else:
+        cmd = ("cat {mpfile} "
+               "| java {jvm_opts} -jar {varscan_jar} mpileup2cns --min-coverage 5 --p-value 0.98 "
+               "  --vcf-sample-list {sample_list} --output-vcf --variants "
+               "> {out_file}")
+        do.run(cmd.format(**locals()), "Varscan", None,
+               [do.file_exists(out_file)])
     os.remove(sample_list)
+    os.remove(mpfile)
     # VarScan can create completely empty files in regions without
     # variants, so we create a correctly formatted empty file
     if os.path.getsize(out_file) == 0:
