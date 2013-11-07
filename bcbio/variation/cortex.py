@@ -327,4 +327,5 @@ def _count_fastq_reads(in_fastq, min_reads):
 
 def get_sample_name(align_bam):
     with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
-        return in_pysam.header["RG"][0]["SM"]
+        if "RG" in in_pysam.header:
+            return in_pysam.header["RG"][0]["SM"]
