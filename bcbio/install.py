@@ -226,6 +226,13 @@ def add_install_defaults(args):
         args.isolate = default_args["isolate"]
     return args
 
+def get_defaults():
+    install_config = _get_install_config()
+    if install_config is None or not utils.file_exists(install_config):
+        return {}
+    with open(install_config) as in_handle:
+        return yaml.load(in_handle)
+
 def add_subparser(subparsers):
     parser = subparsers.add_parser("upgrade", help="Install or upgrade bcbio-nextgen")
     parser.add_argument("--tooldir",
