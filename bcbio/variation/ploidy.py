@@ -23,7 +23,7 @@ def _configured_ploidy_sex(items):
     ploidies = set([data["config"]["algorithm"].get("ploidy", 2) for data in items])
     assert len(ploidies) == 1, "Multiple ploidies set for group calling: %s" % ploidies
     ploidy = ploidies.pop()
-    sexes = set([data["metadata"].get("sex", "").lower() for data in items])
+    sexes = set([data.get("metadata", {}).get("sex", "").lower() for data in items])
     return ploidy, sexes
 
 def get_ploidy(items, region):

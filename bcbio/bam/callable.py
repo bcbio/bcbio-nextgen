@@ -286,8 +286,11 @@ def _combine_excessive_coverage(samples, ref_regions, min_n_size):
     flag = "EXCESSIVE_COVERAGE"
     ecs = (pybedtools.BedTool(x["regions"]["callable"]).filter(lambda x: x.name == flag)
            for x in samples if "regions" in x)
-    merge_ecs = _combine_regions(ecs, ref_regions)
-    return merge_ecs.merge(d=min_n_size).filter(lambda x: x.stop - x.start > min_n_size).saveas()
+    merge_ecs = _combine_regions(ecs, ref_regions).saveas()
+    if len(merge_ecs) > 0:
+        return merge_ecs.merge(d=min_n_size).filter(lambda x: x.stop - x.start > min_n_size).saveas()
+    else:
+        return merge_ecs
 
 def combine_sample_regions(samples):
     """Create global set of callable regions for multi-sample calling.
