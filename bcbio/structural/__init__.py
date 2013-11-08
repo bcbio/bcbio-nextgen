@@ -3,10 +3,10 @@
 import collections
 import copy
 
-from bcbio.structural import lumpy
+from bcbio.structural import cn_mops, lumpy
 
 _CALLERS = {"lumpy": lumpy.run}
-_BATCH_CALLERS = {"cn.mops": None}
+_BATCH_CALLERS = {"cn.mops": cn_mops.run}
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
