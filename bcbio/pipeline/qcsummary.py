@@ -8,7 +8,8 @@ import lxml.html
 import pybedtools
 import yaml
 
-from bcbio import utils
+from bcbio import bam, utils
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -48,7 +49,7 @@ def _run_qc_tools(bam_file, data):
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
     else:
-        to_run += [("qualimap", _run_qualimap), ("gemini", _run_gemini_stats)]
+        to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
     metrics = {}
     for program_name, qc_fn in to_run:
@@ -216,6 +217,45 @@ def _run_qualimap(bam_file, data, out_dir):
             cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % data["name"][-1])
     return _parse_qualimap_metrics(report_file)
+
+# ## Lightweight QC approaches
+
+def _parse_bamtools_stats(stats_file):
+    out = {}
+    want = set(["Mapped reads", "Duplicates", "Median insert size"])
+    with open(stats_file) as in_handle:
+        for line in in_handle:
+            parts = line.split(":")
+            if len(parts) == 2:
+                metric, stat_str = parts
+                metric = metric.split("(")[0].strip()
+                if metric in want:
+                    stat_parts = stat_str.split()
+                    if len(stat_parts) == 2:
+                        stat, pct = stat_parts
+                        pct = pct.replace("(", "").replace(")", "")
+                    else:
+                        stat = stat_parts[0]
+                        pct = None
+                    out[metric] = stat
+                    if pct:
+                        out["%s pct" % metric] = pct
+    return out
+
+def _run_bamtools_stats(bam_file, data, out_dir):
+    """Run bamtools stats with reports on mapped reads, duplicates and insert sizes.
+    """
+    stats_file = os.path.join(out_dir, "bamtools_stats.txt")
+    if not utils.file_exists(stats_file):
+        utils.safe_makedir(out_dir)
+        bamtools = config_utils.get_program("bamtools", data["config"])
+        with file_transaction(stats_file) as tx_out_file:
+            cmd = "{bamtools} stats -in {bam_file}"
+            if bam.is_paired(bam_file):
+                cmd += " -insert"
+            cmd += " > {tx_out_file}"
+            do.run(cmd.format(**locals()), "bamtools stats", data)
+    return _parse_bamtools_stats(stats_file)
 
 ## Variant statistics from gemini
 
