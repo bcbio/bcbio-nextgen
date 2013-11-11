@@ -78,12 +78,8 @@ def detect_sv(items, config):
             data["sv"] = _CALLERS[svcaller](data)
             out.append([data])
         elif svcaller in _BATCH_CALLERS:
-            sv = _BATCH_CALLERS[svcaller](items)
-            svitems = []
-            for data in items:
-                data["sv"] = sv
-                svitems.append(data)
-            out.append(svitems)
+            for svdata in _BATCH_CALLERS[svcaller](items):
+                out.append([svdata])
         else:
             raise ValueError("Unexpected structural variant caller: %s" % svcaller)
     else:

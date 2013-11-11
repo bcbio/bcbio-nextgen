@@ -4,6 +4,8 @@ http://www.bioconductor.org/packages/release/bioc/html/cn.mops.html
 """
 import os
 
+import pybedtools
+
 from bcbio import bam, install, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -28,12 +30,28 @@ def run(items):
             rcode = "%s-run.R" % os.path.splitext(tx_out_file)[0]
             with open(rcode, "w") as out_handle:
                 out_handle.write(_script.format(bam_file_str=",".join(work_bams), names_str=",".join(names),
-                                                out_file=tx_out_file, num_cores=num_cores,
+                                                out_file=tx_out_file, num_cores=0 if num_cores == 1 else num_cores,
                                                 pairmode="paired" if bam.is_paired(work_bams[0]) else "unpaired",
                                                 local_sitelib=local_sitelib))
             rscript = config_utils.get_program("Rscript", data["config"])
             do.run([rscript, rcode], "cn.mops CNV detection", data)
-    return {"bed": out_file}
+    out = []
+    for data in items:
+        if "sv" not in data:
+            data["sv"] = {}
+        data["sv"]["cnv"] = _prep_sample_cnvs(out_file, data)
+        out.append(data)
+    return out
+
+def _prep_sample_cnvs(cnv_file, data):
+    """Convert a multiple sample CNV file into
+    """
+    sample_name = data["name"][-1]
+    sample_file = os.path.join(os.path.dirname(cnv_file), "%s-cnv.bed" % sample_name)
+    if not utils.file_exists(sample_file):
+        with file_transaction(sample_file) as tx_out_file:
+            pybedtools.BedTool(cnv_file).filter(lambda x: x.name == sample_name).saveas(tx_out_file)
+    return sample_file
 
 _script = """
 bam_files <- strsplit("{bam_file_str}", ",")[[1]]
@@ -47,6 +65,10 @@ count_drs <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode="{pa
                                   parallel={num_cores})
 prep_counts <- cn.mops(count_drs, parallel={num_cores})
 cnv_out <- calcIntegerCopyNumbers(prep_counts)
-cnvs <- cnvr(cnv_out)
-export.bed(cnvs, "{out_file}")
+calc_cnvs <- cnvs(cnv_out)
+strcn_to_cn <- function(x) {
+  as.integer(substring(x, 3, 20))}
+calc_cnvs$score <- strcn_to_cn(calc_cnvs$CN)
+calc_cnvs$name <- calc_cnvs$sampleName
+export.bed(calc_cnvs, "{out_file}")
 """
