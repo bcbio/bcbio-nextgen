@@ -88,7 +88,7 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
                 # cn.mops errors out if no CNVs found. Just write an empty file.
                 if _allowed_cnmops_errorstates(str(msg)):
                     with open(tx_out_file, "w") as out_handle:
-                        out_handle.write('track name=empty description="No CNVs found\n"')
+                        out_handle.write('track name=empty description="No CNVs found"\n')
                 else:
                     logger.exception()
                     raise
@@ -128,10 +128,9 @@ library(rtracklayer)
 
 {prep_str}
 
-cnv_out <- calcIntegerCopyNumbers(prep_counts)
 calc_cnvs <- cnvs(cnv_out)
 strcn_to_cn <- function(x) {{
-  as.integer(substring(x, 3, 20))}}
+  as.numeric(substring(x, 3, 20))}}
 calc_cnvs$score <- strcn_to_cn(calc_cnvs$CN)
 calc_cnvs$name <- calc_cnvs$sampleName
 export.bed(calc_cnvs, "{out_file}")
@@ -143,12 +142,15 @@ sample_names <- strsplit("{names_str}", ",")[[1]]
 count_drs <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode="{pairmode}",
                                   refSeqName="{chrom}", parallel={num_cores})
 prep_counts <- cn.mops(count_drs, parallel={num_cores})
+cnv_out <- calcIntegerCopyNumbers(prep_counts)
 """
 
 _paired_prep = """
 case_count <- getReadCountsFromBAM(c("{case_file}"), sampleNames=c("{case_name}"), mode="{pairmode}",
                                    refSeqName="{chrom}", parallel={num_cores})
 ctrl_count <- getReadCountsFromBAM(c("{ctrl_file}"), sampleNames=c("{ctrl_name}"), mode="{pairmode}",
-                                   refSeqName="{chrom}", parallel={num_cores})
+                                   refSeqName="{chrom}", parallel={num_cores},
+                                   WL=width(case_count)[[1]])
 prep_counts <- referencecn.mops(case_count, ctrl_count, parallel={num_cores})
+cnv_out <- calcFractionalCopyNumbers(prep_counts)
 """
