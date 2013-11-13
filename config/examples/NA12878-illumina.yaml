@@ -17,7 +17,8 @@ details:
       quality_format: Standard
       coverage_interval: genome
       coverage_depth: low
-      validate: ../input/NA12878-illumina-example.vcf
+      validate: ../input/NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf
+      validate_regions: ../input/union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed
     analysis: variant2
     description: NA12878
     genome_build: GRCh37
