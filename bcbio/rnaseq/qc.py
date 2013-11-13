@@ -3,6 +3,8 @@
 
 import csv
 import os
+import pandas as pd
+import statsmodels.formula.api as sm
 
 from bcbio import bam
 from bcbio.pipeline import config_utils
@@ -96,3 +98,46 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
                     if name in want:
                         out[name] = val
     return out
+
+
+def starts_by_depth(bam_file):
+    """
+    Return a set of x, y points where x is the number of reads sequenced and
+    y is the number of unique start sites identified
+    """
+    BINSIZE_IN_READS = 100
+    seen_starts = set()
+    counted = 0
+    num_reads = []
+    starts = []
+    buffer = []
+    with bam.open_samfile(bam_file) as samfile:
+        for read in samfile:
+            counted += 1
+            buffer.append(":".join([str(read.tid), str(read.pos)]))
+            if counted % BINSIZE_IN_READS == 0:
+                seen_starts.update(buffer)
+                buffer = []
+                num_reads.append(counted)
+                starts.append(len(seen_starts))
+        seen_starts.update(buffer)
+        num_reads.append(counted)
+        starts.append(len(seen_starts))
+    return pd.DataFrame({"reads": num_reads, "starts": starts})
+
+def estimate_library_complexity(bam_file):
+    LOW_COMPLEXITY_CUTOFF = 0.5
+    MEDIUM_COMPLEXITY_CUTOFF = 0.7
+    pd = starts_by_depth(bam_file)
+    model = sm.ols(formula="starts ~ reads", data=pd)
+    fitted = model.fit()
+    slope = fitted.params["reads"]
+    if slope <= LOW_COMPLEXITY_CUTOFF:
+        complexity = "LOW"
+    elif slope <= MEDIUM_COMPLEXITY_CUTOFF:
+        complexity = "MEDIUM"
+    else:
+        complexity = "HIGH"
+    d = {"unique_start_per_read": slope,
+         "complexity": complexity}
+    return d

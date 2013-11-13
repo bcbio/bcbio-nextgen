@@ -1,37 +1,10 @@
 import argparse
-import pandas as pd
 
-from bcbio import bam
+from bcbio.rnaseq import qc
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-
-def starts_by_depth(bam_file):
-    """
-    Return a set of x, y points where x is the number of reads sequenced and
-    y is the number of unique start sites identified
-    """
-    BINSIZE_IN_READS = 100
-    seen_starts = set()
-    counted = 0
-    num_reads = []
-    starts = []
-    buffer = []
-    df = pd.DataFrame(columns=('reads', 'starts'))
-    with bam.open_samfile(bam_file) as samfile:
-        for read in samfile:
-            counted += 1
-            buffer.append(":".join([str(read.tid), str(read.pos)]))
-            if counted % BINSIZE_IN_READS == 0:
-                seen_starts.update(buffer)
-                buffer = []
-                num_reads.append(counted)
-                starts.append(len(seen_starts))
-        seen_starts.update(buffer)
-        num_reads.append(counted)
-        starts.append(len(seen_starts))
-    return pd.DataFrame({"reads": num_reads, "starts": starts})
 
 if __name__ == "__main__":
     description = ("Create reads sequenced vs unique start sites graph for "
@@ -41,9 +14,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("alignment_file", help="Alignment file to process,"
                         "can be SAM or BAM format.")
-    parser.add_argument("--out_file", help="Name of output figure.")
+    parser.add_argument("--complexity", default=False, action='store_true',
+                        help="Rough estimate of library complexity")
+    parser.add_argument("--figure", default=None, help="Generate a figure for the complexity")
     args = parser.parse_args()
-    df = starts_by_depth(args.alignment_file)
-    df.plot(x='reads', y='starts')
-    fig = plt.gcf()
-    fig.savefig("test.pdf")
+    if args.figure:
+        df = qc.starts_by_depth(args.alignment_file)
+        df.plot(x='reads', y='starts')
+        fig = plt.gcf()
+        fig.savefig(args.figure)
+
+    if args.complexity:
+        print qc.estimate_library_complexity(args.alignment_file)
