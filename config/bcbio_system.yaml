@@ -54,6 +54,10 @@ resources:
   varscan:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/varscan
+  bowtie2:
+    memory: 4g
+  tophat2:
+    memory: 4g
 
 # -- Default algorithm setup
 

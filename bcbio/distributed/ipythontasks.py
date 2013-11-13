@@ -50,7 +50,7 @@ def trim_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
+process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie2", "tophat2"]}
 
 @require(alignprep)
 def prep_align_inputs(*args):
