@@ -58,16 +58,21 @@ def trim_read_through(fastq_files, dirs, lane_config):
     quality_format = _get_quality_format(lane_config)
     to_trim = _get_sequences_to_trim(lane_config)
     out_files = _get_read_through_trimmed_outfiles(fastq_files, dirs)
+    fixed_files = append_stem(out_files, ".fixed")
+    if all(map(file_exists, fixed_files)):
+        return fixed_files
     logger.info("Trimming %s from the 3' end of reads in %s using "
                 "cutadapt." % (", ".join(to_trim),
                                ", ".join(fastq_files)))
     cores = lane_config["algorithm"].get("num_cores", 1)
-    with file_transaction(out_files) as tmp_out_files:
-        tmp_out_files = _cutadapt_trim(fastq_files, quality_format,
-                                       to_trim, tmp_out_files, cores)
+    out_files = _cutadapt_trim(fastq_files, quality_format,
+                               to_trim, out_files, cores)
+    # with file_transaction(out_files) as tmp_out_files:
+    #     tmp_out_files = _cutadapt_trim(fastq_files, quality_format,
+    #                                    to_trim, tmp_out_files, cores)
 
-    trimmed_files = remove_short_reads(out_files, dirs, lane_config)
-    return trimmed_files
+    fixed_files = remove_short_reads(out_files, dirs, lane_config)
+    return fixed_files
 
 
 def _trim_quality(seq, qual, to_trim, min_length):
@@ -200,9 +205,9 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
     base_cmd.extend(adapter_cmd)
     if all(map(file_exists, out_files)):
         return out_files
-
-    map(_run_cutadapt_on_single_file, izip(repeat(base_cmd), fastq_files,
-                                           out_files))
+    with file_transaction(out_files) as tmp_out_files:
+        map(_run_cutadapt_on_single_file, izip(repeat(base_cmd), fastq_files,
+                                               tmp_out_files))
     return out_files
 
 @map_wrap
