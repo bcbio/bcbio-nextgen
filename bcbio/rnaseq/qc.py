@@ -5,13 +5,14 @@ import csv
 import os
 import pandas as pd
 import statsmodels.formula.api as sm
+from random import shuffle
+from itertools import ifilter
 
 from bcbio import bam
 from bcbio import utils
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import safe_makedir, file_exists
-from itertools import ifilter
 
 
 class RNASeQCRunner(object):
@@ -120,6 +121,7 @@ def starts_by_depth(bam_file, sample_size=10000000):
         def read_parser(read):
             return ":".join([str(read.tid), str(read.pos)])
         samples = utils.reservoir_sample(filtered, sample_size, read_parser)
+        shuffle(samples)
         for read in samples:
             counted += 1
             buffer.append(read)
