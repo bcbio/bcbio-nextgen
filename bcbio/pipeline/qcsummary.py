@@ -7,9 +7,13 @@ import subprocess
 import lxml.html
 import pybedtools
 import yaml
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+# allow graceful during upgrades
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
