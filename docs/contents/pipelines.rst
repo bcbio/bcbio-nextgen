@@ -31,8 +31,16 @@ and small indel calling:
    - `MuTect`_ (version 1.1.5 and above)
    - `VarScan`_
 
--  Quality filtering, using either
-   `GATK's Variant Quality Score Recalibrator`_ or hard filtering.
+-  Quality filtering, using either hard filtering or
+   `GATK's Variant Quality Score Recalibrator`_ (VQSR). VQSR
+   requires a large number of variants. Practically this means high
+   depth whole genome variant calling experiments. bcbio-nextgen
+   attempts VQSR with the following :ref:`algorithm-config
+
+   - ``variantcaller`` is gatk or gatk-haplotype
+   - ``coverage_depth`` is not low
+   - ``coverage_interval`` is genome
+
 -  Annotation of variant effects, using `snpEff`_
 -  Variant exploration and prioritization, using `GEMINI`_
 

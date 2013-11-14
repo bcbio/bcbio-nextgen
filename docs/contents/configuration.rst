@@ -87,11 +87,13 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``algorithm`` Parameters to configure algorithm inputs. Options
   described in more detail below.
 - ``metadata`` Additional descriptive metadata about the sample
+
     - ``batch`` defines a group that the sample falls in. We perform
        multi-sample variant calling on all samples with the same batch
        name.
     - ``sex`` specifies the sample sex used to correctly prepare X/Y
       chromosomes.
+
 - ``lane`` A unique number within the project. Corresponds to the
   ``ID`` parameter in the BAM read group. Required.
 - ``description`` Unique name for this sample, corresponding to the
@@ -154,6 +156,7 @@ S3 parameters:
 - ``reduced_redundancy`` Flag to determine if we should store S3 data
   with reduced redundancy: cheaper but less reliable [false, true]
 
+.. _algorithm-config:
 
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~
