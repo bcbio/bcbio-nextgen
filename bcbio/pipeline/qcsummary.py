@@ -7,6 +7,9 @@ import subprocess
 import lxml.html
 import pybedtools
 import yaml
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
@@ -48,6 +51,7 @@ def _run_qc_tools(bam_file, data):
     to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
+        to_run.append(("complexity", _run_complexity))
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
@@ -117,6 +121,19 @@ def _run_fastqc(bam_file, data, fastqc_out):
     parser = FastQCParser(fastqc_out)
     stats = parser.get_fastqc_summary()
     return stats
+
+def _run_complexity(bam_file, data, out_dir):
+    base, _ = os.path.splitext(bam_file)
+    out_file = os.path.join(out_dir, base + ".pdf")
+    df = bcbio.rnaseq.qc.starts_by_depth(bam_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tmp_out_file:
+            df.plot(x='reads', y='starts', title=bam_file + " complexity")
+            fig = plt.gcf()
+            fig.savefig(tmp_out_file)
+
+    return bcbio.rnaseq.qc.estimate_library_complexity(df)
+
 
 # ## Qualimap
 

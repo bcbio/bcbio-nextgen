@@ -125,11 +125,13 @@ def starts_by_depth(bam_file):
         starts.append(len(seen_starts))
     return pd.DataFrame({"reads": num_reads, "starts": starts})
 
-def estimate_library_complexity(bam_file):
+def estimate_library_complexity(df):
+    """
+
+    """
     LOW_COMPLEXITY_CUTOFF = 0.5
     MEDIUM_COMPLEXITY_CUTOFF = 0.7
-    pd = starts_by_depth(bam_file)
-    model = sm.ols(formula="starts ~ reads", data=pd)
+    model = sm.ols(formula="starts ~ reads", data=df)
     fitted = model.fit()
     slope = fitted.params["reads"]
     if slope <= LOW_COMPLEXITY_CUTOFF:
