@@ -35,7 +35,7 @@ and small indel calling:
    `GATK's Variant Quality Score Recalibrator`_ (VQSR). VQSR
    requires a large number of variants. Practically this means high
    depth whole genome variant calling experiments. bcbio-nextgen
-   attempts VQSR with the following :ref:`algorithm-config
+   attempts VQSR with the following :ref:`algorithm-config`
 
    - ``variantcaller`` is gatk or gatk-haplotype
    - ``coverage_depth`` is not low
