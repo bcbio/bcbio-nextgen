@@ -70,7 +70,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "lxml", "matplotlib",
+    pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
             "nose", "numpy", "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests",
             "tornado", "statsmodels"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
