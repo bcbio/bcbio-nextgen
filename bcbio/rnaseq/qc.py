@@ -3,10 +3,15 @@
 
 import csv
 import os
-import pandas as pd
-import statsmodels.formula.api as sm
 from random import shuffle
 from itertools import ifilter
+
+# Provide transition period to install via upgrade with conda
+try:
+    import pandas as pd
+    import statsmodels.formula.api as sm
+except ImportError:
+    pd, sm = None, None
 
 from bcbio import bam
 from bcbio import utils
