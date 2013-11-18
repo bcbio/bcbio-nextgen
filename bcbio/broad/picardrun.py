@@ -128,6 +128,19 @@ def picard_fix_rgs(picard, in_bam, names):
                 picard.run("AddOrReplaceReadGroups", opts)
     return out_file
 
+def picard_downsample(picard, in_bam, ds_pct, random_seed=None):
+    out_file = "%s-downsample%s" % os.path.splitext(in_bam)
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", out_file),
+                        ("PROBABILITY", "%.3f" % ds_pct)]
+                if random_seed:
+                    opts += [("RANDOM_SEED", str(random_seed))]
+                picard.run("DownsampleSam", opts)
+    return out_file
+
 def picard_index_ref(picard, ref_file):
     """Provide a Picard style dict index file for a reference genome.
     """

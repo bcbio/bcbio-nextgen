@@ -85,7 +85,7 @@ class FastQCParser:
         self._dir = base_dir
 
     def get_fastqc_summary(self):
-        ignore = set(["Filtered Sequences", "Filename", "File type"])
+        ignore = set(["Total Sequences", "Filtered Sequences", "Filename", "File type"])
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
             k, v = stat_line.split("\t")[:2]
@@ -110,11 +110,16 @@ class FastQCParser:
 
 def _run_fastqc(bam_file, data, fastqc_out):
     """Run fastqc, generating report in specified directory and parsing metrics.
+
+    Downsamples to 10 million reads to avoid excessive processing times with large
+    files.
     """
     if not os.path.exists(os.path.join(fastqc_out, "fastqc_report.html")):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
+        ds_bam = bam.downsample(bam_file, data["config"], 1e7)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
+        bam_file = ds_bam if ds_bam else bam_file
         cl = [config_utils.get_program("fastqc", data["config"]),
               "-t", str(num_cores), "-o", work_dir, "-f", "bam", bam_file]
         do.run(cl, "FastQC: %s" % data["name"][-1])
@@ -122,6 +127,8 @@ def _run_fastqc(bam_file, data, fastqc_out):
         if os.path.exists("%s.zip" % fastqc_outdir):
             os.remove("%s.zip" % fastqc_outdir)
         shutil.move(fastqc_outdir, fastqc_out)
+        if ds_bam and os.path.exists(ds_bam):
+            os.remove(ds_bam)
     parser = FastQCParser(fastqc_out)
     stats = parser.get_fastqc_summary()
     return stats
@@ -247,7 +254,7 @@ def _run_qualimap(bam_file, data, out_dir):
 
 def _parse_bamtools_stats(stats_file):
     out = {}
-    want = set(["Mapped reads", "Duplicates", "Median insert size"])
+    want = set(["Total reads", "Mapped reads", "Duplicates", "Median insert size"])
     with open(stats_file) as in_handle:
         for line in in_handle:
             parts = line.split(":")

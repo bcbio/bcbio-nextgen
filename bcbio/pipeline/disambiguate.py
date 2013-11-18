@@ -4,7 +4,8 @@ Given specification of mixed input samples, splits a sample into multiple
 sub-samples for alignment to individual genomes, then runs third-party disambiguation
 scripts to reconcile.
 
-XXX Currently relies on manual install of disambiguation scripts:
+XXX Currently relies on manual install of disambiguation scripts contributed
+by  AstraZeneca:
 https://github.com/mjafin/disambiguate
 Needs fully automated integration, or incorporation into bcbio-nextgen.
 """
