@@ -7,11 +7,14 @@ import copy
 import multiprocessing
 import os
 import resource
+import shlex
 import socket
+import subprocess
 
 import yaml
 
 from bcbio import utils
+from bcbio.log import logger
 
 def _get_cache_file(dirs, parallel):
     base_dir = utils.safe_makedir(os.path.join(dirs["work"], "provenance"))
@@ -26,9 +29,22 @@ def write_info(dirs, run_parallel, parallel, config):
         if not utils.file_exists(out_file):
             sys_config = copy.deepcopy(config)
             sys_config["algorithm"]["resource_check"] = False
-            minfos = run_parallel("machine_info", [[sys_config]])
+            minfos = _get_minfo_from_sinfo(parallel, run_parallel, sys_config)
             with open(out_file, "w") as out_handle:
                 yaml.dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
+
+def _get_minfo_from_sinfo(parallel, run_parallel, sys_config):
+    if parallel.get("queue") and parallel.get("scheduler").lower() in "slurm":
+        cl = "sinfo -h -p {} --format '%c %m'".format(parallel.get('queue'))
+        try:
+            num_cpus, mem = subprocess.check_output(shlex.split(cl)).split()
+            # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
+            mem = mem.replace('+', '')
+            return [{"cores": int(num_cpus), "memory": int(mem)/1000, "name": "slurm_node"}]
+        # if the above doesn't work for whatever reason, just ask the queue
+        except:
+            logger.warn("Couldn't get information from sinfo, falling back to queue")
+    return run_parallel("machine_info", [[sys_config]])
 
 def _combine_machine_info(xs):
     if len(xs) == 1:
