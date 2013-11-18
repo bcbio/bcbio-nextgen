@@ -53,6 +53,8 @@ def _get_minfo_from_sinfo(parallel, run_parallel, sys_config):
     return run_parallel("machine_info", [[sys_config]])
 
 def _slurm_info(queue):
+    """Returns machine information for a slurm job scheduler.
+    """
     cl = "sinfo -h -p {} --format '%c %m'".format(queue)
     num_cpus, mem = subprocess.check_output(shlex.split(cl)).split()
     # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
