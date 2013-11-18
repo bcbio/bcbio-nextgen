@@ -29,6 +29,7 @@ Contents:
    contents/outputs
    contents/code
    contents/internals
+   contents/presentations
    contents/deprecated
 
 

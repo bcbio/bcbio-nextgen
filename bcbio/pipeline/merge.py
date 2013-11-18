@@ -34,30 +34,33 @@ def combine_fastq_files(in_files, work_dir, config):
                 utils.save_diskspace(f2, "fastq merged to %s" % out2, config)
         return out1, out2
 
-def merge_bam_files(bam_files, work_dir, config, out_file=None):
+def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
     """Merge multiple BAM files from a sample into a single BAM for processing.
 
-    Uses samtools or bamtools for merging, both of which have some cavaets.
-    samtools can run into file system limits on command line length, while
-    bamtools runs into open file handle issues.
+    Checks system open file limit and merges in batches if necessary to avoid
+    file handle limits.
     """
     if len(bam_files) == 1:
         return bam_files[0]
     else:
         if out_file is None:
             out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
+        if batch is not None:
+            base, ext = os.path.splitext(out_file)
+            out_file = "%s-b%s%s" % (base, batch, ext)
         if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".bai"):
             bamtools = config_utils.get_program("bamtools", config)
             samtools = config_utils.get_program("samtools", config)
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = resources.get("memory", "1G")
+            batch_size = system.open_file_limit() - 100
+            if len(bam_files) > batch_size:
+                bam_files = [merge_bam_files(xs, work_dir, config, out_file, i)
+                             for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
             with utils.curdir_tmpdir() as tmpdir:
                 with utils.chdir(tmpdir):
-                    if len(bam_files) < 4096:
-                        merge_cl = _samtools_cat(bam_files, tmpdir)
-                    else:
-                        merge_cl = _bamtools_merge(bam_files)
+                    merge_cl = _bamtools_merge(bam_files)
                     with file_transaction(out_file) as tx_out_file:
                         tx_out_prefix = os.path.splitext(tx_out_file)[0]
                         with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
