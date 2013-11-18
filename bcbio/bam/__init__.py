@@ -46,3 +46,27 @@ def index(in_bam, config):
                 do.run(samtools_cmd.format(**locals()),
                        "Index BAM file (single core): %s" % os.path.basename(in_bam))
     return index_file if utils.file_exists(index_file) else alt_index_file
+
+def open_samfile(in_file):
+    if is_bam(in_file):
+        return pysam.Samfile(in_file, "rb")
+    elif is_sam(in_file):
+        return pysam.Samfile(in_file, "r")
+    else:
+        raise IOError("in_file must be either a BAM file or SAM file. Is the "
+                      "extension .sam or .bam?")
+
+def is_bam(in_file):
+    _, ext = os.path.splitext(in_file)
+    if ext == ".bam":
+        return True
+    else:
+        return False
+
+
+def is_sam(in_file):
+    _, ext = os.path.splitext(in_file)
+    if ext == ".sam":
+        return True
+    else:
+        return False

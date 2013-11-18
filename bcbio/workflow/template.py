@@ -29,12 +29,12 @@ def parse_args(inputs):
 
 # ## Prepare sequence data inputs
 
-def _prep_bam_input(f, base):
+def _prep_bam_input(f, i, base):
     if not os.path.exists(f):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
     cur["files"] = os.path.abspath(f)
-    cur["description"] = get_sample_name(f)
+    cur["description"] = get_sample_name(f) or "Sample%s" % (i+1)
     return cur
 
 def _prep_fastq_input(fs, base):
@@ -62,10 +62,10 @@ def _prep_items_from_base(base, in_files):
     in_files = _expand_dirs(in_files)
     in_files = _expand_wildcards(in_files)
 
-    for ext, files in itertools.groupby(in_files, lambda x: os.path.splitext(x)[-1].lower()):
+    for i, (ext, files) in enumerate(itertools.groupby(in_files, lambda x: os.path.splitext(x)[-1].lower())):
         if ext == ".bam":
             for f in files:
-                details.append(_prep_bam_input(f, base))
+                details.append(_prep_bam_input(f, i, base))
         elif ext in fq_exts:
             files = list(files)
             if ext == ".gz": assert all(f.endswith(gz_exts) for f in files), (files, gz_exts)

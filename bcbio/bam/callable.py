@@ -65,12 +65,20 @@ def calc_callable_loci(data, region=None, out_file=None):
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
     out_summary = "%s-callable-summary.txt" % os.path.splitext(data["work_bam"])[0]
     variant_regions = data["config"]["algorithm"].get("variant_regions", None)
+    # set a maximum depth to avoid calling in repetitive regions with excessive coverage
+    max_depth = int(1e6 if data["config"]["algorithm"].get("coverage_depth", "").lower() == "super-high"
+                    else 2.5e4)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             bam.index(data["work_bam"], data["config"])
             params = ["-T", "CallableLoci",
                       "-R", data["sam_ref"],
                       "-I", data["work_bam"],
+                      "--minDepth", "0",
+                      "--downsample_to_coverage", str(max_depth + 1000),
+                      "--minMappingQuality", "0",
+                      "--maxFractionOfReadsWithLowMAPQ", "1.1",
+                      "--maxDepth", str(max_depth),
                       "--out", tx_out_file,
                       "--summary", out_summary]
             ready_region = shared.subset_variant_regions(variant_regions, region, tx_out_file)
@@ -126,7 +134,7 @@ def _get_nblock_regions(in_file, min_n_size):
     with open(in_file) as in_handle:
         for line in in_handle:
             contig, start, end, ctype = line.rstrip().split()
-            if (ctype in ["REF_N", "NO_COVERAGE"] and
+            if (ctype in ["REF_N", "NO_COVERAGE", "EXCESSIVE_COVERAGE"] and
                   int(end) - int(start) > min_n_size):
                 out_lines.append("%s\t%s\t%s\n" % (contig, start, end))
     return pybedtools.BedTool("\n".join(out_lines), from_string=True)
@@ -217,7 +225,7 @@ def block_regions(in_bam, ref_file, config):
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
         nblock_regions.saveas(nblock_bed)
         ref_regions.subtract(nblock_bed).merge(d=min_n_size).saveas(callblock_bed)
-    return callblock_bed, nblock_bed
+    return callblock_bed, nblock_bed, callable_bed
 
 def _write_bed_regions(sample, final_regions, out_file, out_file_ref):
     ref_regions = get_ref_bedtool(sample["sam_ref"], sample["config"])
@@ -272,6 +280,18 @@ def _needs_region_update(out_file, samples):
             return True
     return False
 
+def _combine_excessive_coverage(samples, ref_regions, min_n_size):
+    """Provide a global set of regions with excessive coverage to avoid.
+    """
+    flag = "EXCESSIVE_COVERAGE"
+    ecs = (pybedtools.BedTool(x["regions"]["callable"]).filter(lambda x: x.name == flag)
+           for x in samples if "regions" in x)
+    merge_ecs = _combine_regions(ecs, ref_regions).saveas()
+    if len(merge_ecs) > 0:
+        return merge_ecs.merge(d=min_n_size).filter(lambda x: x.stop - x.start > min_n_size).saveas()
+    else:
+        return merge_ecs
+
 def combine_sample_regions(samples):
     """Create global set of callable regions for multi-sample calling.
 
@@ -292,13 +312,17 @@ def combine_sample_regions(samples):
                                 (pybedtools.BedTool(x["regions"]["nblock"])
                                  for x in samples if "regions" in x))
         ref_regions = get_ref_bedtool(samples[0]["sam_ref"], config)
+        ec_regions = _combine_excessive_coverage(samples, ref_regions, min_n_size)
         block_filter = NBlockRegionPicker(ref_regions, config)
         nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
         if len(nblock_size_filtered) > len(ref_regions):
             final_nblock_regions = nblock_size_filtered
         else:
             final_nblock_regions = nblock_regions
-        final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
+        final_regions = ref_regions.subtract(final_nblock_regions)
+        if len(ec_regions) > 0:
+            final_regions = final_regions.subtract(ec_regions)
+        final_regions.merge(d=min_n_size)
         _write_bed_regions(samples[0], final_regions, analysis_file, no_analysis_file)
     else:
         final_regions = pybedtools.BedTool(analysis_file)

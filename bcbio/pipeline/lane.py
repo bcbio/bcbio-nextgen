@@ -54,7 +54,7 @@ def trim_lane(item):
     trim_reads = config["algorithm"].get("trim_reads", False)
     if not trim_reads:
         logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
-        return item
+        return [[item]]
 
     # swap the default to None if trim_reads gets deprecated
 
@@ -154,9 +154,9 @@ def postprocess_alignment(data):
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
     if data["work_bam"]:
-        callable_region_bed, nblock_bed = callable.block_regions(data["work_bam"],
-                                                                 data["sam_ref"], data["config"])
-        data["regions"] = {"nblock": nblock_bed}
+        callable_region_bed, nblock_bed, callable_bed = \
+            callable.block_regions(data["work_bam"], data["sam_ref"], data["config"])
+        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed}
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed

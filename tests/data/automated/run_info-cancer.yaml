@@ -16,6 +16,7 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [mutect, varscan]
+      svcaller: [cn.mops]
   - analysis: variant2
     description: c-tumor
     files: [HCC1143-tumor.bam]
@@ -29,3 +30,4 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [mutect, varscan]
+      svcaller: [cn.mops]

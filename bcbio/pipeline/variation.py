@@ -14,7 +14,7 @@ def postprocess_variants(data):
     if data["work_bam"] and data.get("vrn_file"):
         data["vrn_file"] = variant_filtration(data["vrn_file"], data["sam_ref"],
                                               data["genome_resources"]["variation"],
-                                              data["config"])
+                                              data)
         logger.info("Calculating variation effects for %s" % cur_name)
         ann_vrn_file = effects.snpeff_effects(data)
         if ann_vrn_file:

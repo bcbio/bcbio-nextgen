@@ -1,9 +1,13 @@
 ## 0.7.5 (in development)
 
-- Generalize retrieval of RNA-seq resources (GTF files, transcriptome indexes) to use
-  genome-resources.yaml. Updates all genome resources files. Contributed by James Porter.
 - Update overall project summary to move to a flexible YAML format that handles
   multiple analysis types. Re-include target, duplication and variant metrics.
+- Handle specification of sex in metadata and correctly call X,Y and
+  mitochondrial chromosomes.
+- Avoid calling in regions with excessively deep coverage. Reduces variant calling
+  bottlenecks in repetitive regions with 25,000 or more reads.
+- Generalize retrieval of RNA-seq resources (GTF files, transcriptome indexes) to use
+  genome-resources.yaml. Updates all genome resources files. Contributed by James Porter.
 - Add Qualimap to generate plots and metrics for BAM alignments.
 - Use sambamba for indexing, which allows multicore indexing to speed up index
   creation on large BAM processing. Falls back to samtools index if not available.

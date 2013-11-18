@@ -23,7 +23,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import annotation, bamprep, multi, phasing, vcfutils, vfilter
+from bcbio.variation import annotation, bamprep, multi, phasing, ploidy, vcfutils, vfilter
 
 # ## GATK Genotype calling
 
@@ -72,6 +72,7 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "UnifiedGenotyper",
                            "-o", tx_out_file,
+                           "-ploidy", str(ploidy.get_ploidy(items, region)),
                            "--genotype_likelihoods_model", "BOTH"]
                 broad_runner.run_gatk(params)
     return out_file
@@ -134,18 +135,20 @@ def _gatk_location_hack(args):
 
 # ## Variant filtration -- shared functionality
 
-def variant_filtration(call_file, ref_file, vrn_files, config):
+def variant_filtration(call_file, ref_file, vrn_files, data):
     """Filter variant calls using Variant Quality Score Recalibration.
 
     Newer GATK with Haplotype calling has combined SNP/indel filtering.
     """
-    caller = config["algorithm"].get("variantcaller")
+    caller = data["config"]["algorithm"].get("variantcaller")
+    call_file = ploidy.filter_vcf_by_sex(call_file, data)
     if caller in ["freebayes"]:
-        return vfilter.freebayes(call_file, ref_file, vrn_files, config)
+        return vfilter.freebayes(call_file, ref_file, vrn_files, data["config"])
     # no additional filtration for callers that filter as part of call process
     elif caller in ["samtools", "varscan"]:
         return call_file
     else:
+        config = data["config"]
         snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, config)
         snp_filter_file = _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
         indel_filter_file = _variant_filtration_indel(indel_file, ref_file, vrn_files, config)

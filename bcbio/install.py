@@ -80,8 +80,8 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
-    pkgs = ["biopython", "boto", "cython", "distribute", "ipython", "lxml", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests", "tornado"]
+    pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib", "nose", "numpy",
+            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests", "tornado", "statsmodels"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
         # Remove until can get 13.1.0 working cleanly on CentOS
@@ -225,6 +225,13 @@ def add_install_defaults(args):
     if "isolate" in default_args and not args.isolate is True:
         args.isolate = default_args["isolate"]
     return args
+
+def get_defaults():
+    install_config = _get_install_config()
+    if install_config is None or not utils.file_exists(install_config):
+        return {}
+    with open(install_config) as in_handle:
+        return yaml.load(in_handle)
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser("upgrade", help="Install or upgrade bcbio-nextgen")

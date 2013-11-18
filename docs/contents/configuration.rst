@@ -78,6 +78,7 @@ The sample configuration file defines ``details`` of each sample to process::
         algorithm:
         metadata:
           batch: Batch1
+          sex: female
         lane: 1
         description: Example1
         genome_build: hg19
@@ -85,10 +86,14 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``analysis`` Analysis method to use [variant2, RNA-seq]
 - ``algorithm`` Parameters to configure algorithm inputs. Options
   described in more detail below.
-- ``metadata`` Additional descriptive metadata about the sample. The
-  ``batch`` input defines a batch that the sample falls in. We perform
-  multi-sample variant calling on all samples with the same batch
-  name.
+- ``metadata`` Additional descriptive metadata about the sample
+
+    - ``batch`` defines a group that the sample falls in. We perform
+       multi-sample variant calling on all samples with the same batch
+       name.
+    - ``sex`` specifies the sample sex used to correctly prepare X/Y
+      chromosomes.
+
 - ``lane`` A unique number within the project. Corresponds to the
   ``ID`` parameter in the BAM read group. Required.
 - ``description`` Unique name for this sample, corresponding to the
@@ -151,6 +156,7 @@ S3 parameters:
 - ``reduced_redundancy`` Flag to determine if we should store S3 data
   with reduced redundancy: cheaper but less reliable [false, true]
 
+.. _algorithm-config:
 
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~
@@ -205,7 +211,8 @@ Experimental information
 -  ``coverage_interval`` Regions covered by sequencing. Influences GATK
    options for filtering [exome, genome, regional]
 -  ``coverage_depth`` Depth of sequencing coverage. Influences GATK
-   variant calling [high, low]
+   variant calling and selection of super-high coverage regions to
+   exclude [high, low, super-high]
 -  ``hybrid_target`` BED file with target regions for hybrid selection
    experiments. This is only a descriptive set of regions for metrics
    assessment. Use ``variant_regions`` to restrict calling and
