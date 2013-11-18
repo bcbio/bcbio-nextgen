@@ -29,12 +29,12 @@ def write_info(dirs, run_parallel, parallel, config):
         if not utils.file_exists(out_file):
             sys_config = copy.deepcopy(config)
             sys_config["algorithm"]["resource_check"] = False
-            minfos = _get_minfo_from_sinfo(parallel, run_parallel, sys_config)
+            minfos = _get_machine_info(parallel, run_parallel, sys_config)
             with open(out_file, "w") as out_handle:
                 yaml.dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
 
-def _get_minfo_from_sinfo(parallel, run_parallel, sys_config):
-    """Get machine resource information from the job scheduler either via the queue or the command-line.
+def _get_machine_info(parallel, run_parallel, sys_config):
+    """Get machine resource information from the job scheduler via either the command-line or the queue.
     """
     if parallel.get("queue") and parallel.get("scheduler"):
         # dictionary as switch statement; can add new scheduler implementation functions as (lowercase) keys
