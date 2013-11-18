@@ -50,7 +50,10 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     """Align to the named genome build, returning a sorted BAM file.
     """
     names = data["rgnames"]
-    align_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align", names["sample"]))
+    align_dir_parts = [data["dirs"]["work"], "align", names["sample"]]
+    if data.get("disambiguate"):
+        align_dir_parts.append(data["disambiguate"]["genome_build"])
+    align_dir = utils.safe_makedir(apply(os.path.join, align_dir_parts))
     if fastq1.endswith(".bam"):
         out_bam = _align_from_bam(fastq1, aligner, data["align_ref"], data["sam_ref"],
                                   names, align_dir, data)

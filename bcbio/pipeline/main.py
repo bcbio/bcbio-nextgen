@@ -15,7 +15,7 @@ from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import lane, region, run_info, qcsummary, version
+from bcbio.pipeline import disambiguate, lane, region, run_info, qcsummary, version
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, system, versioncheck
 from bcbio.server import main as server_main
@@ -378,7 +378,9 @@ class RnaseqPipeline(AbstractPipeline):
     @classmethod
     def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
         lane_items = run_parallel("trim_lane", lane_items)
-        samples = run_parallel("process_alignment", lane_items)
+        samples = disambiguate.split(lane_items)
+        samples = run_parallel("process_alignment", samples)
+        samples = disambiguate.resolve(samples, run_parallel)
         samples = run_parallel("generate_transcript_counts", samples)
         samples = qcsummary.generate_parallel(samples, run_parallel)
         #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})

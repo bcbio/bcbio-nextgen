@@ -6,7 +6,7 @@ from IPython.parallel import require
 
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import sample, lane, qcsummary, shared, variation
+from bcbio.pipeline import disambiguate, sample, lane, qcsummary, shared, variation
 from bcbio.provenance import system
 from bcbio import structural
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
@@ -174,6 +174,11 @@ def coverage_summary(*args):
     with _setup_logging(args):
         return apply(coverage.summary, *args)
 coverage_summary.metadata = {"resources": ["bcbio_coverage"]}
+
+@require(disambiguate)
+def run_disambiguate(*args):
+    with _setup_logging(args):
+        return apply(disambiguate.run, *args)
 
 @require(system)
 def machine_info(*args):

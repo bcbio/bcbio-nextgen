@@ -43,13 +43,13 @@ def organize(dirs, config, run_info_yaml):
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
-        item = _add_reference_resources(item)
+        item = add_reference_resources(item)
         out.append(item)
     return out
 
 # ## Genome reference information
 
-def _add_reference_resources(data):
+def add_reference_resources(data):
     """Add genome reference information to the item to process.
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
@@ -143,7 +143,7 @@ def _check_algorithm_keys(item):
                      "phasing", "validate", "validate_regions", "validate_genome_build",
                      "clinical_reporting",
                      "nomap_split_size", "nomap_split_targets",
-                     "ensemble"])
+                     "ensemble", "disambiguate"])
     problem_keys = [k for k in item["algorithm"].iterkeys() if k not in supported]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"

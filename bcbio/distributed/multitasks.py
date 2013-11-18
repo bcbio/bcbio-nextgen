@@ -3,7 +3,7 @@
 from bcbio import structural, utils
 from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import lane, qcsummary, sample, shared, variation
+from bcbio.pipeline import disambiguate, lane, qcsummary, sample, shared, variation
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 
@@ -122,3 +122,7 @@ def compare_to_rm(*args):
 def coverage_summary(*args):
     return coverage.summary(*args)
 coverage_summary.metadata = {"resources": ["bcbio_coverage"]}
+
+@utils.map_wrap
+def run_disambiguate(*args):
+    return disambiguate.run(*args)
