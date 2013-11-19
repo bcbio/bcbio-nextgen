@@ -57,14 +57,22 @@ def get_downsample_pct(runner, in_bam, target_counts):
     if total > rg_target:
         return float(rg_target) / float(total)
 
-def downsample(in_bam, config, target_counts):
+def downsample(in_bam, data, target_counts):
     """Downsample a BAM file to the specified number of target counts.
     """
-    random_seed = 42
-    broad_runner = broad.runner_from_config(config)
+    broad_runner = broad.runner_from_config(data["config"])
     ds_pct = get_downsample_pct(broad_runner, in_bam, target_counts)
     if ds_pct:
-        return broad_runner.run_fn("picard_downsample", in_bam, ds_pct, random_seed)
+        out_file = "%s-downsample%s" % os.path.splitext(in_bam)
+        if not utils.file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                args = ["-T", "PrintReads",
+                        "-R", data["sam_ref"],
+                        "-I", in_bam,
+                        "--downsample_to_fraction", "%.3f" % ds_pct,
+                        "--out", tx_out_file]
+                broad_runner.run_gatk(args)
+        return out_file
 
 def open_samfile(in_file):
     if is_bam(in_file):

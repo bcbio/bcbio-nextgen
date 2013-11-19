@@ -117,7 +117,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
     if not os.path.exists(os.path.join(fastqc_out, "fastqc_report.html")):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
-        ds_bam = bam.downsample(bam_file, data["config"], 1e7)
+        ds_bam = bam.downsample(bam_file, data, 1e7)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         bam_file = ds_bam if ds_bam else bam_file
         cl = [config_utils.get_program("fastqc", data["config"]),
