@@ -13,7 +13,9 @@ import contextlib
 import copy
 import operator
 import os
+import time
 import shutil
+import subprocess
 
 import pybedtools
 import pysam
@@ -86,7 +88,7 @@ def calc_callable_loci(data, region=None, out_file=None):
                 params += ["-L", ready_region]
             if ((variant_regions and ready_region and os.path.isfile(ready_region))
                  or not variant_regions or not region):
-                broad_runner.run_gatk(params)
+                _memory_safe_run(broad_runner, params, data, region)
             else:
                 with open(out_file, "w") as out_handle:
                     for tregion in get_ref_bedtool(data["sam_ref"], data["config"]):
@@ -96,6 +98,30 @@ def calc_callable_loci(data, region=None, out_file=None):
     if handler and hasattr(handler, "close"):
         handler.close()
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
+
+def _memory_safe_run(runner, params, data, region):
+    """Detect java memory errors which occur during large scale processing.
+
+    When running on multiple simultaneous projects or with small regions, this
+    can error out with temporary memory issues. This detects and recovers from those.
+    """
+    max_runs = 5
+    num_runs = 0
+    while 1:
+        try:
+            runner.run_gatk(params, log_error=False)
+            break
+        except subprocess.CalledProcessError, msg:
+            if num_runs < max_runs and ("insufficient memory" in str(msg) or
+                                        "did not provide enough memory" in str(msg) or
+                                        "A fatal error has been detected" in str(msg)):
+                logger.info("Memory issue with callability assessment on %s, %s. Retrying."
+                            % (region, data["work_bam"]))
+                time.sleep(30)
+                num_runs += 1
+            else:
+                logger.exception()
+                raise
 
 def sample_callable_bed(bam_file, ref_file, config):
     """Retrieve callable regions for a sample subset by defined analysis regions.
