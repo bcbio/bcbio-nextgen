@@ -7,11 +7,14 @@ import copy
 import multiprocessing
 import os
 import resource
+import shlex
 import socket
+import subprocess
 
 import yaml
 
 from bcbio import utils
+from bcbio.log import logger
 
 def _get_cache_file(dirs, parallel):
     base_dir = utils.safe_makedir(os.path.join(dirs["work"], "provenance"))
@@ -26,9 +29,37 @@ def write_info(dirs, run_parallel, parallel, config):
         if not utils.file_exists(out_file):
             sys_config = copy.deepcopy(config)
             sys_config["algorithm"]["resource_check"] = False
-            minfos = run_parallel("machine_info", [[sys_config]])
+            minfos = _get_machine_info(parallel, run_parallel, sys_config)
             with open(out_file, "w") as out_handle:
                 yaml.dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
+
+def _get_machine_info(parallel, run_parallel, sys_config):
+    """Get machine resource information from the job scheduler via either the command-line or the queue.
+    """
+    if parallel.get("queue") and parallel.get("scheduler"):
+        # dictionary as switch statement; can add new scheduler implementation functions as (lowercase) keys
+        sched_info_dict = {
+                            "slurm": _slurm_info,
+                          }
+        try:
+            return sched_info_dict[ parallel["scheduler"].lower() ]( parallel["queue"] )
+        except KeyError:
+            logger.info("Resource query function not implemented for scheduler \"{0}\"; "
+                         "submitting job to queue".format( parallel["scheduler"] ) )
+        except:
+            # If something goes wrong, just hit the queue
+            logger.warn("Couldn't get machine information from resource query function for queue \"{0}\" on scheduler \"{1}\"; "
+                         "submitting job to queue".format( parallel["queue"], parallel["scheduler"] ) )
+    return run_parallel("machine_info", [[sys_config]])
+
+def _slurm_info(queue):
+    """Returns machine information for a slurm job scheduler.
+    """
+    cl = "sinfo -h -p {} --format '%c %m'".format(queue)
+    num_cpus, mem = subprocess.check_output(shlex.split(cl)).split()
+    # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
+    mem = mem.replace('+', '')
+    return [{"cores": int(num_cpus), "memory": int(mem)/1000, "name": "slurm_machine"}]
 
 def _combine_machine_info(xs):
     if len(xs) == 1:
