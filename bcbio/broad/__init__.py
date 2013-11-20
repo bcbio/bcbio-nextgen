@@ -3,10 +3,11 @@
   Picard -- BAM manipulation and analysis library.
   GATK -- Next-generation sequence processing.
 """
+from contextlib import closing
 import copy
+from distutils.version import LooseVersion
 import os
 import subprocess
-from contextlib import closing
 
 from bcbio.broad import picardrun
 from bcbio.pipeline import config_utils
@@ -121,7 +122,7 @@ class BroadRunner:
                 if config["algorithm"].get("memory_adjust") is None:
                     config["algorithm"]["memory_adjust"] = {"direction": "increase",
                                                             "magnitude": int(cores) // 2}
-        if self.get_gatk_version() > "1.9":
+        if LooseVersion(self.gatk_major_version()) > LooseVersion("1.9"):
             if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
@@ -199,21 +200,32 @@ class BroadRunner:
         Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,
         the latest 2.4+ restricted version of GATK.
         """
-        full_version = self.get_gatk_version()
-        # Working with a recent version if using nightlies
-        if full_version.startswith("nightly-"):
-            return "restricted"
-        try:
-            version, subversion, githash = full_version.split("-")
-            if version.startswith("v"):
-                version = version[1:]
-        # version was not properly implemented in earlier versions
-        except ValueError:
-            version = 2.3
-        if float(version) > 2.3:
+        if LooseVersion(self.gatk_major_version()) > LooseVersion("2.3"):
             return "restricted"
         else:
             return "lite"
+
+    def gatk_major_version(self):
+        """Retrieve the GATK major version, handling multiple GATK distributions.
+
+        Has special cases for GATK nightly builds, Appistry releases and
+        GATK prior to 2.3.
+        """
+        full_version = self.get_gatk_version()
+        # Working with a recent version if using nightlies
+        if full_version.startswith("nightly-"):
+            return "2.8"
+        parts = full_version.split("-")
+        if len(parts) == 4:
+            appistry_release, version, subversion, githash = parts
+        elif len(parts) == 3:
+            version, subversion, githash = parts
+        # version was not properly implemented in earlier GATKs
+        else:
+            version = "2.3"
+        if version.startswith("v"):
+            version = version[1:]
+        return version
 
     def _get_picard_cmd(self, command):
         """Retrieve the base Picard command, handling both shell scripts and directory of jars.

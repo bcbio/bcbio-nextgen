@@ -27,11 +27,13 @@ details:
       #realign: gkno
       realign: gatk
       recalibrate: gatk
-      variantcaller: freebayes
       svcaller: lumpy
-      #variantcaller: gatk
-      quality_format: Standard
+      variantcaller: freebayes
       coverage_interval: regional
+      #variantcaller: gatk-haplotype
+      #coverage_depth: high
+      #coverage_interval: genome
+      quality_format: Standard
       nomap_split_size: 50
       nomap_split_targets: 100
       variant_regions: ../data/automated/variant_regions-bam.bed

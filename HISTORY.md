@@ -16,6 +16,7 @@
   excessive run times. Part of general speed up of QC step.
 - Add Qualimap to generate plots and metrics for BAM alignments. Off by default
   due to speed issues.
+- Improve handling of GATK version detection, including support for Appistry versions.
 - Allow interruption of read_through trimming with Ctrl-C.
 
 ## 0.7.4 (October 20, 3013)
