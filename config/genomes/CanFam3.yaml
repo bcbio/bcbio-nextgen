@@ -1,0 +1,10 @@
+version: 1
+
+aliases:
+  ensembl: dog
+
+rnaseq:
+  transcripts: ../rnaseq/ref-transcripts.gtf
+  transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
+  transcriptome_index:
+    tophat: ../rnaseq/tophat/CanFam3_transcriptome
