@@ -8,12 +8,14 @@
   bottlenecks in repetitive regions with 25,000 or more reads.
 - Generalize retrieval of RNA-seq resources (GTF files, transcriptome indexes) to use
   genome-resources.yaml. Updates all genome resources files. Contributed by James Porter.
-- Add Qualimap to generate plots and metrics for BAM alignments.
 - Use sambamba for indexing, which allows multicore indexing to speed up index
   creation on large BAM processing. Falls back to samtools index if not available.
-- Update fastqc runs to use multiple threads if available.
 - Remove custom Picard metrics runs and pdf generation. Eliminates dependencies on
-  pdflatex and R.
+  pdflatex and R for QC metrics.
+- Update fastqc runs to use a BAM files downsampled to 10 million reads to avoid
+  excessive run times. Part of general speed up of QC step.
+- Add Qualimap to generate plots and metrics for BAM alignments. Off by default
+  due to speed issues.
 - Allow interruption of read_through trimming with Ctrl-C.
 
 ## 0.7.4 (October 20, 3013)

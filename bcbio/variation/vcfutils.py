@@ -139,6 +139,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             if cur_region:
                 params += ["-L", bamprep.region_to_gatk(cur_region),
                            "--interval_set_rule", "INTERSECTION"]
+            broad_runner.new_resources("gatk-haplotype")
             broad_runner.run_gatk(params)
     if in_pipeline:
         return [{file_key: out_file, "region": region, "sam_ref": ref_file, "config": config}]

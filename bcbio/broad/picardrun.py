@@ -128,6 +128,20 @@ def picard_fix_rgs(picard, in_bam, names):
                 picard.run("AddOrReplaceReadGroups", opts)
     return out_file
 
+def picard_downsample(picard, in_bam, ds_pct, random_seed=None):
+    out_file = "%s-downsample%s" % os.path.splitext(in_bam)
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("PROBABILITY", "%.3f" % ds_pct),
+                        ("TMP_DIR", tmp_dir)]
+                if random_seed:
+                    opts += [("RANDOM_SEED", str(random_seed))]
+                picard.run("DownsampleSam", opts)
+    return out_file
+
 def picard_index_ref(picard, ref_file):
     """Provide a Picard style dict index file for a reference genome.
     """
@@ -206,7 +220,8 @@ def picard_formatconverter(picard, align_sam):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:
                 opts = [("INPUT", align_sam),
-                        ("OUTPUT", tx_out_bam)]
+                        ("OUTPUT", tx_out_bam),
+                        ("TMP_DIR", tmp_dir)]
                 picard.run("SamFormatConverter", opts)
     return out_bam
 
@@ -281,7 +296,7 @@ def bed2interval(align_file, bed, out_file=None):
 
     def reorder_line(line):
         splitline = line.strip().split("\t")
-        reordered = "\t".join([splitline[0], splitline[1]+1, splitline[2],
+        reordered = "\t".join([splitline[0], splitline[1] + 1, splitline[2],
                                splitline[5], splitline[3]])
         return reordered + "\n"
 

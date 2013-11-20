@@ -7,6 +7,7 @@ import shutil
 import contextlib
 import itertools
 import functools
+import random
 import ConfigParser
 try:
     from concurrent import futures
@@ -470,3 +471,17 @@ def which(program):
                 return exe_file
 
     return None
+
+def reservoir_sample(stream, num_items, item_parser=lambda x: x):
+    """
+    samples num_items from the stream keeping each with equal probability
+    """
+    kept = []
+    for index, item in enumerate(stream):
+        if index < num_items:
+            kept.append(item_parser(item))
+        else:
+            r = random.randint(0, index)
+            if r < num_items:
+                kept[r] = item_parser(item)
+    return kept

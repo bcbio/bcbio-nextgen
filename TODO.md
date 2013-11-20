@@ -18,6 +18,13 @@ These are roughly ordered by current priority and we welcome contributors.
 [109]: https://github.com/chapmanb/bcbio-nextgen/issues/109
 [112]: https://github.com/chapmanb/bcbio-nextgen/issues/112
 
+- Once initial structural variation analysis and evaluation is in place,
+  incorporate and evaluate additional CNV and structural variant callers. Some
+  current targets are the [VarScan2 CNV caller][vs2] and [Control-FREEC][cfc].
+
+[cfc]: http://bioinfo-out.curie.fr/projects/freec/
+[vs2]: http://varscan.sourceforge.net/copy-number-calling.html
+
 - Explore options for accumulating and displaying summary information from
   multiple runs. Prioritize options which allow accumulation across multiple
   analysis machines and already handle query and visualization.

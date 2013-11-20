@@ -3,10 +3,18 @@
 
 import csv
 import os
-import pandas as pd
-import statsmodels.formula.api as sm
+from random import shuffle
+from itertools import ifilter
+
+# Provide transition period to install via upgrade with conda
+try:
+    import pandas as pd
+    import statsmodels.formula.api as sm
+except ImportError:
+    pd, sm = None, None
 
 from bcbio import bam
+from bcbio import utils
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import safe_makedir, file_exists
@@ -100,10 +108,11 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
     return out
 
 
-def starts_by_depth(bam_file):
+def starts_by_depth(bam_file, sample_size=10000000):
     """
     Return a set of x, y points where x is the number of reads sequenced and
     y is the number of unique start sites identified
+    If sample size < total reads in a file the file will be downsampled.
     """
     BINSIZE_IN_READS = 100
     seen_starts = set()
@@ -112,9 +121,15 @@ def starts_by_depth(bam_file):
     starts = []
     buffer = []
     with bam.open_samfile(bam_file) as samfile:
-        for read in samfile:
+        # unmapped reads should not be counted
+        filtered = ifilter(lambda x: not x.is_unmapped, samfile)
+        def read_parser(read):
+            return ":".join([str(read.tid), str(read.pos)])
+        samples = utils.reservoir_sample(filtered, sample_size, read_parser)
+        shuffle(samples)
+        for read in samples:
             counted += 1
-            buffer.append(":".join([str(read.tid), str(read.pos)]))
+            buffer.append(read)
             if counted % BINSIZE_IN_READS == 0:
                 seen_starts.update(buffer)
                 buffer = []
@@ -125,19 +140,20 @@ def starts_by_depth(bam_file):
         starts.append(len(seen_starts))
     return pd.DataFrame({"reads": num_reads, "starts": starts})
 
-def estimate_library_complexity(bam_file):
-    LOW_COMPLEXITY_CUTOFF = 0.5
-    MEDIUM_COMPLEXITY_CUTOFF = 0.7
-    pd = starts_by_depth(bam_file)
-    model = sm.ols(formula="starts ~ reads", data=pd)
+
+def estimate_library_complexity(df, algorithm="RNA-seq"):
+    DEFAULT_CUTOFFS = {"RNA-seq": (0.25, 0.40)}
+    cutoffs = DEFAULT_CUTOFFS[algorithm]
+    model = sm.ols(formula="starts ~ reads", data=df)
     fitted = model.fit()
     slope = fitted.params["reads"]
-    if slope <= LOW_COMPLEXITY_CUTOFF:
+    print slope
+    if slope <= cutoffs[0]:
         complexity = "LOW"
-    elif slope <= MEDIUM_COMPLEXITY_CUTOFF:
+    elif slope <= cutoffs[1]:
         complexity = "MEDIUM"
     else:
         complexity = "HIGH"
-    d = {"unique_start_per_read": slope,
+    d = {"unique_start_per_read": float(slope),
          "complexity": complexity}
     return d

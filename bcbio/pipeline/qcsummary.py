@@ -7,6 +7,13 @@ import subprocess
 import lxml.html
 import pybedtools
 import yaml
+# allow graceful during upgrades
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
@@ -48,6 +55,7 @@ def _run_qc_tools(bam_file, data):
     to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
+        to_run.append(("complexity", _run_complexity))
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
@@ -77,7 +85,7 @@ class FastQCParser:
         self._dir = base_dir
 
     def get_fastqc_summary(self):
-        ignore = set(["Filtered Sequences", "Filename", "File type"])
+        ignore = set(["Total Sequences", "Filtered Sequences", "Filename", "File type"])
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
             k, v = stat_line.split("\t")[:2]
@@ -102,11 +110,16 @@ class FastQCParser:
 
 def _run_fastqc(bam_file, data, fastqc_out):
     """Run fastqc, generating report in specified directory and parsing metrics.
+
+    Downsamples to 10 million reads to avoid excessive processing times with large
+    files.
     """
     if not os.path.exists(os.path.join(fastqc_out, "fastqc_report.html")):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
+        ds_bam = bam.downsample(bam_file, data, 1e7)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
+        bam_file = ds_bam if ds_bam else bam_file
         cl = [config_utils.get_program("fastqc", data["config"]),
               "-t", str(num_cores), "-o", work_dir, "-f", "bam", bam_file]
         do.run(cl, "FastQC: %s" % data["name"][-1])
@@ -114,9 +127,28 @@ def _run_fastqc(bam_file, data, fastqc_out):
         if os.path.exists("%s.zip" % fastqc_outdir):
             os.remove("%s.zip" % fastqc_outdir)
         shutil.move(fastqc_outdir, fastqc_out)
+        if ds_bam and os.path.exists(ds_bam):
+            os.remove(ds_bam)
     parser = FastQCParser(fastqc_out)
     stats = parser.get_fastqc_summary()
     return stats
+
+def _run_complexity(bam_file, data, out_dir):
+    base, _ = os.path.splitext(os.path.basename(bam_file))
+    utils.safe_makedir(out_dir)
+    out_file = os.path.join(out_dir, base + ".pdf")
+    df = bcbio.rnaseq.qc.starts_by_depth(bam_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tmp_out_file:
+            df.plot(x='reads', y='starts', title=bam_file + " complexity")
+            fig = plt.gcf()
+            fig.savefig(tmp_out_file)
+
+    print "file saved as", out_file
+    print "out_dir is", out_dir
+
+    return bcbio.rnaseq.qc.estimate_library_complexity(df)
+
 
 # ## Qualimap
 
@@ -222,7 +254,7 @@ def _run_qualimap(bam_file, data, out_dir):
 
 def _parse_bamtools_stats(stats_file):
     out = {}
-    want = set(["Mapped reads", "Duplicates", "Median insert size"])
+    want = set(["Total reads", "Mapped reads", "Duplicates", "Median insert size"])
     with open(stats_file) as in_handle:
         for line in in_handle:
             parts = line.split(":")

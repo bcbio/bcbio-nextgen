@@ -5,7 +5,7 @@ import os
 
 import pysam
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -46,6 +46,33 @@ def index(in_bam, config):
                 do.run(samtools_cmd.format(**locals()),
                        "Index BAM file (single core): %s" % os.path.basename(in_bam))
     return index_file if utils.file_exists(index_file) else alt_index_file
+
+def get_downsample_pct(runner, in_bam, target_counts):
+    """Retrieve percentage of file to downsample to get to target counts.
+    """
+    total = sum(x.aligned for x in runner.run_fn("picard_idxstats", in_bam))
+    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
+        n_rgs = max(1, len(work_bam.header["RG"]))
+    rg_target = n_rgs * target_counts
+    if total > rg_target:
+        return float(rg_target) / float(total)
+
+def downsample(in_bam, data, target_counts):
+    """Downsample a BAM file to the specified number of target counts.
+    """
+    broad_runner = broad.runner_from_config(data["config"])
+    ds_pct = get_downsample_pct(broad_runner, in_bam, target_counts)
+    if ds_pct:
+        out_file = "%s-downsample%s" % os.path.splitext(in_bam)
+        if not utils.file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                args = ["-T", "PrintReads",
+                        "-R", data["sam_ref"],
+                        "-I", in_bam,
+                        "--downsample_to_fraction", "%.3f" % ds_pct,
+                        "--out", tx_out_file]
+                broad_runner.run_gatk(args)
+        return out_file
 
 def open_samfile(in_file):
     if is_bam(in_file):

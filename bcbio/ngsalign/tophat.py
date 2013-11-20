@@ -107,7 +107,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             cmd = str(tophat_ready.bake(*files))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
         _fix_empty_readnames(out_file)
-    if pair_file:
+    if pair_file and _has_alignments(out_file):
         final_out = _fix_mates(out_file, os.path.join(out_dir, "%s-align.bam" % out_base),
                                ref_file, config)
     else:
@@ -116,6 +116,15 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             os.symlink(os.path.basename(out_file), final_out)
     return final_out
 
+def _has_alignments(sam_file):
+    print sam_file
+    with open(sam_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("File removed to save disk space"):
+                return False
+            elif not line.startswith("@"):
+                return True
+    return False
 
 def _fix_empty_readnames(orig_file):
     """ Fix SAMfile reads with empty read names
@@ -145,7 +154,6 @@ def _fix_mates(orig_file, out_file, ref_file, config):
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
-            sort_name = "%s-sorttmp" % os.path.splitext(tx_out_file)[0]
             cmd = "{samtools} view -bt {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
     return out_file
@@ -171,9 +179,9 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
     if not mean or not stdev:
         mean, stdev = _small_file_innerdist("1", fastq_file, pair_file, ref_file,
                                             out_base, out_dir, data, True)
-
-    assert mean, "mean insert size is not set."
-    assert stdev, "stdev of insert size is not set."
+    # No reads aligning so no data to process, set some default values
+    if not mean or not stdev:
+        mean, stdev = 200, 50
 
     return mean, stdev
 
