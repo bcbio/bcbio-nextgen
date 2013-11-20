@@ -115,6 +115,7 @@ def _memory_safe_run(runner, params, data, region):
             if num_runs < max_runs and ("insufficient memory" in str(msg) or
                                         "did not provide enough memory" in str(msg) or
                                         "A fatal error has been detected" in str(msg) or
+                                        "USER ERROR" in str(msg) or
                                         "java.lang.OutOfMemoryError" in str(msg)):
                 logger.info("Memory issue with callability assessment on %s, %s. Retrying."
                             % (region, data["work_bam"]))

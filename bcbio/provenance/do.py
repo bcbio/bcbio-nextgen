@@ -63,6 +63,9 @@ def _do_run(cmd, checks):
     with contextlib.closing(s.stdout) as stdout:
         while 1:
             line = stdout.readline()
+            if line:
+                debug_stdout.append(line)
+                logger.debug(line.rstrip())
             exitcode = s.poll()
             if exitcode is not None:
                 if exitcode is not None and exitcode != 0:
@@ -72,9 +75,6 @@ def _do_run(cmd, checks):
                     raise subprocess.CalledProcessError(exitcode, error_msg)
                 else:
                     break
-            if line:
-                debug_stdout.append(line)
-                logger.debug(line.rstrip())
     # Check for problems not identified by shell return codes
     if checks:
         for check in checks:
