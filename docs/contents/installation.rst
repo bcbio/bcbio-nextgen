@@ -36,6 +36,9 @@ requirements:
 - Compilers: gcc and g++.
 - The git version control system (http://git-scm.com/).
 
+If you're using the ``--nosudo`` option, please see :ref:`isolated-install`
+for additional system requirements needed to bootstrap the full system.
+
 Some steps retrieve third party tools from GitHub, which can run into
 issues if you're behind a proxy or block git ports. To instruct git to
 use ``https://`` globally instead of ``git://``::
@@ -51,6 +54,7 @@ enough to handle both system integrations into standard directories
 like /usr/local, as well as custom isolated installations in non-root
 directories.
 
+.. _isolated-install:
 Isolated installations
 ======================
 
@@ -58,8 +62,16 @@ To install bcbio-nextgen in an isolated non-root environment::
 
     python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --nosudo --isolate
 
-This requires some system requirements are already in place (Java,
-Ruby and compilers) but is as isolated and self-contained as possible
+This requires the following additional system requirements to be in place:
+
+- Java 1.7
+- Ruby
+- R with Rscript (currently optional, but increasingly used in the pipeline)
+- bzip2 (with development libraries)
+- zlib (with development libraries)
+- cmake (temporary requirement, for eventual removal)
+
+Installing this way is as isolated and self-contained as possible
 without virtual machines or lightweight system containers. To ensure
 access to the executables, system libraries and Perl libraries update
 your `~/.bashrc` with::
