@@ -6,6 +6,7 @@ import os
 import subprocess
 
 from bcbio import bam, utils
+from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -118,7 +119,7 @@ def _prep_grabix_indexes(in_files, dirs, config):
     [_grabix_index(x, config) for x in out if x]
     return out
 
-def _bgzip_from_bam(bam_file, dirs, config):
+def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
     """Create bgzipped fastq files from an input BAM file.
     """
     # tools
@@ -126,7 +127,7 @@ def _bgzip_from_bam(bam_file, dirs, config):
     resources = config_utils.get_resources("bamtofastq", config)
     cores = config["algorithm"].get("num_cores", 1)
     max_mem = int(resources.get("memory", "1073741824")) * cores # 1Gb/core default
-    bgzip = _get_bgzip_cmd(config)
+    bgzip = _get_bgzip_cmd(config, is_retry)
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
     out_file_1 = os.path.join(work_dir, "%s-1.fq.gz" % os.path.splitext(os.path.basename(bam_file))[0])
@@ -145,8 +146,18 @@ def _bgzip_from_bam(bam_file, dirs, config):
             else:
                 out_str = "S=>({fq1_bgzip_cmd})"
             cmd = "{bamtofastq} filename={bam_file} T={sortprefix} " + out_str
-            do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
-                   checks=[do.file_reasonable_size(tx_out_file, bam_file)])
+            try:
+                do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
+                       checks=[do.file_reasonable_size(tx_out_file, bam_file)],
+                       log_error=False)
+            except subprocess.CalledProcessError, msg:
+                if not is_retry and "deflate failed" in str(msg):
+                    logger.info("bamtofastq deflate IO failure preparing %s. Retrying with single core."
+                                % (bam_file))
+                    return _bgzip_from_bam(bam_file, dirs, config, is_retry=True)
+                else:
+                    logger.exception()
+                    raise
     return [x for x in [out_file_1, out_file_2] if x is not None]
 
 def _grabix_index(in_file, config):
@@ -170,14 +181,20 @@ def _bgzip_from_fastq(in_file, dirs, config):
         out_file = in_file
     return out_file
 
-def _get_bgzip_cmd(config):
+def _get_bgzip_cmd(config, is_retry=False):
     """Retrieve command to use for bgzip, trying to use parallel pbgzip if available.
+
+    Avoids over committing cores to gzipping since run in pipe with other tools.
+    Allows for retries which force single core bgzip mode.
     """
-    try:
-        pbgzip = config_utils.get_program("pbgzip", config)
-        return "%s -n %s " % (pbgzip, config["algorithm"].get("num_cores", 1))
-    except config_utils.CmdNotFound:
-        return config_utils.get_program("bgzip", config)
+    num_cores = max(1, (config["algorithm"].get("num_cores", 1) // 2) - 1)
+    if not is_retry and num_cores > 1:
+        try:
+            pbgzip = config_utils.get_program("pbgzip", config)
+            return "%s -n %s " % (pbgzip, num_cores)
+        except config_utils.CmdNotFound:
+            pass
+    return config_utils.get_program("bgzip", config)
 
 def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
     """Handle bgzip of input file, potentially gunzipping an existing file.
