@@ -47,7 +47,7 @@ def _clean_args(sys_argv, args):
     """Remove data directory from arguments to pass to upgrade function.
     """
     return [x for x in sys_argv if
-            x.startswith("--") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
+            x.startswith("-") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
 
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
@@ -201,6 +201,8 @@ if __name__ == "__main__":
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
+    parser.add_argument("-u", "--upgrade", help="Code version to install",
+                        choices=["stable", "development"], default="stable")
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",

@@ -20,8 +20,7 @@ REMOTES = {
     "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
     "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux.git",
-    "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
-    }
+    "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml"}
 
 def upgrade_bcbio(args):
     """Perform upgrade of bcbio to latest release, or from GitHub development version.
@@ -70,11 +69,11 @@ def _default_deploy_args(args):
             "custom_add": dict(custom_add),
             "vm_provider": "novm",
             "hostname": "localhost",
-            "fabricrc_overrides" : {"edition": "minimal",
-                                    "use_sudo": args.sudo,
-                                    "keep_isolated": args.isolate,
-                                    "distribution": args.distribution or "__auto__",
-                                    "dist_name": "__auto__"}}
+            "fabricrc_overrides": {"edition": "minimal",
+                                   "use_sudo": args.sudo,
+                                   "keep_isolated": args.isolate,
+                                   "distribution": args.distribution or "__auto__",
+                                   "dist_name": "__auto__"}}
 
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
@@ -212,11 +211,13 @@ def add_install_defaults(args):
         if "tooldir" in default_args:
             args.tooldir = default_args["tooldir"]
         else:
-            raise ValueError("Default tool directory not yet saved in config defaults. Specify the '--tooldir=/path/to/tools' to upgrade tools. "
-                             "After a successful upgrade, the '--tools' parameter should work for future upgrades.")
+            raise ValueError("Default tool directory not yet saved in config defaults. "
+                             "Specify the '--tooldir=/path/to/tools' to upgrade tools. "
+                             "After a successful upgrade, the '--tools' parameter will "
+                             "work for future upgrades.")
     for attr in ["genomes", "aligners", "toolplus"]:
         for x in default_args.get(attr, []):
-            new_val =  getattr(args, attr)
+            new_val = getattr(args, attr)
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
@@ -242,7 +243,7 @@ def add_subparser(subparsers):
                         help="Boolean argument specifying upgrade of tools. Uses previously saved install directory",
                         action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
-                        choices = ["stable", "development", "system", "skip"], default="stable")
+                        choices=["stable", "development", "system", "skip"], default="stable")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
