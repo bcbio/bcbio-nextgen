@@ -92,7 +92,11 @@ def picard_index(picard, in_bam):
     bam_file_ctime = os.path.getctime(in_bam)
 
     if file_exists(index_file) or file_exists(alt_index_file):
-        bam_index_file_ctime = os.path.getctime(in_bam)
+
+        bam_index_file_ctime = (os.path.getctime(index_file) if
+                                file_exists(index_file) else
+                                os.path.getctime(alt_index_file))
+
         if bam_index_file_ctime < bam_file_ctime:
             # Index is older than the BAM file, regenerate
             with file_transaction(index_file) as tx_index_file:
