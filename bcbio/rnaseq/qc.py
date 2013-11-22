@@ -5,6 +5,7 @@ import csv
 import os
 from random import shuffle
 from itertools import ifilter
+import pysam
 
 # Provide transition period to install via upgrade with conda
 try:
@@ -108,13 +109,13 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
     return out
 
 
-def starts_by_depth(bam_file, sample_size=10000000):
+def starts_by_depth(bam_file, sample_size=None):
     """
     Return a set of x, y points where x is the number of reads sequenced and
     y is the number of unique start sites identified
     If sample size < total reads in a file the file will be downsampled.
     """
-    BINSIZE_IN_READS = 100
+    binsize = _count_reads_in_bamfile(bam_file) / 100
     seen_starts = set()
     counted = 0
     num_reads = []
@@ -125,12 +126,16 @@ def starts_by_depth(bam_file, sample_size=10000000):
         filtered = ifilter(lambda x: not x.is_unmapped, samfile)
         def read_parser(read):
             return ":".join([str(read.tid), str(read.pos)])
-        samples = utils.reservoir_sample(filtered, sample_size, read_parser)
-        shuffle(samples)
+        # if no sample size is set, use the whole file
+        if not sample_size:
+            samples = map(read_parser, filtered)
+        else:
+            samples = utils.reservoir_sample(filtered, sample_size, read_parser)
+            shuffle(samples)
         for read in samples:
             counted += 1
             buffer.append(read)
-            if counted % BINSIZE_IN_READS == 0:
+            if counted % binsize == 0:
                 seen_starts.update(buffer)
                 buffer = []
                 num_reads.append(counted)
@@ -147,7 +152,6 @@ def estimate_library_complexity(df, algorithm="RNA-seq"):
     model = sm.ols(formula="starts ~ reads", data=df)
     fitted = model.fit()
     slope = fitted.params["reads"]
-    print slope
     if slope <= cutoffs[0]:
         complexity = "LOW"
     elif slope <= cutoffs[1]:
@@ -157,3 +161,6 @@ def estimate_library_complexity(df, algorithm="RNA-seq"):
     d = {"unique_start_per_read": float(slope),
          "complexity": complexity}
     return d
+
+def _count_reads_in_bamfile(bam_file):
+    return int(pysam.view("-c", bam_file)[0].strip())
