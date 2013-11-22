@@ -271,9 +271,11 @@ def picard_idxstats(picard, align_bam):
             if len(parts) == 2:
                 _, unaligned = parts
                 out.append(AlignInfo("nocontig", 0, 0, int(unaligned)))
-            else:
+            elif len(parts) == 7:
                 contig, _, length, _, aligned, _, unaligned = parts
                 out.append(AlignInfo(contig, int(length), int(aligned), int(unaligned)))
+            else:
+                raise ValueError("Unexpected output from BamIndexStats: %s" % line)
     return out
 
 def bed2interval(align_file, bed, out_file=None):
