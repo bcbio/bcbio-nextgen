@@ -102,7 +102,7 @@ def picard_index(picard, in_bam):
             with file_transaction(index_file) as tx_index_file:
                 opts = [("INPUT", in_bam),
                         ("OUTPUT", tx_index_file)]
-            picard.run("BuildBamIndex", opts)
+                picard.run("BuildBamIndex", opts)
 
     elif not file_exists(index_file) and not file_exists(alt_index_file):
         with file_transaction(index_file) as tx_index_file:
