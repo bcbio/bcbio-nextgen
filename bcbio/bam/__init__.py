@@ -22,14 +22,11 @@ def index(in_bam, config):
 
     Centralizes BAM indexing providing ability to switch indexing approaches.
     """
-    assert is_bam(in_bam), % "%s in not a BAM file" % in_bam
+    assert is_bam(in_bam), "%s in not a BAM file" % in_bam
     index_file = "%s.bai" % in_bam
     alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
     if not utils.file_exists(index_file) and not utils.file_exists(alt_index_file):
-        try:
-            sambamba = config_utils.get_program("sambamba", config)
-        except config_utils.CmdNotFound:
-            sambamba = None
+        sambamba = _get_sambamba(config)
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(index_file) as tx_index_file:
@@ -99,34 +96,66 @@ def is_sam(in_file):
     else:
         return False
 
+
 def sort(in_bam, config, order="coordinate"):
     """Sort a BAM file, skipping if already present.
     """
-    assert is_bam(in_bam), % "%s in not a BAM file" % in_bam
-    sort_file = os.path.splitext(in_bam)[0] + ".sorted"
+    assert is_bam(in_bam), "%s in not a BAM file" % in_bam
+    if bam_already_sorted(in_bam, config, order):
+        return in_bam
+
+    sort_stem = _get_sort_stem(in_bam, order)
+    sort_file = sort_stem + ".bam"
     if not utils.file_exists(sort_file):
-        try:
-            sambamba = config_utils.get_program("sambamba", config)
-        except config_utils.CmdNotFound:
-            sambamba = None
+        sambamba = _get_sambamba(config)
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(sort_file) as tx_sort_file:
-            order_flag = order if order else ""
-                samtools_cmd = ("{samtools} sort {order_flag} {in_bam} -o "
-                                "{tx_sort_file}")
+            tx_sort_stem = os.path.splitext(tx_sort_file)[0]
+            tx_dir = utils.safe_makedir(os.path.dirname(tx_sort_file))
+            order_flag = "-n" if order is "queryname" else ""
+            samtools_cmd = ("{samtools} sort {order_flag} "
+                            "-o {tx_sort_stem} {in_bam}")
             if sambamba:
-                cmd = "{sambamba} sort -t {num_cores} {order_flag} {in_bam}"
+                cmd = ("{sambamba} sort -t {num_cores} {order_flag} "
+                       "-o {tx_sort_file} --tmpdir={tx_dir} {in_bam}")
             else:
                 cmd = samtools_cmd
             # sambamba has intermittent multicore failures. Allow
             # retries with single core
             try:
                 do.run(cmd.format(**locals()),
-                       "Sort BAM file (multi core, %s): %s" %
-                       (order, os.path.basename(in_bam)), log_error=False)
+                       "Sort BAM file (multi core, %s): %s to %s"%
+                       (order, os.path.basename(in_bam),
+                        os.path.basename(sort_file)), log_error=False)
             except:
                 do.run(samtools_cmd.format(**locals()),
                        "Sort BAM file (single core, %s): %s" %
-                       (order, os.path.basename(in_bam))
+                       (order, os.path.basename(in_bam),
+                        os.path.basename(sort_file)))
     return sort_file
+
+
+def _get_sambamba(config):
+    try:
+        sambamba = config_utils.get_program("sambamba", config)
+    except config_utils.CmdNotFound:
+        sambamba = None
+    return sambamba
+
+
+def bam_already_sorted(in_bam, config, order):
+    return order == _get_sort_order(in_bam, config)
+
+
+def _get_sort_order(in_bam, config):
+    with pysam.Samfile(in_bam, "rb") as bam_handle:
+        header = bam_handle.header
+    return utils.get_in(header, ("HD", "SO"), None)
+
+def _get_sort_stem(in_bam, order):
+    SUFFIXES = {"coordinate": ".sorted", "queryname": ".nsorted"}
+    sort_base = os.path.splitext(in_bam)[0]
+    for suffix in SUFFIXES:
+        sort_base = sort_base.split(suffix)[0]
+    return sort_base + SUFFIXES[order]
