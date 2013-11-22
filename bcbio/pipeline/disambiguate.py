@@ -17,6 +17,8 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import run_info
 from bcbio.provenance import do
+from bcbio import bam
+
 
 def split(items):
     """Split samples into all possible genomes for alignment.
@@ -63,8 +65,8 @@ def run(items, config):
         data_a, data_b = items
     else:
         data_b, data_a = items
-    work_bam_a = data_a["work_bam"]
-    work_bam_b = data_b["work_bam"]
+    work_bam_a = bam.sort(data_a["work_bam"], config, "queryname")
+    work_bam_b = bam.sort(data_b["work_bam"], config, "queryname")
     out_dir = os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
                                             os.pardir, os.pardir, "disambiguate"))
     base_name = os.path.join(out_dir, os.path.splitext(os.path.basename(work_bam_a))[0])
@@ -79,5 +81,36 @@ def run(items, config):
        "%s-ambiguous" % data_a["genome_build"]: "%s.ambiguousSpeciesA.bam" % base_name,
        "%s-ambiguous" % data_b["genome_build"]: "%s.ambiguousSpeciesB.bam" % base_name,
        "summary": summary_file}
-    data_a["work_bam"] = "%s.disambiguatedSpeciesA.bam" % base_name
+    data_a["work_bam"] = bam.sort("%s.disambiguatedSpeciesA.bam" % base_name, config)
+    return [[data_a]]
+
+def run_cplusplus(items, config):
+    """Run third party disambiguation script, resolving into single set of calls.
+    """
+    assert len(items) == 2, "Can only resolve two organism disambiguation"
+    # check aligner, handling tophat/tophat2 distinctions
+    aligner = config["algorithm"].get("aligner")
+    aligner = "tophat" if aligner.startswith("tophat") else aligner
+    assert aligner in ["bwa", "tophat"], "Disambiguation only supported for bwa and tophat alignments."
+    if items[0]["disambiguate"].get("base"):
+        data_a, data_b = items
+    else:
+        data_b, data_a = items
+    work_bam_a = bam.sort(data_a["work_bam"], config, "queryname")
+    work_bam_b = bam.sort(data_b["work_bam"], config, "queryname")
+    out_dir = os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
+                                            os.pardir, os.pardir, "disambiguate"))
+    base_name = os.path.join(out_dir, os.path.splitext(os.path.basename(work_bam_a))[0])
+    summary_file = "%s_summary.txt" % base_name
+    if not utils.file_exists(summary_file):
+        with file_transaction(out_dir) as tx_out_dir:
+            cmd = ("disambiguate.py -s disambiguated -a {aligner} -o {tx_out_dir} "
+                   "-i {tx_out_dir} {work_bam_a} {work_bam_b}")
+            do.run(cmd.format(**locals()), "Disambiguation", data_a)
+    data_a["disambiguate"] = \
+      {data_b["genome_build"]: "%s.disambiguatedSpeciesB.bam" % base_name,
+       "%s-ambiguous" % data_a["genome_build"]: "%s.ambiguousSpeciesA.bam" % base_name,
+       "%s-ambiguous" % data_b["genome_build"]: "%s.ambiguousSpeciesB.bam" % base_name,
+       "summary": summary_file}
+    data_a["work_bam"] = bam.sort("%s.disambiguatedSpeciesA.bam" % base_name, config)
     return [[data_a]]
