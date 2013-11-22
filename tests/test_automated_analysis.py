@@ -12,7 +12,9 @@ import functools
 
 from nose import SkipTest
 from nose.plugins.attrib import attr
+import yaml
 
+from bcbio.pipeline.config_utils import load_system_config
 
 @contextlib.contextmanager
 def make_workdir():
@@ -26,7 +28,7 @@ def make_workdir():
     orig_dir = os.getcwd()
     try:
         os.chdir(dirname)
-        yield
+        yield dirname
     finally:
         os.chdir(orig_dir)
 
@@ -85,11 +87,24 @@ class AutomatedAnalysisTest(unittest.TestCase):
         os.rename(os.path.basename(dirname), dirname)
         os.remove(os.path.basename(url))
 
-    def _get_post_process_yaml(self):
+    def _get_post_process_yaml(self, workdir):
         std = os.path.join(self.data_dir, "post_process.yaml")
+        try:
+            _, system = load_system_config("bcbio_system.yaml")
+        except ValueError:
+            system = None
         sample = os.path.join(self.data_dir, "post_process-sample.yaml")
         if os.path.exists(std):
             return std
+        elif system:
+            # create local config pointing to reduced genomes
+            test_system = os.path.join(workdir, os.path.basename(system))
+            with open(system) as in_handle:
+                config = yaml.load(in_handle)
+                config["galaxy_config"] = os.path.join(self.data_dir, "universe_wsgi.ini")
+                with open(test_system, "w") as out_handle:
+                    yaml.dump(config, out_handle)
+            return test_system
         else:
             return sample
 
@@ -100,9 +115,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         XXX Multiplexing not supporting in latest versions.
         """
         self._install_test_files(self.data_dir)
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "110106_FC70BUKAAXX"),
                   os.path.join(self.data_dir, "run_info.yaml")]
             subprocess.check_call(cl)
@@ -113,9 +128,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
 
         XXX Multiplexing not supporting in latest versions.
         """
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "110221_empty_FC12345AAXX"),
                   os.path.join(self.data_dir, "run_info-empty.yaml")]
             subprocess.check_call(cl)
@@ -126,9 +141,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """Run an RNA-seq analysis with TopHat and generate gene-level counts.
         """
         self._install_test_files(self.data_dir)
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
             subprocess.check_call(cl)
@@ -138,9 +153,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """Test variant calling with GATK pipeline.
         """
         self._install_test_files(self.data_dir)
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-variantcall.yaml")]
             subprocess.check_call(cl)
@@ -151,9 +166,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """Allow BAM files as input to pipeline.
         """
         self._install_test_files(self.data_dir)
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
@@ -163,9 +178,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """Clean problem BAM input files that do not require alignment.
         """
         self._install_test_files(self.data_dir)
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bamclean.yaml")]
             subprocess.check_call(cl)
@@ -176,9 +191,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan
         """
         self._install_test_files(self.data_dir)
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "tcga_benchmark"),
                   os.path.join(self.data_dir, "run_info-cancer.yaml")]
             subprocess.check_call(cl)

@@ -8,7 +8,6 @@ from nose.plugins.attrib import attr
 
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.pipeline.config_utils import load_config
-from bcbio.pipeline import run_info
 from bcbio.provenance import programs
 from bcbio.variation import vcfutils
 

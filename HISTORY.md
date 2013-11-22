@@ -22,6 +22,8 @@
   due to speed issues.
 - Improve handling of GATK version detection, including support for Appistry versions.
 - Allow interruption of read_through trimming with Ctrl-C.
+- Improve test suite: use system configuration instead of requiring test specific setup.
+  Install and use a local version of nose using the installer provided Python.
 
 ## 0.7.4 (October 20, 3013)
 
