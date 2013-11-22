@@ -206,6 +206,8 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
     if all(map(file_exists, out_files)):
         return out_files
     with file_transaction(out_files) as tmp_out_files:
+        if isinstance(tmp_out_files, basestring):
+            tmp_out_files = [tmp_out_files]
         map(_run_cutadapt_on_single_file, izip(repeat(base_cmd), fastq_files,
                                                tmp_out_files))
     return out_files
