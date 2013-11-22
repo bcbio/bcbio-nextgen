@@ -120,7 +120,7 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
 
 def _subset_bed_by_region(in_file, out_file, region):
     orig_bed = pybedtools.BedTool(in_file)
-    region_bed = pybedtools.BedTool("\t".join(str (x) for x in region) + "\n", from_string=True)
+    region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
     orig_bed.intersect(region_bed).saveas(out_file)
 
 def subset_variant_regions(variant_regions, region, out_file):
@@ -141,8 +141,8 @@ def subset_variant_regions(variant_regions, region, out_file):
             with file_transaction(subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
                     c, s, e = region
-                    region = [c, s, e - 2]
-                    _subset_bed_by_region(variant_regions, tx_subset_file, region)
+                    safe_region = [c, s, e - 2]
+                    _subset_bed_by_region(variant_regions, tx_subset_file, safe_region)
                 else:
                     _rewrite_bed_with_chrom(variant_regions, tx_subset_file, region)
         if os.path.getsize(subset_file) == 0:
