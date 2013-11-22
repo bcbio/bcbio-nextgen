@@ -48,8 +48,10 @@ if __name__ == "__main__":
     parser.add_argument("--counts", default=False, action='store_true',
                         help="Output a counts of each start site")
     parser.add_argument("--figure", default=None, help="Generate a figure for the complexity")
+    parser.add_argument("--sample-size", default=None, type=int,
+                        help="Number of reads to sample.")
     args = parser.parse_args()
-    df = qc.starts_by_depth(args.alignment_file)
+    df = qc.starts_by_depth(args.alignment_file, args.sample_size)
     if args.figure:
         df.plot(x='reads', y='starts')
         fig = plt.gcf()
