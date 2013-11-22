@@ -115,7 +115,7 @@ def starts_by_depth(bam_file, sample_size=None):
     y is the number of unique start sites identified
     If sample size < total reads in a file the file will be downsampled.
     """
-    binsize = _count_reads_in_bamfile(bam_file) / 100
+    binsize = (_count_reads_in_bamfile(bam_file) / 100) + 1
     seen_starts = set()
     counted = 0
     num_reads = []
@@ -131,7 +131,7 @@ def starts_by_depth(bam_file, sample_size=None):
             samples = map(read_parser, filtered)
         else:
             samples = utils.reservoir_sample(filtered, sample_size, read_parser)
-            shuffle(samples)
+        shuffle(samples)
         for read in samples:
             counted += 1
             buffer.append(read)

@@ -67,9 +67,6 @@ def trim_read_through(fastq_files, dirs, lane_config):
     cores = lane_config["algorithm"].get("num_cores", 1)
     out_files = _cutadapt_trim(fastq_files, quality_format,
                                to_trim, out_files, cores)
-    # with file_transaction(out_files) as tmp_out_files:
-    #     tmp_out_files = _cutadapt_trim(fastq_files, quality_format,
-    #                                    to_trim, tmp_out_files, cores)
 
     fixed_files = remove_short_reads(out_files, dirs, lane_config)
     return fixed_files

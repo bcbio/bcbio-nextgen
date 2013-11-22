@@ -148,6 +148,20 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
             subprocess.check_call(cl)
 
+    @attr(explant=True)
+    def test_3_rnaseq(self):
+        """
+        Run an explant RNA-seq analysis with TopHat and generate gene-level counts.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir():
+            cl = ["bcbio_nextgen.py",
+                  self._get_post_process_yaml(),
+                  os.path.join(self.data_dir, os.pardir, "1_explant"),
+                  os.path.join(self.data_dir, "run_info-explant.yaml")]
+            subprocess.check_call(cl)
+
+
     @attr(speed=1)
     def test_1_variantcall(self):
         """Test variant calling with GATK pipeline.

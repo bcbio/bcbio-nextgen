@@ -24,6 +24,8 @@
 - Allow interruption of read_through trimming with Ctrl-C.
 - Improve test suite: use system configuration instead of requiring test specific setup.
   Install and use a local version of nose using the installer provided Python.
+- Fix for crash with single-end reads in read_through trimming.
+- Added a library complexity calculation for RNA-seq libraries as a QC metric
 
 ## 0.7.4 (October 20, 3013)
 
