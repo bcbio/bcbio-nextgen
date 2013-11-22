@@ -1,0 +1,13 @@
+upload:
+  dir: upload
+details:
+  - analysis: RNA-seq
+    files: ['Hsapiens_Mmusculus_1.fq']
+    algorithm:
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq, polya]
+      disambiguate: [hg19]
+    description: Test1
+    genome_build: mm9
+    lane: 1
