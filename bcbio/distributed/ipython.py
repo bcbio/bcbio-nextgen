@@ -88,10 +88,10 @@ def _get_prog_memory(resources):
         out = _str_memory_to_gb(memory)
     return out
 
-def _scale_cores_to_memory(cores, mem_per_core, sysinfo):
+def _scale_cores_to_memory(cores, mem_per_core, sysinfo, system_memory):
     """Scale multicore usage to avoid excessive memory usage based on system information.
     """
-    total_mem = int(math.floor(cores * mem_per_core))
+    total_mem = "%.1f" % (cores * mem_per_core + system_memory)
     if "cores" not in sysinfo:
         return cores, total_mem
     if cores > sysinfo["cores"]:
@@ -126,7 +126,10 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
     """
     assert len(items) > 0, "Finding job resources but no items to process"
     all_cores = [1]
-    all_memory = [2] # Use modest 2Gb memory usage per core as min baseline
+    # Use modest 2Gb memory usage per core as min baseline
+    all_memory = [2]
+    # Provide 150Mb of additional memory for the system
+    system_memory = 0.15
     algs = [get_algorithm_config(x) for x in items]
     for fn in fns:
         for prog in _get_resource_programs(fn, algs):
@@ -147,10 +150,11 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
     else:
         num_jobs, cores_per_job = 1, total
     if cores_per_job == 1:
-        memory_per_job = int(math.floor(memory_per_core))
+        memory_per_job = "%.1f" % (memory_per_core + system_memory)
         num_jobs = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
     else:
-        cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job, memory_per_core, sysinfo)
+        cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job, memory_per_core, sysinfo,
+                                                               system_memory)
     # do not overschedule if we don't have extra items to process
     num_jobs = min(num_jobs, len(items) * multiplier)
     JobResources = collections.namedtuple("JobResources", "num_jobs cores_per_job memory_per_job")
@@ -222,7 +226,7 @@ def _view_from_parallel(parallel, work_dir, config):
 
 def _get_ipython_fn(fn_name, parallel):
     return getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
-                            fromlist=["ipythontasks"]),
+                              fromlist=["ipythontasks"]),
                    fn_name)
 
 @contextlib.contextmanager
@@ -283,7 +287,7 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     items = [x for x in items if x is not None]
     algs = [get_algorithm_config(x) for x in items]
     if ((len(algs) > 0 and not algs[0].get("resource_check", True))
-        or parallel.get("view") or parallel.get("checkpoint")):
+          or parallel.get("view") or parallel.get("checkpoint")):
         checkpoint_file = None
     else:
         checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))

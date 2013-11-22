@@ -1,7 +1,8 @@
 ## 0.7.5 (in development)
 
-- Update overall project summary to move to a flexible YAML format that handles
-  multiple analysis types. Re-include target, duplication and variant metrics.
+- Update overall project metrics summary to move to a flexible YAML format that
+  handles multiple analysis types. Re-include target, duplication and variant
+  metrics.
 - Handle specification of sex in metadata and correctly call X,Y and
   mitochondrial chromosomes.
 - Avoid calling in regions with excessively deep coverage. Reduces variant calling
@@ -12,6 +13,9 @@
   creation on large BAM processing. Falls back to samtools index if not available.
 - Remove custom Picard metrics runs and pdf generation. Eliminates dependencies on
   pdflatex and R for QC metrics.
+- Improve memory handling by providing fallbacks during common memory intensive steps.
+  Better handle memory on SLURM by explicitly allowing system memory in addition
+  to that required for processing.
 - Update fastqc runs to use a BAM files downsampled to 10 million reads to avoid
   excessive run times. Part of general speed up of QC step.
 - Add Qualimap to generate plots and metrics for BAM alignments. Off by default
