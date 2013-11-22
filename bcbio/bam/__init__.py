@@ -22,6 +22,7 @@ def index(in_bam, config):
 
     Centralizes BAM indexing providing ability to switch indexing approaches.
     """
+    assert is_bam(in_bam), % "%s in not a BAM file" % in_bam
     index_file = "%s.bai" % in_bam
     alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
     if not utils.file_exists(index_file) and not utils.file_exists(alt_index_file):
@@ -97,3 +98,35 @@ def is_sam(in_file):
         return True
     else:
         return False
+
+def sort(in_bam, config, order="coordinate"):
+    """Sort a BAM file, skipping if already present.
+    """
+    assert is_bam(in_bam), % "%s in not a BAM file" % in_bam
+    sort_file = os.path.splitext(in_bam)[0] + ".sorted"
+    if not utils.file_exists(sort_file):
+        try:
+            sambamba = config_utils.get_program("sambamba", config)
+        except config_utils.CmdNotFound:
+            sambamba = None
+        samtools = config_utils.get_program("samtools", config)
+        num_cores = config["algorithm"].get("num_cores", 1)
+        with file_transaction(sort_file) as tx_sort_file:
+            order_flag = order if order else ""
+                samtools_cmd = ("{samtools} sort {order_flag} {in_bam} -o "
+                                "{tx_sort_file}")
+            if sambamba:
+                cmd = "{sambamba} sort -t {num_cores} {order_flag} {in_bam}"
+            else:
+                cmd = samtools_cmd
+            # sambamba has intermittent multicore failures. Allow
+            # retries with single core
+            try:
+                do.run(cmd.format(**locals()),
+                       "Sort BAM file (multi core, %s): %s" %
+                       (order, os.path.basename(in_bam)), log_error=False)
+            except:
+                do.run(samtools_cmd.format(**locals()),
+                       "Sort BAM file (single core, %s): %s" %
+                       (order, os.path.basename(in_bam))
+    return sort_file
