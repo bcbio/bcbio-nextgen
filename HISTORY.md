@@ -18,6 +18,8 @@
   due to speed issues.
 - Improve handling of GATK version detection, including support for Appistry versions.
 - Allow interruption of read_through trimming with Ctrl-C.
+- Fix for crash with single-end reads in read_through trimming.
+- Added a library complexity calculation for RNA-seq libraries as a QC metric
 
 ## 0.7.4 (October 20, 3013)
 
