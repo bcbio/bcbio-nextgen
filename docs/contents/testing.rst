@@ -149,30 +149,29 @@ to the NIST reference materials, enabling rapid comparisons of methods.
 Test suite
 ==========
 
-The test suite exercises the scripts driving the analysis, so are a good
-starting point to ensure correct installation. Run tests from the main
-code directory using `nose`_. To test the main variant calling
-pipeline::
+The test suite exercises the scripts driving the analysis, so are a
+good starting point to ensure correct installation. Tests use the
+`nose`_ test runner pre-installed as part of the pipeline. Grab the latest
+source code::
 
-     $ cd tests
-     $ nosetests -v -s -a speed=1
+     $ git clone https://github.com/chapmanb/bcbio-nextgen.git
 
-To run the full test suite::
+To run the standard tests::
 
-     $ nosetest -v -s
+     $ cd bcbio-nextgen/tests
+     $ ./run_tests.sh
 
-``tests/test_automated_analysis.py`` exercises the full framework using
-an automatically downloaded test dataset. It runs through barcode
-deconvolution, alignment and full SNP analysis. Tweak the configuration
-for the tests for your environment:
+To run specific subsets of the tests::
 
--  ``tests/data/automated/post_process.yaml`` -- May need adjustment to
-   point to installed software in non-standard locations. Change the
-   num\_cores parameter to test multiple processor and parallel
-   execution.
--  ``tests/data/automated/run_info.yaml`` -- Change the ``analysis``
-   variable can to 'Standard' if variant calling is not required in your
-   environment. This will run a smaller pipeline of alignment and
-   analysis.
+     $ ./run_tests.sh rnaseq
+     $ ./run_tests.sh speed=2
+     $ ./run_tests.sh devel
+
+By default the test suite will use your installed system configuration
+for running tests, substituting the test genome information instead of
+using full genomes. If you need a specific testing environment, copy
+``tests/data/automated/post_process-sample.yaml`` to
+``tests/data/automated/post_process.yaml`` to provide a test-only
+configuration.
 
 .. _nose: http://somethingaboutorange.com/mrl/projects/nose/

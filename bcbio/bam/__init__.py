@@ -24,7 +24,8 @@ def index(in_bam, config):
     """
     index_file = "%s.bai" % in_bam
     alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
-    if not utils.file_exists(index_file) and not utils.file_exists(alt_index_file):
+    if (not utils.file_uptodate(index_file, in_bam) and
+          not utils.file_uptodate(alt_index_file, in_bam)):
         try:
             sambamba = config_utils.get_program("sambamba", config)
         except config_utils.CmdNotFound:
@@ -45,7 +46,7 @@ def index(in_bam, config):
             except:
                 do.run(samtools_cmd.format(**locals()),
                        "Index BAM file (single core): %s" % os.path.basename(in_bam))
-    return index_file if utils.file_exists(index_file) else alt_index_file
+    return index_file if utils.file_uptodate(index_file, in_bam) else alt_index_file
 
 def get_downsample_pct(runner, in_bam, target_counts):
     """Retrieve percentage of file to downsample to get to target counts.
@@ -61,6 +62,7 @@ def downsample(in_bam, data, target_counts):
     """Downsample a BAM file to the specified number of target counts.
     """
     broad_runner = broad.runner_from_config(data["config"])
+    index(in_bam, data["config"])
     ds_pct = get_downsample_pct(broad_runner, in_bam, target_counts)
     if ds_pct:
         out_file = "%s-downsample%s" % os.path.splitext(in_bam)
