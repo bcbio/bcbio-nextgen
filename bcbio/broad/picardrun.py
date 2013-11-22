@@ -88,11 +88,24 @@ def picard_merge(picard, in_files, out_file=None,
 def picard_index(picard, in_bam):
     index_file = "%s.bai" % in_bam
     alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
-    if not file_exists(index_file) and not file_exists(alt_index_file):
+
+    bam_file_ctime = os.path.getctime(in_bam)
+
+    if file_exists(index_file) or file_exists(alt_index_file):
+        bam_index_file_ctime = os.path.getctime(in_bam)
+        if bam_index_file_ctime < bam_file_ctime:
+            # Index is older than the BAM file, regenerate
+            with file_transaction(index_file) as tx_index_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", tx_index_file)]
+            picard.run("BuildBamIndex", opts)
+
+    elif not file_exists(index_file) and not file_exists(alt_index_file):
         with file_transaction(index_file) as tx_index_file:
             opts = [("INPUT", in_bam),
                     ("OUTPUT", tx_index_file)]
             picard.run("BuildBamIndex", opts)
+
     return index_file if file_exists(index_file) else alt_index_file
 
 def picard_reorder(picard, in_bam, ref_file, out_file):
