@@ -154,9 +154,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         Run an explant RNA-seq analysis with TopHat and generate gene-level counts.
         """
         self._install_test_files(self.data_dir)
-        with make_workdir():
+        with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(),
+                  self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "1_explant"),
                   os.path.join(self.data_dir, "run_info-explant.yaml")]
             subprocess.check_call(cl)
