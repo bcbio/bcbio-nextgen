@@ -26,6 +26,8 @@
   Install and use a local version of nose using the installer provided Python.
 - Fix for crash with single-end reads in read_through trimming.
 - Added a library complexity calculation for RNA-seq libraries as a QC metric
+- Added sorting via sambamba. Internally bcbio-nextgen now inspects the headers
+  of SAM/BAM files to find their sorting status, so make sure tools set it correctly.
 
 ## 0.7.4 (October 20, 3013)
 
