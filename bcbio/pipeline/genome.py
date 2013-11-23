@@ -83,8 +83,12 @@ def _galaxy_loc_iter(loc_file, galaxy_dt, need_remap=False):
         for line in in_handle:
             if line.strip() and not line.startswith("#"):
                 parts = line.strip().split("\t")
-                if len(parts) == 1: # spaces instead of tabs
-                    parts = [x.strip() for x in line.strip().split("  ") if x.strip()]
+                # Detect and report spaces instead of tabs
+                if len(parts) == 1:
+                    parts = [x.strip() for x in line.strip().split(" ") if x.strip()]
+                    if len(parts) > 1:
+                        raise IOError("Galaxy location file uses spaces instead of "
+                                      "tabs to separate fields: %s" % loc_file)
                 if dbkey_i is not None and not need_remap:
                     dbkey = parts[dbkey_i]
                     cur_ref = parts[path_i]
@@ -160,7 +164,7 @@ def get_refs(genome_build, aligner, galaxy_base):
 
     if len(out_info) != 2:
         raise ValueError("Did not find genome reference for %s %s" %
-                (genome_build, aligner))
+                         (genome_build, aligner))
     else:
         return tuple(out_info)
 
