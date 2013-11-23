@@ -180,7 +180,8 @@ def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
         realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
         cmd = "{extract_recal_cmd} {dedup_cmd} {realign_cmd}  > {tx_out_file}"
         cmd = cmd.format(**locals())
-        do.run(cmd, "Piped post-alignment bamprep {0}".format(region), data)
+        do.run_memory_retry(cmd, "Piped post-alignment bamprep {0}".format(region), data,
+                            region=region)
 
 # ## Shared functionality
 

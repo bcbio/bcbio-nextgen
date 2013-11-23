@@ -45,8 +45,9 @@ def run_memory_retry(cmd, descr, data=None, check=None, region=None):
                                         "did not provide enough memory" in str(msg) or
                                         "A fatal error has been detected" in str(msg) or
                                         "USER ERROR" in str(msg) or
-                                        "java.lang.OutOfMemoryError" in str(msg)):
-                logger.info("Retrying job. Memory issue with run: %s"
+                                        "java.lang.OutOfMemoryError" in str(msg) or
+                                        "Resource temporarily unavailable" in str(msg)):
+                logger.info("Retrying job. Memory or resource issue with run: %s"
                             % _descr_str(descr, data, region))
                 time.sleep(30)
                 num_runs += 1
@@ -96,7 +97,7 @@ def _do_run(cmd, checks):
     cmd, shell_arg, executable_arg = _normalize_cmd_args(cmd)
     s = subprocess.Popen(cmd, shell=shell_arg, executable=executable_arg,
                          stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
+                         stderr=subprocess.STDOUT, close_fds=True)
     debug_stdout = collections.deque(maxlen=100)
     with contextlib.closing(s.stdout) as stdout:
         while 1:

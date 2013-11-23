@@ -92,5 +92,5 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                 params += ["-I", bam_file]
             for x in annotations:
                 params += ["-A", x]
-            broad_runner.run_gatk(params)
+            broad_runner.run_gatk(params, memory_retry=True)
     return out_file
