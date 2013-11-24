@@ -71,7 +71,7 @@ Quick start
 
 .. _system configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _sample description file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
-.. _Automatically create a processing description: _https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
+.. _Automatically create a processing description: https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
 .. _Install: https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#automated
 .. _configuration options: https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html
 
