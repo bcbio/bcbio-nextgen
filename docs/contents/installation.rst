@@ -55,6 +55,7 @@ like /usr/local, as well as custom isolated installations in non-root
 directories.
 
 .. _isolated-install:
+
 Isolated installations
 ======================
 

@@ -59,7 +59,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
                          DlInfo("genomes_automated_test.tar.gz", "genomes", 11),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
-                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 4),
+                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 5),
                          DlInfo("tcga_benchmark.tar.gz", None, 2)]
         for dl in download_data:
             url = "http://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
@@ -210,4 +210,18 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "tcga_benchmark"),
                   os.path.join(self.data_dir, "run_info-cancer.yaml")]
+            subprocess.check_call(cl)
+
+    @attr(speed=1)
+    def test_8_template(self):
+        """Create a project template from input files and metadata configuration.
+        """
+        self._install_test_files(self.data_dir)
+        fc_dir = os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX")
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py", "-w", "template", "freebayes-variant",
+                  os.path.join(fc_dir, "100326.csv"),
+                  os.path.join(fc_dir, "7_100326_FC6107FAAXX_1_fastq.txt"),
+                  os.path.join(fc_dir, "7_100326_FC6107FAAXX_2_fastq.txt"),
+                  os.path.join(fc_dir, "8_100326_FC6107FAAXX.bam")]
             subprocess.check_call(cl)

@@ -31,21 +31,39 @@ Automated sample configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 bcbio-nextgen provides a utility to create configuration files for
-multiple sample inputs using a base template. You start with one of
+multiple sample inputs using a base template. Start with one of
 the `best-practice templates`_, or define your own, then apply to
 multiple samples using the template workflow command::
 
-    bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
+    bcbio_nextgen.py -w template freebayes-variant project1.csv sample1.bam sample2_1.fq sample2_2.fq
 
-- ``gatk-variant`` is the name of the standard ``gatk-template.yaml``
+- ``freebayes-variant`` is the name of the standard ``freebayes-template.yaml``
   input, which the script fetches from GitHub. This argument can also
   be a path to a locally customized YAML configuration. In both cases,
   the script replicates the single sample template configuration to
   all input samples.
 
-- ``project1`` is a short name identifying the current project. The
-  script creates a ``project1`` directory containing the sample
-  configuration in ``project1/config/project1.yaml``.
+- ``project1.csv`` is a comma separated value file containing metadata
+  about the samples::
+
+        samplename,description,batch,phenotype,sex
+        sample1,ERR256785,batch1,normal,female
+        sample2,ERR256786,batch1,tumor
+
+  The first column links the metadata to a specific input file. The
+  template command tries to identify the ``samplename`` from read group
+  information in a BAM file, or uses the filename if no read group
+  information is present.  The remaining columns are
+  :ref:`sample-configuration` metadata key/value pairs. Columns with specific
+  usefulness beyond filling metadata information are:
+
+   - ``description`` Changes the sample description, originally
+     supplied by the file name or BAM read group, to this value.
+
+  The name of the metadata file, minus the ``.csv`` extension, is a
+  short name identifying the current project. The script creates a
+  ``project1`` directory containing the sample configuration in
+  ``project1/config/project1.yaml``.
 
 - The remaining arguments are input BAM or fastq files. The script
   pairs fastq files (identified by ``_1`` and ``_2``) and extracts
@@ -57,7 +75,7 @@ To make it easier to define your own project specific template, an
 optional first step is to download and edit a local template. First
 retrieve a standard template::
 
-    bcbio_nextgen -w template gatk-variant project1
+    bcbio_nextgen -w template freebayes-variant project1
 
 This pulls the current GATK best practice variant calling template
 into your project directory in

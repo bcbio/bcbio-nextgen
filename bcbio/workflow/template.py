@@ -6,6 +6,7 @@ as needed.
 """
 import contextlib
 import copy
+import csv
 import datetime
 import itertools
 import os
@@ -23,7 +24,7 @@ def parse_args(inputs):
     parser = HelpArgParser(
         description="Create a bcbio_sample.yaml file from a standard template and inputs")
     parser.add_argument("template", help="Template name or path to template YAML file")
-    parser.add_argument("project_name", help="Name of the current project")
+    parser.add_argument("metadata", help="CSV file with project metadata. Name of file used as project name.")
     parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
     return parser.parse_args(inputs)
 
@@ -34,7 +35,7 @@ def _prep_bam_input(f, i, base):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
     cur["files"] = os.path.abspath(f)
-    cur["description"] = get_sample_name(f) or "Sample%s" % (i+1)
+    cur["description"] = get_sample_name(f) or os.path.splitext(os.path.basename(f))[0]
     return cur
 
 def _prep_fastq_input(fs, base):
@@ -134,7 +135,7 @@ def _write_config_file(items, template, project_name, out_dir):
     out_config_file = os.path.join(config_dir, "%s.yaml" % project_name)
     out = {"fc_date": datetime.datetime.now().strftime("%y%m%d"),
            "fc_name": project_name,
-           "upload" : {"dir": "../final"},
+           "upload": {"dir": "../final"},
            "details": items}
     for k, v in template.iteritems():
         if k not in ["details"]:
@@ -143,12 +144,71 @@ def _write_config_file(items, template, project_name, out_dir):
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_config_file
 
+def _safe_name(x):
+    for prob in [" ", "."]:
+        x = x.replace(prob, "_")
+    return x
+
+def _parse_metadata(in_file):
+    """Reads metadata from a simple CSV structured input file.
+
+    samplename,batch,phenotype
+    ERR256785,batch1,normal
+    """
+    metadata = {}
+    with open(in_file) as in_handle:
+        reader = csv.reader(in_handle)
+        while 1:
+            header = reader.next()
+            if not header[0].startswith("#"):
+                break
+        keys = [x.strip() for x in header[1:]]
+        for sinfo in (x for x in reader if not x[0].startswith("#")):
+            sample = sinfo[0].strip()
+            metadata[sample] = dict(zip(keys, (x.strip() for x in sinfo[1:])))
+    return metadata
+
+def _pname_and_metadata(in_file):
+    """Retrieve metadata and project name from the input metadata CSV file.
+
+    Uses the input file name for the project name and
+
+    For back compatibility, accepts the project name as an input, providing no metadata.
+    """
+    if not os.path.isfile(in_file):
+        return _safe_name(in_file), {}
+    else:
+        return (_safe_name(os.path.splitext(os.path.basename(in_file))[0]),
+                _parse_metadata(in_file))
+
+def _add_metadata(item, metadata):
+    """Add metadata information from CSV file to current item.
+
+    Retrieves metadata based on 'description' parsed from input CSV file.
+    Adds to object and handles special keys:
+    - `description`: A new description for the item. Used to relabel items
+       based on the pre-determined description from fastq name or BAM read groups.
+    """
+    item_md = metadata.get(item["description"])
+    if "description" in item_md:
+        if item_md["description"]:
+            item["description"] = item_md["description"]
+            del item_md["description"]
+    if len(item_md) > 0:
+        if "metadata" not in item:
+            item["metadata"] = {}
+        for k, v in item_md.iteritems():
+            if v:
+                item["metadata"][k] = v
+    return item
+
 def setup(args):
     template, template_txt = _read_template(args.template)
     base_item = template["details"][0]
-    items = _prep_items_from_base(base_item, args.input_files)
+    project_name, metadata = _pname_and_metadata(args.metadata)
+    items = [_add_metadata(item, metadata) for item in
+             _prep_items_from_base(base_item, args.input_files)]
 
-    project_name = args.project_name.replace(" ", "_")
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     if len(items) == 0:

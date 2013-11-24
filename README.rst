@@ -54,22 +54,26 @@ Quick start
          wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
          python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
 
-producing an editable `system configuration file`_ referencing the installed
-software, data and system information.
+   producing an editable `system configuration file`_ referencing the installed
+   software, data and system information.
 
-2. Create a `sample configuration file`_ with samples from your
-   project (substitute the example BAM and fastq names below with the full
-   path to your sample files)::
+2. `Automatically create a processing description` of sample FASTQ and BAM files
+   from your project, and a CSV file of sample metadata::
 
-         bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
+         bcbio_nextgen.py -w template freebayes-variant project1.csv sample1.bam sample2_1.fq sample2_2.fq
+
+   This produces a `sample description file` containing pipeline `configuration options`.
 
 3. Run analysis, distributed across 8 local cores::
 
-         bcbio_nextgen.py bcbio_sample.yaml -n 8
+         cd project1/work
+         bcbio_nextgen.py ../config/project1.yaml -n 8
 
 .. _system configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
-.. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+.. _sample description file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+.. _Automatically create a processing description: _https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
 .. _Install: https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#automated
+.. _configuration options: https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html
 
 Documentation
 -------------
