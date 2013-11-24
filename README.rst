@@ -57,12 +57,12 @@ Quick start
    producing an editable `system configuration file`_ referencing the installed
    software, data and system information.
 
-2. `Automatically create a processing description` of sample FASTQ and BAM files
+2. `Automatically create a processing description`_ of sample FASTQ and BAM files
    from your project, and a CSV file of sample metadata::
 
          bcbio_nextgen.py -w template freebayes-variant project1.csv sample1.bam sample2_1.fq sample2_2.fq
 
-   This produces a `sample description file` containing pipeline `configuration options`.
+   This produces a `sample description file`_ containing pipeline `configuration options`_.
 
 3. Run analysis, distributed across 8 local cores::
 
