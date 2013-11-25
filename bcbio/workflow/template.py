@@ -20,10 +20,13 @@ from bcbio.bam import fastq
 from bcbio.variation.cortex import get_sample_name
 from bcbio.workflow.xprize import HelpArgParser
 
+
 def parse_args(inputs):
     parser = HelpArgParser(
         description="Create a bcbio_sample.yaml file from a standard template and inputs")
-    parser.add_argument("template", help="Template name or path to template YAML file")
+    parser.add_argument("template", help=("Template name or path to template YAML file. "
+            "Built in choices: freebayes-variant, gatk-variant, tumor-paired, "
+            "illumina-rnaseq, illumina-chipseq"))
     parser.add_argument("metadata", help="CSV file with project metadata. Name of file used as project name.")
     parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
     return parser.parse_args(inputs)
@@ -223,3 +226,5 @@ def setup(args):
         print "Edit to finalize and run with:"
         print "  cd %s" % work_dir
         print "  bcbio_nextgen.py ../config/%s" % os.path.basename(out_config_file)
+
+
