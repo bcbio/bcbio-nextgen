@@ -189,7 +189,7 @@ def _add_metadata(item, metadata):
     - `description`: A new description for the item. Used to relabel items
        based on the pre-determined description from fastq name or BAM read groups.
     """
-    item_md = metadata.get(item["description"])
+    item_md = metadata.get(item["description"], {})
     if "description" in item_md:
         if item_md["description"]:
             item["description"] = item_md["description"]
