@@ -7,6 +7,7 @@ from celery.task import task
 from bcbio.pipeline import sample, lane, qcsummary, toplevel, storage, shared, variation, validate
 from bcbio import structural
 from bcbio.variation import realign, genotype, ensemble, population, multi, recalibrate, vcfutils
+from bcbio import chipseq
 
 # Global configuration for tasks in the main celeryconfig module
 import celeryconfig
@@ -117,3 +118,7 @@ def test(x):
     print x
     time.sleep(5)
     return x
+
+@task
+def clean_chipseq_aligment(*args):
+    return chipseq.clean_chipseq_alignment(*args)

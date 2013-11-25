@@ -386,6 +386,18 @@ class RnaseqPipeline(AbstractPipeline):
         #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         return samples
 
+class ChipseqPipeline(AbstractPipeline):
+    name = "chip-seq"
+
+    @classmethod
+    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
+        lane_items = run_parallel("trim_lane", lane_items)
+        samples = disambiguate.split(lane_items)
+        samples = run_parallel("process_alignment", samples)
+        samples = run_parallel("clean_chipseq_alignment", samples)
+        samples = qcsummary.generate_parallel(samples, run_parallel)
+        return samples
+
 def _get_pipeline(item):
     from bcbio.log import logger
     SUPPORTED_PIPELINES = {x.name.lower(): x for x in

@@ -149,7 +149,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(explant=True)
-    def test_3_rnaseq(self):
+    def test_explant(self):
         """
         Run an explant RNA-seq analysis with TopHat and generate gene-level counts.
         """
@@ -159,6 +159,19 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   self._get_post_process_yaml(workdir),
                   os.path.join(self.data_dir, os.pardir, "1_explant"),
                   os.path.join(self.data_dir, "run_info-explant.yaml")]
+            subprocess.check_call(cl)
+
+    @attr(chipseq=True)
+    def test_chipseq(self):
+        """
+        Run a chip-seq alignment with Bowtie2
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  self._get_post_process_yaml(workdir),
+                  os.path.join(self.data_dir, os.pardir, "test_chipseq"),
+                  os.path.join(self.data_dir, "run_info-chipseq.yaml")]
             subprocess.check_call(cl)
 
 

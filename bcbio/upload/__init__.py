@@ -33,10 +33,19 @@ def _get_files(sample):
         return _get_files_variantcall(sample)
     elif analysis in ["RNA-seq"]:
         return _get_files_rnaseq(sample)
+    elif analysis.lower() in ["chip-seq"]:
+        return _get_files_chipseq(sample)
     else:
         return []
 
 def _get_files_rnaseq(sample):
+    out = []
+    algorithm = sample["config"]["algorithm"]
+    out = _maybe_add_summary(algorithm, sample, out)
+    out = _maybe_add_alignment(algorithm, sample, out)
+    return _add_meta(out, sample)
+
+def _get_files_chipseq(sample):
     out = []
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)

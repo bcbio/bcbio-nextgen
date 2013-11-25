@@ -160,3 +160,18 @@ def _get_sort_stem(in_bam, order):
     for suffix in SUFFIXES:
         sort_base = sort_base.split(suffix)[0]
     return sort_base + SUFFIXES[order]
+
+def is_sam(in_file):
+    _, ext = os.path.splitext(in_file)
+    if ext == ".sam":
+        return True
+    else:
+        return False
+
+def is_bam(in_file):
+    _, ext = os.path.splitext(in_file)
+    if ext == ".bam":
+        return True
+    else:
+        return False
+

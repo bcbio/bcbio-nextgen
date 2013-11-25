@@ -56,6 +56,8 @@ def _run_qc_tools(bam_file, data):
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
         to_run.append(("complexity", _run_complexity))
+    elif data["analysis"].lower() == "chip-seq":
+        to_run.append(["bamtools", _run_bamtools_stats])
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
