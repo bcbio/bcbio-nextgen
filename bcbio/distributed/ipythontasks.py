@@ -9,6 +9,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import disambiguate, sample, lane, qcsummary, shared, variation
 from bcbio.provenance import system
 from bcbio import structural
+from bcbio import chipseq
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
@@ -183,3 +184,7 @@ def run_disambiguate(*args):
 @require(system)
 def machine_info(*args):
     return system.machine_info()
+
+@require(chipseq)
+def clean_chipseq_alignment(*args):
+    return chipseq.machine_info()

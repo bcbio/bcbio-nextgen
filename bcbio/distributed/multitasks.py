@@ -6,6 +6,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import disambiguate, lane, qcsummary, sample, shared, variation
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
+from bcbio import chipseq
 
 @utils.map_wrap
 def process_lane(*args):
@@ -126,3 +127,7 @@ coverage_summary.metadata = {"resources": ["bcbio_coverage"]}
 @utils.map_wrap
 def run_disambiguate(*args):
     return disambiguate.run(*args)
+
+@utils.map_wrap
+def clean_chipseq_alignment(*args):
+    return chipseq.clean_chipseq_alignment(*args)

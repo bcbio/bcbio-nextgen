@@ -485,3 +485,7 @@ def reservoir_sample(stream, num_items, item_parser=lambda x: x):
             if r < num_items:
                 kept[r] = item_parser(item)
     return kept
+
+
+def compose(f, g):
+    return lambda x: f(g(x))

@@ -1,0 +1,12 @@
+upload:
+  dir: upload
+details:
+  - analysis: chip-seq
+    files: ['Hsapiens_Mmusculus_1.fq']
+    algorithm:
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq]
+    description: Test1
+    genome_build: hg19
+    lane: test
