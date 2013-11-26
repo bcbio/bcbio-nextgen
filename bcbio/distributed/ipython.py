@@ -95,10 +95,10 @@ def _scale_cores_to_memory(cores, mem_per_core, sysinfo, system_memory):
     if "cores" not in sysinfo:
         return cores, total_mem
     if cores > sysinfo["cores"]:
-        cores = sysinfo["cores"]
+        cores = int(sysinfo["cores"])
     if total_mem > sysinfo["memory"]:
-        total_mem = sysinfo["memory"]
-    cores = min(cores, int(math.ceil(float(total_mem) / mem_per_core)))
+        total_mem = float(sysinfo["memory"]) - system_memory
+    cores = max(1, min(cores, int(math.floor(float(total_mem) / mem_per_core))))
     return cores, total_mem
 
 def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
@@ -128,8 +128,8 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
     all_cores = [1]
     # Use modest 2Gb memory usage per core as min baseline
     all_memory = [2]
-    # Provide 150Mb of additional memory for the system
-    system_memory = 0.15
+    # Provide 250Mb of additional memory for the system
+    system_memory = 0.25
     algs = [get_algorithm_config(x) for x in items]
     for fn in fns:
         for prog in _get_resource_programs(fn, algs):
