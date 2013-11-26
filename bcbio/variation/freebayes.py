@@ -27,7 +27,7 @@ def _freebayes_options_from_config(items, aconfig, out_file, region=None):
     variant_regions = aconfig.get("variant_regions", None)
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
-        if os.path.isfile(target):
+        if isinstance(target, basestring) and os.path.isfile(target):
             opts += ["--targets", target]
         else:
             opts += ["--region", region_to_freebayes(target)]
