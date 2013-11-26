@@ -66,6 +66,7 @@ def downsample(in_bam, data, target_counts):
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
                 args = ["-T", "PrintReads",
+                        "--filter_reads_with_N_cigar",
                         "-R", data["sam_ref"],
                         "-I", in_bam,
                         "--downsample_to_fraction", "%.3f" % ds_pct,
