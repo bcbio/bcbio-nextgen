@@ -94,10 +94,8 @@ def _scale_cores_to_memory(cores, mem_per_core, sysinfo, system_memory):
     total_mem = "%.1f" % (cores * mem_per_core + system_memory)
     if "cores" not in sysinfo:
         return cores, total_mem
-    if cores > sysinfo["cores"]:
-        cores = int(sysinfo["cores"])
-    if total_mem > sysinfo["memory"]:
-        total_mem = float(sysinfo["memory"]) - system_memory
+    cores = min(cores, int(sysinfo["cores"]))
+    total_mem = min(total_mem, float(sysinfo["memory"]) - system_memory)
     cores = max(1, min(cores, int(math.floor(float(total_mem) / mem_per_core))))
     return cores, total_mem
 
@@ -109,7 +107,7 @@ def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     sys_mem_per_core = float(sysinfo["memory"]) / float(sysinfo["cores"])
     if sys_mem_per_core < mem_per_core:
         pct = sys_mem_per_core / float(mem_per_core)
-        target_jobs = int(math.floor(jobs * pct))
+        target_jobs = int(math.floor(min(jobs, int(sysinfo["cores"])) * pct))
         return max(target_jobs, 1)
     else:
         return jobs
