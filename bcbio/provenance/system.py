@@ -42,14 +42,15 @@ def _get_machine_info(parallel, run_parallel, sys_config):
                             "slurm": _slurm_info,
                           }
         try:
-            return sched_info_dict[ parallel["scheduler"].lower() ]( parallel["queue"] )
+            return sched_info_dict[parallel["scheduler"].lower()](parallel["queue"])
         except KeyError:
             logger.info("Resource query function not implemented for scheduler \"{0}\"; "
-                         "submitting job to queue".format( parallel["scheduler"] ) )
+                         "submitting job to queue".format(parallel["scheduler"]))
         except:
             # If something goes wrong, just hit the queue
-            logger.warn("Couldn't get machine information from resource query function for queue \"{0}\" on scheduler \"{1}\"; "
-                         "submitting job to queue".format( parallel["queue"], parallel["scheduler"] ) )
+            logger.warn("Couldn't get machine information from resource query function for queue "
+                        "'{0}' on scheduler \"{1}\"; "
+                         "submitting job to queue".format(parallel["queue"], parallel["scheduler"]))
     return run_parallel("machine_info", [[sys_config]])
 
 def _slurm_info(queue):
@@ -59,7 +60,7 @@ def _slurm_info(queue):
     num_cpus, mem = subprocess.check_output(shlex.split(cl)).split()
     # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
     mem = mem.replace('+', '')
-    return [{"cores": int(num_cpus), "memory": int(mem)/1000, "name": "slurm_machine"}]
+    return [{"cores": int(num_cpus), "memory": float(mem) / 1024.0, "name": "slurm_machine"}]
 
 def _combine_machine_info(xs):
     if len(xs) == 1:
@@ -87,7 +88,7 @@ def machine_info():
     import psutil
     BYTES_IN_GIG = 1073741824
     free_bytes = psutil.virtual_memory().available
-    return [{"memory": int(free_bytes / BYTES_IN_GIG), "cores": multiprocessing.cpu_count(),
+    return [{"memory": float(free_bytes / BYTES_IN_GIG), "cores": multiprocessing.cpu_count(),
              "name": socket.gethostname()}]
 
 def open_file_limit():
