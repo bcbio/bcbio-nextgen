@@ -3,6 +3,9 @@
 - Update overall project metrics summary to move to a flexible YAML format that
   handles multiple analysis types. Re-include target, duplication and variant
   metrics.
+- Support disambiguation of mixed samples for RNA-seq pipelines. Handles alignment
+  to two genomes, running disambiguation and continuation of disambiguated samples
+  through the pipeline. Contributed by Miika Ahdesmaki and AstraZenenca.
 - Handle specification of sex in metadata and correctly call X,Y and
   mitochondrial chromosomes.
 - Avoid calling in regions with excessively deep coverage. Reduces variant calling

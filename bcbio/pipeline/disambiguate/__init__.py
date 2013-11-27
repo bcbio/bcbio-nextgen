@@ -4,10 +4,8 @@ Given specification of mixed input samples, splits a sample into multiple
 sub-samples for alignment to individual genomes, then runs third-party disambiguation
 scripts to reconcile.
 
-XXX Currently relies on manual install of disambiguation scripts contributed
-by  AstraZeneca:
+Uses disambiguation scripts contributed by AstraZeneca, incorporated into bcbio-nextgen:
 https://github.com/mjafin/disambiguate
-Needs fully automated integration, or incorporation into bcbio-nextgen.
 """
 import collections
 import copy
@@ -15,6 +13,7 @@ import os
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline.disambiguate.run import main as disambiguate_main
 from bcbio.pipeline import run_info
 from bcbio.provenance import do
 from bcbio import bam
@@ -73,9 +72,11 @@ def run(items, config):
     summary_file = "%s_summary.txt" % base_name
     if not utils.file_exists(summary_file):
         with file_transaction(out_dir) as tx_out_dir:
-            cmd = ("disambiguate.py --no-sort -a {aligner} -o {tx_out_dir} -i {tx_out_dir} "
-                   "{work_bam_a} {work_bam_b}")
-            do.run(cmd.format(**locals()), "Disambiguation", data_a)
+            Args = collections.namedtuple("Args", "A B output_dir intermediate_dir "
+                                          "no_sort prefix aligner")
+            args = Args(work_bam_a, work_bam_b, tx_out_dir, tx_out_dir,
+                        True, "", aligner)
+            disambiguate_main(args)
     data_a["disambiguate"] = \
       {data_b["genome_build"]: "%s.disambiguatedSpeciesB.bam" % base_name,
        "%s-ambiguous" % data_a["genome_build"]: "%s.ambiguousSpeciesA.bam" % base_name,
@@ -104,8 +105,8 @@ def run_cplusplus(items, config):
     summary_file = "%s_summary.txt" % base_name
     if not utils.file_exists(summary_file):
         with file_transaction(out_dir) as tx_out_dir:
-            cmd = ("disambiguate.py -s disambiguated -a {aligner} -o {tx_out_dir} "
-                   "-i {tx_out_dir} {work_bam_a} {work_bam_b}")
+            raise NotImplementedError("Still need to test and support C++ version")
+            cmd = ""
             do.run(cmd.format(**locals()), "Disambiguation", data_a)
     data_a["disambiguate"] = \
       {data_b["genome_build"]: "%s.disambiguatedSpeciesB.bam" % base_name,

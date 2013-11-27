@@ -199,6 +199,11 @@ Alignment
    queryname. For additional processing through standard pipelines
    requires coordinate sorted inputs. The default is to not do
    additional sorting and assume pre-sorted BAMs.
+- ``disambiguate`` For mixed or explant samples, provide a list of
+  ``genome_build``  identifiers to check and remove from alignment. Currently
+  supports cleaning a single organism. For example, with ``genome_build: hg19``
+  and ``disambiguate: [mm10]``, it will align to hg19 and mm10, run
+  disambiguation and continue with reads confidently aligned to hg19.
 -  ``trim_reads`` Can be set to trim low quality ends or to also trim off,
     in conjunction with the ``adapters`` field a set of adapter sequences or
     poly-A tails that could appear on the ends of reads:
