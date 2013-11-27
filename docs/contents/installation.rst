@@ -23,7 +23,7 @@ for configuring the installation process. Some useful arguments are:
 
 - ``--nosudo`` For running in environments where you lack administrator
   privileges.
-- ``--isolate`` Avoid updating users ``~/.bashrc`` if installing in a
+- ``--isolate`` Avoid updating the user's ``~/.bashrc`` if installing in a
   non-standard PATH. This facilitates creation of isolated modules
   without disrupting the user's environmental setup.
 - ``--nodata`` Do not install genome data.
@@ -52,7 +52,9 @@ being able to manage and evolve a consistent analysis environment as
 algorithms continue to evolve and improve. The installer is flexible
 enough to handle both system integrations into standard directories
 like /usr/local, as well as custom isolated installations in non-root
-directories.
+directories. The :ref:`upgrade-install` section has additional
+documentation on including additional genome data and software as part
+of your system, and keeping everything up to date.
 
 .. _isolated-install:
 
@@ -81,22 +83,24 @@ your `~/.bashrc` with::
     export LD_LIBRARY_PATH=/path_to_bcbio/lib:$LD_LIBRARY_PATH
     export PERL5LIB=/path_to_bcbio/lib/perl5:/path_to_bcbio/perl5/site_perl:${PERL5LIB}
 
+.. _upgrade-install:
+
 Upgrade
 =======
 
 We use the same automated installation process for performing upgrades
-of tools, software and data in place. With a recent version of
-bcbio-nextgen (0.7.0+), update with::
+of tools, software and data in place. Since there are multiple targets
+and we want to avoid upgrading anything unexpectedly, we have specific
+arguments for each. Generally, you'd want to upgrade the code, tools
+and data together with::
 
-  bcbio_nextgen.py upgrade --tools
+  bcbio_nextgen.py upgrade -u stable --tools --data
 
-In addition to the installation options mentioned above, tune the
-upgrade with these options:
+Tune the upgrade with these options:
 
-- ``-u`` Type of upgrade to do for bcbio-nextgen code. The default is
-  ``stable`` but you can also specify ``development`` to get the
-  latest code from GitHub and ``skip`` to only upgrade tools and data
-  without the library.
+- ``-u`` Type of upgrade to do for bcbio-nextgen code. ``stable``
+  gets the most recent released version and ``development``
+  retrieves the latest code from GitHub.
 
 - ``--toolplus`` Specify additional categories of tools to include.
   These may require manual intervention or be data intensive. You can
@@ -123,9 +127,16 @@ upgrade with these options:
   specify ``--tooldir`` for the first upgrade. You can also pass
   ``--tooldir`` to install to a different directory.
 
-To upgrade older bcbio-nextgen versions that don't have the ``upgrade``
-command, do ``bcbio_nextgen.py -u stable`` to get the latest release
-code.
+- Leave out the ``--data`` option if you don't want to get any upgrades
+  of associated genome data.
+
+The upgrade approach changed slightly as of 0.7.5 to be more
+consistent.  In earlier versions, to get a full upgrade leave out the
+``--data`` argument since that was the default. The best approach if
+you find the arguments are out of date is to do a ``bcbio_nextgen.py
+upgrade -u stable`` to get the latest version, then proceed
+again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
+``bcbio_nextgen.py -u stable`` to get up to date.
 
 On a Virtual Machine
 ====================

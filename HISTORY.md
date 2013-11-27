@@ -7,6 +7,9 @@
   mitochondrial chromosomes.
 - Avoid calling in regions with excessively deep coverage. Reduces variant calling
   bottlenecks in repetitive regions with 25,000 or more reads.
+- Improve `bcbio_nextgen.py upgrade` function to be more consistent on handling of
+  code, tools and data. Now each require an implicit specification, while other
+  options are remembered. Thanks to Jakub Nowacki.
 - Generalize retrieval of RNA-seq resources (GTF files, transcriptome indexes) to use
   genome-resources.yaml. Updates all genome resources files. Contributed by James Porter.
 - Use sambamba for indexing, which allows multicore indexing to speed up index

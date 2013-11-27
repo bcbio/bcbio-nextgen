@@ -33,7 +33,7 @@ def main(args, sys_argv):
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
     print("Installing data and third party dependencies")
-    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args))
+    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args, bcbio))
     system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
     print("Finished: bcbio-nextgen, tools and data installed")
@@ -43,11 +43,20 @@ def main(args, sys_argv):
     print(" Ready to use system configuration at:\n  %s" % system_config)
     print(" Edit configuration file as needed to match your machine or cluster")
 
-def _clean_args(sys_argv, args):
+def _clean_args(sys_argv, args, bcbio):
     """Remove data directory from arguments to pass to upgrade function.
     """
-    return [x for x in sys_argv if
+    base = [x for x in sys_argv if
             x.startswith("-") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
+    # specification of data argument changes in install (default data) to upgrade (default nodata)
+    # in bcbio_nextgen 0.7.5 and beyond
+    version = subprocess.check_output([bcbio["bcbio_nextgen.py"], "--version"]).strip()
+    if version > "0.7.4":
+        if "--nodata" in base:
+            base.remove("--nodata")
+        else:
+            base.append("--data")
+    return base
 
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.

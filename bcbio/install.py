@@ -243,15 +243,15 @@ def add_subparser(subparsers):
                         help="Boolean argument specifying upgrade of tools. Uses previously saved install directory",
                         action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
-                        choices=["stable", "development", "system", "skip"], default="stable")
+                        choices=["stable", "development", "system", "skip"], default="skip")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"])
-    parser.add_argument("--nodata", help="Do not install data dependencies",
-                        dest="install_data", action="store_false", default=True)
+    parser.add_argument("--data", help="Upgrade data dependencies",
+                        dest="install_data", action="store_true", default=False)
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
