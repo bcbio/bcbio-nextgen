@@ -127,6 +127,10 @@ def _remove_read_number(in_file, sam_file):
     """
     out_file = os.path.join(os.path.dirname(sam_file),
                             "%s-safe%s" % os.path.splitext(os.path.basename(in_file)))
+    # file already exists and is zero means we already skipped the removal and
+    # are just using the original file
+    if os.path.exists(out_file) and os.path.getsize(out_file) == 0:
+        return in_file
     if not os.path.exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with open(in_file) as in_handle:
