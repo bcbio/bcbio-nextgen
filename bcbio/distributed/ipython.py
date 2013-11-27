@@ -107,7 +107,7 @@ def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     sys_mem_per_core = float(sysinfo["memory"]) / float(sysinfo["cores"])
     if sys_mem_per_core < mem_per_core:
         pct = sys_mem_per_core / float(mem_per_core)
-        target_jobs = int(math.floor(min(jobs, int(sysinfo["cores"])) * pct))
+        target_jobs = int(math.floor(jobs * pct))
         return max(target_jobs, 1)
     else:
         return jobs
