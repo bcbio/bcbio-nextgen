@@ -44,7 +44,6 @@ def parallel_runner(parallel, dirs, config, config_file=None):
             jobr = ipython.find_job_resources([fn], parallel, items, sysinfo, config,
                                               parallel.get("multiplier", 1),
                                               max_multicore=int(sysinfo["cores"]))
-            print jobr
             items = [ipython.add_cores_to_config(x, jobr.cores_per_job) for x in items]
             if joblib is None:
                 raise ImportError("Need joblib for multiprocessing parallelization")
