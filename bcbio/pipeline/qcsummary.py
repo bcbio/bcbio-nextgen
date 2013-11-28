@@ -122,13 +122,16 @@ def _run_fastqc(bam_file, data, fastqc_out):
         ds_bam = bam.downsample(bam_file, data, 1e7)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         bam_file = ds_bam if ds_bam else bam_file
-        cl = [config_utils.get_program("fastqc", data["config"]),
-              "-t", str(num_cores), "-o", work_dir, "-f", "bam", bam_file]
-        do.run(cl, "FastQC: %s" % data["name"][-1])
-        fastqc_outdir = os.path.join(work_dir, "%s_fastqc" % os.path.splitext(os.path.basename(bam_file))[0])
-        if os.path.exists("%s.zip" % fastqc_outdir):
-            os.remove("%s.zip" % fastqc_outdir)
-        shutil.move(fastqc_outdir, fastqc_out)
+        with utils.curdir_tmpdir(work_dir) as tx_tmp_dir:
+            with utils.chdir(tx_tmp_dir):
+                cl = [config_utils.get_program("fastqc", data["config"]),
+                      "-t", str(num_cores), "-o", tx_tmp_dir, "-f", "bam", bam_file]
+                do.run(cl, "FastQC: %s" % data["name"][-1])
+                fastqc_outdir = os.path.join(tx_tmp_dir,
+                                             "%s_fastqc" % os.path.splitext(os.path.basename(bam_file))[0])
+                if os.path.exists("%s.zip" % fastqc_outdir):
+                    os.remove("%s.zip" % fastqc_outdir)
+                shutil.move(fastqc_outdir, fastqc_out)
         if ds_bam and os.path.exists(ds_bam):
             os.remove(ds_bam)
     parser = FastQCParser(fastqc_out)
