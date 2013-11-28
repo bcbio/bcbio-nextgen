@@ -31,11 +31,12 @@ def _setup_logging(args):
     handler = setup_local_logging(config, config.get("parallel", {}))
     try:
         yield None
-        if hasattr(handler, "close"):
-            handler.close()
     except:
         logger.exception("Unexpected error")
         raise
+    finally:
+        if hasattr(handler, "close"):
+            handler.close()
 
 @require(lane)
 def process_lane(*args):

@@ -41,6 +41,9 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
         self.hostname = hostname
         if context is None:
             context = zmq.Context()
+            self._context = context
+        else:
+            self._context = None
         self.socket = context.socket(zmq.PUSH)
         if addr is not None:
             self.socket.connect(addr)
@@ -49,6 +52,11 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
         if self.hostname:
             inject_hostname.process(record)
         return super(ZeroMQPushHandler, self).emit(record)
+
+    def close(self):
+        if self._context:
+            self._context.destroy(linger=0)
+        self.socket.close(linger=0)
 
 class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
 
