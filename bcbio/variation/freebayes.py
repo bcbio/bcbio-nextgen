@@ -52,7 +52,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                 cl += ["-b", align_bam]
             cl += _freebayes_options_from_config(items, config["algorithm"], out_file, region)
             do.run(cl, "Genotyping with FreeBayes", {})
-        _clean_freebayes_output(out_file)
+        clean_vcf_output(out_file, _clean_freebayes_output, "nodups")
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files["dbsnp"],
                                                ref_file, config)
     return ann_file
@@ -65,7 +65,7 @@ def _move_vcf(orig_file, new_file):
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
 
-def _clean_freebayes_output(in_file):
+def _clean_freebayes_output(line):
     """Clean FreeBayes output to make post-processing with GATK happy.
     - Remove lines from FreeBayes outputs where REF/ALT are identical:
       2       22816178        .       G       G       0.0339196
@@ -73,20 +73,30 @@ def _clean_freebayes_output(in_file):
       4       60594753        .       TGAAA   T,T
     - Remove Type=Int specifications which are not valid VCF and GATK chokes on.
     """
-    out_file = apply("{0}-nodups{1}".format, os.path.splitext(in_file))
+    if line.startswith("#"):
+        line = line.replace("Type=Int,D", "Type=Integer,D")
+        return line
+    else:
+        parts = line.split("\t")
+        alleles = [x.strip() for x in parts[4].split(",")] + [parts[3].strip()]
+        if len(alleles) == len(set(alleles)):
+            return line
+    return None
+
+def clean_vcf_output(orig_file, clean_fn, name="clean"):
+    """Provide framework to clean a file in-place, with the specified clean function.
+    """
+    base, ext = os.path.splitext(orig_file)
+    out_file = "{0}-{1}{2}".format(base, name, ext)
     if not file_exists(out_file):
-        with open(in_file) as in_handle:
-            with open(out_file, "w") as out_handle:
-                for line in in_handle:
-                    if line.startswith("#"):
-                        line = line.replace("Type=Int,D", "Type=Integer,D")
-                        out_handle.write(line)
-                    else:
-                        parts = line.split("\t")
-                        alleles = [x.strip() for x in parts[4].split(",")] + [parts[3].strip()]
-                        if len(alleles) == len(set(alleles)):
-                            out_handle.write(line)
-        _move_vcf(in_file, "{0}.orig".format(in_file))
-        _move_vcf(out_file, in_file)
+        with open(orig_file) as in_handle:
+            with file_transaction(out_file) as tx_out_file:
+                with open(out_file, "w") as out_handle:
+                    for line in in_handle:
+                        update_line = clean_fn(line)
+                        if update_line:
+                            out_handle.write(update_line)
+        _move_vcf(orig_file, "{0}.orig".format(orig_file))
+        _move_vcf(out_file, orig_file)
         with open(out_file, "w") as out_handle:
-            out_handle.write("Moved to {0}".format(in_file))
+            out_handle.write("Moved to {0}".format(orig_file))

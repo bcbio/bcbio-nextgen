@@ -11,7 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import file_exists, append_stem
-from bcbio.variation import samtools
+from bcbio.variation import freebayes, samtools
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
                                       get_paired_bams)
 
@@ -313,3 +313,16 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # variants, so we create a correctly formatted empty file
     if os.path.getsize(out_file) == 0:
         write_empty_vcf(out_file)
+    else:
+        freebayes.clean_vcf_output(out_file, _clean_varscan_line)
+
+def _clean_varscan_line(line):
+    """Avoid lines with non-GATC bases, ambiguous output bases make GATK unhappy.
+    """
+    if not line.startswith("#"):
+        parts = line.split("\t")
+        alleles = [x.strip() for x in parts[4].split(",")] + [parts[3].strip()]
+        for a in alleles:
+            if len(set(a) - set("GATCgatc")) > 0:
+                return None
+    return line

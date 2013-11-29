@@ -44,7 +44,6 @@ def run_memory_retry(cmd, descr, data=None, check=None, region=None):
             if num_runs < max_runs and ("insufficient memory" in str(msg) or
                                         "did not provide enough memory" in str(msg) or
                                         "A fatal error has been detected" in str(msg) or
-                                        "USER ERROR" in str(msg) or
                                         "java.lang.OutOfMemoryError" in str(msg) or
                                         "Resource temporarily unavailable" in str(msg)):
                 logger.info("Retrying job. Memory or resource issue with run: %s"
