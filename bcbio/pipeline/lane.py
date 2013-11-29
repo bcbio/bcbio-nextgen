@@ -102,7 +102,7 @@ def _check_prealigned_bam(in_bam, ref_file, config):
     for bc, rc in itertools.izip_longest(bam_contigs, ref_contigs):
         if bc != rc:
             if bc and rc:
-                problems.append("Reference mismatch. BAM: %s Reference: %s" (bc, rc))
+                problems.append("Reference mismatch. BAM: %s Reference: %s" % (bc, rc))
             elif bc:
                 problems.append("Extra BAM chromosomes: %s" % bc)
             elif rc:
