@@ -1,4 +1,4 @@
-## 0.7.5 (in development)
+## 0.7.5 (November 29, 2013)
 
 - Update overall project metrics summary to move to a flexible YAML format that
   handles multiple analysis types. Re-include target, duplication and variant
@@ -8,6 +8,9 @@
   through the pipeline. Contributed by Miika Ahdesmaki and AstraZenenca.
 - Handle specification of sex in metadata and correctly call X,Y and
   mitochondrial chromosomes.
+- Fix issues with open file handles for large population runs. Ensure ZeroMQ contexts
+  are closed and enable extension of ulimit soft file and user process limits within
+  user available hard limits.
 - Avoid calling in regions with excessively deep coverage. Reduces variant calling
   bottlenecks in repetitive regions with 25,000 or more reads.
 - Improve `bcbio_nextgen.py upgrade` function to be more consistent on handling of
@@ -35,7 +38,7 @@
 - Added sorting via sambamba. Internally bcbio-nextgen now inspects the headers
   of SAM/BAM files to find their sorting status, so make sure tools set it correctly.
 
-## 0.7.4 (October 20, 3013)
+## 0.7.4 (October 20, 2013)
 
 - Framework for indexing input reads using parallel bgzip and grabix, to handle
   distributed alignment. Enables further distribution of alignment step beyond
