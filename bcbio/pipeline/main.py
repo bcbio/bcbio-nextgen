@@ -23,6 +23,7 @@ from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.variation import coverage, ensemble, population, recalibrate, validate
+from bcbio.rnaseq.count import combine_count_files
 
 def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,
              numcores=None, paralleltype=None, queue=None, scheduler=None,
@@ -382,6 +383,10 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("process_alignment", samples)
         samples = disambiguate.resolve(samples, run_parallel)
         samples = run_parallel("generate_transcript_counts", samples)
+        combined = combine_count_files([x[0].get("count_file") for x in samples])
+        for x in samples:
+            x[0]["combined_counts"] = combined
+
         samples = qcsummary.generate_parallel(samples, run_parallel)
         #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
         return samples

@@ -6,6 +6,7 @@ import os
 import sys
 import HTSeq
 import itertools
+import pandas as pd
 
 from bcbio.utils import (which, file_exists, get_in, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
@@ -19,7 +20,8 @@ def _get_files(data):
     work_dir = data["dirs"].get("work", "work")
     out_dir = os.path.join(work_dir, "htseq-count")
     out_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
-    return in_file, gtf_file, out_file
+    stats_file = os.path.join(out_dir, data['rgnames']['sample']) + ".stats"
+    return in_file, gtf_file, out_file, stats_file
 
 
 def is_countfile(in_file):
@@ -60,7 +62,7 @@ def htseq_count(data):
     http://www-huber.embl.de/users/anders/HTSeq/doc/count.html
     """
 
-    sam_filename, gff_filename, out_file = _get_files(data)
+    sam_filename, gff_filename, out_file, stats_file = _get_files(data)
     stranded = "no"
     overlap_mode = "union"
     feature_type = "exon"
@@ -233,12 +235,41 @@ def htseq_count(data):
 
     with file_transaction(out_file) as tmp_out_file:
         with open(tmp_out_file, "w") as out_handle:
+            on_feature = 0
             for fn in sorted(counts.keys()):
+                on_feature += counts[fn]
                 out_handle.write("%s\t%d\n" % (fn, counts[fn]))
+
+    with file_transaction(stats_file) as tmp_stats_file:
+        with open(tmp_stats_file, "w") as out_handle:
+            out_handle.write("on_feature\t%d\n" % on_feature)
             out_handle.write("no_feature\t%d\n" % empty)
             out_handle.write("ambiguous\t%d\n" % ambiguous)
             out_handle.write("too_low_aQual\t%d\n" % lowqual)
             out_handle.write("not_aligned\t%d\n" % notaligned)
             out_handle.write("alignment_not_unique\t%d\n" % nonunique)
 
+    return out_file
+
+
+def combine_count_files(files, out_file=None):
+    for f in files:
+        assert file_exists(f), "%s does not exist or is empty."
+        assert is_countfile(f), "%s does not seem to be a count file."
+    col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
+    f = files.pop()
+    if not out_file:
+        out_dir = os.path.join(os.path.dirname(f))
+        out_file = os.path.join(out_dir, "combined.counts")
+
+    if file_exists(out_file):
+        return out_file
+
+    df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
+                                  names=[col_names[0]])
+    for i, f in enumerate(files):
+        df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
+                                              names=col_names[i]))
+
+    df.to_csv(out_file, sep="\t", index_label="id")
     return out_file
