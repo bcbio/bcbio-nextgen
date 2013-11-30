@@ -7,7 +7,7 @@ import subprocess
 
 from bcbio import bam, utils
 from bcbio.log import logger
-from bcbio.distributed.messaging import run_multicore
+from bcbio.distributed.messaging import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -164,6 +164,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
     return [x for x in [out_file_1, out_file_2] if x is not None]
 
 @utils.map_wrap
+@zeromq_aware_logging
 def _grabix_index(data):
     in_file = data["bgzip_file"]
     config = data["config"]

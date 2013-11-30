@@ -20,8 +20,8 @@ import pysam
 from py_descriptive_statistics import Enum as Stats
 
 from bcbio import bam, broad, utils
-from bcbio.log import logger, setup_local_logging
-from bcbio.distributed.messaging import parallel_runner
+from bcbio.log import logger
+from bcbio.distributed.messaging import parallel_runner, zeromq_aware_logging
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
@@ -50,16 +50,13 @@ def combine_bed(in_files, out_file, config):
                         shutil.copyfileobj(in_handle, out_handle)
     return out_file
 
+@zeromq_aware_logging
 def calc_callable_loci(data, region=None, out_file=None):
     """Determine callable bases for input BAM using Broad's CallableLoci walker.
 
     http://www.broadinstitute.org/gatk/gatkdocs/
     org_broadinstitute_sting_gatk_walkers_coverage_CallableLoci.html
     """
-    if data["config"].get("parallel", {}).get("log_queue"):
-        handler = setup_local_logging(data["config"], data["config"]["parallel"])
-    else:
-        handler = None
     broad_runner = broad.runner_from_config(data["config"])
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
@@ -94,8 +91,6 @@ def calc_callable_loci(data, region=None, out_file=None):
                         if tregion.chrom == region:
                             out_handle.write("%s\t%s\t%s\tNO_COVERAGE\n" %
                                              (tregion.chrom, tregion.start, tregion.stop))
-    if handler and hasattr(handler, "close"):
-        handler.close()
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
 def sample_callable_bed(bam_file, ref_file, config):

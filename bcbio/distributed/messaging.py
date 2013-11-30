@@ -1,6 +1,6 @@
 """Run distributed tasks in parallel using IPython or joblib on multiple cores.
 """
-
+import functools
 import os
 import sys
 import time
@@ -15,7 +15,7 @@ except ImportError:
 
 from bcbio import utils
 from bcbio.distributed import ipython
-from bcbio.log import logger
+from bcbio.log import logger, setup_local_logging
 from bcbio.provenance import diagnostics, system
 
 def parallel_runner(parallel, dirs, config, config_file=None):
@@ -43,9 +43,37 @@ def parallel_runner(parallel, dirs, config, config_file=None):
             return run_multicore(fn, items, config, parallel["cores"])
     return run_parallel
 
+def zeromq_aware_logging(f):
+    """Ensure multiprocessing logging uses ZeroMQ queues.
+
+    ZeroMQ and local stdout/stderr do not behave nicely when intertwined. This
+    ensures the local logging uses existing ZeroMQ logging queues.
+    """
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        config = None
+        for arg in args:
+            if ipython.is_std_config_arg(arg):
+                config = arg
+                break
+            elif ipython.is_nested_config_arg(arg):
+                config = arg["config"]
+                break
+        assert config, "Could not find config dictionary in function arguments."
+        if config.get("parallel", {}).get("log_queue"):
+            handler = setup_local_logging(config, config["parallel"])
+        else:
+            handler = None
+        try:
+            out = f(*args, **kwargs)
+        finally:
+            if handler and hasattr(handler, "close"):
+                handler.close()
+        return out
+    return wrapper
+
 def run_multicore(fn, items, config, cores):
     """Run the function using multiple cores on the given items to process.
-
     """
     parallel = {"type": "local", "cores": cores}
     sysinfo = system.get_info({}, parallel)
