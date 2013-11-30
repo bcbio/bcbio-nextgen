@@ -1,3 +1,8 @@
+## 0.7.6 (In progress)
+
+- Provide additional parallelization of bgzip preparation, performing grabix indexing
+  in parallel for paired ends.
+
 ## 0.7.5 (November 29, 2013)
 
 - Update overall project metrics summary to move to a flexible YAML format that

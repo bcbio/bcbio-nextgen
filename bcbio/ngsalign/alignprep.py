@@ -7,6 +7,7 @@ import subprocess
 
 from bcbio import bam, utils
 from bcbio.log import logger
+from bcbio.distributed.messaging import run_multicore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -116,7 +117,9 @@ def _prep_grabix_indexes(in_files, dirs, config):
         out = _bgzip_from_bam(in_files[0], dirs, config)
     else:
         out = [_bgzip_from_fastq(x, dirs, config) if x else None for x in in_files]
-    [_grabix_index(x, config) for x in out if x]
+    items = [[{"bgzip_file": x, "config": copy.deepcopy(config)}] for x in out if x]
+    run_multicore(_grabix_index, items, config,
+                  config["algorithm"].get("num_cores", 1))
     return out
 
 def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
@@ -160,12 +163,24 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
                     raise
     return [x for x in [out_file_1, out_file_2] if x is not None]
 
-def _grabix_index(in_file, config):
+@utils.map_wrap
+def _grabix_index(data):
+    in_file = data["bgzip_file"]
+    config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     gbi_file = in_file + ".gbi"
-    if not utils.file_exists(gbi_file):
-        do.run([grabix, "index", in_file], "Index input with grabix")
+    if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
+        do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
     return gbi_file
+
+def _is_partial_index(gbi_file):
+    """Check for truncated output since grabix doesn't write to a transactional directory.
+    """
+    with open(gbi_file) as in_handle:
+        for i, _ in enumerate(in_handle):
+            if i > 2:
+                return False
+    return True
 
 def _bgzip_from_fastq(in_file, dirs, config):
     """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).

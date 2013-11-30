@@ -1,6 +1,4 @@
-"""Run distributed tasks using the Celery distributed task queue.
-
-http://celeryproject.org/
+"""Run distributed tasks in parallel using IPython or joblib on multiple cores.
 """
 
 import os
@@ -31,6 +29,7 @@ def parallel_runner(parallel, dirs, config, config_file=None):
         imodule = parallel.get("module", "bcbio.distributed")
         sysinfo = system.get_info(dirs, parallel)
         if parallel["type"].startswith("messaging"):
+            raise NotImplementedError("Messaging parallelization no longer supported")
             task_module = "{base}.tasks".format(base=imodule)
             runner_fn = runner(task_module, dirs, config, config_file)
             return runner_fn(fn_name, items)
@@ -41,18 +40,26 @@ def parallel_runner(parallel, dirs, config, config_file=None):
             fn = getattr(__import__("{base}.multitasks".format(base=imodule),
                                     fromlist=["multitasks"]),
                          fn_name)
-            jobr = ipython.find_job_resources([fn], parallel, items, sysinfo, config,
-                                              parallel.get("multiplier", 1),
-                                              max_multicore=int(sysinfo["cores"]))
-            items = [ipython.add_cores_to_config(x, jobr.cores_per_job) for x in items]
-            if joblib is None:
-                raise ImportError("Need joblib for multiprocessing parallelization")
-            out = []
-            for data in joblib.Parallel(jobr.num_jobs)(joblib.delayed(fn)(x) for x in items):
-                if data:
-                    out.extend(data)
-            return out
+            return run_multicore(fn, items, config, parallel["cores"])
     return run_parallel
+
+def run_multicore(fn, items, config, cores):
+    """Run the function using multiple cores on the given items to process.
+
+    """
+    parallel = {"type": "local", "cores": cores}
+    sysinfo = system.get_info({}, parallel)
+    jobr = ipython.find_job_resources([fn], parallel, items, sysinfo, config,
+                                      parallel.get("multiplier", 1),
+                                      max_multicore=int(sysinfo["cores"]))
+    items = [ipython.add_cores_to_config(x, jobr.cores_per_job) for x in items]
+    if joblib is None:
+        raise ImportError("Need joblib for multiprocessing parallelization")
+    out = []
+    for data in joblib.Parallel(jobr.num_jobs)(joblib.delayed(fn)(x) for x in items):
+        if data:
+            out.extend(data)
+    return out
 
 def runner(task_module, dirs, config, config_file, wait=True):
     """Run a set of tasks using Celery, waiting for results or asynchronously.
