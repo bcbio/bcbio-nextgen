@@ -25,7 +25,8 @@ def index(in_bam, config):
     assert is_bam(in_bam), "%s in not a BAM file" % in_bam
     index_file = "%s.bai" % in_bam
     alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
-    if not utils.file_exists(index_file) and not utils.file_exists(alt_index_file):
+    if (not utils.file_uptodate(index_file, in_bam) and
+          not utils.file_uptodate(alt_index_file, in_bam)):
         sambamba = _get_sambamba(config)
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
@@ -66,11 +67,12 @@ def downsample(in_bam, data, target_counts):
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
                 args = ["-T", "PrintReads",
-                        "--filter_reads_with_N_cigar",
                         "-R", data["sam_ref"],
                         "-I", in_bam,
                         "--downsample_to_fraction", "%.3f" % ds_pct,
                         "--out", tx_out_file]
+                if broad_runner.gatk_type() == "restricted":
+                    args += ["--filter_reads_with_N_cigar"]
                 broad_runner.run_gatk(args)
         return out_file
 
@@ -133,7 +135,7 @@ def sort(in_bam, config, order="coordinate"):
             # retries with single core
             try:
                 do.run(cmd.format(**locals()),
-                       "Sort BAM file (multi core, %s): %s to %s"%
+                       "Sort BAM file (multi core, %s): %s to %s" %
                        (order, os.path.basename(in_bam),
                         os.path.basename(sort_file)), log_error=False)
             except:
@@ -167,18 +169,3 @@ def _get_sort_stem(in_bam, order):
     for suffix in SUFFIXES:
         sort_base = sort_base.split(suffix)[0]
     return sort_base + SUFFIXES[order]
-
-def is_sam(in_file):
-    _, ext = os.path.splitext(in_file)
-    if ext == ".sam":
-        return True
-    else:
-        return False
-
-def is_bam(in_file):
-    _, ext = os.path.splitext(in_file)
-    if ext == ".bam":
-        return True
-    else:
-        return False
-

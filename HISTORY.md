@@ -5,6 +5,8 @@
   better matching of samples using input file names.
 - Provide additional parallelization of bgzip preparation, performing grabix indexing
   in parallel for paired ends.
+- Fix downsampling with GATK-lite 2.3.9 releases by avoiding filter_reads_with_N_cigar
+  argument. Thanks to Przemek Lyszkiewicz.
 
 ## 0.7.5 (November 29, 2013)
 
