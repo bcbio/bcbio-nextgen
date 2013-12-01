@@ -37,28 +37,33 @@ multiple samples using the template workflow command::
 
     bcbio_nextgen.py -w template freebayes-variant project1.csv sample1.bam sample2_1.fq sample2_2.fq
 
-- ``freebayes-variant`` is the name of the standard ``freebayes-template.yaml``
+- ``freebayes-variant`` is the name of the standard ``freebayes-variant.yaml``
   input, which the script fetches from GitHub. This argument can also
   be a path to a locally customized YAML configuration. In both cases,
   the script replicates the single sample template configuration to
   all input samples.
 
-- ``project1.csv`` is a comma separated value file containing metadata
-  about the samples::
+- ``project1.csv`` is a comma separated value file containing sample
+  metadata, descriptions and algorithm tweaks::
 
-        samplename,description,batch,phenotype,sex
-        sample1,ERR256785,batch1,normal,female
-        sample2,ERR256786,batch1,tumor
+        samplename,description,batch,phenotype,sex,coverage_interval
+        sample1,ERR256785,batch1,normal,female,genome
+        sample2,ERR256786,batch1,tumor,,genome
 
   The first column links the metadata to a specific input file. The
   template command tries to identify the ``samplename`` from read group
-  information in a BAM file, or uses the filename if no read group
-  information is present.  The remaining columns are
-  :ref:`sample-configuration` metadata key/value pairs. Columns with specific
-  usefulness beyond filling metadata information are:
+  information in a BAM file, or uses the base filename if no read group
+  information is present.  The remaining columns can contain:
 
    - ``description`` Changes the sample description, originally
      supplied by the file name or BAM read group, to this value.
+
+   - Algorithm parameters specific for this sample. If the column name matches
+     an available :ref:`algorithm-config`, then this value substitutes
+     into the sample ``algorithm``, replacing the defaults from the template.
+
+   -  :ref:`sample-configuration` metadata key/value pairs. Any columns not
+      falling into the above cases will go into the metadata section.
 
   The name of the metadata file, minus the ``.csv`` extension, is a
   short name identifying the current project. The script creates a
@@ -104,11 +109,12 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``analysis`` Analysis method to use [variant2, RNA-seq]
 - ``algorithm`` Parameters to configure algorithm inputs. Options
   described in more detail below.
-- ``metadata`` Additional descriptive metadata about the sample
+- ``metadata`` Additional descriptive metadata about the sample:
 
     - ``batch`` defines a group that the sample falls in. We perform
        multi-sample variant calling on all samples with the same batch
        name.
+
     - ``sex`` specifies the sample sex used to correctly prepare X/Y
       chromosomes.
 

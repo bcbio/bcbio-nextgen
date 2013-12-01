@@ -17,9 +17,9 @@ import yaml
 
 from bcbio import utils
 from bcbio.bam import fastq
+from bcbio.pipeline import run_info
 from bcbio.variation.cortex import get_sample_name
 from bcbio.workflow.xprize import HelpArgParser
-
 
 def parse_args(inputs):
     parser = HelpArgParser(
@@ -37,7 +37,7 @@ def _prep_bam_input(f, i, base):
     if not os.path.exists(f):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
-    cur["files"] = os.path.abspath(f)
+    cur["files"] = [os.path.abspath(f)]
     cur["description"] = get_sample_name(f) or os.path.splitext(os.path.basename(f))[0]
     return cur
 
@@ -136,7 +136,7 @@ def _write_config_file(items, template, project_name, out_dir):
     """
     config_dir = utils.safe_makedir(os.path.join(out_dir, "config"))
     out_config_file = os.path.join(config_dir, "%s.yaml" % project_name)
-    out = {"fc_date": datetime.datetime.now().strftime("%y%m%d"),
+    out = {"fc_date": datetime.datetime.now().strftime("%Y-%m-%d"),
            "fc_name": project_name,
            "upload": {"dir": "../final"},
            "details": items}
@@ -191,18 +191,31 @@ def _add_metadata(item, metadata):
     Adds to object and handles special keys:
     - `description`: A new description for the item. Used to relabel items
        based on the pre-determined description from fastq name or BAM read groups.
+    - Keys matching supported names in the algorithm section map
+      to key/value pairs there instead of metadata.
     """
-    item_md = metadata.get(item["description"], {})
-    if "description" in item_md:
-        if item_md["description"]:
-            item["description"] = item_md["description"]
-            del item_md["description"]
+    item_md = metadata.get(item["description"],
+                           metadata.get(os.path.basename(item["files"][0]), {}))
+    TOP_LEVEL = set(["description"])
     if len(item_md) > 0:
         if "metadata" not in item:
             item["metadata"] = {}
         for k, v in item_md.iteritems():
             if v:
-                item["metadata"][k] = v
+                if k in TOP_LEVEL:
+                    item[k] = v
+                elif k in run_info.ALGORITHM_KEYS:
+                    # Handle keys that pass integer or boolean values
+                    try:
+                        v = int(v)
+                    except ValueError:
+                        if v.lower() == "true":
+                            v = True
+                        elif v.lower() == "false":
+                            v = False
+                    item["algorithm"][k] = v
+                else:
+                    item["metadata"][k] = v
     return item
 
 def setup(args):

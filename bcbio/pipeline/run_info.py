@@ -126,6 +126,21 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                     "----------------+-----------------+----------------"] +
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
+ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
+                      "trim_reads", "adapters", "custom_trim",
+                      "align_split_size", "quality_bin",
+                      "quality_format", "write_summary",
+                      "merge_bamprep", "coverage", "coverage_bigwig",
+                      "coverage_depth", "coverage_interval",
+                      "hybrid_target", "hybrid_bait", "ploidy",
+                      "variantcaller", "variant_regions",
+                      "mark_duplicates", "svcaller", "recalibrate",
+                      "realign", "phasing", "validate",
+                      "validate_regions", "validate_genome_build",
+                      "clinical_reporting", "nomap_split_size",
+                      "nomap_split_targets", "ensemble",
+                      "disambiguate"])
+
 def _check_algorithm_keys(item):
     """Check for unexpected keys in the algorithm section.
 
@@ -133,18 +148,7 @@ def _check_algorithm_keys(item):
     with typos in key names.
     """
     url = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
-    supported = set(["platform", "aligner", "bam_clean", "bam_sort", "trim_reads", "adapters",
-                     "custom_trim", "align_split_size", "quality_bin", "quality_format",
-                     "write_summary", "merge_bamprep", "coverage", "coverage_bigwig",
-                     "coverage_depth", "coverage_interval", "hybrid_target", "hybrid_bait",
-                     "ploidy",
-                     "variantcaller", "variant_regions", "mark_duplicates", "svcaller",
-                     "recalibrate", "realign",
-                     "phasing", "validate", "validate_regions", "validate_genome_build",
-                     "clinical_reporting",
-                     "nomap_split_size", "nomap_split_targets",
-                     "ensemble", "disambiguate"])
-    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in supported]
+    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in ALGORITHM_KEYS]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
                          "See configuration documentation for supported options:\n%s\n"

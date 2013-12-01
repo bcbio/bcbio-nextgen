@@ -1,5 +1,8 @@
 ## 0.7.6 (In progress)
 
+- Expand template functionality to provide additional ability to add metadata
+  to samples with input CSV. Includes customization of algorithm section and
+  better matching of samples using input file names.
 - Provide additional parallelization of bgzip preparation, performing grabix indexing
   in parallel for paired ends.
 
