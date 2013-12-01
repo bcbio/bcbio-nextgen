@@ -251,15 +251,13 @@ def htseq_count(data):
 
     return out_file
 
-
 def combine_count_files(files, out_file=None):
     for f in files:
         assert file_exists(f), "%s does not exist or is empty."
         assert is_countfile(f), "%s does not seem to be a count file."
     col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
-    f = files.pop()
     if not out_file:
-        out_dir = os.path.join(os.path.dirname(f))
+        out_dir = os.path.join(os.path.dirname(files[0]))
         out_file = os.path.join(out_dir, "combined.counts")
 
     if file_exists(out_file):
@@ -268,8 +266,12 @@ def combine_count_files(files, out_file=None):
     df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
                                   names=[col_names[0]])
     for i, f in enumerate(files):
-        df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
-                                              names=col_names[i]))
+        if i == 0:
+            df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
+                                          names=[col_names[0]])
+        else:
+            df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
+                                                  names=[col_names[i]]))
 
     df.to_csv(out_file, sep="\t", index_label="id")
     return out_file

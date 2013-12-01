@@ -98,6 +98,12 @@ def is_sam(in_file):
     else:
         return False
 
+def count(in_bam):
+    """
+    return the counts in a SAM/BAM file
+    """
+    return int(pysam.view("-c", in_bam)[0].strip())
+
 
 def sort(in_bam, config, order="coordinate"):
     """Sort a BAM file, skipping if already present.

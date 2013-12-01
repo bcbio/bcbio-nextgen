@@ -115,7 +115,7 @@ def starts_by_depth(bam_file, sample_size=None):
     y is the number of unique start sites identified
     If sample size < total reads in a file the file will be downsampled.
     """
-    binsize = (_count_reads_in_bamfile(bam_file) / 100) + 1
+    binsize = (bam.count(bam_file) / 100) + 1
     seen_starts = set()
     counted = 0
     num_reads = []
@@ -162,5 +162,3 @@ def estimate_library_complexity(df, algorithm="RNA-seq"):
          "complexity": complexity}
     return d
 
-def _count_reads_in_bamfile(bam_file):
-    return int(pysam.view("-c", bam_file)[0].strip())
