@@ -50,8 +50,9 @@ def _clean_args(sys_argv, args, bcbio):
             x.startswith("-") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
     # specification of data argument changes in install (default data) to upgrade (default nodata)
     # in bcbio_nextgen 0.7.5 and beyond
-    version = subprocess.check_output([bcbio["bcbio_nextgen.py"], "--version"]).strip()
-    if version > "0.7.4":
+    process = subprocess.Popen([bcbio["bcbio_nextgen.py"], "--version"], stdout=subprocess.PIPE)
+    version, _ = process.communicate()
+    if version.strip() > "0.7.4":
         if "--nodata" in base:
             base.remove("--nodata")
         else:
