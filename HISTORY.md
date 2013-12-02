@@ -7,6 +7,8 @@
   in parallel for paired ends.
 - Fix downsampling with GATK-lite 2.3.9 releases by avoiding filter_reads_with_N_cigar
   argument. Thanks to Przemek Lyszkiewicz.
+- Handle Illumina format input files for bwa-mem alignment, and cleanly convert
+  these when preparing bgzipped inputs for parallel alignment. Thanks to Miika Ahdesmaki.
 
 ## 0.7.5 (November 29, 2013)
 

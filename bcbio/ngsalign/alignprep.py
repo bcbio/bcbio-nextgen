@@ -23,6 +23,8 @@ def create_inputs(data):
         return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data["config"])
     data["files"] = ready_files
+    # bgzip preparation takes care of converting illumina into sanger format
+    data["config"]["algorithm"]["quality_format"] = "standard"
     splits = _find_read_splits(ready_files[0], data["algorithm"]["align_split_size"])
     if len(splits) == 1:
         return [[data]]
@@ -40,6 +42,14 @@ def split_namedpipe_cl(in_file, data):
     grabix = config_utils.get_program("grabix", data["config"])
     start, end = data["align_split"]
     return "<({grabix} grab {in_file} {start} {end})".format(**locals())
+
+def fastq_convert_pipe_cl(in_file, data):
+    """Create an anonymous pipe converting Illumina 1.3-1.7 to Sanger.
+
+    Uses fastq_quality_converter from the fastx toolkit.
+    """
+    fq_convert = config_utils.get_program("fastq_quality_converter", data["config"])
+    return "<({fq_convert} -i {in_file})".format(**locals())
 
 # ## configuration
 
@@ -187,12 +197,14 @@ def _bgzip_from_fastq(in_file, dirs, config):
     """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).
     """
     grabix = config_utils.get_program("grabix", config)
+    needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
     if in_file.endswith(".gz"):
-        needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix)
+        needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix, needs_convert)
     else:
         needs_bgzip, needs_gunzip = True, False
-    if needs_bgzip or needs_gunzip:
-        out_file = _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip)
+    if needs_bgzip or needs_gunzip or needs_convert:
+        out_file = _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip,
+                               needs_convert)
     else:
         out_file = in_file
     return out_file
@@ -212,7 +224,7 @@ def _get_bgzip_cmd(config, is_retry=False):
             pass
     return config_utils.get_program("bgzip", config)
 
-def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
+def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert):
     """Handle bgzip of input file, potentially gunzipping an existing file.
     """
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
@@ -222,6 +234,8 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
         with file_transaction(out_file) as tx_out_file:
             assert needs_bgzip
             bgzip = _get_bgzip_cmd(config)
+            if needs_convert:
+                in_file = fastq_convert_pipe_cl(in_file, {"config": config})
             if needs_gunzip:
                 gunzip_cmd = "gunzip -c {in_file} |".format(**locals())
                 bgzip_in = "/dev/stdin"
@@ -232,11 +246,11 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
                    "bgzip input file")
     return out_file
 
-def _check_gzipped_input(in_file, grabix):
+def _check_gzipped_input(in_file, grabix, needs_convert):
     """Determine if a gzipped input file is blocked gzip or standard.
     """
     is_bgzip = subprocess.check_output([grabix, "check", in_file])
-    if is_bgzip.strip() == "yes":
+    if is_bgzip.strip() == "yes" and not needs_convert:
         return False, False
     else:
         return True, True

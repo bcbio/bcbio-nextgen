@@ -75,6 +75,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    qual_format = data["config"]["algorithm"].get("quality_format", "").lower()
     if data.get("align_split"):
         final_file = out_file
         out_file, data = alignprep.setup_combine(final_file, data)
@@ -83,6 +84,10 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
             pair_file = alignprep.split_namedpipe_cl(pair_file, data)
     else:
         final_file = None
+        if qual_format == "illumina":
+            fastq_file = alignprep.fastq_convert_pipe_cl(fastq_file, data)
+            if pair_file:
+                pair_file = alignprep.fastq_convert_pipe_cl(pair_file, data)
     samtools = config_utils.get_program("samtools", data["config"])
     bwa = config_utils.get_program("bwa", data["config"])
     resources = config_utils.get_resources("samtools", data["config"])
