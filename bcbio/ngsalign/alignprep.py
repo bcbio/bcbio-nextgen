@@ -106,7 +106,7 @@ def _find_read_splits(in_file, split_size):
     """
     gbi_file = in_file + ".gbi"
     with open(gbi_file) as in_handle:
-        in_handle.next() # throw away
+        in_handle.next()  # throw away
         num_lines = int(in_handle.next().strip())
     assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
     split_lines = split_size * 4
@@ -139,7 +139,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
     bamtofastq = config_utils.get_program("bamtofastq", config)
     resources = config_utils.get_resources("bamtofastq", config)
     cores = config["algorithm"].get("num_cores", 1)
-    max_mem = int(resources.get("memory", "1073741824")) * cores # 1Gb/core default
+    max_mem = int(resources.get("memory", "1073741824")) * cores  # 1Gb/core default
     bgzip = _get_bgzip_cmd(config, is_retry)
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
@@ -148,8 +148,12 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
         out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
     else:
         out_file_2 = None
-    if not utils.file_exists(out_file_1):
+    needs_retry = False
+    if is_retry or not utils.file_exists(out_file_1):
         with file_transaction(out_file_1) as tx_out_file:
+            for f in [tx_out_file, out_file_1, out_file_2]:
+                if f and os.path.exists(f):
+                    os.remove(f)
             fq1_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, tx_out_file)
             sortprefix = "%s-sort" % os.path.splitext(tx_out_file)[0]
             if bam.is_paired(bam_file):
@@ -167,11 +171,14 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
                 if not is_retry and "deflate failed" in str(msg):
                     logger.info("bamtofastq deflate IO failure preparing %s. Retrying with single core."
                                 % (bam_file))
-                    return _bgzip_from_bam(bam_file, dirs, config, is_retry=True)
+                    needs_retry = True
                 else:
                     logger.exception()
                     raise
-    return [x for x in [out_file_1, out_file_2] if x is not None]
+    if needs_retry:
+        return _bgzip_from_bam(bam_file, dirs, config, is_retry=True)
+    else:
+        return [x for x in [out_file_1, out_file_2] if x is not None]
 
 @utils.map_wrap
 @zeromq_aware_logging
