@@ -10,6 +10,8 @@ upload:
 details:
   - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-1
+    metadata:
+      sex: female
     analysis: variant2
     genome_build: GRCh37
     algorithm:
@@ -32,6 +34,8 @@ details:
         trusted-pct: 0.65
   - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-2
+    metadata:
+      sex: female
     analysis: variant2
     genome_build: GRCh37
     algorithm:

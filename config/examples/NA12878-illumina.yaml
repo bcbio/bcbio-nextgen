@@ -22,5 +22,7 @@ details:
     analysis: variant2
     description: NA12878
     genome_build: GRCh37
+    metadata:
+      sex: female
     lane: 1
     files: [../input/ERR091571_1.fastq.gz, ../input/ERR091571_2.fastq.gz]
