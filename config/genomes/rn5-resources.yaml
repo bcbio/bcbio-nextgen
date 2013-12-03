@@ -7,4 +7,4 @@ rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
-    tophat: ../rnaseq/tophat/rn5_transcriptome
+    tophat: ../rnaseq/tophat/rn5_transcriptome.ver

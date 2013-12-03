@@ -11,4 +11,4 @@ rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
-    tophat: ../rnaseq/tophat/mm10_transcriptome
+    tophat: ../rnaseq/tophat/mm10_transcriptome.ver
