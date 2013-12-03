@@ -118,6 +118,7 @@ postprocess_variants.metadata = {"resources": ["gatk-vqsr", "gatk", "snpEff"]}
 def pipeline_summary(*args):
     with _setup_logging(args):
         return apply(qcsummary.pipeline_summary, *args)
+pipeline_summary.metadata = {"resources": ["gatk"]}
 
 @require(sample)
 def generate_transcript_counts(*args):
