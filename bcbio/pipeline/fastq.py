@@ -37,9 +37,11 @@ def get_fastq_files(item):
     ready_files = []
     for fname in files:
         if fname.endswith(".gz") and _pipeline_needs_fastq(item["config"], item):
-            out_file = os.path.splitext(fname)[0]
             cl = ["gunzip", "-c", fname]
-            print out_file
+            fastq_dir = os.path.join(item["dirs"]["work"], "fastq")
+            safe_makedir(fastq_dir)
+            out_file = os.path.join(fastq_dir,
+                                    os.path.basename(os.path.splitext(fname)[0]))
             with open(out_file, "w") as out_handle:
                 subprocess.Popen(cl, stdout=out_handle)
             ready_files.append(out_file)
@@ -59,7 +61,6 @@ def get_fastq_files(item):
 def _pipeline_needs_fastq(config, item):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
     """
-    print config
     aligner = config["algorithm"].get("aligner")
     has_multiplex = item.get("multiplex") is not None
     support_bam = aligner in alignment.metadata.get("support_bam", [])
