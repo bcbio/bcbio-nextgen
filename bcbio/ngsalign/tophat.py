@@ -35,9 +35,10 @@ def _set_quality_flag(options, config):
 
 def _set_transcriptome_option(options, data, ref_file):
     # prefer transcriptome-index vs a GTF file if available
-    transcriptome_index = data["genome_resources"]["rnaseq"].get("transcriptome_index", {}).get("tophat")
-    if transcriptome_index and file_exists(transcriptome_index + ".1.bt2"):
-        options["transcriptome-index"] = transcriptome_index
+    transcriptome_index = get_in(data, ("genome_resources", "rnaseq",
+                                        "transcriptome_index", "tophat"))
+    if transcriptome_index and file_exists(transcriptome_index):
+        options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
 
     gtf_file = data["genome_resources"]["rnaseq"].get("transcripts")
     if gtf_file:

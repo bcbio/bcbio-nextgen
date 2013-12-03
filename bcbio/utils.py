@@ -489,3 +489,14 @@ def reservoir_sample(stream, num_items, item_parser=lambda x: x):
 
 def compose(f, g):
     return lambda x: f(g(x))
+
+def dictapply(d, fn):
+    """
+    apply a function to all non-dict values in a dictionary
+    """
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = dictapply(v, fn)
+        else:
+            d[k] = fn(v)
+    return d

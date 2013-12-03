@@ -23,11 +23,16 @@ def get_resources(genome, ref_file):
                       % (genome, resource_file))
     with open(resource_file) as in_handle:
         resources = yaml.load(in_handle)
-    for cat in resources.keys():
-        resources[cat] = abs_file_paths(resources[cat], base_dir)
-    return resources
+
+    def resource_file_path(x):
+        if isinstance(x, basestring) and os.path.exists(os.path.join(base_dir, x)):
+            return os.path.normpath(os.path.join(base_dir, x))
+        return x
+
+    return utils.dictapply(resources, resource_file_path)
 
 # ## Utilities
+
 
 def abs_file_paths(xs, base_dir=None, ignore_keys=None):
     """Normalize any file paths found in a subdirectory of configuration input.
@@ -178,3 +183,4 @@ def get_builds(galaxy_base):
                                                 galaxy_base)
     assert not need_remap, "Should not need to remap reference files"
     return _galaxy_loc_iter(loc_file, galaxy_dt)
+
