@@ -29,7 +29,7 @@ def _set_quality_flag(options, config):
     qual_format = config["algorithm"].get("quality_format", None)
     if qual_format.lower() == "illumina":
         options["solexa1.3-quals"] = True
-    else:
+    elif qual_format.lower() == "solexa":
         options["solexa-quals"] = True
     return options
 
