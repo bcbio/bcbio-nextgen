@@ -17,14 +17,16 @@ These are roughly ordered by current priority and we welcome contributors.
 
 - Improved support for cancer tumor/normal paired callers. Suggested callers
   include SomaticSniper ([#66][66], [#109][109]), LoFreq and others. A
-  comprehensive discussion is at [#112][112]. Requires improved framework for
-  evaluating callers and approaches for handling Ensemble calling with multiple
-  inputs ([#67][67]).
+  comprehensive discussion is at [#112][112]. FreeBayes supports tumor/normal
+  calling: see [this mailing list discussion][fb-somatic] for the suggested
+  parameters.  Requires improved framework for evaluating callers and approaches
+  for handling Ensemble calling with multiple inputs ([#67][67]).
 
 [66]: https://github.com/chapmanb/bcbio-nextgen/issues/66
 [67]: https://github.com/chapmanb/bcbio-nextgen/issues/67
 [109]: https://github.com/chapmanb/bcbio-nextgen/issues/109
 [112]: https://github.com/chapmanb/bcbio-nextgen/issues/112
+[fb-somatic]: https://groups.google.com/d/msg/freebayes/beLYRuHMkQE/RwFMniDmBYoJ
 
 - Once initial structural variation analysis and evaluation is in place,
   incorporate and evaluate additional CNV and structural variant callers. Some

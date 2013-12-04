@@ -8,10 +8,11 @@ import contextlib
 import copy
 import csv
 import datetime
+import glob
 import itertools
 import os
+import shutil
 import urllib2
-import glob
 
 import yaml
 
@@ -25,8 +26,8 @@ def parse_args(inputs):
     parser = HelpArgParser(
         description="Create a bcbio_sample.yaml file from a standard template and inputs")
     parser.add_argument("template", help=("Template name or path to template YAML file. "
-            "Built in choices: freebayes-variant, gatk-variant, tumor-paired, "
-            "illumina-rnaseq, illumina-chipseq"))
+                                          "Built in choices: freebayes-variant, gatk-variant, tumor-paired, "
+                                          "illumina-rnaseq, illumina-chipseq"))
     parser.add_argument("metadata", help="CSV file with project metadata. Name of file used as project name.")
     parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
     return parser.parse_args(inputs)
@@ -98,7 +99,6 @@ def _expand_wildcards(in_files):
         files = itertools.chain(glob.glob(abs_path), files)
     return list(files)
 
-
 # ## Read and write configuration files
 
 def _read_template(template):
@@ -143,6 +143,9 @@ def _write_config_file(items, template, project_name, out_dir):
     for k, v in template.iteritems():
         if k not in ["details"]:
             out[k] = v
+    if os.path.exists(out_config_file):
+        shutil.move(out_config_file,
+                    out_config_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     with open(out_config_file, "w") as out_handle:
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_config_file
@@ -239,5 +242,3 @@ def setup(args):
         print "Edit to finalize and run with:"
         print "  cd %s" % work_dir
         print "  bcbio_nextgen.py ../config/%s" % os.path.basename(out_config_file)
-
-
