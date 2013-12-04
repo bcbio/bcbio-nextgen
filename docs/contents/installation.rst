@@ -83,6 +83,13 @@ your `~/.bashrc` with::
     export LD_LIBRARY_PATH=/path_to_bcbio/lib:$LD_LIBRARY_PATH
     export PERL5LIB=/path_to_bcbio/lib/perl5:/path_to_bcbio/perl5/site_perl:${PERL5LIB}
 
+This installation process is not easily re-locatable due to absolute
+filesystem pointers within the installation directory. We plan to move
+towards utilizing `Docker`_ containers to provide a fully isolated software
+installation.
+
+.. _Docker: http://www.docker.io/
+
 .. _upgrade-install:
 
 Upgrade

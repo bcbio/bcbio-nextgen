@@ -1,6 +1,14 @@
 Current development goals and outstanding tasks for bcbio-nextgen development.
 These are roughly ordered by current priority and we welcome contributors.
 
+- Improved deployment experience using [docker][docker] containers to provide a
+  fully isolated bcbio-nextgen installation. Requires re-working of installation
+  process to be a two step process: download docker + add external biological
+  data.  Also requires adjustment of the pipeline and distributed processing to
+  involve starting and using code isolated inside docker container.
+
+[docker]: http://www.docker.io/
+
 - Integrated structural variant analysis, including CNV prediction. Current
   targets are [lumpy][lumpy] and [cn.mops][cn.mops].
 
