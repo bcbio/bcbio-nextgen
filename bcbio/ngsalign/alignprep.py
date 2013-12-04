@@ -219,11 +219,15 @@ def _bgzip_from_fastq(in_file, dirs, config):
 def _get_bgzip_cmd(config, is_retry=False):
     """Retrieve command to use for bgzip, trying to use parallel pbgzip if available.
 
+    XXX Currently uses non-parallel bgzip until we can debug segfault issues
+    with pbgzip.
+
     Avoids over committing cores to gzipping since run in pipe with other tools.
     Allows for retries which force single core bgzip mode.
     """
     num_cores = max(1, (config["algorithm"].get("num_cores", 1) // 2) - 1)
-    if not is_retry and num_cores > 1:
+    #if not is_retry and num_cores > 1:
+    if False:
         try:
             pbgzip = config_utils.get_program("pbgzip", config)
             return "%s -n %s " % (pbgzip, num_cores)
