@@ -12,6 +12,7 @@
 - Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.
 - Fix Tophat not respecting the existing --transcriptome-index. Thanks to Miika Ahdesmaki.
 - Keep original gzipped fastq files. Thanks again to, you guessed it, Miika Ahdesmaki.
+- Fixed incompatibility with complexity calculation and IPython.
 
 ## 0.7.5 (November 29, 2013)
 
