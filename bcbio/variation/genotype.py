@@ -72,7 +72,8 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "UnifiedGenotyper",
                            "-o", tx_out_file,
-                           "-ploidy", str(ploidy.get_ploidy(items, region)),
+                           "-ploidy", (str(ploidy.get_ploidy(items, region))
+                                       if broad_runner.gatk_type() == "restricted" else "2"),
                            "--genotype_likelihoods_model", "BOTH"]
                 broad_runner.run_gatk(params)
     return out_file

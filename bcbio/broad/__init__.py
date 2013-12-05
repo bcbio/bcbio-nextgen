@@ -260,8 +260,11 @@ class BroadRunner:
                 try:
                     check_file = config_utils.get_jar(command, dir_check)
                     return check_file
-                except ValueError:
-                    pass
+                except ValueError, msg:
+                    if str(msg).find("multiple") > 0:
+                        raise
+                    else:
+                        pass
         raise ValueError("Could not find jar %s in %s:%s" % (command, self._picard_ref, self._gatk_dir))
 
 def _get_picard_ref(config):
