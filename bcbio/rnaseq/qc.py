@@ -109,13 +109,13 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
     return out
 
 
-def starts_by_depth(bam_file, sample_size=None):
+def starts_by_depth(bam_file, config, sample_size=None):
     """
     Return a set of x, y points where x is the number of reads sequenced and
     y is the number of unique start sites identified
     If sample size < total reads in a file the file will be downsampled.
     """
-    binsize = (bam.count(bam_file) / 100) + 1
+    binsize = (bam.count(bam_file, config) / 100) + 1
     seen_starts = set()
     counted = 0
     num_reads = []

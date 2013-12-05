@@ -2,6 +2,7 @@
 """
 import contextlib
 import os
+import subprocess
 
 import pysam
 
@@ -100,11 +101,20 @@ def is_sam(in_file):
     else:
         return False
 
-def count(in_bam):
+def count(in_bam, config=None):
     """
-    return the counts in a SAM/BAM file
+    return the counts in a BAM file
     """
-    return int(pysam.view("-c", in_bam)[0].strip())
+    if not config:
+        config = {}
+    sambamba = _get_sambamba(config)
+    if sambamba:
+        cmd = ("{sambamba} view -c {in_bam}").format(**locals())
+    else:
+        samtools = config_utils.get_program("samtools", config)
+        cmd = ("{samtools} view -c {in_bam}").format(**locals())
+    out = subprocess.check_output(cmd, shell=True)
+    return int(out)
 
 
 def sort(in_bam, config, order="coordinate"):

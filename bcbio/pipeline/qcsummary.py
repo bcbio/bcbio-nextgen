@@ -142,7 +142,7 @@ def _run_complexity(bam_file, data, out_dir):
     base, _ = os.path.splitext(os.path.basename(bam_file))
     utils.safe_makedir(out_dir)
     out_file = os.path.join(out_dir, base + ".pdf")
-    df = bcbio.rnaseq.qc.starts_by_depth(bam_file)
+    df = bcbio.rnaseq.qc.starts_by_depth(bam_file, data["config"])
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tmp_out_file:
             df.plot(x='reads', y='starts', title=bam_file + " complexity")
