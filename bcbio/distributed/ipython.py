@@ -95,7 +95,7 @@ def _scale_cores_to_memory(cores, mem_per_core, sysinfo, system_memory):
     if "cores" not in sysinfo:
         return cores, total_mem
     cores = min(cores, int(sysinfo["cores"]))
-    total_mem = min(total_mem, float(sysinfo["memory"]) - system_memory)
+    total_mem = min(float(total_mem), float(sysinfo["memory"]) - system_memory)
     cores = max(1, min(cores, int(math.floor(float(total_mem) / mem_per_core))))
     return cores, total_mem
 
@@ -136,6 +136,8 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
             if cores:
                 all_cores.append(cores)
             memory = _get_prog_memory(resources)
+            logger.debug("{prog} requests {cores} cores and {memory}g "
+                         "memory for each core.".format(**locals()))
             if memory:
                 all_memory.append(memory)
     cores_per_job = max(all_cores)
@@ -156,6 +158,9 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
     # do not overschedule if we don't have extra items to process
     num_jobs = min(num_jobs, len(items) * multiplier)
     JobResources = collections.namedtuple("JobResources", "num_jobs cores_per_job memory_per_job")
+    logger.debug("Configuring %d jobs to run, using %d cores each with %sg of "
+                 "memory reserved for each job" % (num_jobs, cores_per_job,
+                                                   str(memory_per_job)))
     return JobResources(num_jobs, cores_per_job, str(memory_per_job))
 
 cur_num = 0
