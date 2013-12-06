@@ -238,6 +238,9 @@ Alignment
    want variant calls [true, false]
 -  ``coverage_bigwig`` Generate a bigwig file of coverage, for loading
    into the UCSC genome browser [true, false]
+-  ``strandedness`` For RNA-seq libraries, if your library is strand
+   specific, set the appropriate flag form [unstranded, forward, reverse].
+   Defaults to unstranded.
 
 Experimental information
 ========================
