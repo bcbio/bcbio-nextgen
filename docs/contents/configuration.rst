@@ -98,15 +98,27 @@ The sample configuration file defines ``details`` of each sample to process::
 
     details:
       - analysis: variant2
+        lane: 1
+        description: Example1
+        files: [in_pair_1.fq, in_pair_2.fq]
+        genome_build: hg19
         algorithm:
+          platform:illumina
         metadata:
           batch: Batch1
           sex: female
-        lane: 1
-        description: Example1
-        genome_build: hg19
 
 - ``analysis`` Analysis method to use [variant2, RNA-seq]
+- ``lane`` A unique number within the project. Corresponds to the
+  ``ID`` parameter in the BAM read group. Required.
+- ``description`` Unique name for this sample, corresponding to the
+  ``SM`` parameter in the BAM read group.
+- ``files`` A list of files to process. This currently supports either a single
+  end or two paired end fastq files, or a single BAM file. It does not yet
+  handle merging BAM files or more complicated inputs.
+- ``genome_build`` Genome build to align to, which references a genome
+  keyword in Galaxy to find location build files.
+
 - ``algorithm`` Parameters to configure algorithm inputs. Options
   described in more detail below.
 - ``metadata`` Additional descriptive metadata about the sample:
@@ -117,13 +129,6 @@ The sample configuration file defines ``details`` of each sample to process::
 
     - ``sex`` specifies the sample sex used to correctly prepare X/Y
       chromosomes.
-
-- ``lane`` A unique number within the project. Corresponds to the
-  ``ID`` parameter in the BAM read group. Required.
-- ``description`` Unique name for this sample, corresponding to the
-  ``SM`` parameter in the BAM read group.
-- ``genome_build`` Genome build to align to, which references a genome
-  keyword in Galaxy to find location build files.
 
 .. _upload-configuration:
 

@@ -53,8 +53,8 @@ algorithms continue to evolve and improve. The installer is flexible
 enough to handle both system integrations into standard directories
 like /usr/local, as well as custom isolated installations in non-root
 directories. The :ref:`upgrade-install` section has additional
-documentation on including additional genome data and software as part
-of your system, and keeping everything up to date.
+documentation on including additional genome data and software tools like the
+latest commercially-restricted GATK versions and GEMINI.
 
 .. _isolated-install:
 
@@ -115,7 +115,7 @@ Tune the upgrade with these options:
   classes of tools. Available choices are:
 
   - ``protected`` Install software that requires licensing for
-    commerical use. This includes the latest versions of GATK, which
+    commercial use. This includes the latest versions of GATK, which
     need a manual download from the GATK website. The installer
     provides full directions.
   - ``data`` Data rich supplemental tools. A good example is
