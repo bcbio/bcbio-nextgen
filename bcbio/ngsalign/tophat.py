@@ -39,10 +39,13 @@ def _set_transcriptome_option(options, data, ref_file):
                                         "transcriptome_index", "tophat"))
     if transcriptome_index and file_exists(transcriptome_index):
         options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
+        return options
 
     gtf_file = data["genome_resources"]["rnaseq"].get("transcripts")
     if gtf_file:
         options["GTF"] = gtf_file
+        return options
+
     return options
 
 def _set_cores(options, config):
