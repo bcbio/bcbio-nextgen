@@ -1,0 +1,15 @@
+upload:
+  dir: upload
+details:
+  - analysis: RNA-seq
+    files: ['test_1.fq', 'test_2.fq']
+    algorithm:
+      aligner: tophat2
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq, polya]
+      strandedness: forward
+      disambiguate: [mm9]
+    description: Test1
+    genome_build: hg19
+    lane: 1

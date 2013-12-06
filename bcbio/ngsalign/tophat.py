@@ -60,6 +60,18 @@ def _set_rg_options(options, names):
     options["rg-platform-unit"] = names["pu"]
     return options
 
+def _set_stranded_flag(options, config):
+    strand_flag = {"unstranded": "fr-unstranded",
+                   "forward": "fr-firststrand",
+                   "reverse": "fr-secondstrand"}
+    stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
+    assert stranded in strand_flag, ("%s is not a valid strandedness value. "
+                                     "Valid values are 'forward', 'reverse', "
+                                     "and 'unstranded")
+    flag = strand_flag[stranded]
+    options["library-type"] = flag
+    return options
+
 def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                  names=None):
     """
@@ -71,6 +83,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     options = _set_transcriptome_option(options, data, ref_file)
     options = _set_cores(options, config)
     options = _set_rg_options(options, names)
+    options = _set_stranded_flag(options, config)
 
     # select the correct bowtie option to use; tophat2 is ignoring this option
     if _tophat_major_version(config) == 1:

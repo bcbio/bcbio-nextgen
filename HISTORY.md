@@ -13,6 +13,7 @@
 - Fix Tophat not respecting the existing --transcriptome-index. Thanks to Miika Ahdesmaki.
 - Keep original gzipped fastq files. Thanks again to, you guessed it, Miika Ahdesmaki.
 - Fixed incompatibility with complexity calculation and IPython.
+- Added strand-specific RNA-seq support via the strandedness option.
 
 ## 0.7.5 (November 29, 2013)
 

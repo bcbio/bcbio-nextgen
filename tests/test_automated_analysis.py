@@ -135,7 +135,19 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-empty.yaml")]
             subprocess.check_call(cl)
 
-    @attr(speed=2)
+    @attr(stranded=True)
+    @attr(rnaseq=True)
+    def test_2_stranded(self):
+        """Run an RNA-seq analysis with TopHat and generate gene-level counts.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  self._get_post_process_yaml(workdir),
+                  os.path.join(self.data_dir, os.pardir, "test_stranded"),
+                  os.path.join(self.data_dir, "run_info-stranded.yaml")]
+            subprocess.check_call(cl)
+
     @attr(rnaseq=True)
     def test_2_rnaseq(self):
         """Run an RNA-seq analysis with TopHat and generate gene-level counts.
