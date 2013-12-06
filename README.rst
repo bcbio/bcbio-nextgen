@@ -89,27 +89,33 @@ or problem reports using `GitHub`_ and discussion on the
 Contributors
 ------------
 
+- `Miika Ahdesmaki`_, AstraZeneca
 - `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Rory Kirchner`_, Harvard School of Public Health
+- `Jakub Nowacki`_, AstraZeneca
 - `Brent Pedersen`_, University of Colorado Denver
 - `James Porter`_, The University of Chicago
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
+- `Paul Tang`_, UCSF
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
 
+.. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Brad Chapman: https://github.com/chapmanb
 .. _Peter Cock: https://github.com/peterjc
 .. _Mario Giovacchini: https://github.com/mariogiov
 .. _Rory Kirchner: https://github.com/roryk
+.. _Jakub Nowacki: https://github.com/jsnowacki
 .. _Brent Pedersen: https://github.com/brentp
 .. _James Porter: https://github.com/porterjamesj
 .. _Valentine Svensson: https://github.com/vals
+.. _Paul Tang: https://github.com/tanglingfung
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
 
