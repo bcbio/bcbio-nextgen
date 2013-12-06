@@ -25,7 +25,7 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
         bam.index(x, config)
     if out_file is None:
 
-        if vcfutils.is_sample_pair(align_bams, items):
+        if vcfutils.is_paired_analysis(align_bams, items):
             out_file = "%s-paired-variants.vcf" % config["metdata"]["batch"]
         else:
             out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]

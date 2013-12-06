@@ -20,7 +20,7 @@ paired_data = namedtuple("paired_data", "tumor_bam" "tumor_sample_name"
                          "normal_bam" "normal_sample_name")
 
 
-def is_sample_pair(align_bams, items):
+def is_paired_analysis(align_bams, items):
 
     """Determine if bams are from a sample pair or  not"""
 
