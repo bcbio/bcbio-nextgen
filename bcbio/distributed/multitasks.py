@@ -1,12 +1,12 @@
 """Multiprocessing ready entry points for sample analysis.
 """
-from bcbio import structural, utils
+from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import disambiguate, lane, qcsummary, sample, shared, variation
+from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
+                            rnaseq)
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
-from bcbio import chipseq
 
 @utils.map_wrap
 def process_lane(*args):
@@ -71,7 +71,12 @@ def pipeline_summary(*args):
 
 @utils.map_wrap
 def generate_transcript_counts(*args):
-    return sample.generate_transcript_counts(*args)
+    return rnaseq.generate_transcript_counts(*args)
+
+@utils.map_wrap
+def run_cufflinks(*args):
+    return rnaseq.run_cufflinks(*args)
+run_cufflinks.metadata = {"resources": ["cufflinks"]}
 
 @utils.map_wrap
 def generate_bigwig(*args):
