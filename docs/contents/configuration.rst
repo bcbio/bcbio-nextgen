@@ -240,7 +240,8 @@ Alignment
    into the UCSC genome browser [true, false]
 -  ``strandedness`` For RNA-seq libraries, if your library is strand
    specific, set the appropriate flag form [unstranded, firststrand, secondstrand].
-   Defaults to unstranded.
+   Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for
+   Scriptseq prepared libraries, secondstrand is correct.
 
 Experimental information
 ========================
