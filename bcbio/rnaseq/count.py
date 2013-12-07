@@ -59,11 +59,11 @@ class UnknownChrom(Exception):
 
 def _get_stranded_flag(config):
     strand_flag = {"unstranded": "no",
-                   "forward": "yes",
-                   "reverse": "reverse"}
+                   "firststrand": "reverse",
+                   "secondstrand": "yes"}
     stranded = _get_strandedness(config)
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
-                                     "Valid values are 'forward', 'reverse', "
+                                     "Valid values are 'firststrand', 'secondstrand', "
                                      "and 'unstranded")
     return strand_flag[stranded]
 

@@ -65,12 +65,12 @@ def _set_rg_options(options, names):
 
 def _set_stranded_flag(options, config):
     strand_flag = {"unstranded": "fr-unstranded",
-                   "forward": "fr-firststrand",
-                   "reverse": "fr-secondstrand"}
+                   "firststrand": "fr-firststrand",
+                   "secondstrand": "fr-secondstrand"}
     stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
-                                     "Valid values are 'forward', 'reverse', "
-                                     "and 'unstranded")
+                                     "Valid values are 'firststrand', "
+                                     "'secondstrand' and 'unstranded")
     flag = strand_flag[stranded]
     options["library-type"] = flag
     return options

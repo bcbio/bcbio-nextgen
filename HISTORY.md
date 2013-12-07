@@ -15,6 +15,7 @@
 - Fixed incompatibility with complexity calculation and IPython.
 - Added strand-specific RNA-seq support via the strandedness option.
 - Added Cufflinks support.
+- Set stranded flag properly in htseq-count. Thanks to Miika Ahdesmaki.
 
 ## 0.7.5 (November 29, 2013)
 

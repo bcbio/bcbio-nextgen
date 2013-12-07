@@ -124,7 +124,7 @@ poor quality ends. Since your library is a RNA-seq library prepared with the
 TruSeq kit, the set of adapters to trim off are the TruSeq adapters and possible
 polyA tails, so ``adapters`` is set to the both of those. ``strandedness``
 can be set if your library was prepared in a strand-specific manner and can
-be set to forward, reverse or unstranded (the default).
+be set to firststrand, secondstrand or unstranded (the default).
 
 Multiple samples
 ================
