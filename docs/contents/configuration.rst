@@ -250,7 +250,7 @@ Experimental information
    options for filtering [exome, genome, regional]
 -  ``coverage_depth`` Depth of sequencing coverage. Influences GATK
    variant calling and selection of super-high coverage regions to
-   exclude [high, low, super-high]
+   exclude. Low coverage is generally 10x or less. [high, low, super-high]
 -  ``hybrid_target`` BED file with target regions for hybrid selection
    experiments. This is only a descriptive set of regions for metrics
    assessment. Use ``variant_regions`` to restrict calling and
@@ -432,7 +432,9 @@ Reference genome files
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The pipeline requires access to reference genomes, including the raw
-FASTA sequence and pre-built indexes for aligners. The
+FASTA sequence and pre-built indexes for aligners. For human genomes, the
+automated installer provides hg19 and GRCh37 1000 genomes references as
+provided in the `GATK resource bundle`_.
 :ref:`data-requirements` section describes the expected layout of
 `Galaxy .loc files`_ pointing to the actual sequence and index
 files.
