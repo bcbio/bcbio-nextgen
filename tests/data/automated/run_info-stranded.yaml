@@ -8,7 +8,7 @@ details:
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
-      strandedness: forward
+      strandedness: firststrand
       disambiguate: [mm9]
     description: Test1
     genome_build: hg19

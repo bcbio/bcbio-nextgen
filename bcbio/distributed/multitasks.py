@@ -2,7 +2,7 @@
 """
 from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
-from bcbio.ngsalign import alignprep
+from bcbio.ngsalign import alignprep, tophat
 from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
                             rnaseq)
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
@@ -19,7 +19,8 @@ def trim_lane(*args):
 @utils.map_wrap
 def process_alignment(*args):
     return lane.process_alignment(*args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
+process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie2", "tophat2"],
+                              "ensure": {"tophat2": tophat.job_requirements}}
 
 @utils.map_wrap
 def postprocess_alignment(*args):

@@ -379,6 +379,11 @@ and memory and compute resources to devote to them::
   memory. Always specify this as the memory usage for a single core,
   and the pipeline handles scaling this when a process uses multiple
   cores.
+- ``total_memory`` Specify the memory per job. Some programs, like ``tophat``,
+  need a similar amount of memory to run a job on one core as multiple cores.
+  For programs with this behavior, specify ``total_memory`` instead of ``memory``,
+  which will limit the memory use of the program regardless of the number of
+  cores set.
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux

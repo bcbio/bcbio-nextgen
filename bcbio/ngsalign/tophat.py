@@ -70,7 +70,7 @@ def _set_stranded_flag(options, config):
     stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
                                      "Valid values are 'firststrand', "
-                                     "'secondstrand' and 'unstranded")
+                                     "'secondstrand' and 'unstranded" % (stranded))
     flag = strand_flag[stranded]
     options["library-type"] = flag
     return options
@@ -317,3 +317,12 @@ def _ref_version(ref_file):
     raise ValueError("Cannot detect which reference version %s is. "
                      "Should end in either .ebwt (bowtie) or .bt2 "
                      "(bowtie2)." % (ref_file))
+
+
+def job_requirements(cores, memory):
+    MIN_TOPHAT_MEMORY = 8.0
+    if not memory or cores * memory < MIN_TOPHAT_MEMORY:
+        memory = MIN_TOPHAT_MEMORY / cores
+    return cores, memory
+
+align.job_requirements = job_requirements
