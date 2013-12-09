@@ -11,11 +11,12 @@
   these when preparing bgzipped inputs for parallel alignment. Thanks to Miika Ahdesmaki.
 - Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.
 - Fix Tophat not respecting the existing --transcriptome-index. Thanks to Miika Ahdesmaki.
-- Keep original gzipped fastq files. Thanks again to, you guessed it, Miika Ahdesmaki.
+- Keep original gzipped fastq files. Thanks again to Miika Ahdesmaki.
 - Fixed incompatibility with complexity calculation and IPython.
 - Added strand-specific RNA-seq support via the strandedness option.
 - Added Cufflinks support.
 - Set stranded flag properly in htseq-count. Thanks to Miika Ahdesmaki.
+- Fix to ensure Tophat receives a minimum of 8 gb of memory, regardless of number of cores.
 
 ## 0.7.5 (November 29, 2013)
 
