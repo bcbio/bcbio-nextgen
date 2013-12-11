@@ -13,3 +13,4 @@ details:
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
+      strandedness: unstranded

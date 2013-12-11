@@ -67,14 +67,11 @@ def downsample(in_bam, data, target_counts):
         out_file = "%s-downsample%s" % os.path.splitext(in_bam)
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
-                args = ["-T", "PrintReads",
-                        "-R", data["sam_ref"],
-                        "-I", in_bam,
-                        "--downsample_to_fraction", "%.3f" % ds_pct,
-                        "--out", tx_out_file]
-                if broad_runner.gatk_type() == "restricted":
-                    args += ["--filter_reads_with_N_cigar"]
-                broad_runner.run_gatk(args)
+                sambamba = config_utils.get_program("sambamba", data["config"])
+                num_cores = data["config"]["algorithm"].get("num_cores", 1)
+                cmd = ("{sambamba} view -t {num_cores} -f bam -o {tx_out_file} "
+                       "--subsample={ds_pct:.3} --subsampling-seed=42 {in_bam}")
+                do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
         return out_file
 
 def open_samfile(in_file):

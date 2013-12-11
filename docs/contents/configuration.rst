@@ -98,15 +98,27 @@ The sample configuration file defines ``details`` of each sample to process::
 
     details:
       - analysis: variant2
+        lane: 1
+        description: Example1
+        files: [in_pair_1.fq, in_pair_2.fq]
+        genome_build: hg19
         algorithm:
+          platform:illumina
         metadata:
           batch: Batch1
           sex: female
-        lane: 1
-        description: Example1
-        genome_build: hg19
 
 - ``analysis`` Analysis method to use [variant2, RNA-seq]
+- ``lane`` A unique number within the project. Corresponds to the
+  ``ID`` parameter in the BAM read group. Required.
+- ``description`` Unique name for this sample, corresponding to the
+  ``SM`` parameter in the BAM read group.
+- ``files`` A list of files to process. This currently supports either a single
+  end or two paired end fastq files, or a single BAM file. It does not yet
+  handle merging BAM files or more complicated inputs.
+- ``genome_build`` Genome build to align to, which references a genome
+  keyword in Galaxy to find location build files.
+
 - ``algorithm`` Parameters to configure algorithm inputs. Options
   described in more detail below.
 - ``metadata`` Additional descriptive metadata about the sample:
@@ -117,13 +129,6 @@ The sample configuration file defines ``details`` of each sample to process::
 
     - ``sex`` specifies the sample sex used to correctly prepare X/Y
       chromosomes.
-
-- ``lane`` A unique number within the project. Corresponds to the
-  ``ID`` parameter in the BAM read group. Required.
-- ``description`` Unique name for this sample, corresponding to the
-  ``SM`` parameter in the BAM read group.
-- ``genome_build`` Genome build to align to, which references a genome
-  keyword in Galaxy to find location build files.
 
 .. _upload-configuration:
 
@@ -233,6 +238,10 @@ Alignment
    want variant calls [true, false]
 -  ``coverage_bigwig`` Generate a bigwig file of coverage, for loading
    into the UCSC genome browser [true, false]
+-  ``strandedness`` For RNA-seq libraries, if your library is strand
+   specific, set the appropriate flag form [unstranded, firststrand, secondstrand].
+   Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for
+   Scriptseq prepared libraries, secondstrand is correct.
 
 Experimental information
 ========================
@@ -241,7 +250,7 @@ Experimental information
    options for filtering [exome, genome, regional]
 -  ``coverage_depth`` Depth of sequencing coverage. Influences GATK
    variant calling and selection of super-high coverage regions to
-   exclude [high, low, super-high]
+   exclude. Low coverage is generally 10x or less. [high, low, super-high]
 -  ``hybrid_target`` BED file with target regions for hybrid selection
    experiments. This is only a descriptive set of regions for metrics
    assessment. Use ``variant_regions`` to restrict calling and
@@ -423,7 +432,9 @@ Reference genome files
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The pipeline requires access to reference genomes, including the raw
-FASTA sequence and pre-built indexes for aligners. The
+FASTA sequence and pre-built indexes for aligners. For human genomes, the
+automated installer provides hg19 and GRCh37 1000 genomes references as
+provided in the `GATK resource bundle`_.
 :ref:`data-requirements` section describes the expected layout of
 `Galaxy .loc files`_ pointing to the actual sequence and index
 files.

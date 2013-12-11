@@ -3,32 +3,50 @@
 http://cufflinks.cbcb.umd.edu/manual.html
 """
 import os
-import subprocess
 
+from bcbio.utils import get_in
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 
-def assemble_transcripts(align_file, ref_file, config, data):
-    """Create transcript assemblies using Cufflinks.
-    """
-    work_dir, fname = os.path.split(align_file)
-    num_cores = config["algorithm"].get("num_cores", 1)
-    core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
-    out_dir = os.path.join(work_dir,
-                           "{base}-cufflinks".format(base=os.path.splitext(fname)[0]))
-    cl = [config_utils.get_program("cufflinks", config),
-          align_file,
-          "-o", out_dir,
-          "-b", ref_file,
-          "-u"]
-    cl += core_flags
-    tx_file = data["genome_resources"]["rnaseq"]["transcripts"]
-    tx_mask_file = data["genome_resources"]["rnaseq"]["transcripts_mask"]
-    if tx_file:
-        cl += ["-g", tx_file]
-    if tx_mask_file:
-        cl += ["-M", tx_mask_file]
-    out_tx_file = os.path.join(out_dir, "transcripts.gtf")
-    if not os.path.exists(out_tx_file):
-        subprocess.check_call(cl)
-    assert os.path.exists(out_tx_file)
-    return out_tx_file
+
+def run(align_file, ref_file, data):
+    config = data["config"]
+    cmd = _get_general_options(align_file, config)
+    cmd.extend(_get_no_assembly_options(ref_file, data))
+    out_dir = _get_output_dir(align_file, data)
+    with file_transaction(out_dir) as tmp_out_dir:
+        cmd.extend(["--output-dir", tmp_out_dir])
+        cmd.extend([align_file])
+        cmd = map(str, cmd)
+        do.run(cmd, "Cufflinks on %s." % (align_file))
+    return out_dir
+
+def _get_general_options(align_file, config):
+    options = []
+    cufflinks = config_utils.get_program("cufflinks", config)
+    options.extend([cufflinks])
+    options.extend(["--num-threads", config["algorithm"].get("num_cores", 1)])
+    options.extend(["--quiet"])
+    options.extend(["--no-update-check"])
+    return options
+
+def _get_no_assembly_options(ref_file, data):
+    options = []
+    options.extend(["--frag-bias-correct", ref_file])
+    options.extend(["--multi-read-correct"])
+    options.extend(["--upper-quartile-norm"])
+    gtf_file = data["genome_resources"]["rnaseq"].get("transcripts", "")
+    if gtf_file:
+        options.extend(["--GTF", gtf_file])
+    mask_file = data["genome_resources"]["rnaseq"].get("transcripts_mask", "")
+    if mask_file:
+        options.extend(["--mask-file", mask_file])
+
+    return options
+
+
+def _get_output_dir(align_file, data):
+    config = data["config"]
+    name = data["rgnames"]["sample"]
+    return os.path.join(get_in(config, ("dirs", "work"), "cufflinks"), name)

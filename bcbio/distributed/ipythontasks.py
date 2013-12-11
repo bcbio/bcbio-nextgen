@@ -5,8 +5,9 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.distributed import ipython
-from bcbio.ngsalign import alignprep
-from bcbio.pipeline import disambiguate, sample, lane, qcsummary, shared, variation
+from bcbio.ngsalign import alignprep, tophat
+from bcbio.pipeline import (disambiguate, sample, lane, qcsummary, shared,
+                            variation, rnaseq)
 from bcbio.provenance import system
 from bcbio import structural
 from bcbio import chipseq
@@ -52,7 +53,8 @@ def trim_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie2", "tophat2"]}
+process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie2", "tophat2"],
+                              "ensure": {"tophat2": tophat.job_requirements}}
 
 @require(alignprep)
 def prep_align_inputs(*args):
@@ -123,7 +125,13 @@ pipeline_summary.metadata = {"resources": ["gatk"]}
 @require(sample)
 def generate_transcript_counts(*args):
     with _setup_logging(args):
-        return apply(sample.generate_transcript_counts, *args)
+        return apply(rnaseq.generate_transcript_counts, *args)
+
+@require(sample)
+def run_cufflinks(*args):
+    with _setup_logging(args):
+        return apply(rnaseq.run_cufflinks, *args)
+run_cufflinks.metadata = {"resources": ["cufflinks"]}
 
 @require(sample)
 def generate_bigwig(*args):

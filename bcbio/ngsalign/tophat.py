@@ -39,10 +39,13 @@ def _set_transcriptome_option(options, data, ref_file):
                                         "transcriptome_index", "tophat"))
     if transcriptome_index and file_exists(transcriptome_index):
         options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
+        return options
 
     gtf_file = data["genome_resources"]["rnaseq"].get("transcripts")
     if gtf_file:
         options["GTF"] = gtf_file
+        return options
+
     return options
 
 def _set_cores(options, config):
@@ -60,6 +63,18 @@ def _set_rg_options(options, names):
     options["rg-platform-unit"] = names["pu"]
     return options
 
+def _set_stranded_flag(options, config):
+    strand_flag = {"unstranded": "fr-unstranded",
+                   "firststrand": "fr-firststrand",
+                   "secondstrand": "fr-secondstrand"}
+    stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
+    assert stranded in strand_flag, ("%s is not a valid strandedness value. "
+                                     "Valid values are 'firststrand', "
+                                     "'secondstrand' and 'unstranded" % (stranded))
+    flag = strand_flag[stranded]
+    options["library-type"] = flag
+    return options
+
 def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                  names=None):
     """
@@ -71,6 +86,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     options = _set_transcriptome_option(options, data, ref_file)
     options = _set_cores(options, config)
     options = _set_rg_options(options, names)
+    options = _set_stranded_flag(options, config)
 
     # select the correct bowtie option to use; tophat2 is ignoring this option
     if _tophat_major_version(config) == 1:
@@ -301,3 +317,12 @@ def _ref_version(ref_file):
     raise ValueError("Cannot detect which reference version %s is. "
                      "Should end in either .ebwt (bowtie) or .bt2 "
                      "(bowtie2)." % (ref_file))
+
+
+def job_requirements(cores, memory):
+    MIN_TOPHAT_MEMORY = 8.0
+    if not memory or cores * memory < MIN_TOPHAT_MEMORY:
+        memory = MIN_TOPHAT_MEMORY / cores
+    return cores, memory
+
+align.job_requirements = job_requirements

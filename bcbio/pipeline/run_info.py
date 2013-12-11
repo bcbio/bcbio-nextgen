@@ -139,7 +139,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "validate_regions", "validate_genome_build",
                       "clinical_reporting", "nomap_split_size",
                       "nomap_split_targets", "ensemble",
-                      "disambiguate"])
+                      "disambiguate", "strandedness"])
 
 def _check_algorithm_keys(item):
     """Check for unexpected keys in the algorithm section.
@@ -204,8 +204,26 @@ def _normalize_files(item, fc_dir):
             fastq_dir = os.getcwd()
         files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
                  for x in files]
+        _sanity_check_files(item, files)
         item["files"] = files
     return item
+
+def _sanity_check_files(item, files):
+    """Ensure input files correspond with supported
+    """
+    msg = None
+    file_types = set([("bam" if x.endswith(".bam") else "fastq") for x in files if x])
+    if len(file_types) > 1:
+        msg = "Found multiple file types (BAM and fastq)"
+    file_type = file_types.pop()
+    if file_type == "bam":
+        if len(files) != 1:
+            msg = "Expect a single BAM file input as input"
+    elif file_type == "fastq":
+        if len(files) not in [1, 2]:
+            msg = "Expect either 1 (single end) or 2 (paired end) fastq inputs"
+    if msg:
+        raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.

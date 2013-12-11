@@ -12,6 +12,7 @@ from bcbio.utils import (which, file_exists, get_in, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.alignment import sam_to_querysort_sam
 from bcbio.provenance import do
+from bcbio.log import logger
 
 
 def _get_files(data):
@@ -56,6 +57,19 @@ def invert_strand(iv):
 class UnknownChrom(Exception):
     pass
 
+def _get_stranded_flag(config):
+    strand_flag = {"unstranded": "no",
+                   "firststrand": "reverse",
+                   "secondstrand": "yes"}
+    stranded = _get_strandedness(config)
+    assert stranded in strand_flag, ("%s is not a valid strandedness value. "
+                                     "Valid values are 'firststrand', 'secondstrand', "
+                                     "and 'unstranded")
+    return strand_flag[stranded]
+
+def _get_strandedness(config):
+    return get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
+
 
 def htseq_count(data):
     """ adapted from Simon Anders htseq-count.py script
@@ -63,14 +77,19 @@ def htseq_count(data):
     """
 
     sam_filename, gff_filename, out_file, stats_file = _get_files(data)
-    stranded = "no"
+    stranded = _get_stranded_flag(data["config"])
     overlap_mode = "union"
     feature_type = "exon"
     id_attribute = "gene_id"
     minaqual = 0
 
+
     if file_exists(out_file):
         return out_file
+
+    logger.info("Counting reads mapping to exons in %s using %s as the "
+                    "annotation and strandedness as %s." % (os.path.basename(sam_filename),
+                    os.path.basename(gff_filename), _get_strandedness(data["config"])))
 
     features = HTSeq.GenomicArrayOfSets("auto", stranded != "no")
     counts = {}
