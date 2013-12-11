@@ -17,6 +17,8 @@
 - Added Cufflinks support.
 - Set stranded flag properly in htseq-count. Thanks to Miika Ahdesmaki.
 - Fix to ensure Tophat receives a minimum of 8 gb of memory, regardless of number of cores.
+- Added extra summary information to the project-summary.yaml file so downstream tools can
+  locate what genome resources were used.
 
 ## 0.7.5 (November 29, 2013)
 
