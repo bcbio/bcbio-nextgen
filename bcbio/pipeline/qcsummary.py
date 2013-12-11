@@ -73,12 +73,22 @@ def _run_qc_tools(bam_file, data):
 
 def write_project_summary(samples):
     """Write project summary information on the provided samples.
+    write out dirs, genome resources,
+
     """
     out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.yaml")
     with open(out_file, "w") as out_handle:
-        yaml.dump([data[0]["summary"]["metrics"] for data in samples if "summary" in data[0]],
-                  out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.dump([_save_fields(sample[0]) for sample in samples], out_handle,
+                  default_flow_style=False, allow_unicode=False)
     return out_file
+
+def _save_fields(sample):
+    to_save = [("dirs"), ("genome_resources"), ("genome_build"), ("sam_ref")]
+    saved = {k: sample[k] for k in to_save}
+    if "summary" in sample:
+        saved["summary"] = {"metrics": sample["summary"]["metrics"]}
+    return saved
+
 
 # ## Run and parse read information from FastQC
 
