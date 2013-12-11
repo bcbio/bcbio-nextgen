@@ -12,6 +12,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, ploidy
+from bcbio.variation.vcfutils import get_paired_bams, is_sample_pair
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -56,6 +57,48 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files["dbsnp"],
                                                ref_file, config)
     return ann_file
+
+
+def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
+                          region=None, out_file=None):
+
+    config = items[0]["config"]
+    if out_file is None:
+        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
+
+    tumor_bam, tumor_name, normal_bam, normal_name = get_paired_bams(
+        align_bams, items)
+
+    vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
+
+    if out_file is None:
+        out_file = "%s-paired-variants.vcf" % os.path.splitext(
+            align_bams[0])[0]
+
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            cl = [config_utils.get_program("freebayes", config),
+                  "--pooled-discrete", "--pvar", "0.7", "--genotype-qualities"]
+
+            bam.index(tumor_bam)
+            bam.index(normal_bam)
+
+            cl += [normal_bam, tumor_bam]
+            cl += _freebayes_options_from_config(items, config["algorithm"],
+                                                 out_file, region)
+            cl = " ".join(cl)
+            cl += (" | {vcfsamplediff} -s VT {normal_name} {tumor_name} - >"
+                " {tx_out_file}")
+            cl = cl.format(**locals())
+
+            do.run(cl, "Genotyping paired variants with FreeBayes", {})
+        clean_vcf_output(out_file, _clean_freebayes_output, "nodups")
+
+    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
+                                               assoc_files["dbsnp"], ref_file,
+                                                config)
+    return ann_file
+
 
 def _move_vcf(orig_file, new_file):
     """Move a VCF file with associated index.
