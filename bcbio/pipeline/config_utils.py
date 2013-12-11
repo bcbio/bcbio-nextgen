@@ -55,7 +55,9 @@ def load_system_config(config_file):
             raise ValueError("Could not find input system configuration file %s, "
                              "including inside standard directory %s" %
                              (config_file, os.path.join(base_dir, "galaxy")))
-    return load_config(config_file), config_file
+    config = load_config(config_file)
+    config["bcbio_system"] = config_file
+    return config, config_file
 
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
