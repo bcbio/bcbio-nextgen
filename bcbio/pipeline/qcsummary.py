@@ -78,12 +78,14 @@ def write_project_summary(samples):
     """
     out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.yaml")
     with open(out_file, "w") as out_handle:
-        yaml.dump([_save_fields(sample[0]) for sample in samples], out_handle,
+        yaml.dump({"bcbio_system": samples[0][0]["config"]["bcbio_system"]}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        yaml.dump({"samples": [_save_fields(sample[0]) for sample in samples]}, out_handle,
                   default_flow_style=False, allow_unicode=False)
     return out_file
 
 def _save_fields(sample):
-    to_save = [("dirs"), ("genome_resources"), ("genome_build"), ("sam_ref")]
+    to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata"]
     saved = {k: sample[k] for k in to_save}
     if "summary" in sample:
         saved["summary"] = {"metrics": sample["summary"]["metrics"]}
