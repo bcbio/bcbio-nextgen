@@ -263,6 +263,7 @@ def add_subparser(subparsers):
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
+    return parser
 
 def get_cloudbiolinux(remotes):
     base_dir = os.path.join(os.getcwd(), "cloudbiolinux")

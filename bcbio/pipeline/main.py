@@ -3,10 +3,11 @@
 Handles running the full pipeline based on instructions
 """
 import abc
+from collections import defaultdict
 import os
 import sys
 import argparse
-from collections import defaultdict
+import resource
 import tempfile
 
 from bcbio import install, log, structural, utils, upload
@@ -42,6 +43,7 @@ def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,
                 "resources": resources, "timeout": timeout,
                 "retries": retries}
     if parallel["type"] in ["local"]:
+        _setup_resources()
         _run_toplevel(config, config_file, work_dir, parallel,
                       fc_dir, run_info_yaml)
     elif parallel["type"] == "ipython":
@@ -51,6 +53,20 @@ def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,
                       fc_dir, run_info_yaml)
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
+
+def _setup_resources():
+    """Attempt to increase resource limits up to hard limits.
+
+    This allows us to avoid out of file handle limits where we can
+    move beyond the soft limit up to the hard limit.
+    """
+    target_procs = 50000
+    cur_proc, max_proc = resource.getrlimit(resource.RLIMIT_NPROC)
+    target_proc = min(max_proc, target_procs)
+    resource.setrlimit(resource.RLIMIT_NPROC, (max(cur_proc, target_proc), max_proc))
+    cur_hdls, max_hdls = resource.getrlimit(resource.RLIMIT_NOFILE)
+    target_hdls = min(max_hdls, target_procs)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
 
 def _get_cores_and_type(numcores, paralleltype, scheduler):
     """Return core and parallelization approach from command line providing sane defaults.
@@ -114,6 +130,17 @@ def _add_provenance(items, dirs, run_parallel, parallel, config):
 
 # ## Utility functions
 
+def _sanity_check_args(args):
+    """Ensure dependent arguments are correctly specified
+    """
+    if "scheduler" in args and "queue" in args:
+        if args.scheduler and not args.queue:
+            return "IPython parallel scheduler (-s) specified. This also requires a queue (-q)."
+        elif args.queue and not args.scheduler:
+            return "IPython parallel queue (-q) supplied. This also requires a scheduler (-s)."
+        elif args.paralleltype == "ipython" and (not args.queue or not args.scheduler):
+            return "IPython parallel requires queue (-q) and scheduler (-s) arguments."
+
 def parse_cl_args(in_args):
     """Parse input commandline arguments, handling multiple cases.
 
@@ -122,11 +149,11 @@ def parse_cl_args(in_args):
     sub_cmds = {"upgrade": install.add_subparser,
                 "server": server_main.add_subparser}
     parser = argparse.ArgumentParser(
-        description= "Best-practice pipelines for fully automated high throughput sequencing analysis.")
+        description="Best-practice pipelines for fully automated high throughput sequencing analysis.")
     sub_cmd = None
     if len(in_args) > 0 and in_args[0] in sub_cmds:
         subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
-        sub_cmds[in_args[0]](subparsers)
+        sub_parser = sub_cmds[in_args[0]](subparsers)
         sub_cmd = in_args[0]
     else:
         parser.add_argument("global_config", help="Global YAML configuration file specifying details "
@@ -160,6 +187,9 @@ def parse_cl_args(in_args):
                             action="store_true")
     args = parser.parse_args(in_args)
     if hasattr(args, "global_config"):
+        error_msg = _sanity_check_args(args)
+        if error_msg:
+            parser.error(error_msg)
         kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
                   "paralleltype": args.paralleltype,
                   "scheduler": args.scheduler,
@@ -172,6 +202,9 @@ def parse_cl_args(in_args):
         kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
     else:
         assert sub_cmd is not None
+        if sub_cmd == "upgrade":
+            if not args.tools and not args.install_data and args.upgrade == "skip":
+                sub_parser.print_help()
         kwargs = {"args": args,
                   "config_file": None,
                   sub_cmd: True}
@@ -185,7 +218,7 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
     """
     inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
               if x is not None]
-    global_config = "bcbio_system.yaml" # default configuration if not specified
+    global_config = "bcbio_system.yaml"  # default configuration if not specified
     if len(inputs) == 1:
         if os.path.isfile(inputs[0]):
             fc_dir = None
