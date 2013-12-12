@@ -80,14 +80,15 @@ def write_project_summary(samples):
     """
     work_dir = samples[0][0]["dirs"]["work"]
     out_file = os.path.join(work_dir, "project-summary.yaml")
-    upload_dir = os.path.join(work_dir, samples[0][0]["upload"]["dir"])
+    upload_dir = (os.path.join(work_dir, samples[0][0]["upload"]["dir"])
+                  if "dir" in samples[0][0]["upload"] else "")
     date = str(datetime.now())
     with open(out_file, "w") as out_handle:
         yaml.dump({"date": date}, out_handle,
                   default_flow_style=False, allow_unicode=False)
         yaml.dump({"upload": upload_dir}, out_handle,
                   default_flow_style=False, allow_unicode=False)
-        yaml.dump({"bcbio_system": samples[0][0]["config"]["bcbio_system"]}, out_handle,
+        yaml.dump({"bcbio_system": samples[0][0]["config"].get("bcbio_system", "")}, out_handle,
                   default_flow_style=False, allow_unicode=False)
         yaml.dump({"samples": [_save_fields(sample[0]) for sample in samples]}, out_handle,
                   default_flow_style=False, allow_unicode=False)
