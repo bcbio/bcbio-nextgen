@@ -7,6 +7,8 @@ import subprocess
 import lxml.html
 import pybedtools
 import yaml
+from datetime import datetime
+
 # allow graceful during upgrades
 try:
     import matplotlib
@@ -76,8 +78,15 @@ def write_project_summary(samples):
     write out dirs, genome resources,
 
     """
-    out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.yaml")
+    work_dir = samples[0][0]["dirs"]["work"]
+    out_file = os.path.join(work_dir, "project-summary.yaml")
+    upload_dir = os.path.join(work_dir, samples[0][0]["upload"]["dir"])
+    date = str(datetime.now())
     with open(out_file, "w") as out_handle:
+        yaml.dump({"date": date}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        yaml.dump({"upload": upload_dir}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
         yaml.dump({"bcbio_system": samples[0][0]["config"]["bcbio_system"]}, out_handle,
                   default_flow_style=False, allow_unicode=False)
         yaml.dump({"samples": [_save_fields(sample[0]) for sample in samples]}, out_handle,
