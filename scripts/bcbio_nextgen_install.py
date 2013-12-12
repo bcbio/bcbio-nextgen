@@ -81,8 +81,8 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
 
 def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
-            "nose", "numpy", "pandas", "pycrypto", "pip", "pysam", "pyyaml", "pyzmq",
-            "requests", "tornado", "statsmodels"]
+            "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
+            "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
     # Remove until can get 13.1.0 working cleanly on CentOS
     #extra_pkgs = ["zeromq", "pyzmq"]
@@ -112,8 +112,8 @@ def install_anaconda_python(args, remotes):
         url = remotes["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", url])
-        subprocess.check_call("echo -e '\nyes\n%s\nno\n' | bash %s" %
-                              (anaconda_dir, os.path.basename(url)), shell=True)
+        subprocess.check_call("bash %s -b -p %s" %
+                              (os.path.basename(url), anaconda_dir), shell=True)
     return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}

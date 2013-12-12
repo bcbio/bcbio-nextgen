@@ -80,8 +80,8 @@ def _update_conda_packages():
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
     pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
-            "nose", "numpy", "pycrypto", "pandas", "pip", "pysam", "pyyaml", "pyzmq",
-            "requests", "tornado", "statsmodels"]
+            "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
+            "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
         # Remove until can get 13.1.0 working cleanly on CentOS
