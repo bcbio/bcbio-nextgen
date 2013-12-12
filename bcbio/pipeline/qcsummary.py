@@ -94,7 +94,8 @@ def write_project_summary(samples):
     return out_file
 
 def _save_fields(sample):
-    to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata"]
+    to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata",
+               "description"]
     saved = {k: sample[k] for k in to_save}
     if "summary" in sample:
         saved["summary"] = {"metrics": sample["summary"]["metrics"]}
