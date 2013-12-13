@@ -12,7 +12,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, ploidy
-from bcbio.variation.vcfutils import get_paired_bams, is_sample_pair
+from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -37,7 +37,21 @@ def _freebayes_options_from_config(items, aconfig, out_file, region=None):
     #    opts += ["--variant-input", background]
     return opts
 
+
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
+                  out_file=None):
+
+    if is_paired_analysis(align_bams, items):
+        call_file = _run_freebayes_caller(align_bams, items, ref_file,
+                                          assoc_files, region, out_file)
+    else:
+        call_file = _run_freebayes_paired(align_bams, items, ref_file,
+                                          assoc_files, region, out_file)
+
+    return call_file
+
+
+def _run_freebayes_caller(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Detect SNPs and indels with FreeBayes.
     """
