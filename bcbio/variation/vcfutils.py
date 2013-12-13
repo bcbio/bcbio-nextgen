@@ -9,11 +9,12 @@ import shutil
 import pysam
 
 from bcbio import broad, utils
+from bcbio.distributed.messaging import run_multicore, zeromq_aware_logging
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import shared
+from bcbio.pipeline import shared, tools
+from bcbio.provenance import do
 from bcbio.variation import bamprep
-
 
 def is_sample_pair(align_bams, items):
 
@@ -211,7 +212,6 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
     """Combine variants in parallel by chromosome, concatenating final outputs.
     """
     file_key = "vcf_files"
-    items = [[{file_key: orig_files}]]
     def split_by_region(data):
         base, ext = os.path.splitext(os.path.basename(out_file))
         args = []
@@ -223,7 +223,45 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
         return out_file, args
     config = copy.deepcopy(config)
     config["file_key"] = file_key
+    prep_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
+    items = [[{file_key: prep_files}]]
     parallel_split_combine(items, split_by_region, run_parallel,
                            "combine_variant_files", "concat_variant_files",
                            file_key, ["region", "sam_ref", "config"], split_outfile_i=0)
+    return out_file
+
+# ## VCF preparation
+
+def bgzip_and_index(in_file, config):
+    """bgzip and tabix index an input VCF file.
+    """
+    out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            bgzip = tools.get_bgzip_cmd(config)
+            cmd = "{bgzip} -c {in_file} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
+        os.remove(in_file)
+    tabix_index(out_file, config)
+    return out_file
+
+@utils.map_wrap
+@zeromq_aware_logging
+def p_bgzip_and_index(in_file, config):
+    """Parallel-aware bgzip and indexing
+    """
+    return [bgzip_and_index(in_file, config)]
+
+def tabix_index(in_file, config, preset="vcf"):
+    """Index a file using tabix.
+    """
+    in_file = os.path.abspath(in_file)
+    out_file = in_file + ".tbi"
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            tabix = tools.get_tabix_cmd(config)
+            tx_in_file = os.path.splitext(tx_out_file)[0]
+            os.symlink(in_file, tx_in_file)
+            cmd = "{tabix} -p {preset} {tx_in_file}"
+            do.run(cmd.format(**locals()), "tabix index %s" % os.path.basename(in_file))
     return out_file

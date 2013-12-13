@@ -2,6 +2,7 @@
 """
 import os
 import shutil
+import subprocess
 import unittest
 
 from nose.plugins.attrib import attr
@@ -30,6 +31,7 @@ class VCFUtilTest(unittest.TestCase):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data")
 
     @attr(speed=1)
+    @attr(combo=True)
     def test_1_parallel_vcf_combine(self):
         """Parallel combination of VCF files, split by chromosome.
         """
@@ -46,6 +48,11 @@ class VCFUtilTest(unittest.TestCase):
         if os.path.exists(out_file):
             os.remove(out_file)
         vcfutils.parallel_combine_variants(files, out_file, ref_file, config, run_parallel)
+        for fname in files:
+            if os.path.exists(fname + ".gz"):
+                subprocess.check_call(["gunzip", fname + ".gz"])
+            if os.path.exists(fname + ".gz.tbi"):
+                os.remove(fname + ".gz.tbi")
 
     @attr(speed=1)
     def test_2_vcf_exclusion(self):
