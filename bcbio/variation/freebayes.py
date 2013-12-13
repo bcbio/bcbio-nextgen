@@ -105,6 +105,9 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 _freebayes_options_from_config(items, config["algorithm"],
                                                out_file, region))
 
+            # NOTE: The first sample name in the vcfsamplediff call is
+            # the one supposed to be the *germline* one
+            
             cl = ("{freebayes} --pooled-discrete --pvar 0.7"
                   " --genotype-qualities {opts} {paired.tumor_bam}"
                   " {paired.normal_bam} | {vcfsamplediff} -s VT"
