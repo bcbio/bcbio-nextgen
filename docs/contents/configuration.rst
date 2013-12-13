@@ -219,6 +219,7 @@ Alignment
     in conjunction with the ``adapters`` field a set of adapter sequences or
     poly-A tails that could appear on the ends of reads:
     [low_quality, read_through, False]
+-  ``min_read_length`` removes read pairs where any of the trimmed read sizes falls below the allowable size. If bwa-mem is desired, this value must be set to >75 [default: 20]
 -  ``adapters`` If trimming adapter read through, trim a set of stock
    adapter sequences. Allows specification of multiple items in a list,
    for example [truseq, polya] will trim both TruSeq adapter sequences
