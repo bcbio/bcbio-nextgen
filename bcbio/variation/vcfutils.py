@@ -16,8 +16,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.variation import bamprep
 
-paired_data = namedtuple("paired_data", "tumor_bam" "tumor_sample_name"
-                         "normal_bam" "normal_sample_name")
+PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_sample_name",
+                                       "normal_bam", "normal_sample_name"])
 
 
 def is_paired_analysis(align_bams, items):
@@ -28,8 +28,7 @@ def is_paired_analysis(align_bams, items):
                                          is not None for item in items)):
         return False
 
-    if get_paired_bams(align_bams, items) is not None:
-        return True
+    return True if get_paired_bams(align_bams, items) is not None else False
 
 
 def get_paired_bams(align_bams, items):
@@ -53,10 +52,8 @@ def get_paired_bams(align_bams, items):
     if tumor_bam is None or normal_bam is None:
         return
 
-    return paired_data(tumor_bam=tumor_bam,
-                       tumor_sample_name=tumor_sample_name,
-                       normal_bam=normal_bam,
-                       normal_sample_name=normal_sample_name)
+    return PairedData(tumor_bam, tumor_sample_name, normal_bam,
+                      normal_sample_name)
 
 
 def write_empty_vcf(out_file):
