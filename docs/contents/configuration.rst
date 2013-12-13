@@ -363,9 +363,11 @@ and memory and compute resources to devote to them::
   are on the path.
 - ``dir`` For software not distributed as a single executable, like
   files of Java jars, the location of the base directory.
-- ``cores`` Cores to use for multi-proccessor enabled software. On
-  cluster systems, match this with the number of physical cores
-  available on individual machines.
+- ``cores`` Cores to use for multi-proccessor enabled software. This is how
+  many cores will be allocated per job. For example if you are running
+  10 samples and passed -n 40 to bcbio-nextgen and the step you are running
+  has cores: 8 set, a maximum of five samples will run in parallel, each using
+  8 cores.
 - ``jvm_opts`` Specific memory usage options for Java software. For
   memory usage on programs like GATK, specify the maximum usage per
   core. On multicore machines, that's machine-memory divided by cores.
