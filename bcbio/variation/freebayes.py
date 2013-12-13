@@ -66,8 +66,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
 
-    tumor_bam, tumor_name, normal_bam, normal_name = get_paired_bams(
-        align_bams, items)
+        paired = get_paired_bams(align_bams, items)
 
     vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
 
@@ -77,26 +76,30 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            cl = [config_utils.get_program("freebayes", config),
-                  "--pooled-discrete", "--pvar", "0.7", "--genotype-qualities"]
 
-            bam.index(tumor_bam)
-            bam.index(normal_bam)
+            freebayes = config_utils.get_program("freebayes", config)
+            opts = " ".join(
+                _freebayes_options_from_config(items, config["algorithm"],
+                                               out_file, region))
 
-            cl += [normal_bam, tumor_bam]
-            cl += _freebayes_options_from_config(items, config["algorithm"],
-                                                 out_file, region)
-            cl = " ".join(cl)
-            cl += (" | {vcfsamplediff} -s VT {normal_name} {tumor_name} - >"
-                " {tx_out_file}")
-            cl = cl.format(**locals())
+            cl = ("{freebayes} --pooled-discrete --pvar 0.7"
+                  " --genotype-qualities {opts} {paired.tumor_bam}"
+                  " {paired.normal_bam} | {vcfsamplediff} -s VT"
+                  " {paired.normal_sample_name} {paired.tumor_sample_name}"
+                  " - >  {tx_out_file}")
+
+            bam.index(paired.tumor_bam)
+            bam.index(paired.normal_bam)
+
+            cl = cl.format(**locals)
 
             do.run(cl, "Genotyping paired variants with FreeBayes", {})
+
         clean_vcf_output(out_file, _clean_freebayes_output, "nodups")
 
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"], ref_file,
-                                                config)
+                                               config)
     return ann_file
 
 
