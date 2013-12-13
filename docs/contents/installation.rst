@@ -195,6 +195,8 @@ programs and libraries locally instead of globally, `virtualenv`_
 creates an isolated, local Python installation that does not require
 system install privileges.
 
+.. _virtualenv: http://www.virtualenv.org/en/latest/
+
 Tool Requirements
 ~~~~~~~~~~~~~~~~~
 
@@ -207,41 +209,17 @@ for both software and associated data files::
 
 You can also install them manually, adjusting locations in the
 ``resources`` section of your ``bcbio_system.yaml`` configuration file
-as needed.
+as needed.  The CloudBioLinux infrastructure provides a full list of third party
+software installed with bcbio-nextgen:
 
--  An aligner: we support multiple aligners, including `bwa`_,
-   `novoalign`_ and `bowtie2`_
--  `Picard`_ -- BAM manipulation and processing
--  `FastQC`_ -- Generation of sequencing quality reports
--  `GATK`_ -- Variant calling and BAM preparation
--  `snpEff`_ -- Identify functional consequences of variants.
+- `packages-homebrew.yaml`_ -- All third party tools installed through the
+  Homebrew/Linuxbrew package manager.
+- `custom.yaml`_ -- All third party tools installed via CloudBioLinux's custom
+  installation procedure.
 
-The code uses a number of Python modules, installed with the code:
-
--  `biopython`_
--  `pysam`_
--  `ipython`_
--  `sh`_
--  `PyYAML`_
--  `logbook`_
-
-.. _bwa: http://bio-bwa.sourceforge.net/
-.. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
-.. _novoalign: http://www.novocraft.com
-.. _Picard: http://picard.sourceforge.net/
-.. _FastQC: http://www.bioinformatics.bbsrc.ac.uk/projects/fastqc/
-.. _GATK: http://www.broadinstitute.org/gatk/
-.. _snpEff: http://sourceforge.net/projects/snpeff/
-.. _biopython: http://biopython.org
-.. _pysam: http://code.google.com/p/pysam/
-.. _PyYAML: http://pyyaml.org/
-.. _logbook: http://packages.python.org/Logbook
-.. _numpy: http://www.numpy.org/
 .. _CloudBioLinux: http://cloudbiolinux.org
-.. _virtualenv: http://www.virtualenv.org/en/latest/
-.. _ipython: http://ipython.org/
-.. _sh: http://amoffat.github.com/sh/
-
+.. _packages-homebrew.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/contrib/flavor/ngs_pipeline_minimal/packages-homebrew.yaml
+.. _custom.yaml : https://github.com/chapmanb/cloudbiolinux/blob/master/contrib/flavor/ngs_pipeline_minimal/custom.yaml
 
 .. _data-requirements:
 
@@ -318,4 +296,3 @@ automatically::
 
 .. _fabricrc.txt: https://github.com/chapmanb/cloudbiolinux/blob/master/config/fabricrc.txt
 .. _biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
-

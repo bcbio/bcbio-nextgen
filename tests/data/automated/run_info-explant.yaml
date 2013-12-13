@@ -9,6 +9,8 @@ details:
       trim_reads: read_through
       adapters: [truseq, polya]
       disambiguate: [hg19]
+    metadata:
+      condition: normal
     description: Test1
     genome_build: mm9
     lane: 1
@@ -20,6 +22,8 @@ details:
       trim_reads: read_through
       adapters: [truseq, polya]
       disambiguate: [hg19]
+    metadata:
+      condition: tumor
     description: Test2
     genome_build: mm9
     lane: 2

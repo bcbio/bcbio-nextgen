@@ -7,6 +7,8 @@ import subprocess
 import lxml.html
 import pybedtools
 import yaml
+from datetime import datetime
+
 # allow graceful during upgrades
 try:
     import matplotlib
@@ -73,12 +75,33 @@ def _run_qc_tools(bam_file, data):
 
 def write_project_summary(samples):
     """Write project summary information on the provided samples.
+    write out dirs, genome resources,
+
     """
-    out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.yaml")
+    work_dir = samples[0][0]["dirs"]["work"]
+    out_file = os.path.join(work_dir, "project-summary.yaml")
+    upload_dir = (os.path.join(work_dir, samples[0][0]["upload"]["dir"])
+                  if "dir" in samples[0][0]["upload"] else "")
+    date = str(datetime.now())
     with open(out_file, "w") as out_handle:
-        yaml.dump([data[0]["summary"]["metrics"] for data in samples if "summary" in data[0]],
-                  out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.dump({"date": date}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        yaml.dump({"upload": upload_dir}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        yaml.dump({"bcbio_system": samples[0][0]["config"].get("bcbio_system", "")}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        yaml.dump({"samples": [_save_fields(sample[0]) for sample in samples]}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
     return out_file
+
+def _save_fields(sample):
+    to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata",
+               "description"]
+    saved = {k: sample[k] for k in to_save}
+    if "summary" in sample:
+        saved["summary"] = {"metrics": sample["summary"]["metrics"]}
+    return saved
+
 
 # ## Run and parse read information from FastQC
 

@@ -1,6 +1,6 @@
-version: 5
+version: 6
 
-55iases:
+aliases:
   human: true
   snpeff: GRCh37
   ensembl: human

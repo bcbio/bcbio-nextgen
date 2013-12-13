@@ -72,9 +72,11 @@ def zeromq_aware_logging(f):
         return out
     return wrapper
 
-def run_multicore(fn, items, config, cores):
+def run_multicore(fn, items, config, cores=None):
     """Run the function using multiple cores on the given items to process.
     """
+    if cores is None:
+        cores = config["algorithm"].get("num_cores", 1)
     parallel = {"type": "local", "cores": cores}
     sysinfo = system.get_info({}, parallel)
     jobr = ipython.find_job_resources([fn], parallel, items, sysinfo, config,

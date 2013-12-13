@@ -3,6 +3,7 @@
 http://samtools.sourceforge.net/mpileup.shtml
 """
 import os
+from distutils.version import LooseVersion
 
 from bcbio import bam
 from bcbio.utils import file_exists
@@ -10,7 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 from bcbio.variation import annotation, bamprep, realign, vcfutils
 
 
@@ -72,18 +73,26 @@ def prep_mpileup(align_bams, ref_file, max_read_depth, config,
 
 def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_file):
     """Call variants with samtools in target_regions.
-    """
 
+    Works around a GATK VCF compatibility issue in samtools 0.20 by removing extra
+    Version information from VCF header lines.
+    """
     config = items[0]["config"]
 
     max_read_depth = "1000"
     mpileup = prep_mpileup(align_bams, ref_file, max_read_depth, config,
                            target_regions=target_regions)
     bcftools = config_utils.get_program("bcftools", config)
+    bcftools_version = programs.get_version("bcftools", config=config)
+    if LooseVersion(bcftools_version) > LooseVersion("0.1.19"):
+        bcftools_opts = "call -v -c"
+    else:
+        bcftools_opts = "view -v -c -g"
     vcfutils = config_utils.get_program("vcfutils.pl", config)
     cmd = ("{mpileup} "
-           "| {bcftools} view -v -c -g - "
+           "| {bcftools} {bcftools_opts} - "
            "| {vcfutils} varFilter -D {max_read_depth} "
+           "| sed 's/,Version=3>/>/'"
            "> {out_file}")
     logger.info(cmd.format(**locals()))
     do.run(cmd.format(**locals()), "Variant calling with samtools", {})
