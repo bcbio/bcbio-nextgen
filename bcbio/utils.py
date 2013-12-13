@@ -252,6 +252,14 @@ def add_full_path(dirname, basedir=None):
         dirname = os.path.join(basedir, dirname)
     return dirname
 
+def splitext_plus(f):
+    """Split on file extensions, allowing for zipped extensions.
+    """
+    base, ext = os.path.splitext(f)
+    if ext in [".gz", ".bz2", ".zip"]:
+        base, ext2 = os.path.splitext(base)
+        ext = ext2 + ext
+    return base, ext
 
 def append_stem(to_transform, word):
     """
@@ -262,13 +270,9 @@ def append_stem(to_transform, word):
 
     """
     if is_sequence(to_transform):
-        transformed = []
-        for f in to_transform:
-            (base, ext) = os.path.splitext(f)
-            transformed.append("".join([base, word, ext]))
-        return transformed
+        return [append_stem(f, word) for f in to_transform]
     elif is_string(to_transform):
-        (base, ext) = os.path.splitext(to_transform)
+        (base, ext) = splitext_plus(to_transform)
         return "".join([base, word, ext])
     else:
         raise ValueError("append_stem takes a single filename as a string or "

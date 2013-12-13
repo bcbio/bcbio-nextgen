@@ -159,6 +159,11 @@ def concat_variant_files(*args):
     with _setup_logging(args):
         return apply(vcfutils.concat_variant_files, *args)
 
+@require(vcfutils)
+def merge_variant_files(*args):
+    with _setup_logging(args):
+        return apply(vcfutils.merge_variant_files, *args)
+
 @require(population)
 def prep_gemini_db(*args):
     with _setup_logging(args):

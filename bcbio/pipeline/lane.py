@@ -9,12 +9,12 @@ import pysam
 
 from bcbio import utils, broad
 from bcbio.log import logger
-from bcbio.bam import callable
+from bcbio.bam import callable, ref
 from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
-from bcbio.variation import recalibrate, vcfutils
+from bcbio.variation import recalibrate
 
 def _item_needs_compute(lane_items):
     """Determine if any item needs computing resources to spin up a cluster.
@@ -94,7 +94,7 @@ def link_bam_file(orig_file, new_dir):
 def _check_prealigned_bam(in_bam, ref_file, config):
     """Ensure a pre-aligned BAM file matches the expected reference genome.
     """
-    ref_contigs = [c["SN"] for c in vcfutils.ref_file_contigs(ref_file, config)]
+    ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
     with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
         bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
     problems = []
