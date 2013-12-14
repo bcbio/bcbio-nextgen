@@ -19,6 +19,8 @@
 - Fix to ensure Tophat receives a minimum of 8 gb of memory, regardless of number of cores.
 - Added extra summary information to the project-summary.yaml file so downstream tools can
   locate what genome resources were used.
+- Added ``test_run`` option to the sample configuration file. Set it to True to run a small
+subset of your data through the pipeline to make sure everything is working okay.
 
 ## 0.7.5 (November 29, 2013)
 
