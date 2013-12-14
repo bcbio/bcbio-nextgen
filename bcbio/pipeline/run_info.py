@@ -266,6 +266,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
                                                   ignore_keys=["variantcaller", "realign", "recalibrate",
                                                                "phasing", "svcaller"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
+        item["test_run"] = global_config.get("test_run", False)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details

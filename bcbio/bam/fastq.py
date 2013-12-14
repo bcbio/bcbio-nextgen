@@ -2,7 +2,9 @@
 """
 
 import difflib
-from itertools import izip
+from itertools import izip, product
+import os
+import random
 
 from Bio import SeqIO
 
@@ -123,3 +125,59 @@ def combine_pairs(input_files):
 
     [p.sort() for p in pairs]
     return pairs
+
+
+def is_fastq(in_file):
+    fastq_ends = [".fq", ".fastq"]
+    zip_ends = [".gzip", ".gz"]
+    base, first_ext = os.path.splitext(in_file)
+    second_ext = os.path.splitext(base)[1]
+    if first_ext in fastq_ends:
+        return True
+    elif second_ext + first_ext in product(fastq_ends, zip_ends):
+        return True
+    else:
+        return False
+
+def downsample(f1, f2, data, N):
+    """ get N random headers from a fastq file without reading the
+    whole thing into memory
+    modified from: http://www.biostars.org/p/6544/
+    """
+    records = sum(1 for _ in open(f1)) / 4
+    N = records if N > records else N
+    rand_records = random.sample(xrange(records), N)
+
+    fh1 = open(f1)
+    fh2 = open(f2) if f2 else None
+    outf1 = os.path.splitext(f1)[0] + ".subset" + os.path.splitext(f1)[1]
+    outf2 = os.path.splitext(f2)[0] + ".subset" + os.path.splitext(f2)[1] if f2 else None
+
+    out_files = (outf1, outf2) if outf2 else (outf1)
+
+    with file_transaction(out_files) as tx_out_files:
+        if isinstance(tx_out_files, basestring):
+            tx_out_f1 = tx_out_files
+        else:
+            tx_out_f1, tx_out_f2 = tx_out_files
+        sub1 = open(tx_out_f1, "w")
+        sub2 = open(tx_out_f2, "w") if outf2 else None
+        rec_no = - 1
+        for rr in rand_records:
+            while rec_no < rr:
+                rec_no += 1
+                for i in range(4): fh1.readline()
+                if fh2:
+                    for i in range(4): fh2.readline()
+            for i in range(4):
+                sub1.write(fh1.readline())
+                if sub2:
+                    sub2.write(fh2.readline())
+            rec_no += 1
+        fh1.close()
+        sub1.close()
+        if f2:
+            fh2.close()
+            sub2.close()
+
+    return outf1, outf2
