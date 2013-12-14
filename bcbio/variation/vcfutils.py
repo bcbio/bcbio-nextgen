@@ -1,5 +1,6 @@
 """Utilities for manipulating variant files in standard VCF format.
 """
+import contextlib
 import copy
 import gzip
 import itertools
@@ -142,12 +143,13 @@ def _do_merge(orig_files, out_file, config, region):
     """
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            prep_files = " ".join(run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config))
-            bcftools = config_utils.get_program("bcftools", config)
-            output_type = "z" if out_file.endswith(".gz") else "v"
-            region_str = "-r {}".format(region) if region else ""
-            cmd = "{bcftools} merge -o {output_type} {region_str} {prep_files} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Merge variants")
+            with short_filenames(run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)) as fs:
+                prep_files = " ".join(fs)
+                bcftools = config_utils.get_program("bcftools", config)
+                output_type = "z" if out_file.endswith(".gz") else "v"
+                region_str = "-r {}".format(region) if region else ""
+                cmd = "{bcftools} merge -o {output_type} {region_str} {prep_files} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Merge variants")
     return out_file
 
 def _sort_by_region(fnames, regions, ref_file, config):
@@ -181,15 +183,36 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             ready_files = [x for x in sorted_files if vcf_has_variants(x)]
             if len(ready_files) == 0:
                 ready_files = sorted_files[:1]
-            for i, orig_file in enumerate(ready_files):
-                cat_cmd = "zcat" if orig_file.endswith(".gz") else "cat"
-                remove_header = "| grep -v ^#" if i > 0 else ""
-                cat_cmds.append("<({cat_cmd} {orig_file} {remove_header})".format(**locals()))
-            orig_file_str = " ".join(cat_cmds)
-            compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
-            cmd = "cat {orig_file_str} {compress_str} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Concatenate variants")
+            with short_filenames(ready_files) as fs:
+                for i, orig_file in enumerate(fs):
+                    cat_cmd = "zcat" if orig_file.endswith(".gz") else "cat"
+                    remove_header = "| grep -v ^#" if i > 0 else ""
+                    cat_cmds.append("<({cat_cmd} {orig_file} {remove_header})".format(**locals()))
+                orig_file_str = " ".join(cat_cmds)
+                compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
+                cmd = "cat {orig_file_str} {compress_str} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Concatenate variants")
     return out_file
+
+@contextlib.contextmanager
+def short_filenames(fs):
+    """Provide temporary short filenames for a list of files.
+
+    This helps avoids errors from long command lines, and handles tabix and
+    bam indexes on linked files.
+    """
+    index_exts = [".bai", ".tbi"]
+    with utils.curdir_tmpdir() as tmpdir:
+        short_fs = []
+        for i, f in enumerate(fs):
+            ext = utils.splitext_plus(f)[-1]
+            short_f = os.path.relpath(os.path.join(tmpdir, "%s%s" % (i, ext)))
+            os.symlink(f, short_f)
+            for iext in index_exts:
+                if os.path.exists(f + iext):
+                    os.symlink(f + iext, short_f + iext)
+            short_fs.append(short_f)
+        yield short_fs
 
 # ## To be phased out following testing
 
