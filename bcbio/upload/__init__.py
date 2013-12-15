@@ -45,6 +45,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
+    out = _maybe_add_cufflinks(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_chipseq(sample):
@@ -125,6 +126,13 @@ def _maybe_add_counts(algorithm, sample, out):
     out.append({"path": stats_file,
                 "type": "count_stats",
                 "ext": "ready"})
+    return out
+
+def _maybe_add_cufflinks(algorithm, sample, out):
+    if "cufflinks_dir" in sample:
+        out.append({"path": sample["cufflinks_dir"],
+                    "type": "directory",
+                    "ext": "cufflinks"})
     return out
 
 def _has_alignment_file(algorithm, sample):
