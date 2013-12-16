@@ -113,6 +113,54 @@ def count(in_bam, config=None):
     out = subprocess.check_output(cmd, shell=True)
     return int(out)
 
+def sam_to_bam(in_sam, config):
+    if is_bam(in_sam):
+        return in_sam
+
+    assert is_sam(in_sam), "%s is not a SAM file" % in_sam
+    out_file = os.path.splitext(in_sam)[0] + ".bam"
+    if utils.file_exists(out_file):
+        return out_file
+    sambamba = _get_sambamba(config)
+
+    # disamble sambamba view for now: https://github.com/lomereiter/sambamba/issues/46
+    sambamba = None
+    samtools = config_utils.get_program("samtools", config)
+    num_cores = config["algorithm"].get("num_cores", 1)
+    runner = sambamba if sambamba else samtools
+    with file_transaction(out_file) as tx_out_file:
+        cmd = "{runner} view -h -S -b {in_sam} -o {tx_out_file}"
+        if sambamba:
+            cmd += " -t {num_cores}"
+        try:
+            do.run(cmd.format(**locals()),
+                   "Convert SAM to BAM (multi core): %s to %s"
+                   % (in_sam, out_file))
+        except:
+            do.run(cmd.format(**locals()),
+                   ("Convert SAM to BAM (single core): %s to %s"
+                    % (in_sam, out_file)))
+    return out_file
+
+
+def merge(bamfiles, out_bam, config):
+    assert all(map(is_bam, bamfiles)), ("Not all of the files to merge are not BAM "
+                                        "files: %s " % (bamfiles))
+    assert all(map(utils.file_exists, bamfiles)), ("Not all of the files to merge "
+                                             "exist: %s" % (bamfiles))
+    sambamba = _get_sambamba(config)
+    # disamble sambamba view for now: https://github.com/lomereiter/sambamba/issues/46
+    sambamba = None
+    samtools = config_utils.get_program("samtools", config)
+    num_cores = config["algorithm"].get("num_cores", 1)
+    with file_transaction(out_bam) as tx_out_bam:
+        if sambamba:
+            cmd = "{sambamba} merge -t {num_cores} {tx_out_bam} " + " ".join(bamfiles)
+        else:
+            cmd = "{samtools} merge -@ {num_cores} {tx_out_bam} " + " ".join(bamfiles)
+        do.run(cmd.format(**locals()), "Merge %s into %s." % (bamfiles, out_bam))
+    return out_bam
+
 
 def sort(in_bam, config, order="coordinate"):
     """Sort a BAM file, skipping if already present.
@@ -176,3 +224,5 @@ def _get_sort_stem(in_bam, order):
     for suffix in SUFFIXES:
         sort_base = sort_base.split(suffix)[0]
     return sort_base + SUFFIXES[order]
+
+

@@ -153,7 +153,7 @@ def picard_index_ref(picard, ref_file):
             picard.run("CreateSequenceDictionary", opts)
     return dict_file
 
-def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir, names):
+def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir, names, order="queryname"):
     """Convert fastq file(s) to BAM, adding sample, run group and platform information.
     """
     out_bam = os.path.join(out_dir, "%s-fastq.bam" %
@@ -167,7 +167,8 @@ def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir, names):
                         ("PLATFORM_UNIT", names["pu"]),
                         ("PLATFORM", names["pl"]),
                         ("TMP_DIR", tmp_dir),
-                        ("OUTPUT", tx_out_bam)]
+                        ("OUTPUT", tx_out_bam),
+                        ("SORT_ORDER", order)]
                 if fastq_two:
                     opts.append(("FASTQ2", fastq_two))
                 picard.run("FastqToSam", opts)
