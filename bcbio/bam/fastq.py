@@ -153,6 +153,12 @@ def downsample(f1, f2, data, N):
     outf1 = os.path.splitext(f1)[0] + ".subset" + os.path.splitext(f1)[1]
     outf2 = os.path.splitext(f2)[0] + ".subset" + os.path.splitext(f2)[1] if f2 else None
 
+    if utils.file_exists(outf1):
+        if not outf2:
+            return outf1, outf2
+        elif utils.file_exists(outf2):
+            return outf1, outf2
+
     out_files = (outf1, outf2) if outf2 else (outf1)
 
     with file_transaction(out_files) as tx_out_files:
