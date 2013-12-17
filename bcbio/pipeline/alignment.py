@@ -169,14 +169,10 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
     base_dir = os.path.dirname(sam_file)
 
     picard.run_fn("picard_index_ref", ref_file)
-    out_fastq_bam = picard.run_fn("picard_fastq_to_bam", fastq1, fastq2, base_dir,
-                                  names, "queryname")
-    out_bam = bam.sam_to_bam(sam_file, config)
-    #merged_name = os.path.join(os.path.dirname(out_bam), names["sample"]) + "-merged.bam"
-    #merged_bam = bam.merge([out_bam, out_fastq_bam], merged_name, config)
-    merged_bam = picard.run_fn("picard_sam_to_bam", sam_file, out_fastq_bam, ref_file,
-                               fastq2 is not None)
-    sort_bam = bam.sort(merged_bam, config)
+    out_fastq_bam = picard.run_fn("picard_fastq_to_bam", fastq1, fastq2, base_dir, names)
+    out_bam = picard.run_fn("picard_sam_to_bam", sam_file, out_fastq_bam, ref_file,
+                            fastq2 is not None)
+    sort_bam = picard.run_fn("picard_sort", out_bam)
 
     utils.save_diskspace(sam_file, "SAM converted to BAM", config)
     utils.save_diskspace(out_fastq_bam, "Combined into output BAM %s" % out_bam, config)
@@ -189,3 +185,4 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
         if fastq2:
             utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)
     return sort_bam
+
