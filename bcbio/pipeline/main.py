@@ -417,7 +417,6 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("process_alignment", samples)
         samples = disambiguate.resolve(samples, run_parallel)
         samples = rnaseq.estimate_expression(samples, run_parallel)
-#        samples = run_parallel("generate_transcript_counts", samples)
         combined = combine_count_files([x[0].get("count_file") for x in samples])
         for x in samples:
             x[0]["combined_counts"] = combined
