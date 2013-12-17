@@ -97,6 +97,10 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
         options["bowtie1"] = True
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
+    final_out = os.path.join(out_dir, "%s.sam" % out_base)
+    if file_exists(final_out):
+        return final_out
+
     out_file = os.path.join(out_dir, _out_fnames[0])
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
@@ -125,16 +129,17 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
         _fix_empty_readnames(out_file)
     if pair_file and _has_alignments(out_file):
-        final_out = _fix_mates(out_file, os.path.join(out_dir, "%s-align.bam" % out_base),
-                               ref_file, config)
+        fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.sam" % out_base),
+                           ref_file, config)
     else:
-        final_out = os.path.join(out_dir, "%s.sam" % out_base)
-        if not file_exists(final_out):
-            os.symlink(os.path.basename(out_file), final_out)
+        fixed = out_file
+    # else:
+    #     fixed = bam.sam_to_bam(out_file, config)
+    if not file_exists(final_out):
+        os.symlink(os.path.basename(fixed), final_out)
     return final_out
 
 def _has_alignments(sam_file):
-    print sam_file
     with open(sam_file) as in_handle:
         for line in in_handle:
             if line.startswith("File removed to save disk space"):
@@ -171,7 +176,7 @@ def _fix_mates(orig_file, out_file, ref_file, config):
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
-            cmd = "{samtools} view -bt {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
+            cmd = "{samtools} view -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
     return out_file
 
