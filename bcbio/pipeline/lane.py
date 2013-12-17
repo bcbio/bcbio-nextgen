@@ -48,7 +48,7 @@ def process_lane(item):
             file1 = bam.downsample(file1, item, NUM_DOWNSAMPLE)
         else:
             file1, file2 = fastq.downsample(file1, file2, item,
-                                            NUM_DOWNSAMPLE)
+                                            NUM_DOWNSAMPLE, quick=True)
     item["files"] = (file1, file2)
     return [item]
 

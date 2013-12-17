@@ -139,14 +139,19 @@ def is_fastq(in_file):
     else:
         return False
 
-def downsample(f1, f2, data, N):
+def downsample(f1, f2, data, N, quick=False):
     """ get N random headers from a fastq file without reading the
     whole thing into memory
     modified from: http://www.biostars.org/p/6544/
+    quick=True will just grab the first N reads rather than do a true
+    downsampling
     """
-    records = sum(1 for _ in open(f1)) / 4
-    N = records if N > records else N
-    rand_records = random.sample(xrange(records), N)
+    if quick:
+        rand_records = range(N)
+    else:
+        records = sum(1 for _ in open(f1)) / 4
+        N = records if N > records else N
+        rand_records = random.sample(xrange(records), N)
 
     fh1 = open(f1)
     fh2 = open(f2) if f2 else None
