@@ -149,7 +149,6 @@ def merge(bamfiles, out_bam, config):
     assert all(map(utils.file_exists, bamfiles)), ("Not all of the files to merge "
                                              "exist: %s" % (bamfiles))
     sambamba = _get_sambamba(config)
-    # disamble sambamba view for now: https://github.com/lomereiter/sambamba/issues/46
     sambamba = None
     samtools = config_utils.get_program("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
@@ -214,7 +213,7 @@ def bam_already_sorted(in_bam, config, order):
 
 
 def _get_sort_order(in_bam, config):
-    with pysam.Samfile(in_bam, "rb") as bam_handle:
+    with open_samfile(in_bam) as bam_handle:
         header = bam_handle.header
     return utils.get_in(header, ("HD", "SO"), None)
 
