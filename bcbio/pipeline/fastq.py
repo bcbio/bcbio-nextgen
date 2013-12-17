@@ -13,6 +13,8 @@ from bcbio.distributed.transaction import file_transaction
 def needs_fastq_conversion(item, config):
     """Check if an item needs conversion to fastq files.
     """
+    if item.get("test_run", False):
+        return True
     for f in item.get("files", []):
         if f.endswith(".bam") and _pipeline_needs_fastq(config, item):
             return True

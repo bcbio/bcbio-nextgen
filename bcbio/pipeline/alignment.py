@@ -185,3 +185,4 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
         if fastq2:
             utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)
     return sort_bam
+

@@ -30,7 +30,7 @@ def _get_general_options(align_file, config):
     cufflinks = config_utils.get_program("cufflinks", config)
     options.extend([cufflinks])
     options.extend(["--num-threads", config["algorithm"].get("num_cores", 1)])
-    options.extend(["--quiet"])
+  #  options.extend(["--quiet"])
     options.extend(["--no-update-check"])
     return options
 

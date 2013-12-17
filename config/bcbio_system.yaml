@@ -55,12 +55,12 @@ resources:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/varscan
   bowtie2:
-    memory: 2g
     cores: 16
   tophat2:
-    memory: 2g
     cores: 16
-
+  cufflinks:
+    cores: 16
+    
 # -- Default algorithm setup
 
 # Define default algorithmic details for processing. These are generally
