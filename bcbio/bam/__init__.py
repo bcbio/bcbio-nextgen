@@ -179,6 +179,7 @@ def sort(in_bam, config, order="coordinate"):
     sort_file = sort_stem + ".bam"
     if not utils.file_exists(sort_file):
         sambamba = _get_sambamba(config)
+        sambamba = None
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(sort_file) as tx_sort_file:
@@ -186,7 +187,7 @@ def sort(in_bam, config, order="coordinate"):
             tx_dir = utils.safe_makedir(os.path.dirname(tx_sort_file))
             order_flag = "-n" if order is "queryname" else ""
             samtools_cmd = ("{samtools} sort {order_flag} "
-                            "-o {tx_sort_stem} {in_bam}")
+                            "{in_bam} {tx_sort_stem}")
             if sambamba:
                 cmd = ("{sambamba} sort -t {num_cores} {order_flag} "
                        "-o {tx_sort_file} --tmpdir={tx_dir} {in_bam}")

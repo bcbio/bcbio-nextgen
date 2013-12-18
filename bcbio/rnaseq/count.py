@@ -16,7 +16,8 @@ from bcbio import bam
 
 
 def _get_files(data):
-    in_file = _get_sam_file(data)
+#    in_file = _get_sam_file(data)
+    in_file = bam.sort(data["work_bam"], data["config"], order="queryname")
     gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
     work_dir = data["dirs"].get("work", "work")
     out_dir = os.path.join(work_dir, "htseq-count")
@@ -131,7 +132,10 @@ def htseq_count(data):
                          % feature_type)
 
     try:
-        read_seq = HTSeq.SAM_Reader(sam_filename)
+        if bam.is_sam(sam_filename):
+            read_seq = HTSeq.SAM_Reader(sam_filename)
+        elif bam.is_bam(sam_filename):
+            read_seq = HTSeq.BAM_Reader(sam_filename)
         first_read = iter(read_seq).next()
         pe_mode = first_read.paired_end
     except:
