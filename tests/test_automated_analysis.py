@@ -237,6 +237,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=1)
+    @attr(template=True)
     def test_8_template(self):
         """Create a project template from input files and metadata configuration.
         """

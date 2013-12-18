@@ -48,36 +48,32 @@ def _prep_fastq_input(fs, base):
             raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
     cur["files"] = [os.path.abspath(f) for f in fs]
-    d = os.path.commonprefix([os.path.splitext(os.path.basename(f))[0] for f in fs])
-    to_strip = ("_R", "_", "fastq", ".")
-    while d.endswith(to_strip):
-        for x in to_strip:
-            if d.endswith(x):
-                d = d[:len(d) - len(x)]
-                break
-    cur["description"] = d
+    d = os.path.commonprefix([utils.splitext_plus(os.path.basename(f))[0] for f in fs])
+    cur["description"] = fastq.rstrip_extra(d)
     return cur
 
 def _prep_items_from_base(base, in_files):
     """Prepare a set of configuration items for input files.
     """
     details = []
-    fq_exts = [".fq", ".fastq", ".txt", ".gz"]
-    gz_exts = tuple(["%s.gz" % ext for ext in fq_exts if ext != ".gz"])
+    known_exts = {".bam": "bam", ".fq": "fastq",
+                  ".fastq": "fastq", ".txt": "fastq",
+                  ".fastq.gz": "fastq", ".fq.gz": "fastq",
+                  ".txt.gz": "fastq", ".gz": "fastq"}
     in_files = _expand_dirs(in_files)
     in_files = _expand_wildcards(in_files)
 
-    for i, (ext, files) in enumerate(itertools.groupby(in_files, lambda x: os.path.splitext(x)[-1].lower())):
-        if ext == ".bam":
+    for i, (ext, files) in enumerate(itertools.groupby(
+            in_files, lambda x: known_exts.get(utils.splitext_plus(x)[-1].lower()))):
+        if ext == "bam":
             for f in files:
                 details.append(_prep_bam_input(f, i, base))
-        elif ext in fq_exts:
+        elif ext == "fastq":
             files = list(files)
-            if ext == ".gz": assert all(f.endswith(gz_exts) for f in files), (files, gz_exts)
             for fs in fastq.combine_pairs(files):
                 details.append(_prep_fastq_input(fs, base))
-        # else:
-        #     raise ValueError("File type not yet implemented: %s" % ext)
+        else:
+            raise ValueError("Unexpected input file types: %s" % str(files))
     return details
 
 def _expand_dirs(in_files):
@@ -219,14 +215,17 @@ def _add_metadata(item, metadata):
                     item["algorithm"][k] = v
                 else:
                     item["metadata"][k] = v
+    elif len(metadata) > 0:
+        print "Metadata not found for sample %s, %s" % (item["description"],
+                                                        os.path.basename(item["files"][0]))
     return item
 
 def setup(args):
     template, template_txt = _read_template(args.template)
     base_item = template["details"][0]
     project_name, metadata = _pname_and_metadata(args.metadata)
-    items = [_add_metadata(item, metadata) for item in
-             _prep_items_from_base(base_item, args.input_files)]
+    items = [_add_metadata(item, metadata)
+             for item in _prep_items_from_base(base_item, args.input_files)]
 
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))

@@ -2,11 +2,12 @@
 
 - Expand template functionality to provide additional ability to add metadata
   to samples with input CSV. Includes customization of algorithm section and
-  better matching of samples using input file names.
+  better matching of samples using input file names. Improve ability to
+  distinguish fastq pairs.
 - Provide additional parallelization of bgzip preparation, performing grabix indexing
   in parallel for paired ends.
-- Fix downsampling with GATK-lite 2.3.9 releases by avoiding filter_reads_with_N_cigar
-  argument. Thanks to Przemek Lyszkiewicz.
+- Fix downsampling with GATK-lite 2.3.9 releases by moving to sambamba based downsampling.
+  Thanks to Przemek Lyszkiewicz.
 - Handle Illumina format input files for bwa-mem alignment, and cleanly convert
   these when preparing bgzipped inputs for parallel alignment. Thanks to Miika Ahdesmaki.
 - Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.
