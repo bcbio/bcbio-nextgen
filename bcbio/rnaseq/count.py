@@ -10,9 +10,9 @@ import pandas as pd
 
 from bcbio.utils import (which, file_exists, get_in, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline.alignment import sam_to_querysort_sam
 from bcbio.provenance import do
 from bcbio.log import logger
+from bcbio import bam
 
 
 def _get_files(data):
@@ -40,7 +40,9 @@ def is_countfile(in_file):
 def _get_sam_file(data):
     in_file = data["work_bam"]
     config = data["config"]
-    return sam_to_querysort_sam(in_file, config)
+    sorted = bam.sort(in_file, config, "queryname")
+    sam = bam.bam_to_sam(sorted, config)
+    return sam
 
 
 def invert_strand(iv):
