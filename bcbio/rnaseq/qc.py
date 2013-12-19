@@ -5,7 +5,7 @@ import csv
 import os
 from random import shuffle
 from itertools import ifilter
-import pysam
+import shutil
 
 # Provide transition period to install via upgrade with conda
 try:
@@ -19,6 +19,7 @@ from bcbio import utils
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import safe_makedir, file_exists
+from bcbio.distributed.transaction import file_transaction
 
 
 class RNASeQCRunner(object):
@@ -64,23 +65,26 @@ def sample_summary(bam_file, data, out_dir):
     """
     metrics_file = os.path.join(out_dir, "metrics.tsv")
     if not file_exists(metrics_file):
-        config = data["config"]
-        ref_file = data["sam_ref"]
-        genome_dir = os.path.dirname(os.path.dirname(ref_file))
-        gtf_file = config_utils.get_transcript_gtf(genome_dir)
-        rna_file = config_utils.get_rRNA_sequence(genome_dir)
-        sample_file = os.path.join(safe_makedir(out_dir), "sample_file.txt")
-        _write_sample_id_file(data, bam_file, sample_file)
-        runner = rnaseqc_runner_from_config(config)
-        bam.index(bam_file, config)
-        single_end = bam.is_paired(bam_file)
-        runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
+        with file_transaction(out_dir) as tx_out_dir:
+            config = data["config"]
+            ref_file = data["sam_ref"]
+            genome_dir = os.path.dirname(os.path.dirname(ref_file))
+            gtf_file = config_utils.get_transcript_gtf(genome_dir)
+            rna_file = config_utils.get_rRNA_sequence(genome_dir)
+            sample_file = os.path.join(safe_makedir(tx_out_dir), "sample_file.txt")
+            _write_sample_id_file(data, bam_file, sample_file)
+            runner = rnaseqc_runner_from_config(config)
+            bam.index(bam_file, config)
+            single_end = bam.is_paired(bam_file)
+            runner.run(sample_file, ref_file, rna_file, gtf_file, tx_out_dir, single_end)
+            # we don't need this large directory for just the report
+            shutil.rmtree(os.path.join(tx_out_dir, data["description"]))
     return _parse_rnaseqc_metrics(metrics_file, data["name"][-1])
 
 
 def _write_sample_id_file(data, bam_file, out_file):
     HEADER = "\t".join(["Sample ID", "Bam File", "Notes"]) + "\n"
-    sample_ids = ["\t".join([data["rgnames"]["pu"], bam_file, data["description"]])]
+    sample_ids = ["\t".join([data["description"], bam_file, data["description"]])]
     with open(out_file, "w") as out_handle:
         out_handle.write(HEADER)
         for sample_id in sample_ids:

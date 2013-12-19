@@ -82,10 +82,14 @@ def write_project_summary(samples):
     out_file = os.path.join(work_dir, "project-summary.yaml")
     upload_dir = (os.path.join(work_dir, samples[0][0]["upload"]["dir"])
                   if "dir" in samples[0][0]["upload"] else "")
+    test_run = samples[0][0].get("test_run", False)
     date = str(datetime.now())
     with open(out_file, "w") as out_handle:
         yaml.dump({"date": date}, out_handle,
                   default_flow_style=False, allow_unicode=False)
+        if test_run:
+            yaml.dump({"test_run": True}, out_handle, default_flow_style=False,
+                      allow_unicode=False)
         yaml.dump({"upload": upload_dir}, out_handle,
                   default_flow_style=False, allow_unicode=False)
         yaml.dump({"bcbio_system": samples[0][0]["config"].get("bcbio_system", "")}, out_handle,
@@ -97,7 +101,7 @@ def write_project_summary(samples):
 def _save_fields(sample):
     to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata",
                "description"]
-    saved = {k: sample[k] for k in to_save}
+    saved = {k: sample[k] for k in to_save if k in sample}
     if "summary" in sample:
         saved["summary"] = {"metrics": sample["summary"]["metrics"]}
     return saved

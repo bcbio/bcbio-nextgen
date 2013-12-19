@@ -143,8 +143,8 @@ def _flatten_grading(stats):
     for vtype in vtypes:
         yield vtype, cat, stats[cat][cat].get(vtype, 0)
     for vtype in vtypes:
-        for vclass, vitems in stats["discordant"].get(vtype, {}).iteritems():
-            for vreason, val in vitems.iteritems():
+        for vclass, vitems in sorted(stats["discordant"].get(vtype, {}).iteritems()):
+            for vreason, val in sorted(vitems.iteritems()):
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
             yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
 

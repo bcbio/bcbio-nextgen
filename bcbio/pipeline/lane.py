@@ -9,12 +9,15 @@ import pysam
 
 from bcbio import utils, broad
 from bcbio.log import logger
-from bcbio.bam import callable
+from bcbio.bam import callable, ref
 from bcbio.bam.trim import brun_trim_fastq, trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
-from bcbio.variation import recalibrate, vcfutils
+from bcbio.variation import recalibrate
+from bcbio import bam
+from bcbio.bam import fastq
+
 
 def _item_needs_compute(lane_items):
     """Determine if any item needs computing resources to spin up a cluster.
@@ -34,10 +37,19 @@ def process_all_lanes(lanes, run_parallel):
         return [process_lane(x)[0] for x in lanes]
 
 def process_lane(item):
-    """Prepare lanes, potentially splitting based on barcodes.
+    """Prepare lanes, potentially splitting based on barcodes and reducing the
+    number of reads for a test run
     """
+    NUM_DOWNSAMPLE = 10000
     logger.debug("Preparing %s" % item["rgnames"]["lane"])
-    item["files"] = get_fastq_files(item)
+    file1, file2 = get_fastq_files(item)
+    if item.get("test_run", False):
+        if bam.is_bam(file1):
+            file1 = bam.downsample(file1, item, NUM_DOWNSAMPLE)
+        else:
+            file1, file2 = fastq.downsample(file1, file2, item,
+                                            NUM_DOWNSAMPLE, quick=True)
+    item["files"] = (file1, file2)
     return [item]
 
 def trim_lane(item):
@@ -94,7 +106,7 @@ def link_bam_file(orig_file, new_dir):
 def _check_prealigned_bam(in_bam, ref_file, config):
     """Ensure a pre-aligned BAM file matches the expected reference genome.
     """
-    ref_contigs = [c["SN"] for c in vcfutils.ref_file_contigs(ref_file, config)]
+    ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
     with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
         bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
     problems = []
@@ -170,3 +182,4 @@ def _recal_no_markduplicates(data):
     data = recalibrate.prep_recal(data)[0][0]
     data["config"] = orig_config
     return data
+

@@ -101,6 +101,10 @@ def concat_variant_files(*args):
     return vcfutils.concat_variant_files(*args)
 
 @utils.map_wrap
+def merge_variant_files(*args):
+    return vcfutils.merge_variant_files(*args)
+
+@utils.map_wrap
 def detect_sv(*args):
     return structural.detect_sv(*args)
 

@@ -4,17 +4,16 @@
 from collections import namedtuple
 import contextlib
 import copy
+import gzip
 import itertools
 import os
-import shutil
-
-import pysam
 
 from bcbio import broad, utils
+from bcbio.bam import ref
 from bcbio.distributed.messaging import run_multicore, zeromq_aware_logging
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import shared, tools
+from bcbio.pipeline import config_utils, shared, tools
 from bcbio.provenance import do
 from bcbio.variation import bamprep
 
@@ -88,41 +87,150 @@ def split_snps_indels(orig_file, ref_file, config):
 def _get_exclude_samples(in_file, to_exclude):
     """Identify samples in the exclusion list which are actually in the VCF.
     """
-    out = []
-    with open(in_file) as in_handle:
+    include, exclude = [], []
+    to_exclude = set(to_exclude)
+    with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
         for line in in_handle:
             if line.startswith("#CHROM"):
                 parts = line.strip().split("\t")
                 for s in parts[9:]:
                     if s in to_exclude:
-                        out.append(s)
+                        exclude.append(s)
+                    else:
+                        include.append(s)
                 break
-    return out
+    return include, exclude
 
 def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
-    """Exclude specific samples from an input VCF file using GATK SelectVariants.
+    """Exclude specific samples from an input VCF file.
     """
-    to_exclude = _get_exclude_samples(in_file, to_exclude)
+    include, exclude = _get_exclude_samples(in_file, to_exclude)
     # can use the input sample, all exclusions already gone
-    if len(to_exclude) == 0:
+    if len(exclude) == 0:
         out_file = in_file
     elif not utils.file_exists(out_file):
-        broad_runner = broad.runner_from_config(config)
         with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "SelectVariants",
-                      "-R", ref_file,
-                      "--variant", in_file,
-                      "--out", tx_out_file]
-            for x in to_exclude:
-                params += ["-xl_sn", x]
-            broad_runner.run_gatk(params)
+            bcftools = config_utils.get_program("bcftools", config)
+            output_type = "z" if out_file.endswith(".gz") else "v"
+            include_str = ",".join(include)
+            cmd = "{bcftools} subset -o {output_type} -s {include_str} {in_file} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Exclude samples: {}".format(to_exclude))
     return out_file
+
+def vcf_has_variants(in_file):
+    if os.path.exists(in_file):
+        with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+            for line in in_handle:
+                if line.strip() and not line.startswith("#"):
+                    return True
+    return False
+
+# ## Merging of variant files
+
+def merge_variant_files(orig_files, out_file, ref_file, config, region=None):
+    """Combine multiple VCF files into a single output file.
+
+    Uses bcftools merge on bgzipped input files, handling both tricky merge and
+    concatenation of files.
+
+    XXX Will replace combine_variant_files
+    """
+    in_pipeline = False
+    if isinstance(orig_files, dict):
+        file_key = config["file_key"]
+        in_pipeline = True
+        orig_files = orig_files[file_key]
+    out_file = _do_merge(orig_files, out_file, config, region)
+    if in_pipeline:
+        return [{file_key: out_file, "region": region, "sam_ref": ref_file, "config": config}]
+    else:
+        return out_file
+
+def _do_merge(orig_files, out_file, config, region):
+    """Do the actual work of merging with bcftools merge.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            with short_filenames(run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)) as fs:
+                prep_files = " ".join(fs)
+                bcftools = config_utils.get_program("bcftools", config)
+                output_type = "z" if out_file.endswith(".gz") else "v"
+                region_str = "-r {}".format(region) if region else ""
+                cmd = "{bcftools} merge -o {output_type} {region_str} {prep_files} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Merge variants")
+    return out_file
+
+def _sort_by_region(fnames, regions, ref_file, config):
+    """Sort a set of regionally split files by region for ordered output.
+    """
+    contig_order = {}
+    for i, sq in enumerate(ref.file_contigs(ref_file, config)):
+        contig_order[sq.name] = i
+    sitems = []
+    for region, fname in zip(regions, fnames):
+        if isinstance(region, (list, tuple)):
+            c, s, e = region
+        else:
+            c = region
+            s, e = 0, 0
+        sitems.append(((contig_order[c], s, e), fname))
+    sitems.sort()
+    return [x[1] for x in sitems]
+
+def concat_variant_files(orig_files, out_file, regions, ref_file, config):
+    """Concatenate multiple variant files from regions into a single output file.
+
+    Lightweight approach to merging VCF files split by regions with same
+    sample information so no complex merging needed. Handles both plain text
+    and bgzipped/tabix indexed outputs.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            cat_cmds = []
+            sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
+            ready_files = [x for x in sorted_files if vcf_has_variants(x)]
+            if len(ready_files) == 0:
+                ready_files = sorted_files[:1]
+            with short_filenames(ready_files) as fs:
+                for i, orig_file in enumerate(fs):
+                    cat_cmd = "zcat" if orig_file.endswith(".gz") else "cat"
+                    remove_header = "| grep -v ^#" if i > 0 else ""
+                    cat_cmds.append("<({cat_cmd} {orig_file} {remove_header})".format(**locals()))
+                orig_file_str = " ".join(cat_cmds)
+                compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
+                cmd = "cat {orig_file_str} {compress_str} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Concatenate variants")
+    return out_file
+
+@contextlib.contextmanager
+def short_filenames(fs):
+    """Provide temporary short filenames for a list of files.
+
+    This helps avoids errors from long command lines, and handles tabix and
+    bam indexes on linked files.
+    """
+    index_exts = [".bai", ".tbi"]
+    with utils.curdir_tmpdir() as tmpdir:
+        short_fs = []
+        for i, f in enumerate(fs):
+            ext = utils.splitext_plus(f)[-1]
+            short_f = os.path.relpath(os.path.join(tmpdir, "%s%s" % (i, ext)))
+            os.symlink(f, short_f)
+            for iext in index_exts:
+                if os.path.exists(f + iext):
+                    os.symlink(f + iext, short_f + iext)
+            short_fs.append(short_f)
+        yield short_fs
+
+# ## To be phased out following testing
 
 def combine_variant_files(orig_files, out_file, ref_file, config,
                           quiet_out=True, region=None):
     """Combine multiple VCF files into a single output file.
 
     Handles complex merging of samples and other tricky issues using GATK.
+
+    XXX Will be replaced by merge_variant_files
     """
     in_pipeline = False
     if isinstance(orig_files, dict):
@@ -155,65 +263,6 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
     else:
         return out_file
 
-def ref_file_contigs(ref_file, config):
-    """Iterator of sequence contigs from a reference file.
-    """
-    broad_runner = broad.runner_from_config(config)
-    ref_dict = broad_runner.run_fn("picard_index_ref", ref_file)
-    with contextlib.closing(pysam.Samfile(ref_dict, "r")) as ref_sam:
-        for sq in ref_sam.header["SQ"]:
-            yield sq
-
-def _sort_by_region(fnames, regions, ref_file, config):
-    """Sort a set of regionally split files by region for ordered output.
-    """
-    contig_order = {}
-    for i, sq in enumerate(ref_file_contigs(ref_file, config)):
-        contig_order[sq["SN"]] = i
-    sitems = []
-    for region, fname in zip(regions, fnames):
-        if isinstance(region, (list, tuple)):
-            c, s, e = region
-        else:
-            c = region
-            s, e = 0, 0
-        sitems.append(((contig_order[c], s, e), fname))
-    sitems.sort()
-    return [x[1] for x in sitems]
-
-def vcf_has_variants(in_file):
-    if os.path.exists(in_file):
-        with open(in_file) as in_handle:
-            for line in in_handle:
-                if line.strip() and not line.startswith("#"):
-                    return True
-    return False
-
-def concat_variant_files(orig_files, out_file, regions, ref_file, config):
-    """Concatenate multiple variant files from regions into a single output file.
-
-    Lightweight approach to merging VCF files split by regions with same
-    sample information so no complex merging needed.
-    """
-    if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-                has_variants = False
-                for i, orig_file in enumerate(f for f in sorted_files if vcf_has_variants(f)):
-                    has_variants = True
-                    with open(orig_file) as in_handle:
-                        for line in in_handle:
-                            if line.startswith("#"):
-                                if i == 0:
-                                    out_handle.write(line)
-                            else:
-                                out_handle.write(line)
-                # if all empty, copy the (empty of calls) first file
-                if not has_variants:
-                    shutil.copyfile(sorted_files[0], tx_out_file)
-    return out_file
-
 # ## Parallel VCF file combining
 
 def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parallel):
@@ -221,20 +270,20 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
     """
     file_key = "vcf_files"
     def split_by_region(data):
-        base, ext = os.path.splitext(os.path.basename(out_file))
+        base, ext = utils.splitext_plus(os.path.basename(out_file))
         args = []
-        for region in [x["SN"] for x in ref_file_contigs(ref_file, config)]:
+        for region in [x.name for x in ref.file_contigs(ref_file, config)]:
             region_out = os.path.join(os.path.dirname(out_file), "%s-regions" % base,
                                       "%s-%s%s" % (base, region, ext))
             utils.safe_makedir(os.path.dirname(region_out))
-            args.append((region_out, ref_file, config, True, region))
+            args.append((region_out, ref_file, config, region))
         return out_file, args
     config = copy.deepcopy(config)
     config["file_key"] = file_key
     prep_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
     items = [[{file_key: prep_files}]]
     parallel_split_combine(items, split_by_region, run_parallel,
-                           "combine_variant_files", "concat_variant_files",
+                           "merge_variant_files", "concat_variant_files",
                            file_key, ["region", "sam_ref", "config"], split_outfile_i=0)
     return out_file
 
