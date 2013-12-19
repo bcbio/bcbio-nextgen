@@ -131,7 +131,10 @@ def _get_cl_version(p, config):
 def _get_brew_versions():
     """Retrieve versions of tools installed via brew.
     """
-    vout = subprocess.check_output(["brew", "which"])
+    from bcbio import install
+    tooldir = install.get_defaults().get("tooldir")
+    brew_cmd = os.path.join(tooldir, "bin", "brew") if tooldir else "brew"
+    vout = subprocess.check_output([brew_cmd, "which"])
     out = {}
     for vstr in vout.split("\n"):
         if vstr.strip():
