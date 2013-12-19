@@ -23,7 +23,7 @@ _cl_progs = [{"cmd": "bamtofastq", "args": "--version", "stdout_flag": "This is 
              {"cmd": "cutadapt", "args": "--version"},
              {"cmd": "fastqc", "args": "--version", "stdout_flag": "FastQC"},
              {"cmd": "freebayes", "stdout_flag": "version:"},
-             {"cmd": "gemini", "args": "--version", "stdout_flag": "gemini"},
+             {"cmd": "gemini", "args": "--version", "stdout_flag": "gemini "},
              {"cmd": "novosort", "paren_flag": "novosort"},
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
              {"cmd": "samtools", "stdout_flag": "Version:"},
@@ -134,11 +134,21 @@ def _get_brew_versions():
     from bcbio import install
     tooldir = install.get_defaults().get("tooldir")
     brew_cmd = os.path.join(tooldir, "bin", "brew") if tooldir else "brew"
-    vout = subprocess.check_output([brew_cmd, "which"])
+    try:
+        vout = subprocess.check_output([brew_cmd, "which"])
+        uses_which = True
+    except subprocess.CalledProcessError:
+        vout = subprocess.check_output([brew_cmd, "list", "--versions"])
+        uses_which = False
     out = {}
     for vstr in vout.split("\n"):
         if vstr.strip():
-            name, v = vstr.rstrip().split(": ")
+            if uses_which:
+                name, v = vstr.rstrip().split(": ")
+            else:
+                parts = vstr.rstrip().split()
+                name = parts[0]
+                v = parts[-1]
             out[name] = v
     return out
 
