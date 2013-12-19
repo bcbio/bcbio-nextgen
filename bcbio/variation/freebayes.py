@@ -104,6 +104,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             opts = " ".join(
                 _freebayes_options_from_config(items, config["algorithm"],
                                                out_file, region))
+            opts += " -f {}".format(ref_file)
 
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
