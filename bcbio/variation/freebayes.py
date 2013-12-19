@@ -44,10 +44,10 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
 
     if is_paired_analysis(align_bams, items):
-        call_file = _run_freebayes_caller(align_bams, items, ref_file,
+        call_file = _run_freebayes_paired(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
     else:
-        call_file = _run_freebayes_paired(align_bams, items, ref_file,
+        call_file = _run_freebayes_caller(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
 
     return call_file
@@ -89,7 +89,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
 
-        paired = get_paired_bams(align_bams, items)
+    paired = get_paired_bams(align_bams, items)
 
     vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
 
@@ -107,17 +107,17 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
-            
+
             cl = ("{freebayes} --pooled-discrete --pvar 0.7"
                   " --genotype-qualities {opts} {paired.tumor_bam}"
                   " {paired.normal_bam} | {vcfsamplediff} -s VT"
                   " {paired.normal_sample_name} {paired.tumor_sample_name}"
                   " - >  {tx_out_file}")
 
-            bam.index(paired.tumor_bam)
-            bam.index(paired.normal_bam)
+            bam.index(paired.tumor_bam, config)
+            bam.index(paired.normal_bam, config)
 
-            cl = cl.format(**locals)
+            cl = cl.format(**locals())
 
             do.run(cl, "Genotyping paired variants with FreeBayes", {})
 
