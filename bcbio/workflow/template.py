@@ -17,9 +17,8 @@ import urllib2
 import yaml
 
 from bcbio import utils
-from bcbio.bam import fastq
+from bcbio.bam import fastq, sample_name
 from bcbio.pipeline import run_info
-from bcbio.variation.cortex import get_sample_name
 from bcbio.workflow.xprize import HelpArgParser
 
 def parse_args(inputs):
@@ -39,7 +38,7 @@ def _prep_bam_input(f, i, base):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
     cur["files"] = [os.path.abspath(f)]
-    cur["description"] = get_sample_name(f) or os.path.splitext(os.path.basename(f))[0]
+    cur["description"] = sample_name(f) or os.path.splitext(os.path.basename(f))[0]
     return cur
 
 def _prep_fastq_input(fs, base):

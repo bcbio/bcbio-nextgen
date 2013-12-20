@@ -232,4 +232,16 @@ def _get_sort_stem(in_bam, order):
         sort_base = sort_base.split(suffix)[0]
     return sort_base + SUFFIXES[order]
 
-
+def sample_name(in_bam):
+    """
+    get sample name from a BAM file as a work around for pysam 0.6 header
+    parsing issues. This can get replaced by the pysam version in cortex.py
+    when we move to Docker.
+    """
+    cmd = "samtools view -H {in_bam}".format(**locals())
+    out, _ = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()
+    name = None
+    for line in out.split("\n"):
+        if line.startswith("@RG"):
+            name = [x.split(":")[1] for x in line.split() if x.split(":")[0] == "SM"]
+    return name
