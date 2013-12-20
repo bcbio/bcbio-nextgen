@@ -122,27 +122,30 @@ def combine_pairs(input_files):
                 continue
             a = rstrip_extra(utils.splitext_plus(os.path.basename(in_file))[0])
             b = rstrip_extra(utils.splitext_plus(os.path.basename(comp_file))[0])
-            s = difflib.SequenceMatcher(a=a, b=b)
-            blocks = s.get_matching_blocks()
-            # length 2 -- initial match and one numerical mismatch
-            if len(s.get_matching_blocks()) is not 2:
-                continue
-            if (a[blocks[0][2]] in PAIR_FILE_IDENTIFIERS and
-                  b[blocks[0][2]] in PAIR_FILE_IDENTIFIERS):
-                # e.g. _R1, _R2 or _1, _2
-                if b[blocks[0][2] - 1] in ("R", "_", "-"):
-                    used.add(in_file)
-                    used.add(comp_file)
-                    if b[blocks[0][2]] == "2":
-                        pairs.append([in_file, comp_file])
-                    else:
-                        pairs.append([comp_file, in_file])
-                    break
+            s = dif(a,b)
+            if len(s) > 1:
+                continue #there is only 1 difference
+            if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
+                  b[s[0]] in PAIR_FILE_IDENTIFIERS):
+ 
+                if b[s[0]- 1] in ("R", "_", "-"):
+                  
+                            used.add(in_file)
+                            used.add(comp_file)
+                            if b[s[0]] == "2":
+                                pairs.append([in_file, comp_file])
+                            else:
+                                pairs.append([comp_file, in_file])
+                            break
         if in_file not in used:
             pairs.append([in_file])
             used.add(in_file)
 
     return pairs
+
+def dif(a, b):
+    """ copy from http://stackoverflow.com/a/8545526 """
+    return [i for i in range(len(a)) if a[i] != b[i]]
 
 
 def is_fastq(in_file):
