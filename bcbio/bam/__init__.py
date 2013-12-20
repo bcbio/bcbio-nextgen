@@ -244,4 +244,4 @@ def sample_name(in_bam):
     for line in out.split("\n"):
         if line.startswith("@RG"):
             name = [x.split(":")[1] for x in line.split() if x.split(":")[0] == "SM"]
-    return name
+    return name[0] if name else None
