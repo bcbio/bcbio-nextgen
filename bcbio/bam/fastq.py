@@ -210,3 +210,16 @@ def downsample(f1, f2, data, N, quick=False):
             sub2.close()
 
     return outf1, outf2
+
+def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000):
+    """
+    estimate average read length of a fastq file
+    """
+
+    in_handle = SeqIO.parse(fastq_file, quality_format)
+    read = in_handle.next()
+    average = len(read.seq)
+    for _ in range(nreads):
+        average = (average + len(in_handle.next().seq)) / 2
+    in_handle.close()
+    return average
