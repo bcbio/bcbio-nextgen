@@ -53,7 +53,7 @@ def snpeff_effects(data):
     """Annotate input VCF file with effects calculated by snpEff.
     """
     vcf_in = data["vrn_file"]
-    interval_file = data["config"]["algorithm"].get("hybrid_target", None)
+    interval_file = data["config"]["algorithm"].get("variant_regions", None)
     if vcfutils.vcf_has_variants(vcf_in):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)

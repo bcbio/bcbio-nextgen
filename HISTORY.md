@@ -18,6 +18,8 @@
 - Added Cufflinks support.
 - Set stranded flag properly in htseq-count. Thanks to Miika Ahdesmaki.
 - Fix to ensure Tophat receives a minimum of 8 gb of memory, regardless of number of cores.
+- Remove `hybrid_bait` and `hybrid_target` which were no longer used with new
+  lightweight QC framework. Prefer better coverage framework moving forward.
 - Added extra summary information to the project-summary.yaml file so downstream tools can
   locate what genome resources were used.
 - Added ``test_run`` option to the sample configuration file. Set it to True to run a small

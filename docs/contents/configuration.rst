@@ -261,15 +261,6 @@ Experimental information
 -  ``coverage_depth`` Depth of sequencing coverage. Influences GATK
    variant calling and selection of super-high coverage regions to
    exclude. Low coverage is generally 10x or less. [high, low, super-high]
--  ``hybrid_target`` BED file with target regions for hybrid selection
-   experiments. This is only a descriptive set of regions for metrics
-   assessment. Use ``variant_regions`` to restrict calling and
-   assessment regions. ``hybrid_bait`` is also required for metrics
-   and if not present, the ``variant_regions`` we use
-   ``variant_regions`` for both in calculating metrics.
-- ``hybrid_bait`` BED file with bait regions for hybrid selection,
-  required along with ``hybrid_target`` to calculate hybrid selection
-  methods.
 -  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
 
 Variant calling
