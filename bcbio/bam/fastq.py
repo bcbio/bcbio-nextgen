@@ -1,7 +1,6 @@
 """Utilities for working with fastq files.
 """
 
-import difflib
 from itertools import izip, product
 import os
 import random
