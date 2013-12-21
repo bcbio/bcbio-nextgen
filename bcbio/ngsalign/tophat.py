@@ -18,8 +18,6 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 
 from bcbio.provenance import do
-from bcbio import broad
-from bcbio.broad.metrics import PicardMetricsParser
 
 _out_fnames = ["accepted_hits.sam", "junctions.bed",
                "insertions.bed", "deletions.bed"]
@@ -37,7 +35,8 @@ def _set_transcriptome_option(options, data, ref_file):
     # prefer transcriptome-index vs a GTF file if available
     transcriptome_index = get_in(data, ("genome_resources", "rnaseq",
                                         "transcriptome_index", "tophat"))
-    if transcriptome_index and file_exists(transcriptome_index):
+    fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
+    if transcriptome_index and file_exists(transcriptome_index) and not fusion_mode:
         options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
         return options
 
@@ -75,6 +74,12 @@ def _set_stranded_flag(options, config):
     options["library-type"] = flag
     return options
 
+def _set_fusion_mode(options, config):
+    fusion_mode = get_in(config, ("algorithm", "fusion_mode"), False)
+    if fusion_mode:
+        options["fusion-search"] = True
+    return options
+
 def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                  names=None):
     """
@@ -82,18 +87,25 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     """
     config = data["config"]
     options = get_in(config, ("resources", "tophat", "options"), {})
+    options = _set_fusion_mode(options, config)
     options = _set_quality_flag(options, config)
     options = _set_transcriptome_option(options, data, ref_file)
     options = _set_cores(options, config)
     options = _set_rg_options(options, names)
     options = _set_stranded_flag(options, config)
 
-    # select the correct bowtie option to use; tophat2 is ignoring this option
+    ref_file, runner = _determine_aligner_and_reference(ref_file, config)
+
+    # fusion search does not work properly with Bowtie2
+    if options.get("fusion-search", False):
+        ref_file = ref_file.replace("/bowtie2", "/bowtie")
+
     if _tophat_major_version(config) == 1:
         raise NotImplementedError("Tophat versions < 2.0 are not supported, please "
                                   "download the newest version of Tophat here: "
                                   "http://tophat.cbcb.umd.edu")
-    if _ref_version(ref_file) == 1:
+
+    if _ref_version(ref_file) == 1 or options.get("fusion-search", False):
         options["bowtie1"] = True
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
@@ -105,7 +117,6 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
-            _check_bowtie(ref_file, config)
             safe_makedir(tx_out_dir)
             if pair_file and not options.get("mate-inner-dist", None):
                 d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file,
@@ -192,14 +203,10 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
                                out_dir, data):
     """Use Bowtie to estimate the inner distance of paired reads.
     """
-    # skip initial reads for large file, but not for smaller
-    # mean, stdev = _bowtie_for_innerdist("1000000", fastq_file, pair_file, ref_file,
-    #                              out_base, out_dir, config)
-    # if it is a small file, use the old method
-    mean, stdev = _small_file_innerdist("100000", fastq_file, pair_file, ref_file,
+    mean, stdev = _bowtie_for_innerdist("100000", fastq_file, pair_file, ref_file,
                                         out_base, out_dir, data, True)
     if not mean or not stdev:
-        mean, stdev = _small_file_innerdist("1", fastq_file, pair_file, ref_file,
+        mean, stdev = _bowtie_for_innerdist("1", fastq_file, pair_file, ref_file,
                                             out_base, out_dir, data, True)
     # No reads aligning so no data to process, set some default values
     if not mean or not stdev:
@@ -209,36 +216,13 @@ def _estimate_paired_innerdist(fastq_file, pair_file, ref_file, out_base,
 
 
 def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
-                          out_dir, config, remove_workdir=False):
-    work_dir = os.path.join(out_dir, "innerdist_estimate")
-    if os.path.exists(work_dir):
-        shutil.rmtree(work_dir)
-    safe_makedir(work_dir)
-    extra_args = ["-s", str(start), "-u", "250000"]
-    bowtie_runner = _select_bowtie_version(config)
-    out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, out_base,
-                                  work_dir, config, extra_args)
-    runner = broad.runner_from_config(config)
-    metrics_file = runner.run_fn("picard_insert_metrics", out_sam)
-    if not file_exists(metrics_file):
-        return None, None
-    parser = PicardMetricsParser()
-    with open(metrics_file) as metrics_handle:
-        insert_metrics = parser._parse_insert_metrics(metrics_handle)
-
-    avg_read_length = _calculate_average_read_length(out_sam)
-    mean_insert = int(float(insert_metrics["MEAN_INSERT_SIZE"])) - int(2 * avg_read_length)
-    std_deviation = int(float(insert_metrics["STANDARD_DEVIATION"]))
-    return mean_insert, std_deviation
-
-def _small_file_innerdist(start, fastq_file, pair_file, ref_file, out_base,
                           out_dir, data, remove_workdir=False):
     work_dir = os.path.join(out_dir, "innerdist_estimate")
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
     safe_makedir(work_dir)
     extra_args = ["-s", str(start), "-u", "250000"]
-    bowtie_runner = _select_bowtie_version(data["config"])
+    ref_file, bowtie_runner = _determine_aligner_and_reference(ref_file, data["config"])
     out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, out_base,
                                   work_dir, data, extra_args)
     dists = []
@@ -263,19 +247,7 @@ def _calculate_average_read_length(sam_file):
     return avg_read_length
 
 
-def _check_bowtie(ref_file, config):
-    if not _bowtie_ref_match(ref_file, config):
-        logger.error("Bowtie version %d was detected but the reference "
-                     "file %s is built for version %d. Download version "
-                     "%d or build it with bowtie-build."
-                     % (_bowtie_major_version(config), ref_file,
-                        _ref_version(ref_file),
-                        _bowtie_major_version(config)))
-        exit(1)
-
-def _bowtie_major_version(config):
-    bowtie_runner = sh.Command(config_utils.get_program("bowtie", config,
-                                                        default="bowtie2"))
+def _bowtie_major_version(stdout):
     """
     bowtie --version returns strings like this:
     bowtie version 0.12.7
@@ -283,13 +255,29 @@ def _bowtie_major_version(config):
     Built on Franklin.local
     Tue Sep  7 14:25:02 PDT 2010
     """
-    version_line = str(bowtie_runner(version=True)).split("\n")[0]
+    version_line = stdout.split("\n")[0]
     version_string = version_line.strip().split()[2]
     major_version = int(version_string.split(".")[0])
-    # bowtie version 1 has a leading character of 0
-    if major_version == 0:
-        major_version += 1
+    # bowtie version 1 has a leading character of 0 or 1
+    if major_version == 0 or major_version == 1:
+        major_version = 1
     return major_version
+
+def _determine_aligner_and_reference(ref_file, config):
+    fusion_mode = get_in(config, ("algorithm", "fusion_mode"), False)
+    # fusion_mode only works with bowtie1
+    if fusion_mode:
+        return _get_bowtie_with_reference(config, ref_file, 1)
+    else:
+        return _get_bowtie_with_reference(config, ref_file, 2)
+
+def _get_bowtie_with_reference(config, ref_file, version):
+    if version == 1:
+        ref_file = ref_file.replace("/bowtie2/", "/bowtie/")
+        return ref_file, bowtie
+    else:
+        ref_file = ref_file.replace("/bowtie/", "/bowtie2/")
+        return ref_file, bowtie2
 
 
 def _tophat_major_version(config):
@@ -300,17 +288,6 @@ def _tophat_major_version(config):
     version_string = str(tophat_runner(version=True)).strip().split()[1]
     major_version = int(version_string.split(".")[0][1:])
     return major_version
-
-
-def _bowtie_ref_match(ref_file, config):
-    return _ref_version(ref_file) == _bowtie_major_version(config)
-
-
-def _select_bowtie_version(config):
-    if _bowtie_major_version(config) == 1:
-        return bowtie
-    else:
-        return bowtie2
 
 
 def _ref_version(ref_file):
