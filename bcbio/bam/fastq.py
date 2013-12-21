@@ -220,6 +220,9 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
     read = in_handle.next()
     average = len(read.seq)
     for _ in range(nreads):
-        average = (average + len(in_handle.next().seq)) / 2
+        try:
+            average = (average + len(in_handle.next().seq)) / 2
+        except StopIteration:
+            break
     in_handle.close()
     return average
