@@ -50,7 +50,7 @@ def create_genome(fastq_file, data):
     so must be made custom for each mapping
     """
     config = data["config"]
-    star_path = config_utils.get_program("STAR", config)
+    star_path = config_utils.get_program("star", config, default="STAR")
     tempdir = tempfile.mkdtemp("_star")
     quality_format = _get_quality_format(data["config"])
     overhang = fastq.estimate_read_length(fastq_file, quality_format, 100000) - 1
@@ -70,3 +70,11 @@ def create_genome(fastq_file, data):
 
     do.run(cmd.format(**locals()), run_message, None)
     return tempdir
+
+def job_requirements(cores, memory):
+    MIN_STAR_MEMORY = 30.0
+    if not memory or cores * memory < MIN_STAR_MEMORY:
+        memory = MIN_STAR_MEMORY / cores
+    return cores, memory
+
+align.job_requirements = job_requirements

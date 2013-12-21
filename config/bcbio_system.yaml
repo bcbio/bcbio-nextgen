@@ -24,6 +24,9 @@ resources:
   samtools:
     memory: 2G
     cores: 16
+  star:
+    memory: 2g
+    cores: 16
   novoalign:
     cores: 16
     memory: 2G
