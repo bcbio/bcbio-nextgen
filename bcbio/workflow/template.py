@@ -59,7 +59,7 @@ def _prep_items_from_base(base, in_files):
                   ".fastq": "fastq", ".txt": "fastq",
                   ".fastq.gz": "fastq", ".fq.gz": "fastq",
                   ".txt.gz": "fastq", ".gz": "fastq"}
-    in_files = _expand_dirs(in_files)
+    in_files = _expand_dirs(in_files, known_exts)
     in_files = _expand_wildcards(in_files)
 
     for i, (ext, files) in enumerate(itertools.groupby(
@@ -75,13 +75,14 @@ def _prep_items_from_base(base, in_files):
             raise ValueError("Unexpected input file types: %s" % str(files))
     return details
 
-def _expand_dirs(in_files):
+def _expand_dirs(in_files, known_exts):
     def _is_dir(in_file):
         return os.path.isdir(os.path.expanduser(in_file))
     files, dirs = utils.partition(_is_dir, in_files)
     for dir in dirs:
-        wildcard = os.path.join(os.path.expanduser(dir), "*")
-        files = itertools.chain(glob.glob(wildcard), files)
+        for ext in known_exts.keys():
+            wildcard = os.path.join(os.path.expanduser(dir), "*"+ext)
+            files = itertools.chain(glob.glob(wildcard), files)
     return list(files)
 
 def _expand_wildcards(in_files):
