@@ -22,10 +22,18 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     star_path = config_utils.get_program("STAR", config)
     fastq = " ".join([fastq_file, pair_file])
     num_cores = config["algorithm"].get("num_cores", 1)
+
     safe_makedir(align_dir)
     cmd = ("{star_path} --genomeDir {genome_dir} --readFilesIn {fastq} "
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
            "--outReadsUnmapped Fastx --outFilterMultimapNmax 10")
+    fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
+    if fusion_mode:
+        cmd += " --chimSegmentMin 15 --chimJunctionOverhangMin 15"
+    strandedness = get_in(data, ("config", "algorithm", "strandedness"),
+                          "unstranded").lower()
+    if strandedness == "unstranded":
+        cmd += " --outSAMstrandField intronMotif"
     run_message = "Running STAR aligner on %s and %s." % (pair_file, ref_file)
     do.run(cmd.format(**locals()), run_message, None)
     return out_file
