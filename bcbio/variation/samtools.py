@@ -84,7 +84,10 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_fil
                            target_regions=target_regions)
     bcftools = config_utils.get_program("bcftools", config)
     bcftools_version = programs.get_version("bcftools", config=config)
+    samtools_version = programs.get_version("samtools", config=config)
     if LooseVersion(bcftools_version) > LooseVersion("0.1.19"):
+        if LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
+            raise ValueError("samtools calling not supported with 0.1.19 samtools and 0.20 bcftools")
         bcftools_opts = "call -v -c"
     else:
         bcftools_opts = "view -v -c -g"
