@@ -173,24 +173,19 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
 
     Lightweight approach to merging VCF files split by regions with same
-    sample information so no complex merging needed. Handles both plain text
+    sample information, so no complex merging needed. Handles both plain text
     and bgzipped/tabix indexed outputs.
     """
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            cat_cmds = []
             sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
             ready_files = [x for x in sorted_files if vcf_has_variants(x)]
             if len(ready_files) == 0:
                 ready_files = sorted_files[:1]
             with short_filenames(ready_files) as fs:
-                for i, orig_file in enumerate(fs):
-                    cat_cmd = "zcat" if orig_file.endswith(".gz") else "cat"
-                    remove_header = "| grep -v ^#" if i > 0 else ""
-                    cat_cmds.append("<({cat_cmd} {orig_file} {remove_header})".format(**locals()))
-                orig_file_str = " ".join(cat_cmds)
+                orig_file_str = " ".join(fs)
                 compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
-                cmd = "cat {orig_file_str} {compress_str} > {tx_out_file}"
+                cmd = "vcfcat {orig_file_str} {compress_str} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Concatenate variants")
     return out_file
 
