@@ -49,5 +49,5 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                 cl += [fastq_file]
             cl += [tx_out_file]
             cl = [str(i) for i in cl]
-            do.run(cl)
+            do.run(cl, "Running Bowtie on %s and %s." % (fastq_file, pair_file), None)
     return out_file

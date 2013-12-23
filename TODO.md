@@ -28,6 +28,11 @@ These are roughly ordered by current priority and we welcome contributors.
 [112]: https://github.com/chapmanb/bcbio-nextgen/issues/112
 [fb-somatic]: https://groups.google.com/d/msg/freebayes/beLYRuHMkQE/RwFMniDmBYoJ
 
+- Improve analysis of coverage, especially in targeted sequencing
+  experiments. Plan to integrate with [chanjo].
+
+[chanjo]: https://github.com/robinandeer/chanjo
+
 - Once initial structural variation analysis and evaluation is in place,
   incorporate and evaluate additional CNV and structural variant callers. Some
   current targets are the [VarScan2 CNV caller][vs2] and [Control-FREEC][cfc].

@@ -15,6 +15,9 @@ from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
 from bcbio.variation import recalibrate
+from bcbio import bam
+from bcbio.bam import fastq
+
 
 def _item_needs_compute(lane_items):
     """Determine if any item needs computing resources to spin up a cluster.
@@ -34,10 +37,19 @@ def process_all_lanes(lanes, run_parallel):
         return [process_lane(x)[0] for x in lanes]
 
 def process_lane(item):
-    """Prepare lanes, potentially splitting based on barcodes.
+    """Prepare lanes, potentially splitting based on barcodes and reducing the
+    number of reads for a test run
     """
+    NUM_DOWNSAMPLE = 10000
     logger.debug("Preparing %s" % item["rgnames"]["lane"])
-    item["files"] = get_fastq_files(item)
+    file1, file2 = get_fastq_files(item)
+    if item.get("test_run", False):
+        if bam.is_bam(file1):
+            file1 = bam.downsample(file1, item, NUM_DOWNSAMPLE)
+        else:
+            file1, file2 = fastq.downsample(file1, file2, item,
+                                            NUM_DOWNSAMPLE, quick=True)
+    item["files"] = (file1, file2)
     return [item]
 
 def trim_lane(item):
@@ -170,3 +182,4 @@ def _recal_no_markduplicates(data):
     data = recalibrate.prep_recal(data)[0][0]
     data["config"] = orig_config
     return data
+

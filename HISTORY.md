@@ -2,11 +2,12 @@
 
 - Expand template functionality to provide additional ability to add metadata
   to samples with input CSV. Includes customization of algorithm section and
-  better matching of samples using input file names.
+  better matching of samples using input file names. Improve ability to
+  distinguish fastq pairs.
 - Provide additional parallelization of bgzip preparation, performing grabix indexing
   in parallel for paired ends.
-- Fix downsampling with GATK-lite 2.3.9 releases by avoiding filter_reads_with_N_cigar
-  argument. Thanks to Przemek Lyszkiewicz.
+- Fix downsampling with GATK-lite 2.3.9 releases by moving to sambamba based downsampling.
+  Thanks to Przemek Lyszkiewicz.
 - Handle Illumina format input files for bwa-mem alignment, and cleanly convert
   these when preparing bgzipped inputs for parallel alignment. Thanks to Miika Ahdesmaki.
 - Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.
@@ -17,8 +18,12 @@
 - Added Cufflinks support.
 - Set stranded flag properly in htseq-count. Thanks to Miika Ahdesmaki.
 - Fix to ensure Tophat receives a minimum of 8 gb of memory, regardless of number of cores.
+- Remove `hybrid_bait` and `hybrid_target` which were no longer used with new
+  lightweight QC framework. Prefer better coverage framework moving forward.
 - Added extra summary information to the project-summary.yaml file so downstream tools can
   locate what genome resources were used.
+- Added ``test_run`` option to the sample configuration file. Set it to True to run a small
+subset of your data through the pipeline to make sure everything is working okay.
 
 ## 0.7.5 (November 29, 2013)
 

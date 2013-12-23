@@ -38,6 +38,9 @@ resources:
     cores:
   tophat:
     cores:
+  star:
+    mem: 3g
+    cores: 4
   bwa:
     cores: 4
   samtools:

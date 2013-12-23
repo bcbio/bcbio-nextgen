@@ -4,7 +4,7 @@ http://cufflinks.cbcb.umd.edu/manual.html
 """
 import os
 
-from bcbio.utils import get_in
+from bcbio.utils import get_in, file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -15,6 +15,9 @@ def run(align_file, ref_file, data):
     cmd = _get_general_options(align_file, config)
     cmd.extend(_get_no_assembly_options(ref_file, data))
     out_dir = _get_output_dir(align_file, data)
+    out_file = os.path.join(out_dir, "genes.fpkm_tracking")
+    if file_exists(out_file):
+        return out_dir
     with file_transaction(out_dir) as tmp_out_dir:
         cmd.extend(["--output-dir", tmp_out_dir])
         cmd.extend([align_file])
@@ -27,7 +30,7 @@ def _get_general_options(align_file, config):
     cufflinks = config_utils.get_program("cufflinks", config)
     options.extend([cufflinks])
     options.extend(["--num-threads", config["algorithm"].get("num_cores", 1)])
-    options.extend(["--quiet"])
+  #  options.extend(["--quiet"])
     options.extend(["--no-update-check"])
     return options
 
