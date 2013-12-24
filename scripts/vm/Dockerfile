@@ -24,6 +24,9 @@ RUN wget --no-check-certificate https://raw.github.com/chapmanb/bcbio-nextgen/ma
 RUN python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local --nodata --nosudo
 RUN bcbio_nextgen.py upgrade --isolate
 RUN mkdir -p /mnt/biodata
+RUN ln -s /mnt/biodata/genomes /usr/local/share/bcbio-nextgen/genomes
+RUN ln -s /mnt/biodata/liftOver /usr/local/share/bcbio-nextgen/liftOver
+RUN mkdir -p /tmp/bcbio-nextgen
     
 EXPOSE 8085
 ENTRYPOINT ["/usr/local/bin/bcbio_nextgen.py", "server", "--port", "8085"]

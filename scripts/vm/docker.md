@@ -34,7 +34,15 @@ or build directly:
 
 ## Update images to index
 
-    DID=$(docker run -d -i -t -p 8085:8085 chapmanb/bcbio-nextgen-devel /bin/bash)
+    DID=$(docker run -d -i -t -p 8085:8085 -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
+          chapmanb/bcbio-nextgen-devel /bin/bash)
     docker attach $DID
     docker commit $DID chapmanb/bcbio-nextgen-devel
     docker push chapmanb/bcbio-nextgen-devel
+
+
+## Update and test local code
+
+    cd /tmp/bcbio-nextgen
+    /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
+    bcbio_nextgen.py server --port=8085

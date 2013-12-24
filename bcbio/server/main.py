@@ -3,12 +3,13 @@
 import tornado.web
 import tornado.ioloop
 
-from bcbio.server import run
+from bcbio.server import run, install
 
 def start(args):
     """Run server with provided command line arguments.
     """
-    application = tornado.web.Application([(r"/run", run.get_handler(args))])
+    application = tornado.web.Application([(r"/run", run.get_handler(args)),
+                                           (r"/install", install.get_handler(args))])
     application.listen(args.port)
     tornado.ioloop.IOLoop.instance().start()
 
