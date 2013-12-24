@@ -56,7 +56,7 @@ def process_alignment(*args):
 process_alignment.metadata = {"resources": ["star", "novoalign", "bwa", "bowtie2",
                                             "tophat2"],
                               "ensure": {"tophat2": tophat.job_requirements,
-                                         "star": star.job.requirements}}
+                                         "star": star.job_requirements}}
 
 @require(alignprep)
 def prep_align_inputs(*args):
