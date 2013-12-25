@@ -1,7 +1,10 @@
 """Expose bcbio-nextgen installation and upgrade capabilities.
 """
 import json
+import os
+
 import tornado.web
+
 import bcbio.install
 
 def add_defaults(dct, defaults, overwrite=False):
@@ -25,11 +28,16 @@ def json_to_args(x, defaults=None, mandatory=None):
 def get_handler(args):
     """Enable upgrade of data in place on external system.
     """
-    defaults = {"genomes": [], "aligners": [], "install_data": False}
+    defaults = {"genomes": [], "aligners": [], "install_data": False,
+                "toolplus": []}
     mandatory = {"sudo": False, "upgrade": "skip", "tools": False, "tooldir": None,
-                 "toolplus": [], "tooldist": "minimal", "isolate": True, "distribution": ""}
+                 "tooldist": "minimal", "isolate": True, "distribution": ""}
     class InstallHandler(tornado.web.RequestHandler):
         def get(self):
+            biodata_dir = getattr(args, "biodata_dir", None) or "/mnt/biodata"
+            for datadir in ["genomes", "liftOver", "gemini_data"]:
+                if not os.path.lexists(os.path.join(biodata_dir, datadir)):
+                    os.makedirs(os.path.join(biodata_dir, datadir))
             iargs = json_to_args(self.get_argument("args", "{}"), defaults,
                                  mandatory)
             bcbio.install.upgrade_bcbio(iargs)

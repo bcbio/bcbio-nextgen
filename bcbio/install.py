@@ -111,6 +111,10 @@ def upgrade_bcbio_data(args, remotes):
     cbl_deploy.deploy(s)
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
+    if 'data' in args.toolplus:
+        # XXX Need a gemini data only update process
+        #subprocess.check_call(["gemini", "update"])
+        pass
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.

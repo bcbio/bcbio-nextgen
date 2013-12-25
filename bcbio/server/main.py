@@ -21,4 +21,6 @@ def add_subparser(subparsers):
                                                 "Defaults to installed bcbio_system.yaml"))
     parser.add_argument("-p", "--port", help="Port to listen on",
                         default=8080, type=int)
+    parser.add_argument("-d", "--biodata_dir", help="Directory with biological data",
+                        default="/mnt/biodata", type=str)
     return parser
