@@ -140,6 +140,8 @@ def _get_brew_versions():
     except subprocess.CalledProcessError:
         vout = subprocess.check_output([brew_cmd, "list", "--versions"])
         uses_which = False
+    except OSError:  # brew not installed/used
+        vout = ""
     out = {}
     for vstr in vout.split("\n"):
         if vstr.strip():
