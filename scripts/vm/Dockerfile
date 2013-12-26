@@ -32,7 +32,7 @@ RUN mkdir -p /tmp/bcbio-nextgen
 RUN wget --no-check-certificate https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py
 RUN python gemini_install.py /usr/local /usr/local/share/gemini --nosudo --notools --nodata
 RUN ln -s /mnt/biodata/gemini_data /usr/local/share/gemini/data
-# XXX add 'data' to bcbio-nextgen toolplus defaults
+# XXX add 'data' to bcbio-nextgen toolplus defaults: /usr/local/share/bcbio-nextgen/config/install-params.yaml
     
 EXPOSE 8085
 ENTRYPOINT ["/usr/local/bin/bcbio_nextgen.py", "server", "--port", "8085"]
