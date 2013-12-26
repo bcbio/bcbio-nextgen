@@ -41,9 +41,21 @@ or build directly:
     docker commit $DID chapmanb/bcbio-nextgen-devel
     docker push chapmanb/bcbio-nextgen-devel
 
-
 ## Update and test local code
 
     cd /tmp/bcbio-nextgen
     /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
     bcbio_nextgen.py server --port=8085
+
+## ToDo list
+
+- Retrieve all directories to map to container from input sample configuration file,
+  work and configuration directories. Translate into docker input parameters.
+- Handle merging multiple bcbio_system.yaml files. External file sets memory and
+  core parameters. Internal docker file handles locations of executables and
+  java jar files.
+- Enable specification of external programs/jars to handle tricky non-distributable
+  issues like GATK protected versions. Map these directories into docker container.
+- Finalize single machine, multicore runs of bcbio-nextgen with docker containers.
+- Provide IPython/ZeroMQ interface that handles container creation and running
+  of processes, passing actual execution to docker container.

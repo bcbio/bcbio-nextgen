@@ -1,5 +1,5 @@
 FROM stackbrew/ubuntu:13.10
-MAINTAINER Brad Chapman
+MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
 # Setup a base system 
 RUN mkdir -p /tmp/bcbio-nextgen-install
