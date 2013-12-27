@@ -46,15 +46,10 @@ def split_namedpipe_cl(in_file, data):
 def fastq_convert_pipe_cl(in_file, data):
     """Create an anonymous pipe converting Illumina 1.3-1.7 to Sanger.
 
-    Uses sed substitution approach from;
-    https://en.wikipedia.org/wiki/FASTQ_format
-    Assumes standard fastq with 4 lines per item, so will not handle fancy cases,
-    but meant to be a lightweight temporary solution until Illumina qualitu format
-    is gone forever.
+    Uses seqtk: https://github.com/lh3/seqt
     """
-    sed_cmd = (r"""sed -e '4~4y/@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghi/"""
-               r"""!"#$%&'\''()*+,-.\/0123456789:;<=>?@ABCDEFGHIJ/'""")
-    return "<({sed_cmd} {in_file})".format(**locals())
+    seqtk = config_utils.get_program("seqtk", data["config"])
+    return "<({seqtk} seq -Q64 -V {in_file})".format(**locals())
 
 # ## configuration
 
