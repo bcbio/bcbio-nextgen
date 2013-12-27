@@ -151,8 +151,16 @@ def starts_by_depth(bam_file, config, sample_size=None):
 
 
 def estimate_library_complexity(df, algorithm="RNA-seq"):
+    """
+    estimate library complexity from the number of reads vs.
+    number of unique start sites. returns "NA" if there are
+    not enough data points to fit the line
+    """
     DEFAULT_CUTOFFS = {"RNA-seq": (0.25, 0.40)}
     cutoffs = DEFAULT_CUTOFFS[algorithm]
+    if len(df) < 5:
+        return {"unique_starts_per_read": 'nan',
+                "complexity": "NA"}
     model = sm.ols(formula="starts ~ reads", data=df)
     fitted = model.fit()
     slope = fitted.params["reads"]
@@ -162,7 +170,6 @@ def estimate_library_complexity(df, algorithm="RNA-seq"):
         complexity = "MEDIUM"
     else:
         complexity = "HIGH"
-    d = {"unique_start_per_read": float(slope),
-         "complexity": complexity}
-    return d
+    return {"unique_start_per_read": float(slope),
+            "complexity": complexity}
 
