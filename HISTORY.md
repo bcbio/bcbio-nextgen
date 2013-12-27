@@ -29,6 +29,11 @@
   locate what genome resources were used.
 - Added ``test_run`` option to the sample configuration file. Set it to True to run a small
 subset of your data through the pipeline to make sure everything is working okay.
+- Fusion support added by setting ``fusion_mode: True`` in the algorithim section.
+Not officially documented for now until we can come up with best practices for it.
+- STAR support re-enabled.
+- Fixed issue with the complexity calculation throwing an exception when there
+were not enough reads.
 
 ## 0.7.5 (November 29, 2013)
 
