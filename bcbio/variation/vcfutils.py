@@ -150,6 +150,8 @@ def _do_merge(orig_files, out_file, config, region):
                 region_str = "-r {}".format(region) if region else ""
                 cmd = "{bcftools} merge -o {output_type} {region_str} {prep_files} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Merge variants")
+    if out_file.endswith(".gz"):
+        bgzip_and_index(out_file, config)
     return out_file
 
 def _sort_by_region(fnames, regions, ref_file, config):
@@ -196,6 +198,7 @@ def short_filenames(fs):
     This helps avoids errors from long command lines, and handles tabix and
     bam indexes on linked files.
     """
+    print fs
     index_exts = [".bai", ".tbi"]
     with utils.curdir_tmpdir() as tmpdir:
         short_fs = []
