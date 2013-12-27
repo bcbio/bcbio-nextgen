@@ -56,8 +56,8 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
 
 # ## Fastq to BAM alignment
 
-def can_pipe(fastq_file):
-    """Novoalign support piping for all read lengths.
+def can_pipe(fastq_file, data):
+    """Novoalign supports piping for all read lengths.
     """
     return True
 

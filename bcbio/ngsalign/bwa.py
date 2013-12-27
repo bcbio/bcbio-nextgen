@@ -3,6 +3,7 @@
 import contextlib
 import gzip
 import os
+import subprocess
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
@@ -49,25 +50,25 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
     return out_file
 
-def can_pipe(fastq_file):
+def can_pipe(fastq_file, data):
     """bwa-mem handle longer (> 70bp) reads with improved piping.
-    Default to no piping if more than half the first 500 reads are small.
+    Randomly samples 5000 reads from the first two million.
+    Default to no piping if more than 75% of the sampled reads are small.
     """
     min_size = 70
-    thresh = 0.5
-    tocheck = 500
+    thresh = 0.75
+    head_count = 8000000
+    tocheck = 5000
+    seqtk = config_utils.get_program("seqtk", data["config"])
+    gzip_cmd = "zcat {fastq_file}" if fastq_file.endswith(".gz") else "cat {fastq_file}"
+    cmd = (gzip_cmd + " | head -n {head_count} | "
+           "{seqtk} sample -s42 - {tocheck} | "
+           "awk '{{if(NR%4==2) print length($1)}}' | sort | uniq -c")
+    count_out = subprocess.check_output(cmd.format(**locals()), shell=True)
     shorter = 0
-    if fastq_file.endswith(".gz"):
-        handle = gzip.open(fastq_file, "rb")
-    else:
-        handle = open(fastq_file)
-    with contextlib.closing(handle) as in_handle:
-        fqit = FastqGeneralIterator(in_handle)
-        for i, (_, seq, _) in enumerate(fqit):
-            if len(seq) < min_size:
-                shorter += 1
-            if i > tocheck:
-                break
+    for count, size in (l.strip().split() for l in count_out.strip().split("\n")):
+        if int(size) < min_size:
+            shorter += int(count)
     return (float(shorter) / float(tocheck)) <= thresh
 
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):

@@ -9,7 +9,12 @@
 - Fix downsampling with GATK-lite 2.3.9 releases by moving to sambamba based downsampling.
   Thanks to Przemek Lyszkiewicz.
 - Handle Illumina format input files for bwa-mem alignment, and cleanly convert
-  these when preparing bgzipped inputs for parallel alignment. Thanks to Miika Ahdesmaki.
+  these when preparing bgzipped inputs for parallel alignment. Thanks to Miika
+  Ahdesmaki.
+- Provide better algorithm for distinguishing bwa-mem and bwa-aln usage. Now
+  does random sampling of first 2 million reads instead of taking the first set
+  of reads which may be non-generalizable. Also lowers requirement to use
+  bwa-mem to 75% of reads being smaller than 70bp. Thanks to Paul Tang.
 - Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.
 - Fix Tophat not respecting the existing --transcriptome-index. Thanks to Miika Ahdesmaki.
 - Keep original gzipped fastq files. Thanks again to Miika Ahdesmaki.

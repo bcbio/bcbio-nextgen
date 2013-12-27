@@ -58,7 +58,7 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         out_bam = _align_from_bam(fastq1, aligner, data["align_ref"], data["sam_ref"],
                                   names, align_dir, data)
         data["work_bam"] = out_bam
-    elif _can_pipe(aligner, fastq1):
+    elif _can_pipe(aligner, fastq1, data):
         data = _align_from_fastq_pipe(fastq1, fastq2, aligner, data["align_ref"], data["sam_ref"],
                                       names, align_dir, data)
     else:
@@ -69,11 +69,11 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         bam.index(data["work_bam"], data["config"])
     return data
 
-def _can_pipe(aligner, fastq_file):
+def _can_pipe(aligner, fastq_file, data):
     """Check if current aligner support piping for a particular input fastq file.
     """
     if TOOLS[aligner].can_pipe and TOOLS[aligner].pipe_align_fn:
-        return TOOLS[aligner].can_pipe(fastq_file)
+        return TOOLS[aligner].can_pipe(fastq_file, data)
     return False
 
 def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, data):
