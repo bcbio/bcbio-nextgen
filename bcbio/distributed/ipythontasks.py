@@ -124,16 +124,17 @@ def pipeline_summary(*args):
         return apply(qcsummary.pipeline_summary, *args)
 pipeline_summary.metadata = {"resources": ["gatk"]}
 
-@require(sample)
+@require(rnaseq)
 def generate_transcript_counts(*args):
     with _setup_logging(args):
         return apply(rnaseq.generate_transcript_counts, *args)
+generate_transcript_counts.metadata = {"resources": ["samtools"]}
 
-@require(sample)
+@require(rnaseq)
 def run_cufflinks(*args):
     with _setup_logging(args):
         return apply(rnaseq.run_cufflinks, *args)
-run_cufflinks.metadata = {"resources": ["cufflinks"]}
+run_cufflinks.metadata = {"resources": ["cufflinks", "samtools"]}
 
 @require(sample)
 def generate_bigwig(*args):
