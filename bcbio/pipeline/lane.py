@@ -142,13 +142,17 @@ def process_alignment(data):
     elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
         bamclean = config["algorithm"].get("bam_clean")
-        if sort_method:
+        if bamclean is True or bamclean == "picard":
+            if sort_method and sort_method != "coordinate":
+                raise ValueError("Cannot specify `bam_clean: picard` with `bam_sort` other than coordinate: %s"
+                                 % sort_method)
+            out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], data["sam_ref"], data["dirs"],
+                                           config)
+        elif sort_method:
             runner = broad.runner_from_config(config)
             out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
                 os.path.splitext(os.path.basename(fastq1))[0]))
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
-        elif bamclean is True or bamclean == "picard":
-            out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], data["sam_ref"], data["dirs"], config)
         else:
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))

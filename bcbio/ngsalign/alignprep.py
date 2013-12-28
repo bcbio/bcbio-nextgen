@@ -18,8 +18,9 @@ def create_inputs(data):
     Allows parallelization of alignment beyond processors available on a single
     machine. Uses gbzip and grabix to prepare an indexed fastq file.
     """
-    # skip skipping on samples without input files
-    if data["files"][0] is None or data["algorithm"].get("align_split_size") is None:
+    # skip indexing on samples without input files or not doing alignment
+    if (data["files"][0] is None or data["algorithm"].get("align_split_size") is None
+          or not data["algorithm"].get("aligner")):
         return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data["config"])
     data["files"] = ready_files

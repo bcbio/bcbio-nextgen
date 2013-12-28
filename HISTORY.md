@@ -15,6 +15,8 @@
   does random sampling of first 2 million reads instead of taking the first set
   of reads which may be non-generalizable. Also lowers requirement to use
   bwa-mem to 75% of reads being smaller than 70bp. Thanks to Paul Tang.
+- Correctly handle preparation of pre-aligned BAM files when sorting and
+  coordinate specification needed. Thanks to Severine Catreux.
 - Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.
 - Fix Tophat not respecting the existing --transcriptome-index. Thanks to Miika Ahdesmaki.
 - Keep original gzipped fastq files. Thanks again to Miika Ahdesmaki.

@@ -15,6 +15,8 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
   - algorithm:
       #aligner: false
+      #bam_clean: picard
+      #bam_sort: coordinate
       #mark_duplicates: biobambam
       #recalibrate: false
       #realign: false
