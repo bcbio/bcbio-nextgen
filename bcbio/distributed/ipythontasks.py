@@ -128,7 +128,7 @@ pipeline_summary.metadata = {"resources": ["gatk"]}
 def generate_transcript_counts(*args):
     with _setup_logging(args):
         return apply(rnaseq.generate_transcript_counts, *args)
-generate_transcript_counts.metadata = {"resources": ["samtools"]}
+generate_transcript_counts.metadata = {"resources": ["samtools","gatk"]}
 
 @require(rnaseq)
 def run_cufflinks(*args):
