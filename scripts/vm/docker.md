@@ -54,8 +54,8 @@ or build directly:
 - Handle merging multiple bcbio_system.yaml files. External file sets memory and
   core parameters. Internal docker file handles locations of executables and
   java jar files.
+- Finalize single machine, multicore runs of bcbio-nextgen with docker containers.
 - Enable specification of external programs/jars to handle tricky non-distributable
   issues like GATK protected versions. Map these directories into docker container.
-- Finalize single machine, multicore runs of bcbio-nextgen with docker containers.
 - Provide IPython/ZeroMQ interface that handles container creation and running
   of processes, passing actual execution to docker container.

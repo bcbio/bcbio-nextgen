@@ -24,15 +24,23 @@ RUN wget --no-check-certificate https://raw.github.com/chapmanb/bcbio-nextgen/ma
 RUN python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local --nodata --nosudo
 RUN bcbio_nextgen.py upgrade --isolate
 RUN mkdir -p /mnt/biodata
+RUN mv /usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml /usr/local/share/bcbio-nextgen/config
+RUN rmdir /usr/local/share/bcbio-nextgen/galaxy
+RUN ln -s /mnt/biodata/galaxy /usr/local/share/bcbio-nextgen/galaxy
+RUN ln -s /mnt/biodata/gemini_data /usr/local/share/bcbio-nextgen/gemini_data
 RUN ln -s /mnt/biodata/genomes /usr/local/share/bcbio-nextgen/genomes
 RUN ln -s /mnt/biodata/liftOver /usr/local/share/bcbio-nextgen/liftOver
+RUN chmod a+rwx /usr/local/share/bcbio-nextgen/config
+RUN chmod a+rwx /usr/local/share/bcbio-nextgen/config/*.yaml
 RUN mkdir -p /tmp/bcbio-nextgen
 
 # gemini installation
 RUN wget --no-check-certificate https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py
 RUN python gemini_install.py /usr/local /usr/local/share/gemini --nosudo --notools --nodata
 RUN ln -s /mnt/biodata/gemini_data /usr/local/share/gemini/data
+RUN chmod a+rwx /usr/local/share/gemini
+RUN chmod a+rwx /usr/local/share/gemini/gemini-config.yaml
 # XXX add 'data' to bcbio-nextgen toolplus defaults: /usr/local/share/bcbio-nextgen/config/install-params.yaml
     
 EXPOSE 8085
-ENTRYPOINT ["/usr/local/bin/bcbio_nextgen.py", "server", "--port", "8085"]
+ENTRYPOINT ["/usr/local/bin/bcbio_nextgen.py", "server", "--port", "8085", "--biodata_dir", "/mnt/biodata"]
