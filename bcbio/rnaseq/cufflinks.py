@@ -52,6 +52,4 @@ def _get_no_assembly_options(ref_file, data):
 def _get_output_dir(align_file, data):
     config = data["config"]
     name = data["rgnames"]["sample"]
-    import ipdb
-    ipdb.set_trace()
     return os.path.join(get_in(data, ("dirs", "work")), "cufflinks", name)
