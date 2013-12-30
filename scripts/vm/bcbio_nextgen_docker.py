@@ -20,27 +20,110 @@ import yaml
 # default information about docker container
 DOCKER = {"port": 8085,
           "biodata_dir": "/mnt/biodata",
+          "input_dir": "/mnt/inputs",
           "image": "chapmanb/bcbio-nextgen-devel"}
 
 # ## Running analysis
 
 def run(args):
-    args = add_defaults(args)
-    with bcbio_docker(DOCKER, args) as cid:
+    args = update_check_args(args, "Could not run analysis.")
+    with open(args.sample_config) as in_handle:
+        sconfig, mounts = update_config_mounts(yaml.load(in_handle), DOCKER["input_dir"])
+    mounts += prepare_system_mounts(args.datadir, DOCKER["biodata_dir"])
+    with bcbio_docker(DOCKER, mounts, args) as cid:
         print "***", cid
+
+def update_config_mounts(config, input_dir):
+    """Update input configuration with local docker container mounts.
+    Maps input files into docker mounts and resolved relative and symlinked paths.
+    """
+    absdetails = []
+    directories = []
+    for d in config["details"]:
+        d = abs_file_paths(d, base_dirs=[args.fcdir] if args.fcdir else None,
+                           ignore=["description", "analysis", "resources",
+                                   "genome_build", "lane"])
+        d["algorithm"] = abs_file_paths(d["algorithm"], base_dirs=[args.fcdir] if args.fcdir else None,
+                                        ignore=["variantcaller", "realign", "recalibrate",
+                                                "phasing", "svcaller"])
+        absdetails.append(d)
+        directories.extend(_get_directories(d))
+    mounts = {}
+    for i, d in enumerate(sorted(set(directories))):
+        mounts[d] = os.path.join(input_dir, str(i))
+    config["details"] = [_remap_directories(d, mounts) for d in absdetails]
+    return config, ["%s:%s" % (k, v) for k, v in mounts.iteritems()]
+
+def _remap_directories(xs, mounts):
+    """Remap files to point to internal docker container mounts.
+    """
+    if not isinstance(xs, dict):
+        return xs
+    out = {}
+    for k, v in xs.iteritems():
+        if isinstance(v, dict):
+            out[k] = _remap_directories(v, mounts)
+        elif v and isinstance(v, basestring) and os.path.exists(v) and os.path.isabs(v):
+            dirname, basename = os.path.split(v)
+            out[k] = os.path.join(mounts[dirname], basename)
+        elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
+            ready_vs = []
+            for x in v:
+                dirname, basename = os.path.split(x)
+                ready_vs.append(os.path.join(mounts[dirname], basename))
+            out[k] = ready_vs
+        else:
+            out[k] = v
+    return out
+
+def _get_directories(xs):
+    """Retrieve all directories specified in an input file.
+    """
+    out = []
+    if not isinstance(xs, dict):
+        return out
+    for k, v in xs.iteritems():
+        if isinstance(v, dict):
+            out.extend(_get_directories(v))
+        elif v and isinstance(v, basestring) and os.path.exists(v) and os.path.isabs(v):
+            out.append(os.path.dirname(v))
+        elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
+            out.extend(os.path.dirname(x) for x in v)
+    return out
+
+def _normalize_path(x, base_dirs):
+    for base_dir in base_dirs:
+        if os.path.exists(os.path.join(base_dir, x)):
+            return os.path.normpath(os.path.realpath(os.path.join(base_dir, x)))
+    return None
+
+def abs_file_paths(xs, base_dirs=None, ignore=[]):
+    """Expand files to be absolute, non-symlinked file paths.
+    """
+    if not isinstance(xs, dict):
+        return xs
+    base_dirs = base_dirs if base_dirs else []
+    base_dirs.append(os.getcwd())
+    ignore_keys = set(ignore if ignore else [])
+    out = {}
+    for k, v in xs.iteritems():
+        if k not in ignore_keys and v and isinstance(v, basestring) and _normalize_path(v, base_dirs):
+            out[k] = _normalize_path(v, base_dirs)
+        elif k not in ignore_keys and v and isinstance(v, (list, tuple)) and _normalize_path(v[0], base_dirs):
+            out[k] = [_normalize_path(x, base_dirs) for x in v]
+        else:
+            out[k] = v
+    return out
 
 # ## Installation
 
 def install(args):
-    args = add_defaults(args)
-    if not args.datadir:
-        print("Must specify a `--datadir` for installation or save location with `saveconfig`.\n"
-              "bcbio-nextgen not upgraded.")
-        return
+    args = update_check_args(args, "bcbio-nextgen not upgraded.")
     if args.install_tools:
         pull(DOCKER["image"])
     success = True
-    with bcbio_docker(DOCKER, args) as cid:
+    mounts = prepare_system_mounts(args.datadir, DOCKER["biodata_dir"])
+    with bcbio_docker(DOCKER, mounts, args) as cid:
         print("Running data installation with docker container: %s" % cid)
         r = install_data(args, DOCKER["port"])
         if r is None or r.status_code != 200:
@@ -65,6 +148,13 @@ def pull(image):
 # ## Defaults
 
 TOSAVE_DEFAULTS = {"port": 8085, "datadir": None}
+
+def update_check_args(args, command_info):
+    args = add_defaults(args)
+    if not args.datadir:
+        print("Must specify a `--datadir` or save the default location with `saveconfig`.\n" + command_info)
+        sys.exit(1)
+    return args
 
 def save_defaults(args):
     """Save user specific defaults to a yaml configuration file.
@@ -114,24 +204,23 @@ def _get_config_file(just_filename=False):
     else:
         return None
 
-
 # ## Start and stop bcbio-nextgen docker container
 
 @contextlib.contextmanager
-def bcbio_docker(dconf, args):
+def bcbio_docker(dconf, mounts, args):
     """Provide a running bcbio-nextgen docker server with automatic stop on completion.
     """
     cid = None
     try:
-        cid = start(dconf["image"], args.port, dconf["port"], args.datadir, dconf["biodata_dir"])
+        cid = start(dconf["image"], args.port, dconf["port"], mounts, dconf["biodata_dir"])
         wait(dconf["port"])
         yield cid
     finally:
         if cid:
             stop(cid)
 
-def start(image, hport, cport, datadir, docker_biodata_dir):
-    mounts = " ".join("-v %s" % x for x in prepare_mounts(datadir, docker_biodata_dir))
+def start(image, hport, cport, mounts, docker_biodata_dir):
+    mounts = " ".join("-v %s" % x for x in mounts)
     cmd = ("docker run -d -p {hport}:{cport} {mounts} {image} /bin/bash -c '" +
            user_create_cmd() +
            "bcbio_nextgen.py server --port={cport} --biodata_dir={docker_biodata_dir}\"'")
@@ -139,7 +228,7 @@ def start(image, hport, cport, datadir, docker_biodata_dir):
     cid, _ = process.communicate()
     return cid.rstrip()
 
-def prepare_mounts(datadir, docker_biodata_dir):
+def prepare_system_mounts(datadir, docker_biodata_dir):
     """Create set of system mountpoints to link into Docker container.
     """
     mounts = []
@@ -202,7 +291,7 @@ if __name__ == "__main__":
     parser_i.set_defaults(func=install)
     # running
     parser_r = subparsers.add_parser("run", help="Run an automated analysis.")
-    parser_r.add_argument("run_config", help="YAML file with details about samples to process.")
+    parser_r.add_argument("sample_config", help="YAML file with details about samples to process.")
     parser_r.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process")
     parser_r.add_argument("--globalconfig", help="Global YAML configuration file specifying details. "
                           "Defaults to installed bcbio_system.yaml.")

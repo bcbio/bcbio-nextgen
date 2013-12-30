@@ -50,8 +50,6 @@ or build directly:
 
 ## ToDo list
 
-- Retrieve all directories to map to container from input sample configuration file,
-  work and configuration directories. Translate into docker input parameters.
 - Handle merging multiple bcbio_system.yaml files. External file sets memory and
   core parameters. Internal docker file handles locations of executables and
   java jar files.
