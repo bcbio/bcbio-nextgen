@@ -44,6 +44,7 @@ or build directly:
 
 ## Update and test local code
 
+    docker attach bcbio-develrepo
     cd /tmp/bcbio-nextgen
     /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
     bcbio_nextgen.py server --port=8085
