@@ -75,7 +75,7 @@ def sample_summary(bam_file, data, out_dir):
             _write_sample_id_file(data, bam_file, sample_file)
             runner = rnaseqc_runner_from_config(config)
             bam.index(bam_file, config)
-            single_end = bam.is_paired(bam_file)
+            single_end = not bam.is_paired(bam_file)
             runner.run(sample_file, ref_file, rna_file, gtf_file, tx_out_dir, single_end)
             # we don't need this large directory for just the report
             shutil.rmtree(os.path.join(tx_out_dir, data["description"]))
