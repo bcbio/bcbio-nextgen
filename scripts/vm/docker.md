@@ -34,6 +34,7 @@ or build directly:
 
 ## Update images to index
 
+    DID=$(docker run -d -i -t chapmanb/bcbio-nextgen-devel /bin/bash)
     DID=$(docker run -d -i -t -p 8085:8085 -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
           -v /usr/local/share/bcbio_nextgen:/mnt/biodata
           chapmanb/bcbio-nextgen-devel /bin/bash)

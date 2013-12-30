@@ -55,6 +55,8 @@ def upgrade_bcbio(args):
         print("Installation directory not added to current PATH")
         print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
     save_install_defaults(args)
+    args.datadir = _get_data_dir()
+    return args
 
 def _default_deploy_args(args):
     flavors = {"minimal": "ngs_pipeline_minimal",
