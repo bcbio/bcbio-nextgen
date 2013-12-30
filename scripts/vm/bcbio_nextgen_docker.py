@@ -21,17 +21,45 @@ import yaml
 DOCKER = {"port": 8085,
           "biodata_dir": "/mnt/biodata",
           "input_dir": "/mnt/inputs",
+          "work_dir": "/mnt/work",
           "image": "chapmanb/bcbio-nextgen-devel"}
 
 # ## Running analysis
 
 def run(args):
+    """Run a full analysis on a local machine, utilizing multiple cores.
+    """
     args = update_check_args(args, "Could not run analysis.")
     with open(args.sample_config) as in_handle:
-        sconfig, mounts = update_config_mounts(yaml.load(in_handle), DOCKER["input_dir"])
+        sample_config, mounts = update_config_mounts(yaml.load(in_handle), DOCKER["input_dir"])
     mounts += prepare_system_mounts(args.datadir, DOCKER["biodata_dir"])
-    with bcbio_docker(DOCKER, mounts, args) as cid:
-        print "***", cid
+    mounts.append("%s:%s" % (os.getcwd(), DOCKER["work_dir"]))
+    system_config, system_mounts = read_system_config(args, DOCKER)
+    with bcbio_docker(DOCKER, mounts + system_mounts, args) as cid:
+        print("Running analysis using docker container: %s" % cid)
+        payload = {"work_dir": DOCKER["work_dir"],
+                   "system_config": system_config,
+                   "sample_config": sample_config,
+                   "numcores": args.numcores}
+        requests.get("http://localhost:{port}/run".format(port=args.port), params={"args": json.dumps(payload)})
+
+def read_system_config(args, DOCKER):
+    if args.systemconfig:
+        f = args.systemconfig
+    else:
+        f = os.path.join(args.datadir, "galaxy", "bcbio_system.yaml")
+    with open(f) as in_handle:
+        config = yaml.load(in_handle)
+    # Map external galaxy specifications over to docker container
+    mounts = []
+    i = 0
+    for k in ["galaxy_config"]:
+        if k in config:
+            dirname, base = os.path.split(os.path.normpath(os.path.realpath(config[k])))
+            container_dir = os.path.join(DOCKER["input_dir"], "system", str(i))
+            mounts.append("%s:%s" % (dirname, container_dir))
+            config[k] = os.path.join(container_dir, base)
+    return config, mounts
 
 def update_config_mounts(config, input_dir):
     """Update input configuration with local docker container mounts.
@@ -211,19 +239,50 @@ def bcbio_docker(dconf, mounts, args):
     """Provide a running bcbio-nextgen docker server with automatic stop on completion.
     """
     cid = None
-    try:
-        cid = start(dconf["image"], args.port, dconf["port"], mounts, dconf["biodata_dir"])
-        wait(dconf["port"])
-        yield cid
-    finally:
-        if cid:
-            stop(cid)
+    if args.develrepo:
+        yield start_devel(dconf["image"], args.port, dconf["port"], mounts,
+                          dconf["biodata_dir"], args.develrepo)
+    else:
+        try:
+            cid = start(dconf["image"], args.port, dconf["port"], mounts, dconf["biodata_dir"])
+            wait(dconf["port"])
+            yield cid
+        finally:
+            if cid:
+                stop(cid)
+
+def start_devel(image, hport, cport, mounts, docker_biodata_dir, repo):
+    """Start a docker container for development, attached to the provided code repo.
+    Uses a standard name 'bcbio-develrepo' to avoid launching multiple images on
+    re-run.
+    """
+    name = "bcbio-develrepo"
+    # look for existing running processes
+    process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)
+    containers, _ = process.communicate()
+    for line in containers.split("\n"):
+        if line.find(name) >= 0:
+            return line.split()[0]
+    # start a new container running bash for development
+    mounts.append("%s:/tmp/bcbio-nextgen" % repo)
+    mounts = " ".join("-v %s" % x for x in mounts)
+    chown_cmd = ("chown -R {user.pw_name} /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages && "
+                 "chown -R {user.pw_name} /usr/local/share/bcbio-nextgen/anaconda/bin && ")
+    cmd = ("docker run -d -i -t -name {name} -p {hport}:{cport} {mounts} {image} "
+           "/bin/bash -c '"
+           + user_create_cmd(chown_cmd) +
+           "/bin/bash"
+           "\"'")
+    process = subprocess.Popen(cmd.format(**locals()), shell=True, stdout=subprocess.PIPE)
+    cid, _ = process.communicate()
+    return cid.rstrip()
 
 def start(image, hport, cport, mounts, docker_biodata_dir):
     mounts = " ".join("-v %s" % x for x in mounts)
-    cmd = ("docker run -d -p {hport}:{cport} {mounts} {image} /bin/bash -c '" +
-           user_create_cmd() +
-           "bcbio_nextgen.py server --port={cport} --biodata_dir={docker_biodata_dir}\"'")
+    cmd = ("docker run -d -p {hport}:{cport} {mounts} {image} "
+           "/bin/bash -c '" + user_create_cmd() +
+           "bcbio_nextgen.py server --port={cport} --biodata_dir={docker_biodata_dir}"
+           "\"'")
     process = subprocess.Popen(cmd.format(**locals()), shell=True, stdout=subprocess.PIPE)
     cid, _ = process.communicate()
     return cid.rstrip()
@@ -239,7 +298,7 @@ def prepare_system_mounts(datadir, docker_biodata_dir):
         mounts.append("{cur_d}:{docker_biodata_dir}/{d}".format(**locals()))
     return mounts
 
-def user_create_cmd():
+def user_create_cmd(chown_cmd=""):
     """Create a user on the docker container with equivalent UID/GIDs to external user.
     """
     user = pwd.getpwuid(os.getuid())
@@ -248,6 +307,7 @@ def user_create_cmd():
     homedir = "/home/{user.pw_name}".format(**locals())
     cmd = ("addgroup --gid {group.gr_gid} {group.gr_name} && "
            "useradd -m -d {homedir} -g {group.gr_gid} -o -u {user.pw_uid} {user.pw_name} && "
+           + chown_cmd +
            "su - -s /bin/bash {user.pw_name} -c \"cd {homedir} && ")
     return cmd.format(**locals())
 
@@ -277,6 +337,8 @@ if __name__ == "__main__":
     parser.add_argument("--port", default=8085, help="External port to connect to docker image.")
     parser.add_argument("--datadir", help="Directory to install genome data and associated files.",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
+    parser.add_argument("--develrepo", help=("Specify a development repository to link. "
+                                             "Used for debugging and development"))
     subparsers = parser.add_subparsers(title="[sub-commands]")
     # installation
     parser_i = subparsers.add_parser("install", help="Install or upgrade bcbio-nextgen docker container and data.")
@@ -293,8 +355,10 @@ if __name__ == "__main__":
     parser_r = subparsers.add_parser("run", help="Run an automated analysis.")
     parser_r.add_argument("sample_config", help="YAML file with details about samples to process.")
     parser_r.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process")
-    parser_r.add_argument("--globalconfig", help="Global YAML configuration file specifying details. "
+    parser_r.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                           "Defaults to installed bcbio_system.yaml.")
+    parser_r.add_argument("-n", "--numcores", help="Total cores to use for processing",
+                          type=int, default=1)
     parser_r.set_defaults(func=run)
     # configuration
     parser_c = subparsers.add_parser("saveconfig", help="Save standard configuration variables for current user. "
