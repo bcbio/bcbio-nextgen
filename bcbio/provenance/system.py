@@ -66,12 +66,39 @@ def _slurm_info(queue):
 def _torque_info(queue):
     """Return machine information for a torque job scheduler using pbsnodes.
     """
-    pbs_out = subprocess.check_output("pbsnodes")
-    cores = int(pbs_out[pbs_out.find("np = ")+5])
-    name = pbs_out.split("\n")[0]
-    mem = min([float(string.split("=")[1].rstrip("kb")) / 1048576.0
-               for string in pbs_out.split(",") if "availmem" in string])
-    return [{"cores": cores, "memory": mem, "name": name}]
+    nodes = _torque_queue_nodes(queue)
+    pbs_out = subprocess.check_output(["pbsnodes"])
+    info = {}
+    for line in pbs_out.split("\n"):
+        if line.startswith(nodes):
+            info["name"] = line.strip()
+        elif info.get("name"):
+            if line.strip().startswith("np = "):
+                info["cores"] = int(line.replace("np = ", "").strip())
+            elif line.strip().startswith("status = "):
+                mem = [x for x in pbs_out.split(",") if x.startswith("totmem=")][0]
+                info["memory"] = float(mem.split("=")[1].rstrip("kb")) / 1048576.0
+                return info
+
+def _torque_queue_nodes(queue):
+    """Retrieve the nodes available for a queue.
+
+    Parses out nodes from `acl_hosts` in qstat -Qf and extracts the
+    initial names of nodes used in pbsnodes.
+    """
+    qstat_out = subprocess.check_output(["qstat", "-Qf", queue])
+    hosts = []
+    in_hosts = False
+    for line in qstat_out.split("\n"):
+        if line.strip().startswith("acl_hosts = "):
+            hosts.extend(line.replace("acl_hosts = ", "").strip().split(","))
+            in_hosts = True
+        elif in_hosts:
+            if line.find(" = ") > 0:
+                break
+            else:
+                hosts.extend(line.strip().split(","))
+    return tuple([h.split(".")[0].strip() for h in hosts if h.strip()])
 
 def _combine_machine_info(xs):
     if len(xs) == 1:
