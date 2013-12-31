@@ -156,6 +156,8 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
     cores_per_job = max(all_cores)
     if max_multicore:
         cores_per_job = min(cores_per_job, max_multicore)
+    if "cores" in sysinfo:
+        cores_per_job = min(cores_per_job, int(sysinfo["cores"]))
     memory_per_core = max(all_memory)
 
     # these callbacks make sure the cores and memory meet minimum requirements
