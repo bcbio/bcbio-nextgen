@@ -65,12 +65,19 @@ def _slurm_info(queue):
 
 def _torque_info(queue):
     """Return machine information for a torque job scheduler using pbsnodes.
+
+    To identify which host to use it tries to parse available hosts
+    from qstat -Qf `acl_hosts`. If found, it uses these and gets the
+    first node from pbsnodes matching to the list. If no attached
+    hosts are available, it uses the first host found from pbsnodes.
     """
     nodes = _torque_queue_nodes(queue)
     pbs_out = subprocess.check_output(["pbsnodes"])
     info = {}
-    for line in pbs_out.split("\n"):
-        if line.startswith(nodes):
+    for i, line in enumerate(pbs_out.split("\n")):
+        if i == 0 and len(nodes) == 0:
+            info["name"] = line.strip()
+        elif line.startswith(nodes):
             info["name"] = line.strip()
         elif info.get("name"):
             if line.strip().startswith("np = "):
