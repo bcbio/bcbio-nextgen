@@ -134,7 +134,7 @@ generate_transcript_counts.metadata = {"resources": ["samtools","gatk"]}
 def run_cufflinks(*args):
     with _setup_logging(args):
         return apply(rnaseq.run_cufflinks, *args)
-run_cufflinks.metadata = {"resources": ["cufflinks", "samtools"]}
+run_cufflinks.metadata = {"resources": ["cufflinks"]}
 
 @require(sample)
 def generate_bigwig(*args):
