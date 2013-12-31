@@ -6,11 +6,15 @@ details:
     # include a lane (run group ID) for each sample
     # lane: 1
     # to do multi-sample variant calling, assign samples the same metadata / batch
-    # metadata:
-    #   batch: your-arbitrary-batch-name
+    metadata:
+       batch: your-arbitrary-batch-name
+       phenotype: tumor
+       tissue: 
     algorithm:
-      aligner: tophat2
+      aligner: tophat2 #can be star
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
-      strandedness: unstranded
+      strandedness: unstranded #can be stranded
+      fusion_mode: oncofuse
+      

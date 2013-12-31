@@ -1,4 +1,8 @@
-from bcbio.rnaseq import count, cufflinks
+from bcbio.rnaseq import count, cufflinks, oncofuse
+
+def detect_fusion(samples, run_parallel):
+    samples = run_parallel("run_oncofuse", samples)
+    return samples
 
 def estimate_expression(samples, run_parallel):
     samples = run_parallel("generate_transcript_counts", samples)
@@ -8,6 +12,10 @@ def estimate_expression(samples, run_parallel):
 def generate_transcript_counts(data):
     """Generate counts per transcript from an alignment"""
     data["count_file"] = count.htseq_count(data)
+    return [[data]]
+
+def run_oncofuse(data):
+    data["oncofuse_file"] = oncofuse.run(data)
     return [[data]]
 
 def run_cufflinks(data):
