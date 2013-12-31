@@ -40,6 +40,7 @@ def _get_machine_info(parallel, run_parallel, sys_config):
         # dictionary as switch statement; can add new scheduler implementation functions as (lowercase) keys
         sched_info_dict = {
                             "slurm": _slurm_info,
+                            "torque": _torque_info
                           }
         try:
             return sched_info_dict[parallel["scheduler"].lower()](parallel["queue"])
@@ -61,6 +62,16 @@ def _slurm_info(queue):
     # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
     mem = mem.replace('+', '')
     return [{"cores": int(num_cpus), "memory": float(mem) / 1024.0, "name": "slurm_machine"}]
+
+def _torque_info(queue):
+    """Return machine information for a torque job scheduler using pbsnodes.
+    """
+    pbs_out = subprocess.check_output("pbsnodes")
+    cores = int(pbs_out[pbs_out.find("np = ")+5])
+    name = pbs_out.split("\n")[0]
+    mem = min([float(string.split("=")[1].rstrip("kb")) / 1048576.0
+               for string in pbs_out.split(",") if "availmem" in string])
+    return [{"cores": cores, "memory": mem, "name": name}]
 
 def _combine_machine_info(xs):
     if len(xs) == 1:
