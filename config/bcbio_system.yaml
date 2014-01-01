@@ -57,6 +57,9 @@ resources:
   varscan:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/varscan
+  oncofuse:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/oncofuse
   bowtie2:
     cores: 16
   tophat2:
@@ -90,6 +93,7 @@ custom_algorithms:
   'RNA-seq':
     aligner: tophat
     transcript_assemble: true
+    fusion_mode: true
   'Minimal':
     aligner: ""
     
