@@ -12,17 +12,16 @@ import subprocess
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-
+from bcbio.provenance import do
 
 # ## oncofuse fusion trancript detection
 #haven't tested with STAR, instructions referenced from seqanswer, http://seqanswers.com/forums/archive/index.php/t-33095.html
 
 def run(data):
-
+    #cmd line: java -Xmx1G -jar Oncofuse.jar input_file input_type tissue_type output_file
     config = data["config"]
     input_type, input_dir, input_file = _get_input_para(data)
     out_file = os.path.join(input_dir, 'oncofuse_out.txt')
-    #cmd line: java -Xmx1G -jar Oncofuse.jar input_file input_type tissue_type output_file
     oncofuse_jar = config_utils.get_jar("oncofuse",
                                       config_utils.get_program("oncofuse", config, "dir"))
     
@@ -34,7 +33,7 @@ def run(data):
         cl += ["-jar", oncofuse_jar, input_file, input_type, tissue_type, out_file]
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                subprocess.check_call(cl, stdout=out_handle)
+                do.run(cl, "OncoFuse", None)
     return out_file
 
 
