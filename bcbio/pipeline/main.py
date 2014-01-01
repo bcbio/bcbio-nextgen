@@ -417,7 +417,8 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("process_alignment", samples)
         samples = disambiguate.resolve(samples, run_parallel)
         samples = rnaseq.estimate_expression(samples, run_parallel)
-        samples = rnaseq.detect_fusion(samples, run_parallel)
+        if get_in(config, ("algorithm", "fusion_mode"), False):
+            samples = rnaseq.detect_fusion(samples, run_parallel)
         combined = combine_count_files([x[0].get("count_file") for x in samples])
         for x in samples:
             x[0]["combined_counts"] = combined
