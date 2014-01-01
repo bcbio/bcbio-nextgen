@@ -9,7 +9,7 @@ details:
     metadata:
        batch: your-arbitrary-batch-name
        phenotype: tumor
-       tissue: 
+       tissue: AVG
     algorithm:
       aligner: tophat2 #can be star
       quality_format: Standard
