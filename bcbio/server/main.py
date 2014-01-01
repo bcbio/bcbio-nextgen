@@ -10,11 +10,25 @@ def start(args):
     """
     application = tornado.web.Application([(r"/run", run.get_handler(args)),
                                            (r"/install", install.get_handler(args)),
-                                           (r"/stop", StopServer)])
+                                           (r"/status", run.StatusHandler),
+                                           (r"/kill", KillServer)])
+    application.runmonitor= RunMonitor()
     application.listen(args.port)
     tornado.ioloop.IOLoop.instance().start()
 
-class StopServer(tornado.web.RequestHandler):
+class RunMonitor:
+    """Track current runs and provide status.
+    """
+    def __init__(self):
+        self._running = {}
+
+    def set_status(self, run_id, status):
+        self._running[run_id] = status
+
+    def get_status(self, run_id):
+        return self._running.get(run_id, "not-running")
+
+class KillServer(tornado.web.RequestHandler):
     """Development utility. Allows shutdown of the server remotely.
     http://stackoverflow.com/questions/5375220/how-do-i-stop-tornado-web-server
     """

@@ -51,11 +51,12 @@ or build directly:
 
 ## ToDo list
 
-- Debug sqlite issues. Ensure sqlite installed in Dockerfile.
-- Handle merging multiple bcbio_system.yaml files. External file sets memory and
-  core parameters. Internal docker file handles locations of executables and
-  java jar files.
-- Finalize single machine, multicore runs of bcbio-nextgen with docker containers.
+- Provide real time stdout reporting from external script using docker logs and
+  poll until process finishes.
+- Finalize single machine, multicore runs of bcbio-nextgen with docker
+  containers.
+- Improve docker installation size: combine bcbio-nextgen and gemini anaconda
+  directories. Load snpEff databases with genome data.
 - Enable specification of external programs/jars to handle tricky non-distributable
   issues like GATK protected versions. Map these directories into docker container.
 - Provide IPython/ZeroMQ interface that handles container creation and running

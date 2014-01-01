@@ -4,6 +4,7 @@ from functools import wraps
 import os
 import StringIO
 from threading import Thread
+import uuid
 
 import tornado.gen
 import tornado.web
@@ -28,9 +29,19 @@ def run_bcbio_nextgen(**kwargs):
     from bcbio.pipeline.main import run_main
     callback = kwargs["callback"]
     del kwargs["callback"]
+    app = kwargs["app"]
+    del kwargs["app"]
     print kwargs
-    callback(kwargs["work_dir"])
-    run_main(**kwargs)
+    run_id = str(uuid.uuid1())
+    app.runmonitor.set_status(run_id, "running")
+    callback(run_id)
+    try:
+        run_main(**kwargs)
+    except:
+        app.runmonitor.set_status(run_id, "failed")
+    finally:
+        app.runmonitor.set_status(run_id, "finished")
+
 
 def _merge_system_configs(host_config, container_config, work_dir):
     """Create a merged system configuration from external and internal specification.
@@ -81,8 +92,19 @@ def get_handler(args):
                       "queue": rargs.get("queue"),
                       "resources": rargs.get("resources", ""),
                       "timeout": int(rargs.get("timeout", 15)),
-                      "retries": rargs.get("retries")}
-            response = yield tornado.gen.Task(run_bcbio_nextgen, **kwargs)
-            self.write(response)
+                      "retries": rargs.get("retries"),
+                      "app": self.application}
+            run_id = yield tornado.gen.Task(run_bcbio_nextgen, **kwargs)
+            self.write(run_id)
             self.finish()
     return RunHandler
+
+class StatusHandler(tornado.web.RequestHandler):
+    def get(self):
+        run_id = self.get_argument("run_id", None)
+        if run_id is None:
+            status = "not-running"
+        else:
+            status = self.application.runmonitor.get_status(run_id)
+        self.write(status)
+        self.finish()

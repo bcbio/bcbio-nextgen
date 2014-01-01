@@ -41,7 +41,15 @@ def run(args):
                    "system_config": system_config,
                    "sample_config": sample_config,
                    "numcores": args.numcores}
-        requests.get("http://localhost:{port}/run".format(port=args.port), params={"args": json.dumps(payload)})
+        r = requests.get("http://localhost:{port}/run".format(port=args.port), params={"args": json.dumps(payload)})
+        run_id = r.text
+        # monitor processing status
+        while 1:
+            r = requests.get("http://localhost:{port}/status".format(port=args.port), params={"run_id": run_id})
+            if r.text != "running":
+                break
+            time.sleep(2)
+        print("Finished")
 
 def read_system_config(args, DOCKER):
     if args.systemconfig:
