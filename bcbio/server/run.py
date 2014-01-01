@@ -47,6 +47,11 @@ def _merge_system_configs(host_config, container_config, work_dir):
                         if pname not in out[k]:
                             out[k][pname] = {}
                         out[k][pname][rname] = rval
+    # Ensure final file is relocatable by mapping back to reference directory
+    if "bcbio_system" in out and ("galaxy_config" not in out or not os.path.isabs(out["galaxy_config"])):
+        out["galaxy_config"] = os.path.normpath(os.path.join(os.path.dirname(out["bcbio_system"]),
+                                                             os.pardir, "galaxy",
+                                                             "universe_wsgi.ini"))
     with open(out_file, "w") as out_handle:
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file

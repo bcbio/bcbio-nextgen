@@ -52,14 +52,36 @@ def read_system_config(args, DOCKER):
         config = yaml.load(in_handle)
     # Map external galaxy specifications over to docker container
     mounts = []
-    i = 0
     for k in ["galaxy_config"]:
         if k in config:
             dirname, base = os.path.split(os.path.normpath(os.path.realpath(config[k])))
-            container_dir = os.path.join(DOCKER["input_dir"], "system", str(i))
+            container_dir = os.path.join(DOCKER["input_dir"], "system", "galaxy", k)
             mounts.append("%s:%s" % (dirname, container_dir))
+            mounts.extend(_find_genome_directory_mounts(dirname, container_dir))
             config[k] = os.path.join(container_dir, base)
     return config, mounts
+
+def _find_genome_directory_mounts(dirname, container_dir):
+    """Handle external non-docker installed biodata located relative to config directory.
+
+    Need a general way to handle mounting these and adjusting paths, but this handles
+    the special case used in testing.
+    """
+    mounts = []
+    sam_loc = os.path.join(dirname, "tool-data", "sam_fa_indices.loc")
+    genome_dir = None
+    if os.path.exists(sam_loc):
+        with open(sam_loc) as in_handle:
+            for line in in_handle:
+                if line.startswith("index"):
+                    genome_dir = line.split()[-1].strip()
+                    break
+    if genome_dir and not os.path.isabs(genome_dir):
+        rel_genome_dir = os.path.dirname(os.path.dirname(os.path.dirname(genome_dir)))
+        mounts.append("%s:%s" % (os.path.normpath(os.path.join(os.path.dirname(sam_loc), rel_genome_dir)),
+                                 os.path.normpath(os.path.join(os.path.join(container_dir, "tool-data"),
+                                                               rel_genome_dir))))
+    return mounts
 
 def update_config_mounts(config, input_dir):
     """Update input configuration with local docker container mounts.

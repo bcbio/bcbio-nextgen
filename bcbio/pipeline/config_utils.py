@@ -46,12 +46,16 @@ def load_system_config(config_file):
     """Load bcbio_system.yaml configuration file, handling standard defaults.
 
     Looks for configuration file in default location within
-    final base directory from a standard installation.
+    final base directory from a standard installation. Handles both standard
+    installs (galaxy/bcbio_system.yaml) and docker installs (config/bcbio_system.yaml).
     """
     if not os.path.exists(config_file):
         base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+        docker_config = os.path.join(base_dir, "config", config_file)
         test_config = os.path.join(base_dir, "galaxy", config_file)
-        if os.path.exists(test_config):
+        if os.path.exists(docker_config):
+            config_file = docker_config
+        elif os.path.exists(test_config):
             config_file = test_config
         else:
             raise ValueError("Could not find input system configuration file %s, "

@@ -33,6 +33,8 @@ RUN ln -s /mnt/biodata/liftOver /usr/local/share/bcbio-nextgen/liftOver
 RUN chmod a+rwx /usr/local/share/bcbio-nextgen/config
 RUN chmod a+rwx /usr/local/share/bcbio-nextgen/config/*.yaml
 RUN mkdir -p /tmp/bcbio-nextgen
+RUN echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/bash.bashrc
+RUN echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/bash.bashrc
 
 # gemini installation
 RUN wget --no-check-certificate https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py
