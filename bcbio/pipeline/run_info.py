@@ -239,23 +239,26 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     if isinstance(loaded, dict):
         global_config = copy.deepcopy(loaded)
         del global_config["details"]
-        if loaded.has_key("fc_name") and loaded.has_key("fc_date"):
+        if "fc_name" in loaded and "fc_date" in loaded:
             fc_name = loaded["fc_name"].replace(" ", "_")
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
         loaded = loaded["details"]
     run_details = []
     for i, item in enumerate(loaded):
         item = _normalize_files(item, fc_dir)
-        if not item.has_key("lane"):
-            item["lane"] = str(i+1)
+        if "lane" not in item:
+            item["lane"] = str(i + 1)
         item["lane"] = _clean_characters(str(item["lane"]))
-        if not item.has_key("description"):
+        if "description" not in item:
             if len(item.get("files", [])) == 1 and item["files"][0].endswith(".bam"):
                 item["description"] = get_sample_name(item["files"][0])
             else:
-                raise ValueError("No `description` sample name provided for input #%s" % (i+1))
+                raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
         item["description"] = _clean_characters(str(item["description"]))
         upload = global_config.get("upload", {})
+        # Handle specifying a local directory directly in upload
+        if isinstance(upload, basestring):
+            upload = {"dir": upload}
         if fc_name and fc_date:
             upload["fc_name"] = fc_name
             upload["fc_date"] = fc_date
