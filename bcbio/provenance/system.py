@@ -85,7 +85,7 @@ def _torque_info(queue):
             elif line.strip().startswith("status = "):
                 mem = [x for x in pbs_out.split(",") if x.startswith("totmem=")][0]
                 info["memory"] = float(mem.split("=")[1].rstrip("kb")) / 1048576.0
-                return info
+                return [info]
 
 def _torque_queue_nodes(queue):
     """Retrieve the nodes available for a queue.
