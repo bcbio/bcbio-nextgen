@@ -7,7 +7,6 @@ Supported:
 import os
 import csv
 import glob
-import subprocess
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -33,7 +32,8 @@ def run(data):
         cl += ["-jar", oncofuse_jar, input_file, input_type, tissue_type, out_file]
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                do.run(cl, "OncoFuse", None)
+                cmd = " ".join(cl)
+                do.run(cmd, "oncofuse fusion detection", data)
     return out_file
 
 
