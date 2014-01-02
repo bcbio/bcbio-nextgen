@@ -51,10 +51,8 @@ or build directly:
 
 ## ToDo list
 
-- Provide real time stdout reporting from external script using docker logs and
-  poll until process finishes.
 - Finalize single machine, multicore runs of bcbio-nextgen with docker
-  containers.
+  containers. Handle hanging at the end of multicore runs.
 - Improve docker installation size: combine bcbio-nextgen and gemini anaconda
   directories. Load snpEff databases with genome data.
 - Enable specification of external programs/jars to handle tricky non-distributable

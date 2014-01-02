@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 
+import docker
 import requests
 import yaml
 
@@ -35,6 +36,7 @@ def run(args):
     mounts += prepare_system_mounts(args.datadir, DOCKER["biodata_dir"])
     mounts.append("%s:%s" % (os.getcwd(), DOCKER["work_dir"]))
     system_config, system_mounts = read_system_config(args, DOCKER)
+    dockerc = docker.Client()
     with bcbio_docker(DOCKER, mounts + system_mounts, args) as cid:
         print("Running analysis using docker container: %s" % cid)
         payload = {"work_dir": DOCKER["work_dir"],
@@ -43,13 +45,13 @@ def run(args):
                    "numcores": args.numcores}
         r = requests.get("http://localhost:{port}/run".format(port=args.port), params={"args": json.dumps(payload)})
         run_id = r.text
-        # monitor processing status
-        while 1:
+        clogs = dockerc.logs(cid, stream=True)
+        # monitor processing status, writing logging information
+        for log_info in clogs:
+            print(log_info.rstrip())
             r = requests.get("http://localhost:{port}/status".format(port=args.port), params={"run_id": run_id})
             if r.text != "running":
                 break
-            time.sleep(2)
-        print("Finished")
 
 def read_system_config(args, DOCKER):
     if args.systemconfig:
@@ -348,7 +350,8 @@ def wait(port):
     max_tries = 40
     while 1:
         try:
-            requests.get("http://localhost:{port}".format(**locals()))
+            requests.get("http://localhost:{port}/status".format(**locals()),
+                         params={"run_id": "checkup"})
             break
         except requests.exceptions.ConnectionError:
             if num_tries > max_tries:
@@ -404,7 +407,6 @@ if __name__ == "__main__":
 def docker_py_start():
     # XXX Does not appear to bind ports correctly
     # Swap to API instead of command line calls later as it stabilizes
-    import docker
     ports = {8085: ("0.0.0.0", 8085)}
     binds = {"/usr/local/share/bcbio_nextgen": "/mnt/biodata"}
     client = docker.Client()
