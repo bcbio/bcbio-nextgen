@@ -6,11 +6,11 @@ Supported:
 import os
 import csv
 import glob
-import subprocess
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
 # ## snpEff variant effects
@@ -100,8 +100,8 @@ def _run_snpeff(snp_in, genome, se_interval, out_format, data):
             cl.extend(["-filterInterval", se_interval])
         cl += _snpeff_args_from_config(data)
         with file_transaction(out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                subprocess.check_call(cl, stdout=out_handle)
+            cmd = "%s > %s" % (" ".join(cl), tx_out_file)
+            do.run(cmd, "snpEff effects", data)
     return out_file
 
 def _convert_to_snpeff_interval(in_file, base_file):
