@@ -17,12 +17,13 @@ from bcbio.utils import curdir_tmpdir
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """
-    def __init__(self, picard_ref, gatk_dir, config):
+    def __init__(self, picard_ref, gatk_dir, config, tmp_dir=None):
         resources = config_utils.get_resources("gatk", config)
         self._jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
         self._picard_ref = config_utils.expand_path(picard_ref)
         self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
+        self.tmp_dir = tmp_dir
         self._gatk_version, self._picard_version, self._mutect_version = (
             None, None, None)
 
@@ -290,7 +291,7 @@ def _get_picard_ref(config):
         picard = config_utils.get_program("picard", config, "dir")
     return picard
 
-def runner_from_config(config, program="gatk"):
+def runner_from_config(config, program="gatk", tmp_dir=None):
     return BroadRunner(_get_picard_ref(config),
                        config_utils.get_program(program, config, "dir"),
-                       config)
+                       config, tmp_dir=tmp_dir)

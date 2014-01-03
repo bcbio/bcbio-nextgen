@@ -16,7 +16,7 @@ def picard_rnaseq_metrics(picard, align_bam, ref, ribo="null", out_file=None):
     if out_file is None:
         out_file = "%s.metrics" % (base)
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", align_bam),
                         ("OUTPUT", tx_out_file),
@@ -36,7 +36,7 @@ def picard_insert_metrics(picard, align_bam, out_file=None):
         out_file = "%s-insert-metrics.txt" % (base)
     histogram = "%s-insert-histogram.pdf" % (base)
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", align_bam),
                         ("OUTPUT", tx_out_file),
@@ -54,7 +54,7 @@ def picard_sort(picard, align_bam, sort_order="coordinate",
     if out_file is None:
         out_file = "%s-sort%s" % (base, ext)
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", align_bam),
                         ("OUTPUT", out_file if pipe else tx_out_file),
@@ -72,7 +72,7 @@ def picard_merge(picard, in_files, out_file=None,
     if out_file is None:
         out_file = "%smerge.bam" % os.path.commonprefix(in_files)
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("OUTPUT", tx_out_file),
                         ("SORT_ORDER", "coordinate"),
@@ -99,7 +99,7 @@ def picard_reorder(picard, in_bam, ref_file, out_file):
     """Reorder BAM file to match reference file ordering.
     """
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", in_bam),
                         ("OUTPUT", tx_out_file),
@@ -114,7 +114,7 @@ def picard_fix_rgs(picard, in_bam, names):
     """
     out_file = "%s-fixrgs.bam" % os.path.splitext(in_bam)[0]
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", in_bam),
                         ("OUTPUT", tx_out_file),
@@ -131,7 +131,7 @@ def picard_fix_rgs(picard, in_bam, names):
 def picard_downsample(picard, in_bam, ds_pct, random_seed=None):
     out_file = "%s-downsample%s" % os.path.splitext(in_bam)
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", in_bam),
                         ("OUTPUT", tx_out_file),
@@ -159,7 +159,7 @@ def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir, names, order="que
     out_bam = os.path.join(out_dir, "%s-fastq.bam" %
                            os.path.splitext(os.path.basename(fastq_one))[0])
     if not file_exists(out_bam):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:
                 opts = [("FASTQ", fastq_one),
                         ("READ_GROUP_NAME", names["rg"]),
@@ -178,7 +178,7 @@ def picard_bam_to_fastq(picard, in_bam, fastq_one, fastq_two=None):
     """Convert BAM file to fastq.
     """
     if not file_exists(fastq_one):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(fastq_one) as tx_out1:
                 opts = [("INPUT", in_bam),
                         ("FASTQ", tx_out1),
@@ -200,7 +200,7 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
     else:
         raise NotImplementedError("Input format not recognized")
     if not file_exists(out_bam):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:
                 opts = [("UNMAPPED", fastq_bam),
                         ("ALIGNED", align_sam),
@@ -218,7 +218,7 @@ def picard_formatconverter(picard, align_sam):
     """
     out_bam = "%s.bam" % os.path.splitext(align_sam)[0]
     if not file_exists(out_bam):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:
                 opts = [("INPUT", align_sam),
                         ("OUTPUT", tx_out_bam),
@@ -232,7 +232,7 @@ def picard_mark_duplicates(picard, align_bam, remove_dups=False):
     dup_bam = "%s-dup%s" % (base, ext)
     dup_metrics = "%s-dup.dup_metrics" % base
     if not file_exists(dup_bam):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(dup_bam, dup_metrics) as (tx_dup_bam, tx_dup_metrics):
                 opts = [("INPUT", align_bam),
                         ("OUTPUT", tx_dup_bam),
@@ -250,7 +250,7 @@ def picard_fixmate(picard, align_bam):
     base, ext = os.path.splitext(align_bam)
     out_file = "%s-sort%s" % (base, ext)
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir(base_dir=picard.tmp_dir) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 opts = [("INPUT", align_bam),
                         ("OUTPUT", tx_out_file),
