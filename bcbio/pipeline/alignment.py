@@ -108,12 +108,7 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
                         names=names)
     if fastq2 is None and aligner in ["bwa", "bowtie2", "tophat2"]:
         fastq1 = _remove_read_number(fastq1, sam_file)
-    sort_method = config["algorithm"].get("bam_sort", "coordinate")
-
-    if sort_method == "queryname":
-        return sam_to_querysort_bam(sam_file, config)
-    else:
-        return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, names, config)
+    return sam_to_sort_bam(sam_file, sam_ref, fastq1, fastq2, names, config)
 
 def _remove_read_number(in_file, sam_file):
     """Work around problem with MergeBamAlignment with BWA and single end reads.
@@ -143,24 +138,6 @@ def _remove_read_number(in_file, sam_file):
                             name = name.rsplit("/", 1)[0]
                             out_handle.write("@%s\n%s\n+\n%s\n" % (name, seq, qual))
     return out_file
-
-def sam_to_querysort_bam(sam_file, config):
-    """Convert SAM file directly to a query sorted BAM without merging of FASTQ reads.
-
-    This allows merging of multiple mappers which do not work with MergeBamAlignment.
-    """
-    runner = broad.runner_from_config(config)
-    out_file = "{}-querysorted.bam".format(os.path.splitext(sam_file)[0])
-    return runner.run_fn("picard_sort", sam_file, "queryname", out_file)
-
-def sam_to_querysort_sam(sam_file, config):
-    """Convert SAM file directly to a query sorted SAM without merging of FASTQ reads.
-
-    This allows merging of multiple mappers which do not work with MergeBamAlignment.
-    """
-    runner = broad.runner_from_config(config)
-    out_file = "{}-querysorted.sam".format(os.path.splitext(sam_file)[0])
-    return runner.run_fn("picard_sort", sam_file, "queryname", out_file)
 
 def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
     """Convert SAM file to merged and sorted BAM file.
