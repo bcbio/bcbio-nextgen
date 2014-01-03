@@ -204,7 +204,8 @@ def parse_cl_args(in_args):
     else:
         assert sub_cmd is not None
         if sub_cmd == "upgrade":
-            if not args.tools and not args.install_data and args.upgrade == "skip":
+            # Nothing specified to do, print help
+            if not args.tools and not args.tooldir and not args.install_data and args.upgrade == "skip":
                 sub_parser.print_help()
         kwargs = {"args": args,
                   "config_file": None,

@@ -5,6 +5,7 @@ data and software.
 """
 import collections
 import contextlib
+from distutils.version import LooseVersion
 import os
 import shutil
 import subprocess
@@ -62,7 +63,7 @@ def _default_deploy_args(args):
     flavors = {"minimal": "ngs_pipeline_minimal",
                "full": "ngs_pipeline"}
     toolplus = {"protected": {"bio_nextgen": ["gatk-protected"]},
-                "data": {"bio_nextgen": ["gemini"]}}
+                "data": {"bio_nextgen": []}}
     custom_add = collections.defaultdict(list)
     for x in args.toolplus:
         for k, vs in toolplus[x].iteritems():
@@ -159,10 +160,37 @@ def upgrade_thirdparty_tools(args, remotes):
     s["actions"] = ["install_biolinux"]
     s["fabricrc_overrides"]["system_install"] = args.tooldir
     s["fabricrc_overrides"]["local_install"] = os.path.join(args.tooldir, "local_install")
+    if "data" in args.toolplus:
+        _install_gemini(args.tooldir, _get_data_dir(), args)
     cbl = get_cloudbiolinux(remotes)
     sys.path.insert(0, cbl["dir"])
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
+
+def _install_gemini(tooldir, datadir, args):
+    """Install gemini layered on top of bcbio-nextgen, sharing anaconda framework.
+    """
+    # check if we have an up to date version, upgrading if needed
+    gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
+    if os.path.exists(gemini):
+        vurl = "https://raw.github.com/arq5x/gemini/master/requirements.txt"
+        r = requests.get(vurl)
+        for line in r.text.split():
+            if line.startswith("gemini=="):
+                latest_version = line.split("==")[-1]
+        cur_version = subprocess.check_output([gemini, "-v"], stderr=subprocess.STDOUT).strip().split()[-1]
+        if LooseVersion(latest_version) > LooseVersion(cur_version):
+            subprocess.check_call([gemini, "update"])
+    # install from scratch inside existing Anaconda python
+    else:
+        url = "https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py"
+        script = os.path.basename(url)
+        subprocess.check_call(["wget", "-O", script, url])
+        cmd = [sys.executable, script, tooldir, datadir, "--notools", "--nodata", "--sharedpy"]
+        if not args.sudo:
+            cmd.append("--nosudo")
+        subprocess.check_call(cmd)
+        os.remove(script)
 
 # ## Store a local configuration file with upgrade details
 
