@@ -226,7 +226,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
     @attr(speed=2)
     @attr(cancer=True)
     def test_7_cancer(self):
-        """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan
+        """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan, FreeBayes.
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
