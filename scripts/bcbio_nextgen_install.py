@@ -18,6 +18,7 @@ import urllib2
 
 remotes = {"requirements":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
+           "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
@@ -64,6 +65,9 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     """
     subprocess.check_call([anaconda["pip"], "install", "fabric"])
     subprocess.check_call([anaconda["pip"], "install", "-r", remotes["requirements"]])
+    if args.upgrade == "development":
+        subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
+                               "git+%s#egg=bcbio-nextgen" % remotes["gitrepo"]])
     out = {}
     for script in ["bcbio_nextgen.py"]:
         ve_script = os.path.join(anaconda["dir"], "bin", script)

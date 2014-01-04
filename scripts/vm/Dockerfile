@@ -21,7 +21,7 @@ RUN dpkg -i /fuse.deb
 
 # bcbio-nextgen installation
 RUN wget --no-check-certificate https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-RUN python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local --toolplus data --nodata --nosudo
+RUN python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local --toolplus data --nodata --nosudo -u development
 RUN bcbio_nextgen.py upgrade --isolate
 RUN mkdir -p /mnt/biodata
 RUN mv /usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml /usr/local/share/bcbio-nextgen/config
@@ -37,6 +37,10 @@ RUN chmod a+rwx /usr/local/share/bcbio-nextgen/gemini-config.yaml
 RUN mkdir -p /tmp/bcbio-nextgen
 RUN echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/bash.bashrc
 RUN echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/bash.bashrc
+
+# Clean up space
+RUN rm -rf $(brew --cache)
+RUN rm -rf /.cpanm
 
 EXPOSE 8085
 ENTRYPOINT ["/usr/local/bin/bcbio_nextgen.py", "server", "--port", "8085", "--biodata_dir", "/mnt/biodata"]

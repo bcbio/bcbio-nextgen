@@ -1,7 +1,7 @@
-version: 4
+version: 5
 
 aliases:
-  snpeff: GRCm38
+  snpeff: GRCm38.74
   ensembl: mouse
 
 variation:

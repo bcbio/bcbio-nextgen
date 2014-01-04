@@ -16,6 +16,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.pipeline import genome
+from bcbio.variation import effects
 
 REMOTES = {
     "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
@@ -114,6 +115,7 @@ def upgrade_bcbio_data(args, remotes):
     cbl_deploy.deploy(s)
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
+    _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args)
     if 'data' in args.toolplus:
         subprocess.check_call(["gemini", "update", "--dataonly"])
 
@@ -139,6 +141,24 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
                 print("Updating %s genome resources configuration" % dbkey)
                 with open(local_file, "w") as out_handle:
                     out_handle.write(r.text)
+
+def _upgrade_snpeff_data(galaxy_dir, args):
+    """Install or upgrade snpEff databases, localized to reference directory.
+    """
+    for dbkey, ref_file in genome.get_builds(galaxy_dir):
+        resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
+        with open(resource_file) as in_handle:
+            resources = yaml.load(in_handle)
+        snpeff_db, snpeff_base_dir = effects.get_db(ref_file, resources)
+        if snpeff_db:
+            snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
+            if not os.path.exists(snpeff_db_dir):
+                print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
+                tooldir = args.tooldir or get_defaults()["tooldir"]
+                config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
+                                                   "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
+                snpeff_cmd = effects.get_cmd("download", snpeff_base_dir, config)
+                subprocess.check_call("%s %s" % (snpeff_cmd, snpeff_db), shell=True)
 
 def _get_biodata(base_file, args):
     with open(base_file) as in_handle:

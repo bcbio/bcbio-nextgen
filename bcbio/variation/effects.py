@@ -7,47 +7,13 @@ import os
 import csv
 import glob
 
-from bcbio.utils import file_exists
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
 # ## snpEff variant effects
-
-def _find_snpeff_datadir(config_file):
-    with open(config_file) as in_handle:
-        for line in in_handle:
-            if line.startswith("data_dir"):
-                data_dir = config_utils.expand_path(line.split("=")[-1].strip())
-                if not data_dir.startswith("/"):
-                    data_dir = os.path.join(os.path.dirname(config_file), data_dir)
-                return data_dir
-    raise ValueError("Did not find data directory in snpEff config file: %s" % config_file)
-
-def _installed_snpeff_genome(config_file, base_name):
-    """Find the most recent installed genome for snpEff with the given name.
-    """
-    data_dir = _find_snpeff_datadir(config_file)
-    dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
-           if os.path.isdir(d)]
-    if len(dbs) == 0:
-        raise ValueError("No database found in %s for %s" % (data_dir, base_name))
-    else:
-        return os.path.split(dbs[0])[-1]
-
-def _get_snpeff_genome(data):
-    """Generalize retrieval of the snpEff genome to use for an input name.
-
-    This tries to find the snpEff configuration file and identify the
-    installed genome corresponding to the input genome name.
-    """
-    snpeff_db = data["genome_resources"]["aliases"]["snpeff"]
-    snpeff_config_file = os.path.join(config_utils.get_program("snpEff", data["config"], "dir"),
-                                      "snpEff.config")
-    assert os.path.exists(snpeff_config_file), \
-        "Did not find snpEff configuration file: %s" % snpeff_config_file
-    return _installed_snpeff_genome(snpeff_config_file, snpeff_db)
 
 def snpeff_effects(data):
     """Annotate input VCF file with effects calculated by snpEff.
@@ -58,8 +24,7 @@ def snpeff_effects(data):
         se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
                        if interval_file else None)
         try:
-            vcf_file = _run_snpeff(vcf_in, _get_snpeff_genome(data),
-                                   se_interval, "vcf", data)
+            vcf_file = _run_snpeff(vcf_in, se_interval, "vcf", data)
         finally:
             for fname in [se_interval]:
                 if fname and os.path.exists(fname):
@@ -72,7 +37,7 @@ def _snpeff_args_from_config(data):
     config = data["config"]
     args = []
     # General supplied arguments
-    resources = config_utils.get_resources("snpEff", config)
+    resources = config_utils.get_resources("snpeff", config)
     if resources.get("options"):
         args += [str(x) for x in resources.get("options", [])]
     # cancer specific calling arguments
@@ -83,25 +48,51 @@ def _snpeff_args_from_config(data):
         args += ["-canon", "-hgvs"]
     return args
 
-def _run_snpeff(snp_in, genome, se_interval, out_format, data):
-    config = data["config"]
-    snpeff_jar = config_utils.get_jar("snpEff",
-                                      config_utils.get_program("snpEff", config, "dir"))
-    config_file = "%s.config" % os.path.splitext(snpeff_jar)[0]
-    resources = config_utils.get_resources("snpEff", config)
+def get_db(ref_file, resources, config=None):
+    """Retrieve a snpEff database name and location relative to reference file.
+    """
+    snpeff_db = resources.get("aliases", {}).get("snpeff")
+    if snpeff_db:
+        snpeff_base_dir = utils.safe_makedir(os.path.normpath(os.path.join(
+            os.path.dirname(os.path.dirname(ref_file)), "snpeff")))
+        # back compatible retrieval of genome from installation directory
+        if config and not os.path.exists(os.path.join(snpeff_base_dir, snpeff_db)):
+            snpeff_base_dir, snpeff_db = _installed_snpeff_genome(snpeff_db, config)
+    else:
+        snpeff_base_dir = None
+    return snpeff_db, snpeff_base_dir
+
+def get_cmd(cmd_name, datadir, config):
+    """Retrieve snpEff base command line, handling command line and jar based installs.
+    """
+    resources = config_utils.get_resources("snpeff", config)
+    memory = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"]))
+    try:
+        snpeff = config_utils.get_program("snpeff", config)
+        cmd = "{snpeff} {memory} {cmd_name} -dataDir {datadir}"
+    except config_utils.CmdNotFound:
+        snpeff_jar = config_utils.get_jar("snpEff",
+                                          config_utils.get_program("snpeff", config, "dir"))
+        config_file = "%s.config" % os.path.splitext(snpeff_jar)[0]
+        cmd = "java -jar {snpeff_jar} {cmd_name} -c {config_file} -dataDir {datadir}"
+    return cmd.format(**locals())
+
+def _run_snpeff(snp_in, se_interval, out_format, data):
+    snpeff_db, datadir = get_db(data["sam_ref"], data["genome_resources"], data["config"])
+    assert datadir is not None, \
+        "Did not find snpEff resources in genome configuration: %s" % data["genome_resources"]
+    assert os.path.exists(os.path.join(datadir, snpeff_db)), \
+        "Did not find %s snpEff genome data in %s" % (snpeff_db, datadir)
+    snpeff_cmd = get_cmd("eff", datadir, data["config"])
     ext = "vcf" if out_format == "vcf" else "tsv"
     out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
-    if not file_exists(out_file):
-        cl = ["java"]
-        cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
-        cl += ["-jar", snpeff_jar, "eff", "-c", config_file,
-               "-noLog", "-1", "-i", "vcf", "-o", out_format, genome, snp_in]
-        if se_interval:
-            cl.extend(["-filterInterval", se_interval])
-        cl += _snpeff_args_from_config(data)
+    if not utils.file_exists(out_file):
+        interval = "-filterinterval %s" % (se_interval) if se_interval else ""
+        config_args = " ".join(_snpeff_args_from_config(data))
         with file_transaction(out_file) as tx_out_file:
-            cmd = "%s > %s" % (" ".join(cl), tx_out_file)
-            do.run(cmd, "snpEff effects", data)
+            cmd = ("{snpeff_cmd} {interval} {config_args} -noLog -1 -i vcf -o {out_format} "
+                   "{snpeff_db} {snp_in} > {tx_out_file}")
+            do.run(cmd.format(**locals()), "snpEff effects", data)
     return out_file
 
 def _convert_to_snpeff_interval(in_file, base_file):
@@ -116,3 +107,28 @@ def _convert_to_snpeff_interval(in_file, base_file):
                     parts = line.split()
                     writer.writerow(parts[:3])
     return out_file
+
+# ## back-compatibility
+
+def _find_snpeff_datadir(config_file):
+    with open(config_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("data_dir"):
+                data_dir = config_utils.expand_path(line.split("=")[-1].strip())
+                if not data_dir.startswith("/"):
+                    data_dir = os.path.join(os.path.dirname(config_file), data_dir)
+                return data_dir
+    raise ValueError("Did not find data directory in snpEff config file: %s" % config_file)
+
+def _installed_snpeff_genome(base_name, config):
+    """Find the most recent installed genome for snpEff with the given name.
+    """
+    snpeff_config_file = os.path.join(config_utils.get_program("snpEff", config, "dir"),
+                                      "snpEff.config")
+    data_dir = _find_snpeff_datadir(snpeff_config_file)
+    dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+           if os.path.isdir(d)]
+    if len(dbs) == 0:
+        raise ValueError("No database found in %s for %s" % (data_dir, base_name))
+    else:
+        return data_dir, os.path.split(dbs[0])[-1]
