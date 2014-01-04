@@ -1,5 +1,7 @@
 """Utilities for manipulating variant files in standard VCF format.
 """
+
+from collections import namedtuple
 import contextlib
 import copy
 import gzip
@@ -15,12 +17,18 @@ from bcbio.pipeline import config_utils, shared, tools
 from bcbio.provenance import do
 from bcbio.variation import bamprep
 
-def is_sample_pair(align_bams, items):
+PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_sample_name",
+                                       "normal_bam", "normal_sample_name"])
+
+def is_paired_analysis(align_bams, items):
 
     """Determine if bams are from a sample pair or  not"""
 
-    return (len(align_bams) == 2 and all(item["metadata"].get("phenotype")
-                                    is not None for item in items))
+    if not (len(align_bams) == 2 and all(item["metadata"].get("phenotype")
+                                         is not None for item in items)):
+        return False
+
+    return True if get_paired_bams(align_bams, items) is not None else False
 
 
 def get_paired_bams(align_bams, items):
@@ -42,10 +50,10 @@ def get_paired_bams(align_bams, items):
             tumor_sample_name = item["name"][1]
 
     if tumor_bam is None or normal_bam is None:
-        raise ValueError("Missing phenotype definition (tumor or normal) "
-                         "in samples")
+        return
 
-    return (tumor_bam, tumor_sample_name, normal_bam, normal_sample_name)
+    return PairedData(tumor_bam, tumor_sample_name, normal_bam,
+                      normal_sample_name)
 
 
 def write_empty_vcf(out_file):
