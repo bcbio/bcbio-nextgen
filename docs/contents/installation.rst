@@ -124,7 +124,10 @@ Tune the upgrade with these options:
 
 - ``--genomes`` and ``--aligners`` options add additional aligner
   indexes to download and prepare. By default we prepare a minimal
-  human genome setup.
+  human genome setup. If you want to install multiple genomes or
+  aligners at once, specify ``--genomes`` or ``--aligners``
+  multiple times, like this:
+  ``--genomes GRCh38 --genomes GRCh37 --aligners bwa --aligners bowtie2``
 
 - Leave out the ``--tools`` option if you don't want to upgrade third
   party tools. If using ``--tools``, it will use the same installation
