@@ -250,3 +250,17 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_2_fastq.txt"),
                   os.path.join(fc_dir, "8_100326_FC6107FAAXX.bam")]
             subprocess.check_call(cl)
+
+    @attr(docker=True)
+    def test_docker(self):
+        """Run an analysis with code and tools inside a docker container.
+
+        Requires https://github.com/chapmanb/bcbio-nextgen-vm
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen_docker.py", "run",
+                  "--systemconfig=%s" % self._get_post_process_yaml(workdir),
+                  "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
+                  os.path.join(self.data_dir, "run_info-bam.yaml")]
+            subprocess.check_call(cl)
