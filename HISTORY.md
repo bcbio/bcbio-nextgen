@@ -4,6 +4,9 @@
   to samples with input CSV. Includes customization of algorithm section and
   better matching of samples using input file names. Improve ability to
   distinguish fastq pairs.
+- Generalize snpEff database preparation to use individual databases located
+  with each genome. Enables better multi-organism support.
+- Enable tumor/normal paired called with FreeBayes. Contributed by Luca Beltrame.
 - Provide additional parallelization of bgzip preparation, performing grabix indexing
   in parallel for paired ends.
 - Fix downsampling with GATK-lite 2.3.9 releases by moving to sambamba based downsampling.

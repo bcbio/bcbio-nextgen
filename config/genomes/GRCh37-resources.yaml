@@ -1,8 +1,8 @@
-version: 6
+version: 7
 
 aliases:
   human: true
-  snpeff: GRCh37
+  snpeff: GRCh37.74
   ensembl: human
 
 variation:

@@ -57,7 +57,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-                         DlInfo("genomes_automated_test.tar.gz", "genomes", 11),
+                         DlInfo("genomes_automated_test.tar.gz", "genomes", 12),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 5),
                          DlInfo("tcga_benchmark.tar.gz", None, 2)]
@@ -226,7 +226,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
     @attr(speed=2)
     @attr(cancer=True)
     def test_7_cancer(self):
-        """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan
+        """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan, FreeBayes.
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
@@ -249,4 +249,18 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_1_fastq.txt"),
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_2_fastq.txt"),
                   os.path.join(fc_dir, "8_100326_FC6107FAAXX.bam")]
+            subprocess.check_call(cl)
+
+    @attr(docker=True)
+    def test_docker(self):
+        """Run an analysis with code and tools inside a docker container.
+
+        Requires https://github.com/chapmanb/bcbio-nextgen-vm
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen_docker.py", "run",
+                  "--systemconfig=%s" % self._get_post_process_yaml(workdir),
+                  "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
+                  os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)

@@ -39,7 +39,8 @@ def run_bcbio_nextgen(**kwargs):
         run_main(**kwargs)
     except:
         app.runmonitor.set_status(run_id, "failed")
-    finally:
+        raise
+    else:
         app.runmonitor.set_status(run_id, "finished")
 
 

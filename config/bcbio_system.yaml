@@ -43,7 +43,7 @@ resources:
     jvm_opts: ["-Xms2g", "-Xmx4000m"]
   picard:
     dir: /usr/local/share/java/picard
-  snpEff:
+  snpeff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
     dir: /usr/local/share/java/snpeff
   bcbio_variation:

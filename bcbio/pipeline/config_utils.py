@@ -70,8 +70,13 @@ def load_config(config_file):
     """
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-
     config = _expand_paths(config)
+    # lowercase resource names, the preferred way to specify, for back-compatibility
+    newr = {}
+    for k, v in config["resources"].iteritems():
+        if k.lower() != k:
+            newr[k.lower()] = v
+    config["resources"].update(newr)
     return config
 
 def _expand_paths(config):
