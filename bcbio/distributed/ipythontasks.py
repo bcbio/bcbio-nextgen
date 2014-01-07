@@ -43,6 +43,7 @@ def _setup_logging(args):
 def process_lane(*args):
     with _setup_logging(args):
         return apply(lane.process_lane, *args)
+process_lane.metadata = {"resources": ["picard"]}
 
 @require(lane)
 def trim_lane(*args):
@@ -54,8 +55,9 @@ def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
 process_alignment.metadata = {"resources": ["star", "novoalign", "bwa", "bowtie2",
-                                            "tophat2"],
-                              "ensure": {"tophat2": tophat.job_requirements,
+                                            "tophat2", "bowtie", "tophat"],
+                              "ensure": {"tophat": tophat.job_requirements,
+                                         "tophat2": tophat.job_requirements,
                                          "star": star.job_requirements}}
 
 @require(alignprep)
