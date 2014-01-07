@@ -156,8 +156,9 @@ def _check_algorithm_keys(item):
 def _check_aligner(item):
     """Ensure specified aligner is valid choice.
     """
+    aligner = item["algorithm"].get("aligner")
     allowed = set(alignment.TOOLS.keys() + [None, False])
-    if item["algorithm"].get("aligner") not in allowed:
+    if not aligner or aligner not in allowed:
         raise ValueError("Unexpected algorithm 'aligner' parameter: %s\n"
                          "Supported options: %s\n" %
                          (item["algorithm"].get("aligner"), sorted(list(allowed))))
