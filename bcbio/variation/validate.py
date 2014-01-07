@@ -45,8 +45,7 @@ def compare_to_rm(data):
         else:
             vrn_file = os.path.abspath(data["vrn_file"])
         rm_file = normalize_input_path(data["config"]["algorithm"]["validate"], data)
-        rm_interval_file = normalize_input_path(data["config"]["algorithm"].get("validate_regions"),
-                                               data)
+        rm_interval_file = normalize_input_path(data["config"]["algorithm"].get("validate_regions"), data)
         rm_genome = data["config"]["algorithm"].get("validate_genome_build")
         sample = data["name"][-1].replace(" ", "_")
         caller = data["config"]["algorithm"].get("variantcaller")
@@ -110,15 +109,15 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
         eval_call["ref"] = eval_genome
         eval_call["preclean"] = True
         eval_call["prep"] = True
+    intervals = get_analysis_intervals(data)
+    if intervals:
+        eval_call["intervals"] = os.path.abspath(intervals)
     exp = {"sample": data["name"][-1],
            "ref": rm_genome,
            "approach": "grade",
            "calls": [ref_call, eval_call]}
     if data.get("callable_bam"):
         exp["align"] = data["callable_bam"]
-    intervals = get_analysis_intervals(data)
-    if intervals:
-        exp["intervals"] = os.path.abspath(intervals)
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
 
