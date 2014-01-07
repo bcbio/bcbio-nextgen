@@ -206,9 +206,11 @@ if __name__ == "__main__":
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"])
+                        action="append", default=["GRCh37"],
+                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa"])
+                        action="append", default=["bwa"],
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",

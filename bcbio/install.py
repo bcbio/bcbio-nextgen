@@ -300,9 +300,11 @@ def add_subparser(subparsers):
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"])
+                        action="append", default=["GRCh37"],
+                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa"])
+                        action="append", default=["bwa"],
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "ucsc"])
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
