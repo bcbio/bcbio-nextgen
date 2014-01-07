@@ -91,6 +91,7 @@ experiment would look like::
 	genome_build: GRCh37
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [truseq, polya]
@@ -143,6 +144,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]
@@ -151,6 +153,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]
@@ -159,6 +162,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]
@@ -167,6 +171,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]
