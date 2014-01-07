@@ -10,6 +10,7 @@ import tornado.gen
 import tornado.web
 import yaml
 
+from bcbio import utils
 from bcbio.pipeline import config_utils
 
 def run_async(func):
@@ -27,22 +28,21 @@ def run_async(func):
 @run_async
 def run_bcbio_nextgen(**kwargs):
     from bcbio.pipeline.main import run_main
-    callback = kwargs["callback"]
-    del kwargs["callback"]
-    app = kwargs["app"]
-    del kwargs["app"]
-    print kwargs
+    callback = kwargs.pop("callback")
+    app = kwargs.pop("app")
     run_id = str(uuid.uuid1())
     app.runmonitor.set_status(run_id, "running")
     callback(run_id)
     try:
-        run_main(**kwargs)
+        with utils.chdir(kwargs["work_dir"]):
+            run_main(**kwargs)
     except:
         app.runmonitor.set_status(run_id, "failed")
         raise
     else:
         app.runmonitor.set_status(run_id, "finished")
-
+    finally:
+        print("Run ended: %s" % run_id)
 
 def _merge_system_configs(host_config, container_config, work_dir):
     """Create a merged system configuration from external and internal specification.
