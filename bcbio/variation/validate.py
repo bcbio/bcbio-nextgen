@@ -116,7 +116,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
            "ref": rm_genome,
            "approach": "grade",
            "calls": [ref_call, eval_call]}
-    if data.get("callable_bam"):
+    if data.get("callable_bam") and not eval_genome:
         exp["align"] = data["callable_bam"]
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
