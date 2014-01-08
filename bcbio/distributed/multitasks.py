@@ -4,7 +4,7 @@ from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
 from bcbio.ngsalign import alignprep, tophat
 from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
-                            rnaseq)
+                            rnaseq, alignment)
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 
@@ -21,6 +21,11 @@ def process_alignment(*args):
     return lane.process_alignment(*args)
 process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie2", "tophat2"],
                               "ensure": {"tophat2": tophat.job_requirements}}
+
+@utils.map_wrap
+def make_missing_index(*args):
+    return alignment.make_missing_index(*args)
+make_missing_index.metadata = {"resources": ["tophat", "tophat2", "star"]}
 
 @utils.map_wrap
 def postprocess_alignment(*args):
