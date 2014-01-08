@@ -12,12 +12,10 @@ def estimate_expression(samples, run_parallel):
 def generate_transcript_counts(data):
     """Generate counts per transcript from an alignment"""
     data["count_file"] = count.htseq_count(data)
-    data["oncofuse_file"] = oncofuse.run(data)
+    if get_in(data, ("config", "algorithm", "fusion_mode"), False):
+        data["oncofuse_file"] = oncofuse.run(data)
     return [[data]]
 
-def run_oncofuse(data):
-    data["oncofuse_file"] = oncofuse.run(data)
-    return [[data]]
 
 def run_cufflinks(data):
     """Quantitate transcript expression with Cufflinks"""
