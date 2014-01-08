@@ -26,6 +26,7 @@ from bcbio.variation.realign import parallel_realign_sample
 from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
 from bcbio.variation import coverage, ensemble, population, recalibrate, validate
 from bcbio.rnaseq.count import combine_count_files
+from bcbio.utils import get_in
 
 def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,
              numcores=None, paralleltype=None, queue=None, scheduler=None,
@@ -417,8 +418,7 @@ class RnaseqPipeline(AbstractPipeline):
         samples = run_parallel("process_alignment", samples)
         samples = disambiguate.resolve(samples, run_parallel)
         samples = rnaseq.estimate_expression(samples, run_parallel)
-        if get_in(config, ("algorithm", "fusion_mode"), False):
-            samples = rnaseq.detect_fusion(samples, run_parallel)
+        #samples = rnaseq.detect_fusion(samples, run_parallel)
         combined = combine_count_files([x[0].get("count_file") for x in samples])
         for x in samples:
             x[0]["combined_counts"] = combined

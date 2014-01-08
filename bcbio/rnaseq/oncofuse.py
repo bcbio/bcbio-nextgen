@@ -40,16 +40,18 @@ def run(data):
 def _get_input_para(data):
        
     TOPHAT_FUSION_OUTFILE = "fusions.out"
-    STAR_FUSION_OUTFILE = 'Chimeric.out.junction.txt'
+    STAR_FUSION_OUTFILE = 'Chimeric.out.junction.txt' #didn't test
     
     config = data["config"]
     aligner = config["algorithm"].get("aligner")
-    align_dir_parts = [data["dirs"]["work"], "align", names["sample"]]
-    
+    if aligner == 'tophat2':
+        aligner = 'tophat'
+    names = data["rgnames"]
+    align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"], names["sample"]+"_%s" % aligner)
     if aligner in ['tophat', 'tophat2']:
         return 'tophat', align_dir_parts, os.path.join(align_dir_parts, TOPHAT_FUSION_OUTFILE)
-    if aligner in ['star']:
-        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts, STAR_FUSION_OUTFILE)
+    if aligner in ['star']: #didn't test
+        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts,STAR_FUSION_OUTFILE)
     return None 
 
 
@@ -69,10 +71,10 @@ def _oncofuse_tissue_arg_from_config(data):
     #    pass
     SUPPORTED_TIISUE_TYPE = ["EPI", "HEM", "MES", "AVG"]
     if data.get("metadata", {}).get("tissue") in SUPPORTED_TIISUE_TYPE:
-        return [data.get("metadata", {}).get("tissue")]
+        return data.get("metadata", {}).get("tissue")
     else:
         #may handle exception later
-        return ['AVG']
+        return 'AVG'
 
 
 
