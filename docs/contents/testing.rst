@@ -136,7 +136,7 @@ Then the fastq reads, reference materials and analysis regions::
 
 Finally run the analysis, distributed on 8 local cores, with::
 
-    mkdir work && cd work
+    cd .. & mkdir work && cd work
     bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
@@ -145,6 +145,35 @@ to the NIST reference materials, enabling rapid comparisons of methods.
 .. _combined ensemble callset: http://bcbio.wordpress.com/2013/02/06/an-automated-ensemble-method-for-combining-and-evaluating-genomic-variants-from-multiple-callers/
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
 .. _EdgeBio's: http://www.edgebio.com/
+
+Cancer tumor normal
+~~~~~~~~~~~~~~~~~~~
+
+This example calls variants in a paired cancer sample with tumor/normal
+sequencing data. using raw data from `Han et al in PLoS One
+<http://www.plosone.org/article/info:doi/10.1371/journal.pone.0064271>`_. This
+is a work in progress and we welcome contributions. The goal is to use a full
+evaluation dataset to compare calling methods:
+
+Get the input configuration file::
+
+    mkdir config && cd config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
+     examples/cancer-paired.yaml
+
+Get fastq reads and analysis regions::
+
+    cd .. && mkdir input && cd input
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_2.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_2.fastq.gz
+    wget -O ERP002442-targeted.bed https://gist.github.com/mjafin/7120530/raw/cea2a5cb32ff8c0cec587e1c5878d5851a4c2101/BED
+
+Run::
+
+    cd .. & mkdir work && cd work
+    bcbio_nextgen.py ../config/cancer-paired.yaml -n 8
 
 Test suite
 ==========

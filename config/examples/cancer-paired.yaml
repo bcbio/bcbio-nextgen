@@ -1,0 +1,51 @@
+# Testing example dataset for cancer tumor/normal calling.
+# Uses raw data from:
+# http://www.plosone.org/article/info:doi/10.1371/journal.pone.0064271
+# Full instructions to run at:
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#cancer-tumor-normal
+---
+details:
+- algorithm:
+    aligner: bwa
+    coverage_depth: high
+    coverage_interval: regional
+    mark_duplicates: samtools
+    recalibrate: false
+    realign: false
+    platform: illumina
+    quality_format: standard
+    variant_regions: ../input/ERP002442-targeted.bed
+    variantcaller: freebayes
+  analysis: variant2
+  description: ERR256785
+  files:
+  - ../input/ERR256785_1.fastq.gz
+  - ../input/ERR256785_2.fastq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: batch1
+    phenotype: normal
+- algorithm:
+    aligner: bwa
+    coverage_depth: high
+    coverage_interval: regional
+    mark_duplicates: samtools
+    recalibrate: false
+    realign: false
+    platform: illumina
+    quality_format: standard
+    variant_regions: ../ERP002442-targeted.bed
+    variantcaller: freebayes
+  analysis: variant2
+  description: ERR256786
+  files:
+  - ../input/ERR256786_1.fastq.gz
+  - ../input/ERR256786_2.fastq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: batch1
+    phenotype: tumor
+fc_date: '2014-01-06'
+fc_name: cancer
+upload:
+  dir: ../final
