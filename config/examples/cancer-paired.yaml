@@ -34,7 +34,7 @@ details:
     realign: false
     platform: illumina
     quality_format: standard
-    variant_regions: ../ERP002442-targeted.bed
+    variant_regions: ../input/ERP002442-targeted.bed
     variantcaller: freebayes
   analysis: variant2
   description: ERR256786
