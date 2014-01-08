@@ -4,6 +4,7 @@ This works as part of the lane/flowcell process step of the pipeline.
 """
 from collections import namedtuple
 import os
+import sys
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
@@ -12,6 +13,7 @@ from bcbio.bam import cram
 from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, mosaik,
                             novoalign, star)
+from bcbio.log import logger
 
 # Define a next-generation sequencing tool to plugin:
 # align_fn -- runs an aligner and generates SAM output
@@ -23,26 +25,38 @@ from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, mosaik,
 #  This is useful for indexes that don't have an associated location file
 #  but are stored in the same directory structure.
 NgsTool = namedtuple("NgsTool", ["align_fn", "pipe_align_fn", "bam_align_fn",
-                                 "galaxy_loc_file", "remap_index_fn", "can_pipe"])
+                                 "galaxy_loc_file", "remap_index_fn", "can_pipe",
+                                 "index_fn"])
 
 BASE_LOCATION_FILE = "sam_fa_indices.loc"
 
 TOOLS = {
-    "bowtie": NgsTool(bowtie.align, None, None, bowtie.galaxy_location_file, None, None),
-    "bowtie2": NgsTool(bowtie2.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
+    "bowtie": NgsTool(bowtie.align, None, None,
+                      bowtie.galaxy_location_file, None, None,
+                      None),
+    "bowtie2": NgsTool(bowtie2.align, None, None,
+                       bowtie2.galaxy_location_file, bowtie2.remap_index_fn, None,
                        None),
-    "bwa": NgsTool(bwa.align, bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None,
-                   bwa.can_pipe),
-    "mosaik": NgsTool(mosaik.align, None, None, mosaik.galaxy_location_file, None,
+    "bwa": NgsTool(bwa.align, bwa.align_pipe, bwa.align_bam,
+                   bwa.galaxy_location_file, None, bwa.can_pipe,
+                   None),
+    "mosaik": NgsTool(mosaik.align, None, None,
+                      mosaik.galaxy_location_file, None, None,
                       None),
     "novoalign": NgsTool(novoalign.align, novoalign.align_pipe, novoalign.align_bam,
-                         novoalign.galaxy_location_file, novoalign.remap_index_fn, novoalign.can_pipe),
-    "tophat": NgsTool(tophat.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
+                         novoalign.galaxy_location_file, novoalign.remap_index_fn, novoalign.can_pipe,
+                         None),
+    "tophat": NgsTool(tophat.align, None, None,
+                      bowtie2.galaxy_location_file, bowtie2.remap_index_fn, None,
                       None),
-    "samtools": NgsTool(None, None, None, BASE_LOCATION_FILE, None, None),
-    "star": NgsTool(star.align, None, None, None, star.remap_index_fn, None),
-    "tophat2": NgsTool(tophat.align, None, None, bowtie2.galaxy_location_file, bowtie2.remap_index_fn,
-                      None)}
+    "samtools": NgsTool(None, None, None, BASE_LOCATION_FILE,
+                        None, None, None),
+    "star": NgsTool(star.align, None, None,
+                    None, star.remap_index_fn, None,
+                    star.index),
+    "tophat2": NgsTool(tophat.align, None, None,
+                       bowtie2.galaxy_location_file, bowtie2.remap_index_fn, None,
+                       None)}
 
 metadata = {"support_bam": [k for k, v in TOOLS.iteritems() if v.bam_align_fn is not None]}
 
@@ -163,3 +177,22 @@ def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
             utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)
     return sort_bam
 
+
+def make_missing_index(item):
+    aligner = item["algorithm"].get("aligner", None)
+    index_loc = item.get("align_ref", None)
+    indexer_fn = TOOLS[aligner].index_fn if aligner in TOOLS else None
+    if not index_loc or os.path.exists(index_loc):
+        return item
+    if not indexer_fn:
+        logger.error("Index for %s is missing and the code to generate "
+                     "it is not in place. Please open an issue here: "
+                     "https://github.com/chapmanb/bcbio-nextgen/issues?state=open"
+                     % aligner)
+        sys.exit(1)
+    else:
+        logger.info("Index for %s is missing so it is being generated. This may "
+                    "take a couple of hours depending on the index but it will "
+                    "only happen the first time bcbio-nextgen is run." % aligner)
+        indexer_fn(item)
+    return item

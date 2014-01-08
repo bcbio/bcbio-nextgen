@@ -7,7 +7,7 @@ from IPython.parallel import require
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep, tophat, star
 from bcbio.pipeline import (disambiguate, sample, lane, qcsummary, shared,
-                            variation, rnaseq)
+                            variation, rnaseq, alignment)
 from bcbio.provenance import system
 from bcbio import structural
 from bcbio import chipseq
@@ -64,6 +64,17 @@ process_alignment.metadata = {"resources": ["star", "novoalign", "bwa", "bowtie2
 def prep_align_inputs(*args):
     with _setup_logging(args):
         return apply(alignprep.create_inputs, *args)
+
+@require(alignprep)
+def prep_align_inputs(*args):
+    with _setup_logging(args):
+        return apply(alignprep.create_inputs, *args)
+
+@require(alignment)
+def make_missing_index(*args):
+    with _setup_logging(args):
+        return apply(alignment.make_missing_index, *args)
+make_missing_index.metadata = {"resources": ["tophat", "tophat2", "star"]}
 
 @require(lane)
 def postprocess_alignment(*args):
