@@ -66,7 +66,7 @@ def create_genome(fastq_file, data):
     gtf_file = get_in(data, ("genome_resources", "rnaseq", "transcripts"), None)
     num_cores = config["algorithm"].get("num_cores", 1)
 
-    mem_limit = 1000000000
+    mem_limit = 10000000000
 
     cmd = ("{star_path} --genomeDir {tempdir} --genomeFastaFiles {fasta_file} "
            " --runThreadN {num_cores} --runMode genomeGenerate "
