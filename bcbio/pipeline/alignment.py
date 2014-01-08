@@ -5,6 +5,7 @@ This works as part of the lane/flowcell process step of the pipeline.
 from collections import namedtuple
 import os
 import sys
+import glob
 
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
@@ -196,3 +197,16 @@ def make_missing_index(item):
                     "only happen the first time bcbio-nextgen is run." % aligner)
         indexer_fn(item)
     return item
+
+def make_missing_indices(lane_items, run_parallel):
+    items = [x[0] for x in lane_items]
+    for item in items:
+        index_loc = item.get("align_ref", None)
+        if not _index_exists(index_loc):
+            run_parallel("make_missing_index", [[item]])
+
+def _index_exists(index_loc):
+    files_match = glob.glob(index_loc + ".*")
+    if os.path.exists(index_loc) or files_match:
+        return True
+    return False

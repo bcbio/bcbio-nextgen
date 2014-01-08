@@ -108,8 +108,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
             pipeline_items = _add_provenance(pipeline_items, dirs, run_parallel, parallel, config)
             versioncheck.testall(pipeline_items)
             # make missing indexes for the aligners
-            for item in pipeline_items:
-                run_parallel("make_missing_index", [item])
+            alignment.make_missing_indices(pipeline_items, run_parallel)
 
             for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
                 if len(xs) == 1:
