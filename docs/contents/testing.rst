@@ -168,7 +168,7 @@ Get fastq reads and analysis regions::
     wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_2.fastq.gz
     wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_1.fastq.gz
     wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_2.fastq.gz
-    wget -O ERP002442-targeted.bed https://gist.github.com/mjafin/7120530/raw/cea2a5cb32ff8c0cec587e1c5878d5851a4c2101/BED
+    wget https://gist.github.com/chapmanb/8322238/raw/131a5710ac17039e8e2d350e00a88898e030a958/ERP002442-targeted.bed
 
 Run::
 
