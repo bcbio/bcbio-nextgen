@@ -102,6 +102,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
         rm_genome = data["sam_ref"]
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
                 "preclean": True, "prep": True, "remove-refcalls": True}
+    a_intervals = get_analysis_intervals(data)
     if rm_interval_file:
         ref_call["intervals"] = rm_interval_file
     eval_call = {"file": vrn_file, "name": "eval", "remove-refcalls": True}
@@ -109,13 +110,14 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
         eval_call["ref"] = eval_genome
         eval_call["preclean"] = True
         eval_call["prep"] = True
-    intervals = get_analysis_intervals(data)
-    if intervals:
-        eval_call["intervals"] = os.path.abspath(intervals)
+    if a_intervals and eval_genome:
+        eval_call["intervals"] = os.path.abspath(a_intervals)
     exp = {"sample": data["name"][-1],
            "ref": rm_genome,
            "approach": "grade",
            "calls": [ref_call, eval_call]}
+    if a_intervals and not eval_genome:
+        exp["intervals"] = os.path.abspath(a_intervals)
     if data.get("callable_bam") and not eval_genome:
         exp["align"] = data["callable_bam"]
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
