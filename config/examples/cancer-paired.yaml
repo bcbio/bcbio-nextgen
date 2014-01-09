@@ -9,7 +9,7 @@ details:
     aligner: bwa
     coverage_depth: high
     coverage_interval: regional
-    mark_duplicates: samtools
+    mark_duplicates: false
     recalibrate: false
     realign: false
     platform: illumina
@@ -29,7 +29,7 @@ details:
     aligner: bwa
     coverage_depth: high
     coverage_interval: regional
-    mark_duplicates: samtools
+    mark_duplicates: false
     recalibrate: false
     realign: false
     platform: illumina
