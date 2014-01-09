@@ -202,7 +202,7 @@ def make_missing_indices(lane_items, run_parallel):
     items = [x[0] for x in lane_items]
     for item in items:
         index_loc = item.get("align_ref", None)
-        if not _index_exists(index_loc):
+        if index_loc and not _index_exists(index_loc):
             run_parallel("make_missing_index", [[item]])
 
 def _index_exists(index_loc):
