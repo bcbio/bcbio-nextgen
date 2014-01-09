@@ -86,14 +86,14 @@ def _group_by_batches(samples, check_fn):
         if check_fn(data):
             batch = data.get("metadata", {}).get("batch")
             if batch:
-                out_retrieve.append((batch, data))
+                out_retrieve.append((str(batch), data))
             else:
-                out_retrieve.append((data["name"][-1], data))
+                out_retrieve.append((str(data["name"][-1]), data))
             for vrn in data["variants"]:
                 if batch:
-                    batch_groups[(batch, vrn["variantcaller"])].append((vrn["vrn_file"], data))
+                    batch_groups[(str(batch), vrn["variantcaller"])].append((vrn["vrn_file"], data))
                 else:
-                    singles.append((data["name"][-1], vrn["variantcaller"], data, vrn["vrn_file"]))
+                    singles.append((str(data["name"][-1]), vrn["variantcaller"], data, vrn["vrn_file"]))
         else:
             extras.append(data)
     return batch_groups, singles, out_retrieve, extras
@@ -109,10 +109,10 @@ def prep_db_parallel(samples, parallel_fn):
     has_batches = False
     for (name, caller), info in batch_groups.iteritems():
         fnames = [x[0] for x in info]
-        to_process.append([fnames, (name, caller), [x[1] for x in info], info[0][1]])
+        to_process.append([fnames, (str(name), caller), [x[1] for x in info], info[0][1]])
         has_batches = True
     for name, caller, data, fname in singles:
-        to_process.append([[fname], (name, caller), [data], data])
+        to_process.append([[fname], (str(name), caller), [data], data])
     if len(samples) > 0 and not _do_db_build([x[0] for x in samples]) and not has_batches:
         return samples
     output = parallel_fn("prep_gemini_db", to_process)
