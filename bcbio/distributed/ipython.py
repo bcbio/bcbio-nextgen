@@ -165,7 +165,7 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
         for ensure in _get_ensure_functions(fn, algs):
             cores_per_job, memory_per_core = ensure(cores_per_job, memory_per_core)
 
-    total = parallel["cores"]
+    total = parallel["cores"] - 1  # one core needed for the controller
     if total > cores_per_job:
         num_jobs = total // cores_per_job
     else:
