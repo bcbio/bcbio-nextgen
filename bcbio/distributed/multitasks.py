@@ -23,14 +23,6 @@ process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie2", "toph
                               "ensure": {"tophat2": tophat.job_requirements}}
 
 @utils.map_wrap
-def make_missing_index(*args):
-    return alignment.make_missing_index(*args)
-make_missing_index.metadata = {"resources": ["tophat", "tophat2", "star"],
-                               "ensure": {"tophat": tophat.job_requirements,
-                                          "tophat2": tophat.job_requirements,
-                                          "star": star.job_requirements}}
-
-@utils.map_wrap
 def postprocess_alignment(*args):
     return lane.postprocess_alignment(*args)
 postprocess_alignment.metadata = {"resources": ["gatk"]}

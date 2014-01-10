@@ -49,33 +49,6 @@ def remap_index_fn(ref_file):
     """
     return path.join(path.dirname(path.dirname(ref_file)), "star")
 
-def index(item):
-    """
-    create a genome file with splicing information
-    """
-    genome_dir = item["align_ref"]
-    if path.exists(genome_dir) and listdir(genome_dir):
-        return genome_dir
-
-    config = item["config"]
-    star_path = config_utils.get_program("star", config, default="STAR")
-    overhang = 99 # default to 100 bp reads
-    fasta_file = item["sam_ref"]
-    gtf_file = get_in(item, ("genome_resources", "rnaseq", "transcripts"), None)
-    num_cores = config["algorithm"].get("num_cores", 1)
-
-    with file_transaction(genome_dir) as tx_genome_dir:
-        safe_makedir(tx_genome_dir)
-        cmd = ("{star_path} --genomeDir {tx_genome_dir} --genomeFastaFiles {fasta_file} "
-               " --runThreadN {num_cores} --runMode genomeGenerate "
-               "--sjdbOverhang {overhang} ")
-        if gtf_file:
-            cmd + " --sjdbGTFfile {gtf_file}"
-        run_message = ("Generating a STAR index for %s using %s as transcripts with an "
-                       "overhang of %d") % (fasta_file, gtf_file, overhang)
-        do.run(cmd.format(**locals()), run_message, None)
-    return genome_dir
-
 def job_requirements(cores, memory):
     MIN_STAR_MEMORY = 30.0
     if not memory or cores * memory < MIN_STAR_MEMORY:

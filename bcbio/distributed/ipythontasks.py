@@ -70,15 +70,6 @@ def prep_align_inputs(*args):
     with _setup_logging(args):
         return apply(alignprep.create_inputs, *args)
 
-@require(alignment)
-def make_missing_index(*args):
-    with _setup_logging(args):
-        return apply(alignment.make_missing_index, *args)
-make_missing_index.metadata = {"resources": ["tophat", "tophat2", "star"],
-                               "ensure": {"tophat": tophat.job_requirements,
-                                          "tophat2": tophat.job_requirements,
-                                          "star": star.job_requirements}}
-
 @require(lane)
 def postprocess_alignment(*args):
     with _setup_logging(args):

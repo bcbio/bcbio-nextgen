@@ -17,7 +17,7 @@ from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (disambiguate, lane, region, run_info, qcsummary, version,
-                            rnaseq, alignment)
+                            rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, system, versioncheck
 from bcbio.server import main as server_main
@@ -107,9 +107,6 @@ def _run_toplevel(config, config_file, work_dir, parallel,
         for pipeline, pipeline_items in pipelines.items():
             pipeline_items = _add_provenance(pipeline_items, dirs, run_parallel, parallel, config)
             versioncheck.testall(pipeline_items)
-            # make missing indexes for the aligners
-            alignment.make_missing_indices(pipeline_items, run_parallel)
-
             for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
