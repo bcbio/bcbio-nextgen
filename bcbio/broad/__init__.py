@@ -25,6 +25,7 @@ class BroadRunner:
         self._config = config
         self._gatk_version, self._picard_version, self._mutect_version = (
             None, None, None)
+        self._gatk_resources = resources
 
     def _set_default_versions(self, config):
         """Retrieve pre-computed version information for expensive to retrieve versions.
@@ -127,6 +128,8 @@ class BroadRunner:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
+        if "keyfile" in self._gatk_resources:
+            params = ["-et", "NO_ET", "-K", self._gatk_resources["keyfile"]] + params
         return ["java"] + config_utils.adjust_opts(self._jvm_opts, config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
 

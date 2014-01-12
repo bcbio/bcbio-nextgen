@@ -18,6 +18,9 @@
   does random sampling of first 2 million reads instead of taking the first set
   of reads which may be non-generalizable. Also lowers requirement to use
   bwa-mem to 75% of reads being smaller than 70bp. Thanks to Paul Tang.
+- Enable specification of a GATK key file in the bcbio_system resources
+  `keyfile` parameter. Disables callbacks to GATK tracking. Thanks to Severine
+  Catreux for keyfile to debug with.
 - Correctly handle preparation of pre-aligned BAM files when sorting and
   coordinate specification needed. Thanks to Severine Catreux.
 - Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.

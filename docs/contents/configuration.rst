@@ -382,6 +382,9 @@ and memory and compute resources to devote to them::
   memory. Always specify this as the memory usage for a single core,
   and the pipeline handles scaling this when a process uses multiple
   cores.
+- ``keyfile`` Specify the location of a program specific key file, obtained from
+  the third party software tool. Include the path to a GATK supplied key file
+  to disable the `GATK phone home`_ feature.
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
@@ -392,6 +395,7 @@ and memory and compute resources to devote to them::
 .. _Galaxy API: http://wiki.galaxyproject.org/Learn/API
 .. _Amazon S3: http://aws.amazon.com/s3/
 .. _Galaxy Admin: http://wiki.galaxyproject.org/Admin/DataLibraries/LibrarySecurity
+.. _GATK phone home: http://gatkforums.broadinstitute.org/discussion/1250/what-is-phone-home-and-how-does-it-affect-me
 
 Genome configuration files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
