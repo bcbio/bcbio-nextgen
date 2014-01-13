@@ -191,9 +191,8 @@ def _fix_mates(orig_file, out_file, ref_file, config):
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
     return out_file
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
-          names=None):
-    out_files = tophat_align(fastq_file, pair_file, ref_file, out_base,
+def align(fastq_file, pair_file, ref_file, names, align_dir, data,):
+    out_files = tophat_align(fastq_file, pair_file, ref_file, names["lane"],
                              align_dir, data, names)
 
     return out_files
@@ -223,7 +222,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
     safe_makedir(work_dir)
     extra_args = ["-s", str(start), "-u", "250000"]
     ref_file, bowtie_runner = _determine_aligner_and_reference(ref_file, data["config"])
-    out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, out_base,
+    out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, {"lane": out_base},
                                   work_dir, data, extra_args)
     dists = []
     with closing(pysam.Samfile(out_sam)) as work_sam:
