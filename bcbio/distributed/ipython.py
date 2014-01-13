@@ -60,7 +60,8 @@ def _get_ensure_functions(fn, algs):
             yield fn.metadata["ensure"][prog]
 
 def _get_used_programs(fn, algs):
-    used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools", "snpEff", "cufflinks"])
+    used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools",
+                      "snpEff", "cufflinks", "picard"])
     for alg in algs:
         # get aligners used
         aligner = alg.get("aligner")
