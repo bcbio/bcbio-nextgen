@@ -27,14 +27,14 @@ def _bowtie2_args_from_config(config):
     core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     return core_flags + qual_flags
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
-          extra_args=None, names=None):
+def align(fastq_file, pair_file, ref_file, names, align_dir, data,
+          extra_args=None):
     """Alignment with bowtie2.
     """
     config = data["config"]
     analysis_config = ANALYSIS.get(data["analysis"])
     assert analysis_config, "Analysis %s is not supported by bowtie2" % (data["analysis"])
-    out_file = os.path.join(align_dir, "%s.sam" % out_base)
+    out_file = os.path.join(align_dir, "%s.sam" % names["lane"])
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("bowtie2", config)]

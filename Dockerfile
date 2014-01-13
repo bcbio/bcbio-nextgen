@@ -28,6 +28,9 @@ RUN mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     echo 'export PATH=/usr/local/bin:$PATH' >> /etc/bash.bashrc && \
     echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/bash.bashrc && \
     echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/bash.bashrc && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/tmp/* && \
+    /usr/local/share/bcbio-nextgen/anaconda/bin/conda clean --yes --tarballs && \
     rm -rf $(brew --cache) && \
     rm -rf /.cpanm && \
     rm -rf /tmp/bcbio-nextgen-install

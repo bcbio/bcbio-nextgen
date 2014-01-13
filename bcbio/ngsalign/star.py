@@ -1,18 +1,14 @@
-from os import path, listdir
+from os import path
 
 from bcbio.pipeline import config_utils
 from bcbio.utils import safe_makedir, file_exists, get_in
 from bcbio.provenance import do
-from bcbio.distributed.transaction import file_transaction
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 
-
-
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
-          names=None):
+def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
-    out_prefix = path.join(align_dir, out_base)
+    out_prefix = path.join(align_dir, names["lane"])
     out_file = out_prefix + "Aligned.out.sam"
     if file_exists(out_file):
         return out_file
