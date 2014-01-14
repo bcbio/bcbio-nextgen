@@ -9,7 +9,7 @@ import glob
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, tools
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
@@ -84,21 +84,27 @@ def _run_snpeff(snp_in, se_interval, out_format, data):
     assert os.path.exists(os.path.join(datadir, snpeff_db)), \
         "Did not find %s snpEff genome data in %s" % (snpeff_db, datadir)
     snpeff_cmd = get_cmd("eff", datadir, data["config"])
-    ext = "vcf" if out_format == "vcf" else "tsv"
-    out_file = "%s-effects.%s" % (os.path.splitext(snp_in)[0], ext)
+    ext = utils.splitext_plus(snp_in)[1] if out_format == "vcf" else ".tsv"
+    out_file = "%s-effects%s" % (utils.splitext_plus(snp_in)[0], ext)
     if not utils.file_exists(out_file):
         interval = "-filterinterval %s" % (se_interval) if se_interval else ""
         config_args = " ".join(_snpeff_args_from_config(data))
+        if ext.endswith(".gz"):
+            bgzip_cmd = "| %s -c" % tools.get_bgzip_cmd(data["config"])
+        else:
+            bgzip_cmd = ""
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{snpeff_cmd} {interval} {config_args} -noLog -1 -i vcf -o {out_format} "
-                   "{snpeff_db} {snp_in} > {tx_out_file}")
+                   "{snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)
+    if ext.endswith(".gz"):
+        out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
 
 def _convert_to_snpeff_interval(in_file, base_file):
     """Handle wide variety of BED-like inputs, converting to BED-3.
     """
-    out_file = "%s-snpeff-intervals.bed" % os.path.splitext(base_file)[0]
+    out_file = "%s-snpeff-intervals.bed" % utils.splitext_plus(base_file)[0]
     if not os.path.exists(out_file):
         with open(out_file, "w") as out_handle:
             writer = csv.writer(out_handle, dialect="excel-tab")
