@@ -40,7 +40,7 @@ def run(data):
 def _get_input_para(data):
        
     TOPHAT_FUSION_OUTFILE = "fusions.out"
-    STAR_FUSION_OUTFILE = 'Chimeric.out.junction.txt'
+    STAR_FUSION_OUTFILE = 'Chimeric.out.junction'
     
     config = data["config"]
     aligner = config["algorithm"].get("aligner")
