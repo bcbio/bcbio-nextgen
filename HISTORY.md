@@ -42,6 +42,13 @@ Not officially documented for now until we can come up with best practices for i
 - STAR support re-enabled.
 - Fixed issue with the complexity calculation throwing an exception when there
 were not enough reads.
+- Remove `Estimated Library Size` and `Complexity` from RNA-seq QC
+summary information as they were confusing and unnecessarily alarming,
+respectively. Thanks to Miika Ahdesmaki and Sara Dempster.
+- Several memory allocation errors resulting in jobs getting killed in
+cluster environments for overusing their memory limit fixed.
+- Added JVM options by default to Picard to allocate enough memory
+for large BAM->FastQ conversion.
 
 ## 0.7.5 (November 29, 2013)
 
