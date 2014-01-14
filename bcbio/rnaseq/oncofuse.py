@@ -40,7 +40,7 @@ def run(data):
 def _get_input_para(data):
        
     TOPHAT_FUSION_OUTFILE = "fusions.out"
-    STAR_FUSION_OUTFILE = 'Chimeric.out.junction.txt' #didn't test
+    STAR_FUSION_OUTFILE = 'Chimeric.out.junction.txt'
     
     config = data["config"]
     aligner = config["algorithm"].get("aligner")
@@ -49,9 +49,11 @@ def _get_input_para(data):
     names = data["rgnames"]
     align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"], names["sample"]+"_%s" % aligner)
     if aligner in ['tophat', 'tophat2']:
+        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"], names["sample"]+"_%s" % aligner)
         return 'tophat', align_dir_parts, os.path.join(align_dir_parts, TOPHAT_FUSION_OUTFILE)
-    if aligner in ['star']: #didn't test
-        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts,STAR_FUSION_OUTFILE)
+    if aligner in ['star']:
+        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"])
+        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts,names["sample"]+STAR_FUSION_OUTFILE)
     return None 
 
 
