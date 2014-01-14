@@ -69,6 +69,10 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
+    metrics["Quality format"] = utils.get_in(data,
+                                             ("config", "algorithm",
+                                              "quality_format"),
+                                             "standard").lower()
     return {"qc": qc_dir, "metrics": metrics}
 
 # ## Generate project level QC summary for quickly assessing large projects
@@ -114,7 +118,8 @@ class FastQCParser:
         self._dir = base_dir
 
     def get_fastqc_summary(self):
-        ignore = set(["Total Sequences", "Filtered Sequences", "Filename", "File type"])
+        ignore = set(["Total Sequences", "Filtered Sequences",
+                      "Filename", "File type", "Encoding"])
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
             k, v = stat_line.split("\t")[:2]
