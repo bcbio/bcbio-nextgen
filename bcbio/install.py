@@ -304,7 +304,7 @@ def add_subparser(subparsers):
                         choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"],
-                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "ucsc"])
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
