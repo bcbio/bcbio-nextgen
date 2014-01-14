@@ -210,7 +210,7 @@ if __name__ == "__main__":
                         choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"],
-                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "ucsc"])
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
