@@ -98,7 +98,7 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
     """
     out = {}
     want = set(["Genes Detected", "Transcripts Detected",
-                "Mean Per Base Cov.", "Estimated Library Size", "Fragment Length Mean",
+                "Mean Per Base Cov.", "Fragment Length Mean",
                 "Exonic Rate", "Intergenic Rate", "Intronic Rate",
                 "Mapped", "Mapping Rate", "Duplication Rate of Mapped",
                 "rRNA", "rRNA rate"])
@@ -170,6 +170,9 @@ def estimate_library_complexity(df, algorithm="RNA-seq"):
         complexity = "MEDIUM"
     else:
         complexity = "HIGH"
-    return {"unique_start_per_read": float(slope),
-            "complexity": complexity}
+
+    # for now don't return the complexity flag
+    return {"Unique Starts Per Read": float(slope)}
+    # return {"unique_start_per_read": float(slope),
+    #         "complexity": complexity}
 
