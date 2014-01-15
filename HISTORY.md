@@ -1,4 +1,4 @@
-## 0.7.6 (In progress)
+## 0.7.6 (January 15, 2014)
 
 - Expand template functionality to provide additional ability to add metadata
   to samples with input CSV. Includes customization of algorithm section and
@@ -42,6 +42,7 @@ Not officially documented for now until we can come up with best practices for i
 - STAR support re-enabled.
 - Fixed issue with the complexity calculation throwing an exception when there
 were not enough reads.
+- Add disambiguation stats to final project-summary.yaml file. Thanks to Miika Ahdesmaki.
 - Remove `Estimated Library Size` and `Complexity` from RNA-seq QC
 summary information as they were confusing and unnecessarily alarming,
 respectively. Thanks to Miika Ahdesmaki and Sara Dempster.
