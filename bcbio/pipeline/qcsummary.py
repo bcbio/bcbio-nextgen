@@ -108,7 +108,26 @@ def _save_fields(sample):
     saved = {k: sample[k] for k in to_save if k in sample}
     if "summary" in sample:
         saved["summary"] = {"metrics": sample["summary"]["metrics"]}
+        # check if disambiguation was run
+        if "disambiguate" in sample:
+            if utils.file_exists(sample["disambiguate"]["summary"]):
+                disambigStats = _parse_disambiguate(sample["disambiguate"]["summary"])
+                saved["summary"]["metrics"]["Disambiguated %s reads" % str(sample["genome_build"])] = disambigStats[0]
+                saved["summary"]["metrics"]["Disambiguated %s reads" % str(sample["algorithm"]["disambiguate"][0])] = disambigStats[1]
+                saved["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return saved
+
+def _parse_disambiguate(disambiguatestatsfilename):
+    """Parse disambiguation stats from given file.
+    """
+    disambigStats = [-1 -1 -1]
+    with open(disambiguatestatsfilename, "r") as in_handle:
+        header = in_handle.readline().strip().split("\t")
+        if header == ['sample','unique species A pairs','unique species B pairs','ambiguous pairs']:
+            disambigStatsTemp = in_handle.readline().strip().split("\t")[1:]
+            if len(disambigStatsTemp) == 3:
+                disambigStats = [int(x) for x in disambigStatsTemp]
+    return disambigStats
 
 
 # ## Run and parse read information from FastQC
