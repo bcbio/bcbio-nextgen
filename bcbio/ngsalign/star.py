@@ -13,7 +13,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if file_exists(out_file):
         return out_file
     star_path = config_utils.get_program("STAR", config)
-    fastq = " ".join([fastq_file, pair_file])
+    fastq = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = config["algorithm"].get("num_cores", 1)
 
     safe_makedir(align_dir)
