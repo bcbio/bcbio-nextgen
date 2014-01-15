@@ -29,9 +29,12 @@ def prep_gemini_db(fnames, call_id, samples, data):
     if use_gemini and not utils.file_exists(gemini_db):
         with file_transaction(gemini_db) as tx_gemini_db:
             gemini = config_utils.get_program("gemini", data["config"])
-            gemini_ver = programs.get_version("gemini", config=data["config"])
+            if "program_versions" in data["config"].get("resources", {}):
+                gemini_ver = programs.get_version("gemini", config=data["config"])
+            else:
+                gemini_ver = None
             # Recent versions of gemini allow loading only passing variants
-            if LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
+            if not gemini_ver or LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
                 load_opts = "--passonly"
             else:
                 load_opts = ""
