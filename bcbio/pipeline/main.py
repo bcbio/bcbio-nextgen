@@ -16,8 +16,8 @@ from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (disambiguate, lane, region, run_info, qcsummary, version,
-                            rnaseq)
+from bcbio.pipeline import (disambiguate, lane, region, run_info, qcsummary,
+                            version, rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, system, versioncheck
 from bcbio.server import main as server_main
