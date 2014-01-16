@@ -22,9 +22,8 @@ from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, system, versioncheck
 from bcbio.server import main as server_main
 from bcbio.solexa.flowcell import get_fastq_dir
-from bcbio.variation.realign import parallel_realign_sample
-from bcbio.variation.genotype import parallel_variantcall, combine_multiple_callers
-from bcbio.variation import coverage, ensemble, population, recalibrate, validate
+from bcbio.variation.genotype import combine_multiple_callers
+from bcbio.variation import coverage, ensemble, population, validate
 from bcbio.rnaseq.count import combine_count_files
 
 def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,

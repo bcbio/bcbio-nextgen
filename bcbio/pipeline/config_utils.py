@@ -63,6 +63,8 @@ def load_system_config(config_file):
                              (config_file, os.path.join(base_dir, "galaxy")))
     config = load_config(config_file)
     config["bcbio_system"] = config_file
+    if "algorithm" not in config:
+        config["algorithm"] = {}
     return config, config_file
 
 def load_config(config_file):
