@@ -10,6 +10,4 @@ details:
       fusion_mode: True
     description: Test1
     genome_build: hg19
-    #files: ["DatasetP2_SimulatedReads_1.fastq.gz", "DatasetP2_SimulatedReads_2.fastq.gz"]
     files: ["1_1.fq.gz", "1_2.fq.gz"] 
-#    files: ["1_subset_1.fq", "1_subset_2.fq"]
