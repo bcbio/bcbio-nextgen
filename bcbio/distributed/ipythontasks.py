@@ -7,7 +7,7 @@ from IPython.parallel import require
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep, tophat, star
 from bcbio.pipeline import (disambiguate, sample, lane, qcsummary, shared,
-                            variation, rnaseq, alignment)
+                            variation, rnaseq)
 from bcbio.provenance import system
 from bcbio import structural
 from bcbio import chipseq
@@ -65,11 +65,6 @@ def prep_align_inputs(*args):
     with _setup_logging(args):
         return apply(alignprep.create_inputs, *args)
 
-@require(alignprep)
-def prep_align_inputs(*args):
-    with _setup_logging(args):
-        return apply(alignprep.create_inputs, *args)
-
 @require(lane)
 def postprocess_alignment(*args):
     with _setup_logging(args):
@@ -117,7 +112,7 @@ def split_variants_by_sample(*args):
 def piped_bamprep(*args):
     with _setup_logging(args):
         return apply(bamprep.piped_bamprep, *args)
-piped_bamprep.metadata = {"resources": ["gatk"]}
+piped_bamprep.metadata = {"resources": ["gatk", "picard"]}
 
 @require(variation)
 def postprocess_variants(*args):
@@ -135,7 +130,7 @@ pipeline_summary.metadata = {"resources": ["gatk", "picard"]}
 def generate_transcript_counts(*args):
     with _setup_logging(args):
         return apply(rnaseq.generate_transcript_counts, *args)
-generate_transcript_counts.metadata = {"resources": ["samtools","gatk"]}
+generate_transcript_counts.metadata = {"resources": ["samtools", "gatk"]}
 
 @require(rnaseq)
 def run_cufflinks(*args):

@@ -43,6 +43,7 @@ delayed_bam_merge.metadata = {"resources": ["samtools"]}
 @utils.map_wrap
 def piped_bamprep(*args):
     return bamprep.piped_bamprep(*args)
+piped_bamprep.metadata = {"resources": ["gatk", "picard"]}
 
 @utils.map_wrap
 def prep_recal(*args):
