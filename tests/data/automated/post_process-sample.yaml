@@ -77,3 +77,6 @@ resources:
     dir: ~/install/CORTEX_release_v1.0.5.14
   vcftools:
     dir: ~/install/vcftools_0.1.9
+  oncofuse:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/oncofuse

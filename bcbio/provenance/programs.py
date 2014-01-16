@@ -87,7 +87,9 @@ _alt_progs = [{"name": "bcbio.variation",
               {"name": "snpeff",
                "version_fn": java_versioner("snpEff", "snpEff", stdout_flag="snpEff version SnpEff")},
               {"name": "varscan",
-               "version_fn": jar_versioner("varscan", "VarScan")}]
+               "version_fn": jar_versioner("varscan", "VarScan")},
+              {"name": "oncofuse",
+               "version_fn": jar_versioner("Oncofuse", "Oncofuse")}]
 
 def _parse_from_stdoutflag(stdout, x):
     for line in stdout:

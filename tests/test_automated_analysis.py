@@ -159,6 +159,20 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
             subprocess.check_call(cl)
 
+    @expected_failure
+    @attr(fusion=True)
+    def test_2_fusion(self):
+        """Run an RNA-seq analysis and test fusion genes
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  "/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml",
+#                  self._get_post_process_yaml(workdir),
+                  os.path.join(self.data_dir, os.pardir, "test_fusion"),
+                  os.path.join(self.data_dir, "run_info-fusion.yaml")]
+            subprocess.check_call(cl)
+
     @attr(rnaseq=True)
     def test_2_star(self):
         """Run an RNA-seq analysis with STAR and generate gene-level counts.
