@@ -10,6 +10,7 @@ ipython-cluster-helper>=0.2.7
 joblib>=0.7.0d
 Logbook>=0.6.0
 lxml>=3.2.3
+Mako>=0.7.3
 nose>=1.3.0
 psutil>=1.2.0
 pybedtools>=0.6.2
