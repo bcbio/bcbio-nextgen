@@ -5,30 +5,6 @@ This section describes older functionality migrated to new approaches.
 We maintain support for back-compatibility purposes but suggest moving
 to the updated in-development approaches.
 
-Celery and RabbitMQ
-~~~~~~~~~~~~~~~~~~~
-
-We still support celery and RabbitMQ messaging, but please try IPython
-when setting up a new cluster. The IPython approach is under active
-development and supports additional cluster and parallel approaches.
-
-To enable parallel messaging:
-
-1. Configure RabbitMQ as described below. Ensure all processing machines
-   can talk to the RabbitMQ server on port 5672. Update
-   ``universe_wsgi.ini`` to contain the server details.
-
-2. Edit your ``post_process.yaml`` file to set parameters in the
-   ``distributed`` section corresponding to your environment: this
-   includes the type of cluster management and arguments to start jobs.
-
-3. Run ``bcbio_nextgen.py`` with parameters for a distributed cluster
-   environment. It takes care of starting worker nodes, running the
-   processing, and then cleaning up after jobs::
-
-      bcbio_nextgen.py post_process.yaml flowcell_dir run_info.yaml
-                       -t messaging -n 20
-
 RabbitMQ configuration
 **********************
 

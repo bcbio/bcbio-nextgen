@@ -293,31 +293,6 @@ class AbstractPipeline:
     def run(self, config, config_file, run_parallel, parallel, dirs, lanes):
         return
 
-
-class VariantPipeline(AbstractPipeline):
-    name = "variant"
-
-    @classmethod
-    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
-        raise NotImplementedError("`variant` processing is deprecated: please use `variant2`"
-                                  "The next version will alias variant to the new variant2 pipeline")
-        lane_items = run_parallel("trim_lane", lane_items)
-        align_items = run_parallel("process_alignment", lane_items)
-        # process samples, potentially multiplexed across multiple lanes
-        samples = organize_samples(align_items, dirs, config_file)
-        samples = run_parallel("merge_sample", samples)
-        samples = run_parallel("prep_recal", samples)
-        samples = recalibrate.parallel_write_recal_bam(samples, run_parallel)
-        samples = parallel_realign_sample(samples, run_parallel)
-        samples = parallel_variantcall(samples, run_parallel)
-        samples = run_parallel("postprocess_variants", samples)
-        samples = combine_multiple_callers(samples)
-        samples = ensemble.combine_calls_parallel(samples, run_parallel)
-        samples = run_parallel("detect_sv", samples)
-        samples = qcsummary.generate_parallel(samples, run_parallel)
-        run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
-        return samples
-
 class Variant2Pipeline(AbstractPipeline):
     """Streamlined variant calling pipeline for large files.
     This is less generalized but faster in standard cases.
@@ -380,10 +355,15 @@ class Variant2Pipeline(AbstractPipeline):
         logger.info("Timing: finished")
         return samples
 
-class SNPCallingPipeline(VariantPipeline):
+class SNPCallingPipeline(Variant2Pipeline):
     """Back compatible: old name for variant analysis.
     """
     name = "SNP calling"
+
+class VariantPipeline(Variant2Pipeline):
+    """Back compatibility; old name
+    """
+    name = "variant"
 
 class StandardPipeline(AbstractPipeline):
     """Minimal pipeline with alignment and QC.

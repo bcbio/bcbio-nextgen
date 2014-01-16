@@ -48,7 +48,7 @@ def prep_recal(data):
         config = data["config"]
         dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
         broad_runner = broad.runner_from_config(config)
-        platform = config["algorithm"]["platform"]
+        platform = config["algorithm"].get("platform", "illumina")
         broad_runner.run_fn("picard_index_ref", ref_file)
         if config["algorithm"].get("mark_duplicates", True):
             (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])

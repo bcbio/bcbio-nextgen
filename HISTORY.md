@@ -1,5 +1,10 @@
 ## 0.7.7 (in progress)
 
+- Remove deprecated Celery distributed messaging, replaced in favor of IPython.
+- Remove algorithm/custom_algorithm from bcbio_system.yaml, preferring to set
+  these directly in the sample YAML files.
+- Map `variant` calling specification to `variant2` since original approach
+  no longer supported.
 - Fix issues with trying to upload directories to Galaxy. Thanks to Jim Peden.
 
 ## 0.7.6 (January 15, 2014)
