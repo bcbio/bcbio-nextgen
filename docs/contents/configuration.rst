@@ -156,7 +156,7 @@ directory::
      upload:
        dir: /local/filesystem/directory
 
-General parameters:
+General parameters, always required:
 
 - ``method`` Upload method to employ. Defaults to local filesystem.
   [filesystem, galaxy, s3]
@@ -179,13 +179,19 @@ Galaxy parameters:
   the sample details section. The `Galaxy Admin`_ documentation
   has more details about roles.
 
-Here is an example configuration for uploading to a Galaxy instance::
+Here is an example configuration for uploading to a Galaxy instance. This
+assumes you have a shared mounted filesystem that your Galaxy instance can
+also access::
 
       upload:
-	method: galaxy
-	galaxy_url: http://url-to-galaxy-instance
-	galaxy_api_key: YOURAPIKEY
-	galaxy_library: data_library_to_upload_to
+        method: galaxy
+        dir: /path/to/shared/galaxy/filesystem/folder
+        galaxy_url: http://url-to-galaxy-instance
+        galaxy_api_key: YOURAPIKEY
+        galaxy_library: data_library_to_upload_to
+
+Your Galaxy universe_wsgi.ini configuration needs to have
+``allow_library_path_paste = True`` set to enable uploads.
 
 S3 parameters:
 

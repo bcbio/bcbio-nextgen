@@ -21,10 +21,14 @@ def update_file(finfo, sample_info, config):
     """
     if GalaxyInstance is None:
         raise ImportError("Could not import bioblend.galaxy")
+    if "dir" not in config:
+        raise ValueError("Galaxy upload requires `dir` parameter in config specifying the "
+                         "shared filesystem path to move files to.")
     folder_name = "%s_%s" % (config["fc_name"], config["fc_date"])
     storage_dir = utils.safe_makedir(os.path.join(config["dir"], folder_name))
-    storage_file = filesystem.copy_finfo(finfo, storage_dir)
-    if config.has_key("galaxy_url") and config.has_key("galaxy_api_key"):
+    storage_file = (filesystem.copy_finfo(finfo, storage_dir)
+                    if finfo.get("type") != "directory" else None)
+    if "galaxy_url" in config and "galaxy_api_key" in config:
         gi = GalaxyInstance(config["galaxy_url"], config["galaxy_api_key"])
     else:
         raise ValueError("Galaxy upload requires `galaxy_url` and `galaxy_api_key` in config")
@@ -35,7 +39,7 @@ def _to_datalibrary(fname, gi, folder_name, sample_info, config):
     """Upload a file to a Galaxy data library in a project specific folder.
     """
     library = _get_library(gi, sample_info, config)
-    libitems =  gi.libraries.show_library(library.id, contents=True)
+    libitems = gi.libraries.show_library(library.id, contents=True)
     folder = _get_folder(gi, folder_name, library, libitems)
     _file_to_folder(gi, fname, sample_info, libitems, library, folder)
 
@@ -82,7 +86,7 @@ def _get_library_from_name(gi, name, role, sample_info):
         if lib["name"].lower().find(name.lower()) >= 0:
             return GalaxyLibrary(lib["id"], lib["name"], role)
     else:
-        raise ValueError("Could not find Galaxy library matching %s for sample %s" %
+        raise ValueError("Could not find Galaxy library matching '%s' for sample %s" %
                          (name, sample_info["description"]))
 
 def _library_from_nglims(gi, sample_info):

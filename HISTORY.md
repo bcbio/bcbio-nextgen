@@ -1,3 +1,7 @@
+## 0.7.7 (in progress)
+
+- Fix issues with trying to upload directories to Galaxy. Thanks to Jim Peden.
+
 ## 0.7.6 (January 15, 2014)
 
 - Expand template functionality to provide additional ability to add metadata

@@ -1,9 +1,9 @@
 upload:
   dir: upload
-#   method: galaxy
-#   galaxy_url: http://localhost:8080
-#   galaxy_api_key: 57c5786d6a6665e5afc045d73ef3ee94
-#   galaxy_library: test
+#  method: galaxy
+#  galaxy_url: http://localhost:8080
+#  galaxy_api_key: a9a33e4ad35c8f7f79d8cf87822bac1c
+#  galaxy_library: test
 details:
   - description: VarOnly
     analysis: variant2
