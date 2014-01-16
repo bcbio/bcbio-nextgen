@@ -72,6 +72,7 @@ This requires the following additional system requirements to be in place:
 - R with Rscript (currently optional, but increasingly used in the pipeline)
 - bzip2 (with development libraries)
 - zlib (with development libraries)
+- curl (with development libraries)
 - cmake (temporary requirement, for eventual removal)
 
 Installing this way is as isolated and self-contained as possible
