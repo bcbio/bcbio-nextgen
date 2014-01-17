@@ -95,4 +95,5 @@ galaxy_config: universe_wsgi.ini
 #   worker_program: nextgen_analysis_server.py
 
 # ## Back compatible algorithm section, to be removed in 0.7.7 release
-algorithm: {}
+algorithm:
+  platform: illumina
