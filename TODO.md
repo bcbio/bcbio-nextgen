@@ -47,6 +47,10 @@ These are roughly ordered by current priority and we welcome contributors.
 - Performance improvements and testing on Amazon EC2. Make use of high speed
   local ephemeral storage for temporary space.
 
+- Handle split inputs across multiple sequencing lanes, handling merging of
+  multiple fastq/BAM inputs and correctly maintaining lane information in BAM
+  read group headers.
+
 - Implement and evaluate GATK's ReducedReads for use in large scale variant
   calling projects ([#90][90]).
 
