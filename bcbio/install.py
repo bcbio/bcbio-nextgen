@@ -8,6 +8,7 @@ import contextlib
 from distutils.version import LooseVersion
 import os
 import shutil
+import string
 import subprocess
 import sys
 
@@ -17,12 +18,15 @@ import yaml
 from bcbio import utils
 from bcbio.pipeline import genome
 from bcbio.variation import effects
+from bcbio.provenance import programs
 
 REMOTES = {
     "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
     "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux.git",
-    "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml"}
+    "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
+    "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
+                      "snpEff_v{snpeff_ver}_{genome}.zip")}
 
 def upgrade_bcbio(args):
     """Perform upgrade of bcbio to latest release, or from GitHub development version.
@@ -115,7 +119,7 @@ def upgrade_bcbio_data(args, remotes):
     cbl_deploy.deploy(s)
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
-    _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args)
+    _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
     if 'data' in args.toolplus:
         subprocess.check_call(["gemini", "update", "--dataonly"])
 
@@ -142,7 +146,7 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
                 with open(local_file, "w") as out_handle:
                     out_handle.write(r.text)
 
-def _upgrade_snpeff_data(galaxy_dir, args):
+def _upgrade_snpeff_data(galaxy_dir, args, remotes):
     """Install or upgrade snpEff databases, localized to reference directory.
     """
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
@@ -157,8 +161,19 @@ def _upgrade_snpeff_data(galaxy_dir, args):
                 tooldir = args.tooldir or get_defaults()["tooldir"]
                 config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
                                                    "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
-                snpeff_cmd = effects.get_cmd("download", snpeff_base_dir, config)
-                subprocess.check_call("%s %s" % (snpeff_cmd, snpeff_db), shell=True)
+                raw_version = programs.java_versioner("snpeff", "snpEff",
+                                                      stdout_flag="snpEff version SnpEff")(config)
+                snpeff_version = "".join([x for x in raw_version
+                                          if x in set(string.digits + ".")]).replace(".", "_")
+                dl_url = remotes["snpeff_dl_url"].format(snpeff_ver=snpeff_version, genome=snpeff_db)
+                dl_file = os.path.basename(dl_url)
+                with utils.chdir(snpeff_base_dir):
+                    subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
+                    subprocess.check_call(["unzip", dl_file])
+                    os.remove(dl_file)
+                dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
+                os.rename(dl_dir, snpeff_db_dir)
+                os.rmdir(os.path.join(snpeff_base_dir, "data"))
 
 def _get_biodata(base_file, args):
     with open(base_file) as in_handle:
