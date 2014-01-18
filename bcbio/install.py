@@ -62,7 +62,37 @@ def upgrade_bcbio(args):
         print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
     save_install_defaults(args)
     args.datadir = _get_data_dir()
+    _install_container_bcbio_system(args.datadir)
     return args
+
+def _install_container_bcbio_system(datadir):
+    """Install limited bcbio_system.yaml file for setting core and memory usage.
+
+    Adds any non-specific programs to the exposed bcbio_system.yaml file, only
+    when upgrade happening inside a docker container.
+    """
+    base_file = os.path.join(datadir, "config", "bcbio_system.yaml")
+    if not os.path.exists(base_file):
+        return
+    expose_file = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
+    expose = set(["memory", "cores", "jvm_opts"])
+    with open(base_file) as in_handle:
+        config = yaml.load(in_handle)
+    if os.path.exists(expose_file):
+        with open(expose_file) as in_handle:
+            expose_config = yaml.load(in_handle)
+    else:
+        expose_config = {"resources": {}}
+    for pname, vals in config["resources"].iteritems():
+        expose_vals = {}
+        for k, v in vals.iteritems():
+            if k in expose:
+                expose_vals[k] = v
+        if len(expose_vals) > 0 and pname not in expose_config["resources"]:
+            expose_config["resources"][pname] = expose_vals
+    with open(expose_file, "w") as out_handle:
+        yaml.dump(expose_config, out_handle, default_flow_style=False, allow_unicode=False)
+    return expose_file
 
 def _default_deploy_args(args):
     flavors = {"minimal": "ngs_pipeline_minimal",

@@ -3,16 +3,14 @@
 import tornado.web
 import tornado.ioloop
 
-from bcbio.server import run, install
+from bcbio.server import run
 
 def start(args):
     """Run server with provided command line arguments.
     """
     application = tornado.web.Application([(r"/run", run.get_handler(args)),
-                                           (r"/install", install.get_handler(args)),
-                                           (r"/status", run.StatusHandler),
-                                           (r"/kill", KillServer)])
-    application.runmonitor= RunMonitor()
+                                           (r"/status", run.StatusHandler)])
+    application.runmonitor = RunMonitor()
     application.listen(args.port)
     tornado.ioloop.IOLoop.instance().start()
 
@@ -27,14 +25,6 @@ class RunMonitor:
 
     def get_status(self, run_id):
         return self._running.get(run_id, "not-running")
-
-class KillServer(tornado.web.RequestHandler):
-    """Development utility. Allows shutdown of the server remotely.
-    http://stackoverflow.com/questions/5375220/how-do-i-stop-tornado-web-server
-    """
-    def get(self):
-        ioloop = tornado.ioloop.IOLoop.instance()
-        ioloop.add_callback(lambda x: x.stop(), ioloop)
 
 def add_subparser(subparsers):
     """Add command line arguments as server subparser.

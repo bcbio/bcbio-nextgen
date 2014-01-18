@@ -202,10 +202,6 @@ def parse_cl_args(in_args):
         kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
     else:
         assert sub_cmd is not None
-        if sub_cmd == "upgrade":
-            # Nothing specified to do, print help
-            if not args.tools and not args.tooldir and not args.install_data and args.upgrade == "skip":
-                sub_parser.print_help()
         kwargs = {"args": args,
                   "config_file": None,
                   sub_cmd: True}
