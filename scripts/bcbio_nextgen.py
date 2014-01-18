@@ -34,7 +34,6 @@ from bcbio.pipeline.main import run_main, parse_cl_args
 from bcbio.server import main as server_main
 
 def main(**kwargs):
-    kwargs["work_dir"] = os.getcwd()
     run_main(**kwargs)
 
 if __name__ == "__main__":
@@ -46,7 +45,7 @@ if __name__ == "__main__":
     else:
         if kwargs.get("workflow"):
             setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])
-            if setup_info is None: # no automated run after setup
+            if setup_info is None:  # no automated run after setup
                 sys.exit(0)
             workdir, new_kwargs = setup_info
             os.chdir(workdir)

@@ -26,15 +26,16 @@ from bcbio.variation.genotype import combine_multiple_callers
 from bcbio.variation import coverage, ensemble, population, validate
 from bcbio.rnaseq.count import combine_count_files
 
-def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,
+def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              numcores=None, paralleltype=None, queue=None, scheduler=None,
              upgrade=None, profile=None, workflow=None, inputs=None,
              resources="", timeout=15, retries=None):
     """Run variant analysis, handling command line options.
     """
-    config, config_file = load_system_config(config_file)
+    os.chdir(workdir)
+    config, config_file = load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:
-        config["log_dir"] = os.path.join(work_dir, "log")
+        config["log_dir"] = os.path.join(workdir, "log")
     paralleltype, numcores = _get_cores_and_type(numcores, paralleltype, scheduler)
     parallel = {"type": paralleltype, "cores": numcores,
                 "scheduler": scheduler, "queue": queue,
@@ -43,12 +44,12 @@ def run_main(work_dir, config_file=None, fc_dir=None, run_info_yaml=None,
                 "retries": retries}
     if parallel["type"] in ["local"]:
         _setup_resources()
-        _run_toplevel(config, config_file, work_dir, parallel,
+        _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
     elif parallel["type"] == "ipython":
         assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
         assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
-        _run_toplevel(config, config_file, work_dir, parallel,
+        _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
@@ -95,7 +96,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
     run_items = run_info.organize(dirs, config, run_info_yaml)
-    run_parallel = parallel_runner(parallel, dirs, config, config_file)
+    run_parallel = parallel_runner(parallel, dirs, config)
 
     # process each flowcell lane
     lane_items = lane.process_all_lanes(run_items, run_parallel)
@@ -152,7 +153,7 @@ def parse_cl_args(in_args):
     sub_cmd = None
     if len(in_args) > 0 and in_args[0] in sub_cmds:
         subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
-        sub_parser = sub_cmds[in_args[0]](subparsers)
+        sub_cmds[in_args[0]](subparsers)
         sub_cmd = in_args[0]
     else:
         parser.add_argument("global_config", help="Global YAML configuration file specifying details "
@@ -183,6 +184,8 @@ def parse_cl_args(in_args):
         parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
                             default="bcbio_nextgen")
         parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
+        parser.add_argument("--workdir", help="Directory to process in. Defaults to current working directory",
+                            default=os.getcwd())
         parser.add_argument("-v", "--version", help="Print current version",
                             action="store_true")
     args = parser.parse_args(in_args)
@@ -198,7 +201,8 @@ def parse_cl_args(in_args):
                   "retries": args.retries,
                   "resources": args.resources,
                   "profile": args.profile,
-                  "workflow": args.workflow}
+                  "workflow": args.workflow,
+                  "workdir": args.workdir}
         kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
     else:
         assert sub_cmd is not None

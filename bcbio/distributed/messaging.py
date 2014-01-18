@@ -11,7 +11,7 @@ from bcbio.distributed import ipython
 from bcbio.log import logger, setup_local_logging
 from bcbio.provenance import diagnostics, system
 
-def parallel_runner(parallel, dirs, config, config_file=None):
+def parallel_runner(parallel, dirs, config):
     """Process a supplied function: single, multi-processor or distributed.
     """
     def run_parallel(fn_name, items, metadata=None):
