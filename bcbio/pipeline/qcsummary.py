@@ -88,6 +88,7 @@ def write_project_summary(samples):
                   if "dir" in samples[0][0]["upload"] else "")
     test_run = samples[0][0].get("test_run", False)
     date = str(datetime.now())
+    prev_samples = _other_pipeline_samples(out_file, samples)
     with open(out_file, "w") as out_handle:
         yaml.dump({"date": date}, out_handle,
                   default_flow_style=False, allow_unicode=False)
@@ -98,9 +99,21 @@ def write_project_summary(samples):
                   default_flow_style=False, allow_unicode=False)
         yaml.dump({"bcbio_system": samples[0][0]["config"].get("bcbio_system", "")}, out_handle,
                   default_flow_style=False, allow_unicode=False)
-        yaml.dump({"samples": [_save_fields(sample[0]) for sample in samples]}, out_handle,
+        yaml.dump({"samples": prev_samples + [_save_fields(sample[0]) for sample in samples]}, out_handle,
                   default_flow_style=False, allow_unicode=False)
     return out_file
+
+def _other_pipeline_samples(summary_file, cur_samples):
+    """Retrieve samples produced previously by another pipeline in the summary output.
+    """
+    cur_descriptions = set([s[0]["description"] for s in cur_samples])
+    out = []
+    if os.path.exists(summary_file):
+        with open(summary_file) as in_handle:
+            for s in yaml.load(in_handle).get("samples", []):
+                if s["description"] not in cur_descriptions:
+                    out.append(s)
+    return out
 
 def _save_fields(sample):
     to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata",
@@ -113,7 +126,9 @@ def _save_fields(sample):
             if utils.file_exists(sample["disambiguate"]["summary"]):
                 disambigStats = _parse_disambiguate(sample["disambiguate"]["summary"])
                 saved["summary"]["metrics"]["Disambiguated %s reads" % str(sample["genome_build"])] = disambigStats[0]
-                disambigGenome = sample["config"]["algorithm"]["disambiguate"][0] if isinstance(sample["config"]["algorithm"]["disambiguate"],(list,tuple)) else sample["config"]["algorithm"]["disambiguate"]
+                disambigGenome = (sample["config"]["algorithm"]["disambiguate"][0]
+                                  if isinstance(sample["config"]["algorithm"]["disambiguate"], (list, tuple))
+                                  else sample["config"]["algorithm"]["disambiguate"])
                 saved["summary"]["metrics"]["Disambiguated %s reads" % disambigGenome] = disambigStats[1]
                 saved["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return saved
@@ -121,14 +136,14 @@ def _save_fields(sample):
 def _parse_disambiguate(disambiguatestatsfilename):
     """Parse disambiguation stats from given file.
     """
-    disambigStats = [-1 -1 -1]
+    disambig_stats = [-1, -1, -1]
     with open(disambiguatestatsfilename, "r") as in_handle:
         header = in_handle.readline().strip().split("\t")
-        if header == ['sample','unique species A pairs','unique species B pairs','ambiguous pairs']:
-            disambigStatsTemp = in_handle.readline().strip().split("\t")[1:]
-            if len(disambigStatsTemp) == 3:
-                disambigStats = [int(x) for x in disambigStatsTemp]
-    return disambigStats
+        if header == ['sample', 'unique species A pairs', 'unique species B pairs', 'ambiguous pairs']:
+            disambig_stats_tmp = in_handle.readline().strip().split("\t")[1:]
+            if len(disambig_stats_tmp) == 3:
+                disambig_stats = [int(x) for x in disambig_stats_tmp]
+    return disambig_stats
 
 
 # ## Run and parse read information from FastQC
@@ -259,7 +274,7 @@ def _parse_qualimap_metrics(report_file):
     """Extract useful metrics from the qualimap HTML report file.
     """
     out = {}
-    parsers = {"Globals" : _parse_qualimap_globals,
+    parsers = {"Globals": _parse_qualimap_globals,
                "Globals (inside of regions)": _parse_qualimap_globals_inregion,
                "Coverage": _parse_qualimap_coverage,
                "Coverage (inside of regions)": _parse_qualimap_coverage,
@@ -280,7 +295,7 @@ def _bed_to_bed6(orig_file, out_dir):
         with open(bed6_file, "w") as out_handle:
             for i, region in enumerate(list(x) for x in pybedtools.BedTool(orig_file)):
                 fillers = [str(i), "1.0", "+"]
-                full = region + fillers[:6-len(region)]
+                full = region + fillers[:6 - len(region)]
                 out_handle.write("\t".join(full) + "\n")
     return bed6_file
 
