@@ -206,10 +206,11 @@ def _run_fastqc(bam_file, data, fastqc_out):
     return stats
 
 def _run_complexity(bam_file, data, out_dir):
+    SAMPLE_SIZE = 1000000
     base, _ = os.path.splitext(os.path.basename(bam_file))
     utils.safe_makedir(out_dir)
     out_file = os.path.join(out_dir, base + ".pdf")
-    df = bcbio.rnaseq.qc.starts_by_depth(bam_file, data["config"])
+    df = bcbio.rnaseq.qc.starts_by_depth(bam_file, data["config"], SAMPLE_SIZE)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tmp_out_file:
             df.plot(x='reads', y='starts', title=bam_file + " complexity")
