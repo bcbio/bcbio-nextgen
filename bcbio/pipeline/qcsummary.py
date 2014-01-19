@@ -113,7 +113,8 @@ def _save_fields(sample):
             if utils.file_exists(sample["disambiguate"]["summary"]):
                 disambigStats = _parse_disambiguate(sample["disambiguate"]["summary"])
                 saved["summary"]["metrics"]["Disambiguated %s reads" % str(sample["genome_build"])] = disambigStats[0]
-                saved["summary"]["metrics"]["Disambiguated %s reads" % str(sample["algorithm"]["disambiguate"][0])] = disambigStats[1]
+                disambigGenome = sample["config"]["algorithm"]["disambiguate"][0] if isinstance(sample["config"]["algorithm"]["disambiguate"],(list,tuple)) else sample["config"]["algorithm"]["disambiguate"]
+                saved["summary"]["metrics"]["Disambiguated %s reads" % disambigGenome] = disambigStats[1]
                 saved["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return saved
 
