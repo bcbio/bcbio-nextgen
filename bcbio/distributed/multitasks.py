@@ -73,6 +73,7 @@ postprocess_variants.metadata = {"resources": ["gatk-vqsr", "gatk", "snpEff"]}
 @utils.map_wrap
 def pipeline_summary(*args):
     return qcsummary.pipeline_summary(*args)
+pipeline_summary.metadata = {"resources": ["gatk", "picard", "rnaseqc"]}
 
 @utils.map_wrap
 def generate_transcript_counts(*args):

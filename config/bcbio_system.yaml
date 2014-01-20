@@ -52,6 +52,7 @@ resources:
     dir: /usr/local/share/java/bcbio_variation
   rnaseqc:
     dir: /usr/local/share/java/RNA-SeQC
+    jvm_opts: ["-Xms750m", "-Xmx20g"]
   mutect:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/local/share/java/mutect
