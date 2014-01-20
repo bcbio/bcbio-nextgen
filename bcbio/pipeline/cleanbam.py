@@ -16,21 +16,15 @@ def picard_prep(in_bam, names, ref_file, dirs, config):
     - ReorderSam to reorder file to reference
     - AddOrReplaceReadGroups to add read group information and coordinate sort
     - PrintReads to filters to remove problem records:
-      - filterMBQ to remove reads with mismatching bases and base qualities
+    - filterMBQ to remove reads with mismatching bases and base qualities
     """
     runner = broad.runner_from_config(config)
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "bamclean", names["sample"]))
     reorder_bam = os.path.join(work_dir, "%s-reorder.bam" %
                                os.path.splitext(os.path.basename(in_bam))[0])
     reorder_bam = runner.run_fn("picard_reorder", in_bam, ref_file, reorder_bam)
-    rg_bam = _fix_rgs_and_sort(reorder_bam, names, ref_file, runner)
+    rg_bam = runner.run_fn("picard_fix_rgs", reorder_bam, names)
     return _filter_bad_reads(rg_bam, ref_file, runner, config)
-
-def _fix_rgs_and_sort(in_bam, names, ref_file, runner):
-    """Fix input read groups if missing and coordinate sort file.
-    """
-    good_rg_bam = runner.run_fn("picard_fix_rgs", in_bam, names)
-    return runner.run_fn("picard_sort", good_rg_bam, "coordinate")
 
 def _filter_bad_reads(in_bam, ref_file, runner, config):
     """Use GATK filter to remove problem reads which choke GATK and Picard.
