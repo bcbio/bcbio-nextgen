@@ -114,7 +114,7 @@ def _maybe_add_alignment(algorithm, sample, out):
                     "ext": "ready"})
         if file_exists(sample["work_bam"] + ".bai"):
             out.append({"path": sample["work_bam"] + ".bai",
-                        "type": "bai",
+                        "type": "bam.bai",
                         "ext": "ready"})
     return out
 
