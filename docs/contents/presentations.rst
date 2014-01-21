@@ -31,6 +31,10 @@ Mt Sinai: Strategies for accelerating the genomic sequencing pipeline
 - `Mt Sinai workshop slides`_
 - `Mt Sinai workshop website`_
 
+Non-conference talks
+--------------------
+
+- `Novartis slides`_ (21 January 2014)
 
 Abstract
 ~~~~~~~~
@@ -126,3 +130,4 @@ Links from the presentation
 .. _Coverage assessment: https://github.com/chapmanb/bcbio.coverage
 .. _Mt Sinai workshop website: http://www.hpcwire.com/event/strategies-accelerating-genomic-sequencing-pipeline/
 .. _Mt Sinai workshop slides: https://github.com/chapmanb/bcbb/raw/master/talks/mtsinai2013_bcbio_nextgen/chapman_mtsinai_bcbio.pdf
+.. _Novartis slides: https://github.com/chapmanb/bcbb/raw/master/talks/novartis2014_bcbio_nextgen/chapman_bcbio.pdf
