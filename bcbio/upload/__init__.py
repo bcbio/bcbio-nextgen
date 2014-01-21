@@ -175,5 +175,7 @@ def _get_files_project(sample, upload_config):
 
     if "combined_counts" in sample:
         out.append({"path": sample["combined_counts"]})
+    if "annotated_combined_counts" in sample:
+        out.append({"path": sample["annotated_combined_counts"]})
 
     return _add_meta(out, config=upload_config)
