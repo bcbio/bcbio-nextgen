@@ -7,6 +7,7 @@ import sys
 import HTSeq
 import itertools
 import pandas as pd
+import mygene
 
 from bcbio.utils import (which, file_exists, get_in, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
@@ -277,6 +278,9 @@ def htseq_count(data):
     return out_file
 
 def combine_count_files(files, out_file=None):
+    """
+    combine a set of count files into a single combined file
+    """
     for f in files:
         assert file_exists(f), "%s does not exist or is empty."
         assert is_countfile(f), "%s does not seem to be a count file."
@@ -299,4 +303,29 @@ def combine_count_files(files, out_file=None):
                                                   names=[col_names[i]]))
 
     df.to_csv(out_file, sep="\t", index_label="id")
+    return out_file
+
+def annotate_combined_count_file(count_file, organism, out_file=None):
+    SUPPORTED_ORGANISMS = ["mouse", "human", "rat"]
+    if organism not in SUPPORTED_ORGANISMS:
+        return None
+
+    if not out_file:
+        out_dir = os.path.join(os.path.dirname(count_file))
+        out_file = os.path.join(out_dir, "annotated_combined.counts")
+
+    if file_exists(out_file):
+        return out_file
+
+    df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0)
+
+    mg = mygene.MyGeneInfo()
+    out = mg.querymany(df.index.tolist(), scopes='ensembl.gene',
+                       fields='symbol', organism=organism, returnall=True)['out']
+
+    df2 = pd.DataFrame({'symbol': [x.get('symbol', '') for x in out]},
+                       index=[x['query'] for x in out])
+
+    df3 = df.join(df2)
+    df3.to_csv(out_file, sep="\t", index_label="id")
     return out_file

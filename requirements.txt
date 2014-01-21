@@ -21,3 +21,4 @@ PyYAML>=3.10
 sh>=1.07
 tornado>=3.1.0
 bcbio-nextgen==0.7.6
+mygene>=2.1.0
