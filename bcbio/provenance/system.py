@@ -12,6 +12,7 @@ import socket
 import subprocess
 
 import yaml
+from xml.etree import ElementTree as ET
 
 from bcbio import utils
 from bcbio.log import logger
@@ -40,7 +41,8 @@ def _get_machine_info(parallel, run_parallel, sys_config):
         # dictionary as switch statement; can add new scheduler implementation functions as (lowercase) keys
         sched_info_dict = {
                             "slurm": _slurm_info,
-                            "torque": _torque_info
+                            "torque": _torque_info,
+                            "sge": _sge_info
                           }
         try:
             return sched_info_dict[parallel["scheduler"].lower()](parallel["queue"])
@@ -94,7 +96,7 @@ def _torque_queue_nodes(queue):
     initial names of nodes used in pbsnodes.
     """
     qstat_out = subprocess.check_output(["qstat", "-Qf", queue])
-    hosts = []
+    hosts = []  
     in_hosts = False
     for line in qstat_out.split("\n"):
         if line.strip().startswith("acl_hosts = "):
@@ -107,6 +109,63 @@ def _torque_queue_nodes(queue):
                 hosts.extend(line.strip().split(","))
     return tuple([h.split(".")[0].strip() for h in hosts if h.strip()])
 
+def _sge_info(queue):
+    """Returns machine information for an sge job scheduler.
+    """
+    qhost_out = subprocess.check_output(["qhost", "-q", "-xml"])
+    qstat_out = subprocess.check_output(["qstat", "-f", "-xml", "-q", queue])
+    slot_info = _sge_get_slots(qstat_out)
+    mem_info = _sge_get_mem(qhost_out, queue)
+    machine_keys = slot_info.keys()
+    #num_cpus_vec = [slot_info[x]["slots_total"] for x in machine_keys]
+    #mem_vec = [mem_info[x]["mem_total"] for x in machine_keys]
+    mem_per_slot = [mem_info[x]["mem_total"] / float(slot_info[x]["slots_total"]) for x in machine_keys]
+    min_ratio_index = mem_per_slot.index(min(mem_per_slot))
+    mem_info[machine_keys[min_ratio_index]]["mem_total"]
+    return [{"cores": slot_info[machine_keys[min_ratio_index]]["slots_total"], 
+             "memory": mem_info[machine_keys[min_ratio_index]]["mem_total"],
+             "name": "sge_machine"}]
+
+def _sge_get_slots(xmlstring):
+    """ Get slot information from qstat
+    """
+    rootxml = ET.fromstring(xmlstring)
+    my_machine_dict = {}
+    for queue_list in rootxml.iter("Queue-List"):
+        # find all hosts supporting queues
+        my_hostname = queue_list.find("name").text.rsplit("@")[-1]
+        my_slots = queue_list.find("slots_total").text
+        my_machine_dict[my_hostname]={}
+        my_machine_dict[my_hostname]["slots_total"]=int(my_slots)
+    return my_machine_dict
+
+def _sge_get_mem(xmlstring, queue_name):
+    """ Get memory information from qhost
+    """
+    rootxml = ET.fromstring(xmlstring)
+    my_machine_dict = {}
+    # on some machines rootxml.tag looks like "{...}qhost" where the "{...}" gets prepended to all attributes
+    rootTag=rootxml.tag.rstrip("qhost")
+    for hosts in rootxml.findall(rootTag+'host'):
+        # find all hosts supporting queues
+        for queues in hosts.findall(rootTag+'queue'):
+            # if the user specified queue matches that in the xml:
+            if(queue_name in queues.attrib['name']):
+                my_machine_dict[hosts.attrib['name']] = {}
+                # values from xml for number of processors and mem_total on each machine
+                for hostvalues in hosts.findall(rootTag+'hostvalue'):
+                    if('mem_total'==hostvalues.attrib['name']):
+                        if hostvalues.text.lower().endswith('g'):
+                            multip = 1
+                        elif hostvalues.text.lower().endswith('m'):
+                            multip = 1/float(1024)
+                        elif hostvalues.text.lower().endswith('t'):
+                            multip = 1024
+                        else:
+                            raise Exception("Unrecognized suffix in mem_tot from SGE")
+                        my_machine_dict[hosts.attrib['name']]['mem_total']=float(hostvalues.text[:-1])*float(multip)
+    return my_machine_dict
+    
 def _combine_machine_info(xs):
     if len(xs) == 1:
         return xs[0]
