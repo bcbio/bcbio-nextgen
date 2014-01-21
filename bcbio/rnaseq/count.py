@@ -8,15 +8,13 @@ import HTSeq
 import itertools
 import pandas as pd
 
-from bcbio.utils import (which, file_exists, get_in, safe_makedir)
+from bcbio.utils import (file_exists, get_in)
 from bcbio.distributed.transaction import file_transaction
-from bcbio.provenance import do
 from bcbio.log import logger
 from bcbio import bam
 
 
 def _get_files(data):
-#    in_file = _get_sam_file(data)
     in_file = bam.sort(data["work_bam"], data["config"], order="queryname")
     gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
     work_dir = data["dirs"].get("work", "work")
@@ -36,14 +34,6 @@ def is_countfile(in_file):
     except ValueError:
         return False
     return True
-
-
-def _get_sam_file(data):
-    in_file = data["work_bam"]
-    config = data["config"]
-    sorted = bam.sort(in_file, config, "queryname")
-    sam = bam.bam_to_sam(sorted, config)
-    return sam
 
 
 def invert_strand(iv):
@@ -247,16 +237,20 @@ def htseq_count(data):
                 empty += 1
 
             if i % 100000 == 0:
-                sys.stderr.write("%d sam %s processed.\n" % ( i, "lines " if not pe_mode else "line pairs"))
+                sys.stderr.write("%d sam %s processed.\n" %
+                                 ( i, "lines " if not pe_mode else "line pairs"))
 
     except:
         if not pe_mode:
-            sys.stderr.write("Error occured in %s.\n" % read_seq.get_line_number_string())
+            sys.stderr.write("Error occured in %s.\n"
+                             % read_seq.get_line_number_string())
         else:
-            sys.stderr.write("Error occured in %s.\n" % read_seq_pe_file.get_line_number_string() )
+            sys.stderr.write("Error occured in %s.\n"
+                             % read_seq_pe_file.get_line_number_string() )
         raise
 
-    sys.stderr.write("%d sam %s processed.\n" % (i, "lines " if not pe_mode else "line pairs"))
+    sys.stderr.write("%d sam %s processed.\n" %
+                     (i, "lines " if not pe_mode else "line pairs"))
 
     with file_transaction(out_file) as tmp_out_file:
         with open(tmp_out_file, "w") as out_handle:
@@ -295,7 +289,8 @@ def combine_count_files(files, out_file=None):
             df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
                                           names=[col_names[0]])
         else:
-            df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
+            df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0,
+                                                  header=None,
                                                   names=[col_names[i]]))
 
     df.to_csv(out_file, sep="\t", index_label="id")
