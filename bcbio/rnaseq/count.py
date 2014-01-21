@@ -64,6 +64,18 @@ def _get_stranded_flag(config):
 def _get_strandedness(config):
     return get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
 
+def _get_gene_id_attribute_flag(config):
+    gene_id_attribute_flags = {"gene_id": "gene_id",
+                   "gene_name": "gene_name",
+                   "transcript_id": "transcript_id"}
+    gene_id_attribute = _get_gene_id_attribute(config)
+    assert gene_id_attribute in gene_id_attribute_flags, ("%s is not a valid id attribute value. "
+                                     "Valid values are 'gene_id', 'gene_name', "
+                                     "and 'transcript_id'")
+    return gene_id_attribute_flags.get(gene_id_attribute,"gene_id")
+
+def _get_gene_id_attribute(config):
+    return get_in(config, ("algorithm", "gene_id_attribute"), "gene_id").lower()
 
 def htseq_count(data):
     """ adapted from Simon Anders htseq-count.py script
@@ -74,7 +86,7 @@ def htseq_count(data):
     stranded = _get_stranded_flag(data["config"])
     overlap_mode = "union"
     feature_type = "exon"
-    id_attribute = "gene_id"
+    id_attribute = _get_gene_id_attribute_flag(data["config"])
     minaqual = 0
 
 

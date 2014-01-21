@@ -9,6 +9,7 @@ details:
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
+      gene_id_attribute: gene_name
     description: Test1
     genome_build: mm9
     lane: 1
