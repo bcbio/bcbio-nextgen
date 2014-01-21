@@ -24,7 +24,8 @@ from bcbio.server import main as server_main
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.genotype import combine_multiple_callers
 from bcbio.variation import coverage, ensemble, population, validate
-from bcbio.rnaseq.count import combine_count_files
+from bcbio.rnaseq.count import (combine_count_files,
+                                annotate_combined_count_file)
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              numcores=None, paralleltype=None, queue=None, scheduler=None,
@@ -402,8 +403,12 @@ class RnaseqPipeline(AbstractPipeline):
         samples = rnaseq.estimate_expression(samples, run_parallel)
         #samples = rnaseq.detect_fusion(samples, run_parallel)
         combined = combine_count_files([x[0].get("count_file") for x in samples])
+        organism = utils.get_in(samples[0][0], ('genome_resources', 'aliases',
+                                                'ensembl'), None)
+        annotated = annotate_combined_count_file(combined, organism)
         for x in samples:
             x[0]["combined_counts"] = combined
+            x[0]["annotated_combined_counts"] = annotated
 
         samples = qcsummary.generate_parallel(samples, run_parallel)
         #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
