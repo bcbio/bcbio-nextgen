@@ -30,6 +30,7 @@ import os
 import sys
 
 from bcbio import install, workflow
+from bcbio.distributed import runfn
 from bcbio.pipeline.main import run_main, parse_cl_args
 from bcbio.server import main as server_main
 
@@ -42,6 +43,8 @@ if __name__ == "__main__":
         install.upgrade_bcbio(kwargs["args"])
     elif "server" in kwargs and kwargs["server"]:
         server_main.start(kwargs["args"])
+    elif "runfn" in kwargs and kwargs["runfn"]:
+        runfn.process(kwargs["args"])
     else:
         if kwargs.get("workflow"):
             setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])

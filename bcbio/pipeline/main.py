@@ -12,6 +12,7 @@ import tempfile
 
 from bcbio import install, log, structural, utils, upload
 from bcbio.bam import callable
+from bcbio.distributed import runfn
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
@@ -147,7 +148,8 @@ def parse_cl_args(in_args):
     Returns the main config file and set of kwargs.
     """
     sub_cmds = {"upgrade": install.add_subparser,
-                "server": server_main.add_subparser}
+                "server": server_main.add_subparser,
+                "runfn": runfn.add_subparser}
     parser = argparse.ArgumentParser(
         description="Best-practice pipelines for fully automated high throughput sequencing analysis.")
     sub_cmd = None
