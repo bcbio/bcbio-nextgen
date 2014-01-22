@@ -74,7 +74,7 @@ def get_cmd(cmd_name, datadir, config):
         snpeff_jar = config_utils.get_jar("snpEff",
                                           config_utils.get_program("snpeff", config, "dir"))
         config_file = "%s.config" % os.path.splitext(snpeff_jar)[0]
-        cmd = "java -jar {snpeff_jar} {cmd_name} -c {config_file} -dataDir {datadir}"
+        cmd = "java {memory} -jar {snpeff_jar} {cmd_name} -c {config_file} -dataDir {datadir}"
     return cmd.format(**locals())
 
 def _run_snpeff(snp_in, se_interval, out_format, data):
