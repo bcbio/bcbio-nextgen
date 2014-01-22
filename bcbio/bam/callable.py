@@ -15,9 +15,12 @@ import operator
 import os
 import shutil
 
-import pybedtools
+import numpy
+try:
+    import pybedtools
+except ImportError:
+    pybedtools = None
 import pysam
-from py_descriptive_statistics import Enum as Stats
 
 from bcbio import bam, broad, utils
 from bcbio.log import logger
@@ -243,14 +246,13 @@ def _analysis_block_stats(regions):
     def descriptive_stats(xs):
         if len(xs) < 2:
             return xs
-        calc = Stats(xs)
         parts = ["min: %s" % min(xs),
-                 "5%%: %s" % calc.percentile(5),
-                 "25%%: %s" % calc.percentile(25),
-                 "median: %s" % calc.percentile(50),
-                 "75%%: %s" % calc.percentile(75),
-                 "95%%: %s" % calc.percentile(95),
-                 "99%%: %s" % calc.percentile(99),
+                 "5%%: %s" % numpy.percentile(xs, 5),
+                 "25%%: %s" % numpy.percentile(xs, 25),
+                 "median: %s" % numpy.percentile(xs, 50),
+                 "75%%: %s" % numpy.percentile(xs, 75),
+                 "95%%: %s" % numpy.percentile(xs, 95),
+                 "99%%: %s" % numpy.percentile(xs, 99),
                  "max: %s" % max(xs)]
         return "\n".join(["  " + x for x in parts])
     logger.info("Identified %s parallel analysis blocks\n" % len(region_sizes) +

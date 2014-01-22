@@ -5,7 +5,6 @@ import shutil
 import subprocess
 
 import lxml.html
-import pybedtools
 import yaml
 from datetime import datetime
 
@@ -291,6 +290,7 @@ def _parse_qualimap_metrics(report_file):
 def _bed_to_bed6(orig_file, out_dir):
     """Convert bed to required bed6 inputs.
     """
+    import pybedtools
     bed6_file = os.path.join(out_dir, "%s-bed6%s" % os.path.splitext(os.path.basename(orig_file)))
     if not utils.file_exists(bed6_file):
         with open(bed6_file, "w") as out_handle:

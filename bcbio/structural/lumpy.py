@@ -8,7 +8,6 @@ import os
 import sys
 import random
 
-import pybedtools
 import pysam
 import yaml
 
@@ -42,6 +41,7 @@ def _random_region(region_bed):
 
     Uses a consistent seed to ensure same results for identical sets of callable regions.
     """
+    import pybedtools
     random.seed(42)
     regions = [tuple(r) for r in pybedtools.BedTool(region_bed)]
     while True:

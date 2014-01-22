@@ -4,7 +4,6 @@ import os
 import shutil
 from contextlib import closing
 
-import pybedtools
 import pysam
 
 from bcbio import bam, broad
@@ -162,6 +161,7 @@ def has_aligned_reads(align_bam, region=None):
     region can be a chromosome string ("chr22"),
     a tuple region (("chr22", 1, 100)) or a file of regions.
     """
+    import pybedtools
     if region is not None:
         if isinstance(region, basestring) and os.path.isfile(region):
             regions = [tuple(r) for r in pybedtools.BedTool(region)]

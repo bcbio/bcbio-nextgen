@@ -2,14 +2,18 @@
 
 http://tophat.cbcb.umd.edu
 """
-import sh
 import os
 import shutil
 from contextlib import closing
 import glob
 
-from py_descriptive_statistics import Enum as Stats
+import numpy
 import pysam
+
+try:
+    import sh
+except ImportError:
+    sh = None
 
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
@@ -230,8 +234,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
             if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize) - 2 * read.rlen)
     if dists:
-        dist_stats = Stats(dists)
-        return int(round(dist_stats.mean())), int(round(dist_stats.standard_deviation()))
+        return int(round(numpy.mean(dists))), int(round(numpy.std(dists)))
     else:
         return None, None
 

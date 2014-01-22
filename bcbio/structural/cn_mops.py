@@ -7,7 +7,6 @@ import os
 import shutil
 import subprocess
 
-import pybedtools
 import pysam
 
 from bcbio import bam, install, utils
@@ -60,6 +59,7 @@ def _combine_out_files(chr_files, base_bam, work_dir):
 def _prep_sample_cnvs(cnv_file, data):
     """Convert a multiple sample CNV file into a single BED file for a sample.
     """
+    import pybedtools
     sample_name = data["name"][-1]
     sample_file = os.path.join(os.path.dirname(cnv_file), "%s-cnv.bed" % sample_name)
     if not utils.file_exists(sample_file):

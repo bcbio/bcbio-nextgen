@@ -11,8 +11,6 @@ from bcbio import utils
 from bcbio.pipeline import config_utils, version
 from bcbio.log import logger
 
-import HTSeq
-
 _cl_progs = [{"cmd": "bamtofastq", "args": "--version", "stdout_flag": "This is biobambam version"},
              {"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
              {"cmd": "bcftools", "stdout_flag": "Version:"},
@@ -160,6 +158,7 @@ def _get_versions(config):
     """Retrieve details on all programs available on the system.
     """
     brew_vs = _get_brew_versions()
+    import HTSeq
     out = [{"program": "bcbio-nextgen",
             "version": ("%s-%s" % (version.__version__, version.__git_revision__)
                         if version.__git_revision__ else version.__version__)},
