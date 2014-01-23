@@ -138,7 +138,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "validate_regions", "validate_genome_build",
                       "clinical_reporting", "nomap_split_size",
                       "nomap_split_targets", "ensemble",
-                      "disambiguate", "strandedness", "fusion_mode"])
+                      "disambiguate", "strandedness", "fusion_mode", "min_read_length"])
 
 def _check_algorithm_keys(item):
     """Check for unexpected keys in the algorithm section.
