@@ -10,7 +10,7 @@ import pysam
 from bcbio import utils, broad
 from bcbio.log import logger
 from bcbio.bam import callable, ref
-from bcbio.bam.trim import brun_trim_fastq, trim_read_through
+from bcbio.bam.trim import trim_read_through
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
@@ -69,21 +69,10 @@ def trim_lane(item):
         return [[item]]
 
     # swap the default to None if trim_reads gets deprecated
-
-    if trim_reads == "low_quality" or trim_reads == "true":
-        logger.info("Trimming low quality ends from %s."
-                    % (", ".join(to_trim)))
-        out_files = brun_trim_fastq(to_trim, dirs, config)
-
     if trim_reads == "read_through":
         logger.info("Trimming low quality ends and read through adapter "
                     "sequence from %s." % (", ".join(to_trim)))
         out_files = trim_read_through(to_trim, dirs, config)
-
-    else:
-        logger.info("Trimming low quality ends from %s."
-                    % (", ".join(to_trim)))
-        out_files = brun_trim_fastq(to_trim, dirs, config)
     item["files"] = out_files
     return [[item]]
 
