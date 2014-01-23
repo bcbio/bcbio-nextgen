@@ -20,31 +20,6 @@ SUPPORTED_ADAPTERS = {
     "polya": ["AAAAAAAAAAAAA"],
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
-def brun_trim_fastq(fastq_files, dirs, config):
-    """Trim FASTQ files, removing low quality B-runs.
-
-    This removes stretches of low quality sequence from read ends. Illumina
-    quality assessment generates these stretches. Removing them can help reduce
-    false positive rates for variant calling.
-
-    http://genomebiology.com/2011/12/11/R112
-
-    Does simple trimming of problem ends and removes read pairs where
-    any of the trimmed read sizes falls below the allowable size.
-    """
-    qual_format = config["algorithm"].get("quality_format", "").lower()
-    min_length = int(config["algorithm"].get("min_read_length", 20))
-    to_trim = "B" if qual_format == "illumina" else "#"
-    with _work_handles(fastq_files, dirs, "-qtrim.txt") as (in_handles, out_handles, out_fnames):
-        if len(out_handles) == len(fastq_files):
-            for next_reads in _trim_by_read(in_handles, to_trim, min_length):
-                for fname, (name, seq, qual) in next_reads.iteritems():
-                    out_handles[fname].write("@%s\n%s\n+\n%s\n" % (name, seq, qual))
-        out_files = [out_fnames[x] for x in fastq_files]
-        for inf, outf in zip(fastq_files, out_files):
-            _save_diskspace(inf, outf, config)
-        return out_files
-
 def trim_read_through(fastq_files, dirs, lane_config):
     """
     for small insert sizes, the read length can be longer than the insert
