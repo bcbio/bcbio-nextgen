@@ -38,8 +38,6 @@ else:
                'scripts/nextgen_analysis_server.py',
                'scripts/solexa_qseq_to_fastq.py']
 
-print install_requires
-
 write_version_py()
 setup(name="bcbio-nextgen",
       version=version,

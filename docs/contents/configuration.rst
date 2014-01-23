@@ -233,8 +233,10 @@ Alignment
   disambiguation and continue with reads confidently aligned to hg19.
 -  ``trim_reads`` Can be set to trim low quality ends or to also trim off,
     in conjunction with the ``adapters`` field a set of adapter sequences or
-    poly-A tails that could appear on the ends of reads:
-    [low_quality, read_through, False]
+    poly-A tails that could appear on the ends of reads. Only used in RNA-seq
+    pipelines, not variant calling. [False, read_through]
+- ``min_read_length`` Minimum read length to maintain when
+  ``read_through`` trimming set in ``trim_reads``. Defaults to 20.
 -  ``adapters`` If trimming adapter read through, trim a set of stock
    adapter sequences. Allows specification of multiple items in a list,
    for example [truseq, polya] will trim both TruSeq adapter sequences
