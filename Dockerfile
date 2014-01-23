@@ -51,5 +51,9 @@ RUN mkdir -p /mnt/biodata && \
     chmod a+rwx /usr/local/share/bcbio-nextgen/config/*.yaml && \
     chmod a+rwx /usr/local/share/bcbio-nextgen/gemini-config.yaml
 
+# Ensure permissions are set for update in place by arbitrary users
+RUN find /usr/local -perm /u+x -execdir chmod a+x {} \;
+RUN find /usr/local -perm /u+w -execdir chmod a+w {} \;
+
 EXPOSE 8085
 ENTRYPOINT ["/usr/local/bin/bcbio_nextgen.py", "server", "--port", "8085", "--biodata_dir", "/mnt/biodata"]

@@ -304,10 +304,10 @@ def add_install_defaults(args):
     with open(install_config) as in_handle:
         default_args = yaml.load(in_handle)
     if default_args.get("tooldist") and args.tooldist == "minimal":
-        args.tooldist = default_args["tooldist"]
+        args.tooldist = str(default_args["tooldist"])
     if args.tools and args.tooldir is None:
         if "tooldir" in default_args:
-            args.tooldir = default_args["tooldir"]
+            args.tooldir = str(default_args["tooldir"])
         else:
             raise ValueError("Default tool directory not yet saved in config defaults. "
                              "Specify the '--tooldir=/path/to/tools' to upgrade tools. "
@@ -317,7 +317,7 @@ def add_install_defaults(args):
         for x in default_args.get(attr, []):
             new_val = getattr(args, attr)
             if x not in getattr(args, attr):
-                new_val.append(x)
+                new_val.append(str(x))
             setattr(args, attr, new_val)
     if "sudo" in default_args and not args.sudo is False:
         args.sudo = default_args["sudo"]
