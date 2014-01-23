@@ -40,6 +40,13 @@ These are roughly ordered by current priority and we welcome contributors.
 [cfc]: http://bioinfo-out.curie.fr/projects/freec/
 [vs2]: http://varscan.sourceforge.net/copy-number-calling.html
 
+- Document and expand [Ensemble calling][ensemble] functionality with work on
+  speed ups and parallelization. Integrate development work on
+  [bcbio.variation.recall] using recalling with local realignment.
+
+[ensemble]: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+[bcbio.variation.recall]: https://github.com/chapmanb/bcbio.variation.recall
+
 - Explore options for accumulating and displaying summary information from
   multiple runs. Prioritize options which allow accumulation across multiple
   analysis machines and already handle query and visualization.
