@@ -1,10 +1,7 @@
 """Next-gen alignments with BWA (http://bio-bwa.sourceforge.net/)
 """
-import contextlib
-import gzip
 import os
-
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
+import subprocess
 
 from bcbio.pipeline import config_utils
 from bcbio import utils
@@ -49,25 +46,26 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
     return out_file
 
-def can_pipe(fastq_file):
+def can_pipe(fastq_file, data):
     """bwa-mem handle longer (> 70bp) reads with improved piping.
-    Default to no piping if more than half the first 500 reads are small.
+    Randomly samples 5000 reads from the first two million.
+    Default to no piping if more than 75% of the sampled reads are small.
     """
     min_size = 70
-    thresh = 0.5
-    tocheck = 500
+    thresh = 0.75
+    head_count = 8000000
+    tocheck = 5000
+    seqtk = config_utils.get_program("seqtk", data["config"])
+    gzip_cmd = "zcat {fastq_file}" if fastq_file.endswith(".gz") else "cat {fastq_file}"
+    cmd = (gzip_cmd + " | head -n {head_count} | "
+           "{seqtk} sample -s42 - {tocheck} | "
+           "awk '{{if(NR%4==2) print length($1)}}' | sort | uniq -c")
+    count_out = subprocess.check_output(cmd.format(**locals()), shell=True,
+                                        executable="/bin/bash")
     shorter = 0
-    if fastq_file.endswith(".gz"):
-        handle = gzip.open(fastq_file, "rb")
-    else:
-        handle = open(fastq_file)
-    with contextlib.closing(handle) as in_handle:
-        fqit = FastqGeneralIterator(in_handle)
-        for i, (_, seq, _) in enumerate(fqit):
-            if len(seq) < min_size:
-                shorter += 1
-            if i > tocheck:
-                break
+    for count, size in (l.strip().split() for l in count_out.strip().split("\n")):
+        if int(size) < min_size:
+            shorter += int(count)
     return (float(shorter) / float(tocheck)) <= thresh
 
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
@@ -75,6 +73,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    qual_format = data["config"]["algorithm"].get("quality_format", "").lower()
     if data.get("align_split"):
         final_file = out_file
         out_file, data = alignprep.setup_combine(final_file, data)
@@ -83,6 +82,10 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
             pair_file = alignprep.split_namedpipe_cl(pair_file, data)
     else:
         final_file = None
+        if qual_format == "illumina":
+            fastq_file = alignprep.fastq_convert_pipe_cl(fastq_file, data)
+            if pair_file:
+                pair_file = alignprep.fastq_convert_pipe_cl(pair_file, data)
     samtools = config_utils.get_program("samtools", data["config"])
     bwa = config_utils.get_program("bwa", data["config"])
     resources = config_utils.get_resources("samtools", data["config"])
@@ -92,28 +95,32 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
                                          3, "decrease")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
-        with utils.curdir_tmpdir() as work_dir:
-            with file_transaction(out_file) as tx_out_file:
-                tx_out_prefix = os.path.splitext(tx_out_file)[0]
-                cmd = ("{bwa} mem -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} "
-                       "{fastq_file} {pair_file} "
-                       "| {samtools} view -b -S -u - "
-                       "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                cmd = cmd.format(**locals())
-                do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
-                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
+        # If we cannot do piping, use older bwa aln approach
+        if not can_pipe(fastq_file, data):
+            return align(fastq_file, pair_file, ref_file, names, align_dir, data)
+        else:
+            with utils.curdir_tmpdir() as work_dir:
+                with file_transaction(out_file) as tx_out_file:
+                    tx_out_prefix = os.path.splitext(tx_out_file)[0]
+                    cmd = ("{bwa} mem -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} "
+                           "{fastq_file} {pair_file} "
+                           "| {samtools} view -b -S -u - "
+                           "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
+                    cmd = cmd.format(**locals())
+                    do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
+                           [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
     data["work_bam"] = out_file
     return data
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
-          names=None):
+def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform a BWA alignment, generating a SAM file.
     """
+    assert not data.get("align_split"), "Do not handle split alignments with non-piped bwa"
     config = data["config"]
-    sai1_file = os.path.join(align_dir, "%s_1.sai" % out_base)
-    sai2_file = (os.path.join(align_dir, "%s_2.sai" % out_base)
+    sai1_file = os.path.join(align_dir, "%s_1.sai" % names["lane"])
+    sai2_file = (os.path.join(align_dir, "%s_2.sai" % names["lane"])
                  if pair_file else None)
-    sam_file = os.path.join(align_dir, "%s.sam" % out_base)
+    sam_file = os.path.join(align_dir, "%s.sam" % names["lane"])
     if not utils.file_exists(sam_file):
         if not utils.file_exists(sai1_file):
             with file_transaction(sai1_file) as tx_sai1_file:

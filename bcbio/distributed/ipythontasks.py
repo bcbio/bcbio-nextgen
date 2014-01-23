@@ -5,10 +5,12 @@ import contextlib
 from IPython.parallel import require
 
 from bcbio.distributed import ipython
-from bcbio.ngsalign import alignprep
-from bcbio.pipeline import sample, lane, qcsummary, shared, variation
+from bcbio.ngsalign import alignprep, tophat, star
+from bcbio.pipeline import (disambiguate, sample, lane, qcsummary, shared,
+                            variation, rnaseq)
 from bcbio.provenance import system
 from bcbio import structural
+from bcbio import chipseq
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
@@ -30,16 +32,18 @@ def _setup_logging(args):
     handler = setup_local_logging(config, config.get("parallel", {}))
     try:
         yield None
-        if hasattr(handler, "close"):
-            handler.close()
     except:
         logger.exception("Unexpected error")
         raise
+    finally:
+        if hasattr(handler, "close"):
+            handler.close()
 
 @require(lane)
 def process_lane(*args):
     with _setup_logging(args):
         return apply(lane.process_lane, *args)
+process_lane.metadata = {"resources": ["picard"]}
 
 @require(lane)
 def trim_lane(*args):
@@ -50,7 +54,11 @@ def trim_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie2", "tophat2"]}
+process_alignment.metadata = {"resources": ["star", "novoalign", "bwa", "bowtie2",
+                                            "tophat2", "bowtie", "tophat"],
+                              "ensure": {"tophat": tophat.job_requirements,
+                                         "tophat2": tophat.job_requirements,
+                                         "star": star.job_requirements}}
 
 @require(alignprep)
 def prep_align_inputs(*args):
@@ -104,7 +112,7 @@ def split_variants_by_sample(*args):
 def piped_bamprep(*args):
     with _setup_logging(args):
         return apply(bamprep.piped_bamprep, *args)
-piped_bamprep.metadata = {"resources": ["gatk"]}
+piped_bamprep.metadata = {"resources": ["gatk", "picard"]}
 
 @require(variation)
 def postprocess_variants(*args):
@@ -116,11 +124,19 @@ postprocess_variants.metadata = {"resources": ["gatk-vqsr", "gatk", "snpEff"]}
 def pipeline_summary(*args):
     with _setup_logging(args):
         return apply(qcsummary.pipeline_summary, *args)
+pipeline_summary.metadata = {"resources": ["gatk", "picard", "rnaseqc"]}
 
-@require(sample)
+@require(rnaseq)
 def generate_transcript_counts(*args):
     with _setup_logging(args):
-        return apply(sample.generate_transcript_counts, *args)
+        return apply(rnaseq.generate_transcript_counts, *args)
+generate_transcript_counts.metadata = {"resources": ["samtools", "gatk"]}
+
+@require(rnaseq)
+def run_cufflinks(*args):
+    with _setup_logging(args):
+        return apply(rnaseq.run_cufflinks, *args)
+run_cufflinks.metadata = {"resources": ["cufflinks"]}
 
 @require(sample)
 def generate_bigwig(*args):
@@ -147,6 +163,11 @@ def combine_variant_files(*args):
 def concat_variant_files(*args):
     with _setup_logging(args):
         return apply(vcfutils.concat_variant_files, *args)
+
+@require(vcfutils)
+def merge_variant_files(*args):
+    with _setup_logging(args):
+        return apply(vcfutils.merge_variant_files, *args)
 
 @require(population)
 def prep_gemini_db(*args):
@@ -175,6 +196,15 @@ def coverage_summary(*args):
         return apply(coverage.summary, *args)
 coverage_summary.metadata = {"resources": ["bcbio_coverage"]}
 
+@require(disambiguate)
+def run_disambiguate(*args):
+    with _setup_logging(args):
+        return apply(disambiguate.run, *args)
+
 @require(system)
 def machine_info(*args):
     return system.machine_info()
+
+@require(chipseq)
+def clean_chipseq_alignment(*args):
+    return chipseq.machine_info()

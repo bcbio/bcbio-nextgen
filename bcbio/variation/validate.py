@@ -45,8 +45,7 @@ def compare_to_rm(data):
         else:
             vrn_file = os.path.abspath(data["vrn_file"])
         rm_file = normalize_input_path(data["config"]["algorithm"]["validate"], data)
-        rm_interval_file = normalize_input_path(data["config"]["algorithm"].get("validate_regions"),
-                                               data)
+        rm_interval_file = normalize_input_path(data["config"]["algorithm"].get("validate_regions"), data)
         rm_genome = data["config"]["algorithm"].get("validate_genome_build")
         sample = data["name"][-1].replace(" ", "_")
         caller = data["config"]["algorithm"].get("variantcaller")
@@ -103,6 +102,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
         rm_genome = data["sam_ref"]
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
                 "preclean": True, "prep": True, "remove-refcalls": True}
+    a_intervals = get_analysis_intervals(data)
     if rm_interval_file:
         ref_call["intervals"] = rm_interval_file
     eval_call = {"file": vrn_file, "name": "eval", "remove-refcalls": True}
@@ -110,15 +110,16 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
         eval_call["ref"] = eval_genome
         eval_call["preclean"] = True
         eval_call["prep"] = True
+    if a_intervals and eval_genome:
+        eval_call["intervals"] = os.path.abspath(a_intervals)
     exp = {"sample": data["name"][-1],
            "ref": rm_genome,
            "approach": "grade",
            "calls": [ref_call, eval_call]}
-    if data.get("callable_bam"):
+    if a_intervals and not eval_genome:
+        exp["intervals"] = os.path.abspath(a_intervals)
+    if data.get("callable_bam") and not eval_genome:
         exp["align"] = data["callable_bam"]
-    intervals = get_analysis_intervals(data)
-    if intervals:
-        exp["intervals"] = os.path.abspath(intervals)
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
 
@@ -143,8 +144,8 @@ def _flatten_grading(stats):
     for vtype in vtypes:
         yield vtype, cat, stats[cat][cat].get(vtype, 0)
     for vtype in vtypes:
-        for vclass, vitems in stats["discordant"].get(vtype, {}).iteritems():
-            for vreason, val in vitems.iteritems():
+        for vclass, vitems in sorted(stats["discordant"].get(vtype, {}).iteritems()):
+            for vreason, val in sorted(vitems.iteritems()):
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
             yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
 

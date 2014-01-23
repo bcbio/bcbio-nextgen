@@ -1,0 +1,15 @@
+# Template for human RNA-seq using Illumina prepared samples
+---
+details:
+  - analysis: chip-seq
+    genome_build: GRCh37
+    # include a lane (run group ID) for each sample
+    # lane: 1
+    # to do multi-sample variant calling, assign samples the same metadata / batch
+    # metadata:
+    #   batch: your-arbitrary-batch-name
+    algorithm:
+      aligner: bowtie2
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq]

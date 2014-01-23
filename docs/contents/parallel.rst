@@ -75,12 +75,12 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 ``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for
 instance.
 
-``-r pename=your_pe`` supports specifying the `SGE parallel
-environment`_ to use for submitting multicore jobs. Since this setup
+Specify the `SGE parallel environment`_ to use for submitting multicore jobs
+with ``-r pename=your_pe``. Since this setup
 is system specific it is hard to write general code for find a
 suitable environment. Specifically, when there are multiple usable
 parallel environments, it will select the first one which may not be
-correct. Manually specifying it with a ``pename=` flag to resources
+correct. Manually specifying it with a ``pename=`` flag to resources
 will ensure correct selection of the right environment.
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html

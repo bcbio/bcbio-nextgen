@@ -18,10 +18,11 @@ import urllib2
 
 remotes = {"requirements":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
+           "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
-           "http://repo.continuum.io/miniconda/Miniconda-2.0.3-%s-x86_64.sh"}
+           "http://repo.continuum.io/miniconda/Miniconda-2.2.2-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_dependencies()
@@ -33,7 +34,7 @@ def main(args, sys_argv):
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
     print("Installing data and third party dependencies")
-    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args))
+    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args, bcbio))
     system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
     print("Finished: bcbio-nextgen, tools and data installed")
@@ -43,17 +44,30 @@ def main(args, sys_argv):
     print(" Ready to use system configuration at:\n  %s" % system_config)
     print(" Edit configuration file as needed to match your machine or cluster")
 
-def _clean_args(sys_argv, args):
+def _clean_args(sys_argv, args, bcbio):
     """Remove data directory from arguments to pass to upgrade function.
     """
-    return [x for x in sys_argv if
-            x.startswith("--") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
+    base = [x for x in sys_argv if
+            x.startswith("-") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
+    # specification of data argument changes in install (default data) to upgrade (default nodata)
+    # in bcbio_nextgen 0.7.5 and beyond
+    process = subprocess.Popen([bcbio["bcbio_nextgen.py"], "--version"], stdout=subprocess.PIPE)
+    version, _ = process.communicate()
+    if version.strip() > "0.7.4":
+        if "--nodata" in base:
+            base.remove("--nodata")
+        else:
+            base.append("--data")
+    return base
 
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
     """
     subprocess.check_call([anaconda["pip"], "install", "fabric"])
     subprocess.check_call([anaconda["pip"], "install", "-r", remotes["requirements"]])
+    if args.upgrade == "development":
+        subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
+                               "git+%s#egg=bcbio-nextgen" % remotes["gitrepo"]])
     out = {}
     for script in ["bcbio_nextgen.py"]:
         ve_script = os.path.join(anaconda["dir"], "bin", script)
@@ -71,8 +85,8 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
 
 def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
-            "nose", "numpy", "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests",
-            "tornado", "statsmodels"]
+            "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
+            "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
     # Remove until can get 13.1.0 working cleanly on CentOS
     #extra_pkgs = ["zeromq", "pyzmq"]
@@ -102,8 +116,8 @@ def install_anaconda_python(args, remotes):
         url = remotes["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", url])
-        subprocess.check_call("echo -e '\nyes\n%s\nno\n' | bash %s" %
-                              (anaconda_dir, os.path.basename(url)), shell=True)
+        subprocess.check_call("bash %s -b -p %s" %
+                              (os.path.basename(url), anaconda_dir), shell=True)
     return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}
@@ -192,15 +206,19 @@ if __name__ == "__main__":
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"])
+                        action="append", default=["GRCh37"],
+                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa"])
+                        action="append", default=["bwa"],
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
+    parser.add_argument("-u", "--upgrade", help="Code version to install",
+                        choices=["stable", "development"], default="stable")
     parser.add_argument("--tooldist",
                         help="Type of tool distribution to install. Defaults to a minimum install.",
                         default="minimal",

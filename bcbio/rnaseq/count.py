@@ -4,22 +4,30 @@ count number of reads mapping to features of transcripts
 """
 import os
 import sys
-import HTSeq
 import itertools
 
-from bcbio.utils import (which, file_exists, get_in, safe_makedir)
+# soft imports
+try:
+    import HTSeq
+    import pandas as pd
+    import mygene
+except ImportError:
+    HTSeq, pd, mygene = None, None, None
+
+from bcbio.utils import (file_exists, get_in)
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline.alignment import sam_to_querysort_sam
-from bcbio.provenance import do
+from bcbio.log import logger
+from bcbio import bam
 
 
 def _get_files(data):
-    in_file = _get_sam_file(data)
+    in_file = bam.sort(data["work_bam"], data["config"], order="queryname")
     gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
     work_dir = data["dirs"].get("work", "work")
     out_dir = os.path.join(work_dir, "htseq-count")
     out_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
-    return in_file, gtf_file, out_file
+    stats_file = os.path.join(out_dir, data['rgnames']['sample']) + ".stats"
+    return in_file, gtf_file, out_file, stats_file
 
 
 def is_countfile(in_file):
@@ -32,12 +40,6 @@ def is_countfile(in_file):
     except ValueError:
         return False
     return True
-
-
-def _get_sam_file(data):
-    in_file = data["work_bam"]
-    config = data["config"]
-    return sam_to_querysort_sam(in_file, config)
 
 
 def invert_strand(iv):
@@ -54,21 +56,39 @@ def invert_strand(iv):
 class UnknownChrom(Exception):
     pass
 
+def _get_stranded_flag(config):
+    strand_flag = {"unstranded": "no",
+                   "firststrand": "reverse",
+                   "secondstrand": "yes"}
+    stranded = _get_strandedness(config)
+    assert stranded in strand_flag, ("%s is not a valid strandedness value. "
+                                     "Valid values are 'firststrand', 'secondstrand', "
+                                     "and 'unstranded")
+    return strand_flag[stranded]
+
+def _get_strandedness(config):
+    return get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
+
 
 def htseq_count(data):
     """ adapted from Simon Anders htseq-count.py script
     http://www-huber.embl.de/users/anders/HTSeq/doc/count.html
     """
 
-    sam_filename, gff_filename, out_file = _get_files(data)
-    stranded = "no"
+    sam_filename, gff_filename, out_file, stats_file = _get_files(data)
+    stranded = _get_stranded_flag(data["config"])
     overlap_mode = "union"
     feature_type = "exon"
     id_attribute = "gene_id"
     minaqual = 0
 
+
     if file_exists(out_file):
         return out_file
+
+    logger.info("Counting reads mapping to exons in %s using %s as the "
+                    "annotation and strandedness as %s." % (os.path.basename(sam_filename),
+                    os.path.basename(gff_filename), _get_strandedness(data["config"])))
 
     features = HTSeq.GenomicArrayOfSets("auto", stranded != "no")
     counts = {}
@@ -108,7 +128,10 @@ def htseq_count(data):
                          % feature_type)
 
     try:
-        read_seq = HTSeq.SAM_Reader(sam_filename)
+        if bam.is_sam(sam_filename):
+            read_seq = HTSeq.SAM_Reader(sam_filename)
+        elif bam.is_bam(sam_filename):
+            read_seq = HTSeq.BAM_Reader(sam_filename)
         first_read = iter(read_seq).next()
         pe_mode = first_read.paired_end
     except:
@@ -220,25 +243,89 @@ def htseq_count(data):
                 empty += 1
 
             if i % 100000 == 0:
-                sys.stderr.write("%d sam %s processed.\n" % ( i, "lines " if not pe_mode else "line pairs"))
+                sys.stderr.write("%d sam %s processed.\n" %
+                                 ( i, "lines " if not pe_mode else "line pairs"))
 
     except:
         if not pe_mode:
-            sys.stderr.write("Error occured in %s.\n" % read_seq.get_line_number_string())
+            sys.stderr.write("Error occured in %s.\n"
+                             % read_seq.get_line_number_string())
         else:
-            sys.stderr.write("Error occured in %s.\n" % read_seq_pe_file.get_line_number_string() )
+            sys.stderr.write("Error occured in %s.\n"
+                             % read_seq_pe_file.get_line_number_string() )
         raise
 
-    sys.stderr.write("%d sam %s processed.\n" % (i, "lines " if not pe_mode else "line pairs"))
+    sys.stderr.write("%d sam %s processed.\n" %
+                     (i, "lines " if not pe_mode else "line pairs"))
 
     with file_transaction(out_file) as tmp_out_file:
         with open(tmp_out_file, "w") as out_handle:
+            on_feature = 0
             for fn in sorted(counts.keys()):
+                on_feature += counts[fn]
                 out_handle.write("%s\t%d\n" % (fn, counts[fn]))
+
+    with file_transaction(stats_file) as tmp_stats_file:
+        with open(tmp_stats_file, "w") as out_handle:
+            out_handle.write("on_feature\t%d\n" % on_feature)
             out_handle.write("no_feature\t%d\n" % empty)
             out_handle.write("ambiguous\t%d\n" % ambiguous)
             out_handle.write("too_low_aQual\t%d\n" % lowqual)
             out_handle.write("not_aligned\t%d\n" % notaligned)
             out_handle.write("alignment_not_unique\t%d\n" % nonunique)
 
+    return out_file
+
+def combine_count_files(files, out_file=None):
+    """
+    combine a set of count files into a single combined file
+    """
+    for f in files:
+        assert file_exists(f), "%s does not exist or is empty."
+        assert is_countfile(f), "%s does not seem to be a count file."
+    col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
+    if not out_file:
+        out_dir = os.path.join(os.path.dirname(files[0]))
+        out_file = os.path.join(out_dir, "combined.counts")
+
+    if file_exists(out_file):
+        return out_file
+
+    df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
+                                  names=[col_names[0]])
+    for i, f in enumerate(files):
+        if i == 0:
+            df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
+                                          names=[col_names[0]])
+        else:
+            df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0,
+                                                  header=None,
+                                                  names=[col_names[i]]))
+
+    df.to_csv(out_file, sep="\t", index_label="id")
+    return out_file
+
+def annotate_combined_count_file(count_file, organism, out_file=None):
+    SUPPORTED_ORGANISMS = ["mouse", "human", "rat"]
+    if organism not in SUPPORTED_ORGANISMS:
+        return None
+
+    if not out_file:
+        out_dir = os.path.join(os.path.dirname(count_file))
+        out_file = os.path.join(out_dir, "annotated_combined.counts")
+
+    if file_exists(out_file):
+        return out_file
+
+    df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0)
+
+    mg = mygene.MyGeneInfo()
+    out = mg.querymany(df.index.tolist(), scopes='ensembl.gene',
+                       fields='symbol', organism=organism, returnall=True)['out']
+
+    df2 = pd.DataFrame({'symbol': [x.get('symbol', '') for x in out]},
+                       index=[x['query'] for x in out])
+
+    df3 = df.join(df2)
+    df3.to_csv(out_file, sep="\t", index_label="id")
     return out_file

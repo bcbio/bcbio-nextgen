@@ -1,11 +1,11 @@
-version: 2
+version: 4
 
 aliases:
-  snpeff: NCBIM37
+  snpeff: NCBIM37.66
   ensembl: mouse
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
-    tophat: ../rnaseq/tophat/mm9_transcriptome
+    tophat: ../rnaseq/tophat/mm9_transcriptome.ver

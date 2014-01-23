@@ -1,7 +1,7 @@
-version: 3
+version: 5
 
 aliases:
-  snpeff: GRCm38
+  snpeff: GRCm38.74
   ensembl: mouse
 
 variation:
@@ -11,4 +11,4 @@ rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
-    tophat: ../rnaseq/tophat/mm10_transcriptome
+    tophat: ../rnaseq/tophat/mm10_transcriptome.ver

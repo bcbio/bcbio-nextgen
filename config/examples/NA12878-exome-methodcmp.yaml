@@ -10,6 +10,8 @@ upload:
 details:
   - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-1
+    metadata:
+      sex: female
     analysis: variant2
     genome_build: GRCh37
     algorithm:
@@ -19,8 +21,8 @@ details:
       quality_format: Standard
       coverage_interval: regional
       merge_bamprep: true
-      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
-      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
+      validate: ../input/NISTIntegratedCalls_14datasets_131103_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.18_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
+      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.18_2mindatasets_5minYesNoRatio.bed
       variant_regions: ../input/NGv3.bed
       ensemble:
         format-filters: [DP < 4]
@@ -32,6 +34,8 @@ details:
         trusted-pct: 0.65
   - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-2
+    metadata:
+      sex: female
     analysis: variant2
     genome_build: GRCh37
     algorithm:
@@ -44,8 +48,8 @@ details:
       quality_format: Standard
       coverage_interval: regional
       merge_bamprep: false
-      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
-      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
+      validate: ../input/NISTIntegratedCalls_14datasets_131103_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.18_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
+      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.18_2mindatasets_5minYesNoRatio.bed
       variant_regions: ../input/NGv3.bed
       ensemble:
         format-filters: [DP < 4]

@@ -4,10 +4,10 @@ import os
 import shutil
 from contextlib import closing
 
-import pybedtools
 import pysam
 
 from bcbio import bam, broad
+from bcbio.bam import ref
 from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
@@ -131,8 +131,7 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     runner = broad.runner_from_config(config)
     bam.index(align_bam, config)
     runner.run_fn("picard_index_ref", ref_file)
-    if not os.path.exists("%s.fai" % ref_file):
-        pysam.faidx(ref_file)
+    ref.fasta_idx(ref_file)
     if region:
         align_bam = subset_bam_by_region(align_bam, region, out_file)
         bam.index(align_bam, config)
@@ -162,6 +161,7 @@ def has_aligned_reads(align_bam, region=None):
     region can be a chromosome string ("chr22"),
     a tuple region (("chr22", 1, 100)) or a file of regions.
     """
+    import pybedtools
     if region is not None:
         if isinstance(region, basestring) and os.path.isfile(region):
             regions = [tuple(r) for r in pybedtools.BedTool(region)]

@@ -72,7 +72,8 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "UnifiedGenotyper",
                            "-o", tx_out_file,
-                           "-ploidy", str(ploidy.get_ploidy(items, region)),
+                           "-ploidy", (str(ploidy.get_ploidy(items, region))
+                                       if broad_runner.gatk_type() == "restricted" else "2"),
                            "--genotype_likelihoods_model", "BOTH"]
                 broad_runner.run_gatk(params)
     return out_file
@@ -271,7 +272,7 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
             with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
                 params.extend(["--recal_file", tx_recal,
                                "--tranches_file", tx_tranches])
-                if LooseVersion(broad_runner.get_gatk_version()) >= LooseVersion("2.7"):
+                if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("2.7"):
                     params.extend(["--numBadVariants", "3000"])
                 try:
                     broad_runner.new_resources("gatk-vqsr")

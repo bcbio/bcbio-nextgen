@@ -5,8 +5,9 @@ import shutil
 import subprocess
 
 import lxml.html
-import pybedtools
 import yaml
+from datetime import datetime
+
 # allow graceful during upgrades
 try:
     import matplotlib
@@ -56,6 +57,8 @@ def _run_qc_tools(bam_file, data):
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
         to_run.append(("complexity", _run_complexity))
+    elif data["analysis"].lower() == "chip-seq":
+        to_run.append(["bamtools", _run_bamtools_stats])
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
@@ -65,18 +68,82 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
+    metrics["Quality format"] = utils.get_in(data,
+                                             ("config", "algorithm",
+                                              "quality_format"),
+                                             "standard").lower()
     return {"qc": qc_dir, "metrics": metrics}
 
 # ## Generate project level QC summary for quickly assessing large projects
 
 def write_project_summary(samples):
     """Write project summary information on the provided samples.
+    write out dirs, genome resources,
+
     """
-    out_file = os.path.join(samples[0][0]["dirs"]["work"], "project-summary.yaml")
+    work_dir = samples[0][0]["dirs"]["work"]
+    out_file = os.path.join(work_dir, "project-summary.yaml")
+    upload_dir = (os.path.join(work_dir, samples[0][0]["upload"]["dir"])
+                  if "dir" in samples[0][0]["upload"] else "")
+    test_run = samples[0][0].get("test_run", False)
+    date = str(datetime.now())
+    prev_samples = _other_pipeline_samples(out_file, samples)
     with open(out_file, "w") as out_handle:
-        yaml.dump([data[0]["summary"]["metrics"] for data in samples if "summary" in data[0]],
-                  out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.dump({"date": date}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        if test_run:
+            yaml.dump({"test_run": True}, out_handle, default_flow_style=False,
+                      allow_unicode=False)
+        yaml.dump({"upload": upload_dir}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        yaml.dump({"bcbio_system": samples[0][0]["config"].get("bcbio_system", "")}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
+        yaml.dump({"samples": prev_samples + [_save_fields(sample[0]) for sample in samples]}, out_handle,
+                  default_flow_style=False, allow_unicode=False)
     return out_file
+
+def _other_pipeline_samples(summary_file, cur_samples):
+    """Retrieve samples produced previously by another pipeline in the summary output.
+    """
+    cur_descriptions = set([s[0]["description"] for s in cur_samples])
+    out = []
+    if os.path.exists(summary_file):
+        with open(summary_file) as in_handle:
+            for s in yaml.load(in_handle).get("samples", []):
+                if s["description"] not in cur_descriptions:
+                    out.append(s)
+    return out
+
+def _save_fields(sample):
+    to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata",
+               "description"]
+    saved = {k: sample[k] for k in to_save if k in sample}
+    if "summary" in sample:
+        saved["summary"] = {"metrics": sample["summary"]["metrics"]}
+        # check if disambiguation was run
+        if "disambiguate" in sample:
+            if utils.file_exists(sample["disambiguate"]["summary"]):
+                disambigStats = _parse_disambiguate(sample["disambiguate"]["summary"])
+                saved["summary"]["metrics"]["Disambiguated %s reads" % str(sample["genome_build"])] = disambigStats[0]
+                disambigGenome = (sample["config"]["algorithm"]["disambiguate"][0]
+                                  if isinstance(sample["config"]["algorithm"]["disambiguate"], (list, tuple))
+                                  else sample["config"]["algorithm"]["disambiguate"])
+                saved["summary"]["metrics"]["Disambiguated %s reads" % disambigGenome] = disambigStats[1]
+                saved["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
+    return saved
+
+def _parse_disambiguate(disambiguatestatsfilename):
+    """Parse disambiguation stats from given file.
+    """
+    disambig_stats = [-1, -1, -1]
+    with open(disambiguatestatsfilename, "r") as in_handle:
+        header = in_handle.readline().strip().split("\t")
+        if header == ['sample', 'unique species A pairs', 'unique species B pairs', 'ambiguous pairs']:
+            disambig_stats_tmp = in_handle.readline().strip().split("\t")[1:]
+            if len(disambig_stats_tmp) == 3:
+                disambig_stats = [int(x) for x in disambig_stats_tmp]
+    return disambig_stats
+
 
 # ## Run and parse read information from FastQC
 
@@ -85,7 +152,8 @@ class FastQCParser:
         self._dir = base_dir
 
     def get_fastqc_summary(self):
-        ignore = set(["Filtered Sequences", "Filename", "File type"])
+        ignore = set(["Total Sequences", "Filtered Sequences",
+                      "Filename", "File type", "Encoding"])
         stats = {}
         for stat_line in self._fastqc_data_section("Basic Statistics")[1:]:
             k, v = stat_line.split("\t")[:2]
@@ -110,27 +178,38 @@ class FastQCParser:
 
 def _run_fastqc(bam_file, data, fastqc_out):
     """Run fastqc, generating report in specified directory and parsing metrics.
+
+    Downsamples to 10 million reads to avoid excessive processing times with large
+    files.
     """
     if not os.path.exists(os.path.join(fastqc_out, "fastqc_report.html")):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
+        ds_bam = bam.downsample(bam_file, data, 1e7)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
-        cl = [config_utils.get_program("fastqc", data["config"]),
-              "-t", str(num_cores), "-o", work_dir, "-f", "bam", bam_file]
-        do.run(cl, "FastQC: %s" % data["name"][-1])
-        fastqc_outdir = os.path.join(work_dir, "%s_fastqc" % os.path.splitext(os.path.basename(bam_file))[0])
-        if os.path.exists("%s.zip" % fastqc_outdir):
-            os.remove("%s.zip" % fastqc_outdir)
-        shutil.move(fastqc_outdir, fastqc_out)
+        bam_file = ds_bam if ds_bam else bam_file
+        with utils.curdir_tmpdir(work_dir) as tx_tmp_dir:
+            with utils.chdir(tx_tmp_dir):
+                cl = [config_utils.get_program("fastqc", data["config"]),
+                      "-t", str(num_cores), "-o", tx_tmp_dir, "-f", "bam", bam_file]
+                do.run(cl, "FastQC: %s" % data["name"][-1])
+                fastqc_outdir = os.path.join(tx_tmp_dir,
+                                             "%s_fastqc" % os.path.splitext(os.path.basename(bam_file))[0])
+                if os.path.exists("%s.zip" % fastqc_outdir):
+                    os.remove("%s.zip" % fastqc_outdir)
+                shutil.move(fastqc_outdir, fastqc_out)
+        if ds_bam and os.path.exists(ds_bam):
+            os.remove(ds_bam)
     parser = FastQCParser(fastqc_out)
     stats = parser.get_fastqc_summary()
     return stats
 
 def _run_complexity(bam_file, data, out_dir):
+    SAMPLE_SIZE = 1000000
     base, _ = os.path.splitext(os.path.basename(bam_file))
     utils.safe_makedir(out_dir)
     out_file = os.path.join(out_dir, base + ".pdf")
-    df = bcbio.rnaseq.qc.starts_by_depth(bam_file)
+    df = bcbio.rnaseq.qc.starts_by_depth(bam_file, data["config"], SAMPLE_SIZE)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tmp_out_file:
             df.plot(x='reads', y='starts', title=bam_file + " complexity")
@@ -195,7 +274,7 @@ def _parse_qualimap_metrics(report_file):
     """Extract useful metrics from the qualimap HTML report file.
     """
     out = {}
-    parsers = {"Globals" : _parse_qualimap_globals,
+    parsers = {"Globals": _parse_qualimap_globals,
                "Globals (inside of regions)": _parse_qualimap_globals_inregion,
                "Coverage": _parse_qualimap_coverage,
                "Coverage (inside of regions)": _parse_qualimap_coverage,
@@ -211,12 +290,13 @@ def _parse_qualimap_metrics(report_file):
 def _bed_to_bed6(orig_file, out_dir):
     """Convert bed to required bed6 inputs.
     """
+    import pybedtools
     bed6_file = os.path.join(out_dir, "%s-bed6%s" % os.path.splitext(os.path.basename(orig_file)))
     if not utils.file_exists(bed6_file):
         with open(bed6_file, "w") as out_handle:
             for i, region in enumerate(list(x) for x in pybedtools.BedTool(orig_file)):
                 fillers = [str(i), "1.0", "+"]
-                full = region + fillers[:6-len(region)]
+                full = region + fillers[:6 - len(region)]
                 out_handle.write("\t".join(full) + "\n")
     return bed6_file
 
@@ -247,7 +327,7 @@ def _run_qualimap(bam_file, data, out_dir):
 
 def _parse_bamtools_stats(stats_file):
     out = {}
-    want = set(["Mapped reads", "Duplicates", "Median insert size"])
+    want = set(["Total reads", "Mapped reads", "Duplicates", "Median insert size"])
     with open(stats_file) as in_handle:
         for line in in_handle:
             parts = line.split(":")

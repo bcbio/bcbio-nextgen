@@ -4,10 +4,8 @@ GATK and Picard based pipelines have specific requirements for
 chromosome order, run group information and other BAM formatting.
 This provides a pipeline to prepare and resort an input.
 """
-import contextlib
 import os
 
-import pysam
 
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
@@ -18,25 +16,15 @@ def picard_prep(in_bam, names, ref_file, dirs, config):
     - ReorderSam to reorder file to reference
     - AddOrReplaceReadGroups to add read group information and coordinate sort
     - PrintReads to filters to remove problem records:
-      - filterMBQ to remove reads with mismatching bases and base qualities
+    - filterMBQ to remove reads with mismatching bases and base qualities
     """
     runner = broad.runner_from_config(config)
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "bamclean", names["sample"]))
     reorder_bam = os.path.join(work_dir, "%s-reorder.bam" %
                                os.path.splitext(os.path.basename(in_bam))[0])
     reorder_bam = runner.run_fn("picard_reorder", in_bam, ref_file, reorder_bam)
-    rg_bam = _fix_rgs_and_sort(reorder_bam, names, ref_file, runner)
+    rg_bam = runner.run_fn("picard_fix_rgs", reorder_bam, names)
     return _filter_bad_reads(rg_bam, ref_file, runner, config)
-
-def _fix_rgs_and_sort(in_bam, names, ref_file, runner):
-    """Fix input read groups if missing and coordinate sort file.
-    """
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as in_pybam:
-        has_rgs = "RG" in in_pybam.header.keys()
-    if has_rgs:
-        return runner.run_fn("picard_sort", in_bam, "coordinate")
-    else:
-        return runner.run_fn("picard_fix_rgs", in_bam, names)
 
 def _filter_bad_reads(in_bam, ref_file, runner, config):
     """Use GATK filter to remove problem reads which choke GATK and Picard.

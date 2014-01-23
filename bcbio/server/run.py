@@ -1,11 +1,16 @@
 """Provide ability to run bcbio-nextgen workflows.
 """
-import os
 from functools import wraps
+import os
+import StringIO
 from threading import Thread
+import uuid
 
 import tornado.gen
 import tornado.web
+import yaml
+
+from bcbio import utils
 
 def run_async(func):
     """Run function in an asychronous background thread.
@@ -22,28 +27,61 @@ def run_async(func):
 @run_async
 def run_bcbio_nextgen(**kwargs):
     from bcbio.pipeline.main import run_main
-    callback = kwargs["callback"]
-    del kwargs["callback"]
-    print kwargs
-    callback(kwargs["work_dir"])
-    run_main(**kwargs)
+    callback = kwargs.pop("callback")
+    app = kwargs.pop("app")
+    run_id = str(uuid.uuid1())
+    app.runmonitor.set_status(run_id, "running")
+    callback(run_id)
+    try:
+        with utils.chdir(kwargs["work_dir"]):
+            run_main(**kwargs)
+    except:
+        app.runmonitor.set_status(run_id, "failed")
+        raise
+    else:
+        app.runmonitor.set_status(run_id, "finished")
+    finally:
+        print("Run ended: %s" % run_id)
 
 def get_handler(args):
     class RunHandler(tornado.web.RequestHandler):
         @tornado.web.asynchronous
         @tornado.gen.coroutine
         def get(self):
-            kwargs = {"work_dir": str(os.path.abspath(self.get_argument("work_dir"))),
-                      "config_file": args.config or "bcbio_system.yaml",
-                      "fc_dir": self.get_argument("fc_dir", None),
-                      "run_info_yaml": self.get_argument("run_config", None),
-                      "numcores": self.get_argument("numcores", None),
-                      "scheduler": self.get_argument("scheduler", None),
-                      "queue": self.get_argument("queue", None),
-                      "resources": self.get_argument("resources", ""),
-                      "timeout": int(self.get_argument("timeout", 15)),
-                      "retries": self.get_argument("retrieve", None)}
-            response = yield tornado.gen.Task(run_bcbio_nextgen, **kwargs)
-            self.write(response)
+            rargs = yaml.safe_load(StringIO.StringIO(str(self.get_argument("args", "{}"))))
+            system_config = args.config or "bcbio_system.yaml"
+            if "system_config" in rargs:
+                system_config = os.path.join(rargs["work_dir"], "web-system_config.yaml")
+                with open(system_config, "w") as out_handle:
+                    yaml.dump(rargs["system_config"], out_handle, default_flow_style=False, allow_unicode=False)
+            if "sample_config" in rargs:
+                sample_config = os.path.join(rargs["work_dir"], "web-sample_config.yaml")
+                with open(sample_config, "w") as out_handle:
+                    yaml.dump(rargs["sample_config"], out_handle, default_flow_style=False, allow_unicode=False)
+            else:
+                sample_config = rargs.get("run_config")
+            kwargs = {"work_dir": rargs["work_dir"],
+                      "config_file": system_config,
+                      "run_info_yaml": sample_config,
+                      "fc_dir": rargs.get("fc_dir"),
+                      "numcores": int(rargs.get("numcores", 1)),
+                      "scheduler": rargs.get("scheduler"),
+                      "queue": rargs.get("queue"),
+                      "resources": rargs.get("resources", ""),
+                      "timeout": int(rargs.get("timeout", 15)),
+                      "retries": rargs.get("retries"),
+                      "app": self.application}
+            run_id = yield tornado.gen.Task(run_bcbio_nextgen, **kwargs)
+            self.write(run_id)
             self.finish()
     return RunHandler
+
+class StatusHandler(tornado.web.RequestHandler):
+    def get(self):
+        run_id = self.get_argument("run_id", None)
+        if run_id is None:
+            status = "not-running"
+        else:
+            status = self.application.runmonitor.get_status(run_id)
+        self.write(status)
+        self.finish()

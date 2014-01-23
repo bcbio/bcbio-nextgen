@@ -22,6 +22,8 @@ def update_w_custom(config, lane_info):
                    "variant2": ["SNP calling", "variant", "variant2"]}
     config = copy.deepcopy(config)
     base_name = lane_info.get("analysis")
+    if "algorithm" not in config:
+        config["algorithm"] = {}
     for analysis_type in name_remaps.get(base_name, [base_name]):
         custom = config.get("custom_algorithms", {}).get(analysis_type)
         if custom:
@@ -40,14 +42,17 @@ def update_w_custom(config, lane_info):
 
 # ## Retrieval functions
 
-def load_system_config(config_file):
+def load_system_config(config_file, work_dir=None):
     """Load bcbio_system.yaml configuration file, handling standard defaults.
 
     Looks for configuration file in default location within
-    final base directory from a standard installation.
+    final base directory from a standard installation. Handles both standard
+    installs (galaxy/bcbio_system.yaml) and docker installs (config/bcbio_system.yaml).
     """
+    base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+    docker_configfile = os.path.join(base_dir, "config", "bcbio_system.yaml")
+    docker_config = load_config(docker_configfile) if os.path.exists(docker_configfile) else None
     if not os.path.exists(config_file):
-        base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
         test_config = os.path.join(base_dir, "galaxy", config_file)
         if os.path.exists(test_config):
             config_file = test_config
@@ -55,15 +60,51 @@ def load_system_config(config_file):
             raise ValueError("Could not find input system configuration file %s, "
                              "including inside standard directory %s" %
                              (config_file, os.path.join(base_dir, "galaxy")))
-    return load_config(config_file), config_file
+    config = load_config(config_file)
+    if docker_config:
+        assert work_dir is not None, "Need working directory to merge docker config"
+        config_file = os.path.join(work_dir, "%s-merged%s" % os.path.splitext(os.path.basename(config_file)))
+        config = _merge_system_configs(config, docker_config, config_file)
+    if "algorithm" not in config:
+        config["algorithm"] = {}
+    config["bcbio_system"] = config_file
+    return config, config_file
+
+def _merge_system_configs(host_config, container_config, out_file):
+    """Create a merged system configuration from external and internal specification.
+    """
+    out = copy.deepcopy(container_config)
+    for k, v in host_config.iteritems():
+        if k in set(["galaxy_config"]):
+            out[k] = v
+        elif k == "resources":
+            for pname, resources in v.iteritems():
+                for rname, rval in resources.iteritems():
+                    if rname in set(["cores", "jvm_opts", "memory"]):
+                        if pname not in out[k]:
+                            out[k][pname] = {}
+                        out[k][pname][rname] = rval
+    # Ensure final file is relocatable by mapping back to reference directory
+    if "bcbio_system" in out and ("galaxy_config" not in out or not os.path.isabs(out["galaxy_config"])):
+        out["galaxy_config"] = os.path.normpath(os.path.join(os.path.dirname(out["bcbio_system"]),
+                                                             os.pardir, "galaxy",
+                                                             "universe_wsgi.ini"))
+    with open(out_file, "w") as out_handle:
+        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+    return out
 
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
     """
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
-
     config = _expand_paths(config)
+    # lowercase resource names, the preferred way to specify, for back-compatibility
+    newr = {}
+    for k, v in config["resources"].iteritems():
+        if k.lower() != k:
+            newr[k.lower()] = v
+    config["resources"].update(newr)
     return config
 
 def _expand_paths(config):
@@ -156,6 +197,7 @@ def get_jar(base_name, dname):
     """Retrieve a jar in the provided directory
     """
     jars = glob.glob(os.path.join(expand_path(dname), "%s*.jar" % base_name))
+    
     if len(jars) == 1:
         return jars[0]
     elif len(jars) > 1:

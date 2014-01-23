@@ -5,6 +5,7 @@ import csv
 import os
 from random import shuffle
 from itertools import ifilter
+import shutil
 
 # Provide transition period to install via upgrade with conda
 try:
@@ -18,6 +19,7 @@ from bcbio import utils
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import safe_makedir, file_exists
+from bcbio.distributed.transaction import file_transaction
 
 
 class RNASeQCRunner(object):
@@ -63,23 +65,26 @@ def sample_summary(bam_file, data, out_dir):
     """
     metrics_file = os.path.join(out_dir, "metrics.tsv")
     if not file_exists(metrics_file):
-        config = data["config"]
-        ref_file = data["sam_ref"]
-        genome_dir = os.path.dirname(os.path.dirname(ref_file))
-        gtf_file = config_utils.get_transcript_gtf(genome_dir)
-        rna_file = config_utils.get_rRNA_sequence(genome_dir)
-        sample_file = os.path.join(safe_makedir(out_dir), "sample_file.txt")
-        _write_sample_id_file(data, bam_file, sample_file)
-        runner = rnaseqc_runner_from_config(config)
-        bam.index(bam_file, config)
-        single_end = bam.is_paired(bam_file)
-        runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
+        with file_transaction(out_dir) as tx_out_dir:
+            config = data["config"]
+            ref_file = data["sam_ref"]
+            genome_dir = os.path.dirname(os.path.dirname(ref_file))
+            gtf_file = config_utils.get_transcript_gtf(genome_dir)
+            rna_file = config_utils.get_rRNA_sequence(genome_dir)
+            sample_file = os.path.join(safe_makedir(tx_out_dir), "sample_file.txt")
+            _write_sample_id_file(data, bam_file, sample_file)
+            runner = rnaseqc_runner_from_config(config)
+            bam.index(bam_file, config)
+            single_end = not bam.is_paired(bam_file)
+            runner.run(sample_file, ref_file, rna_file, gtf_file, tx_out_dir, single_end)
+            # we don't need this large directory for just the report
+            shutil.rmtree(os.path.join(tx_out_dir, data["description"]))
     return _parse_rnaseqc_metrics(metrics_file, data["name"][-1])
 
 
 def _write_sample_id_file(data, bam_file, out_file):
     HEADER = "\t".join(["Sample ID", "Bam File", "Notes"]) + "\n"
-    sample_ids = ["\t".join([data["rgnames"]["pu"], bam_file, data["description"]])]
+    sample_ids = ["\t".join([data["description"], bam_file, data["description"]])]
     with open(out_file, "w") as out_handle:
         out_handle.write(HEADER)
         for sample_id in sample_ids:
@@ -93,7 +98,7 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
     """
     out = {}
     want = set(["Genes Detected", "Transcripts Detected",
-                "Mean Per Base Cov.", "Estimated Library Size", "Fragment Length Mean",
+                "Mean Per Base Cov.", "Fragment Length Mean",
                 "Exonic Rate", "Intergenic Rate", "Intronic Rate",
                 "Mapped", "Mapping Rate", "Duplication Rate of Mapped",
                 "rRNA", "rRNA rate"])
@@ -108,13 +113,13 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
     return out
 
 
-def starts_by_depth(bam_file, sample_size=10000000):
+def starts_by_depth(bam_file, config, sample_size=None):
     """
     Return a set of x, y points where x is the number of reads sequenced and
     y is the number of unique start sites identified
     If sample size < total reads in a file the file will be downsampled.
     """
-    BINSIZE_IN_READS = 100
+    binsize = (bam.count(bam_file, config) / 100) + 1
     seen_starts = set()
     counted = 0
     num_reads = []
@@ -125,12 +130,16 @@ def starts_by_depth(bam_file, sample_size=10000000):
         filtered = ifilter(lambda x: not x.is_unmapped, samfile)
         def read_parser(read):
             return ":".join([str(read.tid), str(read.pos)])
-        samples = utils.reservoir_sample(filtered, sample_size, read_parser)
+        # if no sample size is set, use the whole file
+        if not sample_size:
+            samples = map(read_parser, filtered)
+        else:
+            samples = utils.reservoir_sample(filtered, sample_size, read_parser)
         shuffle(samples)
         for read in samples:
             counted += 1
             buffer.append(read)
-            if counted % BINSIZE_IN_READS == 0:
+            if counted % binsize == 0:
                 seen_starts.update(buffer)
                 buffer = []
                 num_reads.append(counted)
@@ -142,18 +151,28 @@ def starts_by_depth(bam_file, sample_size=10000000):
 
 
 def estimate_library_complexity(df, algorithm="RNA-seq"):
+    """
+    estimate library complexity from the number of reads vs.
+    number of unique start sites. returns "NA" if there are
+    not enough data points to fit the line
+    """
     DEFAULT_CUTOFFS = {"RNA-seq": (0.25, 0.40)}
     cutoffs = DEFAULT_CUTOFFS[algorithm]
+    if len(df) < 5:
+        return {"unique_starts_per_read": 'nan',
+                "complexity": "NA"}
     model = sm.ols(formula="starts ~ reads", data=df)
     fitted = model.fit()
     slope = fitted.params["reads"]
-    print slope
     if slope <= cutoffs[0]:
         complexity = "LOW"
     elif slope <= cutoffs[1]:
         complexity = "MEDIUM"
     else:
         complexity = "HIGH"
-    d = {"unique_start_per_read": float(slope),
-         "complexity": complexity}
-    return d
+
+    # for now don't return the complexity flag
+    return {"Unique Starts Per Read": float(slope)}
+    # return {"unique_start_per_read": float(slope),
+    #         "complexity": complexity}
+

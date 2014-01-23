@@ -1,6 +1,14 @@
 Current development goals and outstanding tasks for bcbio-nextgen development.
 These are roughly ordered by current priority and we welcome contributors.
 
+- Improved deployment experience using [docker][docker] containers to provide a
+  fully isolated bcbio-nextgen installation. Requires re-working of installation
+  process to be a two step process: download docker + add external biological
+  data.  Also requires adjustment of the pipeline and distributed processing to
+  involve starting and using code isolated inside docker container.
+
+[docker]: http://www.docker.io/
+
 - Integrated structural variant analysis, including CNV prediction. Current
   targets are [lumpy][lumpy] and [cn.mops][cn.mops].
 
@@ -9,14 +17,21 @@ These are roughly ordered by current priority and we welcome contributors.
 
 - Improved support for cancer tumor/normal paired callers. Suggested callers
   include SomaticSniper ([#66][66], [#109][109]), LoFreq and others. A
-  comprehensive discussion is at [#112][112]. Requires improved framework for
-  evaluating callers and approaches for handling Ensemble calling with multiple
-  inputs ([#67][67]).
+  comprehensive discussion is at [#112][112]. FreeBayes supports tumor/normal
+  calling: see [this mailing list discussion][fb-somatic] for the suggested
+  parameters.  Requires improved framework for evaluating callers and approaches
+  for handling Ensemble calling with multiple inputs ([#67][67]).
 
 [66]: https://github.com/chapmanb/bcbio-nextgen/issues/66
 [67]: https://github.com/chapmanb/bcbio-nextgen/issues/67
 [109]: https://github.com/chapmanb/bcbio-nextgen/issues/109
 [112]: https://github.com/chapmanb/bcbio-nextgen/issues/112
+[fb-somatic]: https://groups.google.com/d/msg/freebayes/beLYRuHMkQE/RwFMniDmBYoJ
+
+- Improve analysis of coverage, especially in targeted sequencing
+  experiments. Plan to integrate with [chanjo].
+
+[chanjo]: https://github.com/robinandeer/chanjo
 
 - Once initial structural variation analysis and evaluation is in place,
   incorporate and evaluate additional CNV and structural variant callers. Some
@@ -32,8 +47,19 @@ These are roughly ordered by current priority and we welcome contributors.
 - Performance improvements and testing on Amazon EC2. Make use of high speed
   local ephemeral storage for temporary space.
 
+- Handle split inputs across multiple sequencing lanes, handling merging of
+  multiple fastq/BAM inputs and correctly maintaining lane information in BAM
+  read group headers.
+
 - Implement and evaluate GATK's ReducedReads for use in large scale variant
   calling projects ([#90][90]).
 
+- Test to see if [less strict quality trimming][quality] results in better RNA-seq DE results.
+
+- Evaluate RNA-seq fusion analysis callers and implement support for one if we can find one with
+  reliable results ([#210][210]).
+
+[210]: https://github.com/chapmanb/bcbio-nextgen/issues/210
+[quality]: http://biorxiv.org/content/early/2013/12/23/000422
 [90]: https://github.com/chapmanb/bcbio-nextgen/issues/90
 

@@ -11,9 +11,7 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
-from bcbio.rnaseq.cufflinks import assemble_transcripts
 from bcbio.pipeline import config_utils
-from bcbio.rnaseq import count
 
 # ## Merging
 
@@ -59,19 +57,6 @@ def delayed_bam_merge(data):
     return [[data]]
 
 # ## General processing
-
-def parallel_transcript_assemble(data):
-    """Finalize processing for a sample, potentially multiplexed.
-    """
-    if data["config"]["algorithm"].get("transcript_assemble", False):
-        data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
-                                               data["config"], data)
-    return [[data]]
-
-def generate_transcript_counts(data):
-    """Generate counts per transcript from an alignment"""
-    data["count_file"] = count.htseq_count(data)
-    return [[data]]
 
 def generate_bigwig(data):
     """Provide a BigWig coverage file of the sorted alignments.

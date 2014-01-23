@@ -56,11 +56,6 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
 
 # ## Fastq to BAM alignment
 
-def can_pipe(fastq_file):
-    """Novoalign support piping for all read lengths.
-    """
-    return True
-
 def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
     """
@@ -128,6 +123,7 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
           extra_args=None, names=None):
     """Align with novoalign.
     """
+    raise NotImplementedError("Prefer align_pipe approach now.")
     config = data["config"]
     rg_name = names.get("rg", None) if names else None
     out_file = os.path.join(align_dir, "{0}.sam".format(out_base))

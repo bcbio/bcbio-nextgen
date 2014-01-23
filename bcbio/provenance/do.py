@@ -4,16 +4,16 @@ import collections
 import contextlib
 import os
 import subprocess
+import time
 
 from bcbio import utils
 from bcbio.log import logger, logger_cl
 from bcbio.provenance import diagnostics
 
-def run(cmd, descr, data=None, checks=None, log_error=True):
+def run(cmd, descr, data=None, checks=None, region=None, log_error=True):
     """Run the provided command, logging details and checking for errors.
     """
-    if data:
-        descr = "{0} : {1}".format(descr, data["name"][-1])
+    descr = _descr_str(descr, data, region)
     logger.debug(descr)
     # TODO: Extract entity information from data input
     cmd_id = diagnostics.start_cmd(descr, data, cmd)
@@ -27,6 +27,44 @@ def run(cmd, descr, data=None, checks=None, log_error=True):
         raise
     finally:
         diagnostics.end_cmd(cmd_id)
+
+def run_memory_retry(cmd, descr, data=None, check=None, region=None):
+    """Run command, retrying when detecting fail due to memory errors.
+
+    This is useful for high throughput Java jobs which fail
+    intermittently due to an inability to get system resources.
+    """
+    max_runs = 5
+    num_runs = 0
+    while 1:
+        try:
+            run(cmd, descr, data, check, region=region, log_error=False)
+            break
+        except subprocess.CalledProcessError, msg:
+            if num_runs < max_runs and ("insufficient memory" in str(msg) or
+                                        "did not provide enough memory" in str(msg) or
+                                        "A fatal error has been detected" in str(msg) or
+                                        "java.lang.OutOfMemoryError" in str(msg) or
+                                        "Resource temporarily unavailable" in str(msg)):
+                logger.info("Retrying job. Memory or resource issue with run: %s"
+                            % _descr_str(descr, data, region))
+                time.sleep(30)
+                num_runs += 1
+            else:
+                logger.exception()
+                raise
+
+def _descr_str(descr, data, region):
+    """Add additional useful information from data to description string.
+    """
+    if data:
+        if "name" in data:
+            descr = "{0} : {1}".format(descr, data["name"][-1])
+        elif "work_bam" in data:
+            descr = "{0} : {1}".format(descr, os.path.basename(data["work_bam"]))
+    if region:
+        descr = "{0} : {1}".format(descr, region)
+    return descr
 
 def _find_bash():
     try:
@@ -58,11 +96,14 @@ def _do_run(cmd, checks):
     cmd, shell_arg, executable_arg = _normalize_cmd_args(cmd)
     s = subprocess.Popen(cmd, shell=shell_arg, executable=executable_arg,
                          stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
+                         stderr=subprocess.STDOUT, close_fds=True)
     debug_stdout = collections.deque(maxlen=100)
     with contextlib.closing(s.stdout) as stdout:
         while 1:
             line = stdout.readline()
+            if line:
+                debug_stdout.append(line)
+                logger.debug(line.rstrip())
             exitcode = s.poll()
             if exitcode is not None:
                 if exitcode is not None and exitcode != 0:
@@ -72,9 +113,6 @@ def _do_run(cmd, checks):
                     raise subprocess.CalledProcessError(exitcode, error_msg)
                 else:
                     break
-            if line:
-                debug_stdout.append(line)
-                logger.debug(line.rstrip())
     # Check for problems not identified by shell return codes
     if checks:
         for check in checks:

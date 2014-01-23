@@ -3,10 +3,11 @@
   Picard -- BAM manipulation and analysis library.
   GATK -- Next-generation sequence processing.
 """
+from contextlib import closing
 import copy
+from distutils.version import LooseVersion
 import os
 import subprocess
-from contextlib import closing
 
 from bcbio.broad import picardrun
 from bcbio.pipeline import config_utils
@@ -24,6 +25,7 @@ class BroadRunner:
         self._config = config
         self._gatk_version, self._picard_version, self._mutect_version = (
             None, None, None)
+        self._gatk_resources = resources
 
     def _set_default_versions(self, config):
         """Retrieve pre-computed version information for expensive to retrieve versions.
@@ -121,11 +123,13 @@ class BroadRunner:
                 if config["algorithm"].get("memory_adjust") is None:
                     config["algorithm"]["memory_adjust"] = {"direction": "increase",
                                                             "magnitude": int(cores) // 2}
-        if self.get_gatk_version() > "1.9":
+        if LooseVersion(self.gatk_major_version()) > LooseVersion("1.9"):
             if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
+        if "keyfile" in self._gatk_resources:
+            params = ["-et", "NO_ET", "-K", self._gatk_resources["keyfile"]] + params
         return ["java"] + config_utils.adjust_opts(self._jvm_opts, config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
 
@@ -141,7 +145,8 @@ class BroadRunner:
         return ["java"] + config_utils.adjust_opts(self._jvm_opts, config) + local_args + \
           ["-jar", gatk_jar] + [str(x) for x in params]
 
-    def run_gatk(self, params, tmp_dir=None, log_error=True):
+    def run_gatk(self, params, tmp_dir=None, log_error=True, memory_retry=False,
+                 data=None, region=None):
         with curdir_tmpdir() as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
@@ -149,7 +154,11 @@ class BroadRunner:
             atype_index = cl.index("-T") if cl.count("-T") > 0 \
                           else cl.index("--analysis_type")
             prog = cl[atype_index + 1]
-            do.run(cl, "GATK: {0}".format(prog), log_error=log_error)
+            if memory_retry:
+                do.run_memory_retry(cl, "GATK: {0}".format(prog), data, region=region)
+            else:
+                do.run(cl, "GATK: {0}".format(prog), data, region=region,
+                       log_error=log_error)
 
     def run_mutect(self, params, tmp_dir=None):
         with curdir_tmpdir() as local_tmp_dir:
@@ -199,21 +208,32 @@ class BroadRunner:
         Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,
         the latest 2.4+ restricted version of GATK.
         """
-        full_version = self.get_gatk_version()
-        # Working with a recent version if using nightlies
-        if full_version.startswith("nightly-"):
-            return "restricted"
-        try:
-            version, subversion, githash = full_version.split("-")
-            if version.startswith("v"):
-                version = version[1:]
-        # version was not properly implemented in earlier versions
-        except ValueError:
-            version = 2.3
-        if float(version) > 2.3:
+        if LooseVersion(self.gatk_major_version()) > LooseVersion("2.3"):
             return "restricted"
         else:
             return "lite"
+
+    def gatk_major_version(self):
+        """Retrieve the GATK major version, handling multiple GATK distributions.
+
+        Has special cases for GATK nightly builds, Appistry releases and
+        GATK prior to 2.3.
+        """
+        full_version = self.get_gatk_version()
+        # Working with a recent version if using nightlies
+        if full_version.startswith("nightly-"):
+            return "2.8"
+        parts = full_version.split("-")
+        if len(parts) == 4:
+            appistry_release, version, subversion, githash = parts
+        elif len(parts) == 3:
+            version, subversion, githash = parts
+        # version was not properly implemented in earlier GATKs
+        else:
+            version = "2.3"
+        if version.startswith("v"):
+            version = version[1:]
+        return version
 
     def _get_picard_cmd(self, command):
         """Retrieve the base Picard command, handling both shell scripts and directory of jars.
@@ -243,8 +263,11 @@ class BroadRunner:
                 try:
                     check_file = config_utils.get_jar(command, dir_check)
                     return check_file
-                except ValueError:
-                    pass
+                except ValueError, msg:
+                    if str(msg).find("multiple") > 0:
+                        raise
+                    else:
+                        pass
         raise ValueError("Could not find jar %s in %s:%s" % (command, self._picard_ref, self._gatk_dir))
 
 def _get_picard_ref(config):

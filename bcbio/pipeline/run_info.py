@@ -43,13 +43,13 @@ def organize(dirs, config, run_info_yaml):
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
-        item = _add_reference_resources(item)
+        item = add_reference_resources(item)
         out.append(item)
     return out
 
 # ## Genome reference information
 
-def _add_reference_resources(data):
+def add_reference_resources(data):
     """Add genome reference information to the item to process.
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
@@ -126,6 +126,20 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                     "----------------+-----------------+----------------"] +
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
+ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
+                      "trim_reads", "adapters", "custom_trim",
+                      "align_split_size", "quality_bin",
+                      "quality_format", "write_summary",
+                      "merge_bamprep", "coverage", "coverage_bigwig",
+                      "coverage_depth", "coverage_interval", "ploidy",
+                      "variantcaller", "variant_regions",
+                      "mark_duplicates", "svcaller", "recalibrate",
+                      "realign", "phasing", "validate",
+                      "validate_regions", "validate_genome_build",
+                      "clinical_reporting", "nomap_split_size",
+                      "nomap_split_targets", "ensemble",
+                      "disambiguate", "strandedness", "fusion_mode", "min_read_length"])
+
 def _check_algorithm_keys(item):
     """Check for unexpected keys in the algorithm section.
 
@@ -133,18 +147,7 @@ def _check_algorithm_keys(item):
     with typos in key names.
     """
     url = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
-    supported = set(["platform", "aligner", "bam_clean", "bam_sort", "trim_reads", "adapters",
-                     "custom_trim", "align_split_size", "quality_bin", "quality_format",
-                     "write_summary", "merge_bamprep", "coverage", "coverage_bigwig",
-                     "coverage_depth", "coverage_interval", "hybrid_target", "hybrid_bait",
-                     "ploidy",
-                     "variantcaller", "variant_regions", "mark_duplicates", "svcaller",
-                     "recalibrate", "realign",
-                     "phasing", "validate", "validate_regions", "validate_genome_build",
-                     "clinical_reporting",
-                     "nomap_split_size", "nomap_split_targets",
-                     "ensemble"])
-    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in supported]
+    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in ALGORITHM_KEYS]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
                          "See configuration documentation for supported options:\n%s\n"
@@ -200,8 +203,26 @@ def _normalize_files(item, fc_dir):
             fastq_dir = os.getcwd()
         files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
                  for x in files]
+        _sanity_check_files(item, files)
         item["files"] = files
     return item
+
+def _sanity_check_files(item, files):
+    """Ensure input files correspond with supported
+    """
+    msg = None
+    file_types = set([("bam" if x.endswith(".bam") else "fastq") for x in files if x])
+    if len(file_types) > 1:
+        msg = "Found multiple file types (BAM and fastq)"
+    file_type = file_types.pop()
+    if file_type == "bam":
+        if len(files) != 1:
+            msg = "Expect a single BAM file input as input"
+    elif file_type == "fastq":
+        if len(files) not in [1, 2]:
+            msg = "Expect either 1 (single end) or 2 (paired end) fastq inputs"
+    if msg:
+        raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.
@@ -218,23 +239,26 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     if isinstance(loaded, dict):
         global_config = copy.deepcopy(loaded)
         del global_config["details"]
-        if loaded.has_key("fc_name") and loaded.has_key("fc_date"):
+        if "fc_name" in loaded and "fc_date" in loaded:
             fc_name = loaded["fc_name"].replace(" ", "_")
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
         loaded = loaded["details"]
     run_details = []
     for i, item in enumerate(loaded):
         item = _normalize_files(item, fc_dir)
-        if not item.has_key("lane"):
-            item["lane"] = str(i+1)
+        if "lane" not in item:
+            item["lane"] = str(i + 1)
         item["lane"] = _clean_characters(str(item["lane"]))
-        if not item.has_key("description"):
+        if "description" not in item:
             if len(item.get("files", [])) == 1 and item["files"][0].endswith(".bam"):
                 item["description"] = get_sample_name(item["files"][0])
             else:
-                raise ValueError("No `description` sample name provided for input #%s" % (i+1))
+                raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
         item["description"] = _clean_characters(str(item["description"]))
         upload = global_config.get("upload", {})
+        # Handle specifying a local directory directly in upload
+        if isinstance(upload, basestring):
+            upload = {"dir": upload}
         if fc_name and fc_date:
             upload["fc_name"] = fc_name
             upload["fc_date"] = fc_date
@@ -244,6 +268,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
                                                   ignore_keys=["variantcaller", "realign", "recalibrate",
                                                                "phasing", "svcaller"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
+        item["test_run"] = global_config.get("test_run", False)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details

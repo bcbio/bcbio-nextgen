@@ -11,23 +11,24 @@ from bcbio import utils
 from bcbio.pipeline import config_utils, version
 from bcbio.log import logger
 
-import HTSeq
-
-_cl_progs = [{"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
+_cl_progs = [{"cmd": "bamtofastq", "args": "--version", "stdout_flag": "This is biobambam version"},
+             {"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
+             {"cmd": "bcftools", "stdout_flag": "Version:"},
              {"cmd": "bedtools", "args": "--version", "stdout_flag": "bedtools"},
-             {"cmd": "bowtie2", "args": "--version", "stdout_flag": "bowtie2-align"},
+             {"cmd": "bowtie2", "args": "--version", "stdout_flag": "bowtie2-align version"},
              {"cmd": "bwa", "stdout_flag": "Version:"},
              {"cmd": "cufflinks", "stdout_flag": "cufflinks"},
              {"cmd": "cutadapt", "args": "--version"},
              {"cmd": "fastqc", "args": "--version", "stdout_flag": "FastQC"},
              {"cmd": "freebayes", "stdout_flag": "version:"},
-             {"cmd": "gemini", "args": "--version", "stdout_flag": "gemini"},
+             {"cmd": "gemini", "args": "--version", "stdout_flag": "gemini "},
              {"cmd": "novosort", "paren_flag": "novosort"},
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
-             {"cmd": "samtools", "stdout_flag": "Version"},
+             {"cmd": "samtools", "stdout_flag": "Version:"},
+             {"cmd": "sambamba", "stdout_flag": "sambamba"},
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
-             {"cmd": "tophat", "args": "--version", "stdout_flag": "TopHat"}]
-# TODO: ogap, bamleftalign
+             {"cmd": "tophat", "args": "--version", "stdout_flag": "TopHat"},
+             {"cmd": "vcflib", "has_cl_version": False}]
 
 def _broad_versioner(type):
     def get_version(config):
@@ -56,9 +57,21 @@ def jar_versioner(program_name, jar_name):
         if jar.startswith(("-", ".")):
             jar = jar[1:]
         if jar is "":
-            logger.warn("Unable to determine version for program '{}' from jar file {}".format(program_name,
-                                                                              config_utils.get_jar(jar_name, pdir)))
+            logger.warn("Unable to determine version for program '{}' from jar file {}".format(
+                program_name, config_utils.get_jar(jar_name, pdir)))
         return jar
+    return get_version
+
+def java_versioner(pname, jar_name, **kwargs):
+    def get_version(config):
+        try:
+            pdir = config_utils.get_program(pname, config, "dir")
+        except ValueError:
+            return ""
+        jar = config_utils.get_jar(jar_name, pdir)
+        kwargs["cmd"] = "java"
+        kwargs["args"] = "-Xms128m -Xmx256m -jar %s" % jar
+        return _get_cl_version(kwargs, config)
     return get_version
 
 _alt_progs = [{"name": "bcbio.variation",
@@ -69,14 +82,18 @@ _alt_progs = [{"name": "bcbio.variation",
               {"name": "picard", "version_fn": _broad_versioner("picard")},
               {"name": "rnaseqc",
                "version_fn": jar_versioner("rnaseqc", "RNA-SeQC")},
+              {"name": "snpeff",
+               "version_fn": java_versioner("snpeff", "snpEff", stdout_flag="snpEff version SnpEff")},
               {"name": "varscan",
-               "version_fn": jar_versioner("varscan", "VarScan")}]
-# TODO: cortex_var
+               "version_fn": jar_versioner("varscan", "VarScan")},
+              {"name": "oncofuse",
+               "version_fn": jar_versioner("Oncofuse", "Oncofuse")}]
 
 def _parse_from_stdoutflag(stdout, x):
     for line in stdout:
         if line.find(x) >= 0:
-            return line.split()[-1]
+            parts = [p for p in line[line.find(x) + len(x):].split() if p.strip()]
+            return parts[0].strip()
     return ""
 
 def _parse_from_parenflag(stdout, x):
@@ -88,6 +105,8 @@ def _parse_from_parenflag(stdout, x):
 def _get_cl_version(p, config):
     """Retrieve version of a single commandline program.
     """
+    if not p.get("has_cl_version", True):
+        return ""
     try:
         prog = config_utils.get_program(p["cmd"], config)
     except config_utils.CmdNotFound:
@@ -105,21 +124,53 @@ def _get_cl_version(p, config):
             v = _parse_from_parenflag(stdout, p["paren_flag"])
         else:
             v = stdout.read().strip()
+    if v.endswith("."):
+        v = v[:-1]
     return v
+
+def _get_brew_versions():
+    """Retrieve versions of tools installed via brew.
+    """
+    from bcbio import install
+    tooldir = install.get_defaults().get("tooldir")
+    brew_cmd = os.path.join(tooldir, "bin", "brew") if tooldir else "brew"
+    try:
+        vout = subprocess.check_output([brew_cmd, "which"])
+        uses_which = True
+    except subprocess.CalledProcessError:
+        vout = subprocess.check_output([brew_cmd, "list", "--versions"])
+        uses_which = False
+    except OSError:  # brew not installed/used
+        vout = ""
+    out = {}
+    for vstr in vout.split("\n"):
+        if vstr.strip():
+            if uses_which:
+                name, v = vstr.rstrip().split(": ")
+            else:
+                parts = vstr.rstrip().split()
+                name = parts[0]
+                v = parts[-1]
+            out[name] = v
+    return out
 
 def _get_versions(config):
     """Retrieve details on all programs available on the system.
     """
+    brew_vs = _get_brew_versions()
+    import HTSeq
     out = [{"program": "bcbio-nextgen",
             "version": ("%s-%s" % (version.__version__, version.__git_revision__)
                         if version.__git_revision__ else version.__version__)},
            {"program": "htseq", "version": HTSeq.__version__}]
     for p in _cl_progs:
         out.append({"program": p["cmd"],
-                    "version": _get_cl_version(p, config)})
+                    "version": (brew_vs[p["cmd"]] if p["cmd"] in brew_vs else
+                                _get_cl_version(p, config))})
     for p in _alt_progs:
         out.append({"program": p["name"],
-                    "version": p["version_fn"](config)})
+                    "version": (brew_vs[p["name"]] if p["name"] in brew_vs else
+                                p["version_fn"](config))})
     return out
 
 def _get_program_file(dirs):

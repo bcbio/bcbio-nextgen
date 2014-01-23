@@ -46,9 +46,22 @@ def _get_resource_programs(fn, algs):
 
     Helps avoid requiring core information from unused programs.
     """
+    used_progs = _get_used_programs(fn, algs)
     # standard list of programs we always use
     # XXX Need to expose this in a top-level way to allow more multiprocessing
-    used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools", "snpEff"])
+    for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
+        if prog in used_progs:
+            yield prog
+
+def _get_ensure_functions(fn, algs):
+    used_progs = _get_used_programs(fn, algs)
+    for prog in (fn.metadata.get("ensure", {}).keys() if hasattr(fn, "metadata") else []):
+        if prog in used_progs:
+            yield fn.metadata["ensure"][prog]
+
+def _get_used_programs(fn, algs):
+    used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools",
+                      "snpEff", "cufflinks", "picard", "rnaseqc"])
     for alg in algs:
         # get aligners used
         aligner = alg.get("aligner")
@@ -63,9 +76,8 @@ def _get_resource_programs(fn, algs):
                 used_progs.add(vc)
     if config_utils.use_vqsr(algs):
         used_progs.add("gatk-vqsr")
-    for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
-        if prog in used_progs:
-            yield prog
+    return used_progs
+
 
 def _str_memory_to_gb(memory):
     val = float(memory[:-1])
@@ -75,6 +87,7 @@ def _str_memory_to_gb(memory):
     else:
         assert units.lower() == "g", "Unexpected memory units: %s" % memory
     return val
+
 
 def _get_prog_memory(resources):
     """Get expected memory usage, in Gb per core, for a program from resource specification.
@@ -88,17 +101,16 @@ def _get_prog_memory(resources):
         out = _str_memory_to_gb(memory)
     return out
 
-def _scale_cores_to_memory(cores, mem_per_core, sysinfo):
+
+def _scale_cores_to_memory(cores, mem_per_core, sysinfo, system_memory):
     """Scale multicore usage to avoid excessive memory usage based on system information.
     """
-    total_mem = int(math.floor(cores * mem_per_core))
+    total_mem = "%.1f" % (cores * mem_per_core + system_memory)
     if "cores" not in sysinfo:
         return cores, total_mem
-    if cores > sysinfo["cores"]:
-        cores = sysinfo["cores"]
-    if total_mem > sysinfo["memory"]:
-        total_mem = sysinfo["memory"]
-    cores = min(cores, int(math.ceil(float(total_mem) / mem_per_core)))
+    cores = min(cores, int(sysinfo["cores"]))
+    total_mem = min(float(total_mem), float(sysinfo["memory"]) - system_memory)
+    cores = max(1, min(cores, int(math.floor(float(total_mem) / mem_per_core))))
     return cores, total_mem
 
 def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
@@ -126,34 +138,52 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
     """
     assert len(items) > 0, "Finding job resources but no items to process"
     all_cores = [1]
-    all_memory = [2] # Use modest 2Gb memory usage per core as min baseline
+    # Use modest 2Gb memory usage per core as min baseline
+    all_memory = [2]
+    # Provide 250Mb of additional memory for the system
+    system_memory = 0.25
     algs = [get_algorithm_config(x) for x in items]
     for fn in fns:
         for prog in _get_resource_programs(fn, algs):
             resources = config_utils.get_resources(prog, config)
-            cores = resources.get("cores")
-            if cores:
-                all_cores.append(cores)
+            cores = resources.get("cores", 1)
             memory = _get_prog_memory(resources)
+            all_cores.append(cores)
             if memory:
                 all_memory.append(memory)
+            logger.debug("{prog} requests {cores} cores and {memory}g "
+                         "memory for each core.".format(**locals()))
+
     cores_per_job = max(all_cores)
     if max_multicore:
         cores_per_job = min(cores_per_job, max_multicore)
+    if "cores" in sysinfo:
+        cores_per_job = min(cores_per_job, int(sysinfo["cores"]))
     memory_per_core = max(all_memory)
+
+    # these callbacks make sure the cores and memory meet minimum requirements
+    for fn in fns:
+        for ensure in _get_ensure_functions(fn, algs):
+            cores_per_job, memory_per_core = ensure(cores_per_job, memory_per_core)
+
     total = parallel["cores"]
     if total > cores_per_job:
         num_jobs = total // cores_per_job
     else:
         num_jobs, cores_per_job = 1, total
     if cores_per_job == 1:
-        memory_per_job = int(math.floor(memory_per_core))
+        memory_per_job = "%.1f" % (memory_per_core + system_memory)
         num_jobs = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
     else:
-        cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job, memory_per_core, sysinfo)
+        cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job,
+                                                               memory_per_core, sysinfo,
+                                                               system_memory)
     # do not overschedule if we don't have extra items to process
     num_jobs = min(num_jobs, len(items) * multiplier)
     JobResources = collections.namedtuple("JobResources", "num_jobs cores_per_job memory_per_job")
+    logger.debug("Configuring %d jobs to run, using %d cores each with %sg of "
+                 "memory reserved for each job" % (num_jobs, cores_per_job,
+                                                   str(memory_per_job)))
     return JobResources(num_jobs, cores_per_job, str(memory_per_job))
 
 cur_num = 0
@@ -222,7 +252,7 @@ def _view_from_parallel(parallel, work_dir, config):
 
 def _get_ipython_fn(fn_name, parallel):
     return getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
-                            fromlist=["ipythontasks"]),
+                              fromlist=["ipythontasks"]),
                    fn_name)
 
 @contextlib.contextmanager
@@ -283,7 +313,7 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     items = [x for x in items if x is not None]
     algs = [get_algorithm_config(x) for x in items]
     if ((len(algs) > 0 and not algs[0].get("resource_check", True))
-        or parallel.get("view") or parallel.get("checkpoint")):
+          or parallel.get("view") or parallel.get("checkpoint")):
         checkpoint_file = None
     else:
         checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))

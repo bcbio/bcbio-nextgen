@@ -91,9 +91,11 @@ experiment would look like::
 	genome_build: GRCh37
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [truseq, polya]
+             strandedness: unstranded
 
 ``fc_date`` and ``fc_name`` will be combined to form a prefix to name
 intermediate files, you can set them to whatever you like.  ``upload`` is
@@ -121,7 +123,9 @@ RNA-seq libraries, so we want to trim off possible adapter sequences on the ends
 of reads, so ``trim_reads`` is set to ``read_through``, which will also trim off
 poor quality ends. Since your library is a RNA-seq library prepared with the
 TruSeq kit, the set of adapters to trim off are the TruSeq adapters and possible
-polyA tails, so ``adapters`` is set to the both of those.
+polyA tails, so ``adapters`` is set to the both of those. ``strandedness``
+can be set if your library was prepared in a strand-specific manner and can
+be set to firststrand, secondstrand or unstranded (the default).
 
 Multiple samples
 ================
@@ -140,6 +144,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]
@@ -148,6 +153,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]
@@ -156,6 +162,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]
@@ -164,6 +171,7 @@ sample configuration file for that analysis::
 	genome_build: GRCm38
 	analysis: RNA-seq
 	algorithm:
+             aligner: tophat2
 	     quality_format: Standard
 	     trim_reads: read_through
 	     adapters: [nextera, polya]

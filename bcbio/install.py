@@ -5,8 +5,10 @@ data and software.
 """
 import collections
 import contextlib
+from distutils.version import LooseVersion
 import os
 import shutil
+import string
 import subprocess
 import sys
 
@@ -15,13 +17,16 @@ import yaml
 
 from bcbio import utils
 from bcbio.pipeline import genome
+from bcbio.variation import effects
+from bcbio.provenance import programs
 
 REMOTES = {
     "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
     "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux.git",
     "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
-    }
+    "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
+                      "snpEff_v{snpeff_ver}_{genome}.zip")}
 
 def upgrade_bcbio(args):
     """Perform upgrade of bcbio to latest release, or from GitHub development version.
@@ -56,12 +61,44 @@ def upgrade_bcbio(args):
         print("Installation directory not added to current PATH")
         print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
     save_install_defaults(args)
+    args.datadir = _get_data_dir()
+    _install_container_bcbio_system(args.datadir)
+    return args
+
+def _install_container_bcbio_system(datadir):
+    """Install limited bcbio_system.yaml file for setting core and memory usage.
+
+    Adds any non-specific programs to the exposed bcbio_system.yaml file, only
+    when upgrade happening inside a docker container.
+    """
+    base_file = os.path.join(datadir, "config", "bcbio_system.yaml")
+    if not os.path.exists(base_file):
+        return
+    expose_file = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
+    expose = set(["memory", "cores", "jvm_opts"])
+    with open(base_file) as in_handle:
+        config = yaml.load(in_handle)
+    if os.path.exists(expose_file):
+        with open(expose_file) as in_handle:
+            expose_config = yaml.load(in_handle)
+    else:
+        expose_config = {"resources": {}}
+    for pname, vals in config["resources"].iteritems():
+        expose_vals = {}
+        for k, v in vals.iteritems():
+            if k in expose:
+                expose_vals[k] = v
+        if len(expose_vals) > 0 and pname not in expose_config["resources"]:
+            expose_config["resources"][pname] = expose_vals
+    with open(expose_file, "w") as out_handle:
+        yaml.dump(expose_config, out_handle, default_flow_style=False, allow_unicode=False)
+    return expose_file
 
 def _default_deploy_args(args):
     flavors = {"minimal": "ngs_pipeline_minimal",
                "full": "ngs_pipeline"}
     toolplus = {"protected": {"bio_nextgen": ["gatk-protected"]},
-                "data": {"bio_nextgen": ["gemini"]}}
+                "data": {"bio_nextgen": []}}
     custom_add = collections.defaultdict(list)
     for x in args.toolplus:
         for k, vs in toolplus[x].iteritems():
@@ -70,18 +107,19 @@ def _default_deploy_args(args):
             "custom_add": dict(custom_add),
             "vm_provider": "novm",
             "hostname": "localhost",
-            "fabricrc_overrides" : {"edition": "minimal",
-                                    "use_sudo": args.sudo,
-                                    "keep_isolated": args.isolate,
-                                    "distribution": args.distribution or "__auto__",
-                                    "dist_name": "__auto__"}}
+            "fabricrc_overrides": {"edition": "minimal",
+                                   "use_sudo": args.sudo,
+                                   "keep_isolated": args.isolate,
+                                   "distribution": args.distribution or "__auto__",
+                                   "dist_name": "__auto__"}}
 
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
-    pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib", "nose", "numpy",
-            "pycrypto", "pip", "pysam", "pyyaml", "pyzmq", "requests", "tornado", "statsmodels"]
+    pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
+            "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
+            "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
         # Remove until can get 13.1.0 working cleanly on CentOS
@@ -111,6 +149,9 @@ def upgrade_bcbio_data(args, remotes):
     cbl_deploy.deploy(s)
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
+    _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
+    if 'data' in args.toolplus:
+        subprocess.check_call(["gemini", "update", "--dataonly"])
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -135,6 +176,35 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
                 with open(local_file, "w") as out_handle:
                     out_handle.write(r.text)
 
+def _upgrade_snpeff_data(galaxy_dir, args, remotes):
+    """Install or upgrade snpEff databases, localized to reference directory.
+    """
+    for dbkey, ref_file in genome.get_builds(galaxy_dir):
+        resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
+        with open(resource_file) as in_handle:
+            resources = yaml.load(in_handle)
+        snpeff_db, snpeff_base_dir = effects.get_db(ref_file, resources)
+        if snpeff_db:
+            snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
+            if not os.path.exists(snpeff_db_dir):
+                print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
+                tooldir = args.tooldir or get_defaults()["tooldir"]
+                config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
+                                                   "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
+                raw_version = programs.java_versioner("snpeff", "snpEff",
+                                                      stdout_flag="snpEff version SnpEff")(config)
+                snpeff_version = "".join([x for x in raw_version
+                                          if x in set(string.digits + ".")]).replace(".", "_")
+                dl_url = remotes["snpeff_dl_url"].format(snpeff_ver=snpeff_version, genome=snpeff_db)
+                dl_file = os.path.basename(dl_url)
+                with utils.chdir(snpeff_base_dir):
+                    subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
+                    subprocess.check_call(["unzip", dl_file])
+                    os.remove(dl_file)
+                dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
+                os.rename(dl_dir, snpeff_db_dir)
+                os.rmdir(os.path.join(snpeff_base_dir, "data"))
+
 def _get_biodata(base_file, args):
     with open(base_file) as in_handle:
         config = yaml.load(in_handle)
@@ -155,10 +225,37 @@ def upgrade_thirdparty_tools(args, remotes):
     s["actions"] = ["install_biolinux"]
     s["fabricrc_overrides"]["system_install"] = args.tooldir
     s["fabricrc_overrides"]["local_install"] = os.path.join(args.tooldir, "local_install")
+    if "data" in args.toolplus:
+        _install_gemini(args.tooldir, _get_data_dir(), args)
     cbl = get_cloudbiolinux(remotes)
     sys.path.insert(0, cbl["dir"])
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
+
+def _install_gemini(tooldir, datadir, args):
+    """Install gemini layered on top of bcbio-nextgen, sharing anaconda framework.
+    """
+    # check if we have an up to date version, upgrading if needed
+    gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
+    if os.path.exists(gemini):
+        vurl = "https://raw.github.com/arq5x/gemini/master/requirements.txt"
+        r = requests.get(vurl)
+        for line in r.text.split():
+            if line.startswith("gemini=="):
+                latest_version = line.split("==")[-1]
+        cur_version = subprocess.check_output([gemini, "-v"], stderr=subprocess.STDOUT).strip().split()[-1]
+        if LooseVersion(latest_version) > LooseVersion(cur_version):
+            subprocess.check_call([gemini, "update"])
+    # install from scratch inside existing Anaconda python
+    else:
+        url = "https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py"
+        script = os.path.basename(url)
+        subprocess.check_call(["wget", "-O", script, url])
+        cmd = [sys.executable, script, tooldir, datadir, "--notools", "--nodata", "--sharedpy"]
+        if not args.sudo:
+            cmd.append("--nosudo")
+        subprocess.check_call(cmd)
+        os.remove(script)
 
 # ## Store a local configuration file with upgrade details
 
@@ -212,11 +309,13 @@ def add_install_defaults(args):
         if "tooldir" in default_args:
             args.tooldir = default_args["tooldir"]
         else:
-            raise ValueError("Default tool directory not yet saved in config defaults. Specify the '--tooldir=/path/to/tools' to upgrade tools. "
-                             "After a successful upgrade, the '--tools' parameter should work for future upgrades.")
+            raise ValueError("Default tool directory not yet saved in config defaults. "
+                             "Specify the '--tooldir=/path/to/tools' to upgrade tools. "
+                             "After a successful upgrade, the '--tools' parameter will "
+                             "work for future upgrades.")
     for attr in ["genomes", "aligners", "toolplus"]:
         for x in default_args.get(attr, []):
-            new_val =  getattr(args, attr)
+            new_val = getattr(args, attr)
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
@@ -242,15 +341,17 @@ def add_subparser(subparsers):
                         help="Boolean argument specifying upgrade of tools. Uses previously saved install directory",
                         action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
-                        choices = ["stable", "development", "system", "skip"], default="stable")
+                        choices=["stable", "development", "system", "skip"], default="skip")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], choices=["protected", "data"])
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"])
+                        action="append", default=["GRCh37"],
+                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa"])
-    parser.add_argument("--nodata", help="Do not install data dependencies",
-                        dest="install_data", action="store_false", default=True)
+                        action="append", default=["bwa"],
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+    parser.add_argument("--data", help="Upgrade data dependencies",
+                        dest="install_data", action="store_true", default=False)
     parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
                         dest="sudo", action="store_false", default=True)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
@@ -262,6 +363,7 @@ def add_subparser(subparsers):
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
+    return parser
 
 def get_cloudbiolinux(remotes):
     base_dir = os.path.join(os.getcwd(), "cloudbiolinux")

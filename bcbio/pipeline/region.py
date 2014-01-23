@@ -59,7 +59,7 @@ def parallel_prep_region(samples, regions, run_parallel):
     for data in [x[0] for x in samples]:
         a = data["config"]["algorithm"]
         if (not a.get("mark_duplicates") and not a.get("recalibrate") and
-            not a.get("realign", "gatk") and not a.get("variantcaller", "gatk")):
+              not a.get("realign", "gatk") and not a.get("variantcaller", "gatk")):
             extras.append([data])
         elif not data.get(file_key):
             extras.append([data])

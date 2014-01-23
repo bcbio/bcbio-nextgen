@@ -1,6 +1,7 @@
 """Handle extraction of final files from processing pipelines into storage.
 """
 import datetime
+import os
 
 from bcbio.upload import shared, filesystem, galaxy, s3
 from bcbio.utils import file_exists
@@ -33,10 +34,21 @@ def _get_files(sample):
         return _get_files_variantcall(sample)
     elif analysis in ["RNA-seq"]:
         return _get_files_rnaseq(sample)
+    elif analysis.lower() in ["chip-seq"]:
+        return _get_files_chipseq(sample)
     else:
         return []
 
 def _get_files_rnaseq(sample):
+    out = []
+    algorithm = sample["config"]["algorithm"]
+    out = _maybe_add_summary(algorithm, sample, out)
+    out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_counts(algorithm, sample, out)
+    out = _maybe_add_cufflinks(algorithm, sample, out)
+    return _add_meta(out, sample)
+
+def _get_files_chipseq(sample):
     out = []
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
@@ -102,8 +114,25 @@ def _maybe_add_alignment(algorithm, sample, out):
                     "ext": "ready"})
         if file_exists(sample["work_bam"] + ".bai"):
             out.append({"path": sample["work_bam"] + ".bai",
-                        "type": "bai",
+                        "type": "bam.bai",
                         "ext": "ready"})
+    return out
+
+def _maybe_add_counts(algorithm, sample, out):
+    out.append({"path": sample["count_file"],
+                "type": "counts",
+                "ext": "ready"})
+    stats_file = os.path.splitext(sample["count_file"])[0] + ".stats"
+    out.append({"path": stats_file,
+                "type": "count_stats",
+                "ext": "ready"})
+    return out
+
+def _maybe_add_cufflinks(algorithm, sample, out):
+    if "cufflinks_dir" in sample:
+        out.append({"path": sample["cufflinks_dir"],
+                    "type": "directory",
+                    "ext": "cufflinks"})
     return out
 
 def _has_alignment_file(algorithm, sample):
@@ -120,6 +149,7 @@ def _get_files_project(sample, upload_config):
     out = [{"path": sample["provenance"]["programs"]}]
     if "summary" in sample and sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
+
     for x in sample.get("variants", []):
         if "pop_db" in x:
             out.append({"path": x["pop_db"],
@@ -142,4 +172,10 @@ def _get_files_project(sample, upload_config):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})
             break
+
+    if "combined_counts" in sample:
+        out.append({"path": sample["combined_counts"]})
+    if "annotated_combined_counts" in sample:
+        out.append({"path": sample["annotated_combined_counts"]})
+
     return _add_meta(out, config=upload_config)

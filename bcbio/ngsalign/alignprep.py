@@ -6,8 +6,10 @@ import os
 import subprocess
 
 from bcbio import bam, utils
+from bcbio.log import logger
+from bcbio.distributed.messaging import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, tools
 from bcbio.provenance import do
 
 def create_inputs(data):
@@ -16,11 +18,14 @@ def create_inputs(data):
     Allows parallelization of alignment beyond processors available on a single
     machine. Uses gbzip and grabix to prepare an indexed fastq file.
     """
-    # skip skipping on samples without input files
-    if data["files"][0] is None or data["algorithm"].get("align_split_size") is None:
+    # skip indexing on samples without input files or not doing alignment
+    if (data["files"][0] is None or data["algorithm"].get("align_split_size") is None
+          or not data["algorithm"].get("aligner")):
         return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data["config"])
     data["files"] = ready_files
+    # bgzip preparation takes care of converting illumina into sanger format
+    data["config"]["algorithm"]["quality_format"] = "standard"
     splits = _find_read_splits(ready_files[0], data["algorithm"]["align_split_size"])
     if len(splits) == 1:
         return [[data]]
@@ -38,6 +43,14 @@ def split_namedpipe_cl(in_file, data):
     grabix = config_utils.get_program("grabix", data["config"])
     start, end = data["align_split"]
     return "<({grabix} grab {in_file} {start} {end})".format(**locals())
+
+def fastq_convert_pipe_cl(in_file, data):
+    """Create an anonymous pipe converting Illumina 1.3-1.7 to Sanger.
+
+    Uses seqtk: https://github.com/lh3/seqt
+    """
+    seqtk = config_utils.get_program("seqtk", data["config"])
+    return "<({seqtk} seq -Q64 -V {in_file})".format(**locals())
 
 # ## configuration
 
@@ -94,7 +107,7 @@ def _find_read_splits(in_file, split_size):
     """
     gbi_file = in_file + ".gbi"
     with open(gbi_file) as in_handle:
-        in_handle.next() # throw away
+        in_handle.next()  # throw away
         num_lines = int(in_handle.next().strip())
     assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
     split_lines = split_size * 4
@@ -115,18 +128,20 @@ def _prep_grabix_indexes(in_files, dirs, config):
         out = _bgzip_from_bam(in_files[0], dirs, config)
     else:
         out = [_bgzip_from_fastq(x, dirs, config) if x else None for x in in_files]
-    [_grabix_index(x, config) for x in out if x]
+    items = [[{"bgzip_file": x, "config": copy.deepcopy(config)}] for x in out if x]
+    run_multicore(_grabix_index, items, config,
+                  config["algorithm"].get("num_cores", 1))
     return out
 
-def _bgzip_from_bam(bam_file, dirs, config):
+def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
     """Create bgzipped fastq files from an input BAM file.
     """
     # tools
     bamtofastq = config_utils.get_program("bamtofastq", config)
     resources = config_utils.get_resources("bamtofastq", config)
     cores = config["algorithm"].get("num_cores", 1)
-    max_mem = int(resources.get("memory", "1073741824")) * cores # 1Gb/core default
-    bgzip = _get_bgzip_cmd(config)
+    max_mem = int(resources.get("memory", "1073741824")) * cores  # 1Gb/core default
+    bgzip = tools.get_bgzip_cmd(config, is_retry)
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
     out_file_1 = os.path.join(work_dir, "%s-1.fq.gz" % os.path.splitext(os.path.basename(bam_file))[0])
@@ -134,8 +149,12 @@ def _bgzip_from_bam(bam_file, dirs, config):
         out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
     else:
         out_file_2 = None
-    if not utils.file_exists(out_file_1):
+    needs_retry = False
+    if is_retry or not utils.file_exists(out_file_1):
         with file_transaction(out_file_1) as tx_out_file:
+            for f in [tx_out_file, out_file_1, out_file_2]:
+                if f and os.path.exists(f):
+                    os.remove(f)
             fq1_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, tx_out_file)
             sortprefix = "%s-sort" % os.path.splitext(tx_out_file)[0]
             if bam.is_paired(bam_file):
@@ -145,41 +164,60 @@ def _bgzip_from_bam(bam_file, dirs, config):
             else:
                 out_str = "S=>({fq1_bgzip_cmd})"
             cmd = "{bamtofastq} filename={bam_file} T={sortprefix} " + out_str
-            do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
-                   checks=[do.file_reasonable_size(tx_out_file, bam_file)])
-    return [x for x in [out_file_1, out_file_2] if x is not None]
+            try:
+                do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
+                       checks=[do.file_reasonable_size(tx_out_file, bam_file)],
+                       log_error=False)
+            except subprocess.CalledProcessError, msg:
+                if not is_retry and "deflate failed" in str(msg):
+                    logger.info("bamtofastq deflate IO failure preparing %s. Retrying with single core."
+                                % (bam_file))
+                    needs_retry = True
+                else:
+                    logger.exception()
+                    raise
+    if needs_retry:
+        return _bgzip_from_bam(bam_file, dirs, config, is_retry=True)
+    else:
+        return [x for x in [out_file_1, out_file_2] if x is not None]
 
-def _grabix_index(in_file, config):
+@utils.map_wrap
+@zeromq_aware_logging
+def _grabix_index(data):
+    in_file = data["bgzip_file"]
+    config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     gbi_file = in_file + ".gbi"
-    if not utils.file_exists(gbi_file):
-        do.run([grabix, "index", in_file], "Index input with grabix")
+    if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
+        do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
     return gbi_file
+
+def _is_partial_index(gbi_file):
+    """Check for truncated output since grabix doesn't write to a transactional directory.
+    """
+    with open(gbi_file) as in_handle:
+        for i, _ in enumerate(in_handle):
+            if i > 2:
+                return False
+    return True
 
 def _bgzip_from_fastq(in_file, dirs, config):
     """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).
     """
     grabix = config_utils.get_program("grabix", config)
+    needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
     if in_file.endswith(".gz"):
-        needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix)
+        needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix, needs_convert)
     else:
         needs_bgzip, needs_gunzip = True, False
-    if needs_bgzip or needs_gunzip:
-        out_file = _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip)
+    if needs_bgzip or needs_gunzip or needs_convert:
+        out_file = _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip,
+                               needs_convert)
     else:
         out_file = in_file
     return out_file
 
-def _get_bgzip_cmd(config):
-    """Retrieve command to use for bgzip, trying to use parallel pbgzip if available.
-    """
-    try:
-        pbgzip = config_utils.get_program("pbgzip", config)
-        return "%s -n %s " % (pbgzip, config["algorithm"].get("num_cores", 1))
-    except config_utils.CmdNotFound:
-        return config_utils.get_program("bgzip", config)
-
-def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
+def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert):
     """Handle bgzip of input file, potentially gunzipping an existing file.
     """
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
@@ -188,7 +226,9 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             assert needs_bgzip
-            bgzip = _get_bgzip_cmd(config)
+            bgzip = tools.get_bgzip_cmd(config)
+            if needs_convert:
+                in_file = fastq_convert_pipe_cl(in_file, {"config": config})
             if needs_gunzip:
                 gunzip_cmd = "gunzip -c {in_file} |".format(**locals())
                 bgzip_in = "/dev/stdin"
@@ -199,11 +239,11 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip):
                    "bgzip input file")
     return out_file
 
-def _check_gzipped_input(in_file, grabix):
+def _check_gzipped_input(in_file, grabix, needs_convert):
     """Determine if a gzipped input file is blocked gzip or standard.
     """
     is_bgzip = subprocess.check_output([grabix, "check", in_file])
-    if is_bgzip.strip() == "yes":
+    if is_bgzip.strip() == "yes" and not needs_convert:
         return False, False
     else:
         return True, True

@@ -111,8 +111,8 @@ def fix_vcf_line(parts, ref_base):
         varinfo[4] = ",".join([complements[v] for v in ref.split(",")])
         genotypes = [swap[x] for x in genotypes]
     else:
-       print "Did not associate ref {0} with line: {1}".format(
-           ref_base, varinfo)
+        print "Did not associate ref {0} with line: {1}".format(
+            ref_base, varinfo)
     if varinfo is not None:
         return varinfo + genotypes
 

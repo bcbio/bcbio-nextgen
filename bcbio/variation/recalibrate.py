@@ -7,9 +7,6 @@ http://www.broadinstitute.org/gsa/wiki/index.php/Base_quality_score_recalibratio
 """
 import os
 import shutil
-from contextlib import closing
-
-import pysam
 
 from bcbio import bam, broad, utils
 from bcbio.bam import cram
@@ -51,7 +48,7 @@ def prep_recal(data):
         config = data["config"]
         dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
         broad_runner = broad.runner_from_config(config)
-        platform = config["algorithm"]["platform"]
+        platform = config["algorithm"].get("platform", "illumina")
         broad_runner.run_fn("picard_index_ref", ref_file)
         if config["algorithm"].get("mark_duplicates", True):
             (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])
@@ -66,8 +63,9 @@ def prep_recal(data):
 
 # ## Identify recalibration information
 
-def _get_downsample_pct(runner, in_bam):
-    """Calculate a downsampling percent to use for large BAM files.
+def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
+        dbsnp_file, intervals):
+    """Step 1 of GATK recalibration process, producing table of covariates.
 
     Large whole genome BAM files take an excessively long time to recalibrate and
     the extra inputs don't help much beyond a certain point. See the 'Downsampling analysis'
@@ -76,21 +74,10 @@ def _get_downsample_pct(runner, in_bam):
     http://gatkforums.broadinstitute.org/discussion/44/base-quality-score-recalibrator#latest
 
     This identifies large files and calculates the fraction to downsample to.
-    """
-    target_counts = 1e8 # 100 million reads per read group, 20x the plotted max
-    total = sum(x.aligned for x in runner.run_fn("picard_idxstats", in_bam))
-    with closing(pysam.Samfile(in_bam, "rb")) as work_bam:
-        n_rgs = max(1, len(work_bam.header["RG"]))
-    rg_target = n_rgs * target_counts
-    if total > rg_target:
-        return float(rg_target) / float(total)
-
-def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
-        dbsnp_file, intervals):
-    """Step 1 of GATK recalibration process, producing table of covariates.
 
     TODO: Use new GATK 2.6+ AnalyzeCovariates tool to plot recalibration results.
     """
+    target_counts = 1e8 # 100 million reads per read group, 20x the plotted max
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
         if has_aligned_reads(dup_align_bam, intervals):
@@ -101,7 +88,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                               "-I", dup_align_bam,
                               "-R", ref_file,
                               ]
-                    downsample_pct = _get_downsample_pct(broad_runner, dup_align_bam)
+                    downsample_pct = bam.get_downsample_pct(broad_runner, dup_align_bam, target_counts)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
                                    "--downsampling_type", "ALL_READS"]

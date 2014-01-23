@@ -1,0 +1,40 @@
+package:
+  name: bcbio-nextgen
+  version: '0.7.7a'
+
+build:
+  number: 0
+
+source:
+  git_url: https://github.com/chapmanb/bcbio-nextgen.git
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - setuptools
+    - argparse [py26]
+    - biopython
+    - ipython
+    - ipython-cluster-helper
+    - logbook
+    - lxml
+    - pysam
+    - pyyaml
+    - pyzmq
+    - requests
+    - tornado
+
+test:
+  imports:
+    - bcbio.distributed.ipython
+    - bcbio.distributed.messaging
+    - bcbio.pipeline.main
+    - bcbio.provenance.do
+
+about:
+  home: https://github.com/chapmanb/bcbio-nextgen
+  license: MIT
