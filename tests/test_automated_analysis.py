@@ -88,15 +88,22 @@ class AutomatedAnalysisTest(unittest.TestCase):
         os.remove(os.path.basename(url))
 
     def _get_post_process_yaml(self, workdir):
-        std = os.path.join(self.data_dir, "post_process.yaml")
         try:
-            _, system = load_system_config("bcbio_system.yaml")
-        except ValueError:
+            from bcbiovm.docker.defaults import get_defaults
+            datadir = get_defaults().get("datadir")
+            system = os.path.join(datadir, "galaxy", "bcbio_system.yaml") if datadir else None
+        except ImportError:
             system = None
+        if system is None or not os.path.exists(system):
+            try:
+                _, system = load_system_config("bcbio_system.yaml")
+            except ValueError:
+                system = None
         sample = os.path.join(self.data_dir, "post_process-sample.yaml")
+        std = os.path.join(self.data_dir, "post_process.yaml")
         if os.path.exists(std):
             return std
-        elif system:
+        elif system and os.path.exists(system):
             # create local config pointing to reduced genomes
             test_system = os.path.join(workdir, os.path.basename(system))
             with open(system) as in_handle:
@@ -286,7 +293,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
-            cl = ["bcbio_nextgen_docker.py", "run",
+            cl = ["bcbio_vm.py", "run",
                   "--systemconfig=%s" % self._get_post_process_yaml(workdir),
                   "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
