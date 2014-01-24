@@ -185,7 +185,7 @@ def parse_cl_args(in_args):
                                   "Default 0 (no retries)"),
                             default=0, type=int)
         parser.add_argument("-p", "--tag", help="Tag name to label jobs on the cluster",
-                            default=None)
+                            default="")
         parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
         parser.add_argument("--workdir", help="Directory to process in. Defaults to current working directory",
                             default=os.getcwd())
