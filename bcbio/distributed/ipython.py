@@ -138,8 +138,7 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
     """
     assert len(items) > 0, "Finding job resources but no items to process"
     all_cores = [1]
-    # Use modest 2Gb memory usage per core as min baseline
-    all_memory = [2]
+    all_memory = []
     # Provide 250Mb of additional memory for the system
     system_memory = 0.25
     algs = [get_algorithm_config(x) for x in items]
@@ -153,6 +152,10 @@ def find_job_resources(fns, parallel, items, sysinfo, config, multiplier=1,
                 all_memory.append(memory)
             logger.debug("{prog} requests {cores} cores and {memory}g "
                          "memory for each core.".format(**locals()))
+
+    # Use modest 1Gb memory usage per core as min baseline if not specified
+    if len(all_memory) == 0:
+        all_memory.append(1)
 
     cores_per_job = max(all_cores)
     if max_multicore:

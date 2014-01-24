@@ -1,9 +1,13 @@
 ## 0.7.7 (in progress)
 
+- Default to 1Gb/core memory usage when not specified in any programs. Do not
+  use default baseline if supplied in input file. Thanks to James Porter.
 - Remove deprecated Celery distributed messaging, replaced in favor of IPython.
 - Remove algorithm/custom_algorithm from bcbio_system.yaml, preferring to set
   these directly in the sample YAML files.
 - Remove outdated and unused custom B-run trimming.
+- Add `--tag` argument which labels job names on a cluster to help distinguish
+  when multiple bcbio jobs run concurrently. Thanks to Jason Corneveaux.
 - Connect min_read_length parameter with read_through trimming in
   RNA-seq. Thanks to James Porter.
 - Map `variant` calling specification to `variant2` since original approach
