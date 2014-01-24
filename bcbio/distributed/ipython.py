@@ -247,7 +247,8 @@ def _view_from_parallel(parallel, work_dir, config):
                                         parallel["num_jobs"], parallel["cores_per_job"],
                                         profile=profile_dir, start_wait=parallel["timeout"],
                                         extra_params={"resources": parallel["resources"],
-                                                      "mem": parallel["mem"]},
+                                                      "mem": parallel["mem"],
+                                                      "tag": parallel.get("tag")},
                                         retries=parallel.get("retries"))
 
 def _get_ipython_fn(fn_name, parallel):

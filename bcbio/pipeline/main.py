@@ -30,7 +30,7 @@ from bcbio.rnaseq.count import (combine_count_files,
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              numcores=None, paralleltype=None, queue=None, scheduler=None,
-             upgrade=None, profile=None, workflow=None, inputs=None,
+             upgrade=None, tag=None, workflow=None, inputs=None,
              resources="", timeout=15, retries=None):
     """Run variant analysis, handling command line options.
     """
@@ -41,7 +41,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     paralleltype, numcores = _get_cores_and_type(numcores, paralleltype, scheduler)
     parallel = {"type": paralleltype, "cores": numcores,
                 "scheduler": scheduler, "queue": queue,
-                "profile": profile, "module": "bcbio.distributed",
+                "tag": tag, "module": "bcbio.distributed",
                 "resources": resources, "timeout": timeout,
                 "retries": retries}
     if parallel["type"] in ["local"]:
@@ -184,8 +184,8 @@ def parse_cl_args(in_args):
                             help=("Number of retries of failed tasks during distributed processing. "
                                   "Default 0 (no retries)"),
                             default=0, type=int)
-        parser.add_argument("-p", "--profile", help="Profile name to use for ipython parallel",
-                            default="bcbio_nextgen")
+        parser.add_argument("-p", "--tag", help="Tag name to label jobs on the cluster",
+                            default=None)
         parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
         parser.add_argument("--workdir", help="Directory to process in. Defaults to current working directory",
                             default=os.getcwd())
@@ -203,7 +203,7 @@ def parse_cl_args(in_args):
                   "timeout": args.timeout,
                   "retries": args.retries,
                   "resources": args.resources,
-                  "profile": args.profile,
+                  "tag": args.tag,
                   "workflow": args.workflow,
                   "workdir": args.workdir}
         kwargs = _add_inputs_to_kwargs(args, kwargs, parser)

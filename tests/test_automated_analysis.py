@@ -89,8 +89,8 @@ class AutomatedAnalysisTest(unittest.TestCase):
 
     def _get_post_process_yaml(self, workdir):
         try:
-            from bcbiovm.docker.defaults import get_defaults
-            datadir = get_defaults().get("datadir")
+            from bcbiovm.docker.defaults import get_datadir
+            datadir = get_datadir()
             system = os.path.join(datadir, "galaxy", "bcbio_system.yaml") if datadir else None
         except ImportError:
             system = None
