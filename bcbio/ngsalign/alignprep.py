@@ -127,7 +127,9 @@ def _prep_grabix_indexes(in_files, dirs, config):
     if in_files[0].endswith(".bam") and in_files[1] is None:
         out = _bgzip_from_bam(in_files[0], dirs, config)
     else:
-        out = [_bgzip_from_fastq(x, dirs, config) if x else None for x in in_files]
+        out = run_multicore(_bgzip_from_fastq,
+                            [[{"in_file": x, "dirs": dirs, "config": config}] for x in in_files if x],
+                            config, config["algorithm"].get("num_cores", 1))
     items = [[{"bgzip_file": x, "config": copy.deepcopy(config)}] for x in out if x]
     run_multicore(_grabix_index, items, config,
                   config["algorithm"].get("num_cores", 1))
@@ -201,9 +203,13 @@ def _is_partial_index(gbi_file):
                 return False
     return True
 
-def _bgzip_from_fastq(in_file, dirs, config):
+@utils.map_wrap
+@zeromq_aware_logging
+def _bgzip_from_fastq(data):
     """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).
     """
+    in_file = data["in_file"]
+    config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
     if in_file.endswith(".gz"):
@@ -211,11 +217,11 @@ def _bgzip_from_fastq(in_file, dirs, config):
     else:
         needs_bgzip, needs_gunzip = True, False
     if needs_bgzip or needs_gunzip or needs_convert:
-        out_file = _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip,
+        out_file = _bgzip_file(in_file, data["dirs"], config, needs_bgzip, needs_gunzip,
                                needs_convert)
     else:
         out_file = in_file
-    return out_file
+    return [out_file]
 
 def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert):
     """Handle bgzip of input file, potentially gunzipping an existing file.
