@@ -4,9 +4,8 @@ import contextlib
 
 from IPython.parallel import require
 
-from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep, tophat, star
-from bcbio.pipeline import (disambiguate, sample, lane, qcsummary, shared,
+from bcbio.pipeline import (config_utils, disambiguate, sample, lane, qcsummary, shared,
                             variation, rnaseq)
 from bcbio.provenance import system
 from bcbio import structural
@@ -21,10 +20,10 @@ def _setup_logging(args):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         args = args[0]
     for arg in args:
-        if ipython.is_nested_config_arg(arg):
+        if config_utils.is_nested_config_arg(arg):
             config = arg["config"]
             break
-        elif ipython.is_std_config_arg(arg):
+        elif config_utils.is_std_config_arg(arg):
             config = arg
             break
     if config is None:

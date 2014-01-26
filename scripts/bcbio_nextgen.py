@@ -47,7 +47,7 @@ if __name__ == "__main__":
         runfn.process(kwargs["args"])
     else:
         if kwargs.get("workflow"):
-            setup_info = workflow.setup(kwargs["workflow"], kwargs["inputs"])
+            setup_info = workflow.setup(kwargs["workflow"], kwargs.pop("inputs"))
             if setup_info is None:  # no automated run after setup
                 sys.exit(0)
             workdir, new_kwargs = setup_info

@@ -7,8 +7,9 @@ try:
 except ImportError:
     joblib = False
 
-from bcbio.distributed import ipython
+from bcbio.distributed import ipython, resources
 from bcbio.log import logger, setup_local_logging
+from bcbio.pipeline import config_utils
 from bcbio.provenance import diagnostics, system
 
 def parallel_runner(parallel, dirs, config):
@@ -41,10 +42,10 @@ def zeromq_aware_logging(f):
     def wrapper(*args, **kwargs):
         config = None
         for arg in args:
-            if ipython.is_std_config_arg(arg):
+            if config_utils.is_std_config_arg(arg):
                 config = arg
                 break
-            elif ipython.is_nested_config_arg(arg):
+            elif config_utils.is_nested_config_arg(arg):
                 config = arg["config"]
                 break
         assert config, "Could not find config dictionary in function arguments."
@@ -67,10 +68,10 @@ def run_multicore(fn, items, config, cores=None):
         cores = config["algorithm"].get("num_cores", 1)
     parallel = {"type": "local", "cores": cores}
     sysinfo = system.get_info({}, parallel)
-    jobr = ipython.find_job_resources([fn], parallel, items, sysinfo, config,
-                                      parallel.get("multiplier", 1),
-                                      max_multicore=int(sysinfo["cores"]))
-    items = [ipython.add_cores_to_config(x, jobr.cores_per_job) for x in items]
+    jobr = resources.calculate([fn], parallel, items, sysinfo, config,
+                               parallel.get("multiplier", 1),
+                               max_multicore=int(sysinfo["cores"]))
+    items = [config_utils.add_cores_to_config(x, jobr.cores_per_job) for x in items]
     if joblib is None:
         raise ImportError("Need joblib for multiprocessing parallelization")
     out = []

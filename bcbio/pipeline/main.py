@@ -12,7 +12,7 @@ import tempfile
 
 from bcbio import install, log, structural, utils, upload
 from bcbio.bam import callable
-from bcbio.distributed import runfn
+from bcbio.distributed import clargs, runfn
 from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
@@ -29,21 +29,13 @@ from bcbio.rnaseq.count import (combine_count_files,
                                 annotate_combined_count_file)
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
-             numcores=None, paralleltype=None, queue=None, scheduler=None,
-             upgrade=None, tag=None, workflow=None, inputs=None,
-             resources="", timeout=15, retries=None):
+             parallel=None, workflow=None):
     """Run variant analysis, handling command line options.
     """
     os.chdir(workdir)
     config, config_file = load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(workdir, "log")
-    paralleltype, numcores = _get_cores_and_type(numcores, paralleltype, scheduler)
-    parallel = {"type": paralleltype, "cores": numcores,
-                "scheduler": scheduler, "queue": queue,
-                "tag": tag, "module": "bcbio.distributed",
-                "resources": resources, "timeout": timeout,
-                "retries": retries}
     if parallel["type"] in ["local"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
@@ -69,17 +61,6 @@ def _setup_resources():
     cur_hdls, max_hdls = resource.getrlimit(resource.RLIMIT_NOFILE)
     target_hdls = min(max_hdls, target_procs)
     resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
-
-def _get_cores_and_type(numcores, paralleltype, scheduler):
-    """Return core and parallelization approach from command line providing sane defaults.
-    """
-    if scheduler is not None:
-        paralleltype = "ipython"
-    if paralleltype is None:
-        paralleltype = "local"
-    if numcores is None:
-        numcores = 1
-    return paralleltype, int(numcores)
 
 def _run_toplevel(config, config_file, work_dir, parallel,
                   fc_dir=None, run_info_yaml=None):
@@ -196,14 +177,7 @@ def parse_cl_args(in_args):
         error_msg = _sanity_check_args(args)
         if error_msg:
             parser.error(error_msg)
-        kwargs = {"numcores": args.numcores if args.numcores > 0 else None,
-                  "paralleltype": args.paralleltype,
-                  "scheduler": args.scheduler,
-                  "queue": args.queue,
-                  "timeout": args.timeout,
-                  "retries": args.retries,
-                  "resources": args.resources,
-                  "tag": args.tag,
+        kwargs = {"parallel": clargs.to_parallel(args),
                   "workflow": args.workflow,
                   "workdir": args.workdir}
         kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
@@ -257,7 +231,8 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
         fc_dir = os.path.abspath(fc_dir)
     if run_info_yaml:
         run_info_yaml = os.path.abspath(run_info_yaml)
-    kwargs["inputs"] = inputs
+    if kwargs.get("workflow"):
+        kwargs["inputs"] = inputs
     kwargs["config_file"] = global_config
     kwargs["fc_dir"] = fc_dir
     kwargs["run_info_yaml"] = run_info_yaml

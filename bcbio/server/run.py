@@ -1,5 +1,6 @@
 """Provide ability to run bcbio-nextgen workflows.
 """
+import collections
 from functools import wraps
 import os
 import StringIO
@@ -11,6 +12,7 @@ import tornado.web
 import yaml
 
 from bcbio import utils
+from bcbio.distributed import clargs
 
 def run_async(func):
     """Run function in an asychronous background thread.
@@ -43,6 +45,12 @@ def run_bcbio_nextgen(**kwargs):
     finally:
         print("Run ended: %s" % run_id)
 
+def _rargs_to_parallel_args(rargs):
+    Args = collections.namedtuple("Args", "numcores scheduler queue resources timeout retries")
+    return Args(int(rargs.get("numcores", 1)), rargs.get("scheduler"),
+                rargs.get("queue"), rargs.get("resources", ""),
+                int(rargs.get("timeout", 15)), rargs.get("retries"))
+
 def get_handler(args):
     class RunHandler(tornado.web.RequestHandler):
         @tornado.web.asynchronous
@@ -64,12 +72,7 @@ def get_handler(args):
                       "config_file": system_config,
                       "run_info_yaml": sample_config,
                       "fc_dir": rargs.get("fc_dir"),
-                      "numcores": int(rargs.get("numcores", 1)),
-                      "scheduler": rargs.get("scheduler"),
-                      "queue": rargs.get("queue"),
-                      "resources": rargs.get("resources", ""),
-                      "timeout": int(rargs.get("timeout", 15)),
-                      "retries": rargs.get("retries"),
+                      "parallel": clargs.to_parallel(_rargs_to_parallel_args(rargs)),
                       "app": self.application}
             run_id = yield tornado.gen.Task(run_bcbio_nextgen, **kwargs)
             self.write(run_id)

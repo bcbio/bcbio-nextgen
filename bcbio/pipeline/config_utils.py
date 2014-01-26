@@ -143,7 +143,7 @@ def get_program(name, config, ptype="cmd", default=None):
     old_config = config.get("program", {}).get(name, None)
     if old_config:
         for key in ["dir", "cmd"]:
-            if not pconfig.has_key(key):
+            if not key in pconfig:
                 pconfig[key] = old_config
     if ptype == "cmd":
         return _get_program_cmd(name, pconfig, default)
@@ -174,7 +174,7 @@ def _get_program_cmd(name, config, default):
         return name
     elif isinstance(config, basestring):
         return config
-    elif config.has_key("cmd"):
+    elif "cmd" in config:
         return config["cmd"]
     elif default is not None:
         return default
@@ -188,7 +188,7 @@ def _get_program_dir(name, config):
         raise ValueError("Could not find directory in config for %s" % name)
     elif isinstance(config, basestring):
         return config
-    elif config.has_key("dir"):
+    elif "dir" in config:
         return expand_path(config["dir"])
     else:
         raise ValueError("Could not find directory in config for %s" % name)
@@ -197,7 +197,7 @@ def get_jar(base_name, dname):
     """Retrieve a jar in the provided directory
     """
     jars = glob.glob(os.path.join(expand_path(dname), "%s*.jar" % base_name))
-    
+
     if len(jars) == 1:
         return jars[0]
     elif len(jars) > 1:
@@ -206,6 +206,61 @@ def get_jar(base_name, dname):
     else:
         raise ValueError("Could not find java jar %s in %s" %
                          (base_name, dname))
+
+# ## Retrieval and update to configuration from arguments
+
+def _dictdissoc(orig, k):
+    """Imitates immutability: create a new dictionary with the key dropped.
+    """
+    v = orig.pop(k, None)
+    new = copy.deepcopy(orig)
+    orig[k] = v
+    return new
+
+def is_std_config_arg(x):
+    return isinstance(x, dict) and "algorithm" in x and "resources" in x and not "files" in x
+
+def is_nested_config_arg(x):
+    return isinstance(x, dict) and "config" in x and is_std_config_arg(x["config"])
+
+def get_algorithm_config(xs):
+    """Flexibly extract algorithm configuration for a sample from any function arguments.
+    """
+    for x in xs:
+        if is_std_config_arg(x):
+            return x["algorithm"]
+        elif is_nested_config_arg(x):
+            return x["config"]["algorithm"]
+    raise ValueError("Did not find algorithm configuration in items: {0}"
+                     .format(xs))
+
+def add_cores_to_config(args, cores_per_job, parallel=None):
+    """Add information about available cores for a job to configuration.
+    Ugly hack to update core information in a configuration dictionary.
+    """
+    new_i = None
+    for i, arg in enumerate(args):
+        if is_std_config_arg(arg) or is_nested_config_arg(arg):
+            new_i = i
+            break
+    if new_i is None:
+        raise ValueError("Could not find configuration in args: %s" % args)
+
+    new_arg = copy.deepcopy(args[new_i])
+    if is_nested_config_arg(new_arg):
+        new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
+        if parallel:
+            new_arg["config"]["parallel"] = _dictdissoc(parallel, "view")
+    elif is_std_config_arg(new_arg):
+        new_arg["algorithm"]["num_cores"] = int(cores_per_job)
+        if parallel:
+            new_arg["parallel"] = _dictdissoc(parallel, "view")
+    else:
+        raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
+    args = list(args)[:]
+    args[new_i] = new_arg
+    return args
+
 
 def adjust_memory(val, magnitude, direction="increase"):
     """Adjust memory based on number of cores utilized.
@@ -263,7 +318,7 @@ def use_vqsr(algs):
         callers = alg.get("variantcaller", "gatk")
         if isinstance(callers, basestring):
             callers = [callers]
-        elif not callers: # no variant calling, no VQSR
+        elif not callers:  # no variant calling, no VQSR
             continue
         vqsr_supported_caller = False
         for c in callers:
@@ -271,7 +326,7 @@ def use_vqsr(algs):
                 vqsr_supported_caller = True
                 break
         if (cov.interval not in ["regional", "exome"] and cov.depth != "low"
-            and vqsr_supported_caller):
+              and vqsr_supported_caller):
             return True
     return False
 
