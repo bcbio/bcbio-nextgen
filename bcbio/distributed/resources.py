@@ -29,7 +29,7 @@ def _get_ensure_functions(fn, algs):
 
 def _get_used_programs(fn, algs):
     used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools",
-                      "snpEff", "cufflinks", "picard", "rnaseqc"])
+                      "snpeff", "cufflinks", "picard", "rnaseqc"])
     for alg in algs:
         # get aligners used
         aligner = alg.get("aligner")
