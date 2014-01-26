@@ -22,19 +22,18 @@ def _get_cache_file(dirs, parallel):
     return os.path.join(base_dir, "system-%s-%s.yaml" % (parallel["type"],
                                                          parallel.get("queue", "default")))
 
-def write_info(dirs, run_parallel, parallel, config):
+def write_info(dirs, parallel, config):
     """Write cluster or local filesystem resources, spinning up cluster if not present.
     """
     if parallel["type"] in ["ipython"]:
         out_file = _get_cache_file(dirs, parallel)
         if not utils.file_exists(out_file):
             sys_config = copy.deepcopy(config)
-            sys_config["algorithm"]["resource_check"] = False
-            minfos = _get_machine_info(parallel, run_parallel, sys_config)
+            minfos = _get_machine_info(parallel, sys_config, dirs, config)
             with open(out_file, "w") as out_handle:
                 yaml.dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
 
-def _get_machine_info(parallel, run_parallel, sys_config):
+def _get_machine_info(parallel, sys_config, dirs, config):
     """Get machine resource information from the job scheduler via either the command line or the queue.
     """
     if parallel.get("queue") and parallel.get("scheduler"):
@@ -54,7 +53,10 @@ def _get_machine_info(parallel, run_parallel, sys_config):
             logger.warn("Couldn't get machine information from resource query function for queue "
                         "'{0}' on scheduler \"{1}\"; "
                          "submitting job to queue".format(parallel["queue"], parallel["scheduler"]))
-    return run_parallel("machine_info", [[sys_config]])
+    from bcbio.distributed.ipython import global_parallel
+    with global_parallel(parallel, None, ["machine_info"], [sys_config],
+                         dirs, config) as run_parallel:
+        return run_parallel("machine_info", [[sys_config]])
 
 def _slurm_info(queue):
     """Returns machine information for a slurm job scheduler.
@@ -96,7 +98,7 @@ def _torque_queue_nodes(queue):
     initial names of nodes used in pbsnodes.
     """
     qstat_out = subprocess.check_output(["qstat", "-Qf", queue])
-    hosts = []  
+    hosts = []
     in_hosts = False
     for line in qstat_out.split("\n"):
         if line.strip().startswith("acl_hosts = "):
@@ -122,7 +124,7 @@ def _sge_info(queue):
     mem_per_slot = [mem_info[x]["mem_total"] / float(slot_info[x]["slots_total"]) for x in machine_keys]
     min_ratio_index = mem_per_slot.index(min(mem_per_slot))
     mem_info[machine_keys[min_ratio_index]]["mem_total"]
-    return [{"cores": slot_info[machine_keys[min_ratio_index]]["slots_total"], 
+    return [{"cores": slot_info[machine_keys[min_ratio_index]]["slots_total"],
              "memory": mem_info[machine_keys[min_ratio_index]]["mem_total"],
              "name": "sge_machine"}]
 
@@ -135,8 +137,8 @@ def _sge_get_slots(xmlstring):
         # find all hosts supporting queues
         my_hostname = queue_list.find("name").text.rsplit("@")[-1]
         my_slots = queue_list.find("slots_total").text
-        my_machine_dict[my_hostname]={}
-        my_machine_dict[my_hostname]["slots_total"]=int(my_slots)
+        my_machine_dict[my_hostname] = {}
+        my_machine_dict[my_hostname]["slots_total"] = int(my_slots)
     return my_machine_dict
 
 def _sge_get_mem(xmlstring, queue_name):
@@ -145,27 +147,28 @@ def _sge_get_mem(xmlstring, queue_name):
     rootxml = ET.fromstring(xmlstring)
     my_machine_dict = {}
     # on some machines rootxml.tag looks like "{...}qhost" where the "{...}" gets prepended to all attributes
-    rootTag=rootxml.tag.rstrip("qhost")
-    for hosts in rootxml.findall(rootTag+'host'):
+    rootTag = rootxml.tag.rstrip("qhost")
+    for hosts in rootxml.findall(rootTag + 'host'):
         # find all hosts supporting queues
-        for queues in hosts.findall(rootTag+'queue'):
+        for queues in hosts.findall(rootTag + 'queue'):
             # if the user specified queue matches that in the xml:
             if(queue_name in queues.attrib['name']):
                 my_machine_dict[hosts.attrib['name']] = {}
                 # values from xml for number of processors and mem_total on each machine
-                for hostvalues in hosts.findall(rootTag+'hostvalue'):
-                    if('mem_total'==hostvalues.attrib['name']):
+                for hostvalues in hosts.findall(rootTag + 'hostvalue'):
+                    if('mem_total' == hostvalues.attrib['name']):
                         if hostvalues.text.lower().endswith('g'):
                             multip = 1
                         elif hostvalues.text.lower().endswith('m'):
-                            multip = 1/float(1024)
+                            multip = 1 / float(1024)
                         elif hostvalues.text.lower().endswith('t'):
                             multip = 1024
                         else:
                             raise Exception("Unrecognized suffix in mem_tot from SGE")
-                        my_machine_dict[hosts.attrib['name']]['mem_total']=float(hostvalues.text[:-1])*float(multip)
+                        my_machine_dict[hosts.attrib['name']]['mem_total'] = \
+                                float(hostvalues.text[:-1]) * float(multip)
     return my_machine_dict
-    
+
 def _combine_machine_info(xs):
     if len(xs) == 1:
         return xs[0]

@@ -13,7 +13,6 @@ import tempfile
 from bcbio import install, log, structural, utils, upload
 from bcbio.bam import callable
 from bcbio.distributed import clargs, runfn
-from bcbio.distributed.messaging import parallel_runner
 from bcbio.distributed.ipython import global_parallel
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
@@ -79,25 +78,24 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
     run_items = run_info.organize(dirs, config, run_info_yaml)
-    run_parallel = parallel_runner(parallel, dirs, config)
 
     # process each flowcell lane
-    lane_items = lane.process_all_lanes(run_items, run_parallel)
+    lane_items = lane.process_all_lanes(run_items, parallel, dirs, config)
     pipelines = _pair_lanes_with_pipelines(lane_items)
     final = []
     with utils.curdir_tmpdir() as tmpdir:
         tempfile.tempdir = tmpdir
         for pipeline, pipeline_items in pipelines.items():
-            pipeline_items = _add_provenance(pipeline_items, dirs, run_parallel, parallel, config)
+            pipeline_items = _add_provenance(pipeline_items, dirs, parallel, config)
             versioncheck.testall(pipeline_items)
-            for xs in pipeline.run(config, config_file, run_parallel, parallel, dirs, pipeline_items):
+            for xs in pipeline.run(config, config_file, parallel, dirs, pipeline_items):
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
                     final.append(xs[0])
 
-def _add_provenance(items, dirs, run_parallel, parallel, config):
+def _add_provenance(items, dirs, parallel, config):
     p = programs.write_versions(dirs, config)
-    system.write_info(dirs, run_parallel, parallel, config)
+    system.write_info(dirs, parallel, config)
     out = []
     for item in items:
         if item.get("upload") and item["upload"].get("fc_name"):
@@ -267,7 +265,7 @@ class AbstractPipeline:
         return
 
     @abc.abstractmethod
-    def run(self, config, config_file, run_parallel, parallel, dirs, lanes):
+    def run(self, config, config_file, parallel, dirs, lanes):
         return
 
 class Variant2Pipeline(AbstractPipeline):
@@ -278,12 +276,11 @@ class Variant2Pipeline(AbstractPipeline):
     name = "variant2"
 
     @classmethod
-    def run(self, config, config_file, run_parallel, parallel, dirs, samples):
+    def run(self, config, config_file, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with global_parallel(parallel, "multicore", ["process_alignment", "postprocess_alignment"],
                              samples, dirs, config,
-                             multiplier=alignprep.parallel_multiplier(samples)) as parallel:
-            run_parallel = parallel_runner(parallel, dirs, config)
+                             multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             logger.info("Timing: alignment")
             samples = run_parallel("prep_align_inputs", samples)
             samples = disambiguate.split(samples)
@@ -300,8 +297,7 @@ class Variant2Pipeline(AbstractPipeline):
         ## Variant calling on sub-regions of the input file (full cluster)
         with global_parallel(parallel, "full", ["piped_bamprep", "variantcall_sample"],
                              samples, dirs, config,
-                             multiplier=len(regions["analysis"]), max_multicore=1) as parallel:
-            run_parallel = parallel_runner(parallel, dirs, config)
+                             multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
             logger.info("Timing: alignment post-processing")
             samples = region.parallel_prep_region(samples, regions, run_parallel)
             logger.info("Timing: variant calling")
@@ -309,8 +305,7 @@ class Variant2Pipeline(AbstractPipeline):
 
         ## Finalize variants (per-sample cluster)
         with global_parallel(parallel, "persample", ["postprocess_variants"],
-                             samples, dirs, config) as parallel:
-            run_parallel = parallel_runner(parallel, dirs, config)
+                             samples, dirs, config) as run_parallel:
             logger.info("Timing: variant post-processing")
             samples = run_parallel("postprocess_variants", samples)
             logger.info("Timing: validation")
@@ -321,8 +316,7 @@ class Variant2Pipeline(AbstractPipeline):
             samples = validate.summarize_grading(samples)
         ## Finalizing BAMs and population databases, handle multicore computation
         with global_parallel(parallel, "multicore2", ["prep_gemini_db", "delayed_bam_merge"],
-                             samples, dirs, config) as parallel:
-            run_parallel = parallel_runner(parallel, dirs, config)
+                             samples, dirs, config) as run_parallel:
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
             logger.info("Timing: structural variation")
@@ -349,17 +343,15 @@ class StandardPipeline(AbstractPipeline):
     """
     name = "Standard"
     @classmethod
-    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
+    def run(self, config, config_file, parallel, dirs, lane_items):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with global_parallel(parallel, "multicore", ["process_alignment"],
-                             lane_items, dirs, config) as parallel:
-            run_parallel = parallel_runner(parallel, dirs, config)
+                             lane_items, dirs, config) as run_parallel:
             logger.info("Timing: alignment")
             samples = run_parallel("process_alignment", lane_items)
         ## Finalize (per-sample cluster)
         with global_parallel(parallel, "persample", ["postprocess_variants"],
-                             samples, dirs, config) as parallel:
-            run_parallel = parallel_runner(parallel, dirs, config)
+                             samples, dirs, config) as run_parallel:
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
@@ -372,35 +364,46 @@ class RnaseqPipeline(AbstractPipeline):
     name = "RNA-seq"
 
     @classmethod
-    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
-        lane_items = run_parallel("trim_lane", lane_items)
-        samples = disambiguate.split(lane_items)
-        samples = run_parallel("process_alignment", samples)
-        samples = disambiguate.resolve(samples, run_parallel)
-        samples = rnaseq.estimate_expression(samples, run_parallel)
-        #samples = rnaseq.detect_fusion(samples, run_parallel)
+    def run(self, config, config_file, parallel, dirs, samples):
+        with global_parallel(parallel, "multicore", ["trim_lane", "process_alignment"],
+                             samples, dirs, config,
+                             multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+            samples = disambiguate.split(samples)
+            samples = run_parallel("process_alignment", samples)
+            samples = disambiguate.resolve(samples, run_parallel)
+
+        with global_parallel(parallel, "rnaseqcount", ["generate_transcript_counts", "run_cufflinks"],
+                             samples, dirs, config) as run_parallel:
+            samples = rnaseq.estimate_expression(samples, run_parallel)
+            #samples = rnaseq.detect_fusion(samples, run_parallel)
+
         combined = combine_count_files([x[0].get("count_file") for x in samples])
-        organism = utils.get_in(samples[0][0], ('genome_resources', 'aliases',
-                                                'ensembl'), None)
+        organism = utils.get_in(samples[0][0], ('genome_resources', 'aliases', 'ensembl'), None)
         annotated = annotate_combined_count_file(combined, organism)
         for x in samples:
             x[0]["combined_counts"] = combined
             x[0]["annotated_combined_counts"] = annotated
 
-        samples = qcsummary.generate_parallel(samples, run_parallel)
-        #run_parallel("generate_bigwig", samples, {"programs": ["ucsc_bigwig"]})
+        with global_parallel(parallel, "persample", ["pipeline_summary"],
+                             samples, dirs, config) as run_parallel:
+            samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
 
 class ChipseqPipeline(AbstractPipeline):
     name = "chip-seq"
 
     @classmethod
-    def run(self, config, config_file, run_parallel, parallel, dirs, lane_items):
-        lane_items = run_parallel("trim_lane", lane_items)
-        samples = disambiguate.split(lane_items)
-        samples = run_parallel("process_alignment", samples)
-        samples = run_parallel("clean_chipseq_alignment", samples)
-        samples = qcsummary.generate_parallel(samples, run_parallel)
+    def run(self, config, config_file, parallel, dirs, samples):
+        with global_parallel(parallel, "multicore", ["trim_lane", "process_alignment"],
+                             samples, dirs, config,
+                             multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+            samples = run_parallel("trim_lane", samples)
+            samples = disambiguate.split(samples)
+            samples = run_parallel("process_alignment", samples)
+        with global_parallel(parallel, "persample", ["clean_chipseq_alignment", "pipeline_summary"],
+                             samples, dirs, config) as run_parallel:
+            samples = run_parallel("clean_chipseq_alignment", samples)
+            samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
 
 def _get_pipeline(item):

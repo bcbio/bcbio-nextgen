@@ -32,15 +32,6 @@ def dictadd(orig, k, v):
         new["view"] = view
     return new
 
-cur_num = 0
-def _get_checkpoint_file(cdir, fn_name):
-    """Retrieve checkpoint file for this step, with step number and function name.
-    """
-    global cur_num
-    fname = os.path.join(cdir, "%s-%s.done" % (cur_num, fn_name))
-    cur_num += 1
-    return fname
-
 def _view_from_parallel(parallel, work_dir, config):
     """Translate parallel map into options for a cluster view.
     """
@@ -67,18 +58,19 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
     identical resource requirements. Falls back into local execution for
     non-distributed clusters or completed jobs.
     """
+    from bcbio.distributed.messaging import parallel_runner
     checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"], "checkpoints_ipython"))
-    checkpoint_file = os.path.join(checkpoint_dir, "global-%s.done" % name)
+    checkpoint_file = os.path.join(checkpoint_dir, "global-%s.done" % name) if name else None
     sysinfo = system.get_info(dirs, parallel)
     try:
         if parallel["type"] != "ipython":
             parallel = copy.deepcopy(parallel)
             parallel["multiplier"] = multiplier
             parallel["max_multicore"] = max_multicore
-            yield parallel
-        elif os.path.exists(checkpoint_file):
+            yield parallel_runner(parallel, dirs, config)
+        elif checkpoint_file and os.path.exists(checkpoint_file):
             parallel["checkpoint"] = True
-            yield parallel
+            yield parallel_runner(parallel, dirs, config)
         else:
             items = [x for x in items if x is not None]
             jobr = resources.calculate([_get_ipython_fn(x, parallel) for x in fn_names],
@@ -90,14 +82,15 @@ def global_parallel(parallel, name, fn_names, items, dirs, config,
             with _view_from_parallel(parallel, dirs["work"], config) as view:
                 parallel["checkpoint"] = False
                 parallel["view"] = view
-                yield parallel
+                yield parallel_runner(parallel, dirs, config)
     except:
         raise
     else:
         parallel["view"] = None
         parallel["checkpoint"] = False
-        with open(checkpoint_file, "w") as out_handle:
-            out_handle.write("done\n")
+        if checkpoint_file:
+            with open(checkpoint_file, "w") as out_handle:
+                out_handle.write("done\n")
 
 def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -114,21 +107,9 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     """
     out = []
     items = [x for x in items if x is not None]
-    algs = [config_utils.get_algorithm_config(x) for x in items]
-    if ((len(algs) > 0 and not algs[0].get("resource_check", True))
-          or parallel.get("view") or parallel.get("checkpoint")):
-        checkpoint_file = None
-    else:
-        checkpoint_dir = utils.safe_makedir(os.path.join(work_dir, "checkpoints_ipython"))
-        checkpoint_file = _get_checkpoint_file(checkpoint_dir, fn_name)
     fn = _get_ipython_fn(fn_name, parallel)
-    if parallel.get("view") is None:
-        jobr = resources.calculate([fn], parallel, items, sysinfo, config)
-        parallel = dictadd(parallel, "cores_per_job", jobr.cores_per_job)
-        parallel = dictadd(parallel, "num_jobs", jobr.num_jobs)
-        parallel = dictadd(parallel, "mem", jobr.memory_per_job)
     # already finished, run locally on current machine to collect details
-    if parallel.get("checkpoint") or (checkpoint_file and os.path.exists(checkpoint_file)):
+    if parallel.get("checkpoint"):
         logger.info("ipython: %s -- local; checkpoint passed" % fn_name)
         for args in items:
             if args:
@@ -139,17 +120,9 @@ def runner(parallel, fn_name, items, work_dir, sysinfo, config):
     else:
         logger.info("ipython: %s" % fn_name)
         if len(items) > 0:
+            assert parallel.get("view"), "Need existing parallel view for processing."
             items = [config_utils.add_cores_to_config(x, parallel["cores_per_job"], parallel) for x in items]
-            if parallel.get("view"):
-                for data in parallel["view"].map_sync(fn, items, track=False):
-                    if data:
-                        out.extend(data)
-            else:
-                with _view_from_parallel(parallel, work_dir, config) as view:
-                    for data in view.map_sync(fn, items, track=False):
-                        if data:
-                            out.extend(data)
-    if checkpoint_file:
-        with open(checkpoint_file, "w") as out_handle:
-            out_handle.write("done\n")
+            for data in parallel["view"].map_sync(fn, items, track=False):
+                if data:
+                    out.extend(data)
     return out

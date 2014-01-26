@@ -11,6 +11,7 @@ from bcbio import utils, broad
 from bcbio.log import logger
 from bcbio.bam import callable, ref
 from bcbio.bam.trim import trim_read_through
+from bcbio.distributed.ipython import global_parallel
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
@@ -27,12 +28,14 @@ def _item_needs_compute(lane_items):
             return True
     return False
 
-def process_all_lanes(lanes, run_parallel):
+def process_all_lanes(lanes, parallel, dirs, config):
     """Process all input lanes, avoiding starting a cluster if not needed.
     """
     lanes = list(lanes)
     if _item_needs_compute(lanes):
-        return run_parallel("process_lane", [[x] for x in lanes])
+        with global_parallel(parallel, "laneprocess", ["process_lane"],
+                             lanes, dirs, config) as run_parallel:
+            return run_parallel("process_lane", [[x] for x in lanes])
     else:
         return [process_lane(x)[0] for x in lanes]
 
@@ -175,4 +178,3 @@ def _recal_no_markduplicates(data):
     data = recalibrate.prep_recal(data)[0][0]
     data["config"] = orig_config
     return data
-
