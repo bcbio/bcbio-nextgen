@@ -118,24 +118,18 @@ Aligner
 ~~~~~~~
 Write new aligners within their own submodule inside the ``ngsalign``
 directory. `bwa.py`_ is a good example to follow along with. There are
-three functions to implement, based on which type of alignment you'd
+two functions to implement, based on which type of alignment you'd
 like to allow:
 
 - ``align_bam`` -- Performs alignment given an input BAM file.
   Expected to return a sorted BAM output file.
 
-- ``align_pipe`` -- Performs alignment given FASTQ inputs (gzipped or
-  not). Expected to implemented an approach with unix-pipe that
-  minimizes intermediates and disk IO. Expected to return a sorted BAM
-  output file.
+- ``align`` -- Performs alignment given FASTQ inputs (gzipped or not). This is
+  generally expected to implement an approach with unix-pipe that minimizes
+  intermediates and disk IO, returning a sorted BAM output file. For
+  back-compatibility this can also return a text based SAM file.
 
-- ``align`` -- Performs alignment given FASTQ inputs, returning a text
-  based SAM file.
-
-``align_bam`` and ``align_pipe`` are most commonly used now, which
-``align`` provides functionality for older aligners that do not easily
-support a piped approach. See the :ref:`names-codedetails` section for more
-details on arguments.
+See the :ref:`names-codedetails` section for more details on arguments.
 
 Other required implementation details include:
 
@@ -325,3 +319,103 @@ additional information supplied during a variant calling workflow::
                    'vrn_file': '7_100326_FC6107FAAXX-sort-variants-gatkann-filter-effects.vcf'}],
      'vrn_file': '7_100326_FC6107FAAXX-sort-variants-gatkann-filter-effects.vcf',
      'work_bam': '7_100326_FC6107FAAXX-sort-prep.bam'}
+
+Parallelization framework
+=========================
+
+bcbio-nextgen supports parallel runs on local machines using multiple cores and
+distributed on a cluster using IPython using a general framework.
+
+The first parallelization step starts up a set of resources for processing. On a
+cluster this spawns a IPython parallel controller and set of engines for
+processing. The `prun (parallel run)`_ ``start`` function is the entry point to
+spawning the cluster and the main argument is a ``parallel`` dictionary which
+contains arguments to the engine processing command. Here is an example input
+from an IPython parallel run::
+
+    {'cores': 12,
+     'type': 'ipython'
+     'progs': ['aligner', 'gatk'],
+     'ensure_mem': {'star': 30, 'tophat': 8, 'tophat2': 8},
+     'module': 'bcbio.distributed',
+     'queue': 'batch',
+     'scheduler': 'torque',
+     'resources': [],
+     'retries': 0,
+     'tag': '',
+     'timeout': 15}
+
+The ``cores`` and ``type`` arguments must be present, identifying the total
+cores to use and type of processing, respectively. Following that are arguments
+to help identify the resources to use. ``progs`` specifies the programs used,
+here the aligner, which bcbio looks up from the input sample file, and
+gatk. ``ensure_mem`` is an optional argument that specifies minimum memory
+requirements to programs if used in the workflow. The remaining
+arguments are all specific to IPython to help it spin up engines on the
+appropriate computing cluster.
+
+A shared component of all processing runs is the identification of used programs
+from the ``progs`` argument. The run creation process looks up required memory
+and CPU resources for each program from the :ref:`config-resources` section of
+your ``bcbio_system.yaml`` file. It combines these resources into required
+memory and cores using the logic described in the :ref:`memory-management`
+section of the parallel documentation. Passing these requirements to the cluster
+creation process ensures the available machines match program requirements.
+
+bcbio-nextgen's `pipeline.main`_ code contains examples of starting and using
+set of available processing engines. This example starts up machines that use
+samtools, gatk and cufflinks then runs an RNA-seq expression analysis::
+
+    with prun.start(_wprogs(parallel, ["samtools", "gatk", "cufflinks"]),
+                    samples, config, dirs, "rnaseqcount") as run_parallel:
+        samples = rnaseq.estimate_expression(samples, run_parallel)
+
+The pipelines often reuse a single set of machines for multiple distributed
+functions to avoid the overhead of starting up and tearing down machines and
+clusters.
+
+The ``run_parallel`` function returned from the ``prun.start`` function enables
+running on jobs in the parallel on the created machines. The `ipython wrapper`_
+code contains examples of implementing this. It is a simple function that takes
+two arguments, the name of the function to run and a set of multiple arguments
+to pass to that function::
+
+    def run(fn_name, items):
+
+The ``items`` arguments need to be strings, lists and dictionaries to allow
+serialization to JSON format. The internals of the run function take care of
+running all of the code in parallel and returning the results back to the caller
+function.
+
+In this setup, the main processing code is fully independent from the parallel
+method used so running on a single multicore machine or in parallel on a cluster
+return identical results and require no changes to the logical code defining the
+pipeline.
+
+During re-runs, we avoid the expense of spinning up processing clusters for
+completed tasks using simple checkpoint files in the ``checkpoints_parallel``
+directory. The ``prun.start`` wrapper writes these on completion of processing
+for a group of tasks with the same parallel architecture, and on subsequent runs
+will go through these on the local machine instead of parallelizing. The
+processing code supports these quick re-runs by checking for and avoiding
+re-running of tasks when it finds output files.
+
+Plugging new parallelization approaches into this framework involves writing
+interface code that handles the two steps. First, create a cluster of ready to
+run machines given the ``parallel`` function with expected core and memory
+utilization:
+
+- ``num_jobs`` -- Total number of machines to start.
+- ``cores_per_job`` -- Number of cores available on each machine.
+- ``mem`` -- Expected memory needed for each machine. Divide by ``cores_per_job`` to
+  get the memory usage per core on a machine.
+
+Second, implement a ``run_parallel`` function that handles using these resources
+to distribute jobs and return results. The `multicore wrapper`_ and
+`ipython wrapper`_ are useful starting points for understanding the current
+implementations.
+
+.. _prun (parallel run): https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/prun.py
+.. _pipeline.main: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/main.py
+.. _ipython wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/ipython.py
+.. _multicore wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/multi.py

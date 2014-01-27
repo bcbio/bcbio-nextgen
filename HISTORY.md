@@ -1,5 +1,8 @@
 ## 0.7.7 (in progress)
 
+- Re-organization of parallel framework code to enable alternative approaches.
+  Document plugging in new parallel frameworks. Does not expose changes to users
+  but makes the code cleaner for developers.
 - Default to 1Gb/core memory usage when not specified in any programs. Do not
   use default baseline if supplied in input file. Thanks to James Porter.
 - Remove deprecated Celery distributed messaging, replaced in favor of IPython.

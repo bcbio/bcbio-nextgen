@@ -91,7 +91,6 @@ will ensure correct selection of the right environment.
 .. _Lustre: http://wiki.lustre.org/index.php/Main_Page
 .. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
 .. _SGE parallel environment: https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment
-.. _memory-management:
 
 Troubleshooting
 ===============
@@ -113,6 +112,8 @@ where ``host-ip`` is replaced by the actual IP address of the machine
 and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
 on each compute node. This will probably involve contacting your local
 cluster administrator.
+
+.. _memory-management:
 
 Memory management
 ~~~~~~~~~~~~~~~~~
