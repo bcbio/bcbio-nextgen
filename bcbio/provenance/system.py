@@ -53,9 +53,9 @@ def _get_machine_info(parallel, sys_config, dirs, config):
             logger.warn("Couldn't get machine information from resource query function for queue "
                         "'{0}' on scheduler \"{1}\"; "
                          "submitting job to queue".format(parallel["queue"], parallel["scheduler"]))
-    from bcbio.distributed.ipython import global_parallel
-    with global_parallel(parallel, None, ["machine_info"], [sys_config],
-                         dirs, config) as run_parallel:
+    from bcbio.distributed import prun
+    with prun.start(parallel, None, ["machine_info"], [sys_config],
+                    dirs, config) as run_parallel:
         return run_parallel("machine_info", [[sys_config]])
 
 def _slurm_info(queue):

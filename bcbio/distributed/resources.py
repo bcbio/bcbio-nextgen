@@ -3,7 +3,7 @@
 Uses annotations provided in multitasks.py for each function to identify utilized
 programs, then extracts resource requirements from the input bcbio_system file.
 """
-import collections
+import copy
 import math
 
 from bcbio.pipeline import config_utils
@@ -148,8 +148,11 @@ def calculate(fns, parallel, items, sysinfo, config, multiplier=1,
                                                                system_memory)
     # do not overschedule if we don't have extra items to process
     num_jobs = min(num_jobs, len(items) * multiplier)
-    JobResources = collections.namedtuple("JobResources", "num_jobs cores_per_job memory_per_job")
     logger.debug("Configuring %d jobs to run, using %d cores each with %sg of "
                  "memory reserved for each job" % (num_jobs, cores_per_job,
                                                    str(memory_per_job)))
-    return JobResources(num_jobs, cores_per_job, str(memory_per_job))
+    parallel = copy.deepcopy(parallel)
+    parallel["cores_per_job"] = cores_per_job
+    parallel["num_jobs"] = num_jobs
+    parallel["mem"] = str(memory_per_job)
+    return parallel

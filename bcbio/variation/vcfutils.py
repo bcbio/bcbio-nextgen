@@ -10,7 +10,7 @@ import os
 
 from bcbio import broad, utils
 from bcbio.bam import ref
-from bcbio.distributed.messaging import run_multicore, zeromq_aware_logging
+from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared, tools

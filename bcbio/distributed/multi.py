@@ -1,4 +1,4 @@
-"""Run distributed tasks in parallel using IPython or joblib on multiple cores.
+"""Run tasks in parallel on a single machine using multiple cores.
 """
 import functools
 
@@ -7,30 +7,29 @@ try:
 except ImportError:
     joblib = False
 
-from bcbio.distributed import ipython, resources
+from bcbio.distributed import resources
 from bcbio.log import logger, setup_local_logging
 from bcbio.pipeline import config_utils
 from bcbio.provenance import diagnostics, system
 
-def parallel_runner(parallel, dirs, config):
-    """Process a supplied function: single, multi-processor or distributed.
+def runner(parallel, config):
+    """Run functions, provided by string name, on multiple cores on the current machine.
     """
-    def run_parallel(fn_name, items, metadata=None):
+    def run_parallel(fn_name, items):
         items = [x for x in items if x is not None]
         if len(items) == 0:
             return []
         items = diagnostics.track_parallel(items, fn_name)
-        sysinfo = system.get_info(dirs, parallel)
-        if parallel["type"] == "ipython":
-            return ipython.runner(parallel, fn_name, items, dirs["work"], sysinfo, config)
-        else:
-            imodule = parallel.get("module", "bcbio.distributed")
-            logger.info("multiprocessing: %s" % fn_name)
-            fn = getattr(__import__("{base}.multitasks".format(base=imodule),
-                                    fromlist=["multitasks"]),
-                         fn_name)
-            return run_multicore(fn, items, config, parallel["cores"])
+        logger.info("multiprocessing: %s" % fn_name)
+        fn = get_fn(fn_name, parallel)
+        return run_multicore(fn, items, config, parallel=parallel)
     return run_parallel
+
+def get_fn(fn_name, parallel):
+    imodule = parallel.get("module", "bcbio.distributed")
+    return getattr(__import__("{base}.multitasks".format(base=imodule),
+                              fromlist=["multitasks"]),
+                   fn_name)
 
 def zeromq_aware_logging(f):
     """Ensure multiprocessing logging uses ZeroMQ queues.
@@ -61,21 +60,20 @@ def zeromq_aware_logging(f):
         return out
     return wrapper
 
-def run_multicore(fn, items, config, cores=None):
+def run_multicore(fn, items, config, parallel=None):
     """Run the function using multiple cores on the given items to process.
     """
-    if cores is None:
-        cores = config["algorithm"].get("num_cores", 1)
-    parallel = {"type": "local", "cores": cores}
-    sysinfo = system.get_info({}, parallel)
-    jobr = resources.calculate([fn], parallel, items, sysinfo, config,
-                               parallel.get("multiplier", 1),
-                               max_multicore=int(sysinfo["cores"]))
-    items = [config_utils.add_cores_to_config(x, jobr.cores_per_job) for x in items]
+    if parallel is None:
+        parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1)}
+        sysinfo = system.get_info({}, parallel)
+        parallel = resources.calculate([fn], parallel, items, sysinfo, config,
+                                       parallel.get("multiplier", 1),
+                                       max_multicore=int(parallel.get("max_multicore", sysinfo["cores"])))
+    items = [config_utils.add_cores_to_config(x, parallel["cores_per_job"]) for x in items]
     if joblib is None:
         raise ImportError("Need joblib for multiprocessing parallelization")
     out = []
-    for data in joblib.Parallel(jobr.num_jobs)(joblib.delayed(fn)(x) for x in items):
+    for data in joblib.Parallel(parallel["num_jobs"])(joblib.delayed(fn)(x) for x in items):
         if data:
             out.extend(data)
     return out

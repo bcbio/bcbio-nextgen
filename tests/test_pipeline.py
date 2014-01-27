@@ -9,7 +9,7 @@ from nose.plugins.attrib import attr
 
 from bcbio import utils
 from bcbio.bam import fastq
-from bcbio.distributed.messaging import parallel_runner
+from bcbio.distributed import prun
 from bcbio.pipeline.config_utils import load_config
 from bcbio.provenance import programs
 from bcbio.variation import vcfutils
@@ -43,13 +43,13 @@ class VCFUtilTest(unittest.TestCase):
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         config = load_config(os.path.join(self.data_dir, "automated",
                                           "post_process-sample.yaml"))
-        run_parallel = parallel_runner({"type": "local", "cores": 1}, {}, config)
         region_dir = os.path.join(self.var_dir, "S1_S2-combined-regions")
         if os.path.exists(region_dir):
             shutil.rmtree(region_dir)
         if os.path.exists(self.combo_file):
             os.remove(self.combo_file)
-        vcfutils.parallel_combine_variants(files, self.combo_file, ref_file, config, run_parallel)
+        with prun.start({"type": "local", "cores": 1}, None, [], [[config]], {}, config) as run_parallel:
+            vcfutils.parallel_combine_variants(files, self.combo_file, ref_file, config, run_parallel)
         for fname in files:
             if os.path.exists(fname + ".gz"):
                 subprocess.check_call(["gunzip", fname + ".gz"])
@@ -84,7 +84,6 @@ class VCFUtilTest(unittest.TestCase):
                           "/path/2/input/D1HJVACXX_2_AAGAGATC_2.fastq"], out[0]
         assert out[1] == ["/path/to/input/D1HJVACXX_3_AAGAGATC_1.fastq",
                           "/path/2/input/D1HJVACXX_3_AAGAGATC_2.fastq"], out[1]
-
 
         test_pairs = ["/path/to/input/Tester_1_fastq.txt",
                       "/path/to/input/Tester_2_fastq.txt"]

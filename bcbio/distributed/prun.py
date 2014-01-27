@@ -1,0 +1,55 @@
+"""Generalized running of parallel tasks in multiple environments.
+"""
+import contextlib
+import os
+
+from bcbio import utils
+from bcbio.log import logger
+from bcbio.provenance import system
+from bcbio.distributed import ipython, multi, resources
+
+@contextlib.contextmanager
+def start(parallel, name, fn_names, items, dirs, config, multiplier=1, max_multicore=None):
+    """Start a parallel cluster or machines to be used for running remote functions.
+
+    Returns a function used to process, in parallel items with a given function.
+
+    Allows sharing of a single cluster across multiple functions with
+    identical resource requirements. Uses local execution for non-distributed
+    clusters or completed jobs.
+
+    A checkpoint directory keeps track of finished tasks, avoiding spinning up clusters
+    for sections that have been previous processed.
+
+    multiplier - Number of expected jobs per initial input item. Used to avoid underscheduling
+      cores when an item is split during processing.
+    max_multicore -- The maximum number of cores to use for each process. Can be used
+      to process less multicore usage when jobs run faster on more single cores.
+    """
+    if name:
+        checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"], "checkpoints_parallel"))
+        checkpoint_file = os.path.join(checkpoint_dir, "%s.done" % name)
+    else:
+        checkpoint_file = None
+    sysinfo = system.get_info(dirs, parallel)
+    items = [x for x in items if x is not None]
+    parallel = resources.calculate([multi.get_fn(x, parallel) for x in fn_names],
+                                   parallel, items, sysinfo, config, multiplier=multiplier,
+                                   max_multicore=int(max_multicore or sysinfo["cores"]))
+    try:
+        if checkpoint_file and os.path.exists(checkpoint_file):
+            logger.info("run local -- checkpoint passed: %s" % name)
+            yield multi.runner(parallel, config)
+        elif parallel["type"] == "ipython":
+            with ipython.create(parallel, dirs, config) as view:
+                yield ipython.runner(view, parallel, dirs, config)
+        else:
+            yield multi.runner(parallel, config)
+    except:
+        raise
+    else:
+        for x in ["cores_per_job", "num_jobs", "mem"]:
+            parallel.pop(x, None)
+        if checkpoint_file:
+            with open(checkpoint_file, "w") as out_handle:
+                out_handle.write("done\n")

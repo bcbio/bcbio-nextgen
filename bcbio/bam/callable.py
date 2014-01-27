@@ -24,7 +24,7 @@ import pysam
 
 from bcbio import bam, broad, utils
 from bcbio.log import logger
-from bcbio.distributed.messaging import parallel_runner, zeromq_aware_logging
+from bcbio.distributed import multi, prun
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
@@ -35,11 +35,13 @@ def parallel_callable_loci(in_bam, ref_file, config):
     config["algorithm"]["memory_adjust"] = {"direction": "decrease", "magnitude": 2}
     data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
-    runner = parallel_runner(parallel, {}, config)
-    split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
-    out = parallel_split_combine([[data]], split_fn, runner,
-                                 "calc_callable_loci", "combine_bed",
-                                 "callable_bed", ["config"])[0]
+    items = [[data]]
+    print config.keys()
+    with prun.start(parallel, None, [], items, {}, config) as runner:
+        split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
+        out = parallel_split_combine(items, split_fn, runner,
+                                     "calc_callable_loci", "combine_bed",
+                                     "callable_bed", ["config"])[0]
     return out[0]["callable_bed"]
 
 def combine_bed(in_files, out_file, config):
@@ -53,7 +55,7 @@ def combine_bed(in_files, out_file, config):
                         shutil.copyfileobj(in_handle, out_handle)
     return out_file
 
-@zeromq_aware_logging
+@multi.zeromq_aware_logging
 def calc_callable_loci(data, region=None, out_file=None):
     """Determine callable bases for input BAM using Broad's CallableLoci walker.
 

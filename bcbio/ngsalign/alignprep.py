@@ -7,7 +7,7 @@ import subprocess
 
 from bcbio import bam, utils
 from bcbio.log import logger
-from bcbio.distributed.messaging import run_multicore, zeromq_aware_logging
+from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
 from bcbio.provenance import do
@@ -129,10 +129,9 @@ def _prep_grabix_indexes(in_files, dirs, config):
     else:
         out = run_multicore(_bgzip_from_fastq,
                             [[{"in_file": x, "dirs": dirs, "config": config}] for x in in_files if x],
-                            config, config["algorithm"].get("num_cores", 1))
+                            config)
     items = [[{"bgzip_file": x, "config": copy.deepcopy(config)}] for x in out if x]
-    run_multicore(_grabix_index, items, config,
-                  config["algorithm"].get("num_cores", 1))
+    run_multicore(_grabix_index, items, config)
     return out
 
 def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):

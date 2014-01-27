@@ -11,7 +11,7 @@ from bcbio import utils, broad
 from bcbio.log import logger
 from bcbio.bam import callable, ref
 from bcbio.bam.trim import trim_read_through
-from bcbio.distributed.ipython import global_parallel
+from bcbio.distributed import prun
 from bcbio.pipeline.fastq import get_fastq_files, needs_fastq_conversion
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
@@ -33,8 +33,8 @@ def process_all_lanes(lanes, parallel, dirs, config):
     """
     lanes = list(lanes)
     if _item_needs_compute(lanes):
-        with global_parallel(parallel, "laneprocess", ["process_lane"],
-                             lanes, dirs, config) as run_parallel:
+        with prun.start(parallel, "laneprocess", ["process_lane"],
+                        lanes, dirs, config) as run_parallel:
             return run_parallel("process_lane", [[x] for x in lanes])
     else:
         return [process_lane(x)[0] for x in lanes]

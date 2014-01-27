@@ -11,6 +11,7 @@ from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, mul
 @utils.map_wrap
 def process_lane(*args):
     return lane.process_lane(*args)
+process_lane.metadata = {"resources": ["picard"]}
 
 @utils.map_wrap
 def trim_lane(*args):
@@ -78,6 +79,7 @@ pipeline_summary.metadata = {"resources": ["gatk", "picard", "rnaseqc"]}
 @utils.map_wrap
 def generate_transcript_counts(*args):
     return rnaseq.generate_transcript_counts(*args)
+generate_transcript_counts.metadata = {"resources": ["samtools", "gatk"]}
 
 @utils.map_wrap
 def run_cufflinks(*args):

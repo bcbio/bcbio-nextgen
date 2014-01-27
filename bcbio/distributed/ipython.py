@@ -9,33 +9,20 @@ Cluster implementation from ipython-cluster-helper:
 https://github.com/roryk/ipython-cluster-helper
 """
 import os
-import contextlib
-import copy
 
 from bcbio import utils
 from bcbio.log import logger, get_log_dir
 from bcbio.pipeline import config_utils
-from bcbio.provenance import system
-from bcbio.distributed import resources
+from bcbio.provenance import diagnostics
 
 from cluster_helper import cluster as ipython_cluster
 
-def dictadd(orig, k, v):
-    """Imitates immutability by adding a key/value to a new dictionary.
-    Works around not being able to deepcopy view objects.
-    """
-    view = orig.pop("view", None)
-    new = copy.deepcopy(orig)
-    new[k] = v
-    if view:
-        orig["view"] = view
-        new["view"] = view
-    return new
+def create(parallel, dirs, config):
+    """Create a cluster based on the provided parallel arguments.
 
-def _view_from_parallel(parallel, work_dir, config):
-    """Translate parallel map into options for a cluster view.
+    Returns an IPython view on the cluster, enabling processing on jobs.
     """
-    profile_dir = utils.safe_makedir(os.path.join(work_dir, get_log_dir(config), "ipython"))
+    profile_dir = utils.safe_makedir(os.path.join(dirs["work"], get_log_dir(config), "ipython"))
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                         parallel["num_jobs"], parallel["cores_per_job"],
                                         profile=profile_dir, start_wait=parallel["timeout"],
@@ -49,80 +36,21 @@ def _get_ipython_fn(fn_name, parallel):
                               fromlist=["ipythontasks"]),
                    fn_name)
 
-@contextlib.contextmanager
-def global_parallel(parallel, name, fn_names, items, dirs, config,
-                    multiplier=1, max_multicore=None):
-    """Add an IPython cluster to be used for multiple remote functions.
-
-    Allows sharing of a single cluster across multiple functions with
-    identical resource requirements. Falls back into local execution for
-    non-distributed clusters or completed jobs.
-    """
-    from bcbio.distributed.messaging import parallel_runner
-    checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"], "checkpoints_ipython"))
-    checkpoint_file = os.path.join(checkpoint_dir, "global-%s.done" % name) if name else None
-    sysinfo = system.get_info(dirs, parallel)
-    try:
-        if parallel["type"] != "ipython":
-            parallel = copy.deepcopy(parallel)
-            parallel["multiplier"] = multiplier
-            parallel["max_multicore"] = max_multicore
-            yield parallel_runner(parallel, dirs, config)
-        elif checkpoint_file and os.path.exists(checkpoint_file):
-            parallel["checkpoint"] = True
-            yield parallel_runner(parallel, dirs, config)
-        else:
-            items = [x for x in items if x is not None]
-            jobr = resources.calculate([_get_ipython_fn(x, parallel) for x in fn_names],
-                                       parallel, items, sysinfo, config, multiplier=multiplier,
-                                       max_multicore=max_multicore)
-            parallel = dictadd(parallel, "cores_per_job", jobr.cores_per_job)
-            parallel = dictadd(parallel, "num_jobs", jobr.num_jobs)
-            parallel = dictadd(parallel, "mem", jobr.memory_per_job)
-            with _view_from_parallel(parallel, dirs["work"], config) as view:
-                parallel["checkpoint"] = False
-                parallel["view"] = view
-                yield parallel_runner(parallel, dirs, config)
-    except:
-        raise
-    else:
-        parallel["view"] = None
-        parallel["checkpoint"] = False
-        if checkpoint_file:
-            with open(checkpoint_file, "w") as out_handle:
-                out_handle.write("done\n")
-
-def runner(parallel, fn_name, items, work_dir, sysinfo, config):
+def runner(view, parallel, dirs, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
 
-    This will spawn clusters for parallel and custom queue types like multicore
-    and high I/O tasks on demand.
-
-    A checkpoint directory keeps track of finished tasks, avoiding spinning up clusters
-    for sections that have been previous processed.
-
-    The parallel input function can contain a pre-created view on an
-    existing Ipython cluster, in which case this will be reused
-    instead of creating a new cluster.
+    view provides map-style access to an existing Ipython cluster.
     """
-    out = []
-    items = [x for x in items if x is not None]
-    fn = _get_ipython_fn(fn_name, parallel)
-    # already finished, run locally on current machine to collect details
-    if parallel.get("checkpoint"):
-        logger.info("ipython: %s -- local; checkpoint passed" % fn_name)
-        for args in items:
-            if args:
-                data = fn(args)
-                if data:
-                    out.extend(data)
-    # Run on a standard parallel queue
-    else:
+    def run(fn_name, items):
+        out = []
+        items = [x for x in items if x is not None]
+        items = diagnostics.track_parallel(items, fn_name)
+        fn = _get_ipython_fn(fn_name, parallel)
         logger.info("ipython: %s" % fn_name)
         if len(items) > 0:
-            assert parallel.get("view"), "Need existing parallel view for processing."
             items = [config_utils.add_cores_to_config(x, parallel["cores_per_job"], parallel) for x in items]
-            for data in parallel["view"].map_sync(fn, items, track=False):
+            for data in view.map_sync(fn, items, track=False):
                 if data:
                     out.extend(data)
-    return out
+        return out
+    return run
