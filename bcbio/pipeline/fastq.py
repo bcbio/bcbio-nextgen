@@ -44,10 +44,11 @@ def get_fastq_files(item):
             safe_makedir(fastq_dir)
             out_file = os.path.join(fastq_dir,
                                     os.path.basename(os.path.splitext(fname)[0]))
-            with file_transaction(out_file) as tx_out_file:
-                cmd = "gunzip -c {fname} > {tx_out_file}".format(**locals())
-                with open(tx_out_file, "w") as out_handle:
-                    subprocess.check_call(cmd, shell=True)
+            if not os.path.exists(out_file):
+                with file_transaction(out_file) as tx_out_file:
+                    cmd = "gunzip -c {fname} > {tx_out_file}".format(**locals())
+                    with open(tx_out_file, "w") as out_handle:
+                        subprocess.check_call(cmd, shell=True)
             ready_files.append(out_file)
         elif fname.endswith(".bam"):
             if _pipeline_needs_fastq(item["config"], item):
