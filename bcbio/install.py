@@ -251,7 +251,7 @@ def _install_gemini(tooldir, datadir, args):
         url = "https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py"
         script = os.path.basename(url)
         subprocess.check_call(["wget", "-O", script, url])
-        cmd = [sys.executable, script, tooldir, datadir, "--notools", "--nodata", "--sharedpy"]
+        cmd = [sys.executable, "-E", script, tooldir, datadir, "--notools", "--nodata", "--sharedpy"]
         if not args.sudo:
             cmd.append("--nosudo")
         subprocess.check_call(cmd)
