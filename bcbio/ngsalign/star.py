@@ -44,11 +44,3 @@ def remap_index_fn(ref_file):
     """Map sequence references to equivalent star indexes
     """
     return path.join(path.dirname(path.dirname(ref_file)), "star")
-
-def job_requirements(cores, memory):
-    MIN_STAR_MEMORY = 30.0
-    if not memory or cores * memory < MIN_STAR_MEMORY:
-        memory = MIN_STAR_MEMORY / cores
-    return cores, memory
-
-align.job_requirements = job_requirements

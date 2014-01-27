@@ -28,13 +28,20 @@ def _item_needs_compute(lane_items):
             return True
     return False
 
+def _wprogs(parallel, progs):
+    """Add program information to the parallel environment, making a clean copy.
+    """
+    parallel = copy.deepcopy(parallel)
+    parallel["progs"] = progs
+    return parallel
+
 def process_all_lanes(lanes, parallel, dirs, config):
     """Process all input lanes, avoiding starting a cluster if not needed.
     """
     lanes = list(lanes)
     if _item_needs_compute(lanes):
-        with prun.start(parallel, "laneprocess", ["process_lane"],
-                        lanes, dirs, config) as run_parallel:
+        with prun.start(_wprogs(parallel, ["picard"]),
+                        lanes, config, dirs, "laneprocess") as run_parallel:
             return run_parallel("process_lane", [[x] for x in lanes])
     else:
         return [process_lane(x)[0] for x in lanes]

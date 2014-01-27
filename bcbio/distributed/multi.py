@@ -63,10 +63,11 @@ def zeromq_aware_logging(f):
 def run_multicore(fn, items, config, parallel=None):
     """Run the function using multiple cores on the given items to process.
     """
-    if parallel is None:
-        parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1)}
+    if parallel is None or "num_jobs" not in parallel:
+        if parallel is None:
+            parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1)}
         sysinfo = system.get_info({}, parallel)
-        parallel = resources.calculate([fn], parallel, items, sysinfo, config,
+        parallel = resources.calculate(parallel, items, sysinfo, config,
                                        parallel.get("multiplier", 1),
                                        max_multicore=int(parallel.get("max_multicore", sysinfo["cores"])))
     items = [config_utils.add_cores_to_config(x, parallel["cores_per_job"]) for x in items]

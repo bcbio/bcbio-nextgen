@@ -4,7 +4,7 @@ import contextlib
 
 from IPython.parallel import require
 
-from bcbio.ngsalign import alignprep, tophat, star
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (config_utils, disambiguate, sample, lane, qcsummary, shared,
                             variation, rnaseq)
 from bcbio.provenance import system

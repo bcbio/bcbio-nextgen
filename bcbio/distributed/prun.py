@@ -9,7 +9,7 @@ from bcbio.provenance import system
 from bcbio.distributed import ipython, multi, resources
 
 @contextlib.contextmanager
-def start(parallel, name, fn_names, items, dirs, config, multiplier=1, max_multicore=None):
+def start(parallel, items, config, dirs=None, name=None, multiplier=1, max_multicore=None):
     """Start a parallel cluster or machines to be used for running remote functions.
 
     Returns a function used to process, in parallel items with a given function.
@@ -32,9 +32,8 @@ def start(parallel, name, fn_names, items, dirs, config, multiplier=1, max_multi
     else:
         checkpoint_file = None
     sysinfo = system.get_info(dirs, parallel)
-    items = [x for x in items if x is not None]
-    parallel = resources.calculate([multi.get_fn(x, parallel) for x in fn_names],
-                                   parallel, items, sysinfo, config, multiplier=multiplier,
+    items = [x for x in items if x is not None] if items else []
+    parallel = resources.calculate(parallel, items, sysinfo, config, multiplier=multiplier,
                                    max_multicore=int(max_multicore or sysinfo["cores"]))
     try:
         if checkpoint_file and os.path.exists(checkpoint_file):

@@ -48,7 +48,7 @@ class VCFUtilTest(unittest.TestCase):
             shutil.rmtree(region_dir)
         if os.path.exists(self.combo_file):
             os.remove(self.combo_file)
-        with prun.start({"type": "local", "cores": 1}, None, [], [[config]], {}, config) as run_parallel:
+        with prun.start({"type": "local", "cores": 1}, [[config]], config) as run_parallel:
             vcfutils.parallel_combine_variants(files, self.combo_file, ref_file, config, run_parallel)
         for fname in files:
             if os.path.exists(fname + ".gz"):

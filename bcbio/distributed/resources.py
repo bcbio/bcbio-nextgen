@@ -9,42 +9,41 @@ import math
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
 
-def _get_resource_programs(fn, algs):
+def _get_resource_programs(progs, algs):
     """Retrieve programs used in analysis based on algorithm configurations.
-
-    Helps avoid requiring core information from unused programs.
+    Handles special cases like aligners and variant callers.
     """
-    used_progs = _get_used_programs(fn, algs)
-    # standard list of programs we always use
-    # XXX Need to expose this in a top-level way to allow more multiprocessing
-    for prog in (fn.metadata.get("resources", []) if hasattr(fn, "metadata") else []):
-        if prog in used_progs:
-            yield prog
+    out = set([])
+    for p in progs:
+        if p == "aligner":
+            for alg in algs:
+                aligner = alg.get("aligner")
+                if aligner:
+                    out.add(aligner)
+        elif p == "variantcaller":
+            for alg in algs:
+                vc = alg.get("variantcaller")
+                if vc:
+                    if isinstance(vc, (list, tuple)):
+                        for x in vc:
+                            out.add(x)
+                    else:
+                        out.add(vc)
+        elif p == "gatk-vqsr":
+            if config_utils.use_vqsr(algs):
+                out.add("gatk-vqsr")
+        else:
+            out.add(p)
+    return sorted(list(out))
 
-def _get_ensure_functions(fn, algs):
-    used_progs = _get_used_programs(fn, algs)
-    for prog in (fn.metadata.get("ensure", {}).keys() if hasattr(fn, "metadata") else []):
-        if prog in used_progs:
-            yield fn.metadata["ensure"][prog]
-
-def _get_used_programs(fn, algs):
-    used_progs = set(["gatk", "gemini", "bcbio_coverage", "samtools",
-                      "snpeff", "cufflinks", "picard", "rnaseqc"])
-    for alg in algs:
-        # get aligners used
-        aligner = alg.get("aligner")
-        if aligner:
-            used_progs.add(aligner)
-        vc = alg.get("variantcaller")
-        if vc:
-            if isinstance(vc, (list, tuple)):
-                for x in vc:
-                    used_progs.add(x)
-            else:
-                used_progs.add(vc)
-    if config_utils.use_vqsr(algs):
-        used_progs.add("gatk-vqsr")
-    return used_progs
+def _ensure_min_resources(progs, cores, memory, min_memory):
+    """Ensure setting match minimum resources required for used programs.
+    """
+    for p in progs:
+        if p in min_memory:
+            if not memory or cores * memory < min_memory[p]:
+                memory = float(min_memory[p]) / cores
+    return cores, memory
 
 def _str_memory_to_gb(memory):
     val = float(memory[:-1])
@@ -91,9 +90,9 @@ def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     else:
         return jobs
 
-def calculate(fns, parallel, items, sysinfo, config, multiplier=1,
+def calculate(parallel, items, sysinfo, config, multiplier=1,
               max_multicore=None):
-    """Determine cores and workers to use for this stage based on function metadata.
+    """Determine cores and workers to use for this stage based on used programs.
     multiplier specifies the number of regions items will be split into during
     processing.
     max_multicore specifies an optional limit on the maximum cores. Can use to
@@ -102,25 +101,27 @@ def calculate(fns, parallel, items, sysinfo, config, multiplier=1,
     jobs for available resources.
     """
     assert len(items) > 0, "Finding job resources but no items to process"
-    all_cores = [1]
+    all_cores = []
     all_memory = []
     # Provide 250Mb of additional memory for the system
     system_memory = 0.25
     algs = [config_utils.get_algorithm_config(x) for x in items]
-    for fn in fns:
-        for prog in _get_resource_programs(fn, algs):
-            resources = config_utils.get_resources(prog, config)
-            cores = resources.get("cores", 1)
-            memory = _get_prog_memory(resources)
-            all_cores.append(cores)
-            if memory:
-                all_memory.append(memory)
-            logger.debug("{prog} requests {cores} cores and {memory}g "
-                         "memory for each core.".format(**locals()))
-
+    progs = _get_resource_programs(parallel.get("progs", []), algs)
+    for prog in progs:
+        resources = config_utils.get_resources(prog, config)
+        cores = resources.get("cores", 1)
+        memory = _get_prog_memory(resources)
+        all_cores.append(cores)
+        if memory:
+            all_memory.append(memory)
     # Use modest 1Gb memory usage per core as min baseline if not specified
     if len(all_memory) == 0:
         all_memory.append(1)
+    if len(all_cores) == 0:
+        all_cores.append(1)
+    logger.debug("Resource requests: {progs}; memory: {memory}; cores: {cores}".format(
+        progs=", ".join(progs), memory=", ".join("%.1f" % x for x in all_memory),
+        cores=", ".join(str(x) for x in all_cores)))
 
     cores_per_job = max(all_cores)
     if max_multicore:
@@ -129,10 +130,8 @@ def calculate(fns, parallel, items, sysinfo, config, multiplier=1,
         cores_per_job = min(cores_per_job, int(sysinfo["cores"]))
     memory_per_core = max(all_memory)
 
-    # these callbacks make sure the cores and memory meet minimum requirements
-    for fn in fns:
-        for ensure in _get_ensure_functions(fn, algs):
-            cores_per_job, memory_per_core = ensure(cores_per_job, memory_per_core)
+    cores_per_job, memory_per_core = _ensure_min_resources(progs, cores_per_job, memory_per_core,
+                                                           min_memory=parallel.get("ensure_mem", {}))
 
     total = parallel["cores"]
     if total > cores_per_job:
