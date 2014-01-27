@@ -6,8 +6,8 @@
 # ./run_tests.sh devel
 
 ATTR=${1:-speed=1}
-if [[ "`which bcbio_vm.py`" != "" && $ATTR == "docker" ]]; then
-    BCBIO_DIR=$(dirname $(readlink -f `which bcbio_vm.py`))
+if [[ $ATTR == "docker" && "`which bcbio_vm.py`" != "" ]]; then
+    BCBIO_DIR=$(dirname $(readlink -f `which bcbio_vm2.py`))
 else
     BCBIO_DIR=$(dirname $(readlink -f `which bcbio_nextgen.py`))
 fi
