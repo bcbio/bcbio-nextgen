@@ -26,9 +26,10 @@ def runner(parallel, config):
     return run_parallel
 
 def get_fn(fn_name, parallel):
+    taskmod = "ipythontasks" if parallel.get("type") == "ipython" else "multitasks"
     imodule = parallel.get("module", "bcbio.distributed")
-    return getattr(__import__("{base}.multitasks".format(base=imodule),
-                              fromlist=["multitasks"]),
+    return getattr(__import__("{base}.{taskmod}".format(base=imodule, taskmod=taskmod),
+                              fromlist=[taskmod]),
                    fn_name)
 
 def zeromq_aware_logging(f):
