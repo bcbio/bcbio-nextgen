@@ -132,7 +132,7 @@ def _subset_bed_by_region(in_file, out_file, region):
             else:
                 x.end += 1
         return x
-    orig_bed.intersect(region_bed).each(_ensure_minsize).saveas(out_file)
+    orig_bed.intersect(region_bed).each(_ensure_minsize).merge().saveas(out_file)
 
 def subset_variant_regions(variant_regions, region, out_file):
     """Return BED file subset by a specified chromosome region.
