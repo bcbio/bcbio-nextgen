@@ -6,7 +6,7 @@ no-read regions.
 import os
 
 from bcbio.distributed.split import (parallel_split_combine,
-                                     grouped_parallel_split_combine)
+                                     grouped_parallel_split_combine, group_combine_parts)
 from bcbio import utils
 from bcbio.variation import genotype, multi
 
@@ -74,7 +74,7 @@ def delayed_bamprep_merge(samples, run_parallel):
     needs_merge = False
     for data in samples:
         if (data[0]["config"]["algorithm"].get("merge_bamprep", True) and
-            data[0].has_key("combine")):
+              "combine" in data[0]):
             needs_merge = True
             break
     if needs_merge:
@@ -111,14 +111,21 @@ def parallel_variantcall_region(samples, run_parallel):
     """
     to_process = []
     extras = []
+    to_group = []
     for x in samples:
         added = False
         for add in genotype.handle_multiple_variantcallers(x):
             added = True
             to_process.append(add)
         if not added:
-            extras.append(x)
+            if "combine" in x[0] and x[0]["combine"].keys()[0] in x[0]:
+                assert len(x) == 1
+                to_group.append(x[0])
+            else:
+                extras.append(x)
     split_fn = _split_by_ready_regions("-variants.vcf", "work_bam", genotype.get_variantcaller)
+    if len(to_group) > 0:
+        extras += group_combine_parts(to_group)
     return extras + grouped_parallel_split_combine(to_process, split_fn,
                                                    multi.group_batches, run_parallel,
                                                    "variantcall_sample", "split_variants_by_sample",
@@ -126,7 +133,7 @@ def parallel_variantcall_region(samples, run_parallel):
                                                    "vrn_file", ["region", "sam_ref", "config"])
 
 def clean_sample_data(samples):
-    """Clean unnecessary information from sample data, reducing size for messaging passing.
+    """Clean unnecessary information from sample data, reducing size for message passing.
     """
     out = []
     for data in samples:
@@ -135,7 +142,6 @@ def clean_sample_data(samples):
         data["config"] = {"algorithm": data["config"]["algorithm"],
                           "resources": data["config"]["resources"]}
         for remove_attr in ["config_file", "regions", "algorithm"]:
-            if data.has_key(remove_attr):
-                del data[remove_attr]
+            data.pop(remove_attr, None)
         out.append([data])
     return out
