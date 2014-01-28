@@ -9,7 +9,11 @@ from nose.plugins.attrib import attr
 
 from bcbio import utils
 from bcbio.bam import fastq
-from bcbio.distributed import prun
+# Be back compatible with 0.7.6 -- remove after 0.7.7 release
+try:
+    from bcbio.distributed import prun
+except ImportError:
+    prun = None
 from bcbio.pipeline.config_utils import load_config
 from bcbio.provenance import programs
 from bcbio.variation import vcfutils
@@ -39,6 +43,9 @@ class VCFUtilTest(unittest.TestCase):
     def test_1_parallel_vcf_combine(self):
         """Parallel combination of VCF files, split by chromosome.
         """
+        # Be back compatible with 0.7.6 -- remove after 0.7.7 release
+        if prun is None:
+            return
         files = [os.path.join(self.var_dir, "S1-variants.vcf"), os.path.join(self.var_dir, "S2-variants.vcf")]
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         config = load_config(os.path.join(self.data_dir, "automated",
@@ -61,6 +68,9 @@ class VCFUtilTest(unittest.TestCase):
     def test_2_vcf_exclusion(self):
         """Exclude samples from VCF files.
         """
+        # Be back compatible with 0.7.6 -- remove after 0.7.7 release
+        if prun is None:
+            return
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         config = load_config(os.path.join(self.data_dir, "automated",
                                           "post_process-sample.yaml"))
