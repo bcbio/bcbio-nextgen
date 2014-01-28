@@ -11,4 +11,6 @@ if [[ $ATTR == "docker" && "`which bcbio_vm.py`" != "" ]]; then
 else
     BCBIO_DIR=$(dirname $(readlink -f `which bcbio_nextgen.py`))
 fi
+unset PYTHONHOME
+unset PYTHONPATH
 $BCBIO_DIR/nosetests -v -s -a $ATTR
