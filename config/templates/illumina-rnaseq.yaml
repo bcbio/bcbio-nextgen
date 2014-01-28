@@ -16,5 +16,4 @@ details:
       trim_reads: read_through
       adapters: [truseq, polya]
       strandedness: unstranded #can be stranded
-      fusion_mode: oncofuse
-      
+
