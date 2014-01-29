@@ -116,7 +116,7 @@ def _extract_sr_aligns(in_bam, work_dir, data):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{samtools} view -h {in_bam} | "
-                   "{python} {extract_sr_script} -i stdin | "
+                   "{python} -E {extract_sr_script} -i stdin | "
                    "{samtools} view -Sb - > {tx_out_file}")
             do.run(cmd.format(**locals()), "Lumpy prep: split read", data)
     return out_file

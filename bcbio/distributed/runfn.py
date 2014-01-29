@@ -3,8 +3,11 @@
 Enables command line access and alternative interfaces to run specific
 functionality within bcbio-nextgen.
 """
+import os
+
 import yaml
 
+from bcbio import utils
 from bcbio.distributed import multitasks
 
 def process(args):
@@ -16,7 +19,12 @@ def process(args):
         raise AttributeError("Did not find exposed function in bcbio.distributed.multitasks named '%s'" % args.name)
     with open(args.argfile) as in_handle:
         fnargs = yaml.safe_load(in_handle)
-    fn(fnargs)
+    work_dir = os.path.dirname(args.argfile)
+    with utils.chdir(work_dir):
+        out = fn(fnargs)
+    out_file = "%s-out%s" % os.path.splitext(args.argfile)
+    with open(out_file, "w") as out_handle:
+        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser("runfn", help=("Run a specific bcbio-nextgen function."
