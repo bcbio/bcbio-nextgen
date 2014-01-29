@@ -28,13 +28,15 @@ def create(parallel, dirs, config):
                                         profile=profile_dir, start_wait=parallel["timeout"],
                                         extra_params={"resources": parallel["resources"],
                                                       "mem": parallel["mem"],
-                                                      "tag": parallel.get("tag")},
+                                                      "tag": parallel.get("tag"),
+                                                      "run_local": parallel.get("run_local")},
                                         retries=parallel.get("retries"))
 
 def _get_ipython_fn(fn_name, parallel):
+    import_fn_name = parallel.get("wrapper", fn_name)
     return getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
                               fromlist=["ipythontasks"]),
-                   fn_name)
+                   import_fn_name)
 
 def runner(view, parallel, dirs, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -49,6 +51,8 @@ def runner(view, parallel, dirs, config):
         logger.info("ipython: %s" % fn_name)
         if len(items) > 0:
             items = [config_utils.add_cores_to_config(x, parallel["cores_per_job"], parallel) for x in items]
+            if "wrapper" in parallel:
+                items = [[fn_name] + x for x in items]
             for data in view.map_sync(fn, items, track=False):
                 if data:
                     out.extend(data)

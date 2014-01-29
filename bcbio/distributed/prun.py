@@ -34,7 +34,7 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1, max_multi
     sysinfo = system.get_info(dirs, parallel)
     items = [x for x in items if x is not None] if items else []
     parallel = resources.calculate(parallel, items, sysinfo, config, multiplier=multiplier,
-                                   max_multicore=int(max_multicore or sysinfo["cores"]))
+                                   max_multicore=int(max_multicore or sysinfo.get("cores", 1)))
     try:
         if checkpoint_file and os.path.exists(checkpoint_file):
             logger.info("run local -- checkpoint passed: %s" % name)

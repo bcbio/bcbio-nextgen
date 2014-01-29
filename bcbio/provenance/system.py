@@ -25,7 +25,7 @@ def _get_cache_file(dirs, parallel):
 def write_info(dirs, parallel, config):
     """Write cluster or local filesystem resources, spinning up cluster if not present.
     """
-    if parallel["type"] in ["ipython"]:
+    if parallel["type"] in ["ipython"] and not parallel.get("run_local"):
         out_file = _get_cache_file(dirs, parallel)
         if not utils.file_exists(out_file):
             sys_config = copy.deepcopy(config)
