@@ -16,7 +16,7 @@ def needs_fastq_conversion(item, config):
     if item.get("test_run", False):
         return True
     for f in item.get("files", []):
-        if f.endswith(".bam") and _pipeline_needs_fastq(config, item):
+        if (f.endswith(".bam") or f.endswith(".gz")) and _pipeline_needs_fastq(config, item):
             return True
     return False
 
