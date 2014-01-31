@@ -33,7 +33,7 @@ def create_inputs(data):
         out = []
         for split in splits:
             cur_data = copy.deepcopy(data)
-            cur_data["align_split"] = split
+            cur_data["align_split"] = list(split)
             out.append([cur_data])
         return out
 
