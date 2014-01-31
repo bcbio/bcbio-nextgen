@@ -348,7 +348,7 @@ def add_subparser(subparsers):
                         action="append", default=["GRCh37"],
                         choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa"],
+                        action="append", default=["bwa", "bowtie2"],
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
