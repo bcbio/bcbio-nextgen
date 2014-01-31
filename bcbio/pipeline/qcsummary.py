@@ -205,6 +205,12 @@ def _run_fastqc(bam_file, data, fastqc_out):
     return stats
 
 def _run_complexity(bam_file, data, out_dir):
+    try:
+        import pandas as pd
+        import statsmodels.formula.api as sm
+    except ImportError:
+        return {"Unique Starts Per Read": "NA"}
+
     SAMPLE_SIZE = 1000000
     base, _ = os.path.splitext(os.path.basename(bam_file))
     utils.safe_makedir(out_dir)
