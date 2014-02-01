@@ -374,6 +374,8 @@ class RnaseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
+        with prun.start(parallel, samples, config, dirs, "trimming") as run_parallel:
+            samples = run_parallel("trim_lane", samples)
         with prun.start(_wprogs(parallel, ["aligner"], {"tophat": 8, "tophat2": 8, "star": 30}),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
