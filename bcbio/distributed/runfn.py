@@ -9,6 +9,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.distributed import multitasks
+from bcbio.pipeline import config_utils
 
 def process(args):
     """Run the function in args.name given arguments in args.argfile.
@@ -19,6 +20,7 @@ def process(args):
         raise AttributeError("Did not find exposed function in bcbio.distributed.multitasks named '%s'" % args.name)
     with open(args.argfile) as in_handle:
         fnargs = yaml.safe_load(in_handle)
+    fnargs = config_utils.merge_resources(fnargs)
     work_dir = os.path.dirname(args.argfile)
     with utils.chdir(work_dir):
         out = fn(fnargs)

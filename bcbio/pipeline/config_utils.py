@@ -49,10 +49,9 @@ def load_system_config(config_file, work_dir=None):
     final base directory from a standard installation. Handles both standard
     installs (galaxy/bcbio_system.yaml) and docker installs (config/bcbio_system.yaml).
     """
-    base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
-    docker_configfile = os.path.join(base_dir, "config", "bcbio_system.yaml")
-    docker_config = load_config(docker_configfile) if os.path.exists(docker_configfile) else None
+    docker_config = _get_docker_config()
     if not os.path.exists(config_file):
+        base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
         test_config = os.path.join(base_dir, "galaxy", config_file)
         if os.path.exists(test_config):
             config_file = test_config
@@ -70,7 +69,7 @@ def load_system_config(config_file, work_dir=None):
     config["bcbio_system"] = config_file
     return config, config_file
 
-def _merge_system_configs(host_config, container_config, out_file):
+def _merge_system_configs(host_config, container_config, out_file=None):
     """Create a merged system configuration from external and internal specification.
     """
     out = copy.deepcopy(container_config)
@@ -79,19 +78,44 @@ def _merge_system_configs(host_config, container_config, out_file):
             out[k] = v
         elif k == "resources":
             for pname, resources in v.iteritems():
-                for rname, rval in resources.iteritems():
-                    if rname in set(["cores", "jvm_opts", "memory"]):
-                        if pname not in out[k]:
-                            out[k][pname] = {}
-                        out[k][pname][rname] = rval
+                if not isinstance(resources, dict) and pname not in out[k]:
+                    out[k][pname] = resources
+                else:
+                    for rname, rval in resources.iteritems():
+                        if rname in set(["cores", "jvm_opts", "memory"]):
+                            if pname not in out[k]:
+                                out[k][pname] = {}
+                            out[k][pname][rname] = rval
     # Ensure final file is relocatable by mapping back to reference directory
     if "bcbio_system" in out and ("galaxy_config" not in out or not os.path.isabs(out["galaxy_config"])):
         out["galaxy_config"] = os.path.normpath(os.path.join(os.path.dirname(out["bcbio_system"]),
                                                              os.pardir, "galaxy",
                                                              "universe_wsgi.ini"))
-    with open(out_file, "w") as out_handle:
-        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+    if out_file:
+        with open(out_file, "w") as out_handle:
+            yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out
+
+def _get_docker_config():
+    base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+    docker_configfile = os.path.join(base_dir, "config", "bcbio_system.yaml")
+    if os.path.exists(docker_configfile):
+        return load_config(docker_configfile)
+
+def merge_resources(args):
+    """Merge docker local resources and global resource specification in a set of arguments.
+
+    Finds the `data` object within passed arguments and updates the resources
+    from a local docker configuration if present.
+    """
+    docker_config = _get_docker_config()
+    if not docker_config:
+        return args
+    else:
+        def _update_resources(config):
+            config["resources"] = _merge_system_configs(config, docker_config)["resources"]
+            return config
+        return _update_config(args, _update_resources)
 
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
@@ -238,6 +262,16 @@ def add_cores_to_config(args, cores_per_job, parallel=None):
     """Add information about available cores for a job to configuration.
     Ugly hack to update core information in a configuration dictionary.
     """
+    def _update_cores(config):
+        config["algorithm"]["num_cores"] = int(cores_per_job)
+        if parallel:
+            config["parallel"] = _dictdissoc(parallel, "view")
+        return config
+    return _update_config(args, _update_cores)
+
+def _update_config(args, update_fn):
+    """Update configuration, nested in argument list, with the provided update function.
+    """
     new_i = None
     for i, arg in enumerate(args):
         if is_std_config_arg(arg) or is_nested_config_arg(arg):
@@ -248,19 +282,14 @@ def add_cores_to_config(args, cores_per_job, parallel=None):
 
     new_arg = copy.deepcopy(args[new_i])
     if is_nested_config_arg(new_arg):
-        new_arg["config"]["algorithm"]["num_cores"] = int(cores_per_job)
-        if parallel:
-            new_arg["config"]["parallel"] = _dictdissoc(parallel, "view")
+        new_arg["config"] = update_fn(new_arg["config"])
     elif is_std_config_arg(new_arg):
-        new_arg["algorithm"]["num_cores"] = int(cores_per_job)
-        if parallel:
-            new_arg["parallel"] = _dictdissoc(parallel, "view")
+        new_arg = update_fn(new_arg)
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
     args = list(args)[:]
     args[new_i] = new_arg
     return args
-
 
 def adjust_memory(val, magnitude, direction="increase"):
     """Adjust memory based on number of cores utilized.
