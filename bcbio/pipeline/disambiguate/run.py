@@ -6,7 +6,7 @@ It is part of the explant RNA/DNA-Seq workflow where an informatics
 approach is used to distinguish between e.g. human and mouse or rat RNA/DNA reads.
 
 For reads that have aligned to both organisms, the functionality is based on
-comparing quality scores from either Tophat of BWA. Read
+comparing quality scores from either Tophat, STAR or BWA. Read
 name is used to collect all alignments for both mates (_1 and _2) and
 compared between the alignments from the two species.
 
@@ -14,10 +14,9 @@ For tophat (default, can be changed using option -a), the sum of the flags XO,
 NM and NH is evaluated and the lowest sum wins the paired end reads. For equal
 scores, the reads are assigned as ambiguous.
 
-The alternative algorithm (bwa) disambiguates (for aligned reads) by tags AS
-(alignment score, higher better), NM (edit distance, lower better) and XS
-(suboptimal alignment score, higher better), by first looking at AS, then
-NM and finally XS.
+The alternative algorithm (STAR, bwa) disambiguates (for aligned reads) by tags
+AS (alignment score, higher better), followed by NM (edit distance, lower 
+better).
 
 Code by Miika Ahdesmaki July-August 2013, based on original Perl implementation
 for Tophat by Zhongwu Lai.
@@ -27,7 +26,7 @@ Included in bcbio-nextgen from: https://github.com/mjafin/disambiguate
 
 
 from __future__ import print_function
-import sys, getopt, re, time, pysam
+import sys, re, pysam
 from array import array
 from os import path, makedirs
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -83,10 +82,12 @@ def disambiguate(humanlist, mouselist, disambalgo):
         else:
             # assign to mouse
             return -1
-    elif disambalgo == 'bwa':
+    elif disambalgo.lower() in ('bwa', 'star'):
         dv = -2^13 # default value, low
-        bwatags = ['AS','NM','XS'] # in order of importance (compared sequentially, not as a sum as for tophat)
-        bwatagsigns = [1,-1,1] # for AS and XS higher is better. for NM lower is better, thus multiply by -1
+        bwatags = ['AS', 'NM']# ,'XS'] # in order of importance (compared sequentially, not as a sum as for tophat)
+        if disambalgo.lower() == 'star':
+            bwatags[1] = 'nM' # oddity of STAR
+        bwatagsigns = [1, -1]#,1] # for AS and XS higher is better. for NM lower is better, thus multiply by -1
         AS = list()
         for x in range(0, len(bwatagsigns)):
             AS.append(array('i',(dv for i in range(0,4)))) # alignment score array, with [human_1_Score, human_2_Score, mouse_1_Score, mouse_2_Score]
@@ -127,7 +128,7 @@ def disambiguate(humanlist, mouselist, disambalgo):
 #code
 def main(args):
     numhum = nummou = numamb = 0
-    starttime = time.clock()
+    #starttime = time.clock()
     # parse inputs
     humanfilename = args.A
     mousefilename = args.B
@@ -136,7 +137,7 @@ def main(args):
     intermdir = args.intermediate_dir
     disablesort = args.no_sort
     disambalgo = args.aligner
-    supportedalgorithms = set(['tophat', 'bwa'])
+    supportedalgorithms = set(['tophat', 'bwa', 'star'])
 
     # check existence of input BAM files
     if not (file_exists(humanfilename) and file_exists(mousefilename)):
@@ -152,7 +153,7 @@ def main(args):
         humanprefix = samplenameprefix
         mouseprefix = samplenameprefix
     samplenameprefix = None # clear variable
-    if disambalgo not in supportedalgorithms:
+    if disambalgo.lower() not in supportedalgorithms:
         print(disambalgo+" is not a supported disambiguation scheme at the moment.")
         sys.exit(2)
 
@@ -299,10 +300,9 @@ For tophat (default, can be changed using option -a), the sum of the tags XO,
 NM and NH is evaluated and the lowest sum wins the paired end reads. For equal
 scores (both mates, both species), the reads are assigned as ambiguous.
 
-The alternative algorithm (bwa) disambiguates (for aligned reads) by tags AS
-(alignment score, higher better), NM (edit distance, lower better) and XS
-(suboptimal alignment score, higher better), by first looking at AS, then
-NM and finally XS.
+The alternative algorithm (STAR, bwa) disambiguates (for aligned reads) by tags
+AS (alignment score, higher better), followed by NM (edit distance, lower 
+better).
 
 The output directory will contain four files:\n
 ...disambiguatedSpeciesA.bam: Reads that could be assigned to species A
@@ -331,7 +331,7 @@ disambiguate.py -s mysample1 test/human.bam test/mouse.bam
                        'BAM files. If not provided, the input BAM file prefix '
                        'will be used. Do not include .bam in the prefix.')
    parser.add_argument('-a', '--aligner', default='tophat',
-                       choices=('tophat', 'bwa'),
+                       choices=('tophat', 'bwa', 'star'),
                        help='The aligner used to generate these reads. Some '
                        'aligners set different tags.')
    args = parser.parse_args()
