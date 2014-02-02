@@ -49,7 +49,7 @@ def freebayes(in_file, ref_file, vrn_files, config):
 def _freebayes_custom(in_file, ref_file, config):
     """Custom FreeBayes filtering using bcbio.variation, tuned to human NA12878 results.
     """
-    bv_ver = programs.get_version("bcbio.variation", config=config)
+    bv_ver = programs.get_version("bcbio_variation", config=config)
     if LooseVersion(bv_ver) < LooseVersion("0.1.1"):
         return None
     out_file = "%s-filter%s" % os.path.splitext(in_file)
