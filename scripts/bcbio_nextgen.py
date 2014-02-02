@@ -33,6 +33,7 @@ from bcbio import install, workflow
 from bcbio.distributed import runfn
 from bcbio.pipeline.main import run_main, parse_cl_args
 from bcbio.server import main as server_main
+from bcbio.provenance import programs
 
 def main(**kwargs):
     run_main(**kwargs)
@@ -45,6 +46,8 @@ if __name__ == "__main__":
         server_main.start(kwargs["args"])
     elif "runfn" in kwargs and kwargs["runfn"]:
         runfn.process(kwargs["args"])
+    elif "version" in kwargs and kwargs["version"]:
+        programs.write_versions({"work": kwargs["args"].workdir})
     else:
         if kwargs.get("workflow"):
             setup_info = workflow.setup(kwargs["workflow"], kwargs.pop("inputs"))

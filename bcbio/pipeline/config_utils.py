@@ -51,7 +51,7 @@ def load_system_config(config_file, work_dir=None):
     """
     docker_config = _get_docker_config()
     if not os.path.exists(config_file):
-        base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+        base_dir = get_base_installdir()
         test_config = os.path.join(base_dir, "galaxy", config_file)
         if os.path.exists(test_config):
             config_file = test_config
@@ -68,6 +68,9 @@ def load_system_config(config_file, work_dir=None):
         config["algorithm"] = {}
     config["bcbio_system"] = config_file
     return config, config_file
+
+def get_base_installdir():
+    return os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
 
 def _merge_system_configs(host_config, container_config, out_file=None):
     """Create a merged system configuration from external and internal specification.
@@ -97,7 +100,7 @@ def _merge_system_configs(host_config, container_config, out_file=None):
     return out
 
 def _get_docker_config():
-    base_dir = os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+    base_dir = get_base_installdir()
     docker_configfile = os.path.join(base_dir, "config", "bcbio_system.yaml")
     if os.path.exists(docker_configfile):
         return load_config(docker_configfile)

@@ -122,11 +122,6 @@ def _update_conda_packages():
             "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
-        # Remove until can get 13.1.0 working cleanly on CentOS
-        #extra_pkgs = ["zeromq", "pyzmq"]
-        #binstar_user = "minrk"
-        #subprocess.check_call([conda_bin, "install", "--yes",
-        #                       "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
@@ -215,6 +210,8 @@ def _get_biodata(base_file, args):
 
 def upgrade_thirdparty_tools(args, remotes):
     """Install and update third party tools used in the pipeline.
+
+    Creates a manifest directory with installed programs on the system.
     """
     s = {"fabricrc_overrides": {"system_install": args.tooldir,
                                 "local_install": os.path.join(args.tooldir, "local_install"),
@@ -231,6 +228,13 @@ def upgrade_thirdparty_tools(args, remotes):
     sys.path.insert(0, cbl["dir"])
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
+    cbl_manifest = __import__("cloudbio.manifest", fromlist=["manifest"])
+    manifest_dir = os.path.join(_get_data_dir(), "manifest")
+    print("Creating manifest of installed packages in %s" % manifest_dir)
+    if os.path.exists(manifest_dir):
+        for fname in os.listdir(manifest_dir):
+            os.remove(os.path.join(manifest_dir, fname))
+    cbl_manifest.create(manifest_dir, args.tooldir)
 
 def _install_gemini(tooldir, datadir, args):
     """Install gemini layered on top of bcbio-nextgen, sharing anaconda framework.
