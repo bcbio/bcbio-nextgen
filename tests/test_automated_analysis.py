@@ -298,3 +298,18 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
+
+    @attr(docker_ipython=True)
+    def test_docker_ipython(self):
+        """Run an analysis with code and tools inside a docker container, driven via IPython.
+
+        Requires https://github.com/chapmanb/bcbio-nextgen-vm
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_vm.py", "ipython",
+                  "--systemconfig=%s" % self._get_post_process_yaml(workdir),
+                  "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
+                  os.path.join(self.data_dir, "run_info-bam.yaml"),
+                  "lsf", "localrun"]
+            subprocess.check_call(cl)

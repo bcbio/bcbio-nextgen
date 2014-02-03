@@ -6,7 +6,8 @@ import socket
 import sys
 import time
 
-import logbook, logbook.queues
+import logbook
+import logbook.queues
 
 from bcbio import utils
 from bcbio.log import logbook_zmqpush
@@ -20,13 +21,17 @@ def get_log_dir(config):
 
 logger = logbook.Logger(LOG_NAME)
 logger_cl = logbook.Logger(LOG_NAME + "-commands")
+logger_stdout = logbook.Logger(LOG_NAME + "-stdout")
 mpq = multiprocessing.Queue(-1)
 
 def _is_cl(record, _):
     return record.channel == LOG_NAME + "-commands"
 
+def _is_stdout(record, _):
+    return record.channel == LOG_NAME + "-stdout"
+
 def _not_cl(record, handler):
-    return not _is_cl(record, handler)
+    return not _is_cl(record, handler) and not _is_stdout(record, handler)
 
 class CloseableNestedSetup(logbook.NestedSetup):
     def close(self):
@@ -46,12 +51,13 @@ class IOSafeMultiProcessingSubscriber(logbook.queues.MultiProcessingSubscriber):
             else:
                 raise
 
-def _create_log_handler(config, add_hostname=False):
+def _create_log_handler(config, add_hostname=False, direct_hostname=False):
     logbook.set_datetime_format("local")
     handlers = [logbook.NullHandler()]
-    format_str = " ".join(["[{record.time:%Y-%m-%d %H:%M}]",
-                           "{record.extra[source]}:" if add_hostname else "",
-                           "{record.message}"])
+    format_str = "".join(["[{record.time:%Y-%m-%d %H:%M}] " if config.get("include_time", True) else "",
+                          "{record.extra[source]}: " if add_hostname else "",
+                          "%s: " % (socket.gethostname)() if direct_hostname else "",
+                          "{record.message}"])
 
     log_dir = get_log_dir(config)
     if log_dir:
@@ -68,19 +74,21 @@ def _create_log_handler(config, add_hostname=False):
         handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s-commands.log" % LOG_NAME),
                                             format_string=format_str, level="DEBUG",
                                             filter=_is_cl))
+    handlers.append(logbook.StreamHandler(sys.stdout, format_string="{record.message}",
+                                          level="DEBUG", filter=_is_stdout))
 
     email = config.get("email", config.get("resources", {}).get("log", {}).get("email"))
     if email:
         email_str = u'''Subject: [bcbio-nextgen] {record.extra[run]} \n\n {record.message}'''
         handlers.append(logbook.MailHandler(email, [email],
                                             format_string=email_str,
-                                            level='INFO', bubble = True))
+                                            level='INFO', bubble=True))
 
     handlers.append(logbook.StreamHandler(sys.stderr, format_string=format_str, bubble=True,
                                           filter=_not_cl))
     return CloseableNestedSetup(handlers)
 
-def create_base_logger(config, parallel=None):
+def create_base_logger(config=None, parallel=None):
     """Setup base logging configuration, also handling remote logging.
 
     Correctly sets up for local, multiprocessing and distributed runs.
@@ -98,7 +106,6 @@ def create_base_logger(config, parallel=None):
                              "Your machines might not have a local IP address "
                              "assigned or are not able to resolve it.\n")
             sys.exit(1)
-
         uri = "tcp://%s" % ips[0]
         subscriber = logbook_zmqpush.ZeroMQPullSubscriber()
         mport = subscriber.socket.bind_to_random_port(uri)
@@ -113,20 +120,22 @@ def create_base_logger(config, parallel=None):
         pass
     return parallel
 
-def setup_local_logging(config, parallel=None):
+def setup_local_logging(config=None, parallel=None):
     """Setup logging for a local context, directing messages to appropriate base loggers.
 
     Handles local, multiprocessing and distributed setup, connecting
     to handlers created by the base logger.
     """
+    if config is None: config = {}
     if parallel is None: parallel = {}
     parallel_type = parallel.get("type", "local")
     cores = parallel.get("cores", 1)
+    wrapper = parallel.get("wrapper", None)
     if parallel_type == "ipython":
         handler = logbook_zmqpush.ZeroMQPushHandler(parallel["log_queue"])
     elif cores > 1:
         handler = logbook.queues.MultiProcessingHandler(mpq)
     else:
-        handler = _create_log_handler(config)
+        handler = _create_log_handler(config, direct_hostname=wrapper is not None)
     handler.push_thread()
     return handler

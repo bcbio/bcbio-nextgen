@@ -52,7 +52,7 @@ def zeromq_aware_logging(f):
                 config = arg["config"]
                 break
         assert config, "Could not find config dictionary in function arguments."
-        if config.get("parallel", {}).get("log_queue"):
+        if config.get("parallel", {}).get("log_queue") and not config.get("parallel", {}).get("wrapper"):
             handler = setup_local_logging(config, config["parallel"])
         else:
             handler = None

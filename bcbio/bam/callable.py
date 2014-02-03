@@ -36,7 +36,6 @@ def parallel_callable_loci(in_bam, ref_file, config):
     data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
     items = [[data]]
-    print config.keys()
     with prun.start(parallel, items, config) as runner:
         split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
         out = parallel_split_combine(items, split_fn, runner,
