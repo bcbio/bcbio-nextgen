@@ -52,7 +52,7 @@ def runner(view, parallel, dirs, config):
         if len(items) > 0:
             items = [config_utils.add_cores_to_config(x, parallel["cores_per_job"], parallel) for x in items]
             if "wrapper" in parallel:
-                items = [[fn_name] + parallel.get("wrapper_args", []) + x for x in items]
+                items = [[fn_name] + parallel.get("wrapper_args", []) + list(x) for x in items]
             for data in view.map_sync(fn, items, track=False):
                 if data:
                     out.extend(data)

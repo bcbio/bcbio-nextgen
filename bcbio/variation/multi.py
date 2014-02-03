@@ -25,9 +25,9 @@ def group_batches(xs):
         batch = data.get("metadata", {}).get("batch")
         caller = data["config"]["algorithm"].get("variantcaller", "gatk")
         if batch is not None:
-            batch_groups[(batch, region, caller)].append((data, out_fname))
+            batch_groups[(batch, tuple(region), caller)].append((data, out_fname))
         else:
-            singles.append((data, region, out_fname))
+            singles.append((data, tuple(region), out_fname))
     batches = []
     remap_batches = {}
     for (batch, region, _), xs in batch_groups.iteritems():

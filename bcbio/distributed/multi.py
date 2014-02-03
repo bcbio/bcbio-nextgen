@@ -22,15 +22,18 @@ def runner(parallel, config):
         items = diagnostics.track_parallel(items, fn_name)
         logger.info("multiprocessing: %s" % fn_name)
         fn = get_fn(fn_name, parallel)
+        if "wrapper" in parallel:
+            items = [[fn_name] + parallel.get("wrapper_args", []) + list(x) for x in items]
         return run_multicore(fn, items, config, parallel=parallel)
     return run_parallel
 
 def get_fn(fn_name, parallel):
     taskmod = "multitasks"
     imodule = parallel.get("module", "bcbio.distributed")
+    import_fn_name = parallel.get("wrapper", fn_name)
     return getattr(__import__("{base}.{taskmod}".format(base=imodule, taskmod=taskmod),
                               fromlist=[taskmod]),
-                   fn_name)
+                   import_fn_name)
 
 def zeromq_aware_logging(f):
     """Ensure multiprocessing logging uses ZeroMQ queues.

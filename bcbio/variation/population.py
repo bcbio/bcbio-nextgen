@@ -121,7 +121,7 @@ def prep_db_parallel(samples, parallel_fn):
     output = parallel_fn("prep_gemini_db", to_process)
     out_fetch = {}
     for batch_id, out_file in output:
-        out_fetch[batch_id] = out_file
+        out_fetch[tuple(batch_id)] = out_file
     out = []
     for batch_name, data in out_retrieve:
         out_variants = []

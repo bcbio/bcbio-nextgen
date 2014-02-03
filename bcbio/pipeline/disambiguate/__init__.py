@@ -59,7 +59,7 @@ def run(items, config):
     # check aligner, handling tophat/tophat2 distinctions
     aligner = config["algorithm"].get("aligner")
     aligner = "tophat" if aligner.startswith("tophat") else aligner
-    assert aligner in ["bwa", "tophat"], "Disambiguation only supported for bwa and tophat alignments."
+    assert aligner in ["bwa", "tophat", "star"], "Disambiguation only supported for bwa, star and tophat alignments."
     if items[0]["disambiguate"].get("base"):
         data_a, data_b = items
     else:
@@ -92,7 +92,7 @@ def run_cplusplus(items, config):
     # check aligner, handling tophat/tophat2 distinctions
     aligner = config["algorithm"].get("aligner")
     aligner = "tophat" if aligner.startswith("tophat") else aligner
-    assert aligner in ["bwa", "tophat"], "Disambiguation only supported for bwa and tophat alignments."
+    assert aligner in ["bwa", "tophat", "star"], "Disambiguation only supported for bwa, star and tophat alignments."
     if items[0]["disambiguate"].get("base"):
         data_a, data_b = items
     else:

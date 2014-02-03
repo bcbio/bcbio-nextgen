@@ -94,7 +94,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
                     final.append(xs[0])
 
 def _add_provenance(items, dirs, parallel, config):
-    p = programs.write_versions(dirs, config)
+    p = programs.write_versions(dirs, config, is_wrapper=parallel.get("wrapper") is not None)
     system.write_info(dirs, parallel, config)
     out = []
     for item in items:
@@ -129,7 +129,8 @@ def parse_cl_args(in_args):
     """
     sub_cmds = {"upgrade": install.add_subparser,
                 "server": server_main.add_subparser,
-                "runfn": runfn.add_subparser}
+                "runfn": runfn.add_subparser,
+                "version": programs.add_subparser}
     parser = argparse.ArgumentParser(
         description="Best-practice pipelines for fully automated high throughput sequencing analysis.")
     sub_cmd = None
@@ -374,6 +375,8 @@ class RnaseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
+        with prun.start(parallel, samples, config, dirs, "trimming") as run_parallel:
+            samples = run_parallel("trim_lane", samples)
         with prun.start(_wprogs(parallel, ["aligner"], {"tophat": 8, "tophat2": 8, "star": 30}),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
