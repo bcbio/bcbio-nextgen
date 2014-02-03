@@ -68,12 +68,13 @@ resubmitting jobs that may have failed for reproducible reasons.
 
 Finally, the ``-r resources`` flag specifies resource options to pass along
 to the underlying queue scheduler. This currently supports SGE's
-``-l`` parameter and SLURM native flags. This allows specification
+``-l`` parameter, Torque's ``-l`` parameter and SLURM native flags. This allows specification
 or resources to the scheduler (see the `qsub man page`_). You may specify multiple
 resources, so ``-r mem=4g -r ct=01:40:00``
 translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 ``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for
-instance.
+instance. SLURM and Torque support specification of an account parameter with
+``-r account=your_name``, which IPython transfers into ``-A``.
 
 Specify the `SGE parallel environment`_ to use for submitting multicore jobs
 with ``-r pename=your_pe``. Since this setup

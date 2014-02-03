@@ -103,7 +103,6 @@ def inject_hostname(log_record):
     """A Logbook processor to inject the current hostname into log records."""
     log_record.extra['source'] = socket.gethostname()
 
-
 def inject(**params):
 
     """

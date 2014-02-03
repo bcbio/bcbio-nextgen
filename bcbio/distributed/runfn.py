@@ -7,7 +7,7 @@ import os
 
 import yaml
 
-from bcbio import utils
+from bcbio import log, utils
 from bcbio.distributed import multitasks
 from bcbio.pipeline import config_utils
 
@@ -23,6 +23,7 @@ def process(args):
     fnargs = config_utils.merge_resources(fnargs)
     work_dir = os.path.dirname(args.argfile)
     with utils.chdir(work_dir):
+        log.setup_local_logging(parallel={"wrapper": "runfn"})
         out = fn(fnargs)
     out_file = "%s-out%s" % os.path.splitext(args.argfile)
     with open(out_file, "w") as out_handle:
