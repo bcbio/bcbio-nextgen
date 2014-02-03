@@ -31,7 +31,7 @@ requirements:
 test:
   imports:
     - bcbio.distributed.ipython
-    - bcbio.distributed.messaging
+    - bcbio.distributed.multi
     - bcbio.pipeline.main
     - bcbio.provenance.do
 
