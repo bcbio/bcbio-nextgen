@@ -2,8 +2,8 @@
 
 from distutils.version import LooseVersion
 import os
-import itertools
-from subprocess import CalledProcessError
+#import itertools
+#from subprocess import CalledProcessError
 
 from bcbio import bam, broad
 from bcbio.utils import file_exists
@@ -11,7 +11,9 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils
+from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis
 from bcbio.log import logger
+
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
                         "java.lang.IllegalArgumentException: "
@@ -66,31 +68,37 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
 
     params = ["-R", ref_file, "-T", "MuTect"]
     params += ["--dbsnp", dbsnp]
+    
+    # mutect supports single-normal bams only (Feb2014) and multiple tumor bams
+    # are concatenated prior to calling and thus there are only two samples 
+    # ever in the vcf output
+    # 
+    # check if a tumor/normal pair is defined or whether it's tumor only 
+    if is_paired_analysis(align_bams, items):
+        paired = get_paired_bams(align_bams, items)
+        params += ["-I:normal", paired.normal_bam]
+        params += ["--normal_sample_name", paired.normal_sample_name]
+        tumor_bam = paired.tumor_bam
+        tumor_sample_name = paired.tumor_sample_name
+        panel_of_normals_vcf = paired.normal_panel
+    else:
+        # sanity check - there should be no singleton normals or more than 2 bams
+        if (len(align_bams)>1 or items[0]["metadata"]["phenotype"] == "normal"):
+            message =  ("MuTect currently supports tumor/normal and tumor only modes."
+                        "Provide one sample with tumor phenotype or two samples with "
+                        "one tumor and one normal phenotype. ")
+            raise ValueError(message)
+        tumor_bam = align_bams[0]
+        tumor_sample_name = items[0]["name"][1]
+        panel_of_normals_vcf = items[0]["metadata"].get("normal_panel",None)
 
-    tumor_bam = None
-    normal_bam = None
-
-    for bamfile, item in itertools.izip(align_bams, items):
-
-        metadata = item["metadata"]
-
-        if metadata["phenotype"] == "normal":
-            normal_bam = bamfile
-            normal_sample_name = item["name"][1]
-        elif metadata["phenotype"] == "tumor":
-            tumor_bam = bamfile
-            tumor_sample_name = item["name"][1]
-
-    if tumor_bam is None or normal_bam is None:
-        raise ValueError("Missing phenotype definition (tumor or normal) "
-                         "in samples")
-
-    params += ["-I:normal", normal_bam]
     params += ["-I:tumor", tumor_bam]
     params += ["--tumor_sample_name", tumor_sample_name]
-    params += ["--normal_sample_name", normal_sample_name]
     params += ["--fraction_contamination", contamination]
-
+    
+    if panel_of_normals_vcf is not None:
+        params += ["--normal_panel", panel_of_normals_vcf]
+    
     if cosmic is not None:
         params += ["--cosmic", cosmic]
 

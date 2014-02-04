@@ -18,11 +18,12 @@ from bcbio.provenance import do
 from bcbio.variation import bamprep
 
 PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_sample_name",
-                                       "normal_bam", "normal_sample_name"])
+                                       "normal_bam", "normal_sample_name",
+                                       "normal_panel"])
 
 def is_paired_analysis(align_bams, items):
 
-    """Determine if bams are from a sample pair or  not"""
+    """Determine if bams are from a sample pair or not"""
 
     if not (len(align_bams) == 2 and all(item["metadata"].get("phenotype")
                                          is not None for item in items)):
@@ -33,11 +34,12 @@ def is_paired_analysis(align_bams, items):
 
 def get_paired_bams(align_bams, items):
 
-    """Split aligned bams imn tumor / normal pairs."""
+    """Split aligned bams in tumor / normal pairs."""
 
     tumor_bam = None
     normal_bam = None
-
+    normal_panel = None
+    
     for bamfile, item in itertools.izip(align_bams, items):
 
         metadata = item["metadata"]
@@ -45,15 +47,19 @@ def get_paired_bams(align_bams, items):
         if metadata["phenotype"] == "normal":
             normal_bam = bamfile
             normal_sample_name = item["name"][1]
+            if metadata.get("normal_panel", None) is not None and normal_panel is None:
+                normal_panel = getattr(metadata, "normal_panel")
         elif metadata["phenotype"] == "tumor":
             tumor_bam = bamfile
             tumor_sample_name = item["name"][1]
+            if metadata.get("normal_panel", None) is not None:
+                normal_panel = getattr(metadata, "normal_panel")
 
     if tumor_bam is None or normal_bam is None:
         return
 
     return PairedData(tumor_bam, tumor_sample_name, normal_bam,
-                      normal_sample_name)
+                      normal_sample_name, normal_panel)
 
 
 def write_empty_vcf(out_file):
