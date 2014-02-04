@@ -81,6 +81,11 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
     out_file = "%s-gatkann%s" % os.path.splitext(orig_file)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            # Avoid issues with incorrectly created empty GATK index files.
+            # Occurs when GATK cannot lock shared dbSNP database on previous run
+            idx_file = orig_file + ".idx"
+            if os.path.exists(idx_file) and not file_exists(idx_file):
+                os.remove(idx_file)
             annotations = get_gatk_annotations(config)
             params = ["-T", "VariantAnnotator",
                       "-R", ref_file,
