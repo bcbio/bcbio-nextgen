@@ -9,6 +9,11 @@
 - Remove algorithm/custom_algorithm from bcbio_system.yaml, preferring to set
   these directly in the sample YAML files.
 - Remove outdated and unused custom B-run trimming.
+- Remove ability to guess fastq files from directories with no specification in
+  sample YAML. Prefer using generalized template functionality with explicit
+  specification of files in sample YAML file.
+- Remove deprecated multiplex support, which is outdated and not
+  maintained. Prefer approaches in external tools upstream of bcbio-nextgen.
 - Add `--tag` argument which labels job names on a cluster to help distinguish
   when multiple bcbio jobs run concurrently. Thanks to Jason Corneveaux.
 - Connect min_read_length parameter with read_through trimming in

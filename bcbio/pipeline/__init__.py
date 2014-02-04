@@ -3,8 +3,7 @@
 This structures processing steps into the following modules:
 
   - lane.py: Analyze a single fastq file.
-    - fastq.py: Utilities to retrieve fastq files from flowcell directories.
-    - demultiplex.py: Split file by barcodes, if required.
+    - fastq.py: Utilities to retrieve fastq files.
     - alignment.py: Align to a reference genome.
 
   - sample.py: Analyze a sample, which may consist of multiple lanes or

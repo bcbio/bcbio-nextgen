@@ -16,7 +16,7 @@ from bcbio.bam import callable
 from bcbio.distributed import clargs, prun, runfn
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (disambiguate, lane, region, run_info, qcsummary,
+from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
                             version, rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, system, versioncheck
@@ -77,11 +77,8 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     config_file = os.path.join(config_dir, os.path.basename(config_file))
     dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
-    run_items = run_info.organize(dirs, config, run_info_yaml)
-
-    # process each flowcell lane
-    lane_items = lane.process_all_lanes(run_items, parallel, dirs, config)
-    pipelines = _pair_lanes_with_pipelines(lane_items)
+    samples = run_info.organize(dirs, config, run_info_yaml)
+    pipelines = _pair_lanes_with_pipelines(samples)
     final = []
     with utils.curdir_tmpdir() as tmpdir:
         tempfile.tempdir = tmpdir
@@ -375,7 +372,9 @@ class RnaseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(parallel, samples, config, dirs, "trimming") as run_parallel:
+        with prun.start(_wprogs(parallel, ["picard"]),
+                        samples, config, dirs, "trimming") as run_parallel:
+            samples = run_parallel("process_lane", samples)
             samples = run_parallel("trim_lane", samples)
         with prun.start(_wprogs(parallel, ["aligner"], {"tophat": 8, "tophat2": 8, "star": 30}),
                         samples, config, dirs, "multicore",
@@ -406,9 +405,10 @@ class ChipseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wprogs(parallel, ["aligner"]),
+        with prun.start(_wprogs(parallel, ["aligner", "picard"]),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+            samples = run_parallel("process_lane", samples)
             samples = run_parallel("trim_lane", samples)
             samples = disambiguate.split(samples)
             samples = run_parallel("process_alignment", samples)

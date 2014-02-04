@@ -4,11 +4,8 @@ This handles two methods of getting processing information: from a Galaxy
 next gen LIMS system or an on-file YAML configuration.
 """
 import copy
-import datetime
 import itertools
 import os
-import string
-import time
 
 import yaml
 
@@ -80,7 +77,7 @@ def prep_rg_names(item, config, fc_name, fc_date):
             "sample": item["description"],
             "lane": lane_name,
             "pl": item.get("algorithm", {}).get("platform",
-                    config.get("algorithm", {}).get("platform", "illumina")).lower(),
+                                                config.get("algorithm", {}).get("platform", "illumina")).lower(),
             "pu": lane_name}
 
 # ## Configuration file validation
@@ -104,12 +101,6 @@ def _check_for_duplicates(xs, attr, check_fn=None):
         raise ValueError("Duplicate '%s' found in input sample configuration.\n"
                          "Required to be unique for a project: %s\n"
                          "Problem found in these samples: %s" % (attr, dups, descrs))
-
-def _okay_with_multiplex(xs):
-    for x in xs:
-        if "multiplex" not in x and "barcode" not in x:
-            return False
-    return True
 
 def _check_for_misplaced(xs, subkey, other_keys):
     """Ensure configuration keys are not incorrectly nested under other keys.
@@ -178,8 +169,8 @@ def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
     logger.info("Checking sample YAML configuration: %s" % in_file)
-    _check_for_duplicates(items, "lane", _okay_with_multiplex)
-    _check_for_duplicates(items, "description", _okay_with_multiplex)
+    _check_for_duplicates(items, "lane")
+    _check_for_duplicates(items, "description")
     _check_for_misplaced(items, "algorithm",
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
@@ -272,20 +263,3 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details
-
-def _unique_flowcell_info():
-    """Generate data and unique identifier for non-barcoded flowcell.
-
-    String encoding from:
-    http://stackoverflow.com/questions/561486/
-    how-to-convert-an-integer-to-the-shortest-url-safe-string-in-python
-    """
-    alphabet = string.ascii_uppercase + string.digits
-    fc_date = datetime.datetime.now().strftime("%y%m%d")
-    n = int(time.time())
-    s = []
-    while True:
-        n, r = divmod(n, len(alphabet))
-        s.append(alphabet[r])
-        if n == 0: break
-    return ''.join(reversed(s)), fc_date

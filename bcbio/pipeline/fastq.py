@@ -1,44 +1,20 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
-import glob
 import subprocess
 
 from bcbio import bam, broad
 from bcbio.bam import cram
 from bcbio.pipeline import alignment
-from bcbio.utils import file_exists, safe_makedir, flatten
+from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
-
-def needs_fastq_conversion(item, config):
-    """Check if an item needs conversion to fastq files.
-    """
-    if item.get("test_run", False):
-        return True
-    for f in item.get("files", []):
-        if f.endswith(".bam") and _pipeline_needs_fastq(config, item):
-            return True
-    return False
 
 def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    if "files" in item:
-        files = item["files"]
-    elif "vrn_file" in item:
-        files = []
-    else:
-        assert item["upload"].get("fc_name") is not None
-        fastq_dir = item["dirs"]["fastq"]
-        lane = item["lane"]
-        glob_str = "%s_*%s*_fastq.txt" % (lane, item["upload"]["fc_name"])
-        files = glob.glob(os.path.join(fastq_dir, glob_str))
-        files.sort()
-        if len(files) > 2 or len(files) == 0:
-            raise ValueError("Did not find correct files for %s %s %s %s" %
-                             (fastq_dir, lane, item["upload"]["fc_name"], files))
+    assert "files" in item, "Did not find `files` in input; nothing to process"
     ready_files = []
-    for fname in files:
+    for fname in item["files"]:
         if fname.endswith(".gz") and _pipeline_needs_fastq(item["config"], item):
             fastq_dir = os.path.join(item["dirs"]["work"], "fastq")
             safe_makedir(fastq_dir)
@@ -53,7 +29,7 @@ def get_fastq_files(item):
         elif fname.endswith(".bam"):
             if _pipeline_needs_fastq(item["config"], item):
                 ready_files = _convert_bam_to_fastq(fname, item["dirs"]["work"],
-                                                   item, item["dirs"], item["config"])
+                                                    item, item["dirs"], item["config"])
             else:
                 ready_files = [fname]
         else:
@@ -67,10 +43,8 @@ def _pipeline_needs_fastq(config, item):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
     """
     aligner = config["algorithm"].get("aligner")
-    has_multiplex = item.get("multiplex") is not None
     support_bam = aligner in alignment.metadata.get("support_bam", [])
-    return (has_multiplex or
-            (aligner and not support_bam))
+    return aligner and not support_bam
 
 def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     """Convert BAM input file into FASTQ files.

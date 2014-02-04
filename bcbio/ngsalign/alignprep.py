@@ -19,7 +19,8 @@ def create_inputs(data):
     machine. Uses gbzip and grabix to prepare an indexed fastq file.
     """
     # skip indexing on samples without input files or not doing alignment
-    if (data["files"][0] is None or data["algorithm"].get("align_split_size") is None
+    if ("files" not in data or data["files"][0] is None or
+          data["algorithm"].get("align_split_size") is None
           or not data["algorithm"].get("aligner")):
         return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data["config"])
@@ -124,7 +125,7 @@ def _find_read_splits(in_file, split_size):
 # ## bgzip and grabix
 
 def _prep_grabix_indexes(in_files, dirs, config):
-    if in_files[0].endswith(".bam") and in_files[1] is None:
+    if in_files[0].endswith(".bam") and len(in_files) == 1 or in_files[1] is None:
         out = _bgzip_from_bam(in_files[0], dirs, config)
     else:
         out = run_multicore(_bgzip_from_fastq,

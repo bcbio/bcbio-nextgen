@@ -22,4 +22,5 @@ details:
     metadata:
       batch: TestBatch1
     genome_build: hg19
+    files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
     lane: 7
