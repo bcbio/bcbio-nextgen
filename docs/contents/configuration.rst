@@ -65,6 +65,10 @@ multiple samples using the template workflow command::
    -  :ref:`sample-configuration` metadata key/value pairs. Any columns not
       falling into the above cases will go into the metadata section.
 
+  Individual column items can contain booleans (true or false), integers, or
+  lists (separated by semi-colons). These get converted into the expected time
+  in the output YAML file.
+
   The name of the metadata file, minus the ``.csv`` extension, is a
   short name identifying the current project. The script creates a
   ``project1`` directory containing the sample configuration in
@@ -125,7 +129,9 @@ The sample configuration file defines ``details`` of each sample to process::
 
     - ``batch`` defines a group that the sample falls in. We perform
        multi-sample variant calling on all samples with the same batch
-       name.
+       name. This can also be a list, allowing specification of a single normal
+       sample to pair with multiple tumor samples in paired cancer variant
+       calling (``batch: [MatchWithTumor1, MatchWithTumor2]``).
 
     - ``sex`` specifies the sample sex used to correctly prepare X/Y
       chromosomes.

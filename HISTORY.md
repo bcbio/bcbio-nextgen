@@ -1,5 +1,10 @@
 ## 0.7.7 (in progress)
 
+- For cancer tumor/normal calling, attach final call information of both to
+  the tumor sample. This provides a single downstream file for processing and
+  analysis.
+- Enable batch specification in metadata to be a list, allowing a single normal
+  BAM file to serve as a control for multiple tumor files.
 - Re-organization of parallel framework code to enable alternative approaches.
   Document plugging in new parallel frameworks. Does not expose changes to users
   but makes the code cleaner for developers.

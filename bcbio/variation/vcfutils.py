@@ -17,44 +17,41 @@ from bcbio.pipeline import config_utils, shared, tools
 from bcbio.provenance import do
 from bcbio.variation import bamprep
 
+# ## Tumor/normal paired cancer analyses
+
 PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_sample_name",
                                        "normal_bam", "normal_sample_name"])
 
 def is_paired_analysis(align_bams, items):
-
-    """Determine if bams are from a sample pair or  not"""
-
-    if not (len(align_bams) == 2 and all(item["metadata"].get("phenotype")
-                                         is not None for item in items)):
-        return False
-
+    """Determine if BAMs are from a tumor/normal paired analysis.
+    """
     return True if get_paired_bams(align_bams, items) is not None else False
 
-
 def get_paired_bams(align_bams, items):
-
-    """Split aligned bams imn tumor / normal pairs."""
-
-    tumor_bam = None
-    normal_bam = None
-
+    """Split aligned bams into tumor / normal pairs if this is a paired analysis.
+    """
+    tumor_bam, normal_bam = None, None
     for bamfile, item in itertools.izip(align_bams, items):
-
-        metadata = item["metadata"]
-
-        if metadata["phenotype"] == "normal":
+        phenotype = get_paired_phenotype(item)
+        if phenotype == "normal":
             normal_bam = bamfile
             normal_sample_name = item["name"][1]
-        elif metadata["phenotype"] == "tumor":
+        elif phenotype == "tumor":
             tumor_bam = bamfile
             tumor_sample_name = item["name"][1]
 
-    if tumor_bam is None or normal_bam is None:
-        return
+    if tumor_bam and normal_bam:
+        return PairedData(tumor_bam, tumor_sample_name, normal_bam,
+                          normal_sample_name)
 
-    return PairedData(tumor_bam, tumor_sample_name, normal_bam,
-                      normal_sample_name)
+def get_paired_phenotype(data):
+    """Retrieve the phenotype for a paired tumor/normal analysis.
+    """
+    allowed_names = set(["tumor", "normal"])
+    p = data.get("metadata", {}).get("phenotype")
+    return p if p in allowed_names else None
 
+# ## General utilities
 
 def write_empty_vcf(out_file):
     with open(out_file, "w") as out_handle:

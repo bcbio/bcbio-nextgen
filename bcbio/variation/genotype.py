@@ -144,9 +144,9 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
     caller = data["config"]["algorithm"].get("variantcaller")
     call_file = ploidy.filter_vcf_by_sex(call_file, data)
     if caller in ["freebayes"]:
-        return vfilter.freebayes(call_file, ref_file, vrn_files, data["config"])
+        return vfilter.freebayes(call_file, ref_file, vrn_files, data)
     # no additional filtration for callers that filter as part of call process
-    elif caller in ["samtools", "varscan"]:
+    elif caller in ["samtools", "varscan", "mutect"]:
         return call_file
     else:
         config = data["config"]

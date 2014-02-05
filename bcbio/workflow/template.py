@@ -183,6 +183,21 @@ def _pname_and_metadata(in_file):
         return (_safe_name(os.path.splitext(os.path.basename(in_file))[0]),
                 _parse_metadata(in_file))
 
+def _handle_special_yaml_cases(v):
+    """Handle values that pass integer, boolean or list values.
+    """
+    if ";" in v:
+        v = v.split(";")
+    else:
+        try:
+            v = int(v)
+        except ValueError:
+            if v.lower() == "true":
+                v = True
+            elif v.lower() == "false":
+                    v = False
+    return v
+
 def _add_metadata(item, metadata):
     """Add metadata information from CSV file to current item.
 
@@ -201,17 +216,10 @@ def _add_metadata(item, metadata):
             item["metadata"] = {}
         for k, v in item_md.iteritems():
             if v:
+                v = _handle_special_yaml_cases(v)
                 if k in TOP_LEVEL:
                     item[k] = v
                 elif k in run_info.ALGORITHM_KEYS:
-                    # Handle keys that pass integer or boolean values
-                    try:
-                        v = int(v)
-                    except ValueError:
-                        if v.lower() == "true":
-                            v = True
-                        elif v.lower() == "false":
-                            v = False
                     item["algorithm"][k] = v
                 else:
                     item["metadata"][k] = v

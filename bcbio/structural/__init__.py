@@ -58,7 +58,9 @@ def run(samples, run_parallel):
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
                 batch = x.get("metadata", {}).get("batch")
                 if svcaller in _BATCH_CALLERS and batch:
-                    to_process[batch].append(x)
+                    batches = batch if isinstance(batch, (list, tuple)) else [batch]
+                    for b in batches:
+                        to_process[b].append(x)
                 else:
                     to_process[x["name"][-1]] = [x]
         else:

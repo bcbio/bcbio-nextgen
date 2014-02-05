@@ -8,6 +8,7 @@ import re
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.variation import vcfutils
 
 def chromosome_special_cases(chrom):
     if chrom in ["MT", "M", "chrM", "chrMT"]:
@@ -87,7 +88,12 @@ def filter_vcf_by_sex(vcf_file, data):
 
     Handles sex chromosomes and mitochondrial. Does not try to resolve called
     hets into potential homozygotes when converting diploid to haploid.
+
+    Skips filtering on cancer samples. Since these will be pooled, need special
+    functionality to handle them
     """
+    if vcfutils.get_paired_phenotype(data):
+        return vcf_file
     _, sexes = _configured_ploidy_sex([data])
     sex = sexes.pop()
     out_file = "%s-ploidyfix%s" % os.path.splitext(vcf_file)

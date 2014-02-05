@@ -8,6 +8,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
+from bcbio.variation import vcfutils
 
 # ## General functionality
 
@@ -38,17 +39,20 @@ def jexl_hard(broad_runner, snp_file, ref_file, filter_type,
 
 # ## Caller specific
 
-def freebayes(in_file, ref_file, vrn_files, config):
+def freebayes(in_file, ref_file, vrn_files, data):
     """FreeBayes filters: trying custom filter approach before falling back on hard filtering.
     """
-    out_file = _freebayes_custom(in_file, ref_file, config)
+    out_file = _freebayes_custom(in_file, ref_file, data)
     if out_file is None:
-        out_file = _freebayes_hard(in_file, ref_file, config)
+        out_file = _freebayes_hard(in_file, ref_file, data["config"])
     return out_file
 
-def _freebayes_custom(in_file, ref_file, config):
+def _freebayes_custom(in_file, ref_file, data):
     """Custom FreeBayes filtering using bcbio.variation, tuned to human NA12878 results.
     """
+    if vcfutils.get_paired_phenotype(data):
+        return None
+    config = data["config"]
     bv_ver = programs.get_version("bcbio_variation", config=config)
     if LooseVersion(bv_ver) < LooseVersion("0.1.1"):
         return None

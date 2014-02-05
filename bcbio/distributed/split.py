@@ -188,20 +188,26 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
     extra_args = collections.defaultdict(list)
     final_args = {}
     already_added = []
+    extras = []
     for data in output:
-        cur_file = data[file_key]
-        cur_out = combine_map[cur_file]
-        out_map[cur_out].append(cur_file)
-        extra_args[cur_out].append([data[x] for x in combine_arg_keys])
-        data[file_key] = cur_out
-        if cur_out not in already_added:
-            already_added.append(cur_out)
-            final_args[cur_out] = data
-        elif "combine" in data:
-            final_args = _add_combine_parts(final_args, cur_out, data)
+        cur_file = data.get(file_key)
+        if cur_file:
+            cur_out = combine_map[cur_file]
+            out_map[cur_out].append(cur_file)
+            extra_args[cur_out].append([data[x] for x in combine_arg_keys])
+            data[file_key] = cur_out
+            if cur_out not in already_added:
+                already_added.append(cur_out)
+                final_args[cur_out] = data
+            elif "combine" in data:
+                final_args = _add_combine_parts(final_args, cur_out, data)
+            else:
+                extras.append([data])
+        else:
+            extras.append([data])
     combine_args = [[v, k] + _get_extra_args(extra_args[k], combine_arg_keys)
                     for (k, v) in out_map.iteritems()]
-    return combine_args, [[final_args[x]] for x in already_added]
+    return combine_args, [[final_args[x]] for x in already_added] + extras
 
 def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):
     """Split up input files and arguments, returning arguments for parallel processing.
