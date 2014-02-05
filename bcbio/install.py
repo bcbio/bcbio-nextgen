@@ -146,7 +146,8 @@ def upgrade_bcbio_data(args, remotes):
                               remotes["genome_resources"])
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
     if 'data' in args.toolplus:
-        subprocess.check_call(["gemini", "update", "--dataonly"])
+        gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
+        subprocess.check_call([gemini, "update", "--dataonly"])
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
