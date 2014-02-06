@@ -14,6 +14,7 @@ from bcbio.bam import callable
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import genome
 from bcbio.provenance import do
+from bcbio.variation import validateplot
 
 # ## Individual sample comparisons
 
@@ -161,13 +162,16 @@ def summarize_grading(samples):
     """
     if not _has_grading_info(samples):
         return samples
+    validate_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"], "validate"))
+    out_csv = os.path.join(validate_dir, "grading-summary.csv")
+    header = ["sample", "caller", "variant.type", "category", "value"]
     out = []
-    out_csv = os.path.join(samples[0][0]["dirs"]["work"],
-                           "grading-summary.csv")
     with open(out_csv, "w") as out_handle:
         writer = csv.writer(out_handle)
-        writer.writerow(["sample", "caller", "variant.type", "category", "value"])
+        writer.writerow(header)
+        plot_num = 0
         for data in (x[0] for x in samples):
+            plot_data = []
             for variant in data.get("variants", []):
                 if variant.get("validate"):
                     variant["validate"]["grading_summary"] = out_csv
@@ -176,7 +180,17 @@ def summarize_grading(samples):
                     for sample_stats in grade_stats:
                         sample = sample_stats["sample"]
                         for vtype, cat, val in _flatten_grading(sample_stats):
-                            writer.writerow([sample, variant.get("variantcaller", ""),
-                                             vtype, cat, val])
-            out.append([data])
+                            row = [sample, variant.get("variantcaller", ""),
+                                   vtype, cat, val]
+                            writer.writerow(row)
+                            plot_data.append(row)
+            plots = (validateplot.create(plot_data, header, plot_num, data["config"],
+                                         os.path.splitext(out_csv)[0])
+                     if plot_data else None)
+            if plots:
+                plot_num += 1
+                for variant in data.get("variants", []):
+                    if variant.get("validate"):
+                        variant["validate"]["grading_plots"] = plots
+        out.append([data])
     return out

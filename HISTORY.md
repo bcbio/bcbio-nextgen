@@ -10,6 +10,7 @@
   but makes the code cleaner for developers.
 - Default to 1Gb/core memory usage when not specified in any programs. Do not
   use default baseline if supplied in input file. Thanks to James Porter.
+- Integrate plotting of variant evaluation results using prettyplotlib.
 - Add `globals` option to configuration to avoid needing to specify the same
   shared file multiple times in a samples configuration.
 - Remove deprecated Celery distributed messaging, replaced in favor of IPython.
