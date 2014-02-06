@@ -5,8 +5,7 @@ upload:
   dir: upload
 fc_date: '2014-02-05'
 fc_name: tcancer2
-# XXX Need a useful file here to use as a test
-# XXX Need to implement the globals functionality
+# XXX Need a useful file here to use as a real test
 globals:
   normal_panel1: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
 details:
@@ -23,4 +22,4 @@ details:
       recalibrate: false
       realign: false
       variantcaller: mutect
-      background: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf #normal_panel1
+      background: normal_panel1

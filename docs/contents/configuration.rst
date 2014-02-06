@@ -174,7 +174,7 @@ Galaxy parameters:
   assumes you are able to access a shared directory also present on
   the Galaxy machine.
 - ``galaxy_api_key`` User API key to access Galaxy: see the
-  `Galaxy API`_ documentation.
+ `Galaxy API`_ documentation.
 - ``galaxy_library`` Name of the Galaxy Data Library to upload to. You
   can specify this globally for a project in ``upload`` or for
   individual samples in the sample details section.
@@ -208,6 +208,23 @@ S3 parameters:
   with reduced redundancy: cheaper but less reliable [false, true]
 
 .. _algorithm-config:
+
+Globals
+~~~~~~~
+You can define files used multiple times in the ``algorithm`` section of your
+configuration in a top level ``globals`` dictionary. This saves copying and
+pasting across the configuration and makes it easier to manually adjust the
+configuration if inputs change::
+
+  globals:
+    my_custom_locations: /path/to/file.bed
+  details:
+    - description: sample1
+      algorithm:
+        variant_regions: my_custom_locations
+    - description: sample2
+      algorithm:
+        variant_regions: my_custom_locations
 
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~

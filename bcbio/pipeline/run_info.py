@@ -227,12 +227,14 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         except ValueError:
             pass
     global_config = {}
+    global_vars = {}
     if isinstance(loaded, dict):
         global_config = copy.deepcopy(loaded)
         del global_config["details"]
         if "fc_name" in loaded and "fc_date" in loaded:
             fc_name = loaded["fc_name"].replace(" ", "_")
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
+        global_vars = global_config.pop("globals", {})
         loaded = loaded["details"]
     run_details = []
     for i, item in enumerate(loaded):
@@ -255,6 +257,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             upload["fc_date"] = fc_date
         upload["run_id"] = ""
         item["upload"] = upload
+        item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
                                                   ignore_keys=["variantcaller", "realign", "recalibrate",
                                                                "phasing", "svcaller"])
@@ -263,3 +266,18 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details
+
+def _replace_global_vars(xs, global_vars):
+    """Replace globally shared names from input header with value.
+    """
+    if isinstance(xs, (list, tuple)):
+        return [_replace_global_vars(x) for x in xs]
+    elif isinstance(xs, dict):
+        final = {}
+        for k, v in xs.iteritems():
+            if v in global_vars:
+                v = global_vars[v]
+            final[k] = v
+        return final
+    else:
+        return xs

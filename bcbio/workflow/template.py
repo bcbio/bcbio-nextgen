@@ -4,6 +4,7 @@ Provides an automated way to generate a full set of analysis files from an input
 YAML template. Default templates are provided for common approaches which can be tweaked
 as needed.
 """
+import collections
 import contextlib
 import copy
 import csv
@@ -75,13 +76,16 @@ def _prep_items_from_base(base, in_files):
             raise ValueError("Unexpected input file types: %s" % str(files))
     return details
 
+def _expand_file(x):
+    return os.path.abspath(os.path.normpath(os.path.expanduser(os.path.expandvars(x))))
+
 def _expand_dirs(in_files, known_exts):
     def _is_dir(in_file):
         return os.path.isdir(os.path.expanduser(in_file))
     files, dirs = utils.partition(_is_dir, in_files)
     for dir in dirs:
         for ext in known_exts.keys():
-            wildcard = os.path.join(os.path.expanduser(dir), "*"+ext)
+            wildcard = os.path.join(os.path.expanduser(dir), "*" + ext)
             files = itertools.chain(glob.glob(wildcard), files)
     return list(files)
 
@@ -115,7 +119,7 @@ def _read_template(template):
                 txt_config = in_handle.read()
             with contextlib.closing(urllib2.urlopen(base_url % template)) as in_handle:
                 config = yaml.load(in_handle)
-        except urllib2.HTTPError:
+        except (urllib2.HTTPError, urllib2.URLError):
             raise ValueError("Could not find template '%s' locally or in standard templates on GitHub"
                              % template)
     return config, txt_config
@@ -127,7 +131,7 @@ def _write_template_config(template_txt, project_name, out_dir):
         out_handle.write(template_txt)
     return out_config_file
 
-def _write_config_file(items, template, project_name, out_dir):
+def _write_config_file(items, global_vars, template, project_name, out_dir):
     """Write configuration file, adding required top level attributes.
     """
     config_dir = utils.safe_makedir(os.path.join(out_dir, "config"))
@@ -136,6 +140,8 @@ def _write_config_file(items, template, project_name, out_dir):
            "fc_name": project_name,
            "upload": {"dir": "../final"},
            "details": items}
+    if global_vars:
+        out["globals"] = global_vars
     for k, v in template.iteritems():
         if k not in ["details"]:
             out[k] = v
@@ -150,6 +156,32 @@ def _safe_name(x):
     for prob in [" ", "."]:
         x = x.replace(prob, "_")
     return x
+
+def _set_global_vars(metadata):
+    """Identify files used multiple times in metadata and replace with global variables
+    """
+    fnames = collections.defaultdict(list)
+    for sample in metadata.keys():
+        for k, v in metadata[sample].items():
+            print k, v
+            if os.path.isfile(v):
+                v = _expand_file(v)
+                metadata[sample][k] = v
+                fnames[v].append(k)
+    loc_counts = collections.defaultdict(int)
+    global_vars = {}
+    global_var_sub = {}
+    for fname, locs in fnames.items():
+        if len(locs) > 1:
+            loc_counts[locs[0]] += 1
+            name = "%s%s" % (locs[0], loc_counts[locs[0]])
+            global_var_sub[fname] = name
+            global_vars[name] = fname
+    for sample in metadata.keys():
+        for k, v in metadata[sample].items():
+            if v in global_var_sub:
+                metadata[sample][k] = global_var_sub[v]
+    return metadata, global_vars
 
 def _parse_metadata(in_file):
     """Reads metadata from a simple CSV structured input file.
@@ -168,7 +200,8 @@ def _parse_metadata(in_file):
         for sinfo in (x for x in reader if not x[0].startswith("#")):
             sample = sinfo[0].strip()
             metadata[sample] = dict(zip(keys, (x.strip() for x in sinfo[1:])))
-    return metadata
+    metadata, global_vars = _set_global_vars(metadata)
+    return metadata, global_vars
 
 def _pname_and_metadata(in_file):
     """Retrieve metadata and project name from the input metadata CSV file.
@@ -178,10 +211,11 @@ def _pname_and_metadata(in_file):
     For back compatibility, accepts the project name as an input, providing no metadata.
     """
     if not os.path.isfile(in_file):
-        return _safe_name(in_file), {}
+        return _safe_name(in_file), {}, {}
     else:
+        md, global_vars = _parse_metadata(in_file)
         return (_safe_name(os.path.splitext(os.path.basename(in_file))[0]),
-                _parse_metadata(in_file))
+                md, global_vars)
 
 def _handle_special_yaml_cases(v):
     """Handle values that pass integer, boolean or list values.
@@ -231,7 +265,7 @@ def _add_metadata(item, metadata):
 def setup(args):
     template, template_txt = _read_template(args.template)
     base_item = template["details"][0]
-    project_name, metadata = _pname_and_metadata(args.metadata)
+    project_name, metadata, global_vars = _pname_and_metadata(args.metadata)
     items = [_add_metadata(item, metadata)
              for item in _prep_items_from_base(base_item, args.input_files)]
 
@@ -244,7 +278,7 @@ def setup(args):
         print "  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
             (out_config_file, project_name)
     else:
-        out_config_file = _write_config_file(items, template, project_name, out_dir)
+        out_config_file = _write_config_file(items, global_vars, template, project_name, out_dir)
         print "Configuration file created at: %s" % out_config_file
         print "Edit to finalize and run with:"
         print "  cd %s" % work_dir
