@@ -56,8 +56,7 @@ def split_variants_by_sample(data):
     # cancer tumor/normal
     if vcfutils.get_paired_phenotype(data):
         # handle trailing normals, which we don't need to process
-        if len(data["group_orig"]) == 1:
-            assert vcfutils.get_paired_phenotype(data["group_orig"][0][0]) == "normal"
+        if len(data["group_orig"]) == 1 and vcfutils.get_paired_phenotype(data["group_orig"][0][0]) == "normal":
             sub_data = data["group_orig"][0][0]
             sub_data.pop("vrn_file", None)
             out.append(sub_data)
