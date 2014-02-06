@@ -71,14 +71,14 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     params = ["-R", ref_file, "-T", "MuTect"]
 
     paired = vcfutils.get_paired_bams(align_bams, items)
-    print paired
-    if not paired.normal_bam:
-        raise ValueError("Require both tumor and normal BAM files for MuTect cancer calling")
     params += ["-I:tumor", paired.tumor_bam]
     params += ["--tumor_sample_name", paired.tumor_name]
-    params += ["-I:normal", paired.normal_bam]
-    params += ["--normal_sample_name", paired.normal_name]
-
+    if paired.normal_bam is not None:
+        params += ["-I:normal", paired.normal_bam]
+        params += ["--normal_sample_name", paired.normal_name]
+    if paired.normal_panel is not None:
+        params += ["--normal_panel", paired.normal_panel]
+    
     params += _config_params(base_config, assoc_files, region, out_file)
     return broad_runner, params
 
