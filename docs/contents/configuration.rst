@@ -305,6 +305,9 @@ Variant calling
 - ``clinical_reporting`` Tune output for clinical reporting.
   Modifies snpEff parameters to use HGVS notational on canonical
   transcripts [false, true].
+- ``background`` Provide a VCF file with variants to use as a background
+  reference during variant calling. For tumor/normal paired calling use this to
+  supply a panel of normal individuals.
 
 Parallelization
 ===============

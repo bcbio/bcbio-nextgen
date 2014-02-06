@@ -19,8 +19,8 @@ from bcbio.variation import bamprep
 
 # ## Tumor/normal paired cancer analyses
 
-PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_sample_name",
-                                       "normal_bam", "normal_sample_name"])
+PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_name",
+                                       "normal_bam", "normal_name", "normal_panel"])
 
 def is_paired_analysis(align_bams, items):
     """Determine if BAMs are from a tumor/normal paired analysis.
@@ -29,20 +29,22 @@ def is_paired_analysis(align_bams, items):
 
 def get_paired_bams(align_bams, items):
     """Split aligned bams into tumor / normal pairs if this is a paired analysis.
+    Allows cases with only tumor BAMs to handle callers that can work without
+    normal BAMs or with normal VCF panels.
     """
-    tumor_bam, normal_bam = None, None
+    tumor_bam, normal_bam, normal_name, normal_panel = None, None, None, None
     for bamfile, item in itertools.izip(align_bams, items):
         phenotype = get_paired_phenotype(item)
         if phenotype == "normal":
             normal_bam = bamfile
-            normal_sample_name = item["name"][1]
+            normal_name = item["name"][1]
         elif phenotype == "tumor":
             tumor_bam = bamfile
-            tumor_sample_name = item["name"][1]
-
-    if tumor_bam and normal_bam:
-        return PairedData(tumor_bam, tumor_sample_name, normal_bam,
-                          normal_sample_name)
+            tumor_name = item["name"][1]
+            normal_panel = item["config"]["algorithm"].get("background")
+    if tumor_bam:
+        return PairedData(tumor_bam, tumor_name, normal_bam,
+                          normal_name, normal_panel)
 
 def get_paired_phenotype(data):
     """Retrieve the phenotype for a paired tumor/normal analysis.

@@ -13,7 +13,7 @@ from bcbio.provenance import do, programs
 from bcbio.utils import file_exists, append_stem
 from bcbio.variation import freebayes, samtools
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
-                                      get_paired_bams)
+                                      get_paired_bams, is_paired_analysis)
 
 import pysam
 
@@ -21,11 +21,10 @@ import pysam
 def run_varscan(align_bams, items, ref_file, assoc_files,
                 region=None, out_file=None):
 
-    if len(align_bams) == 2 and all(item["metadata"].get("phenotype")
-                                    is not None for item in items):
+    if is_paired_analysis(align_bams, items):
         call_file = samtools.shared_variantcall(_varscan_paired, "varscan",
-                                            align_bams, ref_file, items,
-                                            assoc_files, region, out_file)
+                                                align_bams, ref_file, items,
+                                                assoc_files, region, out_file)
     else:
         call_file = samtools.shared_variantcall(_varscan_work, "varscan",
                                                 align_bams, ref_file,
@@ -65,13 +64,14 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
     # No need for names in VarScan, hence the "_"
 
-    tumor_bam, tumor_name, normal_bam, normal_name = get_paired_bams(
-        align_bams, items)
+    paired = get_paired_bams(align_bams, items)
+    if not paired.normal_bam:
+        raise ValueError("Require both tumor and normal BAM files for VarScan cancer calling")
 
     if not file_exists(out_file):
         base, ext = os.path.splitext(out_file)
         cleanup_files = []
-        for fname, mpext in [(normal_bam, "normal"), (tumor_bam, "tumor")]:
+        for fname, mpext in [(paired.normal_bam, "normal"), (paired.tumor_bam, "tumor")]:
             mpfile = "%s-%s.mpileup" % (base, mpext)
             cleanup_files.append(mpfile)
             with file_transaction(mpfile) as mpfile_tx:
@@ -119,11 +119,11 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
         if do.file_exists(snp_file):
             to_combine.append(snp_file)
-            _fix_varscan_vcf(snp_file, normal_name, tumor_name)
+            _fix_varscan_vcf(snp_file, paired.normal_name, paired.tumor_name)
 
         if do.file_exists(indel_file):
             to_combine.append(indel_file)
-            _fix_varscan_vcf(indel_file, normal_name, tumor_name)
+            _fix_varscan_vcf(indel_file, paired.normal_name, paired.tumor_name)
 
         if not to_combine:
             write_empty_vcf(out_file)

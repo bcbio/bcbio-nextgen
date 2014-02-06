@@ -128,7 +128,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "realign", "phasing", "validate",
                       "validate_regions", "validate_genome_build",
                       "clinical_reporting", "nomap_split_size",
-                      "nomap_split_targets", "ensemble",
+                      "nomap_split_targets", "ensemble", "background",
                       "disambiguate", "strandedness", "fusion_mode", "min_read_length"])
 
 def _check_algorithm_keys(item):

@@ -2,8 +2,6 @@
 
 from distutils.version import LooseVersion
 import os
-import itertools
-from subprocess import CalledProcessError
 
 from bcbio import bam, broad
 from bcbio.utils import file_exists
@@ -19,23 +17,8 @@ _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
                         "java.lang.IllegalArgumentException: "
                         "Comparison method violates its general contract!"])
 
-
-def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
-                       region=None, out_file=None):
-    """
-    Preparation work for MuTect.
-    """
-
-    #FIXME: We assume all other bits in the config are shared
-
-    base_config = items[0]["config"]
-    dbsnp = assoc_files["dbsnp"]
-    cosmic = assoc_files.get("cosmic")
-
-    broad_runner = broad.runner_from_config(base_config, "mutect")
-
+def _check_mutect_version(broad_runner):
     mutect_version = broad_runner.get_mutect_version()
-
     try:
         assert mutect_version is not None
     except AssertionError:
@@ -48,58 +31,56 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
         try:
             assert LooseVersion(mutect_version) >= LooseVersion("1.1.5")
         except AssertionError:
-            message =  ("MuTect 1.1.4 and lower is known to have incompatibilities "
-                        "with Java < 7, and this may lead to problems in analyses. "
-                        "Please use MuTect 1.1.5 or higher (note that it requires "
-                        "Java 7).")
+            message = ("MuTect 1.1.4 and lower is known to have incompatibilities "
+                       "with Java < 7, and this may lead to problems in analyses. "
+                       "Please use MuTect 1.1.5 or higher (note that it requires "
+                       "Java 7).")
             raise ValueError(message)
+
+def _config_params(base_config, assoc_files, region, out_file):
+    """Add parameters based on configuration variables, associated files and genomic regions.
+    """
+    params = []
+    contamination = base_config["algorithm"].get("fraction_contamination", 0)
+    params += ["--fraction_contamination", contamination]
+    dbsnp = assoc_files["dbsnp"]
+    if dbsnp:
+        params += ["--dbsnp", dbsnp]
+    cosmic = assoc_files.get("cosmic")
+    if cosmic:
+        params += ["--cosmic", cosmic]
+    variant_regions = base_config["algorithm"].get("variant_regions")
+    region = subset_variant_regions(variant_regions, region, out_file)
+    if region:
+        params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
+                   "INTERSECTION"]
+    return params
+
+def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
+                       region=None, out_file=None):
+    """Preparation work for MuTect.
+    """
+    base_config = items[0]["config"]
+    broad_runner = broad.runner_from_config(base_config, "mutect")
+    _check_mutect_version(broad_runner)
 
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
         bam.index(x, base_config)
 
-    variant_regions = base_config["algorithm"].get("variant_regions", None)
-    contamination = base_config["algorithm"].get("fraction_contamination", 0)
-    region = subset_variant_regions(variant_regions, region, out_file)
-
-    #FIXME: Add more parameters like fraction contamination etc
-
     params = ["-R", ref_file, "-T", "MuTect"]
-    params += ["--dbsnp", dbsnp]
 
-    tumor_bam = None
-    normal_bam = None
+    paired = vcfutils.get_paired_bams(align_bams, items)
+    print paired
+    if not paired.normal_bam:
+        raise ValueError("Require both tumor and normal BAM files for MuTect cancer calling")
+    params += ["-I:tumor", paired.tumor_bam]
+    params += ["--tumor_sample_name", paired.tumor_name]
+    params += ["-I:normal", paired.normal_bam]
+    params += ["--normal_sample_name", paired.normal_name]
 
-    for bamfile, item in itertools.izip(align_bams, items):
-
-        metadata = item["metadata"]
-
-        if metadata["phenotype"] == "normal":
-            normal_bam = bamfile
-            normal_sample_name = item["name"][1]
-        elif metadata["phenotype"] == "tumor":
-            tumor_bam = bamfile
-            tumor_sample_name = item["name"][1]
-
-    if tumor_bam is None or normal_bam is None:
-        raise ValueError("Missing phenotype definition (tumor or normal) "
-                         "in samples")
-
-    params += ["-I:normal", normal_bam]
-    params += ["-I:tumor", tumor_bam]
-    params += ["--tumor_sample_name", tumor_sample_name]
-    params += ["--normal_sample_name", normal_sample_name]
-    params += ["--fraction_contamination", contamination]
-
-    if cosmic is not None:
-        params += ["--cosmic", cosmic]
-
-    if region:
-        params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
-                   "INTERSECTION"]
-
+    params += _config_params(base_config, assoc_files, region, out_file)
     return broad_runner, params
-
 
 def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
@@ -114,18 +95,13 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
         broad_runner, params = \
             _mutect_call_prep(align_bams, items, ref_file, assoc_files,
                                    region, out_file)
-
         if (not isinstance(region, (list, tuple)) and
-            not all(has_aligned_reads(x, region) for x in align_bams)):
-
+              not all(has_aligned_reads(x, region) for x in align_bams)):
                 vcfutils.write_empty_vcf(out_file)
                 return
-
         with file_transaction(out_file) as tx_out_file:
-            # Rationale: MuTect writes another table to stdout,
-            # which we don't need
+            # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
-
             broad_runner.run_mutect(params)
 
     return out_file

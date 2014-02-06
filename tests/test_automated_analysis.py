@@ -270,6 +270,18 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-cancer.yaml")]
             subprocess.check_call(cl)
 
+    @attr(cancer_indevel=True)
+    def test_7_cancer_nonormal(self):
+        """Test cancer calling without normal samples or with normal VCF panels.
+        XXX Not yet working
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  self._get_post_process_yaml(workdir),
+                  os.path.join(self.data_dir, "run_info-cancer2.yaml")]
+            subprocess.check_call(cl)
+
     @attr(speed=1)
     @attr(template=True)
     def test_8_template(self):

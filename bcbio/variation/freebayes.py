@@ -90,6 +90,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
 
     paired = get_paired_bams(align_bams, items)
+    if not paired.normal_bam:
+        raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
 
     vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
 
@@ -112,7 +114,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             cl = ("{freebayes} --pooled-discrete --pvar 0.7"
                   " --genotype-qualities {opts} {paired.tumor_bam}"
                   " {paired.normal_bam} | {vcfsamplediff} -s VT"
-                  " {paired.normal_sample_name} {paired.tumor_sample_name}"
+                  " {paired.normal_name} {paired.tumor_name}"
                   " - >  {tx_out_file}")
 
             bam.index(paired.tumor_bam, config)

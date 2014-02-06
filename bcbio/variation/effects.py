@@ -41,7 +41,7 @@ def _snpeff_args_from_config(data):
     if resources.get("options"):
         args += [str(x) for x in resources.get("options", [])]
     # cancer specific calling arguments
-    if data.get("metadata", {}).get("phenotype") in ["tumor", "normal"]:
+    if vcfutils.get_paired_phenotype(data):
         args += ["-cancer"]
     # Provide options tuned to reporting variants in clinical environments
     if config["algorithm"].get("clinical_reporting"):
