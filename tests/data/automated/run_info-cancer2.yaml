@@ -1,4 +1,4 @@
-# Test cancer runs without normal matches samples or using pre-called
+# Test cancer runs without normal matched samples or using pre-called
 # normal panels input as VCF files
 ---
 upload:
@@ -10,7 +10,7 @@ fc_name: tcancer2
 globals:
   normal_panel1: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
 details:
-  - analysis: variant
+  - analysis: variant2
     description: c-tumor
     files: [../data/tcga_benchmark/HCC1143-tumor.bam]
     genome_build: hg19
@@ -23,4 +23,4 @@ details:
       recalibrate: false
       realign: false
       variantcaller: mutect
-      background: normal_panel1
+      background: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf #normal_panel1
