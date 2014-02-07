@@ -270,13 +270,15 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
 def _replace_global_vars(xs, global_vars):
     """Replace globally shared names from input header with value.
     """
+    import ipdb
+    ipdb.set_trace()
     if isinstance(xs, (list, tuple)):
         return [_replace_global_vars(x) for x in xs]
     elif isinstance(xs, dict):
         final = {}
         for k, v in xs.iteritems():
-            if v in global_vars:
-                v = global_vars[v]
+            if k in global_vars:
+                k = global_vars[k]
             final[k] = v
         return final
     else:
