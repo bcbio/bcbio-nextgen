@@ -109,7 +109,7 @@ def _convert_to_snpeff_interval(in_file, base_file):
         with open(out_file, "w") as out_handle:
             writer = csv.writer(out_handle, dialect="excel-tab")
             with open(in_file) as in_handle:
-                for line in (l for l in in_handle if not l.startswith(("@", "#"))):
+                for line in (l for l in in_handle if not l.startswith(("@", "#", "track", "browser"))):
                     parts = line.split()
                     writer.writerow(parts[:3])
     return out_file
