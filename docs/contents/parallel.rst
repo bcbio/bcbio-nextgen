@@ -68,7 +68,7 @@ resubmitting jobs that may have failed for reproducible reasons.
 
 Finally, the ``-r resources`` flag specifies resource options to pass along
 to the underlying queue scheduler. This currently supports SGE's
-``-l`` parameter, Torque's ``-l`` parameter and SLURM native flags. This allows specification
+``-l`` parameter, Torque's ``-l`` parameter, LSF and SLURM native flags. This allows specification
 or resources to the scheduler (see the `qsub man page`_). You may specify multiple
 resources, so ``-r mem=4g -r ct=01:40:00``
 translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
