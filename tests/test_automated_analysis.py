@@ -270,7 +270,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-cancer.yaml")]
             subprocess.check_call(cl)
 
-    @attr(cancer_indevel=True)
+    @attr(cancer=True)
     def test_7_cancer_nonormal(self):
         """Test cancer calling without normal samples or with normal VCF panels.
         XXX Not yet working

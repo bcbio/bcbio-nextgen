@@ -269,14 +269,18 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
 
 def _replace_global_vars(xs, global_vars):
     """Replace globally shared names from input header with value.
+
+    The value of the `algorithm` item may be a pointer to a real
+    file specified in the `global` section. If found, replace with
+    the full value.
     """
     if isinstance(xs, (list, tuple)):
         return [_replace_global_vars(x) for x in xs]
     elif isinstance(xs, dict):
         final = {}
         for k, v in xs.iteritems():
-            if k in global_vars:
-                k = global_vars[k]
+            if isinstance(v, basestring) and v in global_vars:
+                v = global_vars[v]
             final[k] = v
         return final
     else:

@@ -192,5 +192,5 @@ def summarize_grading(samples):
                 for variant in data.get("variants", []):
                     if variant.get("validate"):
                         variant["validate"]["grading_plots"] = plots
-        out.append([data])
+            out.append([data])
     return out
