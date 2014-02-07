@@ -6,6 +6,7 @@ results and tracking of provenance in output files.
 import os
 import contextlib
 import subprocess
+import sys
 
 import yaml
 
@@ -113,7 +114,11 @@ def _get_cl_version(p, config):
     try:
         prog = config_utils.get_program(p["cmd"], config)
     except config_utils.CmdNotFound:
-        return ""
+        localpy_cmd = os.path.join(os.path.dirname(sys.executable), p["cmd"])
+        if os.path.exists(localpy_cmd):
+            prog = localpy_cmd
+        else:
+            return ""
     args = p.get("args", "")
 
     cmd = "{prog} {args}"

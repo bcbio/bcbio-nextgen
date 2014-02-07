@@ -1,6 +1,8 @@
 """Provide trimming of input reads from Fastq or BAM files.
 """
 import os
+import sys
+
 from bcbio.utils import (file_exists, safe_makedir,
                          replace_suffix, append_stem, is_pair,
                          replace_directory, map_wrap)
@@ -95,6 +97,11 @@ def _get_sequences_to_trim(lane_config):
 
 
 def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
+    """Trimming with cutadapt, using version installed with bcbio-nextgen.
+
+    Uses the system executable to find the version next to our Anaconda Python.
+    TODO: Could we use cutadapt as a library to avoid this?
+    """
     if quality_format == "illumina":
         quality_base = "64"
     else:
@@ -104,7 +111,8 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
     # realsequenceAAAAAAadapter to remove both the poly-A and the adapter
     # this behavior might not be what we want; we could also do two or
     # more passes of cutadapt
-    base_cmd = ["cutadapt", "--times=" + "2", "--quality-base=" + quality_base,
+    cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
+    base_cmd = [cutadapt, "--times=" + "2", "--quality-base=" + quality_base,
                 "--quality-cutoff=20", "--format=fastq", "--minimum-length=0"]
     adapter_cmd = map(lambda x: "--adapter=" + x, adapters)
     base_cmd.extend(adapter_cmd)
