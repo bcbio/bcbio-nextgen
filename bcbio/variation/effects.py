@@ -19,16 +19,8 @@ def snpeff_effects(data):
     """Annotate input VCF file with effects calculated by snpEff.
     """
     vcf_in = data["vrn_file"]
-    interval_file = data["config"]["algorithm"].get("variant_regions", None)
     if vcfutils.vcf_has_variants(vcf_in):
-        se_interval = (_convert_to_snpeff_interval(interval_file, vcf_in)
-                       if interval_file else None)
-        try:
-            vcf_file = _run_snpeff(vcf_in, se_interval, "vcf", data)
-        finally:
-            for fname in [se_interval]:
-                if fname and os.path.exists(fname):
-                    os.remove(fname)
+        vcf_file = _run_snpeff(vcf_in, "vcf", data)
         return vcf_file
 
 def _snpeff_args_from_config(data):
@@ -77,7 +69,7 @@ def get_cmd(cmd_name, datadir, config):
         cmd = "java {memory} -jar {snpeff_jar} {cmd_name} -c {config_file} -dataDir {datadir}"
     return cmd.format(**locals())
 
-def _run_snpeff(snp_in, se_interval, out_format, data):
+def _run_snpeff(snp_in, out_format, data):
     snpeff_db, datadir = get_db(data["sam_ref"], data["genome_resources"], data["config"])
     assert datadir is not None, \
         "Did not find snpEff resources in genome configuration: %s" % data["genome_resources"]
@@ -87,31 +79,17 @@ def _run_snpeff(snp_in, se_interval, out_format, data):
     ext = utils.splitext_plus(snp_in)[1] if out_format == "vcf" else ".tsv"
     out_file = "%s-effects%s" % (utils.splitext_plus(snp_in)[0], ext)
     if not utils.file_exists(out_file):
-        interval = "-filterinterval %s" % (se_interval) if se_interval else ""
         config_args = " ".join(_snpeff_args_from_config(data))
         if ext.endswith(".gz"):
             bgzip_cmd = "| %s -c" % tools.get_bgzip_cmd(data["config"])
         else:
             bgzip_cmd = ""
         with file_transaction(out_file) as tx_out_file:
-            cmd = ("{snpeff_cmd} {interval} {config_args} -noLog -1 -i vcf -o {out_format} "
+            cmd = ("{snpeff_cmd} {config_args} -noLog -1 -i vcf -o {out_format} "
                    "{snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)
     if ext.endswith(".gz"):
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])
-    return out_file
-
-def _convert_to_snpeff_interval(in_file, base_file):
-    """Handle wide variety of BED-like inputs, converting to BED-3.
-    """
-    out_file = "%s-snpeff-intervals.bed" % utils.splitext_plus(base_file)[0]
-    if not os.path.exists(out_file):
-        with open(out_file, "w") as out_handle:
-            writer = csv.writer(out_handle, dialect="excel-tab")
-            with open(in_file) as in_handle:
-                for line in (l for l in in_handle if not l.startswith(("@", "#", "track", "browser"))):
-                    parts = line.split()
-                    writer.writerow(parts[:3])
     return out_file
 
 # ## back-compatibility

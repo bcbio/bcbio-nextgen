@@ -10,7 +10,6 @@ import math
 import numpy as np
 try:
     import prettyplotlib as ppl
-    from prettyplotlib import plt
     import pandas as pd
 except ImportError:
     gg, pd, ppl = None, None, None
@@ -59,7 +58,7 @@ def _prettyplot(df, prep, prepi, out_file):
     cats = ["concordant", "discordant-missing-total",
             "discordant-extra-total", "discordant-shared-total"]
     vtypes = df["variant.type"].unique()
-    fig, axs = plt.subplots(len(vtypes), len(cats))
+    fig, axs = ppl.subplots(len(vtypes), len(cats))
     callers = sorted(df["caller"].unique())
     width = 0.8
     for i, vtype in enumerate(vtypes):
