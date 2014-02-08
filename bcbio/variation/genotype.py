@@ -151,8 +151,8 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
     else:
         config = data["config"]
         snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, config)
-        snp_filter_file = _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
-        indel_filter_file = _variant_filtration_indel(indel_file, ref_file, vrn_files, config)
+        snp_filter_file = _variant_filtration_snp(snp_file, ref_file, vrn_files, data)
+        indel_filter_file = _variant_filtration_indel(indel_file, ref_file, vrn_files, data)
         orig_files = [snp_filter_file, indel_filter_file]
         out_file = "{base}combined.vcf".format(base=os.path.commonprefix(orig_files))
         return vcfutils.combine_variant_files(orig_files, out_file, ref_file, config)
@@ -208,9 +208,10 @@ def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files, varia
 
 # ## SNP specific variant filtration
 
-def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
+def _variant_filtration_snp(snp_file, ref_file, vrn_files, data):
     """Filter SNP variant calls using GATK best practice recommendations.
     """
+    config = data["config"]
     broad_runner = broad.runner_from_config(config)
     filter_type = "SNP"
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
@@ -221,13 +222,13 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
     if not config_utils.use_vqsr([config["algorithm"]]):
-        return vfilter.jexl_hard(broad_runner, snp_file, ref_file, filter_type, filters)
+        return vfilter.hard_w_expression(snp_file, " || ".join(filters), data, filter_type)
     else:
         # also check if we've failed recal and needed to do strict filtering
         filter_file = "{base}-filter{ext}.vcf".format(base=os.path.splitext(snp_file)[0], ext=filter_type)
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
-            return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
+            return _variant_filtration_snp(snp_file, ref_file, vrn_files, data)
         assert "train_hapmap" in vrn_files and "train_1000g_omni" in vrn_files, \
             "Need HapMap and 1000 genomes training files"
         params, recal_file, tranches_file = _shared_variant_filtration(
@@ -244,27 +245,28 @@ def _variant_filtration_snp(snp_file, ref_file, vrn_files, config):
                 except:
                     logger.info("VQSR failed due to lack of training data. Using hard filtering.")
                     config["algorithm"]["coverage_interval"] = "regional"
-                    return _variant_filtration_snp(snp_file, ref_file, vrn_files, config)
+                    return _variant_filtration_snp(snp_file, ref_file, vrn_files, data)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
 
 # ## Indel specific variant filtration
 
-def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
+def _variant_filtration_indel(snp_file, ref_file, vrn_files, data):
     """Filter indel variant calls using GATK best practice recommendations.
     """
+    config = data["config"]
     broad_runner = broad.runner_from_config(config)
     filter_type = "INDEL"
     variantcaller = config["algorithm"].get("variantcaller", "gatk")
     if not config_utils.use_vqsr([config["algorithm"]]):
-        return vfilter.jexl_hard(broad_runner, snp_file, ref_file, filter_type,
-                                 ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
+        filterexp = " || ".join(["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
+        return vfilter.hard_w_expression(snp_file, filterexp, data, filter_type)
     else:
         # also check if we've failed recal and needed to do strict filtering
         filter_file = "{base}-filter{ext}.vcf".format(base=os.path.splitext(snp_file)[0], ext=filter_type)
         if file_exists(filter_file):
             config["algorithm"]["coverage_interval"] = "regional"
-            return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
+            return _variant_filtration_indel(snp_file, ref_file, vrn_files, data)
         assert "train_indels" in vrn_files, "Need indel training file specified"
         params, recal_file, tranches_file = _shared_variant_filtration(
             filter_type, snp_file, ref_file, vrn_files, variantcaller)
@@ -280,7 +282,7 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, config):
                 except:
                     logger.info("VQSR failed due to lack of training data. Using hard filtering.")
                     config["algorithm"]["coverage_interval"] = "regional"
-                    return _variant_filtration_indel(snp_file, ref_file, vrn_files, config)
+                    return _variant_filtration_indel(snp_file, ref_file, vrn_files, data)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
 
@@ -484,7 +486,7 @@ def variantcall_sample(data, region=None, out_file=None):
                 try:
                     os.symlink(call_file + ext, out_file + ext)
                 except OSError, msg:
-                    if  str(msg).find("File exists") == -1:
+                    if str(msg).find("File exists") == -1:
                         raise
     if "work_items" in data:
         del data["work_items"]
