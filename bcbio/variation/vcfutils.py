@@ -287,7 +287,7 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
 # ## VCF preparation
 
 def bgzip_and_index(in_file, config):
-    """bgzip and tabix index an input VCF file.
+    """bgzip and tabix index an input file, handling VCF and BED.
     """
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
     if not utils.file_exists(out_file):
@@ -306,9 +306,20 @@ def p_bgzip_and_index(in_file, config):
     """
     return [bgzip_and_index(in_file, config)]
 
-def tabix_index(in_file, config, preset="vcf"):
+def _guess_preset(f):
+    if f.lower().endswith(".vcf.gz"):
+        return "vcf"
+    elif f.lower().endswith(".bed.gz"):
+        return "bed"
+    elif f.lower().endswith(".gff.gz"):
+        return "gff"
+    else:
+        raise ValueError("Unexpected tabix input: %s" % f)
+
+def tabix_index(in_file, config, preset=None):
     """Index a file using tabix.
     """
+    preset = _guess_preset(in_file) if preset is None else preset
     in_file = os.path.abspath(in_file)
     out_file = in_file + ".tbi"
     if not utils.file_exists(out_file):

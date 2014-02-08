@@ -39,7 +39,7 @@ def clean_variant_regions(data):
             with file_transaction(out_file) as tx_out_file:
                 cmd = "sort -k1,1 -k2,2n {variant_regions} | {bedtools} merge -i > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
-        return out_file
+        return vcfutils.bgzip_and_index(out_file, data["config"])
 
 # ## Caller specific
 
