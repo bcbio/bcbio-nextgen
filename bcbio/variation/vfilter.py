@@ -52,6 +52,8 @@ def freebayes(in_file, ref_file, vrn_files, data):
 
 def _freebayes_custom(in_file, ref_file, data):
     """Custom FreeBayes filtering using bcbio.variation, tuned to human NA12878 results.
+
+    Experimental: for testing new methods.
     """
     if vcfutils.get_paired_phenotype(data):
         return None
@@ -73,7 +75,14 @@ def _freebayes_custom(in_file, ref_file, data):
     return out_file
 
 def _freebayes_hard(in_file, data):
-    """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
+    """Perform filtering of FreeBayes results, removing low confidence calls.
+
+    Filters using cutoffs on depth based on Meynert et al's work modeling sensitivity
+    of homozygote and heterozygote calling on depth:
+
+    http://www.ncbi.nlm.nih.gov/pubmed/23773188
+
+    Tuned based on NA12878 call comparisons to Genome in a Bottle reference genome.
     """
-    filters = "%QUAL < 20 || DP < 5"
+    filters = "DP < 4 || (DP < 13 && %QUAL < 50)"
     return hard_w_expression(in_file, filters, data)
