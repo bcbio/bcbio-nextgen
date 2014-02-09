@@ -67,7 +67,7 @@ def split_variants_by_sample(data):
                 if paired_phenotype == "tumor":
                     has_tumor = True
                     if not os.path.exists(sub_vrn_file):
-                        os.symlink(vrn_file, sub_vrn_file)
+                        utils.symlink_plus(vrn_file, sub_vrn_file)
                     sub_data["vrn_file"] = sub_vrn_file
                     out.append(sub_data)
                 else:
@@ -82,7 +82,7 @@ def split_variants_by_sample(data):
                 select_sample_from_vcf(vrn_file, sub_data["name"][-1], sub_vrn_file,
                                        data["sam_ref"], config)
             elif not os.path.exists(sub_vrn_file):
-                os.symlink(vrn_file, sub_vrn_file)
+                utils.symlink_plus(vrn_file, sub_vrn_file)
             if sub_vrn_file:
                 sub_data["vrn_file"] = sub_vrn_file
                 out.append(sub_data)

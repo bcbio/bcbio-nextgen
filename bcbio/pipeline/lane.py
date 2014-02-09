@@ -61,15 +61,9 @@ def link_bam_file(orig_file, new_dir):
     """Provide symlinks of BAM file and existing indexes.
     """
     new_dir = utils.safe_makedir(new_dir)
-    update_files = []
-    for fname in (orig_file, "%s.bai" % orig_file,
-                  "%s.bai" % os.path.splitext(orig_file)[0]):
-        if utils.file_exists(fname):
-            sym_file = os.path.join(new_dir, os.path.basename(fname))
-            if not os.path.exists(sym_file):
-                os.symlink(fname, sym_file)
-            update_files.append(sym_file)
-    return update_files[0]
+    sym_file = os.path.join(new_dir, os.path.basename(orig_file))
+    utils.symlink_plus(orig_file, sym_file)
+    return sym_file
 
 def _check_prealigned_bam(in_bam, ref_file, config):
     """Ensure a pre-aligned BAM file matches the expected reference genome.

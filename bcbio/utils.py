@@ -171,9 +171,9 @@ def curdir_tmpdir(remove=True, base_dir=None):
     safe_makedir(tmp_dir_base)
     tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
     safe_makedir(tmp_dir)
-    try :
+    try:
         yield tmp_dir
-    finally :
+    finally:
         if remove:
             try:
                 shutil.rmtree(tmp_dir)
@@ -189,9 +189,9 @@ def chdir(new_dir):
     cur_dir = os.getcwd()
     safe_makedir(new_dir)
     os.chdir(new_dir)
-    try :
+    try:
         yield
-    finally :
+    finally:
         os.chdir(cur_dir)
 
 @contextlib.contextmanager
@@ -260,6 +260,20 @@ def splitext_plus(f):
         base, ext2 = os.path.splitext(base)
         ext = ext2 + ext
     return base, ext
+
+def symlink_plus(orig, new):
+    """Create relative symlinks and handle associated biological index files.
+    """
+    for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
+        if os.path.exists(orig + ext) and not os.path.lexists(new + ext):
+            with chdir(os.path.dirname(new)):
+                os.symlink(os.path.relpath(orig + ext), os.path.basename(new + ext))
+    orig_noext = splitext_plus(orig)[0]
+    new_noext = splitext_plus(new)[0]
+    for sub_ext in [".bai"]:
+        if os.path.exists(orig_noext + sub_ext) and not os.path.lexists(new_noext + sub_ext):
+            with chdir(os.path.dirname(new_noext)):
+                os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
 
 def append_stem(to_transform, word):
     """

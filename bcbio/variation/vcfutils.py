@@ -206,16 +206,12 @@ def short_filenames(fs):
     bam indexes on linked files.
     """
     print fs
-    index_exts = [".bai", ".tbi"]
     with utils.curdir_tmpdir() as tmpdir:
         short_fs = []
         for i, f in enumerate(fs):
             ext = utils.splitext_plus(f)[-1]
             short_f = os.path.relpath(os.path.join(tmpdir, "%s%s" % (i, ext)))
-            os.symlink(f, short_f)
-            for iext in index_exts:
-                if os.path.exists(f + iext):
-                    os.symlink(f + iext, short_f + iext)
+            utils.symlink_plus(f, short_f)
             short_fs.append(short_f)
         yield short_fs
 
@@ -326,7 +322,7 @@ def tabix_index(in_file, config, preset=None):
         with file_transaction(out_file) as tx_out_file:
             tabix = tools.get_tabix_cmd(config)
             tx_in_file = os.path.splitext(tx_out_file)[0]
-            os.symlink(in_file, tx_in_file)
+            utils.symlink_plus(in_file, tx_in_file)
             cmd = "{tabix} -p {preset} {tx_in_file}"
             do.run(cmd.format(**locals()), "tabix index %s" % os.path.basename(in_file))
     return out_file

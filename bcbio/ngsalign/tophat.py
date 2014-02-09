@@ -17,7 +17,7 @@ except ImportError:
 
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
-from bcbio.utils import safe_makedir, file_exists, get_in
+from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 
@@ -151,7 +151,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     # else:
     #     fixed = bam.sam_to_bam(out_file, config)
     if not file_exists(final_out):
-        os.symlink(os.path.basename(fixed), final_out)
+        symlink_plus(fixed, final_out)
     return final_out
 
 def _has_alignments(sam_file):

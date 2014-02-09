@@ -15,7 +15,7 @@ import copy
 from distutils.version import LooseVersion
 import itertools
 
-from bcbio import bam, broad
+from bcbio import bam, broad, utils
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import grouped_parallel_split_combine
@@ -480,14 +480,7 @@ def variantcall_sample(data, region=None, out_file=None):
                           region, call_file)
     if data["config"]["algorithm"].get("phasing", False) == "gatk":
         call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
-    for ext in ["", ".idx"]:
-        if not os.path.exists(out_file + ext):
-            if os.path.exists(call_file + ext):
-                try:
-                    os.symlink(call_file + ext, out_file + ext)
-                except OSError, msg:
-                    if str(msg).find("File exists") == -1:
-                        raise
+    utils.symlink_plus(call_file, out_file)
     if "work_items" in data:
         del data["work_items"]
     data["vrn_file"] = out_file

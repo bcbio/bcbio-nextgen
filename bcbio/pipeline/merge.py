@@ -83,7 +83,7 @@ def _samtools_cat(bam_files, tmpdir):
     short_bams = []
     for i, bam_file in enumerate(bam_files):
         short_bam = os.path.join(tmpdir, "%s.bam" % i)
-        os.symlink(bam_file, short_bam)
+        utils.symlink_plus(bam_file, short_bam)
         short_bams.append(short_bam)
     return "{samtools} cat " + " ".join(os.path.relpath(b) for b in short_bams)
 

@@ -48,7 +48,7 @@ def combine_calls_parallel(samples, run_parallel):
     return out + extras
 
 def _has_ensemble(data):
-    return len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble")
+    return len(data["variants"]) > 1 and "ensemble" in data["config"]["algorithm"]
 
 def _group_by_batches(samples, check_fn):
     """Group calls by batches, processing families together during ensemble calling.
@@ -108,11 +108,11 @@ def _run_ensemble(batch_id, vrn_files, config_file, base_dir, ref_file, config):
                                   base_dir, config)
         if not utils.file_exists(out_vcf_file):
             base_vcf = glob.glob(os.path.join(work_dir, "prep", "*-cfilter.vcf"))[0]
-            os.symlink(base_vcf, out_vcf_file)
+            utils.symlink_plus(base_vcf, out_vcf_file)
     if not utils.file_exists(out_bed_file):
         multi_beds = glob.glob(os.path.join(work_dir, "prep", "*-multicombine.bed"))
         if len(multi_beds) > 0:
-            os.symlink(multi_beds[0], out_bed_file)
+            utils.symlink_plus(multi_beds[0], out_bed_file)
     return {"variantcaller": "ensemble",
             "vrn_file": out_vcf_file,
             "bed_file": out_bed_file if os.path.exists(out_bed_file) else None}
