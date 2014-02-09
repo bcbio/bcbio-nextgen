@@ -84,5 +84,6 @@ def _freebayes_hard(in_file, data):
 
     Tuned based on NA12878 call comparisons to Genome in a Bottle reference genome.
     """
-    filters = "DP < 4 || (DP < 13 && %QUAL < 50)"
+    filters = ("(AF <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 20))) || "
+               "(AF > 0.5 && (DP < 4 && %QUAL < 50))")
     return hard_w_expression(in_file, filters, data)

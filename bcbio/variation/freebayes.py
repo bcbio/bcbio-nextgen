@@ -11,7 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation, ploidy
+from bcbio.variation import annotation, ploidy, vfilter
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis
 
 
@@ -21,7 +21,6 @@ def region_to_freebayes(region):
         return "%s:%s..%s" % (chrom, start, end)
     else:
         return region
-
 
 def _freebayes_options_from_config(items, aconfig, out_file, region=None):
     opts = []
@@ -39,7 +38,6 @@ def _freebayes_options_from_config(items, aconfig, out_file, region=None):
     #    opts += ["--variant-input", background]
     return opts
 
-
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
 
@@ -52,34 +50,39 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
 
     return call_file
 
-
 def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
-                          region=None,   out_file=None):
+                          region=None, out_file=None):
     """Detect SNPs and indels with FreeBayes.
+
+    Performs post-filtering to remove very low quality variants which
+    can cause issues feeding into GATK. Breaks variants into individual
+    allelic primitives for analysis and evaluation.
     """
     config = items[0]["config"]
     if out_file is None:
         out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            cl = [config_utils.get_program("freebayes", config),
-                  "-v", tx_out_file, "-f", ref_file, "--pvar", "0.7"]
             for align_bam in align_bams:
                 bam.index(align_bam, config)
-                cl += ["-b", align_bam]
-            cl += _freebayes_options_from_config(items, config["algorithm"],
-                                                 out_file, region)
-            do.run(cl, "Genotyping with FreeBayes", {})
+            freebayes = config_utils.get_program("freebayes", config)
+            vcffilter = config_utils.get_program("vcffilter", config)
+            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
+            vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
+            input_bams = " ".join("-b %s" % x for x in align_bams)
+            opts = " ".join(_freebayes_options_from_config(items, config["algorithm"],
+                                                           out_file, region))
+            cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
+                   "{vcffilter} -f 'QUAL > 5' -s | {vcfallelicprimitives} | {vcfstreamsort} > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
         clean_vcf_output(out_file, _clean_freebayes_output, "nodups")
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"],
                                                ref_file, config)
     return ann_file
 
-
 def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
-
     """Detect SNPs and indels with FreeBayes.
 
     This is used for paired tumor / normal samples.
@@ -170,7 +173,7 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
     if not file_exists(out_file):
         with open(orig_file) as in_handle:
             with file_transaction(out_file) as tx_out_file:
-                with open(out_file, "w") as out_handle:
+                with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
                         update_line = clean_fn(line)
                         if update_line:
