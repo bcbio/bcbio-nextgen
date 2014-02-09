@@ -75,5 +75,5 @@ def _freebayes_custom(in_file, ref_file, data):
 def _freebayes_hard(in_file, data):
     """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
     """
-    filters = "%QUAL < 200 || DP < 5"
+    filters = "%QUAL < 20 || DP < 5"
     return hard_w_expression(in_file, filters, data)
