@@ -291,7 +291,10 @@ def bgzip_and_index(in_file, config):
             bgzip = tools.get_bgzip_cmd(config)
             cmd = "{bgzip} -c {in_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
-        os.remove(in_file)
+        try:
+            os.remove(in_file)
+        except OSError:  # Handle cases where run in parallel and file has been deleted
+            pass
     tabix_index(out_file, config)
     return out_file
 
