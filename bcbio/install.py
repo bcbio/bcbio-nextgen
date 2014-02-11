@@ -121,6 +121,7 @@ def _update_conda_packages():
             "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
             "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
     if os.path.exists(conda_bin):
+        subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
         subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
 
 def _get_data_dir():

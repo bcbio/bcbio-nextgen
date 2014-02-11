@@ -22,7 +22,7 @@ remotes = {"requirements":
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
-           "http://repo.continuum.io/miniconda/Miniconda-2.2.2-%s-x86_64.sh"}
+           "http://repo.continuum.io/miniconda/Miniconda-3.0.0-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_dependencies()
@@ -87,12 +87,8 @@ def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
             "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
             "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
+    subprocess.check_call([anaconda["conda"], "install", "--yes", "numpy"])
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
-    # Remove until can get 13.1.0 working cleanly on CentOS
-    #extra_pkgs = ["zeromq", "pyzmq"]
-    #binstar_user = "minrk"
-    #subprocess.check_call([anaconda["conda"], "install", "--yes",
-    #                       "-c", "http://conda.binstar.org/%s" % binstar_user] + extra_pkgs)
 
 def _guess_distribution():
     """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.
