@@ -85,8 +85,6 @@ def disambiguate(humanlist, mouselist, disambalgo):
     elif disambalgo.lower() in ('bwa', 'star'):
         dv = -2^13 # default value, low
         bwatags = ['AS', 'NM']# ,'XS'] # in order of importance (compared sequentially, not as a sum as for tophat)
-        if disambalgo.lower() == 'star':
-            bwatags[1] = 'nM' # oddity of STAR
         bwatagsigns = [1, -1]#,1] # for AS and XS higher is better. for NM lower is better, thus multiply by -1
         AS = list()
         for x in range(0, len(bwatagsigns)):
