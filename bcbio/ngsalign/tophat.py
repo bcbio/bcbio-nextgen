@@ -234,7 +234,13 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
             if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize) - 2 * read.rlen)
     if dists:
-        return int(round(numpy.mean(dists))), int(round(numpy.std(dists)))
+        median = float(numpy.median(dists))
+        deviations = []
+        for d in dists:
+            deviations.append(abs(d - median))
+        # this is the median absolute deviation estimator of the standard deviation
+        mad = 1.4826 * float(numpy.median(deviations))
+        return int(median), int(mad)
     else:
         return None, None
 
