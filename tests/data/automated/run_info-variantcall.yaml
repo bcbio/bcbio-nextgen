@@ -9,6 +9,7 @@ details:
       #variantcaller: cortex
       #sv_detection: hydra
       ensemble:
+        #caller: platypus
         format-filters: [DP < 4]
         classifiers: [DP, QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, Entropy, HRun, MFE, NBQ, MQ]
         trusted_pct: 0.65
