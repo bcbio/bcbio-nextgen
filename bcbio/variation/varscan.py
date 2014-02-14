@@ -98,7 +98,8 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         jvm_opts = _get_varscan_opts(config)
         varscan_cmd = ("java {jvm_opts} -jar {varscan_jar} somatic"
                        " {normal_tmp_mpileup} {tumor_tmp_mpileup} {base}"
-                       " --output-vcf --min-coverage 5 --p-value 0.98")
+                       " --output-vcf --min-coverage 5 --p-value 0.98 "
+                       "--strand-filter 1 ")
 
         indel_file = base + ".indel.vcf"
         snp_file = base + ".snp.vcf"
