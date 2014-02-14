@@ -29,6 +29,9 @@
 - Map `variant` calling specification to `variant2` since original approach
   no longer supported.
 - Fix issues with trying to upload directories to Galaxy. Thanks to Jim Peden.
+- Made inner distance calculation for Tophat more accurate.
+- Added gffutils GFF database to the RNA-seq indices.
+- Add gene name annotation from the GFF file instead of from mygene.
 
 ## 0.7.6 (January 15, 2014)
 
