@@ -182,7 +182,8 @@ def _run_fastqc(bam_file, data, fastqc_out):
     Downsamples to 10 million reads to avoid excessive processing times with large
     files.
     """
-    if not os.path.exists(os.path.join(fastqc_out, "fastqc_report.html")):
+    sentry_file = os.path.join(fastqc_out, "fastqc_report.html")
+    if not os.path.exists(sentry_file):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
         ds_bam = bam.downsample(bam_file, data, 1e7)
@@ -197,7 +198,10 @@ def _run_fastqc(bam_file, data, fastqc_out):
                                              "%s_fastqc" % os.path.splitext(os.path.basename(bam_file))[0])
                 if os.path.exists("%s.zip" % fastqc_outdir):
                     os.remove("%s.zip" % fastqc_outdir)
-                shutil.move(fastqc_outdir, fastqc_out)
+                if not os.path.exists(sentry_file):
+                    if os.path.exists(fastqc_out):
+                        shutil.rmtree(fastqc_out)
+                    shutil.move(fastqc_outdir, fastqc_out)
         if ds_bam and os.path.exists(ds_bam):
             os.remove(ds_bam)
     parser = FastQCParser(fastqc_out)
