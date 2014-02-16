@@ -21,7 +21,8 @@ from bcbio import bam
 
 
 def _get_files(data):
-    in_file = bam.sort(data["work_bam"], data["config"], order="queryname")
+    mapped = bam.mapped(data["work_bam"], data["config"])
+    in_file = bam.sort(mapped, data["config"], order="queryname")
     gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
     work_dir = data["dirs"].get("work", "work")
     out_dir = os.path.join(work_dir, "htseq-count")

@@ -3,6 +3,7 @@ from os import path
 from bcbio.pipeline import config_utils
 from bcbio.utils import safe_makedir, file_exists, get_in
 from bcbio.provenance import do
+from bcbio import broad
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 
@@ -19,7 +20,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     safe_makedir(align_dir)
     cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq} "
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
-           "--outReadsUnmapped Fastx --outFilterMultimapNmax 10")
+           "--outReadsUnmapped Fastx --outFilterMultimapNmax 10 "
+           "--outSAMunmapped Within")
     fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
     if fusion_mode:
         cmd += " --chimSegmentMin 15 --chimJunctionOverhangMin 15"
@@ -29,7 +31,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += " --outSAMstrandField intronMotif"
     run_message = "Running STAR aligner on %s and %s." % (pair_file, ref_file)
     do.run(cmd.format(**locals()), run_message, None)
-    return out_file
+    picard = broad.runner_from_config(config)
+    rg_fixed = picard.run_fn("picard_fix_rgs", out_file, names)
+    return rg_fixed
 
 def _get_quality_format(config):
     qual_format = config["algorithm"].get("quality_format", None)

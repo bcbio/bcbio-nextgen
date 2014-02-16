@@ -20,8 +20,10 @@ from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
-
 from bcbio.provenance import do
+from bcbio import bam
+from bcbio import broad
+
 
 _out_fnames = ["accepted_hits.sam", "junctions.bed",
                "insertions.bed", "deletions.bed"]
@@ -117,7 +119,8 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     if file_exists(final_out):
         return final_out
 
-    out_file = os.path.join(out_dir, _out_fnames[0])
+    out_file = os.path.join(out_dir, "accepted_hits.sam")
+    unmapped = os.path.join(out_dir, "unmapped.bam")
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
         with file_transaction(out_dir) as tx_out_dir:
@@ -132,6 +135,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             options["output-dir"] = tx_out_dir
             options["no-convert-bam"] = True
             options["no-coverage-search"] = True
+            options["no-mixed"] = True
             tophat_runner = sh.Command(config_utils.get_program("tophat",
                                                                 config))
             ready_options = {}
@@ -148,11 +152,20 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                            ref_file, config)
     else:
         fixed = out_file
-    # else:
-    #     fixed = bam.sam_to_bam(out_file, config)
+    fixed = merge_unmapped(fixed, unmapped, config)
+    fixed = _fix_unmapped(fixed, config, names)
+    fixed = bam.sort(fixed, config)
+    fixed = bam.bam_to_sam(fixed, config)
     if not file_exists(final_out):
         symlink_plus(fixed, final_out)
     return final_out
+
+def merge_unmapped(mapped_sam, unmapped_bam, config):
+    merged_bam = os.path.join(os.path.dirname(mapped_sam), "merged.bam")
+    bam_file = bam.sam_to_bam(mapped_sam, config)
+    if not file_exists(merged_bam):
+        merged_bam = bam.merge([bam_file, unmapped_bam], merged_bam, config)
+    return merged_bam
 
 def _has_alignments(sam_file):
     with open(sam_file) as in_handle:
@@ -193,6 +206,43 @@ def _fix_mates(orig_file, out_file, ref_file, config):
             samtools = config_utils.get_program("samtools", config)
             cmd = "{samtools} view -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
+    return out_file
+
+def _fix_unmapped(unmapped_file, config, names):
+    """
+    the unmapped.bam file from Tophat 2.0.9 is missing some things
+    1) the RG tag is missing from the reads
+    2) MAPQ is set to 255 instead of 0
+    need to fix the unmapped read issue
+    """
+    out_file = os.path.splitext(unmapped_file)[0] + "_fixed.bam"
+    if file_exists(out_file):
+        return out_file
+    picard = broad.runner_from_config(config)
+    rg_fixed = picard.run_fn("picard_fix_rgs", unmapped_file, names)
+    fixed = bam.sort(rg_fixed, config, "queryname")
+    with closing(pysam.Samfile(fixed)) as work_sam:
+        with file_transaction(out_file) as tx_out_file:
+            tx_out = pysam.Samfile(tx_out_file, "wb", template=work_sam)
+            for read1 in work_sam:
+                read2 = work_sam.next()
+                if read1.qname != read2.qname:
+                    continue
+                if read1.is_unmapped and not read2.is_unmapped:
+                    read1.mapq = 0
+                    read1.tid = read2.tid
+                if not read1.is_unmapped and read2.is_unmapped:
+                    read2.mapq = 0
+                    read2.tid = read1.tid
+                if read1.is_unmapped and read2.is_unmapped:
+                    read1.mapq = 0
+                    read2.mapq = 0
+                    read1.mate_is_unmapped = True
+                    read2.mate_is_unmapped = True
+                tx_out.write(read1)
+                tx_out.write(read2)
+            tx_out.close()
+
     return out_file
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data,):
@@ -238,7 +288,8 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
         deviations = []
         for d in dists:
             deviations.append(abs(d - median))
-        # this is the median absolute deviation estimator of the standard deviation
+        # this is the median absolute deviation estimator of the
+        # standard deviation
         mad = 1.4826 * float(numpy.median(deviations))
         return int(median), int(mad)
     else:
