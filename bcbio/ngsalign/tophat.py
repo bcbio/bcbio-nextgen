@@ -213,7 +213,7 @@ def _fix_unmapped(unmapped_file, config, names):
     the unmapped.bam file from Tophat 2.0.9 is missing some things
     1) the RG tag is missing from the reads
     2) MAPQ is set to 255 instead of 0
-    need to fix the unmapped read issue
+    3) for reads where both are unmapped, the mate_is_unmapped flag is not set correctly
     """
     out_file = os.path.splitext(unmapped_file)[0] + "_fixed.bam"
     if file_exists(out_file):
