@@ -98,6 +98,26 @@ def is_sam(in_file):
     else:
         return False
 
+def mapped(in_bam, config):
+    """
+    return a bam file of only the mapped reads
+    """
+    out_file = os.path.splitext(in_bam)[0] + ".mapped.bam"
+    if utils.file_exists(out_file):
+        return out_file
+    sambamba = _get_sambamba(config)
+    with file_transaction(out_file) as tx_out_file:
+        if sambamba:
+            cmd = ("{sambamba} view --format=bam -F 'not (unmapped or mate_is_unmapped)' "
+                   "{in_bam} -o {tx_out_file}")
+        else:
+            samtools = config_utils.get_program("samtools", config)
+            cmd = "{samtools} view -b -F 4 {in_bam} -o {tx_out_file}"
+        do.run(cmd.format(**locals()),
+               "Filtering mapped reads to %s." % (tx_out_file))
+    return out_file
+
+
 def count(in_bam, config=None):
     """
     return the counts in a BAM file
