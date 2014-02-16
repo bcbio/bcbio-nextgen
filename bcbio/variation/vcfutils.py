@@ -25,7 +25,7 @@ PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_name",
 def is_paired_analysis(align_bams, items):
     """Determine if BAMs are from a tumor/normal paired analysis.
     """
-    return True if get_paired_bams(align_bams, items) is not None else False
+    return get_paired_bams(align_bams, items) is not None
 
 def get_paired_bams(align_bams, items):
     """Split aligned bams into tumor / normal pairs if this is a paired analysis.

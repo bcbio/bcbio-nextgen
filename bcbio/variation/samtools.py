@@ -19,20 +19,17 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
                        assoc_files, region=None, out_file=None):
     """Provide base functionality for prepping and indexing for variant calling.
     """
-
     config = items[0]["config"]
-
-    for x in align_bams:
-        bam.index(x, config)
     if out_file is None:
-
         if vcfutils.is_paired_analysis(align_bams, items):
             out_file = "%s-paired-variants.vcf" % config["metdata"]["batch"]
         else:
             out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
-        logger.info("Genotyping with {name}: {region} {fname}".format(name=name,
-            region=region, fname=os.path.basename(align_bams[0])))
+        logger.info("Genotyping with {name}: {region} {fname}".format(
+            name=name, region=region, fname=os.path.basename(align_bams[0])))
+        for x in align_bams:
+            bam.index(x, config)
         variant_regions = config["algorithm"].get("variant_regions", None)
         target_regions = subset_variant_regions(variant_regions, region, out_file)
         if ((variant_regions is not None and isinstance(target_regions, basestring)

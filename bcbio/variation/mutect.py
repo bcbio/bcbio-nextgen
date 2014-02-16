@@ -69,7 +69,6 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
         bam.index(x, base_config)
 
     params = ["-R", ref_file, "-T", "MuTect"]
-
     paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
     params += ["--tumor_sample_name", paired.tumor_name]
@@ -78,19 +77,15 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
         params += ["--normal_sample_name", paired.normal_name]
     if paired.normal_panel is not None:
         params += ["--normal_panel", paired.normal_panel]
-    
     params += _config_params(base_config, assoc_files, region, out_file)
     return broad_runner, params
 
 def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
-
-    """Run the MuTect paired analysis algorithm."""
-
+    """Run the MuTect paired analysis algorithm.
+    """
     if out_file is None:
-        out_file = "%s-paired-variants.vcf" % os.path.splitext(
-            align_bams[0])[0]
-
+        out_file = "%s-paired-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         broad_runner, params = \
             _mutect_call_prep(align_bams, items, ref_file, assoc_files,
@@ -103,5 +98,4 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-
     return out_file

@@ -19,30 +19,33 @@ def prep_gemini_db(fnames, call_id, samples, data):
     """
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     gemini_db = os.path.join(out_dir, "-".join(call_id) + ".db")
-    use_gemini = _do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
     is_population = len(fnames) > 1
     if is_population:
         name, caller = call_id
         gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
     else:
         gemini_vcf = fnames[0]
-    if use_gemini and not utils.file_exists(gemini_db):
-        with file_transaction(gemini_db) as tx_gemini_db:
-            gemini = config_utils.get_program("gemini", data["config"])
-            if "program_versions" in data["config"].get("resources", {}):
-                gemini_ver = programs.get_version("gemini", config=data["config"])
-            else:
-                gemini_ver = None
-            # Recent versions of gemini allow loading only passing variants
-            if not gemini_ver or LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
-                load_opts = "--passonly"
-            else:
-                load_opts = ""
-            num_cores = data["config"]["algorithm"].get("num_cores", 1)
-            cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
-            cmd = cmd.format(**locals())
-            do.run(cmd, "Create gemini database for %s" % str(call_id), data)
-    return [[call_id, {"db": gemini_db if use_gemini else None,
+    use_gemini_quick = (_do_db_build(samples, check_gemini=False) and
+                        any(vcfutils.vcf_has_variants(f) for f in fnames))
+    if not utils.file_exists(gemini_db) and use_gemini_quick:
+        use_gemini = _do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
+        if use_gemini:
+            with file_transaction(gemini_db) as tx_gemini_db:
+                gemini = config_utils.get_program("gemini", data["config"])
+                if "program_versions" in data["config"].get("resources", {}):
+                    gemini_ver = programs.get_version("gemini", config=data["config"])
+                else:
+                    gemini_ver = None
+                # Recent versions of gemini allow loading only passing variants
+                if not gemini_ver or LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
+                    load_opts = "--passonly"
+                else:
+                    load_opts = ""
+                num_cores = data["config"]["algorithm"].get("num_cores", 1)
+                cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
+                cmd = cmd.format(**locals())
+                do.run(cmd, "Create gemini database for %s" % str(call_id), data)
+    return [[call_id, {"db": gemini_db if utils.file_exists(gemini_db) else None,
                        "vcf": gemini_vcf if is_population else None}]]
 
 def get_multisample_vcf(fnames, name, caller, data):
@@ -53,10 +56,7 @@ def get_multisample_vcf(fnames, name, caller, data):
     return vcfutils.combine_variant_files(fnames, gemini_vcf, data["sam_ref"],
                                           data["config"])
 
-def _do_db_build(samples):
-    """Confirm we should build a gemini database: need gemini + human samples.
-    """
-    config = samples[0]["config"]
+def _has_gemini(config):
     try:
         gemini = config_utils.get_program("gemini", config)
     except config_utils.CmdNotFound:
@@ -69,14 +69,20 @@ def _do_db_build(samples):
             return False
     except OSError:
         return False
+    return True
+
+def _do_db_build(samples, check_gemini=True):
+    """Confirm we should build a gemini database: need gemini + human samples.
+    """
     genomes = set()
     for data in samples:
         if data["work_bam"]:
             genomes.add(data["genome_build"])
-    if len(genomes) == 0 or len(genomes) > 1:
-        return False
+    if len(genomes) == 1:
+        return (samples[0]["genome_resources"].get("aliases", {}).get("human", False)
+                and (not check_gemini or _has_gemini(samples[0]["config"])))
     else:
-        return samples[0]["genome_resources"].get("aliases", {}).get("human", False)
+        return False
 
 def _group_by_batches(samples, check_fn):
     """Group data items into batches, providing details to retrieve results.
@@ -116,7 +122,7 @@ def prep_db_parallel(samples, parallel_fn):
         has_batches = True
     for name, caller, data, fname in singles:
         to_process.append([[fname], (str(name), caller), [data], data])
-    if len(samples) > 0 and not _do_db_build([x[0] for x in samples]) and not has_batches:
+    if len(samples) > 0 and not _do_db_build([x[0] for x in samples], check_gemini=False) and not has_batches:
         return samples
     output = parallel_fn("prep_gemini_db", to_process)
     out_fetch = {}
