@@ -95,9 +95,15 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
     config = data["config"]
     align_fn = TOOLS[aligner].align_fn
     out = align_fn(fastq1, fastq2, align_ref, names, align_dir, data)
-    work_bam = bam.sam_to_bam(out, config)
-    data["work_bam"] = bam.sort(work_bam, config)
-    return data
+    # handle align functions that update the main data dictionary in place
+    if isinstance(out, dict):
+        assert "work_bam" in out
+        return out
+    # handle output of raw SAM files that need to be converted to BAM
+    else:
+        work_bam = bam.sam_to_bam(out, config)
+        data["work_bam"] = bam.sort(work_bam, config)
+        return data
 
 def _remove_read_number(in_file, sam_file):
     """Work around problem with MergeBamAlignment with BWA and single end reads.
