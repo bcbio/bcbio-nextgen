@@ -133,27 +133,3 @@ def _remove_read_number(in_file, sam_file):
                             name = name.rsplit("/", 1)[0]
                             out_handle.write("@%s\n%s\n+\n%s\n" % (name, seq, qual))
     return out_file
-
-def sam_to_sort_bam(sam_file, ref_file, fastq1, fastq2, names, config):
-    """Convert SAM file to merged and sorted BAM file.
-    """
-    picard = broad.runner_from_config(config)
-    base_dir = os.path.dirname(sam_file)
-
-    picard.run_fn("picard_index_ref", ref_file)
-    out_fastq_bam = picard.run_fn("picard_fastq_to_bam", fastq1, fastq2, base_dir, names)
-    out_bam = picard.run_fn("picard_sam_to_bam", sam_file, out_fastq_bam, ref_file,
-                            fastq2 is not None)
-    sort_bam = picard.run_fn("picard_sort", out_bam)
-
-    utils.save_diskspace(sam_file, "SAM converted to BAM", config)
-    utils.save_diskspace(out_fastq_bam, "Combined into output BAM %s" % out_bam, config)
-    utils.save_diskspace(out_bam, "Sorted to %s" % sort_bam, config)
-    # merge FASTQ files, only if barcoded samples in the work directory
-    if (os.path.commonprefix([fastq1, sort_bam]) ==
-             os.path.split(os.path.dirname(sort_bam))[0]
-          and not config["algorithm"].get("upload_fastq", True)):
-        utils.save_diskspace(fastq1, "Merged into output BAM %s" % out_bam, config)
-        if fastq2:
-            utils.save_diskspace(fastq2, "Merged into output BAM %s" % out_bam, config)
-    return sort_bam
