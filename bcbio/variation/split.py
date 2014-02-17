@@ -32,6 +32,6 @@ def subset_vcf(in_file, region, out_file, config):
         with file_transaction(out_file) as tx_out_file:
             bcftools = config_utils.get_program("bcftools", config)
             region_str = bamprep.region_to_gatk(region)
-            cmd = "{bcftools} subset -r {region_str} {work_file} > {tx_out_file}"
+            cmd = "{bcftools} view -r {region_str} {work_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "subset %s: %s" % (os.path.basename(work_file), region_str))
     return out_file
