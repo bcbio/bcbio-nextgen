@@ -127,7 +127,9 @@ def _update_conda_packages():
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
     if "anaconda" not in os.path.basename(base_dir) and "virtualenv" not in os.path.basename(base_dir):
-        raise ValueError("Cannot update data for bcbio-nextgen not installed by installer.")
+        raise ValueError("Cannot update data for bcbio-nextgen not installed by installer.\n"
+                         "bcbio-nextgen needs to be installed inside an anaconda environment \n"
+                         "located in the same directory as `galaxy` `genomes` and `gemini_data` directories.")
     return os.path.dirname(base_dir)
 
 def upgrade_bcbio_data(args, remotes):

@@ -221,6 +221,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(speed=1)
+    @attr(ensemble=True)
     def test_1_variantcall(self):
         """Test variant calling with GATK pipeline.
         """
