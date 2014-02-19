@@ -9,6 +9,7 @@ import os
 
 import yaml
 
+from bcbio import utils
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.pipeline import alignment, config_utils, genome
@@ -50,10 +51,10 @@ def add_reference_resources(data):
     """Add genome reference information to the item to process.
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
-    align_ref, sam_ref = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
-    data["align_ref"] = align_ref
-    data["sam_ref"] = sam_ref
-    ref_loc = data["config"].get("resources", {}).get("species", {}).get("dir", sam_ref)
+    data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
+    data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
+    ref_loc = utils.get_in(data, ("config", "resources", "species", "dir"),
+                           utils.get_in(data, ("reference", "fasta", "base")))
     data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc)
     return data
 

@@ -93,14 +93,14 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
     """Create a bcbio.variation configuration input for validation.
     """
     if rm_genome:
-        rm_genome = genome.get_refs(rm_genome, None, data["dirs"]["galaxy"])[-1]
-        if rm_genome != data["sam_ref"]:
-            eval_genome = data["sam_ref"]
-        else:
-            eval_genome = None
+        rm_genome = utils.get_in(genome.get_refs(rm_genome, None, data["dirs"]["galaxy"]),
+                                 ("reference", "fasta", "base"))
+
+    if rm_genome and rm_genome != utils.get_in(data, ("reference", "fasta", "base")):
+        eval_genome = utils.get_in(data, ("reference", "fasta", "base"))
     else:
+        rm_genome = utils.get_in(data, ("reference", "fasta", "base"))
         eval_genome = None
-        rm_genome = data["sam_ref"]
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
                 "preclean": True, "prep": True, "remove-refcalls": True}
     a_intervals = get_analysis_intervals(data)
@@ -130,7 +130,8 @@ def get_analysis_intervals(data):
     if data.get("ensemble_bed"):
         return data["ensemble_bed"]
     elif data.get("callable_bam"):
-        return callable.sample_callable_bed(data["callable_bam"], data["sam_ref"], data["config"])
+        return callable.sample_callable_bed(data["callable_bam"],
+                                            utils.get_in(data, ("reference", "fasta", "base")), data["config"])
     else:
         for key in ["callable_regions", "variant_regions"]:
             intervals = data["config"]["algorithm"].get(key)

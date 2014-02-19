@@ -107,7 +107,7 @@ def _find_snpeff_datadir(config_file):
 def _installed_snpeff_genome(base_name, config):
     """Find the most recent installed genome for snpEff with the given name.
     """
-    snpeff_config_file = os.path.join(config_utils.get_program("snpEff", config, "dir"),
+    snpeff_config_file = os.path.join(config_utils.get_program("snpeff", config, "dir"),
                                       "snpEff.config")
     data_dir = _find_snpeff_datadir(snpeff_config_file)
     dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
