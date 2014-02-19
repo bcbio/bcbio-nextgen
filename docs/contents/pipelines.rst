@@ -57,7 +57,7 @@ bcbio-nextgen also implements a configurable best-practice pipeline for RNA-seq
 quality control, adapter trimming, alignment and post-alignment quantitation
 
 - Adapter trimming:
-  - `cutadapt`_
+  - `AlienTrimmer`_
 
 - Sequence alignment:
   - `tophat2`_
@@ -69,6 +69,21 @@ quality control, adapter trimming, alignment and post-alignment quantitation
 
 - Quantitation:
   - `HTSeq`_
+
+After a run you will have in the ``upload`` directory a directory for each
+sample which contains a BAM file of the aligned and unaligned reads, a
+``cufflinks`` directory with the output of Cufflinks, including FPKM values,
+and a ``qc`` directory with plots from FastQC and RNA-SeQC. It is useful to look
+at the fastqc report an the RNA-SeQC report for each of your samples to ensure
+nothing looks abnormal.
+
+In addition to directories for each sample, in the ``upload`` directory there is
+a project directory which contains a YAML file describing some summary statistics
+about each sample and some provenance data. In that directory is also a
+``combined.counts`` file which can be used as a starting point for performing
+differential expression calling using any count-based method such as EdgeR,
+DESeq2 or voom+limma, etc.
+
 
 Configuration
 =============
@@ -223,3 +238,4 @@ templating system.
 .. _illumina-rnaseq: http://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml
 .. _VarScan: http://varscan.sourceforge.net
 .. _MuTect: http://www.broadinstitute.org/cancer/cga/mutect
+.. _AlienTrimmer: http://www.ncbi.nlm.nih.gov/pubmed/23912058

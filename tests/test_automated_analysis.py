@@ -182,6 +182,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(rnaseq=True)
+    @attr(star=True)
     def test_2_star(self):
         """Run an RNA-seq analysis with STAR and generate gene-level counts.
         """
