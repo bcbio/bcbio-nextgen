@@ -10,7 +10,7 @@ import pysam
 from bcbio import utils, broad
 from bcbio.log import logger
 from bcbio.bam import callable, ref
-from bcbio.bam.trim import trim_read_through
+from bcbio.bam.trim import trim_read_through, trim_adapters
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
@@ -51,7 +51,7 @@ def trim_lane(item):
     if trim_reads == "read_through":
         logger.info("Trimming low quality ends and read through adapter "
                     "sequence from %s." % (", ".join(to_trim)))
-        out_files = trim_read_through(to_trim, dirs, config)
+        out_files = trim_adapters(to_trim, dirs, config)
     item["files"] = out_files
     return [[item]]
 

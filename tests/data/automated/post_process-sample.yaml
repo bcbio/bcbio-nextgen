@@ -43,6 +43,9 @@ resources:
     cores: 4
   bwa:
     cores: 4
+  AlienTrimmer:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/AlienTrimmer
   samtools:
     cores: 4
     memory: 1G

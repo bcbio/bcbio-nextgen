@@ -2,6 +2,7 @@
 """
 import os
 import sys
+import tempfile
 
 from bcbio.utils import (file_exists, safe_makedir,
                          replace_suffix, append_stem, is_pair,
@@ -12,6 +13,7 @@ from bcbio.provenance import do
 from Bio.Seq import Seq
 from itertools import izip, repeat
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 
 
 SUPPORTED_ADAPTERS = {
@@ -19,6 +21,66 @@ SUPPORTED_ADAPTERS = {
     "truseq": ["AGATCGGAAGAG"],
     "polya": ["AAAAAAAAAAAAA"],
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
+
+QUALITY_FLAGS = {5: ['"E"', '"&"'],
+                 20: ['"T"', '"5"']}
+
+def trim_adapters(fastq_files, dirs, config):
+    QUALITY_CUTOFF = 20
+    to_trim = _get_sequences_to_trim(config)
+    resources = config_utils.get_resources("AlienTrimmer", config)
+    try:
+        jarpath = config_utils.get_program("AlienTrimmer", config, "dir")
+    # fall back on Cutadapt if AlienTrimmer is not installed
+    # XXX: remove after it has been live for a while
+    except:
+        return trim_read_through(fastq_files, dirs, config)
+    jarfile = config_utils.get_jar("AlienTrimmer", jarpath)
+    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]))
+    base_cmd = ("java -jar {jvm_opts} {jarfile} -k 10 ")
+    fastq1 = fastq_files[0]
+    supplied_quality_format = _get_quality_format(config)
+    cores = config["algorithm"].get("num_cores", 0)
+    out_files = _get_read_through_trimmed_outfiles(fastq_files, dirs)
+    fastq1_out = out_files[0]
+    if supplied_quality_format == "illumina":
+        quality_flag = QUALITY_FLAGS[QUALITY_CUTOFF][0]
+    else:
+        quality_flag = QUALITY_FLAGS[QUALITY_CUTOFF][1]
+    quality_flag = '-q ' + quality_flag
+    if len(fastq_files) == 1:
+        if file_exists(fastq1_out):
+            return [fastq1_out]
+        base_cmd += ("-i {fastq1} -o {tx_fastq1_out} -c {temp_file} "
+                     "{quality_flag}")
+        message = "Trimming %s from %s with AlienTrimmer." % (to_trim, fastq1)
+    else:
+        fastq2 = fastq_files[1]
+        fastq2_out = out_files[1]
+        if all(map(file_exists, [fastq1_out, fastq2_out])):
+            return [fastq1_out, fastq2_out]
+        base_cmd += ("-if {fastq1} -ir {fastq2} -of {tx_fastq1_out} "
+                     "-or {tx_fastq2_out} -c {temp_file}")
+        message = ("Trimming %s from %s and %s with AlienTrimmer."
+                   % (to_trim, fastq1, fastq2))
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
+        temp_file = temp.name
+        for adapter in to_trim:
+            temp.write(adapter + "\n")
+        temp.close()
+
+
+    if len(fastq_files) == 1:
+        with file_transaction(fastq1_out) as tx_fastq1_out:
+            do.run(base_cmd.format(**locals()), message)
+        return [fastq1_out]
+    else:
+        with file_transaction([fastq1_out, fastq2_out]) as tx_out_files:
+            tx_fastq1_out = tx_out_files[0]
+            tx_fastq2_out = tx_out_files[1]
+            do.run(base_cmd.format(**locals()), message)
+        return [fastq1_out, fastq2_out]
+
 
 def trim_read_through(fastq_files, dirs, lane_config):
     """
@@ -113,7 +175,7 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
     # more passes of cutadapt
     cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
     base_cmd = [cutadapt, "--times=" + "2", "--quality-base=" + quality_base,
-                "--quality-cutoff=20", "--format=fastq", "--minimum-length=0"]
+                "--quality-cutoff=5", "--format=fastq", "--minimum-length=0"]
     adapter_cmd = map(lambda x: "--adapter=" + x, adapters)
     base_cmd.extend(adapter_cmd)
     if all(map(file_exists, out_files)):

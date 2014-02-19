@@ -62,6 +62,9 @@ resources:
   oncofuse:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/oncofuse
+  AlienTrimmer:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/AlienTrimmer
   bowtie2:
     cores: 16
   tophat2:
