@@ -112,7 +112,7 @@ def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
             include_str = ",".join(include)
-            cmd = "{bcftools} subset -o {output_type} -s {include_str} {in_file} > {tx_out_file}"
+            cmd = "{bcftools} view -O {output_type} -s {include_str} {in_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Exclude samples: {}".format(to_exclude))
     return out_file
 
@@ -155,7 +155,7 @@ def _do_merge(orig_files, out_file, config, region):
                 bcftools = config_utils.get_program("bcftools", config)
                 output_type = "z" if out_file.endswith(".gz") else "v"
                 region_str = "-r {}".format(region) if region else ""
-                cmd = "{bcftools} merge -o {output_type} {region_str} {prep_files} > {tx_out_file}"
+                cmd = "{bcftools} merge -O {output_type} {region_str} {prep_files} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Merge variants")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)

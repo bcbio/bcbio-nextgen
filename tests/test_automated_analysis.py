@@ -221,8 +221,8 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-chipseq.yaml")]
             subprocess.check_call(cl)
 
-
     @attr(speed=1)
+    @attr(ensemble=True)
     def test_1_variantcall(self):
         """Test variant calling with GATK pipeline.
         """
@@ -234,7 +234,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-variantcall.yaml")]
             subprocess.check_call(cl)
 
-    @attr(speed=2)
+    @attr(speed=1)
     @attr(devel=True)
     def test_5_bam(self):
         """Allow BAM files as input to pipeline.

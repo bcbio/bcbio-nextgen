@@ -22,7 +22,7 @@ def hard_w_expression(vcf_file, expression, data, filterext=""):
             output_type = "z" if out_file.endswith(".gz") else "v"
             variant_regions = clean_variant_regions(data)
             intervals = "-t %s" % variant_regions if variant_regions else ""
-            cmd = ("{bcftools} filter -o {output_type} {intervals} --soft-filter '+' "
+            cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '+' "
                    "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
     return out_file
