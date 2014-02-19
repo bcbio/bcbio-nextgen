@@ -317,8 +317,12 @@ def annotate_combined_count_file(count_file, gtf_file, out_file=None):
         out_dir = os.path.dirname(count_file)
         out_file = os.path.join(out_dir, "annotated_combined.counts")
 
-    symbol_lookup = {f['gene_id'][0]: f['gene_name'][0] for f in
-                   db.features_of_type('exon')}
+    # if the genes don't have a gene_id or gene_name set, bail out
+    try:
+        symbol_lookup = {f['gene_id'][0]: f['gene_name'][0] for f in
+                         db.features_of_type('exon')}
+    except KeyError:
+        return None
 
     df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=0)
 
