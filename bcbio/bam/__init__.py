@@ -169,6 +169,14 @@ def bam_to_sam(in_file, config):
                 % (str(num_cores), in_file, out_file)))
     return out_file
 
+def reheader(header, bam_file, config):
+    samtools = config_utils.get_program("samtools", config)
+    base, ext = os.path.splitext(bam_file)
+    out_file = base + ".reheadered" + ext
+    cmd = "{samtools} reheader {header} {bam_file} > {out_file}"
+    do.run(cmd.format(**locals()), "Reheadering %s." % bam_file)
+    return out_file
+
 
 def merge(bamfiles, out_bam, config):
     assert all(map(is_bam, bamfiles)), ("Not all of the files to merge are not BAM "
@@ -265,3 +273,4 @@ def sample_name(in_bam):
         if line.startswith("@RG"):
             name = [x.split(":")[1] for x in line.split() if x.split(":")[0] == "SM"]
     return name[0] if name else None
+
