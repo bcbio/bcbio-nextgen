@@ -40,19 +40,26 @@ def _snpeff_args_from_config(data):
         args += ["-canon", "-hgvs"]
     return args
 
-def get_db(ref_file, resources, config=None):
+def get_db(data):
     """Retrieve a snpEff database name and location relative to reference file.
     """
-    snpeff_db = resources.get("aliases", {}).get("snpeff")
+    snpeff_db = utils.get_in(data, ("genome_resources", "aliases", "snpeff"))
+    snpeff_base_dir = None
     if snpeff_db:
-        snpeff_base_dir = utils.safe_makedir(os.path.normpath(os.path.join(
-            os.path.dirname(os.path.dirname(ref_file)), "snpeff")))
-        # back compatible retrieval of genome from installation directory
-        if config and not os.path.exists(os.path.join(snpeff_base_dir, snpeff_db)):
-            snpeff_base_dir, snpeff_db = _installed_snpeff_genome(snpeff_db, config)
-    else:
-        snpeff_base_dir = None
+        snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db, "base"))
+        if not snpeff_base_dir:
+            ref_file = utils.get_in(data, ("reference", "fasta", "base"))
+            snpeff_base_dir = utils.safe_makedir(os.path.normpath(os.path.join(
+                os.path.dirname(os.path.dirname(ref_file)), "snpeff")))
+            # back compatible retrieval of genome from installation directory
+            if "config" in data and not os.path.exists(os.path.join(snpeff_base_dir, snpeff_db)):
+                snpeff_base_dir, snpeff_db = _installed_snpeff_genome(snpeff_db, data["config"])
     return snpeff_db, snpeff_base_dir
+
+def get_snpeff_files(data):
+    snpeff_db, datadir = get_db(data)
+    return {snpeff_db: {"base": datadir,
+                        "indexes": glob.glob(os.path.join(datadir, snpeff_db, "*"))}}
 
 def get_cmd(cmd_name, datadir, config):
     """Retrieve snpEff base command line, handling command line and jar based installs.
@@ -70,7 +77,7 @@ def get_cmd(cmd_name, datadir, config):
     return cmd.format(**locals())
 
 def _run_snpeff(snp_in, out_format, data):
-    snpeff_db, datadir = get_db(data["sam_ref"], data["genome_resources"], data["config"])
+    snpeff_db, datadir = get_db(data)
     assert datadir is not None, \
         "Did not find snpEff resources in genome configuration: %s" % data["genome_resources"]
     assert os.path.exists(os.path.join(datadir, snpeff_db)), \

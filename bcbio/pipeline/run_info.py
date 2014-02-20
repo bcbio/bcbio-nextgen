@@ -14,7 +14,7 @@ from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
-from bcbio.variation import genotype
+from bcbio.variation import effects, genotype
 from bcbio.variation.cortex import get_sample_name
 
 def organize(dirs, config, run_info_yaml):
@@ -52,10 +52,12 @@ def add_reference_resources(data):
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
     data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
+    # back compatible `sam_ref` target
     data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
     ref_loc = utils.get_in(data, ("config", "resources", "species", "dir"),
                            utils.get_in(data, ("reference", "fasta", "base")))
     data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc)
+    data["reference"]["snpeff"] = effects.get_snpeff_files(data)
     return data
 
 # ## Sample and BAM read group naming

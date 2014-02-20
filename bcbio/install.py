@@ -182,7 +182,8 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
         resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
         with open(resource_file) as in_handle:
             resources = yaml.load(in_handle)
-        snpeff_db, snpeff_base_dir = effects.get_db(ref_file, resources)
+        snpeff_db, snpeff_base_dir = effects.get_db({"resources": resources,
+                                                     "reference": {"fasta": {"base": ref_file}}})
         if snpeff_db:
             snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
             if not os.path.exists(snpeff_db_dir):
