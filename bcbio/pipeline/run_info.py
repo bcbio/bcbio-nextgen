@@ -58,6 +58,10 @@ def add_reference_resources(data):
                            utils.get_in(data, ("reference", "fasta", "base")))
     data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc)
     data["reference"]["snpeff"] = effects.get_snpeff_files(data)
+    alt_genome = utils.get_in(data, ("config", "algorithm", "validate_genome_build"))
+    if alt_genome:
+        data["reference"]["alt"] = {alt_genome:
+                                    genome.get_refs(alt_genome, None, data["dirs"]["galaxy"])["fasta"]}
     return data
 
 # ## Sample and BAM read group naming

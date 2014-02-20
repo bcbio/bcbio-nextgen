@@ -12,7 +12,6 @@ import yaml
 from bcbio import utils
 from bcbio.bam import callable
 from bcbio.pipeline import config_utils
-from bcbio.pipeline import genome
 from bcbio.provenance import do
 from bcbio.variation import validateplot
 
@@ -93,9 +92,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
     """Create a bcbio.variation configuration input for validation.
     """
     if rm_genome:
-        rm_genome = utils.get_in(genome.get_refs(rm_genome, None, data["dirs"]["galaxy"]),
-                                 ("reference", "fasta", "base"))
-
+        rm_genome = utils.get_in(data, ("reference", "alts", rm_genome, "base"))
     if rm_genome and rm_genome != utils.get_in(data, ("reference", "fasta", "base")):
         eval_genome = utils.get_in(data, ("reference", "fasta", "base"))
     else:
