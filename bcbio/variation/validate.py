@@ -92,7 +92,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
     """Create a bcbio.variation configuration input for validation.
     """
     if rm_genome:
-        rm_genome = utils.get_in(data, ("reference", "alts", rm_genome, "base"))
+        rm_genome = utils.get_in(data, ("reference", "alt", rm_genome, "base"))
     if rm_genome and rm_genome != utils.get_in(data, ("reference", "fasta", "base")):
         eval_genome = utils.get_in(data, ("reference", "fasta", "base"))
     else:
