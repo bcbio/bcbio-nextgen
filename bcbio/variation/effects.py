@@ -57,9 +57,15 @@ def get_db(data):
     return snpeff_db, snpeff_base_dir
 
 def get_snpeff_files(data):
-    snpeff_db, datadir = get_db(data)
-    return {snpeff_db: {"base": datadir,
-                        "indexes": glob.glob(os.path.join(datadir, snpeff_db, "*"))}}
+    try:
+        snpeff_db, datadir = get_db(data)
+    except ValueError:
+        snpeff_db = None
+    if snpeff_db:
+        return {snpeff_db: {"base": datadir,
+                            "indexes": glob.glob(os.path.join(datadir, snpeff_db, "*"))}}
+    else:
+        return {}
 
 def get_cmd(cmd_name, datadir, config):
     """Retrieve snpEff base command line, handling command line and jar based installs.
