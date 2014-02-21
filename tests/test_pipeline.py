@@ -1,6 +1,7 @@
 """Test individual components of the analysis pipeline.
 """
 import os
+import sys
 import shutil
 import subprocess
 import unittest
@@ -18,17 +19,21 @@ from bcbio.pipeline.config_utils import load_config
 from bcbio.provenance import programs
 from bcbio.variation import vcfutils
 
+sys.path.append(os.path.dirname(__file__))
+from test_automated_analysis import get_post_process_yaml, make_workdir
+
 class RunInfoTest(unittest.TestCase):
     def setUp(self):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data")
 
     @attr(speed=1)
+    @attr(blah=True)
     def test_programs(self):
         """Identify programs and versions used in analysis.
         """
-        config = load_config(os.path.join(self.data_dir, "automated",
-                                          "post_process-sample.yaml"))
-        print programs._get_versions(config)
+        with make_workdir() as workdir:
+            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            print programs._get_versions(config)
 
 class VCFUtilTest(unittest.TestCase):
     """Test various utilities for dealing with VCF files.
@@ -48,8 +53,9 @@ class VCFUtilTest(unittest.TestCase):
             return
         files = [os.path.join(self.var_dir, "S1-variants.vcf"), os.path.join(self.var_dir, "S2-variants.vcf")]
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
-        config = load_config(os.path.join(self.data_dir, "automated",
-                                          "post_process-sample.yaml"))
+        with make_workdir() as workdir:
+            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            config["algorithm"] = {}
         region_dir = os.path.join(self.var_dir, "S1_S2-combined-regions")
         if os.path.exists(region_dir):
             shutil.rmtree(region_dir)
@@ -72,8 +78,9 @@ class VCFUtilTest(unittest.TestCase):
         if prun is None:
             return
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
-        config = load_config(os.path.join(self.data_dir, "automated",
-                                          "post_process-sample.yaml"))
+        with make_workdir() as workdir:
+            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            config["algorithm"] = {}
         out_file = utils.append_stem(self.combo_file, "-exclude")
         to_exclude = ["S1"]
         if os.path.exists(out_file):

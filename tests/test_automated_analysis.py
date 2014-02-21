@@ -46,6 +46,34 @@ def expected_failure(test):
             raise AssertionError('Failure expected')
     return inner
 
+def get_post_process_yaml(data_dir, workdir):
+    try:
+        from bcbiovm.docker.defaults import get_datadir
+        datadir = get_datadir()
+        system = os.path.join(datadir, "galaxy", "bcbio_system.yaml") if datadir else None
+    except ImportError:
+        system = None
+    if system is None or not os.path.exists(system):
+        try:
+            _, system = load_system_config("bcbio_system.yaml")
+        except ValueError:
+            system = None
+    sample = os.path.join(data_dir, "post_process-sample.yaml")
+    std = os.path.join(data_dir, "post_process.yaml")
+    if os.path.exists(std):
+        return std
+    elif system and os.path.exists(system):
+        # create local config pointing to reduced genomes
+        test_system = os.path.join(workdir, os.path.basename(system))
+        with open(system) as in_handle:
+            config = yaml.load(in_handle)
+            config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
+            with open(test_system, "w") as out_handle:
+                yaml.dump(config, out_handle)
+        return test_system
+    else:
+        return sample
+
 class AutomatedAnalysisTest(unittest.TestCase):
     """Setup a full automated analysis and run the pipeline.
     """
@@ -87,34 +115,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
         os.rename(os.path.basename(dirname), dirname)
         os.remove(os.path.basename(url))
 
-    def _get_post_process_yaml(self, workdir):
-        try:
-            from bcbiovm.docker.defaults import get_datadir
-            datadir = get_datadir()
-            system = os.path.join(datadir, "galaxy", "bcbio_system.yaml") if datadir else None
-        except ImportError:
-            system = None
-        if system is None or not os.path.exists(system):
-            try:
-                _, system = load_system_config("bcbio_system.yaml")
-            except ValueError:
-                system = None
-        sample = os.path.join(self.data_dir, "post_process-sample.yaml")
-        std = os.path.join(self.data_dir, "post_process.yaml")
-        if os.path.exists(std):
-            return std
-        elif system and os.path.exists(system):
-            # create local config pointing to reduced genomes
-            test_system = os.path.join(workdir, os.path.basename(system))
-            with open(system) as in_handle:
-                config = yaml.load(in_handle)
-                config["galaxy_config"] = os.path.join(self.data_dir, "universe_wsgi.ini")
-                with open(test_system, "w") as out_handle:
-                    yaml.dump(config, out_handle)
-            return test_system
-        else:
-            return sample
-
     @attr(speed=3)
     def IGNOREtest_3_full_pipeline(self):
         """Run full automated analysis pipeline with multiplexing.
@@ -124,7 +124,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "110106_FC70BUKAAXX"),
                   os.path.join(self.data_dir, "run_info.yaml")]
             subprocess.check_call(cl)
@@ -137,7 +137,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "110221_empty_FC12345AAXX"),
                   os.path.join(self.data_dir, "run_info-empty.yaml")]
             subprocess.check_call(cl)
@@ -149,7 +149,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "test_stranded"),
                   os.path.join(self.data_dir, "run_info-stranded.yaml")]
             subprocess.check_call(cl)
@@ -162,7 +162,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
             subprocess.check_call(cl)
@@ -176,7 +176,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
                   "/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml",
-#                  self._get_post_process_yaml(workdir),
+                  # get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "test_fusion"),
                   os.path.join(self.data_dir, "run_info-fusion.yaml")]
             subprocess.check_call(cl)
@@ -189,11 +189,10 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
                   os.path.join(self.data_dir, "run_info-star.yaml")]
             subprocess.check_call(cl)
-
 
     @attr(explant=True)
     def test_explant(self):
@@ -203,7 +202,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "1_explant"),
                   os.path.join(self.data_dir, "run_info-explant.yaml")]
             subprocess.check_call(cl)
@@ -216,7 +215,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "test_chipseq"),
                   os.path.join(self.data_dir, "run_info-chipseq.yaml")]
             subprocess.check_call(cl)
@@ -229,7 +228,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-variantcall.yaml")]
             subprocess.check_call(cl)
@@ -242,7 +241,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
@@ -254,7 +253,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bamclean.yaml")]
             subprocess.check_call(cl)
@@ -267,7 +266,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "tcga_benchmark"),
                   os.path.join(self.data_dir, "run_info-cancer.yaml")]
             subprocess.check_call(cl)
@@ -280,7 +279,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  self._get_post_process_yaml(workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, "run_info-cancer2.yaml")]
             subprocess.check_call(cl)
 
@@ -308,7 +307,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_vm.py", "run",
-                  "--systemconfig=%s" % self._get_post_process_yaml(workdir),
+                  "--systemconfig=%s" % get_post_process_yaml(self.data_dir, workdir),
                   "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
@@ -322,7 +321,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_vm.py", "ipython",
-                  "--systemconfig=%s" % self._get_post_process_yaml(workdir),
+                  "--systemconfig=%s" % get_post_process_yaml(self.data_dir, workdir),
                   "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml"),
                   "lsf", "localrun"]
