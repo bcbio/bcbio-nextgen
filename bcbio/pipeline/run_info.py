@@ -14,7 +14,7 @@ from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
-from bcbio.variation import effects, genotype
+from bcbio.variation import effects, genotype, population
 from bcbio.variation.cortex import get_sample_name
 
 def organize(dirs, config, run_info_yaml):
@@ -62,6 +62,10 @@ def add_reference_resources(data):
     if alt_genome:
         data["reference"]["alt"] = {alt_genome:
                                     genome.get_refs(alt_genome, None, data["dirs"]["galaxy"])["fasta"]}
+    # Re-enable when we have ability to re-define gemini configuration directory
+    if False:
+        if population.do_db_build([data], check_gemini=False, need_bam=False):
+            data["reference"]["gemini"] = population.get_gemini_files(data)
     return data
 
 # ## Sample and BAM read group naming

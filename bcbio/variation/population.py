@@ -5,6 +5,7 @@ database of variations for query and evaluation.
 """
 import collections
 from distutils.version import LooseVersion
+import glob
 import os
 import subprocess
 
@@ -25,10 +26,10 @@ def prep_gemini_db(fnames, call_id, samples, data):
         gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
     else:
         gemini_vcf = fnames[0]
-    use_gemini_quick = (_do_db_build(samples, check_gemini=False) and
+    use_gemini_quick = (do_db_build(samples, check_gemini=False) and
                         any(vcfutils.vcf_has_variants(f) for f in fnames))
     if not utils.file_exists(gemini_db) and use_gemini_quick:
-        use_gemini = _do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
+        use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
         if use_gemini:
             with file_transaction(gemini_db) as tx_gemini_db:
                 gemini = config_utils.get_program("gemini", data["config"])
@@ -71,18 +72,28 @@ def _has_gemini(config):
         return False
     return True
 
-def _do_db_build(samples, check_gemini=True):
+def do_db_build(samples, check_gemini=True, need_bam=True):
     """Confirm we should build a gemini database: need gemini + human samples.
     """
     genomes = set()
     for data in samples:
-        if data["work_bam"]:
+        if not need_bam or data.get("work_bam"):
             genomes.add(data["genome_build"])
     if len(genomes) == 1:
         return (samples[0]["genome_resources"].get("aliases", {}).get("human", False)
                 and (not check_gemini or _has_gemini(samples[0]["config"])))
     else:
         return False
+
+def get_gemini_files(data):
+    """Enumerate available gemini data files in a standard installation.
+    """
+    try:
+        from gemini import annotations, config
+    except ImportError:
+        return {}
+    return {"base": config.read_gemini_config()["annotation_dir"],
+            "files": annotations.get_anno_files().values()}
 
 def _group_by_batches(samples, check_fn):
     """Group data items into batches, providing details to retrieve results.
@@ -122,7 +133,7 @@ def prep_db_parallel(samples, parallel_fn):
         has_batches = True
     for name, caller, data, fname in singles:
         to_process.append([[fname], (str(name), caller), [data], data])
-    if len(samples) > 0 and not _do_db_build([x[0] for x in samples], check_gemini=False) and not has_batches:
+    if len(samples) > 0 and not do_db_build([x[0] for x in samples], check_gemini=False) and not has_batches:
         return samples
     output = parallel_fn("prep_gemini_db", to_process)
     out_fetch = {}
