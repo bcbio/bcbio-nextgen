@@ -246,11 +246,22 @@ def _get_full_paths(fastq_dir, config, config_file):
 
 # ## Generic pipeline framework
 
-def _wprogs(parallel, progs, ensure_mem=None):
-    """Add program information to the parallel environment, making a clean copy.
+def _wres(parallel, progs, fresources=None, ensure_mem=None):
+    """Add resource information to the parallel environment on required programs and files.
+
+    Enables spinning up required machines and operating in non-shared filesystem
+    environments.
+
+    progs -- Third party tools used in processing
+    fresources -- Required file-based resources needed. These will be transferred on non-shared
+                  filesystems.
+    ensure_mem -- Dictionary of required minimum memory for programs used. Ensures
+                  enough memory gets allocated on low-core machines.
     """
     parallel = copy.deepcopy(parallel)
     parallel["progs"] = progs
+    if fresources:
+        parallel["fresources"] = fresources
     if ensure_mem:
         parallel["ensure_mem"] = ensure_mem
     return parallel
@@ -262,9 +273,7 @@ class AbstractPipeline:
         design:
             - analysis: name
     run: the steps run to perform the analyses
-
     """
-
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
@@ -285,7 +294,8 @@ class Variant2Pipeline(AbstractPipeline):
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with prun.start(_wprogs(parallel, ["aligner", "gatk"]),
+        with prun.start(_wres(parallel, ["aligner", "gatk"],
+                              (["reference", "fasta"], ["reference", "aligner"])),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             logger.info("Timing: alignment")
@@ -302,7 +312,7 @@ class Variant2Pipeline(AbstractPipeline):
             samples = coverage.summarize_samples(samples, run_parallel)
 
         ## Variant calling on sub-regions of the input file (full cluster)
-        with prun.start(_wprogs(parallel, ["gatk", "picard", "variantcaller"]),
+        with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
                         samples, config, dirs, "full",
                         multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
             logger.info("Timing: alignment post-processing")
@@ -311,7 +321,7 @@ class Variant2Pipeline(AbstractPipeline):
             samples = region.parallel_variantcall_region(samples, run_parallel)
 
         ## Finalize variants (per-sample cluster)
-        with prun.start(_wprogs(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation"]),
+        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation"]),
                         samples, config, dirs, "persample") as run_parallel:
             logger.info("Timing: variant post-processing")
             samples = run_parallel("postprocess_variants", samples)
@@ -322,7 +332,7 @@ class Variant2Pipeline(AbstractPipeline):
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
             samples = validate.summarize_grading(samples)
         ## Finalizing BAMs and population databases, handle multicore computation
-        with prun.start(_wprogs(parallel, ["gemini", "samtools", "fastqc", "bamtools"]),
+        with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools"]),
                         samples, config, dirs, "multicore2") as run_parallel:
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
@@ -352,12 +362,12 @@ class StandardPipeline(AbstractPipeline):
     @classmethod
     def run(self, config, config_file, parallel, dirs, lane_items):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with prun.start(_wprogs(parallel, ["aligner"]),
+        with prun.start(_wres(parallel, ["aligner"]),
                         lane_items, config, dirs, "multicore") as run_parallel:
             logger.info("Timing: alignment")
             samples = run_parallel("process_alignment", lane_items)
         ## Finalize (per-sample cluster)
-        with prun.start(_wprogs(parallel, ["fastqc", "bamtools"]),
+        with prun.start(_wres(parallel, ["fastqc", "bamtools"]),
                         samples, config, dirs, "persample") as run_parallel:
             logger.info("Timing: quality control")
             samples = qcsummary.generate_parallel(samples, run_parallel)
@@ -372,18 +382,19 @@ class RnaseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wprogs(parallel, ["picard"]),
+        with prun.start(_wres(parallel, ["picard"]),
                         samples, config, dirs, "trimming") as run_parallel:
             samples = run_parallel("process_lane", samples)
             samples = run_parallel("trim_lane", samples)
-        with prun.start(_wprogs(parallel, ["aligner"], {"tophat": 8, "tophat2": 8, "star": 30}),
+        with prun.start(_wres(parallel, ["aligner"],
+                              ensure_mem={"tophat": 8, "tophat2": 8, "star": 30}),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             samples = disambiguate.split(samples)
             samples = run_parallel("process_alignment", samples)
             samples = disambiguate.resolve(samples, run_parallel)
 
-        with prun.start(_wprogs(parallel, ["samtools", "cufflinks"]),
+        with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
             samples = rnaseq.estimate_expression(samples, run_parallel)
             #samples = rnaseq.detect_fusion(samples, run_parallel)
@@ -397,7 +408,7 @@ class RnaseqPipeline(AbstractPipeline):
             if annotated:
                 x[0]["annotated_combined_counts"] = annotated
 
-        with prun.start(_wprogs(parallel, ["picard", "fastqc", "rnaseqc"]),
+        with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc"]),
                         samples, config, dirs, "persample") as run_parallel:
             samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
@@ -407,14 +418,14 @@ class ChipseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wprogs(parallel, ["aligner", "picard"]),
+        with prun.start(_wres(parallel, ["aligner", "picard"]),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             samples = run_parallel("process_lane", samples)
             samples = run_parallel("trim_lane", samples)
             samples = disambiguate.split(samples)
             samples = run_parallel("process_alignment", samples)
-        with prun.start(_wprogs(parallel, ["picard", "fastqc"]),
+        with prun.start(_wres(parallel, ["picard", "fastqc"]),
                         samples, config, dirs, "persample") as run_parallel:
             samples = run_parallel("clean_chipseq_alignment", samples)
             samples = qcsummary.generate_parallel(samples, run_parallel)

@@ -23,7 +23,8 @@ def runner(parallel, config):
         logger.info("multiprocessing: %s" % fn_name)
         fn = get_fn(fn_name, parallel)
         if "wrapper" in parallel:
-            items = [[fn_name] + parallel.get("wrapper_args", []) + list(x) for x in items]
+            wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources"])}
+            items = [[fn_name] + parallel.get("wrapper_args", []) + [wrap_parallel] + list(x) for x in items]
         return run_multicore(fn, items, config, parallel=parallel)
     return run_parallel
 
