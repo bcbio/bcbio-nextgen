@@ -188,14 +188,13 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-            ready_files = [x for x in sorted_files if vcf_has_variants(x)]
-            if len(ready_files) == 0:
-                ready_files = sorted_files[:1]
-            with short_filenames(ready_files) as fs:
-                orig_file_str = " ".join(fs)
-                compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
-                cmd = "vcfcat {orig_file_str} {compress_str} > {tx_out_file}"
-                do.run(cmd.format(**locals()), "Concatenate variants")
+            input_vcf_file = "%s-files.txt" % os.path.splitext(tx_out_file)[0]
+            with open(input_vcf_file, "w") as out_handle:
+                for fname in sorted_files:
+                    out_handle.write(fname + "\n")
+            compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
+            cmd = "vt concat -L {input_vcf_file} {compress_str} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Concatenate variants")
     return out_file
 
 @contextlib.contextmanager
