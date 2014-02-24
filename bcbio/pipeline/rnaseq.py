@@ -1,4 +1,4 @@
-from bcbio.rnaseq import count, cufflinks, oncofuse
+from bcbio.rnaseq import featureCounts, cufflinks, oncofuse
 from bcbio.utils import get_in
 
 def detect_fusion(samples, run_parallel):
@@ -12,7 +12,7 @@ def estimate_expression(samples, run_parallel):
 
 def generate_transcript_counts(data):
     """Generate counts per transcript from an alignment"""
-    data["count_file"] = count.htseq_count(data)
+    data["count_file"] = featureCounts.count(data)
     if get_in(data, ("config", "algorithm", "fusion_mode"), False):
         data["oncofuse_file"] = oncofuse.run(data)
     return [[data]]

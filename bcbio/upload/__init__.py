@@ -123,9 +123,10 @@ def _maybe_add_counts(algorithm, sample, out):
                 "type": "counts",
                 "ext": "ready"})
     stats_file = os.path.splitext(sample["count_file"])[0] + ".stats"
-    out.append({"path": stats_file,
-                "type": "count_stats",
-                "ext": "ready"})
+    if file_exists(stats_file):
+        out.append({"path": stats_file,
+                    "type": "count_stats",
+                    "ext": "ready"})
     return out
 
 def _maybe_add_cufflinks(algorithm, sample, out):
