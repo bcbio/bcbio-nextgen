@@ -26,7 +26,7 @@ QUALITY_FLAGS = {5: ['"E"', '"&"'],
                  20: ['"T"', '"5"']}
 
 def trim_adapters(fastq_files, dirs, config):
-    QUALITY_CUTOFF = 20
+    QUALITY_CUTOFF = 5
     to_trim = _get_sequences_to_trim(config)
     resources = config_utils.get_resources("AlienTrimmer", config)
     try:
@@ -60,7 +60,7 @@ def trim_adapters(fastq_files, dirs, config):
         if all(map(file_exists, [fastq1_out, fastq2_out])):
             return [fastq1_out, fastq2_out]
         base_cmd += ("-if {fastq1} -ir {fastq2} -of {tx_fastq1_out} "
-                     "-or {tx_fastq2_out} -c {temp_file}")
+                     "-or {tx_fastq2_out} -c {temp_file} {quality_flag}")
         message = ("Trimming %s from %s and %s with AlienTrimmer."
                    % (to_trim, fastq1, fastq2))
     with tempfile.NamedTemporaryFile(delete=False) as temp:
