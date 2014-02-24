@@ -7,6 +7,7 @@ import copy
 import gzip
 import itertools
 import os
+import subprocess
 
 from bcbio import broad, utils
 from bcbio.bam import ref
@@ -188,12 +189,12 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-            input_vcf_file = "%s-files.txt" % os.path.splitext(tx_out_file)[0]
+            input_vcf_file = "%s-files.txt" % os.path.splitext(out_file)[0]
             with open(input_vcf_file, "w") as out_handle:
                 for fname in sorted_files:
                     out_handle.write(fname + "\n")
             compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
-            cmd = "vt concat -L {input_vcf_file} {compress_str} > {tx_out_file}"
+            cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Concatenate variants")
     return out_file
 
@@ -289,7 +290,12 @@ def bgzip_and_index(in_file, config):
         with file_transaction(out_file) as tx_out_file:
             bgzip = tools.get_bgzip_cmd(config)
             cmd = "{bgzip} -c {in_file} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
+            try:
+                do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
+            except subprocess.CalledProcessError:
+                # Race conditions: ignore errors where file has been deleted by another
+                if os.path.exists(in_file) and not os.path.exists(out_file):
+                    raise
         try:
             os.remove(in_file)
         except OSError:  # Handle cases where run in parallel and file has been deleted
