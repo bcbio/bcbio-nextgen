@@ -328,14 +328,15 @@ class Variant2Pipeline(AbstractPipeline):
             logger.info("Timing: validation")
             samples = run_parallel("compare_to_rm", samples)
             samples = combine_multiple_callers(samples)
-            logger.info("Timing: ensemble calling")
-            samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            samples = validate.summarize_grading(samples)
         ## Finalizing BAMs and population databases, handle multicore computation
-        with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools"]),
+        with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools", "bcbio_variation",
+                                         "bcbio-variation-recall"]),
                         samples, config, dirs, "multicore2") as run_parallel:
             logger.info("Timing: prepped BAM merging")
             samples = region.delayed_bamprep_merge(samples, run_parallel)
+            logger.info("Timing: ensemble calling")
+            samples = ensemble.combine_calls_parallel(samples, run_parallel)
+            samples = validate.summarize_grading(samples)
             logger.info("Timing: structural variation")
             samples = structural.run(samples, run_parallel)
             logger.info("Timing: population database")
