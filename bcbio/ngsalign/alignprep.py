@@ -20,14 +20,14 @@ def create_inputs(data):
     """
     # skip indexing on samples without input files or not doing alignment
     if ("files" not in data or data["files"][0] is None or
-          data["algorithm"].get("align_split_size") is None
-          or not data["algorithm"].get("aligner")):
+          data["config"]["algorithm"].get("align_split_size") is None
+          or not data["config"]["algorithm"].get("aligner")):
         return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data["config"])
     data["files"] = ready_files
     # bgzip preparation takes care of converting illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
-    splits = _find_read_splits(ready_files[0], data["algorithm"]["align_split_size"])
+    splits = _find_read_splits(ready_files[0], data["config"]["algorithm"]["align_split_size"])
     if len(splits) == 1:
         return [[data]]
     else:
@@ -60,7 +60,7 @@ def parallel_multiplier(items):
     """
     multiplier = 1
     for data in (x[0] for x in items):
-        if data["algorithm"].get("align_split_size"):
+        if data["config"]["algorithm"].get("align_split_size"):
             multiplier += 50
     return multiplier
 

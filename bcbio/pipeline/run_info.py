@@ -37,7 +37,9 @@ def organize(dirs, config, run_info_yaml):
             run_details.append(item)
     out = []
     for item in run_details:
+        # add algorithm details to configuration, avoid double specification
         item["config"] = config_utils.update_w_custom(config, item)
+        item.pop("algorithm", None)
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
