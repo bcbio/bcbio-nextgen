@@ -1,5 +1,4 @@
 import os
-import pandas as pd
 
 from bcbio.utils import (file_exists, get_in, safe_makedir)
 from bcbio.pipeline import config_utils
@@ -9,6 +8,10 @@ from bcbio.bam import is_paired
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 def count(data):
     """

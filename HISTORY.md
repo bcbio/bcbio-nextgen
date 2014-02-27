@@ -1,4 +1,4 @@
-## 0.7.7 (in progress)
+## 0.7.7 (February 27, 2014)
 
 - For cancer tumor/normal calling, attach final call information of both to
   the tumor sample. This provides a single downstream file for processing and

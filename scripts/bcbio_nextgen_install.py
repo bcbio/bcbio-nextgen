@@ -87,8 +87,9 @@ def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
             "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
             "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
+    channels = ["-c", "https://conda.binstar.org/faircloth-lab"]
     subprocess.check_call([anaconda["conda"], "install", "--yes", "numpy"])
-    subprocess.check_call([anaconda["conda"], "install", "--yes"] + pkgs)
+    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels + pkgs)
 
 def _guess_distribution():
     """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.

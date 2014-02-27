@@ -120,9 +120,10 @@ def _update_conda_packages():
     pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
             "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
             "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
+    channels = ["-c", "https://conda.binstar.org/faircloth-lab"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
-        subprocess.check_call([conda_bin, "install", "--yes"] + pkgs)
+        subprocess.check_call([conda_bin, "install", "--yes"] + channels + pkgs)
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
