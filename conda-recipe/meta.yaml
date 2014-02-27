@@ -1,12 +1,15 @@
 package:
   name: bcbio-nextgen
-  version: '0.7.7a'
+  version: '0.7.7'
 
 build:
-  number: 1
+  number: 0
 
 source:
-  git_url: https://github.com/chapmanb/bcbio-nextgen.git
+  fn: bcbio-nextgen-0.7.7.tar.gz
+  url: https://pypi.python.org/packages/source/b/bcbio-nextgen/bcbio-nextgen-0.7.7.tar.gz
+  md5: 2aa05b9689d3145c673cb2983186de7e
+  #git_url: https://github.com/chapmanb/bcbio-nextgen.git
 
 requirements:
   build:

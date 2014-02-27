@@ -19,6 +19,7 @@ RUN mkdir -p /tmp/fuse-hack && cd /tmp/fuse-hack && \
     rm -rf /tmp/fuse-hack
 
 # bcbio-nextgen installation
+RUN git config --global url.https://github.com/.insteadOf git://github.com/
 RUN mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     wget --no-check-certificate \
       https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
@@ -36,6 +37,9 @@ RUN mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     rm -rf $(brew --cache) && \
     rm -rf /.cpanm && \
     rm -rf /tmp/bcbio-nextgen-install
+RUN wget --no-check-certificate -O createsetuser \
+      https://raw.github.com/chapmanb/bcbio-nextgen-vm/master/scripts/createsetuser && \
+    chmod a+x createsetuser && mv createsetuser /sbin
 
 # Create directories and symlinks for data 
 RUN mkdir -p /mnt/biodata && \
@@ -54,6 +58,3 @@ RUN mkdir -p /mnt/biodata && \
 # Ensure permissions are set for update in place by arbitrary users
 RUN find /usr/local -perm /u+x -execdir chmod a+x {} \;
 RUN find /usr/local -perm /u+w -execdir chmod a+w {} \;
-
-EXPOSE 8085
-ENTRYPOINT ["/usr/local/bin/bcbio_nextgen.py", "server", "--port", "8085", "--biodata_dir", "/mnt/biodata"]
