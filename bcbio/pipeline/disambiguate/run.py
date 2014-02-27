@@ -96,7 +96,13 @@ def disambiguate(humanlist, mouselist, disambalgo):
             # directionality (_1 or _2)
             d12 = 0 if 0x40&read.flag else 1
             for x in range(0, len(bwatagsigns)):
-                QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                try:
+                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                except KeyError:
+                    if bwatags[x] == 'NM':
+                        bwatags[x] = 'nM' # oddity of STAR
+                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                    
                 if AS[x][d12]<QScore:
                     AS[x][d12]=QScore # update to highest (i.e. 'best') quality score
         #
@@ -106,7 +112,13 @@ def disambiguate(humanlist, mouselist, disambalgo):
            # directionality (_1 or _2)
             d12 = 2 if 0x40&read.flag else 3
             for x in range(0, len(bwatagsigns)):
-                QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                try:
+                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                except KeyError:
+                    if bwatags[x] == 'NM':
+                        bwatags[x] = 'nM' # oddity of STAR
+                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                
                 if AS[x][d12]<QScore:
                     AS[x][d12]=QScore # update to highest (i.e. 'best') quality score
         #
