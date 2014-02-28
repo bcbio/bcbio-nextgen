@@ -1,3 +1,10 @@
+## 0.7.8 (In development)
+
+- General removal of GATK for variant manipulation functionality to help focus
+  on support for upcoming GATK 3.0. Use bcftools for splitting of variants into
+  SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs
+  and indels instead of GATK.
+
 ## 0.7.7 (February 27, 2014)
 
 - For cancer tumor/normal calling, attach final call information of both to

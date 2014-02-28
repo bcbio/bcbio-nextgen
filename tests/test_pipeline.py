@@ -10,11 +10,7 @@ from nose.plugins.attrib import attr
 
 from bcbio import utils
 from bcbio.bam import fastq
-# Be back compatible with 0.7.6 -- remove after 0.7.7 release
-try:
-    from bcbio.distributed import prun
-except ImportError:
-    prun = None
+from bcbio.distributed import prun
 from bcbio.pipeline.config_utils import load_config
 from bcbio.provenance import programs
 from bcbio.variation import vcfutils
@@ -48,9 +44,6 @@ class VCFUtilTest(unittest.TestCase):
     def test_1_parallel_vcf_combine(self):
         """Parallel combination of VCF files, split by chromosome.
         """
-        # Be back compatible with 0.7.6 -- remove after 0.7.7 release
-        if prun is None:
-            return
         files = [os.path.join(self.var_dir, "S1-variants.vcf"), os.path.join(self.var_dir, "S2-variants.vcf")]
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         with make_workdir() as workdir:
@@ -74,9 +67,6 @@ class VCFUtilTest(unittest.TestCase):
     def test_2_vcf_exclusion(self):
         """Exclude samples from VCF files.
         """
-        # Be back compatible with 0.7.6 -- remove after 0.7.7 release
-        if prun is None:
-            return
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         with make_workdir() as workdir:
             config = load_config(get_post_process_yaml(self.data_dir, workdir))
@@ -88,8 +78,27 @@ class VCFUtilTest(unittest.TestCase):
         vcfutils.exclude_samples(self.combo_file, out_file, to_exclude, ref_file, config)
 
     @attr(speed=1)
+    @attr(combo=True)
+    def test_3_vcf_split_combine(self):
+        """Split a VCF file into SNPs and indels, then combine back together.
+        """
+        with make_workdir() as workdir:
+            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            config["algorithm"] = {}
+        ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
+        fname = os.path.join(self.var_dir, "S1-variants.vcf")
+        snp_file, indel_file = vcfutils.split_snps_indels(fname, ref_file, config)
+        merge_file = "%s-merge%s.gz" % os.path.splitext(fname)
+        vcfutils.combine_variant_files([snp_file, indel_file], merge_file, ref_file,
+                                       config)
+        for f in [snp_file, indel_file, merge_file]:
+            for ext in ["", ".gz", ".gz.tbi", ".tbi"]:
+                if os.path.exists(f + ext):
+                    os.remove(f + ext)
+
+    @attr(speed=1)
     @attr(template=True)
-    def test_3_find_fastq_pairs(self):
+    def test_4_find_fastq_pairs(self):
         """Ensure we can correctly find paired fastq files.
         """
         test_pairs = ["/path/to/input/D1HJVACXX_2_AAGAGATC_1.fastq",

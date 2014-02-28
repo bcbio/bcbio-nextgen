@@ -137,7 +137,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         # Remove cleanup files
 
         for extra_file in cleanup_files:
-            os.remove(extra_file)
+            for ext in ["", ".gz", ".gz.tbi"]:
+                if os.path.exists(extra_file + ext):
+                    os.remove(extra_file + ext)
 
         if os.path.getsize(out_file) == 0:
             write_empty_vcf(out_file)
