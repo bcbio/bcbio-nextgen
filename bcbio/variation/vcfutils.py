@@ -293,7 +293,7 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
 
 # ## VCF preparation
 
-def bgzip_and_index(in_file, config):
+def bgzip_and_index(in_file, config, remove_orig=True):
     """bgzip and tabix index an input file, handling VCF and BED.
     """
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
@@ -307,10 +307,11 @@ def bgzip_and_index(in_file, config):
                 # Race conditions: ignore errors where file has been deleted by another
                 if os.path.exists(in_file) and not os.path.exists(out_file):
                     raise
-        try:
-            os.remove(in_file)
-        except OSError:  # Handle cases where run in parallel and file has been deleted
-            pass
+        if remove_orig:
+            try:
+                os.remove(in_file)
+            except OSError:  # Handle cases where run in parallel and file has been deleted
+                pass
     tabix_index(out_file, config)
     return out_file
 

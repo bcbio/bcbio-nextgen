@@ -20,26 +20,13 @@ def hard_w_expression(vcf_file, expression, data, filterext=""):
         with file_transaction(out_file) as tx_out_file:
             bcftools = config_utils.get_program("bcftools", data["config"])
             output_type = "z" if out_file.endswith(".gz") else "v"
-            variant_regions = clean_variant_regions(data)
-            intervals = "-t %s" % variant_regions if variant_regions else ""
+            variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
+            intervals = ("-t %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
+                         if variant_regions else "")
             cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '+' "
                    "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
     return out_file
-
-def clean_variant_regions(data):
-    """Prepare a clean input BED file without headers or overlapping segments.
-    """
-    bedtools = config_utils.get_program("bedtools", data["config"])
-    variant_regions = data["config"]["algorithm"].get("variant_regions", None)
-    if variant_regions:
-        bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
-        out_file = os.path.join(bedprep_dir, os.path.basename(variant_regions))
-        if not utils.file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
-                cmd = "sort -k1,1 -k2,2n {variant_regions} | {bedtools} merge -i > {tx_out_file}"
-                do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
-        return vcfutils.bgzip_and_index(out_file, data["config"])
 
 # ## Caller specific
 

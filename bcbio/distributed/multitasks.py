@@ -5,7 +5,7 @@ from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
                             rnaseq)
-from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, bedutils, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 
 @utils.map_wrap
@@ -110,7 +110,7 @@ def prep_gemini_db(*args):
 
 @utils.map_wrap
 def combine_bed(*args):
-    return callable.combine_bed(*args)
+    return bedutils.combine(*args)
 
 @utils.map_wrap
 def calc_callable_loci(*args):

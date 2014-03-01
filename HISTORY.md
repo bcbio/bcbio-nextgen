@@ -5,6 +5,9 @@
   SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs
   and indels instead of GATK. Use bcftools for sample selection from
   multi-sample VCFs.
+- Normalize input variant_regions BED files to avoid overlapping
+  segments. Avoids out of order errors with FreeBayes caller which will call in
+  each region without flattening the input BED.
 
 ## 0.7.7 (February 27, 2014)
 

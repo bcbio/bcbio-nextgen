@@ -10,11 +10,11 @@ import pysam
 from bcbio import utils, broad
 from bcbio.log import logger
 from bcbio.bam import callable, ref
-from bcbio.bam.trim import trim_read_through, trim_adapters
+from bcbio.bam.trim import trim_adapters
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
-from bcbio.variation import recalibrate
+from bcbio.variation import bedutils, recalibrate
 from bcbio import bam
 from bcbio.bam import fastq
 
@@ -132,7 +132,9 @@ def process_alignment(data):
 def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
+    Cleans input BED files to avoid issues with overlapping input segments.
     """
+    data = bedutils.clean_inputs(data)
     if data["work_bam"]:
         callable_region_bed, nblock_bed, callable_bed = \
             callable.block_regions(data["work_bam"], data["sam_ref"], data["config"])

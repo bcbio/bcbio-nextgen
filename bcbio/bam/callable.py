@@ -13,7 +13,6 @@ import contextlib
 import copy
 import operator
 import os
-import shutil
 
 import numpy
 try:
@@ -28,6 +27,7 @@ from bcbio.distributed import multi, prun
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
+from bcbio.variation import bedutils
 
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
@@ -43,17 +43,6 @@ def parallel_callable_loci(in_bam, ref_file, config):
                                      "callable_bed", ["config"])[0]
     return out[0]["callable_bed"]
 
-def combine_bed(in_files, out_file, config):
-    """Combine multiple BED files into a single output.
-    """
-    if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                for in_file in in_files:
-                    with open(in_file) as in_handle:
-                        shutil.copyfileobj(in_handle, out_handle)
-    return out_file
-
 @multi.zeromq_aware_logging
 def calc_callable_loci(data, region=None, out_file=None):
     """Determine callable bases for input BAM using Broad's CallableLoci walker.
@@ -65,7 +54,7 @@ def calc_callable_loci(data, region=None, out_file=None):
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
     out_summary = "%s-callable-summary.txt" % os.path.splitext(data["work_bam"])[0]
-    variant_regions = data["config"]["algorithm"].get("variant_regions", None)
+    variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
     # set a maximum depth to avoid calling in repetitive regions with excessive coverage
     max_depth = int(1e6 if data["config"]["algorithm"].get("coverage_depth", "").lower() == "super-high"
                     else 2.5e4)
