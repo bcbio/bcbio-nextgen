@@ -23,6 +23,7 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 import bcbio.rnaseq.qc
 from bcbio.variation.realign import has_aligned_reads
+from bcbio.rnaseq.coverage import plot_gene_coverage
 
 # ## High level functions to generate summary PDF
 
@@ -56,6 +57,7 @@ def _run_qc_tools(bam_file, data):
     to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
+        to_run.append(("coverage", _run_gene_coverage))
         to_run.append(("complexity", _run_complexity))
     elif data["analysis"].lower() == "chip-seq":
         to_run.append(["bamtools", _run_bamtools_stats])
@@ -175,6 +177,17 @@ class FastQCParser:
                             break
                         out.append(line.rstrip("\r\n"))
         return out
+
+def _run_gene_coverage(bam_file, data, out_dir):
+    out_file = os.path.join(out_dir, "gene_coverage.pdf")
+    ref_file = utils.get_in(data, ("genome_resources", "rnaseq", "transcripts"))
+    count_file = data["count_file"]
+    if utils.file_exists(out_file):
+        return out_file
+    with file_transaction(out_file) as tx_out_file:
+        plot_gene_coverage(bam_file, ref_file, count_file, tx_out_file)
+    return {"gene_coverage": out_file}
+
 
 def _run_fastqc(bam_file, data, fastqc_out):
     """Run fastqc, generating report in specified directory and parsing metrics.
