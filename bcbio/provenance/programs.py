@@ -32,7 +32,8 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "sambamba", "stdout_flag": "sambamba"},
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
              {"cmd": "tophat", "args": "--version", "stdout_flag": "TopHat"},
-             {"cmd": "vcflib", "has_cl_version": False}]
+             {"cmd": "vcflib", "has_cl_version": False},
+             {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
 
 def _broad_versioner(type):
     def get_version(config):
@@ -91,7 +92,10 @@ _alt_progs = [{"name": "bcbio_variation",
               {"name": "varscan",
                "version_fn": jar_versioner("varscan", "VarScan")},
               {"name": "oncofuse",
-               "version_fn": jar_versioner("Oncofuse", "Oncofuse")}]
+               "version_fn": jar_versioner("Oncofuse", "Oncofuse")},
+              {"name": "alientrimmer",
+               "version_fn": jar_versioner("AlienTrimmer", "AlienTrimmer")}
+]
 
 def _parse_from_stdoutflag(stdout, x):
     for line in stdout:
