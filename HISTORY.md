@@ -3,7 +3,8 @@
 - General removal of GATK for variant manipulation functionality to help focus
   on support for upcoming GATK 3.0. Use bcftools for splitting of variants into
   SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs
-  and indels instead of GATK.
+  and indels instead of GATK. Use bcftools for sample selection from
+  multi-sample VCFs.
 
 ## 0.7.7 (February 27, 2014)
 

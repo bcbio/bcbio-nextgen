@@ -117,6 +117,19 @@ def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
             do.run(cmd.format(**locals()), "Exclude samples: {}".format(to_exclude))
     return out_file
 
+def select_sample(in_file, sample, out_file, config):
+    """Select a single sample from the supplied multisample VCF file.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            bcftools = config_utils.get_program("bcftools", config)
+            output_type = "z" if out_file.endswith(".gz") else "v"
+            cmd = "{bcftools} view -O {output_type} {in_file} -s {sample} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Select sample: %s" % sample)
+    if out_file.endswith(".gz"):
+        bgzip_and_index(out_file, config)
+    return out_file
+
 def vcf_has_variants(in_file):
     if os.path.exists(in_file):
         with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:

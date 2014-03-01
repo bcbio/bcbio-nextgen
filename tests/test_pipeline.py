@@ -92,13 +92,26 @@ class VCFUtilTest(unittest.TestCase):
         vcfutils.combine_variant_files([snp_file, indel_file], merge_file, ref_file,
                                        config)
         for f in [snp_file, indel_file, merge_file]:
-            for ext in ["", ".gz", ".gz.tbi", ".tbi"]:
-                if os.path.exists(f + ext):
-                    os.remove(f + ext)
+            self._remove_vcf(f)
+
+    def _remove_vcf(self, f):
+        for ext in ["", ".gz", ".gz.tbi", ".tbi"]:
+            if os.path.exists(f + ext):
+                os.remove(f + ext)
+
+    @attr(speed=1)
+    @attr(combo=True)
+    def test_4_vcf_sample_select(self):
+        """Select a sample from a VCF file.
+        """
+        fname = os.path.join(self.var_dir, "S1-variants.vcf")
+        out_file = "%s-sampleselect%s.gz" % os.path.splitext(fname)
+        out_file = vcfutils.select_sample(fname, "S2", out_file, {})
+        self._remove_vcf(out_file)
 
     @attr(speed=1)
     @attr(template=True)
-    def test_4_find_fastq_pairs(self):
+    def test_5_find_fastq_pairs(self):
         """Ensure we can correctly find paired fastq files.
         """
         test_pairs = ["/path/to/input/D1HJVACXX_2_AAGAGATC_1.fastq",

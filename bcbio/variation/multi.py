@@ -7,8 +7,7 @@ import collections
 import copy
 import os
 
-from bcbio import broad, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio import utils
 from bcbio.variation import vcfutils
 
 def group_batches(xs):
@@ -78,34 +77,11 @@ def split_variants_by_sample(data):
     # population or single sample
     else:
         for sub_data, sub_vrn_file in data["group_orig"]:
-            if is_multisample(vrn_file):
-                select_sample_from_vcf(vrn_file, sub_data["name"][-1], sub_vrn_file,
-                                       data["sam_ref"], config)
+            if len(vcfutils.get_samples(vrn_file)) > 1:
+                vcfutils.select_sample(vrn_file, sub_data["name"][-1], sub_vrn_file, config)
             elif not os.path.exists(sub_vrn_file):
                 utils.symlink_plus(vrn_file, sub_vrn_file)
             if sub_vrn_file:
                 sub_data["vrn_file"] = sub_vrn_file
                 out.append(sub_data)
     return out
-
-def select_sample_from_vcf(in_file, sample, out_file, ref_file, config):
-    """Select a single sample from the supplied multisample VCF file.
-    """
-    brunner = broad.runner_from_config(config)
-    if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "SelectVariants",
-                      "-R", ref_file,
-                      "--sample_name", sample,
-                      "--variant", in_file,
-                      "--out", tx_out_file]
-            brunner.run_gatk(params)
-    return out_file
-
-def is_multisample(fname):
-    """Check VCF header to determine if we have a multi-sample file.
-    """
-    with open(fname) as in_handle:
-        for line in in_handle:
-            if line.startswith("#CHROM"):
-                return len(line.split("\t")) > 10
