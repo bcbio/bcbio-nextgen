@@ -106,9 +106,9 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
         with file_transaction(out_file_indels) as tx_out_file:
             params_indels += ["-o", tx_out_file]
             broad_runner.run_mutect(params_indels)
-        out_file = vcfutils.merge_variant_files(orig_files=[out_file_mutect,out_file_indels],
+        out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect,out_file_indels],
                                        out_file=out_file, 
-                                       ref_file=None, 
+                                       ref_file=items[0]["sam_ref"], 
                                        config=items[0]["config"], 
                                        region=None)
         
