@@ -238,7 +238,7 @@ Alignment
 
 - ``platform`` Sequencing platform used. Corresponds to the ``PL``
   parameter in BAM read groups. Default 'Illumina'.
--  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign,
+-  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign, star,
    false]
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
    handles adding read groups, sorting to a reference genome and
@@ -299,7 +299,7 @@ Variant calling
 
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
    multiple options [gatk, freebayes, varscan, samtools,
-   gatk-haplotype, cortex]
+   gatk-haplotype, cortex, mutect]
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [picard,
    biobambam, samtools, false]
