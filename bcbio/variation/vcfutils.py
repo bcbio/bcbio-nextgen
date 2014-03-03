@@ -345,6 +345,6 @@ def tabix_index(in_file, config, preset=None):
             tabix = tools.get_tabix_cmd(config)
             tx_in_file = os.path.splitext(tx_out_file)[0]
             utils.symlink_plus(in_file, tx_in_file)
-            cmd = "{tabix} -p {preset} {tx_in_file}"
+            cmd = "{tabix} -f -p {preset} {tx_in_file}"
             do.run(cmd.format(**locals()), "tabix index %s" % os.path.basename(in_file))
     return out_file
