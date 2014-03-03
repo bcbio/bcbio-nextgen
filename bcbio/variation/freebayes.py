@@ -88,6 +88,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 
     This is used for paired tumor / normal samples.
     """
+    config = items[0]["config"]
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
@@ -95,7 +96,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             paired = get_paired_bams(align_bams, items)
             if not paired.normal_bam:
                 raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
-            config = items[0]["config"]
+
             vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(
