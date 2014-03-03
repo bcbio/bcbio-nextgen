@@ -121,6 +121,8 @@ def combine_pairs(input_files):
                 continue
             a = rstrip_extra(utils.splitext_plus(os.path.basename(in_file))[0])
             b = rstrip_extra(utils.splitext_plus(os.path.basename(comp_file))[0])
+            if len(a) != len(b):
+                continue
             s = dif(a,b)
             if len(s) > 1:
                 continue #there is only 1 difference
