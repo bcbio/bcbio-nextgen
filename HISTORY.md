@@ -1,5 +1,9 @@
 ## 0.7.8 (In development)
 
+- Use bgzipped/tabix indexed variant files throughout pipeline instead of raw
+  uncompressed VCFs. Reduces space requirements and enables parallelization on
+  non-shared filesystems or temporary space by avoiding transferring
+  uncompressed outputs.
 - General removal of GATK for variant manipulation functionality to help focus
   on support for upcoming GATK 3.0. Use bcftools for splitting of variants into
   SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs

@@ -64,7 +64,7 @@ def write_empty_vcf(out_file):
 def split_snps_indels(orig_file, ref_file, config):
     """Split a variant call file into SNPs and INDELs for processing.
     """
-    base, ext = os.path.splitext(orig_file)
+    base, ext = utils.splitext_plus(orig_file)
     snp_file = "{base}-snp{ext}".format(base=base, ext=ext)
     indel_file = "{base}-indel{ext}".format(base=base, ext=ext)
     for out_file, select_arg in [(snp_file, "--types snps"),
@@ -215,6 +215,8 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            if len(orig_files) > 0 and orig_files[0].endswith(".gz"):
+                orig_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
             sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
             input_vcf_file = "%s-files.txt" % os.path.splitext(out_file)[0]
             with open(input_vcf_file, "w") as out_handle:

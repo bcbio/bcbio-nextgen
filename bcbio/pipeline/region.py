@@ -123,7 +123,7 @@ def parallel_variantcall_region(samples, run_parallel):
                 to_group.append(x[0])
             else:
                 extras.append(x)
-    split_fn = _split_by_ready_regions("-variants.vcf", "work_bam", genotype.get_variantcaller)
+    split_fn = _split_by_ready_regions("-variants.vcf.gz", "work_bam", genotype.get_variantcaller)
     if len(to_group) > 0:
         extras += group_combine_parts(to_group)
     return extras + grouped_parallel_split_combine(to_process, split_fn,

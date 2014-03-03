@@ -3,8 +3,8 @@
 import datetime
 import os
 
+from bcbio import utils
 from bcbio.upload import shared, filesystem, galaxy, s3
-from bcbio.utils import file_exists
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -82,10 +82,7 @@ def _get_files_variantcall(sample):
 def _maybe_add_variant_file(algorithm, sample, out):
     if sample["work_bam"] is not None and sample.get("vrn_file"):
         for x in sample["variants"]:
-            out.append({"path": x["vrn_file"],
-                        "type": "vcf",
-                        "ext": x["variantcaller"],
-                        "variantcaller": x["variantcaller"]})
+            out.extend(_get_vcf(x, ("vrn_file",)))
             if x.get("bed_file"):
                 out.append({"path": x["bed_file"],
                             "type": "bed",
@@ -93,6 +90,28 @@ def _maybe_add_variant_file(algorithm, sample, out):
                             "variantcaller": x["variantcaller"]})
     return out
 
+def _get_vcf(x, key):
+    """Retrieve VCF file with the given key if it exists, handling bgzipped.
+    """
+    out = []
+    fname = utils.get_in(x, key)
+    if fname:
+        if fname.endswith(".gz"):
+            out.append({"path": fname,
+                        "type": "vcf.gz",
+                        "ext": x["variantcaller"],
+                        "variantcaller": x["variantcaller"]})
+            if utils.file_exists(fname + ".tbi"):
+                out.append({"path": fname + ".tbi",
+                            "type": "vcf.gz.tbi",
+                            "ext": x["variantcaller"],
+                            "variantcaller": x["variantcaller"]})
+        else:
+            out.append({"path": fname,
+                        "type": "vcf",
+                        "ext": x["variantcaller"],
+                        "variantcaller": x["variantcaller"]})
+    return out
 
 def _maybe_add_summary(algorithm, sample, out):
     out = []
@@ -112,7 +131,7 @@ def _maybe_add_alignment(algorithm, sample, out):
         out.append({"path": sample["work_bam"],
                     "type": "bam",
                     "ext": "ready"})
-        if file_exists(sample["work_bam"] + ".bai"):
+        if utils.file_exists(sample["work_bam"] + ".bai"):
             out.append({"path": sample["work_bam"] + ".bai",
                         "type": "bam.bai",
                         "ext": "ready"})
@@ -123,7 +142,7 @@ def _maybe_add_counts(algorithm, sample, out):
                 "type": "counts",
                 "ext": "ready"})
     stats_file = os.path.splitext(sample["count_file"])[0] + ".stats"
-    if file_exists(stats_file):
+    if utils.file_exists(stats_file):
         out.append({"path": stats_file,
                     "type": "count_stats",
                     "ext": "ready"})
@@ -163,12 +182,7 @@ def _get_files_project(sample, upload_config):
                 out.append({"path": pop_db,
                             "type": "sqlite",
                             "variantcaller": x["variantcaller"]})
-            pop_vcf = x["population"].get("vcf")
-            if pop_vcf:
-
-                out.append({"path": pop_vcf,
-                            "type": "vcf",
-                            "variantcaller": x["variantcaller"]})
+            out.extend(_get_vcf(x, ("population", "vcf")))
     for x in sample.get("variants", []):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})

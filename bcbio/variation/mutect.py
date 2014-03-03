@@ -85,7 +85,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
     """Run the MuTect paired analysis algorithm.
     """
     if out_file is None:
-        out_file = "%s-paired-variants.vcf" % os.path.splitext(align_bams[0])[0]
+        out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         broad_runner, params = \
             _mutect_call_prep(align_bams, items, ref_file, assoc_files,

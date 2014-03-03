@@ -1,5 +1,6 @@
 """Helpful utilities for building analysis pipelines.
 """
+import gzip
 import os
 import tempfile
 import time
@@ -274,6 +275,9 @@ def symlink_plus(orig, new):
         if os.path.exists(orig_noext + sub_ext) and not os.path.lexists(new_noext + sub_ext):
             with chdir(os.path.dirname(new_noext)):
                 os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
+
+def open_gzipsafe(f):
+    return gzip.open(f) if f.endswith(".gz") else open(f)
 
 def append_stem(to_transform, word):
     """

@@ -9,7 +9,7 @@ except ImportError:
     pybedtools = None
 import pysam
 
-from bcbio import bam, broad
+from bcbio import bam, broad, utils
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction
@@ -147,7 +147,7 @@ def subset_variant_regions(variant_regions, region, out_file):
     elif not isinstance(region, (list, tuple)) and region.find(":") > 0:
         raise ValueError("Partial chromosome regions not supported")
     else:
-        subset_file = "{0}-regions.bed".format(os.path.splitext(out_file)[0])
+        subset_file = "{0}-regions.bed".format(utils.splitext_plus(out_file)[0])
         if not os.path.exists(subset_file):
             with file_transaction(subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):

@@ -7,11 +7,12 @@ from distutils.version import LooseVersion
 import os
 import shutil
 
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import file_exists, append_stem
-from bcbio.variation import freebayes, samtools
+from bcbio.variation import freebayes, samtools, vcfutils
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
                                       get_paired_bams, is_paired_analysis)
 
@@ -69,7 +70,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         raise ValueError("Require both tumor and normal BAM files for VarScan cancer calling")
 
     if not file_exists(out_file):
-        base, ext = os.path.splitext(out_file)
+        orig_out_file = out_file
+        out_file = orig_out_file.replace(".vcf.gz", ".vcf")
+        base, ext = utils.splitext_plus(out_file)
         cleanup_files = []
         for fname, mpext in [(paired.normal_bam, "normal"), (paired.tumor_bam, "tumor")]:
             mpfile = "%s-%s.mpileup" % (base, mpext)
@@ -143,6 +146,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
         if os.path.getsize(out_file) == 0:
             write_empty_vcf(out_file)
+
+        if orig_out_file.endswith(".gz"):
+            vcfutils.bgzip_and_index(out_file, config)
 
 
 def _fix_varscan_vcf(orig_file, normal_name, tumor_name):

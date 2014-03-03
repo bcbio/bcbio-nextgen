@@ -22,9 +22,9 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
     config = items[0]["config"]
     if out_file is None:
         if vcfutils.is_paired_analysis(align_bams, items):
-            out_file = "%s-paired-variants.vcf" % config["metdata"]["batch"]
+            out_file = "%s-paired-variants.vcf.gz" % config["metdata"]["batch"]
         else:
-            out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
+            out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
         logger.info("Genotyping with {name}: {region} {fname}".format(
             name=name, region=region, fname=os.path.basename(align_bams[0])))
@@ -88,11 +88,12 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_fil
         bcftools_opts = "call -v -c"
     else:
         bcftools_opts = "view -v -c -g"
+    compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
     vcfutils = config_utils.get_program("vcfutils.pl", config)
     cmd = ("{mpileup} "
            "| {bcftools} {bcftools_opts} - "
            "| {vcfutils} varFilter -D {max_read_depth} "
            "| sed 's/,Version=3>/>/'"
-           "> {out_file}")
+           "{compress_cmd} > {out_file}")
     logger.info(cmd.format(**locals()))
     do.run(cmd.format(**locals()), "Variant calling with samtools", {})

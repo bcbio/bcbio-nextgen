@@ -29,6 +29,7 @@ def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
                out_file=None):
     """Top level entry to regional de-novo based variant calling with cortex_var.
     """
+    raise NotImplementedError("Cortex currently out of date and needs reworking.")
     if len(align_bams) == 1:
         align_bam = align_bams[0]
         config = items[0]["config"]

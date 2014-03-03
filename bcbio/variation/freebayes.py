@@ -5,8 +5,7 @@ http://bioinformatics.bc.edu/marthlab/FreeBayes
 import os
 import shutil
 
-from bcbio import bam
-from bcbio.utils import file_exists
+from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
@@ -61,8 +60,8 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
     """
     config = items[0]["config"]
     if out_file is None:
-        out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
-    if not file_exists(out_file):
+        out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
+    if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             for align_bam in align_bams:
                 bam.index(align_bam, config)
@@ -73,10 +72,11 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             input_bams = " ".join("-b %s" % x for x in align_bams)
             opts = " ".join(_freebayes_options_from_config(items, config["algorithm"],
                                                            out_file, region))
+            compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
-                   "{vcffilter} -f 'QUAL > 5' -s | {vcfallelicprimitives} | {vcfstreamsort} > {tx_out_file}")
+                   "{vcffilter} -f 'QUAL > 5' -s | {vcfallelicprimitives} | {vcfstreamsort} "
+                   "{compress_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
-        clean_vcf_output(out_file, _clean_freebayes_output, "nodups")
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"],
                                                ref_file, config)
@@ -89,8 +89,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     This is used for paired tumor / normal samples.
     """
     if out_file is None:
-        out_file = "%s-paired-variants.vcf" % os.path.splitext(align_bams[0])[0]
-    if not file_exists(out_file):
+        out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
+    if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             paired = get_paired_bams(align_bams, items)
             if not paired.normal_bam:
@@ -104,16 +104,15 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             opts += " -f {}".format(ref_file)
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
+            compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             cl = ("{freebayes} --pooled-discrete --pvar 0.7"
                   " --genotype-qualities {opts} {paired.tumor_bam}"
                   " {paired.normal_bam} | {vcfsamplediff} -s VT"
                   " {paired.normal_name} {paired.tumor_name}"
-                  " - >  {tx_out_file}")
+                  " - {compress_cmd} >  {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
-        clean_vcf_output(out_file, _clean_freebayes_output, "nodups")
-
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"], ref_file,
                                                config)
@@ -129,6 +128,10 @@ def _move_vcf(orig_file, new_file):
 
 def _clean_freebayes_output(line):
     """Clean FreeBayes output to make post-processing with GATK happy.
+
+    XXX Not applied on recent versions which fix issues to be more compatible
+    with bgzip output, but retained in case of need.
+
     - Remove lines from FreeBayes outputs where REF/ALT are identical:
       2       22816178        .       G       G       0.0339196
       or there are multiple duplicate alleles:
@@ -150,9 +153,9 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
     """Provide framework to clean a file in-place, with the specified clean
     function.
     """
-    base, ext = os.path.splitext(orig_file)
+    base, ext = utils.splitext_plus(orig_file)
     out_file = "{0}-{1}{2}".format(base, name, ext)
-    if not file_exists(out_file):
+    if not utils.file_exists(out_file):
         with open(orig_file) as in_handle:
             with file_transaction(out_file) as tx_out_file:
                 with open(tx_out_file, "w") as out_handle:
