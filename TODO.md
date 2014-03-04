@@ -58,9 +58,6 @@ These are roughly ordered by current priority and we welcome contributors.
   multiple fastq/BAM inputs and correctly maintaining lane information in BAM
   read group headers.
 
-- Implement and evaluate GATK's ReducedReads for use in large scale variant
-  calling projects ([#90][90]).
-
 - Test to see if [less strict quality trimming][quality] results in better RNA-seq DE results.
 
 - Evaluate RNA-seq fusion analysis callers and implement support for one if we can find one with
@@ -68,5 +65,3 @@ These are roughly ordered by current priority and we welcome contributors.
 
 [210]: https://github.com/chapmanb/bcbio-nextgen/issues/210
 [quality]: http://biorxiv.org/content/early/2013/12/23/000422
-[90]: https://github.com/chapmanb/bcbio-nextgen/issues/90
-

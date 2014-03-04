@@ -1,13 +1,4 @@
-"""Provide SNP, indel calling and variation analysis using GATK genotyping tools.
-
-Genotyping:
-
-http://www.broadinstitute.org/gsa/wiki/index.php/Best_Practice_Variant_Detection_with_the_GATK_v3
-http://www.broadinstitute.org/gsa/wiki/index.php/Unified_genotyper
-
-Variant Evaluation:
-
-http://www.broadinstitute.org/gsa/wiki/index.php/VariantEval
+"""Provide SNP and indel calling using GATK genotyping tools.
 """
 import os
 import collections
@@ -285,104 +276,6 @@ def _variant_filtration_indel(snp_file, ref_file, vrn_files, data):
                     return _variant_filtration_indel(snp_file, ref_file, vrn_files, data)
         return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
                                     tranches_file, filter_type)
-
-# ## Variant evaluation
-
-def gatk_evaluate_variants(vcf_file, ref_file, config, dbsnp=None):
-    """Evaluate variants, return SNP counts and Transition/Transversion ratios.
-    """
-    runner = broad.runner_from_config(config)
-    eval_file = variant_eval(vcf_file, ref_file, dbsnp, runner)
-    stats = _extract_eval_stats(eval_file)
-    return _format_stats(stats['called'])
-
-def _format_stats(stats):
-    """Convert statistics into high level summary of major variables.
-    """
-    total = sum(itertools.chain.from_iterable(s.itervalues() for s in stats.itervalues()))
-    if total > 0:
-        dbsnp = sum(stats['known'].itervalues()) / float(total) * 100.0
-    else:
-        dbsnp = -1.0
-    tv_dbsnp = stats['known']['tv']
-    ti_dbsnp = stats['known']['ti']
-    tv_novel = stats['novel']['tv']
-    ti_novel = stats['novel']['ti']
-    if tv_novel > 0 and tv_dbsnp > 0:
-        titv_all = float(ti_novel + ti_dbsnp) / float(tv_novel + tv_dbsnp)
-        titv_dbsnp = float(ti_dbsnp) / float(tv_dbsnp)
-        titv_novel = float(ti_novel) / float(tv_novel)
-    else:
-        titv_all, titv_dbsnp, titv_novel = (-1.0, -1.0, -1.0)
-    return dict(total=total, dbsnp_pct=dbsnp, titv_all=titv_all,
-                titv_dbsnp=titv_dbsnp, titv_novel=titv_novel)
-
-def _extract_eval_stats(eval_file):
-    """Parse statistics of interest from GATK output file.
-    """
-    stats = dict()
-    for snp_type in ['called', 'filtered']:
-        stats[snp_type] = dict()
-        for dbsnp_type in ['known', 'novel']:
-            stats[snp_type][dbsnp_type] = dict(ti=0, tv=0)
-    for line in _eval_analysis_type(eval_file, "Ti/Tv Variant Evaluator"):
-        if line[1:3] == ['dbsnp', 'eval']:
-            snp_type = line[3]
-            dbsnp_type = line[5]
-            try:
-                cur = stats[snp_type][dbsnp_type]
-            except KeyError:
-                cur = None
-            if cur:
-                stats[snp_type][dbsnp_type]["ti"] = int(line[6])
-                stats[snp_type][dbsnp_type]["tv"] = int(line[7])
-    return stats
-
-def _eval_analysis_type(in_file, analysis_name):
-    """Retrieve data lines associated with a particular analysis.
-    """
-    supported_versions = ["v0.2", "v1.0", "v1.1"]
-    with open(in_file) as in_handle:
-        # read until we reach the analysis
-        for line in in_handle:
-            if line.startswith(("##:GATKReport", "#:GATKReport")):
-                version = line.split()[0].split(".", 1)[-1].split(":")[0]
-                assert version in supported_versions, \
-                       "Unexpected GATKReport version: {0}".format(version)
-                if line.find(analysis_name) > 0:
-                    break
-        # read off header lines
-        for _ in range(1):
-            in_handle.next()
-        # read the table until a blank line
-        for line in in_handle:
-            if not line.strip():
-                break
-            parts = line.rstrip("\n\r").split()
-            yield parts
-
-def variant_eval(vcf_in, ref_file, dbsnp, picard):
-    """Evaluate variants in comparison with dbSNP reference.
-    """
-    out_file = "%s.eval" % utils.splitext_plus(vcf_in)[0]
-    if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "VariantEval",
-                      "-R", ref_file,
-                      "--eval", vcf_in,
-                      "-L", vcf_in,
-                      "--dbsnp", dbsnp,
-                      "-ST", "Filter",
-                      "-o", tx_out_file,
-                      "-l", "INFO",
-                      "--doNotUseAllStandardModules",
-                      "--evalModule", "CompOverlap",
-                      "--evalModule", "CountVariants",
-                      "--evalModule", "TiTvVariantEvaluator",
-                      "--evalModule", "ValidationReport",
-                      "--stratificationModule", "Filter"]
-            picard.run_gatk(params)
-    return out_file
 
 # ## High level functionality to run genotyping in parallel
 
