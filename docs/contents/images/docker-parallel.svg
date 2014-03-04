@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="docker-parallel.svg"
+   inkscape:export-filename="/home/bchapman/bio/bcbio-nextgen/docs/contents/images/docker-parallel.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
+  <defs
+     id="defs4">
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lend"
+       style="overflow:visible">
+      <path
+         id="path8669"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lend-5"
+       style="overflow:visible">
+      <path
+         id="path8669-1"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         inkscape:connector-curvature="0" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="375"
+     inkscape:cy="522.00213"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1918"
+     inkscape:window-height="1150"
+     inkscape:window-x="0"
+     inkscape:window-y="24"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana"
+       x="224.18011"
+       y="219.51599"
+       id="text2991-0-3"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="224.18011"
+         y="219.51599"
+         id="tspan2995-8-2">Cluster scheduler</tspan><tspan
+         sodipodi:role="line"
+         x="224.18011"
+         y="239.51599"
+         id="tspan3157">(SLURM, Torque,</tspan><tspan
+         sodipodi:role="line"
+         x="224.18011"
+         y="259.51602"
+         id="tspan3943"> SGE, LSF)</tspan></text>
+    <g
+       id="g3933"
+       transform="translate(-27.274119,-18.182745)">
+      <rect
+         y="200.80357"
+         x="33.335033"
+         height="97.984802"
+         width="212.13202"
+         id="rect3159"
+         style="opacity:0.98999999;fill:#3dc982;stroke:none" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text2991-0"
+         y="247.80026"
+         x="45.644939"
+         style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana"
+         xml:space="preserve"><tspan
+           y="247.80026"
+           x="45.644939"
+           id="tspan2993-5"
+           sodipodi:role="line">bcbio-nextgen</tspan><tspan
+           id="tspan2995-8"
+           y="267.80026"
+           x="45.644939"
+           sodipodi:role="line">(workflow and parallel)</tspan></text>
+      <text
+         sodipodi:linespacing="125%"
+         id="text2991-0-4"
+         y="291.23685"
+         x="46.393257"
+         style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana"
+         xml:space="preserve"><tspan
+           id="tspan2995-8-1"
+           y="291.23685"
+           x="46.393257"
+           sodipodi:role="line">IPython parallel</tspan></text>
+      <text
+         sodipodi:linespacing="125%"
+         id="text3929"
+         y="224.03709"
+         x="43.43655"
+         style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Georgia;-inkscape-font-specification:Georgia"
+         xml:space="preserve"><tspan
+           y="224.03709"
+           x="43.43655"
+           id="tspan3931"
+           sodipodi:role="line">bcbio-nextgen-vm</tspan></text>
+    </g>
+    <g
+       id="g4119"
+       transform="translate(25.253814,2.0203051)">
+      <g
+         transform="translate(-52.52792,-31.314735)"
+         id="g3107">
+        <rect
+           style="opacity:0.98999999;fill:#91b4e0;stroke:none"
+           id="rect2985"
+           width="174.75639"
+           height="112.12692"
+           x="403.05087"
+           y="213.93558" />
+        <text
+           xml:space="preserve"
+           style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Georgia;-inkscape-font-specification:Georgia"
+           x="411.13208"
+           y="235.14877"
+           id="text2987"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan2989"
+             x="411.13208"
+             y="235.14877">Docker Container</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana"
+           x="420.22345"
+           y="255.35181"
+           id="text2991"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan2993"
+             x="420.22345"
+             y="255.35181">bcbio-nextgen</tspan><tspan
+             sodipodi:role="line"
+             x="420.22345"
+             y="275.35181"
+             id="tspan2995">(run tools)</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana"
+           x="419.29861"
+           y="295.59619"
+           id="text2991-5"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             x="419.29861"
+             y="295.59619"
+             id="tspan2995-3">external tools</tspan><tspan
+             sodipodi:role="line"
+             x="419.29861"
+             y="315.59619"
+             id="tspan3061">(bwa, freebayes...)</tspan></text>
+      </g>
+      <text
+         sodipodi:linespacing="125%"
+         id="text4009"
+         y="176.55992"
+         x="371.73615"
+         style="font-size:24px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Georgia;-inkscape-font-specification:Georgia Bold"
+         xml:space="preserve"><tspan
+           y="176.55992"
+           x="371.73615"
+           id="tspan4011"
+           sodipodi:role="line">Machine 1</tspan></text>
+      <rect
+         y="153.2704"
+         x="347.94156"
+         height="149.61461"
+         width="179.91917"
+         id="rect4034-8"
+         style="opacity:0.98999999;fill:none;stroke:#000000;stroke-width:0.88797706;stroke-opacity:1" />
+    </g>
+    <g
+       transform="translate(209.60664,2.0203054)"
+       id="g4119-7">
+      <g
+         transform="translate(-52.52792,-31.314735)"
+         id="g3107-8">
+        <rect
+           style="opacity:0.98999999;fill:#91b4e0;stroke:none"
+           id="rect2985-7"
+           width="174.75639"
+           height="112.12692"
+           x="403.05087"
+           y="213.93558" />
+        <text
+           xml:space="preserve"
+           style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Georgia;-inkscape-font-specification:Georgia"
+           x="411.13208"
+           y="235.14877"
+           id="text2987-2"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan2989-2"
+             x="411.13208"
+             y="235.14877">Docker Container</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana"
+           x="420.22345"
+           y="255.35181"
+           id="text2991-2"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan2993-3"
+             x="420.22345"
+             y="255.35181">bcbio-nextgen</tspan><tspan
+             sodipodi:role="line"
+             x="420.22345"
+             y="275.35181"
+             id="tspan2995-9">(run tools)</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Verdana;-inkscape-font-specification:Verdana"
+           x="419.29861"
+           y="295.59619"
+           id="text2991-5-1"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             x="419.29861"
+             y="295.59619"
+             id="tspan2995-3-7">external tools</tspan><tspan
+             sodipodi:role="line"
+             x="419.29861"
+             y="315.59619"
+             id="tspan3061-2">(bwa, freebayes...)</tspan></text>
+      </g>
+      <text
+         sodipodi:linespacing="125%"
+         id="text4009-4"
+         y="176.55992"
+         x="371.73615"
+         style="font-size:24px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Georgia;-inkscape-font-specification:Georgia Bold"
+         xml:space="preserve"><tspan
+           y="176.55992"
+           x="371.73615"
+           id="tspan4011-2"
+           sodipodi:role="line">Machine 2</tspan></text>
+      <rect
+         y="153.2704"
+         x="347.94156"
+         height="149.61461"
+         width="179.91917"
+         id="rect4034-8-9"
+         style="opacity:0.98999999;fill:none;stroke:#000000;stroke-width:0.88797706;stroke-opacity:1" />
+    </g>
+  </g>
+</svg>
