@@ -151,9 +151,7 @@ def subset_variant_regions(variant_regions, region, out_file):
         if not os.path.exists(subset_file):
             with file_transaction(subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
-                    c, s, e = region
-                    safe_region = [c, s, e - 2]
-                    _subset_bed_by_region(variant_regions, tx_subset_file, safe_region)
+                    _subset_bed_by_region(variant_regions, tx_subset_file, region)
                 else:
                     _rewrite_bed_with_chrom(variant_regions, tx_subset_file, region)
         if os.path.getsize(subset_file) == 0:
