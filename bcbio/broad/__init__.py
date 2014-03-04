@@ -23,8 +23,8 @@ class BroadRunner:
         self._picard_ref = config_utils.expand_path(picard_ref)
         self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
-        self._gatk_version, self._picard_version, self._mutect_version = (
-            None, None, None)
+        self._gatk_version, self._picard_version, self._mutect_version, self._mutect_type = (
+            None, None, None, None)
         self._gatk_resources = resources
 
     def _set_default_versions(self, config):
@@ -202,7 +202,21 @@ class BroadRunner:
         if self._mutect_version is None:
             self._set_default_versions(self._config)
         return self._mutect_version
-
+        
+    def mutect_type(self):
+        """ Check mutect jar for SomaticIndelDetector, which is an Appistry feature
+        """
+        if self._mutect_type is None:
+            gatk_jar = self._get_jar("muTect")
+            cl = ["java", "-Xms64m", "-Xmx128m", "-jar", gatk_jar, "-h"]
+            appistry = False
+            with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+                if "SomaticIndelDetector" in stdout.read().strip():
+                    self._mutect_type = "-appistry"
+                else:
+                    self._mutect_type = ""
+        return self._mutect_type
+        
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
         Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,

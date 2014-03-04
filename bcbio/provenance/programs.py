@@ -43,6 +43,8 @@ def _broad_versioner(type):
             return runner.get_gatk_version()
         elif type == "picard":
             return runner.get_picard_version("ViewSam")
+        elif type == "mutect":
+            return jar_versioner("mutect", "muTect")(config) + runner.mutect_type()
         else:
             raise NotImplementedError(type)
     return get_version
@@ -83,7 +85,7 @@ _alt_progs = [{"name": "bcbio_variation",
                "version_fn": jar_versioner("bcbio_variation", "bcbio.variation")},
               {"name": "gatk", "version_fn": _broad_versioner("gatk")},
               {"name": "mutect",
-               "version_fn": jar_versioner("mutect", "muTect")},
+               "version_fn": _broad_versioner("mutect")},
               {"name": "picard", "version_fn": _broad_versioner("picard")},
               {"name": "rnaseqc",
                "version_fn": jar_versioner("rnaseqc", "RNA-SeQC")},
