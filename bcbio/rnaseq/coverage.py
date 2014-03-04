@@ -5,12 +5,11 @@ Functions to handle plotting coverage across genes
 try:
     import gffutils
     from chanjo import bam
+    import pandas as pd
+    import matplotlib.pyplot as plt
 except ImportError:
-    bam = None
-    gffutils = None
+    bam, gffutils, pd, plt = None, None, None, None
 
-import pandas as pd
-import matplotlib.pyplot as plt
 import random
 import numpy as np
 
@@ -57,13 +56,13 @@ def _gene_depth(dbfn, bamfn, gene):
     the gene
     """
     db = gffutils.FeatureDB(dbfn, keep_order=True)
-    read_depths =  []
+    read_depths = []
     bam_handle = bam.CoverageAdapter(bamfn)
     for exon in db.children(gene, featuretype="exon", order_by='start'):
         read_depths += bam_handle.read(exon.seqid, exon.start, exon.end).tolist()
     # return a list of depths going in the 5' -> 3' direction
     if db[gene].strand == "-":
-       read_depths = read_depths[::-1]
+        read_depths = read_depths[::-1]
     else:
         return read_depths
 

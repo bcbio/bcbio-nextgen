@@ -4,6 +4,7 @@ import contextlib
 
 from IPython.parallel import require
 
+from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (config_utils, disambiguate, sample, lane, qcsummary, shared,
                             variation, rnaseq)
@@ -132,6 +133,11 @@ def generate_bigwig(*args):
 def combine_bam(*args):
     with _setup_logging(args):
         return apply(shared.combine_bam, *args)
+
+@require(callable)
+def combine_sample_regions(*args):
+    with _setup_logging(args):
+        return apply(callable.combine_sample_regions, *args)
 
 @require(genotype)
 def variantcall_sample(*args):

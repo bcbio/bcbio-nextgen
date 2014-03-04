@@ -318,7 +318,7 @@ def _combine_excessive_coverage(samples, ref_regions, min_n_size):
     else:
         return merge_ecs
 
-def combine_sample_regions(samples):
+def combine_sample_regions(*samples):
     """Create global set of callable regions for multi-sample calling.
 
     Intersects all non-callable (nblock) regions from all samples,
@@ -356,4 +356,4 @@ def combine_sample_regions(samples):
     regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
                "noanalysis": no_analysis_file,
                "analysis_bed": analysis_file}
-    return regions
+    return [regions]

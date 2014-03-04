@@ -12,7 +12,6 @@ import resource
 import tempfile
 
 from bcbio import install, log, structural, utils, upload
-from bcbio.bam import callable
 from bcbio.distributed import clargs, prun, runfn
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
@@ -305,7 +304,7 @@ class Variant2Pipeline(AbstractPipeline):
             samples = alignprep.merge_split_alignments(samples, run_parallel)
             samples = disambiguate.resolve(samples, run_parallel)
             samples = run_parallel("postprocess_alignment", samples)
-            regions = callable.combine_sample_regions(samples)
+            regions = run_parallel("combine_sample_regions", [samples])[0]
             samples = region.add_region_info(samples, regions)
             samples = region.clean_sample_data(samples)
             logger.info("Timing: coverage")

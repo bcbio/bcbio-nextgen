@@ -117,6 +117,10 @@ def calc_callable_loci(*args):
     return callable.calc_callable_loci(*args)
 
 @utils.map_wrap
+def combine_sample_regions(*args):
+    return callable.combine_sample_regions(*args)
+
+@utils.map_wrap
 def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
 

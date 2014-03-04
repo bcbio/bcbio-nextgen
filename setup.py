@@ -22,7 +22,7 @@ def write_version_py():
                                     '__git_revision__ = "%s"' % githash]))
 
 with open("requirements.txt", "r") as f:
-    install_requires = [x.strip() for x in f.readlines() if not x.startswith("bcbio-nextgen")]
+    install_requires = [x.strip() for x in f.readlines() if not x.startswith(("bcbio-nextgen", "#"))]
 
 # library-only install: enable skipping of scripts and requirements for conda builds
 if "--record=/dev/null" in sys.argv:
