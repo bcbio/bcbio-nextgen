@@ -68,7 +68,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     for x in align_bams:
         bam.index(x, base_config)
 
-    params = ["-R", ref_file, "-T", "MuTect"]
+    params = ["-R", ref_file, "-T", "MuTect", "-U", "ALLOW_N_CIGAR_READS"]
     paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
     params += ["--tumor_sample_name", paired.tumor_name]
@@ -87,15 +87,54 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
+        base_config = items[0]["config"]
+        broad_runner = broad.runner_from_config(base_config, "mutect")
+        if "appistry" in broad_runner.get_mutect_version():
+            out_file_mutect = out_file.replace(".vcf","-mutect.vcf") if "vcf" in out_file else out_file + "-mutect.vcf"
+        else:
+            out_file_mutect = out_file
         broad_runner, params = \
             _mutect_call_prep(align_bams, items, ref_file, assoc_files,
-                                   region, out_file)
+                                   region, out_file_mutect)
         if (not isinstance(region, (list, tuple)) and
               not all(has_aligned_reads(x, region) for x in align_bams)):
                 vcfutils.write_empty_vcf(out_file)
                 return
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(out_file_mutect) as tx_out_file:
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
+        if "appistry" in broad_runner.get_mutect_version():
+            # SomaticIndelDetector modifications
+            out_file_indels = out_file.replace(".vcf","-somaticIndels.vcf")  if "vcf" in out_file else out_file + "-mutect.vcf"
+            params_indels = _SID_call_prep(align_bams, items, ref_file, assoc_files,
+                                       region, out_file_indels)
+            with file_transaction(out_file_indels) as tx_out_file:
+                params_indels += ["-o", tx_out_file]
+                broad_runner.run_mutect(params_indels)
+            out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect,out_file_indels],
+                                           out_file=out_file, 
+                                           ref_file=items[0]["sam_ref"], 
+                                           config=items[0]["config"], 
+                                           region=None)
     return out_file
+
+def _SID_call_prep(align_bams, items, ref_file, assoc_files,
+                       region=None, out_file=None):
+    """Preparation work for SomaticIndelDetector.
+    """
+    base_config = items[0]["config"]
+    for x in align_bams:
+        bam.index(x, base_config)
+
+    params = ["-R", ref_file, "-T", "SomaticIndelDetector", "-U", "ALLOW_N_CIGAR_READS"]
+    paired = vcfutils.get_paired_bams(align_bams, items)
+    params += ["-I:tumor", paired.tumor_bam]
+    if paired.normal_bam is not None:
+        params += ["-I:normal", paired.normal_bam]
+    else:
+         params += ["--unpaired"]
+    if region:
+        params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
+                   "INTERSECTION"]
+    return params
