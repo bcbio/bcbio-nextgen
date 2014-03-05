@@ -24,7 +24,7 @@ def count(data):
     work_dir = data["dirs"].get("work", "work")
     out_dir = os.path.join(work_dir, "htseq-count")
     safe_makedir(out_dir)
-    count_file = _count_file_name(in_bam, out_dir)
+    count_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
     if file_exists(count_file):
         return count_file
 
@@ -71,10 +71,6 @@ def _format_count_file(count_file):
         df_sub.to_csv(tx_out_file, sep="\t", index_label="id", header=False)
     return out_file
 
-
-def _count_file_name(in_bam, out_dir):
-    out_stem = os.path.basename(os.path.splitext(in_bam)[0]) + ".counts"
-    return os.path.join(out_dir, out_stem)
 
 def _strand_flag(config):
     """

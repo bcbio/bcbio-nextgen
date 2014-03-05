@@ -12,6 +12,7 @@ except ImportError:
 
 import random
 import numpy as np
+from collections import defaultdict, Counter
 
 from bcbio.utils import file_exists
 
@@ -21,7 +22,7 @@ def _select_random_nonzero_genes(count_file):
     given a count file with rows of gene_ids and columns of counts
     return a random set of genes with non-zero counts
     """
-    MIN_READS = 10
+    MIN_READS = 100
     DEFAULT_NUM_SAMPLES = 100
     df = pd.io.parsers.read_csv(count_file, delimiter="\t", header=0, index_col=0)
     means = pd.DataFrame({"mean": df.mean(1)}, index=df.index)
@@ -59,10 +60,12 @@ def _gene_depth(dbfn, bamfn, gene):
     read_depths = []
     bam_handle = bam.CoverageAdapter(bamfn)
     for exon in db.children(gene, featuretype="exon", order_by='start'):
-        read_depths += bam_handle.read(exon.seqid, exon.start, exon.end).tolist()
+        strand = exon.strand
+        coord = [exon.start, exon.end]
+        read_depths += bam_handle.read(exon.seqid, min(coord), max(coord)).tolist()
     # return a list of depths going in the 5' -> 3' direction
-    if db[gene].strand == "-":
-        read_depths = read_depths[::-1]
+    if strand == "-":
+       read_depths = read_depths[::-1]
     else:
         return read_depths
 
@@ -79,3 +82,14 @@ def plot_gene_coverage(bam_file, ref_file, count_file, out_file):
     groups = coverage.groupby(np.digitize(coverage.distance, range(100)))
     out_file = _plot_coverage(groups.mean(), out_file)
     return out_file
+
+def estimate_library_content(bam_file, ref_file):
+    ref_db = ref_file + ".db"
+    library_content = defaultdict(Counter)
+    db = gffutils.FeatureDB(ref_db, keep_order=True)
+    with bam.open_samfile(bam_file) as bam_handle:
+        for read in bam_handle:
+            name = read.getrname(read.tid)
+            start = read.pos
+            end = read.aend
+            overlapped = db.region((name, start, end))

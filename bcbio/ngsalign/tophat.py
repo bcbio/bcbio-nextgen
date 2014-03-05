@@ -115,7 +115,8 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
         options["bowtie1"] = True
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
-    final_out = os.path.join(out_dir, "%s.sam" % out_base)
+#    final_out = os.path.join(out_dir, "%s.sam" % out_base)
+    final_out = os.path.join(align_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):
         return final_out
 
@@ -155,7 +156,6 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     fixed = merge_unmapped(fixed, unmapped, config)
     fixed = _fix_unmapped(fixed, config, names)
     fixed = bam.sort(fixed, config)
-    fixed = bam.bam_to_sam(fixed, config)
     if not file_exists(final_out):
         symlink_plus(fixed, final_out)
     return final_out

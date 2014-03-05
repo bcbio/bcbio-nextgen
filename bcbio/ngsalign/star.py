@@ -1,8 +1,8 @@
-from os import path
+import os
 import tempfile
 
 from bcbio.pipeline import config_utils
-from bcbio.utils import safe_makedir, file_exists, get_in
+from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
 from bcbio.provenance import do
 from bcbio import broad
 from bcbio import bam
@@ -11,10 +11,11 @@ CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
-    out_prefix = path.join(align_dir, names["lane"])
+    out_prefix = os.path.join(align_dir, names["lane"])
     out_file = out_prefix + "Aligned.out.sam"
-    if file_exists(out_file):
-        return out_file
+    final_out = os.path.join(align_dir, "{0}.bam".format(names["sample"]))
+    if file_exists(final_out):
+        return final_out
     star_path = config_utils.get_program("STAR", config)
     fastq = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = config["algorithm"].get("num_cores", 1)
@@ -37,7 +38,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     picard = broad.runner_from_config(config)
     out_file = bam.sam_to_bam(out_file, config)
     out_file = _fix_sam_header(out_file, config)
-    return out_file
+    if not file_exists(final_out):
+        symlink_plus(out_file, final_out)
+    return final_out
 
 def _fix_sam_header(in_file, config):
     """
@@ -84,4 +87,4 @@ def _get_quality_format(config):
 def remap_index_fn(ref_file):
     """Map sequence references to equivalent star indexes
     """
-    return path.join(path.dirname(path.dirname(ref_file)), "star")
+    return os.path.join(os.path.dirname(os.path.dirname(ref_file)), "star")
