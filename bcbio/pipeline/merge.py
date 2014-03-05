@@ -62,10 +62,9 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                 with utils.chdir(tmpdir):
                     merge_cl = _bamtools_merge(bam_files)
                     with file_transaction(out_file) as tx_out_file:
-                        tx_out_prefix = os.path.splitext(tx_out_file)[0]
-                        with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
-                            bam_file_list = "%s.list" % os.path.splitext(out_file)[0]
-                            with open(bam_file_list, "w") as out_handle:
+                        with file_transaction("%s.list" % os.path.splitext(out_file)[0]) as tx_bam_file_list:
+                            tx_out_prefix = os.path.splitext(tx_out_file)[0]
+                            with open(tx_bam_file_list, "w") as out_handle:
                                 for f in sorted(bam_files):
                                     out_handle.write("%s\n" % f)
                             cmd = (merge_cl + " | "
@@ -96,4 +95,4 @@ def _bamtools_merge(bam_files):
                       "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
                       "parallel.html#tuning-systems-for-scale"
                       % (len(bam_files), system.open_file_limit()))
-    return "{bamtools} merge -list {bam_file_list}"
+    return "{bamtools} merge -list {tx_bam_file_list}"

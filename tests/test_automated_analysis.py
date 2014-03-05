@@ -274,7 +274,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
     @attr(cancer=True)
     def test_7_cancer_nonormal(self):
         """Test cancer calling without normal samples or with normal VCF panels.
-        XXX Not yet working
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:

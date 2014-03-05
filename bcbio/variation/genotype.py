@@ -297,7 +297,7 @@ def combine_multiple_callers(data):
         final = grouped_calls[0]
         def orig_variantcaller_order(x):
             return final["config"]["algorithm"]["orig_variantcaller"].index(x["variantcaller"])
-        if len(ready_calls) > 1:
+        if len(ready_calls) > 1 and "orig_variantcaller" in final["config"]["algorithm"]:
             final["variants"] = sorted(ready_calls, key=orig_variantcaller_order)
         else:
             final["variants"] = ready_calls

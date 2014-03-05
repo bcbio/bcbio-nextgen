@@ -50,9 +50,8 @@ def delayed_bam_merge(data):
         config["algorithm"]["save_diskspace"] = False
         merged_file = merge_bam_files(in_files, os.path.dirname(out_file), config,
                                       out_file=out_file)
-        if data.has_key("region"):
-            del data["region"]
-        del data["combine"]
+        data.pop("region", None)
+        data.pop("combine", None)
         data[file_key] = merged_file
     return [[data]]
 
