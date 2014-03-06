@@ -56,8 +56,9 @@ def split_variants_by_sample(data):
     if vcfutils.get_paired_phenotype(data):
         # handle trailing normals, which we don't need to process
         if len(data["group_orig"]) == 1 and vcfutils.get_paired_phenotype(data["group_orig"][0][0]) == "normal":
-            sub_data = data["group_orig"][0][0]
+            sub_data, sub_vrn_file = data["group_orig"][0]
             sub_data.pop("vrn_file", None)
+            sub_data["vrn_file-shared"] = sub_vrn_file
             out.append(sub_data)
         else:
             has_tumor = False
@@ -71,6 +72,7 @@ def split_variants_by_sample(data):
                     out.append(sub_data)
                 else:
                     sub_data.pop("vrn_file", None)
+                    sub_data["vrn_file-shared"] = sub_vrn_file
                     out.append(sub_data)
             if not has_tumor:
                 raise ValueError("Did not find tumor sample in paired analysis")

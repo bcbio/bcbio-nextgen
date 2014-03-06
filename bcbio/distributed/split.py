@@ -191,18 +191,21 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
     extras = []
     for data in output:
         cur_file = data.get(file_key)
-        if cur_file:
+        # Special case -- shared variant calls with another sample, do not need to process
+        if cur_file is None:
+            data.pop(file_key, None)
+            cur_out = combine_map[data.pop("%s-shared" % file_key)]
+        # Standard case -- want to combine all of the individual parts
+        else:
             cur_out = combine_map[cur_file]
             out_map[cur_out].append(cur_file)
             extra_args[cur_out].append([data[x] for x in combine_arg_keys])
             data[file_key] = cur_out
-            if cur_out not in already_added:
-                already_added.append(cur_out)
-                final_args[cur_out] = data
-            elif "combine" in data:
-                final_args = _add_combine_parts(final_args, cur_out, data)
-            else:
-                extras.append([data])
+        if cur_out not in already_added:
+            already_added.append(cur_out)
+            final_args[cur_out] = data
+        elif "combine" in data:
+            final_args = _add_combine_parts(final_args, cur_out, data)
         else:
             extras.append([data])
     combine_args = [[v, k] + _get_extra_args(extra_args[k], combine_arg_keys)
