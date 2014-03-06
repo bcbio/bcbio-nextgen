@@ -54,12 +54,19 @@ def get_paired_phenotype(data):
 
 # ## General utilities
 
-def write_empty_vcf(out_file):
+def write_empty_vcf(out_file, config=None):
+    needs_bgzip = False
+    if os.path.exists(".vcf.gz"):
+        needs_bgzip = True
+        out_file = out_file.replace("vcf.gz", ".vcf")
     with open(out_file, "w") as out_handle:
         out_handle.write("##fileformat=VCFv4.1\n"
                          "## No variants; no reads aligned in region\n"
                          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
-
+    if needs_bgzip:
+        return bgzip_and_index(out_file, config or {})
+    else:
+        return out_file
 
 def split_snps_indels(orig_file, ref_file, config):
     """Split a variant call file into SNPs and INDELs for processing.

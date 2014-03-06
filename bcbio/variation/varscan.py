@@ -21,7 +21,6 @@ import pysam
 
 def run_varscan(align_bams, items, ref_file, assoc_files,
                 region=None, out_file=None):
-
     if is_paired_analysis(align_bams, items):
         call_file = samtools.shared_variantcall(_varscan_paired, "varscan",
                                                 align_bams, ref_file, items,
@@ -91,7 +90,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         # just skip the rest of the analysis (VarScan will hang otherwise)
 
         if any(os.stat(filename).st_size == 0 for filename in cleanup_files):
-            write_empty_vcf(out_file)
+            write_empty_vcf(orig_out_file, config)
             return
 
         # First index is normal, second is tumor
@@ -130,7 +129,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             _fix_varscan_vcf(indel_file, paired.normal_name, paired.tumor_name)
 
         if not to_combine:
-            write_empty_vcf(out_file)
+            write_empty_vcf(orig_out_file, config)
             return
 
         out_file = combine_variant_files([snp_file, indel_file],
@@ -283,8 +282,10 @@ def _create_sample_list(in_bams, vcf_file):
 def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     """Perform SNP and indel genotyping with VarScan.
     """
-
     config = items[0]["config"]
+
+    orig_out_file = out_file
+    out_file = orig_out_file.replace(".vcf.gz", ".vcf")
 
     max_read_depth = "1000"
     version = programs.jar_versioner("varscan", "VarScan")(config)
@@ -324,6 +325,9 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
         write_empty_vcf(out_file)
     else:
         freebayes.clean_vcf_output(out_file, _clean_varscan_line)
+
+    if orig_out_file.endswith(".gz"):
+        vcfutils.bgzip_and_index(out_file, config)
 
 def _clean_varscan_line(line):
     """Avoid lines with non-GATC bases, ambiguous output bases make GATK unhappy.
