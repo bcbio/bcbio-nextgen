@@ -18,7 +18,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
                             version, rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
-from bcbio.provenance import programs, system, versioncheck
+from bcbio.provenance import programs, profile, system, versioncheck
 from bcbio.server import main as server_main
 from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.genotype import combine_multiple_callers
@@ -297,51 +297,53 @@ class Variant2Pipeline(AbstractPipeline):
                               (["reference", "fasta"], ["reference", "aligner"], ["files"])),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            logger.info("Timing: alignment")
-            samples = run_parallel("prep_align_inputs", samples)
-            samples = disambiguate.split(samples)
-            samples = run_parallel("process_alignment", samples)
-            samples = alignprep.merge_split_alignments(samples, run_parallel)
-            samples = disambiguate.resolve(samples, run_parallel)
-            samples = run_parallel("postprocess_alignment", samples)
-            regions = run_parallel("combine_sample_regions", [samples])[0]
-            samples = region.add_region_info(samples, regions)
-            samples = region.clean_sample_data(samples)
-            logger.info("Timing: coverage")
-            samples = coverage.summarize_samples(samples, run_parallel)
+            with profile.report("alignment preparation", dirs):
+                samples = run_parallel("prep_align_inputs", samples)
+                samples = disambiguate.split(samples)
+            with profile.report("alignment", dirs):
+                samples = run_parallel("process_alignment", samples)
+                samples = alignprep.merge_split_alignments(samples, run_parallel)
+                samples = disambiguate.resolve(samples, run_parallel)
+            with profile.report("callable regions", dirs):
+                samples = run_parallel("postprocess_alignment", samples)
+                regions = run_parallel("combine_sample_regions", [samples])[0]
+                samples = region.add_region_info(samples, regions)
+                samples = region.clean_sample_data(samples)
+            with profile.report("coverage", dirs):
+                samples = coverage.summarize_samples(samples, run_parallel)
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
                         samples, config, dirs, "full",
                         multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
-            logger.info("Timing: alignment post-processing")
-            samples = region.parallel_prep_region(samples, regions, run_parallel)
-            logger.info("Timing: variant calling")
-            samples = region.parallel_variantcall_region(samples, run_parallel)
+            with profile.report("alignment post-processing", dirs):
+                samples = region.parallel_prep_region(samples, regions, run_parallel)
+            with profile.report("variant calling", dirs):
+                samples = region.parallel_variantcall_region(samples, run_parallel)
 
         ## Finalize variants (per-sample cluster)
         with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation"]),
                         samples, config, dirs, "persample") as run_parallel:
-            logger.info("Timing: variant post-processing")
-            samples = run_parallel("postprocess_variants", samples)
-            logger.info("Timing: validation")
-            samples = run_parallel("compare_to_rm", samples)
-            samples = combine_multiple_callers(samples)
+            with profile.report("variant post-processing", dirs):
+                samples = run_parallel("postprocess_variants", samples)
+            with profile.report("validation", dirs):
+                samples = run_parallel("compare_to_rm", samples)
+                samples = combine_multiple_callers(samples)
         ## Finalizing BAMs and population databases, handle multicore computation
         with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools", "bcbio_variation",
                                          "bcbio-variation-recall"]),
                         samples, config, dirs, "multicore2") as run_parallel:
-            logger.info("Timing: prepped BAM merging")
-            samples = region.delayed_bamprep_merge(samples, run_parallel)
-            logger.info("Timing: ensemble calling")
-            samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            samples = validate.summarize_grading(samples)
-            logger.info("Timing: structural variation")
-            samples = structural.run(samples, run_parallel)
-            logger.info("Timing: population database")
-            samples = population.prep_db_parallel(samples, run_parallel)
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("prepped BAM merging", dirs):
+                samples = region.delayed_bamprep_merge(samples, run_parallel)
+            with profile.report("ensemble calling", dirs):
+                samples = ensemble.combine_calls_parallel(samples, run_parallel)
+                samples = validate.summarize_grading(samples)
+            with profile.report("structural variation", dirs):
+                samples = structural.run(samples, run_parallel)
+            with profile.report("population database", dirs):
+                samples = population.prep_db_parallel(samples, run_parallel)
+            with profile.report("quality control", dirs):
+                samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
         return samples
 
