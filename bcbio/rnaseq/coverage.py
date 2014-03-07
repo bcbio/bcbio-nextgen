@@ -66,8 +66,7 @@ def _gene_depth(dbfn, bamfn, gene):
     # return a list of depths going in the 5' -> 3' direction
     if strand == "-":
        read_depths = read_depths[::-1]
-    else:
-        return read_depths
+    return read_depths
 
 def plot_gene_coverage(bam_file, ref_file, count_file, out_file):
     if file_exists(out_file):
