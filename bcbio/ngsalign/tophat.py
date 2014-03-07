@@ -290,7 +290,7 @@ def _tophat_major_version(config):
 
 
 def _ref_version(ref_file):
-    for ext in [os.path.splitext(x)[1] for x in glob.glob(ref_file + "*")]:
+    for ext in [os.path.splitext(x)[1] for x in glob.glob(ref_file + "/*")]:
         if ext == ".ebwt":
             return 1
         elif ext == ".bt2":
