@@ -3,6 +3,9 @@
 - Remove deprecated Celery distributed messaging, replaced in favor of IPython.
 - Remove algorithm/custom_algorithm from bcbio_system.yaml, preferring to set
   these directly in the sample YAML files.
+- Remove outdated and unused custom B-run trimming.
+- Connect min_read_length parameter with read_through trimming in
+  RNA-seq. Thanks to James Porter.
 - Map `variant` calling specification to `variant2` since original approach
   no longer supported.
 - Fix issues with trying to upload directories to Galaxy. Thanks to Jim Peden.

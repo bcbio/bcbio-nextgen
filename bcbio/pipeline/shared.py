@@ -3,7 +3,10 @@
 import os
 from contextlib import closing
 
-import pybedtools
+try:
+    import pybedtools
+except ImportError:
+    pybedtools = None
 import pysam
 
 from bcbio import bam, broad

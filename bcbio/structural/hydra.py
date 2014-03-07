@@ -10,8 +10,8 @@ import collections
 import subprocess
 from contextlib import closing
 
+import numpy
 import pysam
-from py_descriptive_statistics import Enum as Stats
 
 from bcbio import utils, broad
 from bcbio.pipeline.alignment import align_to_sort_bam
@@ -71,13 +71,12 @@ def insert_size_stats(dists):
 
     MAD is the Median Absolute Deviation: http://en.wikipedia.org/wiki/Median_absolute_deviation
     """
-    med = Stats(dists).median()
+    med = numpy.median(dists)
     filter_dists = filter(lambda x: x < med + 10 * med, dists)
-    median = Stats(filter_dists).median()
-    return {"mean": Stats(filter_dists).mean(), "std": Stats(filter_dists).standard_deviation(),
+    median = numpy.median(filter_dists)
+    return {"mean": numpy.mean(filter_dists), "std": numpy.std(filter_dists),
             "median": median,
-            "mad": Stats([abs(x - median) for x in filter_dists]).median()}
-
+            "mad": numpy.median([abs(x - median) for x in filter_dists])}
 
 def calc_paired_insert_stats(in_bam):
     """Retrieve statistics for paired end read insert distances.

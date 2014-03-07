@@ -4,10 +4,15 @@ count number of reads mapping to features of transcripts
 """
 import os
 import sys
-import HTSeq
 import itertools
-import pandas as pd
-import mygene
+
+# soft imports
+try:
+    import HTSeq
+    import pandas as pd
+    import mygene
+except ImportError:
+    HTSeq, pd, mygene = None, None, None
 
 from bcbio.utils import (file_exists, get_in)
 from bcbio.distributed.transaction import file_transaction
