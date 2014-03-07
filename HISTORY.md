@@ -8,6 +8,9 @@
   `coverage_depth_min`) instead of `coverage_depth` enumeration. Provide
   downsampling of reads to max depth during post-alignment preparation to avoid
   repetitive centromere regions with high depth.
+- Fix bug in retrieval of snpEff databases on install. Thanks to Matan Hofree.
+- Fix bug in normal BAM preparation for tumor/normal variant calling. Thanks to
+  Miika Ahdesmaki.
 - General removal of GATK for variant manipulation functionality to help focus
   on support for upcoming GATK 3.0. Use bcftools for splitting of variants into
   SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs
