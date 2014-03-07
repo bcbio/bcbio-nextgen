@@ -337,16 +337,10 @@ def adjust_opts(in_opts, config):
 
 # specific program usage
 
-def _get_coverage_params(alg):
-    Cov = collections.namedtuple("Cov", ["interval", "depth"])
-    return Cov(alg.get("coverage_interval", "exome").lower(),
-               alg.get("coverage_depth", "high").lower())
-
 def use_vqsr(algs):
     """Processing uses GATK's Variant Quality Score Recalibration.
     """
     for alg in algs:
-        cov = _get_coverage_params(alg)
         callers = alg.get("variantcaller", "gatk")
         if isinstance(callers, basestring):
             callers = [callers]
@@ -357,11 +351,9 @@ def use_vqsr(algs):
             if c in ["gatk", "gatk-haplotype"]:
                 vqsr_supported_caller = True
                 break
-        if (cov.interval not in ["regional", "exome"] and cov.depth != "low"
-              and vqsr_supported_caller):
+        if alg.get("coverage_interval", "exome").lower() not in ["regional", "exome"] and vqsr_supported_caller:
             return True
     return False
-
 
 ## functions for navigating through the standard galaxy directory of files
 

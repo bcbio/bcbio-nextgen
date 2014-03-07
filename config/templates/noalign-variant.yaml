@@ -21,6 +21,5 @@ details:
       platform: illumina
       quality_format: Standard
       coverage_interval: genome
-      coverage_depth: high
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

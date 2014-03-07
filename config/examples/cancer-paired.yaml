@@ -7,7 +7,6 @@
 details:
 - algorithm:
     aligner: bwa
-    coverage_depth: high
     coverage_interval: regional
     mark_duplicates: false
     recalibrate: false
@@ -27,7 +26,6 @@ details:
     phenotype: normal
 - algorithm:
     aligner: bwa
-    coverage_depth: high
     coverage_interval: regional
     mark_duplicates: false
     recalibrate: false

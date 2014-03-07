@@ -14,7 +14,6 @@ custom_algorithms:
     aligner: bwa
     recalibrate: gatk
     snpcall: true
-    coverage_depth: "low" # other options: high
     coverage_interval: "exome" # other options: genome
   'RNA-seq':
     aligner: tophat2
