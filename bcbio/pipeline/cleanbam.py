@@ -20,6 +20,7 @@ def picard_prep(in_bam, names, ref_file, dirs, config):
     """
     runner = broad.runner_from_config(config)
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "bamclean", names["sample"]))
+    runner.run_fn("picard_index_ref", ref_file)
     reorder_bam = os.path.join(work_dir, "%s-reorder.bam" %
                                os.path.splitext(os.path.basename(in_bam))[0])
     reorder_bam = runner.run_fn("picard_reorder", in_bam, ref_file, reorder_bam)
