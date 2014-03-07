@@ -48,10 +48,8 @@ def calc_callable_loci(data, region=None, out_file=None):
     """
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
-    # set a maximum depth to avoid calling in repetitive regions with excessive coverage
-    depth = {"max": int(1e6 if data["config"]["algorithm"].get("coverage_depth", "").lower() == "super-high"
-                        else 2.5e4),
-             "min": 3}
+    depth = {"max": 250,  # Could also use coverage_depth_max if we need to distinguish high depth
+             "min": utils.get_in(data, ("config", "algorithm", "coverage_depth_min"), 4)}
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             bam.index(data["work_bam"], data["config"])
@@ -67,7 +65,7 @@ def _get_coverage_in_region(in_bam, region, depth):
     Uses chajo's approach of pre-allocating a numpy array for coverage before collapsing
     to cleanly handle non-covered positions. This uses 2Gb memory for human chr1. If memory
     requirements become an issue, could look at splitting long chromosomes at smart places.
-    XXX Can replace positions with chanjo functionality when it accepts max_depth keyword.
+    XXX Can replace `positions` with chanjo functionality when it accepts max_depth keyword.
     """
     # special case, do not calculate if we are in a chromosome not covered by BED file
     if region.attrs.get("no_coverage"):
@@ -96,8 +94,9 @@ def _get_ctype(count, depth):
         return "NO_COVERAGE"
     elif count < depth["min"]:
         return "LOW_COVERAGE"
-    elif count > depth["max"]:
-        return "EXCESSIVE_COVERAGE"
+    # Do not ignore excessive coverage regions; prefer downsampling downstream
+    # elif count > depth["max"]:
+    #     return "EXCESSIVE_COVERAGE"
     else:
         return "CALLABLE"
 
@@ -122,7 +121,6 @@ def _regions_for_coverage(data, region, out_file):
             r.attrs["no_coverage"] = variant_regions is not None
             out.append(r)
         return out
-
 
 def sample_callable_bed(bam_file, ref_file, config):
     """Retrieve callable regions for a sample subset by defined analysis regions.

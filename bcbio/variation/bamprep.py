@@ -27,6 +27,8 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
             "-L", region_to_gatk(region),
             "-R", data["sam_ref"],
             "-I", data["work_bam"]]
+    if prep_params.get("max_depth"):
+        args += ["--downsample_to_coverage", str(prep_params["max_depth"])]
     if prep_params["recal"] == "gatk":
         if _recal_has_reads(data["prep_recal"]):
             args += ["-BQSR", data["prep_recal"]]
@@ -158,12 +160,12 @@ def _piped_extract_recal_cmd(data, region, prep_params, tmp_dir):
     config = data["config"]
     samtools = config_utils.get_program("samtools", config)
     out_type = "-u" if prep_params["dup"] or prep_params["realign"] else "-b"
-    if not prep_params.get("recal"):
+    if not prep_params.get("recal") and not prep_params.get("max_depth"):
         prep_region = region_to_gatk(region)
         in_file = data["work_bam"]
         cmd = "{samtools} view {out_type} {in_file} {prep_region}"
         return cmd.format(**locals())
-    elif prep_params["recal"] == "gatk":
+    elif prep_params["recal"] == "gatk" or prep_params.get("max_depth"):
         cl = _gatk_extract_reads_cl(data, region, prep_params, tmp_dir)
         cl += ["--logging_level", "ERROR"]
         cmd = "{samtools} view -S {out_type} -"
@@ -195,8 +197,10 @@ def _get_prep_params(data):
     recal_param = "gatk" if recal_param is True else recal_param
     realign_param = algorithm.get("realign", True)
     realign_param = "gatk" if realign_param is True else realign_param
+    max_depth = algorithm.get("coverage_depth_max", 10000)
     all_params = set([dup_param, realign_param])
     return {"dup": dup_param, "recal": recal_param, "realign": realign_param,
+            "max_depth": max_depth,
             "all_pipe": "gatk" not in all_params and "picard" not in all_params}
 
 def _piped_bamprep_region(data, region, out_file, tmp_dir):

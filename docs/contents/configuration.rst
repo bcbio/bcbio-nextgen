@@ -288,10 +288,18 @@ Experimental information
 ========================
 
 -  ``coverage_interval`` Regions covered by sequencing. Influences GATK
-   options for filtering [exome, genome, regional]
--  ``coverage_depth`` Depth of sequencing coverage. Influences GATK
-   variant calling and selection of super-high coverage regions to
-   exclude. Low coverage is generally 10x or less. [high, low, super-high]
+   options for filtering. GATK will use Variant Quality Score Recalibration
+   when set to 'genome', otherwise we apply hard filters. [exome, genome, regional]
+- ``coverage_depth_max`` Maximum depth of coverage. We downsample coverage
+   regions with more than this value to approximately the specified
+   coverage. Actual coverage depth per position will be higher since we
+   downsample reads based on shared start positions, although some callers like
+   GATK can also downsample to exactly this coverage per position. This controls
+   memory usage in highly repetitive regions like centromeres. Defaults
+   to 10000. Set to 0 (or false or null) to do no downsampling.
+-  ``coverage_depth_min`` Minimum depth of coverage. Regions will less reads
+   will not get called. Defaults to 4. Setting lower than 4 will trigger
+   low-depth calling options for GATK.
 -  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
 
 Variant calling

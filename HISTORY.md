@@ -4,6 +4,10 @@
   uncompressed VCFs. Reduces space requirements and enables parallelization on
   non-shared filesystems or temporary space by avoiding transferring
   uncompressed outputs.
+- Provide explicit targets for coverage depth (`coverage_depth_max` and
+  `coverage_depth_min`) instead of `coverage_depth` enumeration. Provide
+  downsampling of reads to max depth during post-alignment preparation to avoid
+  repetitive centromere regions with high depth.
 - General removal of GATK for variant manipulation functionality to help focus
   on support for upcoming GATK 3.0. Use bcftools for splitting of variants into
   SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs

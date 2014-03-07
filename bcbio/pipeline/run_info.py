@@ -135,14 +135,17 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "align_split_size", "quality_bin",
                       "quality_format", "write_summary",
                       "merge_bamprep", "coverage", "coverage_bigwig",
-                      "coverage_depth", "coverage_interval", "ploidy",
+                      "coverage_interval", "ploidy",
                       "variantcaller", "variant_regions",
                       "mark_duplicates", "svcaller", "recalibrate",
                       "realign", "phasing", "validate",
                       "validate_regions", "validate_genome_build",
                       "clinical_reporting", "nomap_split_size",
                       "nomap_split_targets", "ensemble", "background",
-                      "disambiguate", "strandedness", "fusion_mode", "min_read_length"])
+                      "disambiguate", "strandedness", "fusion_mode", "min_read_length",
+                      "coverage_depth_min", "coverage_depth_max"] +
+                     # back compatibility
+                      ["coverage_depth"])
 
 def _check_algorithm_keys(item):
     """Check for unexpected keys in the algorithm section.

@@ -17,24 +17,18 @@ details:
       #aligner: false
       #bam_clean: picard
       #bam_sort: coordinate
-      #mark_duplicates: biobambam
-      #recalibrate: false
-      #realign: false
-      #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
-      #aligner: novoalign
       align_split_size: 15000
       aligner: bwa
       #mark_duplicates: samtools
-      #realign: gkno
+      #recalibrate: false
+      #realign: false
       realign: gatk
       recalibrate: gatk
       svcaller: lumpy
       variantcaller: freebayes
       coverage_interval: regional
       #variantcaller: gatk-haplotype
-      #coverage_depth: high
-      #coverage_interval: genome
       quality_format: Standard
       nomap_split_size: 50
       nomap_split_targets: 100

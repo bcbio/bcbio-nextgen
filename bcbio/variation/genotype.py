@@ -25,15 +25,17 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
         bam.index(x, config)
-    coverage_depth = config["algorithm"].get("coverage_depth", "high").lower()
+    # GATK can only downsample to a minimum of 200
+    coverage_depth_max = max(200, utils.get_in(config, ("algorithm", "coverage_depth_max"), 10000))
+    coverage_depth_min = utils.get_in(config, ("algorithm", "coverage_depth_min"), 4)
     variant_regions = config["algorithm"].get("variant_regions", None)
-    confidence = "4.0" if coverage_depth in ["low"] else "30.0"
+    confidence = "4.0" if coverage_depth_min < 4 else "30.0"
     region = subset_variant_regions(variant_regions, region, out_file)
 
     params = ["-R", ref_file,
               "--standard_min_confidence_threshold_for_calling", confidence,
               "--standard_min_confidence_threshold_for_emitting", confidence,
-              "--downsample_to_coverage", "250",
+              "--downsample_to_coverage", str(coverage_depth_max),
               "--downsampling_type", "BY_SAMPLE",
               ]
     for a in annotation.get_gatk_annotations(config):
