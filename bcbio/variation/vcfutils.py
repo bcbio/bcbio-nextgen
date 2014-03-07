@@ -56,9 +56,9 @@ def get_paired_phenotype(data):
 
 def write_empty_vcf(out_file, config=None):
     needs_bgzip = False
-    if os.path.exists(".vcf.gz"):
+    if out_file.endswith(".vcf.gz"):
         needs_bgzip = True
-        out_file = out_file.replace("vcf.gz", ".vcf")
+        out_file = out_file.replace(".vcf.gz", ".vcf")
     with open(out_file, "w") as out_handle:
         out_handle.write("##fileformat=VCFv4.1\n"
                          "## No variants; no reads aligned in region\n"

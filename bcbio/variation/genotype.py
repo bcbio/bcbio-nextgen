@@ -55,12 +55,13 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
+        config = items[0]["config"]
         broad_runner, params = \
             _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files["dbsnp"],
                                    region, out_file)
         if (not isinstance(region, (list, tuple)) and
                 not all(has_aligned_reads(x, region) for x in align_bams)):
-            vcfutils.write_empty_vcf(out_file)
+            vcfutils.write_empty_vcf(out_file, config)
         else:
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "UnifiedGenotyper",
@@ -80,13 +81,14 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
+        config = items[0]["config"]
         broad_runner, params = \
             _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files["dbsnp"],
                                    region, out_file)
         assert broad_runner.gatk_type() == "restricted", \
             "Require full version of GATK 2.4+ for haplotype calling"
         if not all(has_aligned_reads(x, region) for x in align_bams):
-            vcfutils.write_empty_vcf(out_file)
+            vcfutils.write_empty_vcf(out_file, config)
         else:
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "HaplotypeCaller",
