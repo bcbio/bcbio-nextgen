@@ -8,13 +8,14 @@ import itertools
 import os
 import subprocess
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared, tools
 from bcbio.provenance import do
+from bcbio.variation import bamprep
 
 # ## Tumor/normal paired cancer analyses
 
@@ -172,7 +173,7 @@ def _do_merge(orig_files, out_file, config, region):
         with file_transaction(out_file) as tx_out_file:
             _check_samples_nodups(orig_files)
             prep_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
-            input_vcf_file = "%s-files.txt" % os.path.splitext(out_file)[0]
+            input_vcf_file = "%s-files.txt" % utils.splitext_plus(out_file)[0]
             with open(input_vcf_file, "w") as out_handle:
                 for fname in prep_files:
                     out_handle.write(fname + "\n")
@@ -251,24 +252,27 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
         file_key = config["file_key"]
         in_pipeline = True
         orig_files = orig_files[file_key]
-    assert len(orig_files) == 2, "Expect two files for combining into final output"
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            f1, f2 = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
+            ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
+            broad_runner = broad.runner_from_config(config)
+            params = ["-T", "CombineVariants",
+                      "-R", ref_file,
+                      "--out", tx_out_file]
+            priority_order = []
+            for i, ready_file in enumerate(ready_files):
+                name = "v%s" % i
+                params.extend(["--variant:{name}".format(name=name), ready_file])
+                priority_order.append(name)
+            params.extend(["--rod_priority_list", ",".join(priority_order)])
+            if quiet_out:
+                params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
             variant_regions = config["algorithm"].get("variant_regions", None)
-            region = shared.subset_variant_regions(variant_regions, region, out_file)
-            if not region:
-                fb_region = ""
-            elif isinstance(region, (list, tuple)):
-                chrom, start, end = region
-                fb_region = "-R %s:%s-%s" % (chrom, start + 1, end)
-            elif os.path.isfile(region):
-                fb_region = "-b %s" % region
-            else:
-                fb_region = "-R %s" % region
-            compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
-            cmd = "vcfintersect {fb_region} -r {ref_file} -u {f2} {f1} {compress_str} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Combine variants from the same sample")
+            cur_region = shared.subset_variant_regions(variant_regions, region, out_file)
+            if cur_region:
+                params += ["-L", bamprep.region_to_gatk(cur_region),
+                           "--interval_set_rule", "INTERSECTION"]
+            broad_runner.run_gatk(params)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     if in_pipeline:
