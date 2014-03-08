@@ -38,16 +38,34 @@ def prep_gemini_db(fnames, call_id, samples, data):
                 else:
                     gemini_ver = None
                 # Recent versions of gemini allow loading only passing variants
+                load_opts = ""
                 if not gemini_ver or LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
-                    load_opts = "--passonly"
-                else:
-                    load_opts = ""
+                    load_opts += " --passonly"
+                # For small test files, skip gene table loading which takes a long time
+                if gemini_ver and LooseVersion(gemini_ver) > LooseVersion("0.6.4"):
+                    if _is_small_vcf(gemini_vcf):
+                        load_opts += " --skip-gene-tables"
+                    if "/test_automated_output/" in gemini_vcf:
+                        load_opts += " --test-mode"
                 num_cores = data["config"]["algorithm"].get("num_cores", 1)
                 cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
                 cmd = cmd.format(**locals())
                 do.run(cmd, "Create gemini database for %s" % str(call_id), data)
     return [[call_id, {"db": gemini_db if utils.file_exists(gemini_db) else None,
                        "vcf": gemini_vcf if is_population else None}]]
+
+def _is_small_vcf(vcf_file):
+    """Check for small VCFs which we want to analyze quicker.
+    """
+    count = 0
+    small_thresh = 250
+    with utils.open_gzipsafe(vcf_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith("#"):
+                count += 1
+            if count > small_thresh:
+                return False
+    return True
 
 def get_multisample_vcf(fnames, name, caller, data):
     """Retrieve a multiple sample VCF file in a standard location.
