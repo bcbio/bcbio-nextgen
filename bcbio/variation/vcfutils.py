@@ -255,7 +255,6 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
-            broad_runner = broad.runner_from_config(config)
             params = ["-T", "CombineVariants",
                       "-R", ref_file,
                       "--out", tx_out_file]
@@ -272,7 +271,9 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             if cur_region:
                 params += ["-L", bamprep.region_to_gatk(cur_region),
                            "--interval_set_rule", "INTERSECTION"]
-            broad_runner.run_gatk(params)
+            jvm_opts = broad.get_gatk_framework_opts(config)
+            cmd = [config_utils.get_program("gatk-framework", config)] + jvm_opts + params
+            do.run(cmd, "Combine variant files")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     if in_pipeline:

@@ -22,7 +22,6 @@ def region_to_gatk(region):
 def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
     """Use GATK to extract reads from full BAM file, recalibrating if configured.
     """
-    broad_runner = broad.runner_from_config(data["config"])
     args = ["-T", "PrintReads",
             "-L", region_to_gatk(region),
             "-R", data["sam_ref"],
@@ -34,7 +33,8 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
             args += ["-BQSR", data["prep_recal"]]
     elif prep_params["recal"]:
         raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
-    return broad_runner.cl_gatk(args, tmp_dir)
+    jvm_opts = broad.get_gatk_framework_opts(data["config"])
+    return [config_utils.get_program("gatk-framework", data["config"])] + jvm_opts + args
 
 def _recal_has_reads(in_file):
     with open(in_file) as in_handle:

@@ -14,6 +14,28 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import curdir_tmpdir
 
+def _get_gatk_opts(config, names, tmp_dir=None):
+    """Retrieve GATK memory specifications, moving down a list of potential specifications.
+    """
+    opts = ["-U", "LENIENT_VCF_PROCESSING", "--read_filter",
+            "BadCigar", "--read_filter", "NotPrimaryAlignment"]
+    if tmp_dir:
+        opts.append("-Djava.io.tmpdir=%s" % tmp_dir)
+    for n in names:
+        resources = config_utils.get_resources(n, config)
+        if resources and resources.get("jvm_opts"):
+            return resources.get("jvm_opts") + opts
+    return ["-Xms750m", "-Xmx2g"] + opts
+
+def get_gatk_framework_opts(config, tmp_dir=None):
+    return _get_gatk_opts(config, ["gatk-framework", "gatk"], tmp_dir)
+
+def get_gatk_opts(config, tmp_dir=None):
+    return _get_gatk_opts(config, ["gatk", "gatk-framework"], tmp_dir)
+
+def get_gatk_vqsr_opts(config, tmp_dir=None):
+    return _get_gatk_opts(config, ["gatk-vqsr", "gatk", "gatk-framework"], tmp_dir)
+
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """

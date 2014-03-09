@@ -27,7 +27,7 @@ details:
       recalibrate: gatk
       svcaller: lumpy
       variantcaller: freebayes
-      #variantcaller: gatk-haplotype
+      #variantcaller: [gatk, gatk-haplotype]
       coverage_interval: regional
       quality_format: Standard
       nomap_split_size: 50

@@ -16,6 +16,9 @@
   SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs
   and indels instead of GATK. Use bcftools for sample selection from
   multi-sample VCFs. Use pysam for calculation of sample coverage.
+- Use GATK 3.0 MIT licensed framework for remaining BAM and variant manipulation
+  code (PrintReads, CombineVariants) to provide one consistent up to date set of
+  functionality for GATK variant manipulation.
 - Normalize input variant_regions BED files to avoid overlapping
   segments. Avoids out of order errors with FreeBayes caller which will call in
   each region without flattening the input BED.

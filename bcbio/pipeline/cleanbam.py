@@ -6,9 +6,10 @@ This provides a pipeline to prepare and resort an input.
 """
 import os
 
-
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 
 def picard_prep(in_bam, names, ref_file, dirs, config):
     """Prepare input BAM using Picard and GATK cleaning tools.
@@ -25,9 +26,9 @@ def picard_prep(in_bam, names, ref_file, dirs, config):
                                os.path.splitext(os.path.basename(in_bam))[0])
     reorder_bam = runner.run_fn("picard_reorder", in_bam, ref_file, reorder_bam)
     rg_bam = runner.run_fn("picard_fix_rgs", reorder_bam, names)
-    return _filter_bad_reads(rg_bam, ref_file, runner, config)
+    return _filter_bad_reads(rg_bam, ref_file, config)
 
-def _filter_bad_reads(in_bam, ref_file, runner, config):
+def _filter_bad_reads(in_bam, ref_file, config):
     """Use GATK filter to remove problem reads which choke GATK and Picard.
     """
     bam.index(in_bam, config)
@@ -40,5 +41,7 @@ def _filter_bad_reads(in_bam, ref_file, runner, config):
                           "-I", in_bam,
                           "--out", tx_out_file,
                           "--filter_mismatching_base_and_quals"]
-                runner.run_gatk(params, tmp_dir)
+                jvm_opts = broad.get_gatk_framework_opts(config, tmp_dir)
+                cmd = [config_utils.get_program("gatk-framework", config)] + jvm_opts + params
+                do.run(cmd, "Filter problem reads")
     return out_file
