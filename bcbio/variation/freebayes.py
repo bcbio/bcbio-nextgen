@@ -21,20 +21,20 @@ def region_to_freebayes(region):
     else:
         return region
 
-def _freebayes_options_from_config(items, aconfig, out_file, region=None):
+def _freebayes_options_from_config(items, config, out_file, region=None):
     opts = []
     opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
 
-    variant_regions = aconfig.get("variant_regions", None)
+    variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
             opts += ["--targets", target]
         else:
             opts += ["--region", region_to_freebayes(target)]
-    #background = aconfig.get("call_background", None)
-    #if background and os.path.exists(background):
-    #    opts += ["--variant-input", background]
+    resources = config_utils.get_resources("freebayes", config)
+    if resources.get("options"):
+        opts += resources["options"]
     return opts
 
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
@@ -70,8 +70,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             input_bams = " ".join("-b %s" % x for x in align_bams)
-            opts = " ".join(_freebayes_options_from_config(items, config["algorithm"],
-                                                           out_file, region))
+            opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
                    "{vcffilter} -f 'QUAL > 5' -s | {vcfallelicprimitives} | {vcfstreamsort} "
@@ -99,9 +98,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 
             vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
             freebayes = config_utils.get_program("freebayes", config)
-            opts = " ".join(
-                _freebayes_options_from_config(items, config["algorithm"],
-                                               out_file, region))
+            opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             opts += " -f {}".format(ref_file)
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
