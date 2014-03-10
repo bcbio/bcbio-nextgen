@@ -53,8 +53,9 @@ algorithms continue to evolve and improve. The installer is flexible
 enough to handle both system integrations into standard directories
 like /usr/local, as well as custom isolated installations in non-root
 directories. The :ref:`upgrade-install` section has additional
-documentation on including additional genome data and software tools like the
-latest commercially-restricted GATK versions and GEMINI.
+documentation on including additional genome data, and the section on
+:ref:`toolplus-install` describes how to add commercially restricted software
+like GATK.
 
 .. _isolated-install:
 
@@ -73,7 +74,6 @@ This requires the following additional system requirements to be in place:
 - bzip2 (with development libraries)
 - zlib (with development libraries)
 - curl (with development libraries)
-- cmake (temporary requirement, for eventual removal)
 
 Installing this way is as isolated and self-contained as possible
 without virtual machines or lightweight system containers. To ensure
@@ -90,6 +90,57 @@ towards utilizing `Docker`_ containers to provide a fully isolated software
 installation.
 
 .. _Docker: http://www.docker.io/
+
+.. _toolplus-install:
+
+Non-distributable software
+==========================
+
+We're not able to automatically install some useful tools due to licensing
+restrictions, so provide a mechanism to manually download and add these to
+bcbio-nextgen during an upgrade with the ``--toolplus`` command line.
+
+GATK and muTect
+~~~~~~~~~~~~~~~
+
+Calling variants with GATK's HaplotypeCaller or UnifiedGenotyper requires manual
+installation of the latest GATK release. This is freely available for academic
+users, but requires a manual download from the `GATK download`_ site.  Appistry
+provides `a distribution of GATK for commercial users`_.  We distribute the last
+freely available GATK-lite release (2.3.9) as part of the automated install but
+don't recommend using this for calling. If you don't want to use the restricted
+GATK version, freely available callers like FreeBayes provide a better
+alternative than older GATK versions. See the `FreeBayes and GATK comparison`_
+for a full evaluation.
+
+To install GATK, download and unzip the latest version from the GATK or Appistry
+distributions. Then make this jar available to bcbio-nextgen with::
+
+    bcbio_nextgen.py upgrade --tools --toolplus gatk=/path/to/gatk/GenomeAnalysisTK.jar
+
+This will copy the jar and update your bcbio_system.yaml and manifest files to
+reflect the new version.
+
+For muTect, we provide the latest 1.1.5 jar, but commercial users need to obtain
+the Appistry muTect distribution. To make this jar available to bcbio-nextgen::
+
+    bcbio_nextgen.py upgrade --tools --toolplus mutect=/path/to/appistry/muTect-1.1.5.jar
+
+Note that muTect does not provide an easy way to query for the current version,
+so your input jar needs to include the version in the name.
+
+GEMINI
+~~~~~~
+
+``-- toolplus`` is also used to install data rich supplemental software which is
+not installed by default such as GEMINI. We're making changes to automatically
+include these tools in the default install, but for now include  GEMINI with::
+
+    bcbio_nextgen.py upgrade --tools --toolplus data
+
+.. _GATK download: http://www.broadinstitute.org/gatk/download
+.. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
+.. _FreeBayes and GATK comparison: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 
 .. _upgrade-install:
 
@@ -110,18 +161,8 @@ Tune the upgrade with these options:
   gets the most recent released version and ``development``
   retrieves the latest code from GitHub.
 
-- ``--toolplus`` Specify additional categories of tools to include.
-  These may require manual intervention or be data intensive. You can
-  specify the argument multiple times to include multiple extra
-  classes of tools. Available choices are:
-
-  - ``protected`` Install software that requires licensing for
-    commercial use. This includes the latest versions of GATK, which
-    need a manual download from the GATK website. The installer
-    provides full directions.
-  - ``data`` Data rich supplemental tools. A good example is
-    GEMINI, which provides rich annotation of variant calls
-    but requires download of external data sources.
+- ``--toolplus`` Specify additional tools to include. See the section on
+  :ref:`toolplus-install` for more details.
 
 - ``--genomes`` and ``--aligners`` options add additional aligner
   indexes to download and prepare. By default we prepare a minimal

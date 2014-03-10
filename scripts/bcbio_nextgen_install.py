@@ -7,6 +7,7 @@ for human variant calling.
 
 Requires: git, Python 2.7 or argparse for earlier versions.
 """
+import collections
 import contextlib
 import datetime
 import os
@@ -187,6 +188,24 @@ def check_dependencies():
     except OSError:
         raise OSError("bcbio-nextgen installer requires Git (http://git-scm.com/)")
 
+def _check_toolplus(x):
+    """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
+    """
+    import argparse
+    Tool = collections.namedtuple("Tool", ["name", "fname"])
+    std_choices = set(["data"])
+    if x in std_choices:
+        return Tool(x, None)
+    elif "=" in x and len(x.split("=")) == 2:
+        name, fname = x.split("=")
+        fname = os.path.normpath(os.path.realpath(fname))
+        if not os.path.exists(fname):
+            raise argparse.ArgumentTypeError("Unexpected --toolplus argument for %s. File does not exist: %s"
+                                             % (name, fname))
+        return Tool(name, fname)
+    else:
+        raise argparse.ArgumentTypeError("Unexpected --toolplus argument. Expect toolname=filename.")
+
 if __name__ == "__main__":
     try:
         import argparse
@@ -202,7 +221,7 @@ if __name__ == "__main__":
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
-                        action="append", default=[], choices=["protected", "data"])
+                        action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"],
                         choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
@@ -217,10 +236,6 @@ if __name__ == "__main__":
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to install",
                         choices=["stable", "development"], default="stable")
-    parser.add_argument("--tooldist",
-                        help="Type of tool distribution to install. Defaults to a minimum install.",
-                        default="minimal",
-                        choices=["minimal", "full"])
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])

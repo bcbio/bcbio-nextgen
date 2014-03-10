@@ -36,6 +36,43 @@ def get_gatk_opts(config, tmp_dir=None):
 def get_gatk_vqsr_opts(config, tmp_dir=None):
     return _get_gatk_opts(config, ["gatk-vqsr", "gatk", "gatk-framework"], tmp_dir)
 
+def get_gatk_version(gatk_jar):
+    cl = ["java", "-Xms128m", "-Xmx256m", "-jar", gatk_jar, "-version"]
+    with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+        out = stdout.read().strip()
+        # versions earlier than 2.4 do not have explicit version command,
+        # parse from error output from GATK
+        if out.find("ERROR") >= 0:
+            flag = "The Genome Analysis Toolkit (GATK)"
+            for line in out.split("\n"):
+                if line.startswith(flag):
+                    version = line.split(flag)[-1].split(",")[0].strip()
+        else:
+            version = out
+    if version.startswith("v"):
+        version = version[1:]
+    return version
+
+def get_mutect_version(mutect_jar):
+    """Retrieves version from input jar name since there is not an easy way to get MuTect version.
+    Check mutect jar for SomaticIndelDetector, which is an Appistry feature
+    """
+    cl = ["java", "-Xms128m", "-Xmx256m", "-jar", mutect_jar, "-h"]
+    with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+        if "SomaticIndelDetector" in stdout.read().strip():
+            mutect_type = "-appistry"
+        else:
+            mutect_type = ""
+    version = os.path.basename(mutect_jar).lower()
+    for to_remove in [".jar", "-standalone", "mutect"]:
+        version = version.replace(to_remove, "")
+    if version.startswith(("-", ".")):
+        version = version[1:]
+    if version is "":
+        raise ValueError("Unable to determine MuTect version from jar file. "
+                         "Need to have version contained in jar (ie. muTect-1.1.5.jar): %s" % mutect_jar)
+    return version + mutect_type
+
 class BroadRunner:
     """Simplify running Broad commandline tools.
     """
@@ -45,8 +82,8 @@ class BroadRunner:
         self._picard_ref = config_utils.expand_path(picard_ref)
         self._gatk_dir = config_utils.expand_path(gatk_dir) or config_utils.expand_path(picard_ref)
         self._config = config
-        self._gatk_version, self._picard_version, self._mutect_version, self._mutect_type = (
-            None, None, None, None)
+        self._gatk_version, self._picard_version, self._mutect_version = (
+            None, None, None)
         self._gatk_resources = resources
 
     def _set_default_versions(self, config):
@@ -201,44 +238,17 @@ class BroadRunner:
             return self._gatk_version
         else:
             gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-            cl = ["java", "-Xms64m", "-Xmx128m", "-jar", gatk_jar, "-version"]
-            with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
-                out = stdout.read().strip()
-                # versions earlier than 2.4 do not have explicit version command,
-                # parse from error output from GATK
-                if out.find("ERROR") >= 0:
-                    flag = "The Genome Analysis Toolkit (GATK)"
-                    for line in out.split("\n"):
-                        if line.startswith(flag):
-                            version = line.split(flag)[-1].split(",")[0].strip()
-                else:
-                    version = out
-            if version.startswith("v"):
-                version = version[1:]
-            self._gatk_version = version
-            return version
+            self._gatk_version = get_gatk_version(gatk_jar)
+            return self._gatk_version
 
     def get_mutect_version(self):
         """Retrieve the Mutect version.
         """
         if self._mutect_version is None:
-            self._set_default_versions(self._config)
+            mutect_jar = self._get_jar("muTect")
+            self._mutect_version = get_mutect_version(mutect_jar)
         return self._mutect_version
-        
-    def mutect_type(self):
-        """ Check mutect jar for SomaticIndelDetector, which is an Appistry feature
-        """
-        if self._mutect_type is None:
-            gatk_jar = self._get_jar("muTect")
-            cl = ["java", "-Xms64m", "-Xmx128m", "-jar", gatk_jar, "-h"]
-            appistry = False
-            with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
-                if "SomaticIndelDetector" in stdout.read().strip():
-                    self._mutect_type = "-appistry"
-                else:
-                    self._mutect_type = ""
-        return self._mutect_type
-        
+
     def gatk_type(self):
         """Retrieve type of GATK jar, allowing support for older GATK lite.
         Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,

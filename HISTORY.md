@@ -1,5 +1,8 @@
 ## 0.7.8 (In development)
 
+- Provide cleaner installation process for non-distributable tools like
+  GATK. The `--tooplus` argument now handles jars from the GATK site or Appistry
+  and correctly updates manifest version information.
 - Use bgzipped/tabix indexed variant files throughout pipeline instead of raw
   uncompressed VCFs. Reduces space requirements and enables parallelization on
   non-shared filesystems or temporary space by avoiding transferring

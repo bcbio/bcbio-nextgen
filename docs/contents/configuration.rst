@@ -174,7 +174,7 @@ Galaxy parameters:
   assumes you are able to access a shared directory also present on
   the Galaxy machine.
 - ``galaxy_api_key`` User API key to access Galaxy: see the
- `Galaxy API`_ documentation.
+  `Galaxy API`_ documentation.
 - ``galaxy_library`` Name of the Galaxy Data Library to upload to. You
   can specify this globally for a project in ``upload`` or for
   individual samples in the sample details section.

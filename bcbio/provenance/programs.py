@@ -45,7 +45,7 @@ def _broad_versioner(type):
             return runner.get_picard_version("ViewSam")
         elif type == "mutect":
             runner = broad.runner_from_config(config, "mutect")
-            return jar_versioner("mutect", "muTect")(config) + runner.mutect_type()
+            return runner.get_mutect_version()
         else:
             raise NotImplementedError(type)
     return get_version
@@ -196,12 +196,12 @@ def _get_versions(config=None):
 def _get_versions_manifest():
     """Retrieve versions from a pre-existing manifest of installed software.
     """
-    all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant"] + \
+    all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant", "gatk-framework"] + \
                [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
     manifest_dir = os.path.join(config_utils.get_base_installdir(), "manifest")
     if os.path.exists(manifest_dir):
         out = []
-        for plist in ["brew", "python", "r", "debian", "custom"]:
+        for plist in ["toolplus", "brew", "python", "r", "debian", "custom"]:
             pkg_file = os.path.join(manifest_dir, "%s-packages.yaml" % plist)
             if os.path.exists(pkg_file):
                 with open(pkg_file) as in_handle:
