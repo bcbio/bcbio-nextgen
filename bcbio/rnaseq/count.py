@@ -279,8 +279,8 @@ def combine_count_files(files, out_file=None):
     combine a set of count files into a single combined file
     """
     for f in files:
-        assert file_exists(f), "%s does not exist or is empty."
-        assert is_countfile(f), "%s does not seem to be a count file."
+        assert file_exists(f), "%s does not exist or is empty." % f
+        assert is_countfile(f), "%s does not seem to be a count file." % f
     col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
