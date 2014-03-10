@@ -260,6 +260,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
 
     @attr(speed=2)
     @attr(cancer=True)
+    @attr(cancermulti=True)
     def test_7_cancer(self):
         """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan, FreeBayes.
         """
