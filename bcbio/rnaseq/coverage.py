@@ -78,6 +78,9 @@ def plot_gene_coverage(bam_file, ref_file, count_file, out_file):
         coverage = coverage.append(_normalize_coverage(depth))
 
     # group into 100 bins for 0->100% along the transcript
+    if coverage.empty:
+        return None
+
     groups = coverage.groupby(np.digitize(coverage.distance, range(100)))
     out_file = _plot_coverage(groups.mean(), out_file)
     return out_file

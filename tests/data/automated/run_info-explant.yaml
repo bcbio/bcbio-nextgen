@@ -4,7 +4,7 @@ details:
   - analysis: RNA-seq
     files: ['Hsapiens_Mmusculus_1.fq.gz']
     algorithm:
-      aligner: tophat2
+      aligner: star
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
@@ -17,7 +17,7 @@ details:
   - analysis: RNA-seq
     files: ['Hsapiens_Mmusculus_rep2.fq.gz']
     algorithm:
-      aligner: tophat2
+      aligner: star
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
@@ -27,21 +27,3 @@ details:
     description: Test2
     genome_build: mm9
     lane: 2
-  - analysis: variant2
-    files: ['Hsapiens_Mmusculus_rep2.fq.gz']
-    algorithm:
-      aligner: bwa
-      #aligner: novoalign
-      variantcaller: [freebayes]
-      quality_format: Standard
-      coverage_interval: regional
-      trim_reads: true
-      align_split_size: 9000
-      #variant_regions: ../data/automated/variant_regions-variantcall.bed
-      #validate: ../reference_material/7_100326_FC6107FAAXX-grade.vcf
-      disambiguate: [mm9]
-    description: Test3
-    metadata:
-      batch: TestBatch1
-    genome_build: hg19
-    lane: 7
