@@ -243,7 +243,6 @@ reference genome file throughout. Here's an example of these inputs::
                               'coverage_depth': 'low',
                               'coverage_interval': 'regional',
                               'mark_duplicates': 'samtools',
-                              'max_errors': 2,
                               'nomap_split_size': 50,
                               'nomap_split_targets': 20,
                               'num_cores': 1,

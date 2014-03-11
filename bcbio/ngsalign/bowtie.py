@@ -36,7 +36,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
             cl += _bowtie_args_from_config(config)
             cl += extra_args if extra_args is not None else []
             cl += ["-q",
-                   "-v", config["algorithm"]["max_errors"],
+                   "-v", 2,
                    "-k", 1,
                    "-X", 2000, # default is too selective for most data
                    "--best",

@@ -149,8 +149,7 @@ def _bwa_args_from_config(config):
 
 def _run_bwa_align(fastq_file, ref_file, out_file, config):
     aln_cl = [config_utils.get_program("bwa", config), "aln",
-              "-n %s" % config["algorithm"]["max_errors"],
-              "-k %s" % config["algorithm"]["max_errors"]]
+              "-n 2", "-k 2"]
     aln_cl += _bwa_args_from_config(config)
     aln_cl += [ref_file, fastq_file]
     cmd = "{cl} > {out_file}".format(cl=" ".join(aln_cl), out_file=out_file)

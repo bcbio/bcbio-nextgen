@@ -97,7 +97,3 @@ galaxy_config: universe_wsgi.ini
 #   store_dir: /store4/solexadata
 #   base_dir: /array0/projects/Sequencing
 #   worker_program: nextgen_analysis_server.py
-
-# ## Back compatible algorithm section, to be removed in 0.7.7 release
-algorithm:
-  platform: illumina
