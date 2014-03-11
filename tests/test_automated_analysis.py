@@ -85,7 +85,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-                         DlInfo("genomes_automated_test.tar.gz", "genomes", 13),
+                         DlInfo("genomes_automated_test.tar.gz", "genomes", 14),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 5),
                          DlInfo("tcga_benchmark.tar.gz", None, 2)]
