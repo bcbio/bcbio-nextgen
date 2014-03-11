@@ -115,8 +115,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
         options["bowtie1"] = True
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
-#    final_out = os.path.join(out_dir, "%s.sam" % out_base)
-    final_out = os.path.join(align_dir, "{0}.bam".format(names["sample"]))
+    final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):
         return final_out
 
@@ -225,6 +224,11 @@ def _fix_unmapped(unmapped_file, config, names):
         with file_transaction(out_file) as tx_out_file:
             tx_out = pysam.Samfile(tx_out_file, "wb", template=work_sam)
             for read1 in work_sam:
+                if not read1.is_paired:
+                    if read1.is_unmapped:
+                        read1.mapq = 0
+                    tx_out.write(read1)
+                    continue
                 read2 = work_sam.next()
                 if read1.qname != read2.qname:
                     continue
