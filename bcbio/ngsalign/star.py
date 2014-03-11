@@ -13,7 +13,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
     out_prefix = os.path.join(align_dir, names["lane"])
     out_file = out_prefix + "Aligned.out.sam"
-    final_out = os.path.join(align_dir, "{0}.bam".format(names["sample"]))
+    out_dir = os.path.join(align_dir, "%s_star" % names["lane"])
+
+    final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):
         return final_out
     star_path = config_utils.get_program("STAR", config)
