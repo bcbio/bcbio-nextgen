@@ -14,27 +14,31 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import curdir_tmpdir
 
-def _get_gatk_opts(config, names, tmp_dir=None):
+def _get_gatk_opts(config, names, tmp_dir=None, memscale=None):
     """Retrieve GATK memory specifications, moving down a list of potential specifications.
     """
     opts = ["-U", "LENIENT_VCF_PROCESSING", "--read_filter",
             "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     if tmp_dir:
         opts.append("-Djava.io.tmpdir=%s" % tmp_dir)
+    jvm_opts = ["-Xms750m", "-Xmx2g"]
     for n in names:
         resources = config_utils.get_resources(n, config)
         if resources and resources.get("jvm_opts"):
-            return resources.get("jvm_opts") + opts
-    return ["-Xms750m", "-Xmx2g"] + opts
+            jvm_opts = resources.get("jvm_opts")
+            break
+    if memscale:
+        jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust": memscale}})
+    return jvm_opts + opts
 
-def get_gatk_framework_opts(config, tmp_dir=None):
-    return _get_gatk_opts(config, ["gatk-framework", "gatk"], tmp_dir)
+def get_gatk_framework_opts(config, tmp_dir=None, memscale=None):
+    return _get_gatk_opts(config, ["gatk-framework", "gatk"], tmp_dir, memscale)
 
-def get_gatk_opts(config, tmp_dir=None):
-    return _get_gatk_opts(config, ["gatk", "gatk-framework"], tmp_dir)
+def get_gatk_opts(config, tmp_dir=None, memscale=None):
+    return _get_gatk_opts(config, ["gatk", "gatk-framework"], tmp_dir, memscale)
 
-def get_gatk_vqsr_opts(config, tmp_dir=None):
-    return _get_gatk_opts(config, ["gatk-vqsr", "gatk", "gatk-framework"], tmp_dir)
+def get_gatk_vqsr_opts(config, tmp_dir=None, memscale=None):
+    return _get_gatk_opts(config, ["gatk-vqsr", "gatk", "gatk-framework"], tmp_dir, memscale)
 
 def get_gatk_version(gatk_jar):
     cl = ["java", "-Xms128m", "-Xmx256m", "-jar", gatk_jar, "-version"]

@@ -33,7 +33,8 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
             args += ["-BQSR", data["prep_recal"]]
     elif prep_params["recal"]:
         raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
-    jvm_opts = broad.get_gatk_framework_opts(data["config"])
+    jvm_opts = broad.get_gatk_framework_opts(data["config"],
+                                             memscale={"direction": "decrease", "magnitude": 3})
     return [config_utils.get_program("gatk-framework", data["config"])] + jvm_opts + args
 
 def _recal_has_reads(in_file):
@@ -52,7 +53,7 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
         if not utils.file_exists(sel_file):
             with file_transaction(sel_file) as tx_out_file:
                 cl += ["-o", tx_out_file]
-                do.run_memory_retry(cl, "GATK: PrintReads", data, region=region)
+                do.run(cl, "GATK: PrintReads", data, region=region)
         dup_metrics = "%s-dup.dup_metrics" % os.path.splitext(out_base_file)[0]
         compression = "5" if prep_params["realign"] == "gatk" else "0"
         cl = broad_runner.cl_picard("MarkDuplicates",
@@ -182,8 +183,8 @@ def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
         realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
         cmd = "{extract_recal_cmd} {dedup_cmd} {realign_cmd}  > {tx_out_file}"
         cmd = cmd.format(**locals())
-        do.run_memory_retry(cmd, "Piped post-alignment bamprep {0}".format(region), data,
-                            region=region)
+        do.run(cmd, "Piped post-alignment bamprep {0}".format(region), data,
+               region=region)
 
 # ## Shared functionality
 
