@@ -195,6 +195,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(explant=True)
+    @attr(singleend=True)
     def test_explant(self):
         """
         Run an explant RNA-seq analysis with TopHat and generate gene-level counts.
