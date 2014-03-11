@@ -11,6 +11,8 @@
   `coverage_depth_min`) instead of `coverage_depth` enumeration. Provide
   downsampling of reads to max depth during post-alignment preparation to avoid
   repetitive centromere regions with high depth.
+- Ensure read group information correctly supplied with bwa aln. Thanks to Miika
+  Ahdesmaki.
 - Fix bug in retrieval of snpEff databases on install. Thanks to Matan Hofree.
 - Fix bug in normal BAM preparation for tumor/normal variant calling. Thanks to
   Miika Ahdesmaki.

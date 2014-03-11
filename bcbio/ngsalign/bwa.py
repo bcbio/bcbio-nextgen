@@ -129,7 +129,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             with file_transaction(sai2_file) as tx_sai2_file:
                 _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
         align_type = "sampe" if sai2_file else "samse"
-        sam_cl = [config_utils.get_program("bwa", config), align_type, ref_file, sai1_file]
+        rg_info = novoalign.get_rg_info(names)
+        sam_cl = [config_utils.get_program("bwa", config), align_type, "-r", "'%s'" % rg_info,
+                  ref_file, sai1_file]
         if sai2_file:
             sam_cl.append(sai2_file)
         sam_cl.append(fastq_file)
