@@ -4,7 +4,6 @@ import tempfile
 from bcbio.pipeline import config_utils
 from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
 from bcbio.provenance import do
-from bcbio import broad
 from bcbio import bam
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
@@ -37,7 +36,6 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += " --outSAMstrandField intronMotif"
     run_message = "Running STAR aligner on %s and %s." % (pair_file, ref_file)
     do.run(cmd.format(**locals()), run_message, None)
-    picard = broad.runner_from_config(config)
     out_file = bam.sam_to_bam(out_file, config)
     out_file = _fix_sam_header(out_file, config)
     if not file_exists(final_out):
