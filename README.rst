@@ -118,6 +118,7 @@ Contributors
 .. _Paul Tang: https://github.com/tanglingfung
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
+.. _Alla Bushoy: https://github.com/abushoy
 
 License
 -------
