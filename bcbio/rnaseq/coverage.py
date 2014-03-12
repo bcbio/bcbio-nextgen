@@ -3,11 +3,14 @@ Functions to handle plotting coverage across genes
 """
 try:
     from chanjo import bam
+except ImportError:
+    bam = None
+try:
     import gffutils
     import pandas as pd
     import matplotlib.pyplot as plt
 except ImportError:
-    bam, gffutils, pd, plt = None, None, None, None
+    gffutils, pd, plt = None, None, None
 
 import random
 import numpy as np
