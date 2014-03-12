@@ -12,6 +12,7 @@ PyYAML>=3.10
 tornado>=3.1.0
 # soft dependencies -- not required for bcbio-nextgen-vm
 bioblend>=0.4.2
+chanjo>=0.5.4
 cutadapt>=1.2.1
 fabric>=1.7.0
 gffutils>=0.8.1
