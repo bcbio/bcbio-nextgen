@@ -161,56 +161,59 @@ def _check_algorithm_keys(item):
                          % (problem_keys, url))
 
 
-def _detect_fastq_format(in_file,MAX_RECORDS=1000000):
-        ranges = {
-                 "sanger": (33, 73),
-                 "solexa": (59, 104),      
-                 "illumina_1.3+": (64, 104),
-                 "illumina_1.5+": (66, 104)
-                 }
-       
-        gmin, gmax  = 99, 0
-        valid_encodings = []
-        
-        with open(in_file) as in_handle:
-            four = itertools.islice(in_handle, 3, None, 4)
-            count  = 0
-            
-            for  line in four:
-                if count > MAX_RECORDS:
-                    break
-                    count +=1
-             
-                vals = [ord(c) for c in line.rstrip()]
-                lmin = min(vals)
-                lmax = max(vals)
-                if lmin < gmin or lmax > gmax:
-                    gmin, gmax = min(lmin, gmin), max(lmax, gmax)
-                    
-                    for encoding, (emin, emax) in  ranges.items():
-                        if gmin >= emin and gmax <= emax:
-                            valid_encodings.append(encoding)
-       
-                                        
-        return valid_encodings
+def _detect_fastq_format(in_file, MAX_RECORDS=1000000):
+    ranges = {"sanger": (33, 73),
+              "solexa": (59, 104),
+              "illumina_1.3+": (64, 104),
+              "illumina_1.5+": (66, 104)}
+
+    gmin, gmax = 99, 0
+    valid_encodings = []
+
+    with open(in_file) as in_handle:
+        four = itertools.islice(in_handle, 3, None, 4)
+        count = 0
+        for line in four:
+            if count > MAX_RECORDS:
+                break
+                count +=1
+            vals = [ord(c) for c in line.rstrip()]
+            lmin = min(vals)
+            lmax = max(vals)
+            if lmin < gmin or lmax > gmax:
+                gmin, gmax = min(lmin, gmin), max(lmax, gmax)
+                for encoding, (emin, emax) in ranges.items():
+                    if gmin >= emin and gmax <= emax:
+                        valid_encodings.append(encoding)
+
+    return valid_encodings
+
+
 def _check_quality_format(items):
     """
     Check if quality_format="standard" and fastq_format is not sanger
     """
+    SAMPLE_FORMAT = {"illumina_1.3+": "illumina",
+                     "illumina_1.5+": "illumina",
+                     "solexa": "solexa",
+                     "sanger": "standard"}
+
     for item in items:
-        quality_format_node = item["algorithm"].get("quality_format", None)
-     
-        
-        fastq_file = next((file for file in item['files'] if 'fastq' in file),None)
+        specified_format = item["algorithm"].get("quality_format", "").lower()
+        fastq_file = next((file for file in item['files'] if 'fastq' in file), None)
 
-        if fastq_file is not None  and  quality_format_node  is not None:
+        if fastq_file and specified_format:
             fastq_format = _detect_fastq_format(fastq_file)
-    
-        if fastq_format and fastq_format[0]=="sanger" and quality_format_node.lower() == "standard":
-            raise ValueError("Quality format might be sanger. Check input yaml for quality format value")
+            detected_encodings = [SAMPLE_FORMAT[x] for x in fastq_format]
+            if detected_encodings:
+                if specified_format not in detected_encodings:
+                    raise ValueError("Quality format specified in the YAML"
+                                     "file might be a different encoding."
+                                     "%s was specified but possible formats"
+                                     "detected were %s." % (specified_format,
+                                                            detected_encodings))
 
-       
-       
+
 def _check_aligner(item):
     """Ensure specified aligner is valid choice.
     """
@@ -236,17 +239,17 @@ def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
     logger.info("Checking sample YAML configuration: %s" % in_file)
-    _check_quality_format(items  ) 
+    _check_quality_format(items  )
     _check_for_duplicates(items, "lane")
     _check_for_duplicates(items, "description")
     _check_for_misplaced(items, "algorithm",
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
-   
+
     [_check_algorithm_keys(x) for x in items]
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
-    
+
 
 # ## Read bcbio_sample.yaml files
 
@@ -306,7 +309,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
         global_vars = global_config.pop("globals", {})
         loaded = loaded["details"]
-  
+
     run_details = []
     for i, item in enumerate(loaded):
         item = _normalize_files(item, fc_dir)
@@ -332,20 +335,20 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
                                                   ignore_keys=["variantcaller", "realign", "recalibrate",
                                                                "phasing", "svcaller"])
-        
+
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
-       
-        
+
+
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details
 
 
-    
-    
-    
-    
+
+
+
+
 def _replace_global_vars(xs, global_vars):
     """Replace globally shared names from input header with value.
 
