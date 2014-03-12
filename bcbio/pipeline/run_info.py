@@ -181,7 +181,7 @@ def _detect_fastq_format(in_file, MAX_RECORDS=1000):
                 return possible
             if count > MAX_RECORDS:
                 break
-                count +=1
+            count += 1
             vals = [ord(c) for c in line.rstrip()]
             lmin = min(vals)
             lmax = max(vals)
@@ -191,7 +191,6 @@ def _detect_fastq_format(in_file, MAX_RECORDS=1000):
                         possible.remove(encoding)
 
     return possible
-
 
 def _check_quality_format(items):
     """
@@ -206,7 +205,7 @@ def _check_quality_format(items):
 
     for item in items:
         specified_format = item["algorithm"].get("quality_format", "").lower()
-        fastq_file = next((file for file in item['files'] if
+        fastq_file = next((file for file in item.get('files', []) if
                            any([ext for ext in fastq_extensions if ext in file])), None)
 
         if fastq_file and specified_format:
@@ -246,7 +245,7 @@ def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
     logger.info("Checking sample YAML configuration: %s" % in_file)
-    _check_quality_format(items  )
+    _check_quality_format(items)
     _check_for_duplicates(items, "lane")
     _check_for_duplicates(items, "description")
     _check_for_misplaced(items, "algorithm",
@@ -345,16 +344,9 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
 
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
-
-
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details
-
-
-
-
-
 
 def _replace_global_vars(xs, global_vars):
     """Replace globally shared names from input header with value.
