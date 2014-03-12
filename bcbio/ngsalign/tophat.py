@@ -155,6 +155,10 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     fixed = merge_unmapped(fixed, unmapped, config)
     fixed = _fix_unmapped(fixed, config, names)
     fixed = bam.sort(fixed, config)
+    picard = broad.runner_from_config(config)
+    # set the contig order to match the reference file so GATK works
+    fixed = picard.run_fn("picard_reorder", out_file, data["sam_ref"],
+                          os.path.splitext(out_file)[0] + ".picard.bam")
     if not file_exists(final_out):
         symlink_plus(fixed, final_out)
     return final_out
