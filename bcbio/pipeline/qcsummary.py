@@ -57,7 +57,7 @@ def _run_qc_tools(bam_file, data):
     to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower() == "rna-seq":
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
-        to_run.append(("coverage", _run_gene_coverage))
+#        to_run.append(("coverage", _run_gene_coverage))
         to_run.append(("complexity", _run_complexity))
     elif data["analysis"].lower() == "chip-seq":
         to_run.append(["bamtools", _run_bamtools_stats])
