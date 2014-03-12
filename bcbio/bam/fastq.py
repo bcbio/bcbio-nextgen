@@ -4,6 +4,7 @@
 from itertools import izip, product
 import os
 import random
+import gzip
 
 from Bio import SeqIO
 
@@ -128,9 +129,9 @@ def combine_pairs(input_files):
                 continue #there is only 1 difference
             if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
                   b[s[0]] in PAIR_FILE_IDENTIFIERS):
- 
+
                 if b[s[0]- 1] in ("R", "_", "-"):
-                  
+
                             used.add(in_file)
                             used.add(comp_file)
                             if b[s[0]] == "2":
@@ -230,3 +231,13 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
             break
     in_handle.close()
     return average
+
+def open_fastq(in_file):
+    """ open a fastq file, using gzip if it is gzipped
+    """
+    _, ext = os.path.splitext(in_file)
+    if ext == ".gz":
+        return gzip.open(in_file, 'rb')
+    if ext in [".fastq", ".fq"]:
+        return open(in_file, 'r')
+

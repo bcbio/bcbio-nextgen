@@ -6,6 +6,7 @@ next gen LIMS system or an on-file YAML configuration.
 import copy
 import itertools
 import os
+from contextlib import closing
 
 import yaml
 
@@ -16,6 +17,7 @@ from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
 from bcbio.variation import effects, genotype, population
 from bcbio.variation.cortex import get_sample_name
+from bcbio.bam.fastq import open_fastq
 
 def organize(dirs, config, run_info_yaml):
     """Organize run information from a passed YAML file or the Galaxy API.
@@ -161,32 +163,34 @@ def _check_algorithm_keys(item):
                          % (problem_keys, url))
 
 
-def _detect_fastq_format(in_file, MAX_RECORDS=1000000):
+def _detect_fastq_format(in_file, MAX_RECORDS=1000):
     ranges = {"sanger": (33, 73),
               "solexa": (59, 104),
               "illumina_1.3+": (64, 104),
-              "illumina_1.5+": (66, 104)}
+              "illumina_1.5+": (66, 104),
+              "illumina_1.8+": (35, 74)}
 
     gmin, gmax = 99, 0
-    valid_encodings = []
+    possible = set(ranges.keys())
 
-    with open(in_file) as in_handle:
+    with closing(open_fastq(in_file)) as in_handle:
         four = itertools.islice(in_handle, 3, None, 4)
         count = 0
         for line in four:
+            if len(possible) == 1:
+                return possible
             if count > MAX_RECORDS:
                 break
                 count +=1
             vals = [ord(c) for c in line.rstrip()]
             lmin = min(vals)
             lmax = max(vals)
-            if lmin < gmin or lmax > gmax:
-                gmin, gmax = min(lmin, gmin), max(lmax, gmax)
-                for encoding, (emin, emax) in ranges.items():
-                    if gmin >= emin and gmax <= emax:
-                        valid_encodings.append(encoding)
+            for encoding, (emin, emax) in ranges.items():
+                if encoding in possible:
+                    if lmin < emin or lmax > emax:
+                        possible.remove(encoding)
 
-    return valid_encodings
+    return possible
 
 
 def _check_quality_format(items):
@@ -195,23 +199,26 @@ def _check_quality_format(items):
     """
     SAMPLE_FORMAT = {"illumina_1.3+": "illumina",
                      "illumina_1.5+": "illumina",
+                     "illumina_1.8+": "standard",
                      "solexa": "solexa",
                      "sanger": "standard"}
+    fastq_extensions = ["fq.gz", "fastq.gz", ".fastq" ".fq"]
 
     for item in items:
         specified_format = item["algorithm"].get("quality_format", "").lower()
-        fastq_file = next((file for file in item['files'] if 'fastq' in file), None)
+        fastq_file = next((file for file in item['files'] if
+                           any([ext for ext in fastq_extensions if ext in file])), None)
 
         if fastq_file and specified_format:
             fastq_format = _detect_fastq_format(fastq_file)
-            detected_encodings = [SAMPLE_FORMAT[x] for x in fastq_format]
+            detected_encodings = set([SAMPLE_FORMAT[x] for x in fastq_format])
             if detected_encodings:
                 if specified_format not in detected_encodings:
-                    raise ValueError("Quality format specified in the YAML"
-                                     "file might be a different encoding."
-                                     "%s was specified but possible formats"
+                    raise ValueError("Quality format specified in the YAML "
+                                     "file might be a different encoding. "
+                                     "'%s' was specified but possible formats "
                                      "detected were %s." % (specified_format,
-                                                            detected_encodings))
+                                                            ", ".join(detected_encodings)))
 
 
 def _check_aligner(item):

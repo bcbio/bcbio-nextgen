@@ -143,6 +143,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(stranded=True)
+    @attr(rnaseq=True)
     def test_2_stranded(self):
         """Run an RNA-seq analysis with TopHat and generate gene-level counts.
         """
@@ -196,6 +197,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
 
     @attr(explant=True)
     @attr(singleend=True)
+    @attr(rnaseq=True)
     def test_explant(self):
         """
         Run an explant RNA-seq analysis with TopHat and generate gene-level counts.

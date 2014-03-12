@@ -5,7 +5,7 @@ details:
     files: ['Hsapiens_Mmusculus_1.fq.gz']
     algorithm:
       aligner: star
-      quality_format: Standard
+      quality_format: standard
       trim_reads: read_through
       adapters: [truseq, polya]
       disambiguate: [hg19]
@@ -18,7 +18,7 @@ details:
     files: ['Hsapiens_Mmusculus_rep2.fq.gz']
     algorithm:
       aligner: star
-      quality_format: Standard
+      quality_format: standard
       trim_reads: read_through
       adapters: [truseq, polya]
       disambiguate: [hg19]
