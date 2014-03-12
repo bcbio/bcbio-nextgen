@@ -13,6 +13,7 @@ import contextlib
 import copy
 import operator
 import os
+import sys
 
 import numpy
 import pysam
@@ -45,10 +46,15 @@ def parallel_callable_loci(in_bam, ref_file, config):
 @multi.zeromq_aware_logging
 def calc_callable_loci(data, region=None, out_file=None):
     """Determine callable bases for an input BAM in the given region.
+
+    We also identify super high depth regions (7x more than the set maximum depth) to
+    avoid calling in since these are repetitive centromere and telomere regions that spike
+    memory usage.
     """
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
-    depth = {"max": 250,  # Could also use coverage_depth_max if we need to distinguish high depth
+    max_depth = utils.get_in(data, ("config", "algorithm", "coverage_depth_max"), 10000)
+    depth = {"max": max_depth * 7 if max_depth > 0 else sys.maxint - 1,
              "min": utils.get_in(data, ("config", "algorithm", "coverage_depth_min"), 4)}
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
@@ -94,9 +100,8 @@ def _get_ctype(count, depth):
         return "NO_COVERAGE"
     elif count < depth["min"]:
         return "LOW_COVERAGE"
-    # Do not ignore excessive coverage regions; prefer downsampling downstream
-    # elif count > depth["max"]:
-    #     return "EXCESSIVE_COVERAGE"
+    elif count > depth["max"]:
+        return "EXCESSIVE_COVERAGE"
     else:
         return "CALLABLE"
 
@@ -159,7 +164,7 @@ def _get_nblock_regions(in_file, min_n_size):
     with open(in_file) as in_handle:
         for line in in_handle:
             contig, start, end, ctype = line.rstrip().split()
-            if (ctype in ["REF_N", "NO_COVERAGE", "EXCESSIVE_COVERAGE"] and
+            if (ctype in ["REF_N", "NO_COVERAGE", "EXCESSIVE_COVERAGE", "LOW_COVERAGE"] and
                   int(end) - int(start) > min_n_size):
                 out_lines.append("%s\t%s\t%s\n" % (contig, start, end))
     return pybedtools.BedTool("\n".join(out_lines), from_string=True)

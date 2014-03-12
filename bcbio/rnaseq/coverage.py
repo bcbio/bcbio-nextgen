@@ -1,10 +1,9 @@
 """
 Functions to handle plotting coverage across genes
 """
-
 try:
-    import gffutils
     from chanjo import bam
+    import gffutils
     import pandas as pd
     import matplotlib.pyplot as plt
 except ImportError:
@@ -15,7 +14,6 @@ import numpy as np
 from collections import defaultdict, Counter
 
 from bcbio.utils import file_exists
-
 
 def _select_random_nonzero_genes(count_file):
     """
