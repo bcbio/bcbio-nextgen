@@ -102,10 +102,14 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             opts += " -f {}".format(ref_file)
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
+
+            # NOTE: -s in vcfsamplediff (strict checking: i.e., require no
+            # reads in the germline to call somatic) is not used as it is
+            # too stringent
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            cl = ("{freebayes} --pooled-discrete --pvar 0.7"
+            cl = ("{freebayes} --pooled-discrete"
                   " --genotype-qualities {opts} {paired.tumor_bam}"
-                  " {paired.normal_bam} | {vcfsamplediff} -s VT"
+                  " {paired.normal_bam} | {vcfsamplediff}  VT"
                   " {paired.normal_name} {paired.tumor_name}"
                   " - {compress_cmd} >  {tx_out_file}")
             bam.index(paired.tumor_bam, config)
