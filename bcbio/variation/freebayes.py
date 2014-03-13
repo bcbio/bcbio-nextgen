@@ -97,6 +97,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
 
             vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
+            vcffilter = config_utils.get_program("vcffilter", config)
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             opts += " -f {}".format(ref_file)
@@ -107,11 +108,11 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             # reads in the germline to call somatic) is not used as it is
             # too stringent
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            cl = ("{freebayes} --pooled-discrete"
-                  " --genotype-qualities {opts} {paired.tumor_bam}"
-                  " {paired.normal_bam} | {vcfsamplediff}  VT"
-                  " {paired.normal_name} {paired.tumor_name}"
-                  " - {compress_cmd} >  {tx_out_file}")
+            cl = ("{freebayes} --pooled-discrete --genotype-qualities "
+                  "{opts} {paired.tumor_bam} {paired.normal_bam} "
+                  "| {vcffilter} -f 'QUAL > 1' -s "
+                  "| {vcfsamplediff} VT {paired.normal_name} {paired.tumor_name} - "
+                  "{compress_cmd} >  {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
