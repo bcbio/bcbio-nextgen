@@ -2,6 +2,8 @@
 
 http://bioinformatics.bc.edu/marthlab/FreeBayes
 """
+
+from collections import namedtuple
 import os
 import shutil
 
@@ -170,3 +172,36 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
         _move_vcf(out_file, orig_file)
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(orig_file))
+
+
+def fix_somatic_calls(in_file, out_file):
+
+    """Fix somatic variant output, standardize it to the SOMATIC flag."""
+
+    import vcf
+
+    # HACK: Needed to replicate the structure used by PyVCF
+    Info = namedtuple('Info', ['id', 'num', 'type', 'desc'])
+    somatic_info = Info(id='SOMATIC', num=0, type='Flag', desc='Somatic event')
+
+    if utils.file_exists(in_file):
+        reader = vcf.VCFReader(filename=in_file)
+        # Add info to the header of the reader
+        reader.infos["SOMATIC"] = somatic_info
+
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "wb") as handle:
+                writer = vcf.VCFWriter(handle, template=reader)
+
+                for record in reader:
+
+                    # Handle FreeBayes
+                    if "VT" in record.INFO:
+                        if record.INFO["VT"] == "somatic":
+                            record.add_info("SOMATIC", True)
+                        # Discard old record
+                        del record.INFO["VT"]
+
+                    writer.write_record(record)
+
+        return out_file
