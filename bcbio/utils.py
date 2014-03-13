@@ -262,13 +262,24 @@ def splitext_plus(f):
         ext = ext2 + ext
     return base, ext
 
+def remove_safe(f):
+    try:
+        os.remove(f)
+    except OSError:
+        pass
+
 def symlink_plus(orig, new):
     """Create relative symlinks and handle associated biological index files.
     """
     for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
-        if os.path.exists(orig + ext) and not os.path.lexists(new + ext):
+        if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):
             with chdir(os.path.dirname(new)):
+                remove_safe(new + ext)
                 os.symlink(os.path.relpath(orig + ext), os.path.basename(new + ext))
+                # Work around symlink issues on some filesystems. Randomly fail to symlink.
+                if not os.path.exists(new + ext) or not os.path.lexists(new + ext):
+                    remove_safe(new + ext)
+                    shutil.copyfile(orig + ext, new + ext)
     orig_noext = splitext_plus(orig)[0]
     new_noext = splitext_plus(new)[0]
     for sub_ext in [".bai"]:

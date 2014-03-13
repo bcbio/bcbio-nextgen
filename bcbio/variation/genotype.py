@@ -360,25 +360,26 @@ def get_variantcallers():
 def variantcall_sample(data, region=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
-    safe_makedir(os.path.dirname(out_file))
-    sam_ref = data["sam_ref"]
-    config = data["config"]
-    caller_fns = get_variantcallers()
-    caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
-    if isinstance(data["work_bam"], basestring):
-        align_bams = [data["work_bam"]]
-        items = [data]
-    else:
-        align_bams = data["work_bam"]
-        items = data["work_items"]
-    call_file = "%s-raw%s" % utils.splitext_plus(out_file)
-    call_file = caller_fn(align_bams, items, sam_ref,
-                          data["genome_resources"]["variation"],
-                          region, call_file)
-    if data["config"]["algorithm"].get("phasing", False) == "gatk":
-        call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
-    utils.symlink_plus(call_file, out_file)
-    if "work_items" in data:
-        del data["work_items"]
+    if out_file is None or not os.path.exists(out_file) or not os.path.lexists(out_file):
+        safe_makedir(os.path.dirname(out_file))
+        sam_ref = data["sam_ref"]
+        config = data["config"]
+        caller_fns = get_variantcallers()
+        caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
+        if isinstance(data["work_bam"], basestring):
+            align_bams = [data["work_bam"]]
+            items = [data]
+        else:
+            align_bams = data["work_bam"]
+            items = data["work_items"]
+        call_file = "%s-raw%s" % utils.splitext_plus(out_file)
+        call_file = caller_fn(align_bams, items, sam_ref,
+                              data["genome_resources"]["variation"],
+                              region, call_file)
+        if data["config"]["algorithm"].get("phasing", False) == "gatk":
+            call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
+        utils.symlink_plus(call_file, out_file)
+        if "work_items" in data:
+            del data["work_items"]
     data["vrn_file"] = out_file
     return [data]

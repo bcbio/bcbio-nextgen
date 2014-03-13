@@ -311,7 +311,8 @@ def bgzip_and_index(in_file, config, remove_orig=True):
     """bgzip and tabix index an input file, handling VCF and BED.
     """
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) or not os.path.lexists(out_file):
+        assert not in_file == out_file, "Input file is bgzipped but not found: %s" % in_file
         with file_transaction(out_file) as tx_out_file:
             bgzip = tools.get_bgzip_cmd(config)
             cmd = "{bgzip} -c {in_file} > {tx_out_file}"
@@ -352,7 +353,11 @@ def tabix_index(in_file, config, preset=None):
     preset = _guess_preset(in_file) if preset is None else preset
     in_file = os.path.abspath(in_file)
     out_file = in_file + ".tbi"
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) or not utils.file_uptodate(out_file, in_file):
+        try:
+            os.remove(out_file)
+        except OSError:
+            pass
         with file_transaction(out_file) as tx_out_file:
             tabix = tools.get_tabix_cmd(config)
             tx_in_file = os.path.splitext(tx_out_file)[0]

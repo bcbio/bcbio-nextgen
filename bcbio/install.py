@@ -184,30 +184,31 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
     """
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
         resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
-        with open(resource_file) as in_handle:
-            resources = yaml.load(in_handle)
-        snpeff_db, snpeff_base_dir = effects.get_db({"genome_resources": resources,
-                                                     "reference": {"fasta": {"base": ref_file}}})
-        if snpeff_db:
-            snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
-            if not os.path.exists(snpeff_db_dir):
-                print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
-                tooldir = args.tooldir or get_defaults()["tooldir"]
-                config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
-                                                   "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
-                raw_version = programs.java_versioner("snpeff", "snpEff",
-                                                      stdout_flag="snpEff version SnpEff")(config)
-                snpeff_version = "".join([x for x in raw_version
-                                          if x in set(string.digits + ".")]).replace(".", "_")
-                dl_url = remotes["snpeff_dl_url"].format(snpeff_ver=snpeff_version, genome=snpeff_db)
-                dl_file = os.path.basename(dl_url)
-                with utils.chdir(snpeff_base_dir):
-                    subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
-                    subprocess.check_call(["unzip", dl_file])
-                    os.remove(dl_file)
-                dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
-                os.rename(dl_dir, snpeff_db_dir)
-                os.rmdir(os.path.join(snpeff_base_dir, "data"))
+        if os.path.exists(resource_file):
+            with open(resource_file) as in_handle:
+                resources = yaml.load(in_handle)
+            snpeff_db, snpeff_base_dir = effects.get_db({"genome_resources": resources,
+                                                         "reference": {"fasta": {"base": ref_file}}})
+            if snpeff_db:
+                snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
+                if not os.path.exists(snpeff_db_dir):
+                    print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
+                    tooldir = args.tooldir or get_defaults()["tooldir"]
+                    config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
+                                                       "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
+                    raw_version = programs.java_versioner("snpeff", "snpEff",
+                                                          stdout_flag="snpEff version SnpEff")(config)
+                    snpeff_version = "".join([x for x in raw_version
+                                              if x in set(string.digits + ".")]).replace(".", "_")
+                    dl_url = remotes["snpeff_dl_url"].format(snpeff_ver=snpeff_version, genome=snpeff_db)
+                    dl_file = os.path.basename(dl_url)
+                    with utils.chdir(snpeff_base_dir):
+                        subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
+                        subprocess.check_call(["unzip", dl_file])
+                        os.remove(dl_file)
+                    dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
+                    os.rename(dl_dir, snpeff_db_dir)
+                    os.rmdir(os.path.join(snpeff_base_dir, "data"))
 
 def _get_biodata(base_file, args):
     with open(base_file) as in_handle:
