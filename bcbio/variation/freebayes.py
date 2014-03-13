@@ -107,7 +107,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             # reads in the germline to call somatic) is not used as it is
             # too stringent
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            cl = ("{freebayes} --pooled-discrete --pvar 0.7"
+            cl = ("{freebayes} --pooled-discrete"
                   " --genotype-qualities {opts} {paired.tumor_bam}"
                   " {paired.normal_bam} | {vcfsamplediff}  VT"
                   " {paired.normal_name} {paired.tumor_name}"
