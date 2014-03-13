@@ -11,7 +11,7 @@ details:
       mark_duplicates: picard
       recalibrate: gatk
       realign: gatk
-      variantcaller: gatk
+      variantcaller: gatk-haplotype
       platform: illumina
       quality_format: Standard
       coverage_interval: genome
