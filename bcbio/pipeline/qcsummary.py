@@ -393,22 +393,29 @@ def _run_gemini_stats(bam_file, data, out_dir):
     out = {}
     gemini_db = data.get("variants", [{}])[0].get("population", {}).get("db")
     if gemini_db:
-        gemini = config_utils.get_program("gemini", data["config"])
-        tstv = subprocess.check_output([gemini, "stats", "--tstv", gemini_db])
-        gt_counts = subprocess.check_output([gemini, "stats", "--gts-by-sample", gemini_db])
-        dbsnp_count = subprocess.check_output([gemini, "query", gemini_db, "-q",
-                                               "SELECT count(*) FROM variants WHERE in_dbsnp==1"])
-        out["Transition/Transversion"] = tstv.split("\n")[1].split()[-1]
-        for line in gt_counts.split("\n"):
-            parts = line.rstrip().split()
-            if len(parts) > 0 and parts[0] == data["name"][-1]:
-                _, hom_ref, het, hom_var, _, total = parts
-                out["Variations (total)"] = int(total)
-                out["Variations (heterozygous)"] = int(het)
-                out["Variations (homozygous)"] = int(hom_var)
-                break
-        out["Variations (in dbSNP)"] = int(dbsnp_count.strip())
-        if out.get("Variations (total)") > 0:
-            out["Variations (in dbSNP) pct"] = "%.1f%%" % (out["Variations (in dbSNP)"] /
-                                                           float(out["Variations (total)"]) * 100.0)
+        gemini_stat_file = "%s-stats.yaml" % os.path.splitext(gemini_db)[0]
+        if not utils.file_uptodate(gemini_stat_file, gemini_db):
+            gemini = config_utils.get_program("gemini", data["config"])
+            tstv = subprocess.check_output([gemini, "stats", "--tstv", gemini_db])
+            gt_counts = subprocess.check_output([gemini, "stats", "--gts-by-sample", gemini_db])
+            dbsnp_count = subprocess.check_output([gemini, "query", gemini_db, "-q",
+                                                   "SELECT count(*) FROM variants WHERE in_dbsnp==1"])
+            out["Transition/Transversion"] = tstv.split("\n")[1].split()[-1]
+            for line in gt_counts.split("\n"):
+                parts = line.rstrip().split()
+                if len(parts) > 0 and parts[0] == data["name"][-1]:
+                    _, hom_ref, het, hom_var, _, total = parts
+                    out["Variations (total)"] = int(total)
+                    out["Variations (heterozygous)"] = int(het)
+                    out["Variations (homozygous)"] = int(hom_var)
+                    break
+            out["Variations (in dbSNP)"] = int(dbsnp_count.strip())
+            if out.get("Variations (total)") > 0:
+                out["Variations (in dbSNP) pct"] = "%.1f%%" % (out["Variations (in dbSNP)"] /
+                                                               float(out["Variations (total)"]) * 100.0)
+            with open(gemini_stat_file, "w") as out_handle:
+                yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+        else:
+            with open(gemini_stat_file) as in_handle:
+                out = yaml.safe_load(in_handle)
     return out

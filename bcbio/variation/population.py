@@ -15,17 +15,13 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
-def prep_gemini_db(fnames, call_id, samples, data):
+def prep_gemini_db(fnames, call_info, samples, data):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
     """
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
-    gemini_db = os.path.join(out_dir, "-".join(call_id) + ".db")
-    is_population = len(fnames) > 1
-    if is_population:
-        name, caller = call_id
-        gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
-    else:
-        gemini_vcf = fnames[0]
+    name, caller, is_batch = call_info
+    gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
+    gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
     use_gemini_quick = (do_db_build(samples, check_gemini=False) and
                         any(vcfutils.vcf_has_variants(f) for f in fnames))
     if not utils.file_exists(gemini_db) and use_gemini_quick:
@@ -50,9 +46,9 @@ def prep_gemini_db(fnames, call_id, samples, data):
                 num_cores = data["config"]["algorithm"].get("num_cores", 1)
                 cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
                 cmd = cmd.format(**locals())
-                do.run(cmd, "Create gemini database for %s" % str(call_id), data)
-    return [[call_id, {"db": gemini_db if utils.file_exists(gemini_db) else None,
-                       "vcf": gemini_vcf if is_population else None}]]
+                do.run(cmd, "Create gemini database for %s %s" % (name, caller), data)
+    return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
+                              "vcf": gemini_vcf if is_batch else None}]]
 
 def _is_small_vcf(vcf_file):
     """Check for small VCFs which we want to analyze quicker.
@@ -72,8 +68,12 @@ def get_multisample_vcf(fnames, name, caller, data):
     """
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
-    return vcfutils.merge_variant_files(fnames, gemini_vcf, data["sam_ref"],
-                                        data["config"])
+    if len(fnames) > 1:
+        return vcfutils.merge_variant_files(fnames, gemini_vcf, data["sam_ref"],
+                                            data["config"])
+    else:
+        utils.symlink_plus(fnames[0], gemini_vcf)
+        return gemini_vcf
 
 def _has_gemini(config):
     try:
@@ -147,10 +147,10 @@ def prep_db_parallel(samples, parallel_fn):
     has_batches = False
     for (name, caller), info in batch_groups.iteritems():
         fnames = [x[0] for x in info]
-        to_process.append([fnames, (str(name), caller), [x[1] for x in info], info[0][1]])
+        to_process.append([fnames, (str(name), caller, True), [x[1] for x in info], info[0][1]])
         has_batches = True
     for name, caller, data, fname in singles:
-        to_process.append([[fname], (str(name), caller), [data], data])
+        to_process.append([[fname], (str(name), caller, False), [data], data])
     if len(samples) > 0 and not do_db_build([x[0] for x in samples], check_gemini=False) and not has_batches:
         return samples
     output = parallel_fn("prep_gemini_db", to_process)
