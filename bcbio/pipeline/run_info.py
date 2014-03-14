@@ -117,6 +117,19 @@ def _check_for_duplicates(xs, attr, check_fn=None):
                          "Required to be unique for a project: %s\n"
                          "Problem found in these samples: %s" % (attr, dups, descrs))
 
+def _check_for_batch_clashes(xs):
+    """Check that batch names do not overlap with sample names.
+    """
+    names = set([x["description"] for x in xs])
+    dups = set([])
+    for x in xs:
+        batch = utils.get_in(x, ("metadata", "batch"))
+        if batch in names:
+            dups.add(batch)
+    if len(dups) > 0:
+        raise ValueError("Batch names must be unique from sample descriptions.\n"
+                         "Clashing batch names: %s" % sorted(list(dups)))
+
 def _check_for_misplaced(xs, subkey, other_keys):
     """Ensure configuration keys are not incorrectly nested under other keys.
     """
@@ -248,6 +261,7 @@ def _check_sample_config(items, in_file):
     _check_quality_format(items)
     _check_for_duplicates(items, "lane")
     _check_for_duplicates(items, "description")
+    _check_for_batch_clashes(items)
     _check_for_misplaced(items, "algorithm",
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
