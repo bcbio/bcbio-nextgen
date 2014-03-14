@@ -394,12 +394,9 @@ class RnaseqPipeline(AbstractPipeline):
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             samples = disambiguate.split(samples)
             samples = run_parallel("process_alignment", samples)
-        with prun.start(_wres(parallel, ["samtools"]), samples,
-                        config, dirs, "disambiguate") as run_parallel:
-            samples = disambiguate.resolve(samples, run_parallel)
-
         with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
+            samples = disambiguate.resolve(samples, run_parallel)
             samples = rnaseq.estimate_expression(samples, run_parallel)
             #samples = rnaseq.detect_fusion(samples, run_parallel)
 
