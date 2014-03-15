@@ -123,9 +123,13 @@ def _check_for_batch_clashes(xs):
     names = set([x["description"] for x in xs])
     dups = set([])
     for x in xs:
-        batch = utils.get_in(x, ("metadata", "batch"))
-        if batch in names:
-            dups.add(batch)
+        batches = utils.get_in(x, ("metadata", "batch"))
+        if batches:
+            if isinstance(batches, basestring):
+                batches = [batches]
+            for batch in batches:
+                if batch in names:
+                    dups.add(batch)
     if len(dups) > 0:
         raise ValueError("Batch names must be unique from sample descriptions.\n"
                          "Clashing batch names: %s" % sorted(list(dups)))

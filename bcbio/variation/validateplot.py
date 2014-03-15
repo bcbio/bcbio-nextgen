@@ -75,7 +75,7 @@ def _prettyplot(df, prep, prepi, out_file):
             ax.set_ylim(0, maxval)
             if i == len(vtypes) - 1:
                 ax.set_xticks(np.arange(len(callers)) + width / 2.0)
-                ax.set_xticklabels([caller_labels.get(x, "") for x in callers], size=8, rotation=45)
+                ax.set_xticklabels([caller_labels.get(x, x) for x in callers], size=8, rotation=45)
             else:
                 ax.get_xaxis().set_ticks([])
             _annotate(ax, labels, vals, np.arange(len(callers)), width)
