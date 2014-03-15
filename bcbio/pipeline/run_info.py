@@ -125,7 +125,7 @@ def _check_for_batch_clashes(xs):
     for x in xs:
         batches = utils.get_in(x, ("metadata", "batch"))
         if batches:
-            if isinstance(batches, basestring):
+            if not isinstance(batches, (list, tuple)):
                 batches = [batches]
             for batch in batches:
                 if batch in names:
