@@ -159,17 +159,17 @@ def _piped_extract_recal_cmd(data, region, prep_params, tmp_dir):
     Combines extraction and recalibration supported by GATK.
     """
     config = data["config"]
-    samtools = config_utils.get_program("samtools", config)
-    out_type = "-u" if prep_params["dup"] or prep_params["realign"] else "-b"
+    sambamba = config_utils.get_program("sambamba", config)
+    clevel = "0" if prep_params["dup"] or prep_params["realign"] else "-1"
     if not prep_params.get("recal") and not prep_params.get("max_depth"):
         prep_region = region_to_gatk(region)
         in_file = data["work_bam"]
-        cmd = "{samtools} view {out_type} {in_file} {prep_region}"
+        cmd = "{sambamba} view -f bam --compression-level {clevel} {in_file} {prep_region}"
         return cmd.format(**locals())
     elif prep_params["recal"] == "gatk" or prep_params.get("max_depth"):
         cl = _gatk_extract_reads_cl(data, region, prep_params, tmp_dir)
         cl += ["--logging_level", "ERROR"]
-        cmd = "{samtools} view -S {out_type} -"
+        cmd = "{sambamba} view -S -f bam --compression-level {clevel} /dev/stdin"
         return " ".join(cl) + " | " + cmd.format(**locals())
     else:
         raise ValueError("Unexpected recalibration approach: %s" % prep_params["recal"])
