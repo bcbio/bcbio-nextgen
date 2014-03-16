@@ -86,7 +86,7 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
             if deep_coverage:
                 params += ["--mismatchFraction", "0.30",
                            "--maxIntervalSize", "650"]
-            runner.run_gatk(params)
+            runner.run_gatk(params, memscale={"direction": "decrease", "magnitude": 2})
     return out_file
 
 def gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
@@ -105,7 +105,7 @@ def gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
                    "--maxReadsForRealignment", str(int(5e5)),
                    "--maxReadsForConsensuses", "500",
                    "--maxConsensuses", "100"]
-    return runner.cl_gatk(params, tmp_dir)
+    return runner.cl_gatk(params, tmp_dir, memscale={"direction": "decrease", "magnitude": 2})
 
 def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                            region=None, out_file=None, deep_coverage=False):

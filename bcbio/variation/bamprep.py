@@ -62,7 +62,8 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
                                      ("METRICS_FILE", dup_metrics),
                                      ("PROGRAM_RECORD_ID", "null"),
                                      ("COMPRESSION_LEVEL", compression),
-                                     ("TMP_DIR", tmp_dir)])
+                                     ("TMP_DIR", tmp_dir)],
+                                    memscale={"direction": "decrease", "magnitude": 2})
     elif not prep_params["dup"]:
         sel_file = data["work_bam"]
     else:
