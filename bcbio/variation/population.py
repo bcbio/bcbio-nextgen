@@ -65,15 +65,21 @@ def _is_small_vcf(vcf_file):
 
 def get_multisample_vcf(fnames, name, caller, data):
     """Retrieve a multiple sample VCF file in a standard location.
+
+    Handles inputs with multiple repeated input files from batches.
     """
+    unique_fnames = []
+    for f in fnames:
+        if f not in unique_fnames:
+            unique_fnames.append(f)
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
-    if len(fnames) > 1:
+    if len(unique_fnames) > 1:
         gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
-        return vcfutils.merge_variant_files(fnames, gemini_vcf, data["sam_ref"],
+        return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
                                             data["config"])
     else:
-        gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, os.path.splitext(fnames[0])[1]))
-        utils.symlink_plus(fnames[0], gemini_vcf)
+        gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, os.path.splitext(unique_fnames[0])[1]))
+        utils.symlink_plus(unique_fnames[0], gemini_vcf)
         return gemini_vcf
 
 def _has_gemini(config):

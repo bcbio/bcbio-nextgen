@@ -46,7 +46,7 @@ def plot_prep_methods(df, prep, prepi, out_file_base):
     """Plot comparison between BAM preparation methods.
     """
     samples = df[(df["bamprep"] == prep)]["sample"].unique()
-    assert len(samples) == 1, samples
+    assert len(samples) >= 1, samples
     out_file = "%s-%s.pdf" % (out_file_base, samples[0])
     df = df[df["category"].isin(cat_labels)]
     _prettyplot(df, prep, prepi, out_file)
