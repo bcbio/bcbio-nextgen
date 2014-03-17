@@ -67,7 +67,7 @@ def run(items, config):
     work_bam_a = bam.sort(data_a["work_bam"], config, "queryname")
     work_bam_b = bam.sort(data_b["work_bam"], config, "queryname")
     out_dir = os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
-                                            os.pardir, os.pardir, "disambiguate"))
+                                            os.pardir, "disambiguate_%s" % aligner))
     base_name = os.path.join(out_dir, os.path.splitext(os.path.basename(work_bam_a))[0])
     summary_file = "%s_summary.txt" % base_name
     if not utils.file_exists(summary_file):
