@@ -128,6 +128,7 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files,
         bam.index(x, base_config)
 
     params = ["-R", ref_file, "-T", "SomaticIndelDetector", "-U", "ALLOW_N_CIGAR_READS"]
+    params += ["--maxNumberOfReads", max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
     paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
     if paired.normal_bam is not None:
@@ -136,6 +137,5 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files,
          params += ["--unpaired"]
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
-                   "INTERSECTION", "--maxNumberOfReads", 
-                   max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
+                   "INTERSECTION"]
     return params
