@@ -1,5 +1,7 @@
 ## 0.7.8 (In development)
 
+- Allow calculation of RPKM on more deeply sampled genes by setting
+  `--max-bundle-frags` to 2,000,000. Thanks to Miika Ahdesmaki.
 - Provide cleaner installation process for non-distributable tools like
   GATK. The `--tooplus` argument now handles jars from the GATK site or Appistry
   and correctly updates manifest version information.

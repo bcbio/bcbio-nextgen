@@ -32,6 +32,7 @@ def _get_general_options(align_file, config):
     options.extend(["--num-threads", config["algorithm"].get("num_cores", 1)])
     options.extend(["--quiet"])
     options.extend(["--no-update-check"])
+    options.extend(["--max--bundle-frags", 2000000])
     return options
 
 def _get_no_assembly_options(ref_file, data):
