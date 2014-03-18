@@ -1,5 +1,11 @@
 ## 0.7.8 (In development)
 
+- Add a check for mis-specified FASTQ format in the sample YAML file. Thanks
+  to Alla Bushoy.
+- Updated RNA-seq integration tests to have more specific tags (singleend, Tophat,
+  STAR, explant).
+- Fix contig ordering after Tophat alignment which was preventing GATK-based
+  tools from running.
 - Allow calculation of RPKM on more deeply sampled genes by setting
   `--max-bundle-frags` to 2,000,000. Thanks to Miika Ahdesmaki.
 - Provide cleaner installation process for non-distributable tools like
