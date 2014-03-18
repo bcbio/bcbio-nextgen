@@ -4,7 +4,7 @@ from distutils.version import LooseVersion
 import os
 
 from bcbio import bam, broad
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, get_in
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
@@ -136,5 +136,6 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files,
          params += ["--unpaired"]
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
-                   "INTERSECTION"]
+                   "INTERSECTION", "--maxNumberOfReads", 
+                   max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
     return params
