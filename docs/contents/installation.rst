@@ -57,6 +57,19 @@ documentation on including additional genome data, and the section on
 :ref:`toolplus-install` describes how to add commercially restricted software
 like GATK.
 
+Troubleshooting
+===============
+
+ImportError: No module named conda.cli
+--------------------------------------
+Having a PYTHONHOME or PYTHONPATH set can cause installation troubles,
+if you are seeing an error like the above, unsetting these two environment
+variables will help. Fix that with::
+
+    $ unset PYTHONHOME
+    $ unset PYTHONPATH
+
+
 .. _isolated-install:
 
 Isolated installations
