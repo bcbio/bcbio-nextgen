@@ -15,6 +15,10 @@
   uncompressed VCFs. Reduces space requirements and enables parallelization on
   non-shared filesystems or temporary space by avoiding transferring
   uncompressed outputs.
+- Reduce memory usage during post-alignment BAM preparation steps (PrintReads
+  downsampling, deduplication and realignment prep) to avoid reaching memory cap
+  on limited systems like SLURM. Do not include for IndelRealigner which needs
+  memory in high depth regions.
 - Provide explicit targets for coverage depth (`coverage_depth_max` and
   `coverage_depth_min`) instead of `coverage_depth` enumeration. Provide
   downsampling of reads to max depth during post-alignment preparation to avoid

@@ -105,7 +105,7 @@ def gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
                    "--maxReadsForRealignment", str(int(5e5)),
                    "--maxReadsForConsensuses", "500",
                    "--maxConsensuses", "100"]
-    return runner.cl_gatk(params, tmp_dir, memscale={"direction": "decrease", "magnitude": 2})
+    return runner.cl_gatk(params, tmp_dir)
 
 def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                            region=None, out_file=None, deep_coverage=False):
