@@ -61,7 +61,7 @@ Troubleshooting
 ===============
 
 ImportError: No module named conda.cli
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Having a PYTHONHOME or PYTHONPATH set can cause installation troubles,
 if you are seeing an error like the above, unsetting these two environment
 variables will help. Fix that with::
