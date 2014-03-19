@@ -4,7 +4,7 @@ from distutils.version import LooseVersion
 import os
 
 from bcbio import bam, broad
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, get_in
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
@@ -128,6 +128,7 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files,
         bam.index(x, base_config)
 
     params = ["-R", ref_file, "-T", "SomaticIndelDetector", "-U", "ALLOW_N_CIGAR_READS"]
+    params += ["--maxNumberOfReads", max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
     paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
     if paired.normal_bam is not None:
