@@ -69,6 +69,8 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
         bam.index(x, base_config)
 
     params = ["-R", ref_file, "-T", "MuTect", "-U", "ALLOW_N_CIGAR_READS"]
+    params += ["--downsample_to_coverage", max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
+    params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
     params += ["--tumor_sample_name", paired.tumor_name]
@@ -129,6 +131,7 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files,
 
     params = ["-R", ref_file, "-T", "SomaticIndelDetector", "-U", "ALLOW_N_CIGAR_READS"]
     params += ["--maxNumberOfReads", max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
+    params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
     if paired.normal_bam is not None:
