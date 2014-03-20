@@ -384,7 +384,7 @@ class RnaseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["picard"]),
+        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
                         samples, config, dirs, "trimming") as run_parallel:
             with profile.report("adapter trimming", dirs):
                 samples = run_parallel("process_lane", samples)
