@@ -53,7 +53,8 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
             samtools = config_utils.get_program("samtools", config)
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
-            max_mem = resources.get("memory", "1G")
+            max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
+                                                 2, "decrease")
             batch_size = system.open_file_limit() - 100
             if len(bam_files) > batch_size:
                 bam_files = [merge_bam_files(xs, work_dir, config, out_file, i)

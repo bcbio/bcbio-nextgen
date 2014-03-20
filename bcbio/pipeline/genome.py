@@ -115,10 +115,9 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
             if dbkey == genome_build]
     if len(refs) == 0:
         raise IndexError("Genome %s not found in %s" % (genome_build, loc_file))
-    elif len(refs) > 1:
-        raise IndexError("Genome %s found multiple times in %s" % (genome_build, loc_file))
+    # allow multiple references in a file and use the most recently added
     else:
-        cur_ref = refs[0]
+        cur_ref = refs[-1]
     if need_remap:
         remap_fn = alignment.TOOLS[name].remap_index_fn
         assert remap_fn is not None, "%s requires remapping function from base location file" % name
@@ -172,6 +171,8 @@ def get_refs(genome_build, aligner, galaxy_base):
 
 def get_builds(galaxy_base):
     """Retrieve configured genome builds and reference files, using Galaxy configuration files.
+
+    Allows multiple dbkey specifications in the same file, using the most recently added.
     """
     name = "samtools"
     galaxy_config = _get_galaxy_tool_info(galaxy_base)
@@ -179,4 +180,10 @@ def get_builds(galaxy_base):
     loc_file, need_remap = _get_galaxy_loc_file(name, galaxy_dt, galaxy_config["tool_data_path"],
                                                 galaxy_base)
     assert not need_remap, "Should not need to remap reference files"
-    return _galaxy_loc_iter(loc_file, galaxy_dt)
+    fnames = {}
+    for dbkey, fname in _galaxy_loc_iter(loc_file, galaxy_dt):
+        fnames[dbkey] = fname
+    out = []
+    for dbkey in sorted(fnames.keys()):
+        out.append((dbkey, fnames[dbkey]))
+    return out

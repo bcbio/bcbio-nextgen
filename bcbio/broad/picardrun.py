@@ -241,7 +241,7 @@ def picard_mark_duplicates(picard, align_bam, remove_dups=False):
                         ("METRICS_FILE", tx_dup_metrics)]
                 if picard.get_picard_version("MarkDuplicates") >= 1.82:
                     opts += [("PROGRAM_RECORD_ID", "null")]
-                picard.run("MarkDuplicates", opts)
+                picard.run("MarkDuplicates", opts, memscale={"direction": "decrease", "magnitude": 2})
     return dup_bam, dup_metrics
 
 def picard_fixmate(picard, align_bam):

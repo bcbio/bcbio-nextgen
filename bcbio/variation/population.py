@@ -65,14 +65,21 @@ def _is_small_vcf(vcf_file):
 
 def get_multisample_vcf(fnames, name, caller, data):
     """Retrieve a multiple sample VCF file in a standard location.
+
+    Handles inputs with multiple repeated input files from batches.
     """
+    unique_fnames = []
+    for f in fnames:
+        if f not in unique_fnames:
+            unique_fnames.append(f)
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
-    gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
-    if len(fnames) > 1:
-        return vcfutils.merge_variant_files(fnames, gemini_vcf, data["sam_ref"],
+    if len(unique_fnames) > 1:
+        gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
+        return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
                                             data["config"])
     else:
-        utils.symlink_plus(fnames[0], gemini_vcf)
+        gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, utils.splitext_plus(unique_fnames[0])[1]))
+        utils.symlink_plus(unique_fnames[0], gemini_vcf)
         return gemini_vcf
 
 def _has_gemini(config):
@@ -123,15 +130,16 @@ def _group_by_batches(samples, check_fn):
     for data in [x[0] for x in samples]:
         if check_fn(data):
             batch = data.get("metadata", {}).get("batch")
+            name = str(data["name"][-1])
             if batch:
                 out_retrieve.append((str(batch), data))
             else:
-                out_retrieve.append((str(data["name"][-1]), data))
+                out_retrieve.append((name, data))
             for vrn in data["variants"]:
                 if batch:
                     batch_groups[(str(batch), vrn["variantcaller"])].append((vrn["vrn_file"], data))
                 else:
-                    singles.append((str(data["name"][-1]), vrn["variantcaller"], data, vrn["vrn_file"]))
+                    singles.append((name, vrn["variantcaller"], data, vrn["vrn_file"]))
         else:
             extras.append(data)
     return batch_groups, singles, out_retrieve, extras

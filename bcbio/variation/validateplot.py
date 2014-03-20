@@ -46,7 +46,7 @@ def plot_prep_methods(df, prep, prepi, out_file_base):
     """Plot comparison between BAM preparation methods.
     """
     samples = df[(df["bamprep"] == prep)]["sample"].unique()
-    assert len(samples) == 1, samples
+    assert len(samples) >= 1, samples
     out_file = "%s-%s.pdf" % (out_file_base, samples[0])
     df = df[df["category"].isin(cat_labels)]
     _prettyplot(df, prep, prepi, out_file)
@@ -75,7 +75,7 @@ def _prettyplot(df, prep, prepi, out_file):
             ax.set_ylim(0, maxval)
             if i == len(vtypes) - 1:
                 ax.set_xticks(np.arange(len(callers)) + width / 2.0)
-                ax.set_xticklabels([caller_labels.get(x, "") for x in callers], size=8, rotation=45)
+                ax.set_xticklabels([caller_labels.get(x, x) for x in callers], size=8, rotation=45)
             else:
                 ax.get_xaxis().set_ticks([])
             _annotate(ax, labels, vals, np.arange(len(callers)), width)

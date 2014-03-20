@@ -142,6 +142,7 @@ def postprocess_alignment(data):
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
+            data = bedutils.clean_inputs(data)
         data["callable_bam"] = data["work_bam"]
         data = _recal_no_markduplicates(data)
     return [data]

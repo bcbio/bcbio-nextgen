@@ -1,5 +1,13 @@
 ## 0.7.8 (In development)
 
+- Add a check for mis-specified FASTQ format in the sample YAML file. Thanks
+  to Alla Bushoy.
+- Updated RNA-seq integration tests to have more specific tags (singleend, Tophat,
+  STAR, explant).
+- Fix contig ordering after Tophat alignment which was preventing GATK-based
+  tools from running.
+- Allow calculation of RPKM on more deeply sampled genes by setting
+  `--max-bundle-frags` to 2,000,000. Thanks to Miika Ahdesmaki.
 - Provide cleaner installation process for non-distributable tools like
   GATK. The `--tooplus` argument now handles jars from the GATK site or Appistry
   and correctly updates manifest version information.
@@ -7,6 +15,10 @@
   uncompressed VCFs. Reduces space requirements and enables parallelization on
   non-shared filesystems or temporary space by avoiding transferring
   uncompressed outputs.
+- Reduce memory usage during post-alignment BAM preparation steps (PrintReads
+  downsampling, deduplication and realignment prep) to avoid reaching memory cap
+  on limited systems like SLURM. Do not include for IndelRealigner which needs
+  memory in high depth regions.
 - Provide explicit targets for coverage depth (`coverage_depth_max` and
   `coverage_depth_min`) instead of `coverage_depth` enumeration. Provide
   downsampling of reads to max depth during post-alignment preparation to avoid

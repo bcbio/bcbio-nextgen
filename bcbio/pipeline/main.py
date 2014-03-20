@@ -386,20 +386,23 @@ class RnaseqPipeline(AbstractPipeline):
     def run(self, config, config_file, parallel, dirs, samples):
         with prun.start(_wres(parallel, ["picard"]),
                         samples, config, dirs, "trimming") as run_parallel:
-            samples = run_parallel("process_lane", samples)
-            samples = run_parallel("trim_lane", samples)
+            with profile.report("adapter trimming", dirs):
+                samples = run_parallel("process_lane", samples)
+                samples = run_parallel("trim_lane", samples)
         with prun.start(_wres(parallel, ["aligner"],
                               ensure_mem={"tophat": 8, "tophat2": 8, "star": 30}),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            samples = disambiguate.split(samples)
-            samples = run_parallel("process_alignment", samples)
-            samples = disambiguate.resolve(samples, run_parallel)
+            with profile.report("alignment", dirs):
+                samples = disambiguate.split(samples)
+                samples = run_parallel("process_alignment", samples)
 
         with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
-            samples = rnaseq.estimate_expression(samples, run_parallel)
-            #samples = rnaseq.detect_fusion(samples, run_parallel)
+            with profile.report("disambiguation", dirs):
+                samples = disambiguate.resolve(samples, run_parallel)
+            with profile.report("estimate expression", dirs):
+                samples = rnaseq.estimate_expression(samples, run_parallel)
 
         combined = combine_count_files([x[0].get("count_file") for x in samples])
         gtf_file = utils.get_in(samples[0][0], ('genome_resources', 'rnaseq',
@@ -412,7 +415,8 @@ class RnaseqPipeline(AbstractPipeline):
 
         with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc"]),
                         samples, config, dirs, "persample") as run_parallel:
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("quality control", dirs):
+                samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
 
 class ChipseqPipeline(AbstractPipeline):
