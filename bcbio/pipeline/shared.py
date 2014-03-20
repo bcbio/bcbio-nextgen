@@ -125,14 +125,7 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
 def _subset_bed_by_region(in_file, out_file, region):
     orig_bed = pybedtools.BedTool(in_file)
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
-    def _ensure_minsize(x):
-        while len(x) < 1:
-            if x.start > 0:
-                x.start -= 1
-            else:
-                x.end += 1
-        return x
-    orig_bed.intersect(region_bed).each(_ensure_minsize).merge().saveas(out_file)
+    orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).merge().saveas(out_file)
 
 def subset_variant_regions(variant_regions, region, out_file):
     """Return BED file subset by a specified chromosome region.
