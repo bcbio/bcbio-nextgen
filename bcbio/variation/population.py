@@ -78,7 +78,7 @@ def get_multisample_vcf(fnames, name, caller, data):
         return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
                                             data["config"])
     else:
-        gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, os.path.splitext(unique_fnames[0])[1]))
+        gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, utils.splitext_plus(unique_fnames[0])[1]))
         utils.symlink_plus(unique_fnames[0], gemini_vcf)
         return gemini_vcf
 
