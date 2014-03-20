@@ -15,6 +15,8 @@ from bcbio.provenance import do
 from bcbio.variation import annotation, ploidy
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis
 
+import vcf
+
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -118,10 +120,12 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
+    fix_somatic_calls(out_file)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"], ref_file,
                                                config)
     return ann_file
+
 
 def _move_vcf(orig_file, new_file):
     """Move a VCF file with associated index.
@@ -174,15 +178,17 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
             out_handle.write("Moved to {0}".format(orig_file))
 
 
-def fix_somatic_calls(in_file, out_file):
+def fix_somatic_calls(in_file):
 
     """Fix somatic variant output, standardize it to the SOMATIC flag."""
-
-    import vcf
 
     # HACK: Needed to replicate the structure used by PyVCF
     Info = namedtuple('Info', ['id', 'num', 'type', 'desc'])
     somatic_info = Info(id='SOMATIC', num=0, type='Flag', desc='Somatic event')
+
+    base, ext = utils.splitext_plus(in_file)
+    name = "somaticfix"
+    out_file = "{0}-{1}{2}".format(base, name, ext)
 
     if utils.file_exists(in_file):
         reader = vcf.VCFReader(filename=in_file)
@@ -204,4 +210,7 @@ def fix_somatic_calls(in_file, out_file):
 
                     writer.write_record(record)
 
-        return out_file
+        _move_vcf(in_file, "{0}.orig".format(in_file))
+        _move_vcf(out_file, in_file)
+        with open(out_file, "w") as out_handle:
+            out_handle.write("Moved to {0}".format(in_file))
