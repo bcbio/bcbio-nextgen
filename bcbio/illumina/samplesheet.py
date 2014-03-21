@@ -14,6 +14,32 @@ import yaml
 from bcbio.illumina import flowcell
 from bcbio import utils
 
+# ## Create samplesheets
+
+def from_flowcell(run_folder, lane_details, out_dir=None):
+    """Convert a flowcell into a samplesheet for demultiplexing.
+    """
+    fcid = os.path.basename(run_folder)
+    if out_dir is None:
+        out_dir = run_folder
+    out_file = os.path.join(out_dir, "%s.csv" % fcid)
+    with open(out_file, "w") as out_handle:
+        writer = csv.writer(out_handle)
+        writer.writerow(["FCID", "Lane", "Sample_ID", "SampleRef", "Index",
+                         "Description", "Control", "Recipe", "Operator", "SampleProject"])
+        for ldetail in lane_details:
+            writer.writerow(_lane_detail_to_ss(fcid, ldetail))
+    return out_file
+
+def _lane_detail_to_ss(fcid, ldetail):
+    """Convert information about a lane into Illumina samplesheet output.
+    """
+    return [fcid, ldetail["lane"], ldetail["name"], ldetail["genome_build"],
+            ldetail["bc_index"], ldetail["description"], "N", "", "",
+            ldetail["project_name"]]
+
+# ## Use samplesheets to create YAML files
+
 def _organize_lanes(info_iter, barcode_ids):
     """Organize flat lane information into nested YAML structure.
     """

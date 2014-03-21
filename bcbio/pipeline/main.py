@@ -13,7 +13,7 @@ import tempfile
 
 from bcbio import install, log, structural, utils, upload
 from bcbio.distributed import clargs, prun, runfn
-from bcbio.illumina import flowcell
+from bcbio.illumina import flowcell, machine
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
@@ -126,7 +126,8 @@ def parse_cl_args(in_args):
     sub_cmds = {"upgrade": install.add_subparser,
                 "server": server_main.add_subparser,
                 "runfn": runfn.add_subparser,
-                "version": programs.add_subparser}
+                "version": programs.add_subparser,
+                "sequencer": machine.add_subparser}
     parser = argparse.ArgumentParser(
         description="Best-practice pipelines for fully automated high throughput sequencing analysis.")
     sub_cmd = None

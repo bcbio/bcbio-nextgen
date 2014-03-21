@@ -30,6 +30,7 @@ import os
 import sys
 
 from bcbio import install, workflow
+from bcbio.illumina import machine
 from bcbio.distributed import runfn
 from bcbio.pipeline.main import run_main, parse_cl_args
 from bcbio.server import main as server_main
@@ -48,6 +49,8 @@ if __name__ == "__main__":
         runfn.process(kwargs["args"])
     elif "version" in kwargs and kwargs["version"]:
         programs.write_versions({"work": kwargs["args"].workdir})
+    elif "sequencer" in kwargs and kwargs["sequencer"]:
+        machine.check_and_postprocess(kwargs["args"])
     else:
         if kwargs.get("workflow"):
             setup_info = workflow.setup(kwargs["workflow"], kwargs.pop("inputs"))
