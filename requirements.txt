@@ -20,4 +20,4 @@ joblib>=0.7.0d
 psutil>=1.2.0
 pybedtools>=0.6.2
 sh>=1.07
-bcbio-nextgen==0.7.7
+bcbio-nextgen==0.7.8

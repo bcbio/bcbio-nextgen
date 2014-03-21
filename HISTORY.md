@@ -1,4 +1,4 @@
-## 0.7.8 (In development)
+## 0.7.8 (March 21, 2014)
 
 - Add a check for mis-specified FASTQ format in the sample YAML file. Thanks
   to Alla Bushoy.
