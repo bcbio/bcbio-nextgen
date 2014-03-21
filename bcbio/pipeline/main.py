@@ -13,6 +13,7 @@ import tempfile
 
 from bcbio import install, log, structural, utils, upload
 from bcbio.distributed import clargs, prun, runfn
+from bcbio.illumina import flowcell
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
@@ -20,7 +21,6 @@ from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, profile, system, versioncheck
 from bcbio.server import main as server_main
-from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.genotype import combine_multiple_callers
 from bcbio.variation import coverage, ensemble, population, validate
 from bcbio.rnaseq.count import (combine_count_files,
@@ -70,7 +70,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
-    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir)
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
                                                         if fc_dir else None,
                                                         config, config_file)
     config_file = os.path.join(config_dir, os.path.basename(config_file))

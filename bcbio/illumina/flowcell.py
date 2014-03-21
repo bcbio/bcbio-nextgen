@@ -7,7 +7,7 @@ import urllib2
 import cookielib
 import json
 
-def get_flowcell_info(fc_dir):
+def parse_dirname(fc_dir):
     """Parse the flow cell ID and date from a flow cell directory.
     """
     (_, fc_dir) = os.path.split(fc_dir)

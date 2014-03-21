@@ -4,7 +4,6 @@ This allows running the analysis pipeline without Galaxy, using CSV input
 files from Illumina SampleSheet or Genesifter.
 """
 import os
-import sys
 import csv
 import itertools
 import difflib
@@ -12,7 +11,7 @@ import glob
 
 import yaml
 
-from bcbio.solexa.flowcell import (get_flowcell_info)
+from bcbio.illumina import flowcell
 from bcbio import utils
 
 def _organize_lanes(info_iter, barcode_ids):
@@ -87,7 +86,7 @@ def csv2yaml(in_file, out_file=None):
 def run_has_samplesheet(fc_dir, config, require_single=True):
     """Checks if there's a suitable SampleSheet.csv present for the run
     """
-    fc_name, _ = get_flowcell_info(fc_dir)
+    fc_name, _ = flowcell.parse_dirname(fc_dir)
     sheet_dirs = config.get("samplesheet_directories", [])
     fcid_sheet = {}
     for ss_dir in (s for s in sheet_dirs if os.path.exists(s)):

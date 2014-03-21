@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 import yaml
 
-from bcbio.solexa.flowcell import (get_flowcell_info, get_fastq_dir)
+from bcbio.illumina import flowcell
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.broad.metrics import PicardMetricsParser
 from bcbio import utils
@@ -28,9 +28,9 @@ def main(config_file, fc_dir):
     work_dir = os.getcwd()
     config = load_config(config_file)
     galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-    fc_name, fc_date = get_flowcell_info(fc_dir)
+    fc_name, fc_date = flowcell.parse_dirname(fc_dir)
     run_info = galaxy_api.run_details(fc_name)
-    fastq_dir = get_fastq_dir(fc_dir)
+    fastq_dir = flowcell.get_fastq_dir(fc_dir)
     if config["algorithm"]["num_cores"] > 1:
         pool = Pool(config["algorithm"]["num_cores"])
         try:

@@ -13,8 +13,8 @@ import yaml
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
+from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
-from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
 from bcbio.variation import effects, genotype, population
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
@@ -29,7 +29,7 @@ def organize(dirs, config, run_info_yaml):
         run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
     else:
         logger.info("Fetching run details from Galaxy instance")
-        fc_name, fc_date = get_flowcell_info(dirs["flowcell"])
+        fc_name, fc_date = flowcell.parse_dirname(dirs["flowcell"])
         galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
         run_details = []
         galaxy_info = galaxy_api.run_details(fc_name, fc_date)
@@ -286,7 +286,7 @@ def _normalize_files(item, fc_dir):
         if isinstance(files, basestring):
             files = [files]
         if fc_dir:
-            fastq_dir = get_fastq_dir(fc_dir)
+            fastq_dir = flowcell.get_fastq_dir(fc_dir)
         else:
             fastq_dir = os.getcwd()
         files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
@@ -320,7 +320,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     fc_name, fc_date = None, None
     if fc_dir:
         try:
-            fc_name, fc_date = get_flowcell_info(fc_dir)
+            fc_name, fc_date = flowcell.parse_dirname(fc_dir)
         except ValueError:
             pass
     global_config = {}
