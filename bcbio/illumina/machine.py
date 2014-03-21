@@ -9,7 +9,7 @@ import yaml
 import logbook
 
 from bcbio.log import setup_local_logging, logger
-from bcbio.illumina import samplesheet
+from bcbio.illumina import demultiplex, samplesheet
 from bcbio.galaxy import nglims
 
 # ## bcbio-nextgen integration
@@ -24,7 +24,7 @@ def check_and_postprocess(args):
         runinfo = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname)
         lane_details = nglims.flatten_lane_detail(runinfo)
         fcid_ss = samplesheet.from_flowcell(dname, lane_details)
-        print fcid_ss
+        fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)
         #_update_reported(config["msg_db"], dname)
 
 def add_subparser(subparsers):
