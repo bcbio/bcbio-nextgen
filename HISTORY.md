@@ -1,3 +1,8 @@
+## 0.7.9 (in progress)
+
+- Use bgzipped VCFs for dbSNP, Cosmic and other resources to save disk
+  space. Upgrade to Cosmic v68.
+
 ## 0.7.8 (March 21, 2014)
 
 - Add a check for mis-specified FASTQ format in the sample YAML file. Thanks

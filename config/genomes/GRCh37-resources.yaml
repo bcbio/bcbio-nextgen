@@ -1,4 +1,4 @@
-version: 7
+version: 8
 
 aliases:
   human: true
@@ -6,11 +6,11 @@ aliases:
   ensembl: human
 
 variation:
-  dbsnp: ../variation/dbsnp_138.vcf
-  train_hapmap: ../variation/hapmap_3.3.vcf
-  train_1000g_omni: ../variation/1000G_omni2.5.vcf
-  train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf
-  cosmic: ../variation/cosmic-v67_20131024-GRCh37.vcf
+  dbsnp: ../variation/dbsnp_138.vcf.gz
+  train_hapmap: ../variation/hapmap_3.3.vcf.gz
+  train_1000g_omni: ../variation/1000G_omni2.5.vcf.gz
+  train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
+  cosmic: ../variation/cosmic-v68-GRCh37.vcf.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
