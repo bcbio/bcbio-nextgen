@@ -104,7 +104,7 @@ Contributors
 - `Paul Tang`_, UCSF
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
-- `Jeff Hammerbacher`_, Cloudera
+- `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
