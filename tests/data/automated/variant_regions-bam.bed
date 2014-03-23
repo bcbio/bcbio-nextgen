@@ -1,3 +1,4 @@
 track name=target_region description="Target Regions"
 chrM	100	1000
 chrM	2000	5000
+chr22	14250	15500
