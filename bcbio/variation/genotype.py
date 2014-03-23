@@ -4,7 +4,6 @@ import os
 import collections
 import copy
 from distutils.version import LooseVersion
-import itertools
 
 from bcbio import bam, broad, utils
 from bcbio.utils import file_exists, safe_makedir
@@ -92,42 +91,15 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         else:
             with file_transaction(out_file) as tx_out_file:
                 params += ["-T", "HaplotypeCaller",
-                           "-o", tx_out_file]
-                #params = _gatk_location_hack(params)
+                           "-o", tx_out_file,
+                           "--annotation", "ClippingRankSumTest",
+                           "--annotation", "DepthPerSampleHC"]
+                # Enable hardware based optimizations in GATK 3.1+
+                if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
+                    params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
                 broad_runner.new_resources("gatk-haplotype")
                 broad_runner.run_gatk(params)
     return out_file
-
-def _gatk_location_hack(args):
-    """Temporary work around for issues in GATK 2.4-9 and 2.5-2 HaplotypeCaller.
-
-    Fixes:
-    - softclipped reads at end of chromosomes.
-      Pads these regions to avoid working exclusively with the end. Needs to be
-      fixed properly in upstream GATK.
-    - Problematic assembly around repeat regions. Excludes these regions.
-    """
-    region_idxs = [i + 1 for i, x in enumerate(args) if x == "-L"]
-    # padding
-    problem_chrs = ["GL000195.1"]
-    pad_start = 250
-    # exclusion
-    exclude_args = {"20": ["-XL", "20:33972777-33973070"]}
-    extra_args = []
-    for ridx in region_idxs:
-        if os.path.isfile(args[ridx]):
-            with open(args[ridx]) as in_handle:
-                chrom = in_handle.readline().split()[0]
-        else:
-            chrom = args[ridx].split(":")[0]
-        if chrom in problem_chrs and args[ridx].find(":") > 0:
-            chrom, rest = args[ridx].split(":")
-            start, end = rest.split("-")
-            new_start = max([pad_start, int(start)])
-            args[ridx] = "%s:%s-%s" % (chrom, new_start, end)
-        elif chrom in exclude_args:
-            extra_args.extend(exclude_args[chrom])
-    return args + extra_args
 
 # ## Variant filtration -- shared functionality
 
