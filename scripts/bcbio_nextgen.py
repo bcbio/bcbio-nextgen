@@ -5,7 +5,7 @@ Handles runs in local or distributed mode based on the command line or
 configured parameters.
 
 The <config file> is a global YAML configuration file specifying details
-about the system. An example configuration file is in 'config/post_process.yaml'.
+about the system. An example configuration file is in 'config/bcbio_sample.yaml'.
 This is optional for automated installations.
 
 <fc_dir> is an optional parameter specifying a directory of Illumina output
