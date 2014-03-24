@@ -56,13 +56,14 @@ def _to_haploid(parts):
     """
     finfo = dict(zip(parts[-2].split(":"), parts[-1].strip().split(":")))
     pat = re.compile(r"\||/")
-    calls = set(pat.split(finfo["GT"]))
-    if len(calls) == 1:
-        gt_index = parts[-2].split(":").index("GT")
-        call_parts = parts[-1].strip().split(":")
-        call_parts[gt_index] = calls.pop()
-        parts[-1] = ":".join(call_parts) + "\n"
-        return "\t".join(parts)
+    if "GT" in finfo:
+        calls = set(pat.split(finfo["GT"]))
+        if len(calls) == 1:
+            gt_index = parts[-2].split(":").index("GT")
+            call_parts = parts[-1].strip().split(":")
+            call_parts[gt_index] = calls.pop()
+            parts[-1] = ":".join(call_parts) + "\n"
+            return "\t".join(parts)
 
 def _fix_line_ploidy(line, sex):
     """Check variant calls to be sure if conforms to expected ploidy for sex/custom chromosomes.
