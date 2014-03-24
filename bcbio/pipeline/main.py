@@ -52,7 +52,7 @@ def _setup_resources():
     This allows us to avoid out of file handle limits where we can
     move beyond the soft limit up to the hard limit.
     """
-    target_procs = 50000
+    target_procs = 10240
     cur_proc, max_proc = resource.getrlimit(resource.RLIMIT_NPROC)
     target_proc = min(max_proc, target_procs)
     resource.setrlimit(resource.RLIMIT_NPROC, (max(cur_proc, target_proc), max_proc))
