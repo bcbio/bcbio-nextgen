@@ -52,7 +52,7 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
     """Perform SNP genotyping on the given alignment file.
     """
     if out_file is None:
-        out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
+        out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not file_exists(out_file):
         config = items[0]["config"]
         broad_runner, params = \
@@ -78,7 +78,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
     This requires the full non open-source version of GATK.
     """
     if out_file is None:
-        out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
+        out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not file_exists(out_file):
         config = items[0]["config"]
         broad_runner, params = \
