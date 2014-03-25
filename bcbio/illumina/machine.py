@@ -21,10 +21,10 @@ def check_and_postprocess(args):
         config = yaml.safe_load(in_handle)
     setup_local_logging()
     for dname in _find_unprocessed(config):
-        runinfo = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname)
-        lane_details = nglims.flatten_lane_detail(runinfo)
+        lane_details = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname)
         fcid_ss = samplesheet.from_flowcell(dname, lane_details)
         fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)
+        bcbio_config, ready_fastq_dir = nglims.prep_samples_and_config(dname, lane_details, fastq_dir, config)
         #_update_reported(config["msg_db"], dname)
 
 def add_subparser(subparsers):

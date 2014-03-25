@@ -75,8 +75,8 @@ def _get_library(gi, sample_info, config):
                            config.get("galaxy_role"))
     if galaxy_lib:
         return _get_library_from_name(gi, galaxy_lib, role, sample_info)
-    elif sample_info.get("private_libs"):
-        return _library_from_nglims(gi, sample_info)
+    elif config.get("private_libs"):
+        return _library_from_nglims(gi, sample_info, config)
     else:
         raise ValueError("No Galaxy library specified for sample: %s" %
                          sample_info["description"])
@@ -89,19 +89,17 @@ def _get_library_from_name(gi, name, role, sample_info):
         raise ValueError("Could not find Galaxy library matching '%s' for sample %s" %
                          (name, sample_info["description"]))
 
-def _library_from_nglims(gi, sample_info):
+def _library_from_nglims(gi, sample_info, config):
     """Retrieve upload library from nglims specified user libraries.
     """
-    check_names = [sample_info[x].lower()
-                   for x in ["lab_association", "researcher"]
-                   if sample_info[x]]
-    for libname, role in sample_info["private_libs"]:
+    check_names = set([config.get(x, "").lower() for x in ["lab_association", "researcher"]])
+    for libname, role in config["private_libs"]:
         # Try to find library for lab or rsearcher
         if libname.lower() in check_names:
             return _get_library_from_name(gi, libname, role, sample_info)
     # default to first private library if available
-    if len(sample_info["private_libs"]) > 0:
-        libname, role = sample_info["private_libs"][0]
+    if len(config.get("private_libs", [])) > 0:
+        libname, role = config["private_libs"][0]
         return _get_library_from_name(gi, libname, role, sample_info)
     # otherwise use the lab association or researcher name
     else:
