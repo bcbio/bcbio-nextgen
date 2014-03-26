@@ -32,8 +32,10 @@ def add_subparser(subparsers):
     parser = subparsers.add_parser("server", help="Run a bcbio-nextgen server allowing remote job execution.")
     parser.add_argument("-c", "--config", help=("Global YAML configuration file specifying system details."
                                                 "Defaults to installed bcbio_system.yaml"))
-    parser.add_argument("-p", "--port", help="Port to listen on",
+    parser.add_argument("-p", "--port", help="Port to listen on (default 8080)",
                         default=8080, type=int)
+    parser.add_argument("-n", "--cores", help="Cores to use when processing locally when not requested (default 1)",
+                        default=1, type=int)
     parser.add_argument("-d", "--biodata_dir", help="Directory with biological data",
                         default="/mnt/biodata", type=str)
     return parser
