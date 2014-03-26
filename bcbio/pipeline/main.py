@@ -46,19 +46,6 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
 
-def _setup_resources():
-    """Attempt to increase resource limits up to hard limits.
-
-    This allows us to avoid out of file handle limits where we can
-    move beyond the soft limit up to the hard limit.
-    """
-    target_procs = 10240
-    cur_proc, max_proc = resource.getrlimit(resource.RLIMIT_NPROC)
-    target_proc = min(max_proc, target_procs) if max_proc > 0 else target_procs
-    resource.setrlimit(resource.RLIMIT_NPROC, (max(cur_proc, target_proc), max_proc))
-    cur_hdls, max_hdls = resource.getrlimit(resource.RLIMIT_NOFILE)
-    target_hdls = min(max_hdls, target_procs) if max_hdls > 0 else target_procs
-    resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
 
 def _run_toplevel(config, config_file, work_dir, parallel,
                   fc_dir=None, run_info_yaml=None):
@@ -418,6 +405,7 @@ class RnaseqPipeline(AbstractPipeline):
                         samples, config, dirs, "persample") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
+        logger.info("Timing: finished")
         return samples
 
 class ChipseqPipeline(AbstractPipeline):
