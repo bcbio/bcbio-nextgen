@@ -8,8 +8,8 @@ from xml.etree.ElementTree import ElementTree
 import yaml
 import logbook
 
-from bcbio.log import setup_local_logging, logger
-from bcbio.illumina import demultiplex, samplesheet
+from bcbio.log import setup_local_logging
+from bcbio.illumina import demultiplex, samplesheet, transfer
 from bcbio.galaxy import nglims
 
 # ## bcbio-nextgen integration
@@ -19,12 +19,13 @@ def check_and_postprocess(args):
     """
     with open(args.process_config) as in_handle:
         config = yaml.safe_load(in_handle)
-    setup_local_logging()
+    setup_local_logging(config)
     for dname in _find_unprocessed(config):
         lane_details = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname)
         fcid_ss = samplesheet.from_flowcell(dname, lane_details)
         fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)
         bcbio_config, ready_fastq_dir = nglims.prep_samples_and_config(dname, lane_details, fastq_dir, config)
+        transfer.copy_to_remote(dname, ready_fastq_dir, bcbio_config, config)
         #_update_reported(config["msg_db"], dname)
 
 def add_subparser(subparsers):
