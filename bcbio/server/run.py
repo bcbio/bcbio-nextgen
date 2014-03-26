@@ -45,11 +45,12 @@ def run_bcbio_nextgen(**kwargs):
     finally:
         print("Run ended: %s" % run_id)
 
-def _rargs_to_parallel_args(rargs):
-    Args = collections.namedtuple("Args", "numcores scheduler queue resources timeout retries")
-    return Args(int(rargs.get("numcores", 1)), rargs.get("scheduler"),
+def _rargs_to_parallel_args(rargs, args):
+    Args = collections.namedtuple("Args", "numcores scheduler queue resources timeout retries tag")
+    return Args(int(rargs.get("numcores", args.cores)), rargs.get("scheduler"),
                 rargs.get("queue"), rargs.get("resources", ""),
-                int(rargs.get("timeout", 15)), rargs.get("retries"))
+                int(rargs.get("timeout", 15)), rargs.get("retries"),
+                rargs.get("tag"))
 
 def get_handler(args):
     class RunHandler(tornado.web.RequestHandler):
@@ -72,7 +73,7 @@ def get_handler(args):
                       "config_file": system_config,
                       "run_info_yaml": sample_config,
                       "fc_dir": rargs.get("fc_dir"),
-                      "parallel": clargs.to_parallel(_rargs_to_parallel_args(rargs)),
+                      "parallel": clargs.to_parallel(_rargs_to_parallel_args(rargs, args)),
                       "app": self.application}
             run_id = yield tornado.gen.Task(run_bcbio_nextgen, **kwargs)
             self.write(run_id)

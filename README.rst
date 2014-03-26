@@ -91,7 +91,7 @@ Contributors
 
 - `Miika Ahdesmaki`_, AstraZeneca
 - `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
-- `Alla Bushoy`_
+- `Alla Bushoy`_, AstraZeneca
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
