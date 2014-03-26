@@ -418,6 +418,7 @@ class RnaseqPipeline(AbstractPipeline):
                         samples, config, dirs, "persample") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
+        logger.info("Timing: finished")
         return samples
 
 class ChipseqPipeline(AbstractPipeline):
