@@ -69,6 +69,12 @@ variables will help. Fix that with::
     $ unset PYTHONHOME
     $ unset PYTHONPATH
 
+Other import errors
+~~~~~~~~~~~~~~~~~~~
+Having a .pydistutils.cfg file in your home directory can mess with
+where the libraries get installed. If you have this file in your
+home directory, temporarily renaming it to something else may fix
+your installation issue.
 
 .. _isolated-install:
 
