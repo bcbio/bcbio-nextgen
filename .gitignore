@@ -20,3 +20,5 @@ tests/unit/unit_test_data.tar.gz
 .#*
 .ropeproject
 .env
+*~
+\#*
