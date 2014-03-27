@@ -15,6 +15,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.illumina import flowcell
+from bcbio.workflow import template
 
 def prep_samples_and_config(run_folder, ldetails, fastq_dir, config):
     """Prepare sample fastq files and provide global sample configuration for the flowcell.
@@ -35,7 +36,7 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
     files = []
     print "->", ldetail_group[0]["name"], len(ldetail_group)
     for read in ["R1", "R2"]:
-        fastq_inputs = reduce(operator.add, (_get_fastq_files(x, read, fastq_dir) for x in ldetail_group))
+        fastq_inputs = sorted(reduce(operator.add, (_get_fastq_files(x, read, fastq_dir) for x in ldetail_group)))
         if len(fastq_inputs) > 0:
             files.append(_concat_bgzip_fastq(fastq_inputs, fastq_final_dir, read, ldetail_group[0]))
     if len(files) == 0:
@@ -46,8 +47,6 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
 
 def _write_sample_config(run_folder, ldetails):
     """Generate a bcbio-nextgen YAML configuration file for processing a sample.
-
-    TODO: Fill in reasonable defaults for algorithm configuration from default templates.
     """
     out_file = os.path.join(run_folder, "%s.yaml" % os.path.basename(run_folder))
     with open(out_file, "w") as out_handle:
@@ -67,7 +66,25 @@ def _prepare_sample(data, run_folder):
     for k, v in data.items():
         if k in want:
             out[k] = _relative_paths(v, run_folder)
+    if "algorithm" not in out:
+        analysis, algorithm = _select_default_algorithm(out.get("analysis"))
+        out["algorithm"] = algorithm
+        out["analysis"] = analysis
     return out
+
+def _select_default_algorithm(analysis):
+    """Provide default algorithm sections from templates or standard
+    """
+    if not analysis or analysis == "Standard":
+        return "Standard", {"aligner": "bwa", "platform": "illumina", "quality_format": "Standard"}
+    elif "variant" in analysis:
+        try:
+            config, _ = template.name_to_config(analysis)
+        except ValueError:
+            config, _ = template.name_to_config("freebayes-variant")
+        return "variant", config["details"][0]["algorithm"]
+    else:
+        return analysis, {}
 
 def _relative_paths(xs, base_path):
     """Adjust paths to be relative to the provided base path.
@@ -98,8 +115,7 @@ def _concat_bgzip_fastq(finputs, out_dir, read, ldetail):
     """Concatenate multiple input fastq files, preparing a bgzipped output file.
     """
     out_file = os.path.join(out_dir, "%s_%s.fastq.gz" % (ldetail["name"], read))
-    if False:
-    # if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             subprocess.check_call("zcat %s | bgzip -c > %s" % (" ".join(finputs), tx_out_file), shell=True)
     return out_file

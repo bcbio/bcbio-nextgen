@@ -29,15 +29,25 @@ def check_and_postprocess(args):
         fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)
         bcbio_config, ready_fastq_dir = nglims.prep_samples_and_config(dname, lane_details, fastq_dir, config)
         transfer.copy_to_remote(dname, ready_fastq_dir, bcbio_config, config)
-        _start_processing(dname, bcbio_config, ready_fastq_dir, config)
+        _start_processing(dname, bcbio_config, config)
         #_update_reported(config["msg_db"], dname)
 
-def _start_processing(dname, sample_file, fastq_dir, config):
+def _remap_dirname(local, remote):
+    """Remap directory names from local to remote.
+    """
+    def do(x):
+        return x.replace(local, remote, 1)
+    return do
+
+def _start_processing(dname, sample_file, config):
     """Initiate processing on the remote server.
     """
-    args = {"work_dir": os.path.join(dname, "analysis"),
-            "config_file": sample_file,
-            "fc_dir": fastq_dir}
+    to_remote = _remap_dirname(dname, os.path.join(utils.get_in(config, ("process", "dir")),
+                                                   os.path.basename(dname)))
+    args = {"work_dir": to_remote(os.path.join(dname, "analysis")),
+            "run_config": to_remote(sample_file),
+            "fc_dir": to_remote(dname)}
+    print "%s/run?args=%s" % (utils.get_in(config, ("process", "server")), json.dumps(args))
     requests.get(url="%s/run" % utils.get_in(config, ("process", "server")),
                  params={"args": json.dumps(args)})
 
