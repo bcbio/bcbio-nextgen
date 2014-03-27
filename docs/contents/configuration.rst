@@ -476,7 +476,7 @@ section of your ``bcbio_system.yaml`` file::
       dir: /path/to/resources/files
 
 .. _Example genome configuration files: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/genomes
-.. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
+.. _GATK resource bundle: http://www.broadinstitute.org/gatk/guide/article.php?id=1213
 
 Reference genome files
 ~~~~~~~~~~~~~~~~~~~~~~
