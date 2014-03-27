@@ -277,6 +277,18 @@ def _check_sample_config(items, in_file):
 
 # ## Read bcbio_sample.yaml files
 
+def _file_to_abs(x, dnames):
+    """Make a file absolute using the supplied base directory choices.
+    """
+    if os.path.isabs(x):
+        return x
+    else:
+        for dname in dnames:
+            normx = os.path.normpath(os.path.join(dname, x))
+            if os.path.exists(normx):
+                return normx
+        raise ValueError("Did not find input file %s in %s" % (x, dnames))
+
 def _normalize_files(item, fc_dir):
     """Ensure the files argument is a list of absolute file names.
     Handles BAM, single and paired end fastq.
@@ -285,12 +297,8 @@ def _normalize_files(item, fc_dir):
     if files:
         if isinstance(files, basestring):
             files = [files]
-        if fc_dir:
-            fastq_dir = flowcell.get_fastq_dir(fc_dir)
-        else:
-            fastq_dir = os.getcwd()
-        files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
-                 for x in files]
+        fastq_dir = flowcell.get_fastq_dir(fc_dir) if fc_dir else os.getcwd()
+        files = [_file_to_abs(x, [os.getcwd(), fc_dir, fastq_dir]) for x in files]
         _sanity_check_files(item, files)
         item["files"] = files
     return item

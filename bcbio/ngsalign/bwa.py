@@ -61,7 +61,9 @@ def can_pipe(fastq_file, data):
            "{seqtk} sample -s42 - {tocheck} | "
            "awk '{{if(NR%4==2) print length($1)}}' | sort | uniq -c")
     count_out = subprocess.check_output(cmd.format(**locals()), shell=True,
-                                        executable="/bin/bash")
+                                        executable="/bin/bash", stderr=open("/dev/null", "w"))
+    if not count_out.strip():
+        raise IOError("Failed to check fastq file sizes with: %s" % cmd.format(**locals()))
     shorter = 0
     for count, size in (l.strip().split() for l in count_out.strip().split("\n")):
         if int(size) < min_size:
