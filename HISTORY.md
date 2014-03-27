@@ -1,5 +1,7 @@
 ## 0.7.9 (in progress)
 
+- Improve checks for pre-aligned BAMs: ensure correct sample names and
+  provide more context on errors around mismatching reference genomes.
 - GATK HaplotypeCaller: ensure genotype depth annotation with DepthPerSampleHC
   annotation. Enable GATK 3.1 hardware specific optimizations.
 - Use bgzipped VCFs for dbSNP, Cosmic and other resources to save disk
