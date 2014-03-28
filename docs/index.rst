@@ -28,9 +28,9 @@ Contents:
    contents/pipelines
    contents/outputs
    contents/code
+   contents/sequencer
    contents/internals
    contents/presentations
-   contents/deprecated
 
 
 Indices and tables
