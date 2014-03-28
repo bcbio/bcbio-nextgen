@@ -31,12 +31,7 @@ if "--record=/dev/null" in sys.argv:
     zip_safe = True
 else:
     zip_safe = False
-    scripts = ['scripts/bcbio_nextgen.py',
-               'scripts/bam_to_wiggle.py',
-               'scripts/barcode_sort_trim.py',
-               'scripts/illumina_finished_msg.py',
-               'scripts/nextgen_analysis_server.py',
-               'scripts/solexa_qseq_to_fastq.py']
+    scripts = ['scripts/bcbio_nextgen.py']
 
 write_version_py()
 setup(name="bcbio-nextgen",
