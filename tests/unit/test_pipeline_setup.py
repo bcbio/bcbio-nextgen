@@ -1,9 +1,11 @@
 import unittest
+from nose.plugins.attrib import attr
 from bcbio.pipeline.main import *
 from bcbio.pipeline.main import _get_pipeline, _pair_lanes_with_pipelines, _add_provenance
 from bcbio.pipeline.run_info import organize, _run_info_from_yaml, add_reference_resources
 from bcbio.pipeline.config_utils import update_w_custom
 from bcbio.provenance.programs import _get_versions
+from bcbio.provenance import versioncheck
 
 
 class TestPipelineSetup(unittest.TestCase):
@@ -17,7 +19,8 @@ class TestPipelineSetup(unittest.TestCase):
     #  1) run_info = organize(config)
     #  2) pipelines = _pair_lanes_with_pipelines(run_info)
     #  3) pipeline_items = _add_provenance(pipeline_items, ...)
-    #  4) pipeline.run(config, ...)
+    #  4) versioncheck.testall(pipeline_items)
+    #  5) pipeline.run(config, ...)
 
     # 1) organize(config) calls:
     #  1) run_info = _run_info_from_yaml(config)
@@ -141,4 +144,26 @@ class TestPipelineSetup(unittest.TestCase):
             }
         }
         versions = _get_versions(config)
+
+    # 4) versioncheck.testall(pipeline_items)
+    @attr('current')
+    def test_versioncheck(self):
+        config = {
+            "resources": {
+                "samtools": {
+                    "cmd": os.path.join(self.bin_dir, "samtools")
+                },
+                "picard": {
+                    "dir": self.bin_dir
+                },
+                "gatk": {
+                    "dir": self.bin_dir
+                },
+                "mutect": {
+                    "dir": self.bin_dir
+                },
+            }
+        }
+        pipeline_items = [[{"config": config}]]
+        versioncheck.testall(pipeline_items)
 
