@@ -47,7 +47,10 @@ def _broad_versioner(type):
         elif type == "picard":
             return runner.get_picard_version("ViewSam")
         elif type == "mutect":
-            runner = broad.runner_from_config(config, "mutect")
+            try:
+                runner = broad.runner_from_config(config, "mutect")
+            except ValueError:
+                return ""
             return runner.get_mutect_version()
         else:
             raise NotImplementedError(type)
