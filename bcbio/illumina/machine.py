@@ -26,11 +26,11 @@ def check_and_postprocess(args):
     for dname in _find_unprocessed(config):
         lane_details = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname)
         fcid_ss = samplesheet.from_flowcell(dname, lane_details)
+        _update_reported(config["msg_db"], dname)
         fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)
         bcbio_config, ready_fastq_dir = nglims.prep_samples_and_config(dname, lane_details, fastq_dir, config)
         transfer.copy_to_remote(dname, ready_fastq_dir, bcbio_config, config)
         _start_processing(dname, bcbio_config, config)
-        #_update_reported(config["msg_db"], dname)
 
 def _remap_dirname(local, remote):
     """Remap directory names from local to remote.

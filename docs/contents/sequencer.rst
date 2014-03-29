@@ -39,7 +39,7 @@ Sequencer output machine
 Post-sequencing processing, including demultiplexing, initiate via a cronjob run
 on the Illumina output machine::
 
-    PATH=/usr/local/bin
+    PATH=/usr/bin:/usr/local/bin:/bin:/usr/X11R6/bin
     @hourly bcbio_nextgen.py sequencer /opt/bcbio/transfer_info.yaml
 
 `transfer_info.yaml`_ is a configuration file specifying locations of output
