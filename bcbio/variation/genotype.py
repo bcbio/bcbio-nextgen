@@ -9,11 +9,9 @@ from bcbio import bam, broad, utils
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import grouped_parallel_split_combine
-from bcbio.log import logger
-from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome, subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-from bcbio.variation import annotation, bamprep, multi, phasing, ploidy, vcfutils, vfilter
+from bcbio.variation import annotation, bamprep, gatkfilter, multi, phasing, ploidy, vcfutils, vfilter
 
 # ## GATK Genotype calling
 
@@ -112,146 +110,11 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
     call_file = ploidy.filter_vcf_by_sex(call_file, data)
     if caller in ["freebayes"]:
         return vfilter.freebayes(call_file, ref_file, vrn_files, data)
+    elif caller in ["gatk", "gatk-haplotype"]:
+        return gatkfilter.run(call_file, ref_file, vrn_files, data)
     # no additional filtration for callers that filter as part of call process
-    elif caller in ["samtools", "varscan", "mutect"]:
+    else:
         return call_file
-    else:
-        config = data["config"]
-        snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, config)
-        snp_filter_file = _variant_filtration_snp(snp_file, ref_file, vrn_files, data)
-        indel_filter_file = _variant_filtration_indel(indel_file, ref_file, vrn_files, data)
-        orig_files = [snp_filter_file, indel_filter_file]
-        out_file = "{base}combined.vcf.gz".format(base=os.path.commonprefix(orig_files))
-        return vcfutils.combine_variant_files(orig_files, out_file, ref_file, config)
-
-def _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
-                         tranch_file, filter_type):
-    """Apply recalibration details, returning filtered VCF file.
-    """
-    base, ext = utils.splitext_plus(snp_file)
-    out_file = "{base}-{filter}filter{ext}".format(base=base, ext=ext,
-                                                   filter=filter_type)
-    if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "ApplyRecalibration",
-                      "-R", ref_file,
-                      "--input", snp_file,
-                      "--out", tx_out_file,
-                      "--tranches_file", tranch_file,
-                      "--recal_file", recal_file,
-                      "--mode", filter_type]
-            broad_runner.run_gatk(params)
-    return out_file
-
-def _shared_variant_filtration(filter_type, snp_file, ref_file, vrn_files, variantcaller):
-    """Share functionality for filtering variants.
-    """
-    recal_file = "{base}.recal".format(base=utils.splitext_plus(snp_file)[0])
-    tranches_file = "{base}.tranches".format(base=utils.splitext_plus(snp_file)[0])
-    params = ["-T", "VariantRecalibrator",
-              "-R", ref_file,
-              "--input", snp_file,
-              "--mode", filter_type,
-              "-an", "DP",
-              "-an", "FS",
-              "-an", "ReadPosRankSum",
-              "-an", "MQRankSum"]
-    if filter_type in ["SNP", "BOTH"]:
-        # Haplotype Score no longer calculated for indels as of GATK 2.4
-        # and only used for GATK Unified Genotyper calls
-        if variantcaller == "gatk":
-            params.extend(["-an", "HaplotypeScore"])
-        for name, train_info in [("train_hapmap", "known=false,training=true,truth=true,prior=15.0"),
-                                 ("train_1000g_omni", "known=false,training=true,truth=false,prior=12.0"),
-                                 ("dbsnp", "known=true,training=false,truth=false,prior=8.0")]:
-            if name in vrn_files:
-                params.extend(["-resource:%s,VCF,%s" % (name.replace("train_", ""), train_info),
-                               vrn_files[name]])
-    if filter_type in ["INDEL", "BOTH"]:
-        params.extend(
-            ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
-             vrn_files["train_indels"]])
-    return params, recal_file, tranches_file
-
-# ## SNP specific variant filtration
-
-def _variant_filtration_snp(snp_file, ref_file, vrn_files, data):
-    """Filter SNP variant calls using GATK best practice recommendations.
-    """
-    config = data["config"]
-    broad_runner = broad.runner_from_config(config)
-    filter_type = "SNP"
-    variantcaller = config["algorithm"].get("variantcaller", "gatk")
-    filters = ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
-               "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
-    # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
-    # resulting in excessive filtering, so avoid this metric
-    if variantcaller not in ["gatk-haplotype"]:
-        filters.append("HaplotypeScore > 13.0")
-    if not config_utils.use_vqsr([config["algorithm"]]):
-        return vfilter.hard_w_expression(snp_file, " || ".join(filters), data, filter_type)
-    else:
-        # also check if we've failed recal and needed to do strict filtering
-        filter_file = "{base}-filter{ext}.vcf.gz".format(base=utils.splitext_plus(snp_file)[0], ext=filter_type)
-        if file_exists(filter_file):
-            config["algorithm"]["coverage_interval"] = "regional"
-            return _variant_filtration_snp(snp_file, ref_file, vrn_files, data)
-        assert "train_hapmap" in vrn_files and "train_1000g_omni" in vrn_files, \
-            "Need HapMap and 1000 genomes training files"
-        params, recal_file, tranches_file = _shared_variant_filtration(
-            filter_type, snp_file, ref_file, vrn_files, variantcaller)
-        if not file_exists(recal_file):
-            with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
-                params.extend(["--recal_file", tx_recal,
-                               "--tranches_file", tx_tranches])
-                try:
-                    broad_runner.new_resources("gatk-vqsr")
-                    broad_runner.run_gatk(params, log_error=False)
-                # Can fail to run if not enough values are present to train. Rerun with regional
-                # filtration approach instead
-                except:
-                    logger.info("VQSR failed due to lack of training data. Using hard filtering.")
-                    config["algorithm"]["coverage_interval"] = "regional"
-                    return _variant_filtration_snp(snp_file, ref_file, vrn_files, data)
-        return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
-                                    tranches_file, filter_type)
-
-# ## Indel specific variant filtration
-
-def _variant_filtration_indel(snp_file, ref_file, vrn_files, data):
-    """Filter indel variant calls using GATK best practice recommendations.
-    """
-    config = data["config"]
-    broad_runner = broad.runner_from_config(config)
-    filter_type = "INDEL"
-    variantcaller = config["algorithm"].get("variantcaller", "gatk")
-    if not config_utils.use_vqsr([config["algorithm"]]):
-        filterexp = " || ".join(["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"])
-        return vfilter.hard_w_expression(snp_file, filterexp, data, filter_type)
-    else:
-        # also check if we've failed recal and needed to do strict filtering
-        filter_file = "{base}-filter{ext}.vcf.gz".format(base=utils.splitext_plus(snp_file)[0], ext=filter_type)
-        if file_exists(filter_file):
-            config["algorithm"]["coverage_interval"] = "regional"
-            return _variant_filtration_indel(snp_file, ref_file, vrn_files, data)
-        assert "train_indels" in vrn_files, "Need indel training file specified"
-        params, recal_file, tranches_file = _shared_variant_filtration(
-            filter_type, snp_file, ref_file, vrn_files, variantcaller)
-        if not file_exists(recal_file):
-            with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
-                params.extend(["--recal_file", tx_recal,
-                               "--tranches_file", tx_tranches])
-                if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("2.7"):
-                    params.extend(["--numBadVariants", "3000"])
-                try:
-                    broad_runner.new_resources("gatk-vqsr")
-                    broad_runner.run_gatk(params, log_error=False)
-                except:
-                    logger.info("VQSR failed due to lack of training data. Using hard filtering.")
-                    config["algorithm"]["coverage_interval"] = "regional"
-                    return _variant_filtration_indel(snp_file, ref_file, vrn_files, data)
-        return _apply_variant_recal(broad_runner, snp_file, ref_file, recal_file,
-                                    tranches_file, filter_type)
 
 # ## High level functionality to run genotyping in parallel
 

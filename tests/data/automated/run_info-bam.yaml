@@ -28,7 +28,7 @@ details:
       svcaller: lumpy
       variantcaller: freebayes
       #variantcaller: [gatk, gatk-haplotype]
-      coverage_interval: regional
+      coverage_interval: genome
       quality_format: Standard
       nomap_split_size: 50
       nomap_split_targets: 100
