@@ -3,6 +3,9 @@
 - Redo Illumina sequencer integration to be up to date with current
   code base. Uses external bcl2fastq demultiplexing and new bcbio integrated
   analysis server. Provide documentation on setting up automated infrastructure.
+- Update VQSR support for GATK to be up to date with latest best
+  practices. Re-organize GATK and filtering to be more modular to help with
+  transition to GATK 3.x gVCF approaches.
 - Improve checks for pre-aligned BAMs: ensure correct sample names and
   provide more context on errors around mismatching reference genomes.
 - GATK HaplotypeCaller: ensure genotype depth annotation with DepthPerSampleHC
