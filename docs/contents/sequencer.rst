@@ -24,9 +24,9 @@ A fully automated setup consists of three components:
   locations of samples. The automated processing scripts use this information to
   prepare sample configurations for downstream processing.
 
-- A sequencer output machine, where the sequencer dumps reads. A
-  cronjob detects newly finished flowcells and processes output into
-  demultiplexed fastq.
+- A sequencer output machine, where the sequencer dumps reads. An hourly
+  scheduled job detects newly finished flowcells and initiates processing of
+  output into demultiplexed fastq.
 
 - An analysis machine where bcbio-nextgen analysis occurs. The cronjob on the
   sequencer output machines transfers fastq files and initiates multi-core
@@ -36,8 +36,11 @@ A fully automated setup consists of three components:
 Sequencer output machine
 ************************
 
-Post-sequencing processing, including demultiplexing, initiate via a cronjob run
-on the Illumina output machine::
+The sequencer output machine is a Linux-based machine where Illumina writes
+output directories containing bcel files. Our current experience is on HiSeq
+machines output and we welcome contributions from users working with different
+machines or output setups. Post-sequencing processing, including demultiplexing,
+initiate via a cronjob run on the Illumina output machine::
 
     PATH=/usr/bin:/usr/local/bin:/bin:/usr/X11R6/bin
     @hourly bcbio_nextgen.py sequencer /opt/bcbio/transfer_info.yaml
