@@ -6,7 +6,7 @@ import os
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.provenance import system
-from bcbio.distributed import ipython, multi, resources
+from bcbio.distributed import clusterk, ipython, multi, resources
 
 @contextlib.contextmanager
 def start(parallel, items, config, dirs=None, name=None, multiplier=1, max_multicore=None):
@@ -44,6 +44,9 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1, max_multi
         elif parallel["type"] == "ipython":
             with ipython.create(parallel, dirs, config) as view:
                 yield ipython.runner(view, parallel, dirs, config)
+        elif parallel["type"] == "clusterk":
+            with clusterk.create(parallel) as queue:
+                yield clusterk.runner(queue, parallel)
         else:
             yield multi.runner(parallel, config)
     except:

@@ -34,7 +34,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     config, config_file = load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(workdir, "log")
-    if parallel["type"] in ["local"]:
+    if parallel["type"] in ["local", "clusterk"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
