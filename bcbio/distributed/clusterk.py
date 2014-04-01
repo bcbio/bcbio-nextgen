@@ -13,7 +13,8 @@ def create(parallel):
 
     TODO Startup/tear-down. Currently using default queue for testing
     """
-    yield {"name": parallel["queue"]}
+    queue = {k: v for k, v in parallel.items() if k in ["queue", "cores_per_job", "mem"]}
+    yield queue
 
 def runner(queue, parallel):
     """Run individual jobs on an existing queue.
