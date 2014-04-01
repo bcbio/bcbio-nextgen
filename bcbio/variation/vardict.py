@@ -15,7 +15,9 @@ from bcbio.variation import bamprep
 
 
 def _vardict_options_from_config(items, config, out_file, region=None):
-    opts = []
+    opts = ["-z", "-F", "-c 1", "-S 2", "-E 3", "-g 4"]
+    #["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
+    # "-k", "3", "-r", "4", "-m", "8"]
 
     resources = config_utils.get_resources("vardict", config)
     if resources.get("options"):
@@ -35,7 +37,11 @@ def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Run VarDict variant calling.
     """
-    call_file = _run_vardict_caller(align_bams, items, ref_file,
+    if is_paired_analysis(align_bams, items):
+        call_file = _run_vardict_paired(align_bams, items, ref_file,
+                                          assoc_files, region, out_file)
+    else:
+        call_file = _run_vardict_caller(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
     return call_file
 
@@ -51,61 +57,84 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
             for align_bam in align_bams:
                 bam.index(align_bam, config)
             
-            #vardict = config_utils.get_program("vardict", config)
-            #input_bams = " ".join("-b %s" % x for x in align_bams)
             num_bams = len(align_bams)
             sample_vcf_names = [] # for individual sample names, given batch calling may be required
             for bamfile, item in itertools.izip(align_bams, items):
-                temp_file_prefix = out_file.replace(".gz","").replace(".vcf","") + item["name"][1]
-                tmp_out1 = temp_file_prefix + ".temp1.txt"
-                tmp_out2 = temp_file_prefix + ".temp2.txt"
-                tmp_out3 = temp_file_prefix + ".temp3.vcf"
-                if out_file.endswith("gz"):
-                    tmp_out3 += ".gz"
                 # prepare commands
-                vardict_dir = os.path.dirname(os.path.realpath(config_utils.get_program("vardict", config)))
-                # assumption: the following scripts are all in the same path
-                vardict = os.path.join(vardict_dir, "vardict")
-                if not utils.file_exists(vardict):
-                    vardict = "vardict.pl" # desperado attempt
-                strandbias = os.path.join(vardict_dir, "teststrandbias.R")
-                if not utils.file_exists(strandbias):
-                    strandbias = "teststrandbias.R" # desperado attempt
-                var2vcf = os.path.join(vardict_dir, "var2vcf_valid.pl")
-                if not utils.file_exists(var2vcf):
-                    var2vcf = "var2vcf_valid.pl" # desperado attempt
-                sample_vcf_names.append(tmp_out3)
-                opts = " ".join(_vardict_options_from_config(items, config, out_file, region))            
+                vardict = config_utils.get_program("vardict", config)
+                strandbias = "teststrandbias.R"
+                var2vcf = "var2vcf_valid.pl"
+                opts = " ".join(_vardict_options_from_config(items, config, out_file, region))
+                vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-                compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""            
-                freq = 0.01
+                compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+                freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
+                coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
+                var2vcf_opts = " -v 50 " if coverage_interval == "regional" else "" # for deep targeted panels, require 50 worth of coverage
                 sample = item["name"][1]
-                # 3 steps to produce vcf
-                # 1. scan and sift BAM
-                with file_transaction(tmp_out1) as tx_tmp1_file:
-                    cmd = ("{vardict} -z -c 1 -S 2 -E 3 -g 4 -x 0 -G {ref_file} -f {freq} -k 3 " 
-                           "-X 5 -N {sample} -b {bamfile} {opts} > {tx_tmp1_file}")
-                    do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
-                # 2. filter based on strand bias
-                with file_transaction(tmp_out2) as tx_tmp2_file:
-                    cmd = ("{strandbias} {tmp_out1} > {tx_tmp2_file}")
-                    do.run(cmd.format(**locals()), "Genotyping with VarDict: Strand bias", {})
-                # 3. produce vcf
+                cmd = ("{vardict} -G {ref_file} -f {freq} "
+                       "-N {sample} -b {bamfile} {opts} "
+                       "| {strandbias}"
+                       "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
+                       "| {vcfallelicprimitives} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
-                    with file_transaction(tmp_out3) as tx_tmp3_file:
-                        cmd = ("{var2vcf} -S -f {freq} {tmp_out2} | {vcfstreamsort} {compress_cmd} > {tmp_out3}")
-                        do.run(cmd.format(**locals()), "Genotyping with VarDict: VCF output", {})
+                    temp_file_prefix = out_file.replace(".gz","").replace(".vcf","") + item["name"][1]
+                    tmp_out = temp_file_prefix + ".temp.vcf"
+                    tmp_out += ".gz" if out_file.endswith("gz") else ""
+                    sample_vcf_names.append(tmp_out)
+                    with file_transaction(tmp_out) as tx_tmp_file:
+                        cmd += " > {tx_tmp_file}"
+                        do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
                 else:
-                    cmd = ("var2vcf_valid.pl -S -f {freq} -N {sample} {tmp_out2} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
-                    do.run(cmd.format(**locals()), "Genotyping with VarDict: VCF output", {})
+                    cmd += " > {tx_out_file}"
+                    do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
             if num_bams > 1:
-                # N.B. merge_variant_files wants region in 1-based end-inclusive 
+                # N.B. merge_variant_files wants region in 1-based end-inclusive
                 # coordinates. Thus use bamprep.region_to_gatk
                 merge_variant_files(orig_files=sample_vcf_names, 
                                     out_file=tx_out_file, ref_file=ref_file, 
-                                    config=config, region=bamprep.region_to_gatk(region))            
+                                    config=config, region=bamprep.region_to_gatk(region))
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"],
                                                ref_file, config)
     return ann_file
 
+def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
+                          region=None, out_file=None):
+    """Detect variants with Vardict.
+
+    This is used for paired tumor / normal samples.
+    """
+    config = items[0]["config"]
+    if out_file is None:
+        out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            paired = get_paired_bams(align_bams, items)
+            if not paired.normal_bam:
+                ann_file = _run_vardict_caller(align_bams, items, ref_file,
+                                               assoc_files, region, out_file)
+                return ann_file
+            vcffilter = config_utils.get_program("vcffilter", config)
+            vardict = config_utils.get_program("vardict", config)
+            vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
+            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
+            strandbias = "testsomatic.R"
+            var2vcf = "var2vcf_somatic.pl"
+            compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+            freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
+            opts = " ".join(_vardict_options_from_config(items, config, out_file, region))
+            coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
+            var2vcf_opts = " -v 50 " if coverage_interval == "regional" else "" # for deep targeted panels, require 50 worth of coverage
+            cmd = ("{vardict} -G {ref_file} -f {freq} "
+                   "-N paired.tumor_name -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
+                   "| {strandbias} "
+                   "| {var2vcf} -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
+                   "| {vcfstreamsort} {compress_cmd} > {tx_out_file}")
+            bam.index(paired.tumor_bam, config)
+            bam.index(paired.normal_bam, config)
+            do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
+    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
+                                               assoc_files["dbsnp"], ref_file,
+                                               config)
+    return ann_file
