@@ -118,7 +118,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                                            out_file=out_file, 
                                            ref_file=items[0]["sam_ref"], 
                                            config=items[0]["config"], 
-                                           region=None)
+                                           region=region)
     return out_file
 
 def _SID_call_prep(align_bams, items, ref_file, assoc_files,
@@ -130,14 +130,25 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files,
         bam.index(x, base_config)
 
     params = ["-R", ref_file, "-T", "SomaticIndelDetector", "-U", "ALLOW_N_CIGAR_READS"]
-    params += ["--maxNumberOfReads", max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
+    # Limit per base read start count to between 200-10000, i.e. from any base
+    # can no more 10000 new reads begin.
+    # Further, limit maxNumberOfReads accordingly, otherwise SID discards 
+    # windows for high coverage panels.
+    window_size = 200 # default SID value
+    max_depth = min(max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000)), 10000)
+    params += ["--downsample_to_coverage", max_depth]
+    params += ["--maxNumberOfReads", str(int(max_depth) * window_size)]
     params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
     if paired.normal_bam is not None:
         params += ["-I:normal", paired.normal_bam]
+        # lower minimum AF from default 30% to 0.5%, filter more downstream
+        # notice there must be at least 4 reads of coverage in normal
+        params += ["--filter_expressions", "T_COV<6||N_COV<4||T_INDEL_F<0.005||T_INDEL_CF<0.7"]
     else:
-         params += ["--unpaired"]
+        params += ["--unpaired"]
+        params += ["--filter_expressions", "COV<6||INDEL_F<0.005||INDEL_CF<0.7"]
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
                    "INTERSECTION"]
