@@ -5,6 +5,7 @@ import os
 
 from bcbio import utils
 from bcbio.upload import shared, filesystem, galaxy, s3
+from bcbio.galaxy import nglims
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -30,7 +31,7 @@ def _get_files(sample):
     metadata about the file and pipeline versions.
     """
     analysis = sample.get("analysis")
-    if analysis in ["variant", "SNP calling", "variant2"]:
+    if analysis.lower() in ["variant", "snp calling", "variant2", "standard"]:
         return _get_files_variantcall(sample)
     elif analysis in ["RNA-seq"]:
         return _get_files_rnaseq(sample)
@@ -60,7 +61,11 @@ def _add_meta(xs, sample=None, config=None):
     for x in xs:
         x["mtime"] = shared.get_file_timestamp(x["path"])
         if sample:
-            x["sample"] = sample["name"][-1]
+            if isinstance(sample["name"], (tuple, list)):
+                name = sample["name"][-1]
+            else:
+                name = "%s-%s" % (sample["name"], nglims.clean_name(sample["description"]))
+            x["sample"] = name
         if config:
             if "fc_name" in config and "fc_date" in config:
                 x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
@@ -104,6 +109,7 @@ def _get_vcf(x, key):
             if utils.file_exists(fname + ".tbi"):
                 out.append({"path": fname + ".tbi",
                             "type": "vcf.gz.tbi",
+                            "index": True,
                             "ext": x["variantcaller"],
                             "variantcaller": x["variantcaller"]})
         else:
@@ -134,6 +140,7 @@ def _maybe_add_alignment(algorithm, sample, out):
         if utils.file_exists(sample["work_bam"] + ".bai"):
             out.append({"path": sample["work_bam"] + ".bai",
                         "type": "bam.bai",
+                        "index": True,
                         "ext": "ready"})
     return out
 

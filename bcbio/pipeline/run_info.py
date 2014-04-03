@@ -354,15 +354,16 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             else:
                 raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
         item["description"] = _clean_characters(str(item["description"]))
-        upload = global_config.get("upload", {})
-        # Handle specifying a local directory directly in upload
-        if isinstance(upload, basestring):
-            upload = {"dir": upload}
-        if fc_name and fc_date:
-            upload["fc_name"] = fc_name
-            upload["fc_date"] = fc_date
-        upload["run_id"] = ""
-        item["upload"] = upload
+        if "upload" not in item:
+            upload = global_config.get("upload", {})
+            # Handle specifying a local directory directly in upload
+            if isinstance(upload, basestring):
+                upload = {"dir": upload}
+            if fc_name and fc_date:
+                upload["fc_name"] = fc_name
+                upload["fc_date"] = fc_date
+            upload["run_id"] = ""
+            item["upload"] = upload
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
                                                   ignore_keys=["variantcaller", "realign", "recalibrate",

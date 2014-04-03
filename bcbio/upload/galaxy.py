@@ -24,15 +24,18 @@ def update_file(finfo, sample_info, config):
     if "dir" not in config:
         raise ValueError("Galaxy upload requires `dir` parameter in config specifying the "
                          "shared filesystem path to move files to.")
-    folder_name = "%s_%s" % (config["fc_name"], config["fc_date"])
+    folder_name = "%s_%s" % (config["fc_date"], config["fc_name"])
     storage_dir = utils.safe_makedir(os.path.join(config["dir"], folder_name))
-    storage_file = (filesystem.copy_finfo(finfo, storage_dir)
+    storage_file = (filesystem.copy_finfo(finfo, storage_dir, pass_uptodate=True)
                     if finfo.get("type") != "directory" else None)
     if "galaxy_url" in config and "galaxy_api_key" in config:
-        gi = GalaxyInstance(config["galaxy_url"], config["galaxy_api_key"])
+        galaxy_url = config["galaxy_url"]
+        if not galaxy_url.endswith("/"):
+            galaxy_url += "/"
+        gi = GalaxyInstance(galaxy_url, config["galaxy_api_key"])
     else:
         raise ValueError("Galaxy upload requires `galaxy_url` and `galaxy_api_key` in config")
-    if storage_file and sample_info:
+    if storage_file and sample_info and not finfo.get("index", False):
         _to_datalibrary(storage_file, gi, folder_name, sample_info, config)
 
 def _to_datalibrary(fname, gi, folder_name, sample_info, config):
@@ -50,11 +53,11 @@ def _file_to_folder(gi, fname, sample_info, libitems, library, folder):
     for item in libitems:
         if item["name"] == full_name:
             return item
-    logger.info("Uploading to Galaxy: %s" % full_name)
-    return gi.libraries.upload_from_galaxy_filesystem(library.id, fname, folder_id=folder["id"],
+    logger.info("Uploading to Galaxy library '%s': %s" % (library.name, full_name))
+    return gi.libraries.upload_from_galaxy_filesystem(str(library.id), fname, folder_id=str(folder["id"]),
                                                       link_data_only="link_to_files",
                                                       dbkey=sample_info["genome_build"],
-                                                      roles=library.roles)
+                                                      roles=str(library.roles))
 
 def _get_folder(gi, folder_name, library, libitems):
     """Retrieve or create a folder inside the library with the right now.
@@ -75,16 +78,20 @@ def _get_library(gi, sample_info, config):
                            config.get("galaxy_role"))
     if galaxy_lib:
         return _get_library_from_name(gi, galaxy_lib, role, sample_info)
-    elif config.get("private_libs"):
+    elif config.get("private_libs") or config.get("lab_association") or config.get("researcher"):
         return _library_from_nglims(gi, sample_info, config)
     else:
         raise ValueError("No Galaxy library specified for sample: %s" %
                          sample_info["description"])
 
-def _get_library_from_name(gi, name, role, sample_info):
+def _get_library_from_name(gi, name, role, sample_info, create=False):
     for lib in gi.libraries.get_libraries():
         if lib["name"].lower().find(name.lower()) >= 0:
             return GalaxyLibrary(lib["id"], lib["name"], role)
+    if create and name:
+        logger.info("Creating Galaxy library: '%s'" % name)
+        lib = gi.libraries.create_library(name)[0]
+        return GalaxyLibrary(lib["id"], lib["name"], role)
     else:
         raise ValueError("Could not find Galaxy library matching '%s' for sample %s" %
                          (name, sample_info["description"]))
@@ -92,7 +99,9 @@ def _get_library_from_name(gi, name, role, sample_info):
 def _library_from_nglims(gi, sample_info, config):
     """Retrieve upload library from nglims specified user libraries.
     """
-    check_names = set([config.get(x, "").lower() for x in ["lab_association", "researcher"]])
+    names = [config.get(x, "").strip() for x in ["lab_association", "researcher"]
+             if config.get(x)]
+    check_names = set([x.lower() for x in names])
     for libname, role in config["private_libs"]:
         # Try to find library for lab or rsearcher
         if libname.lower() in check_names:
@@ -102,6 +111,7 @@ def _library_from_nglims(gi, sample_info, config):
         libname, role = config["private_libs"][0]
         return _get_library_from_name(gi, libname, role, sample_info)
     # otherwise use the lab association or researcher name
+    elif len(names) > 0:
+        return _get_library_from_name(gi, names[0], None, sample_info, create=True)
     else:
-        libname = check_names[0]
-        return _get_library_from_name(gi, libname, None, sample_info)
+        raise ValueError("Could not find Galaxy library for sample %s" % sample_info["description"])
