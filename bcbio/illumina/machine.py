@@ -24,7 +24,8 @@ def check_and_postprocess(args):
         config = yaml.safe_load(in_handle)
     setup_local_logging(config)
     for dname in _find_unprocessed(config):
-        lane_details = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname)
+        lane_details = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname,
+                                          utils.get_in(config, ("process", "storedir")))
         fcid_ss = samplesheet.from_flowcell(dname, lane_details)
         _update_reported(config["msg_db"], dname)
         fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)

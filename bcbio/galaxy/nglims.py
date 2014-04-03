@@ -3,6 +3,7 @@
 import collections
 import copy
 import glob
+import gzip
 import operator
 import os
 import string
@@ -27,11 +28,13 @@ def prep_samples_and_config(run_folder, ldetails, fastq_dir, config):
     cores = utils.get_in(config, ("algorithm", "num_cores"), 1)
     ldetails = joblib.Parallel(cores)(joblib.delayed(_prep_sample_and_config)(x, fastq_dir, fastq_final_dir)
                                       for x in _group_same_samples(ldetails))
-    config_file = _write_sample_config(run_folder, ldetails)
+    config_file = _write_sample_config(run_folder, [x for x in ldetails if x])
     return config_file, fastq_final_dir
 
 def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
     """Prepare output fastq file and configuration for a single sample.
+
+    Only passes non-empty files through for processing.
     """
     files = []
     print "->", ldetail_group[0]["name"], len(ldetail_group)
@@ -41,9 +44,16 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
             files.append(_concat_bgzip_fastq(fastq_inputs, fastq_final_dir, read, ldetail_group[0]))
     if len(files) == 0:
         raise ValueError("Did not find input fastq files for %s %s" % (ldetail["project_name"], ldetail["name"]))
-    out = ldetail_group[0]
-    out["files"] = files
-    return out
+    if _non_empty(files[0]):
+        out = ldetail_group[0]
+        out["files"] = files
+        return out
+
+def _non_empty(f):
+    with gzip.open(f) as in_handle:
+        for line in in_handle:
+            return True
+    return False
 
 def _write_sample_config(run_folder, ldetails):
     """Generate a bcbio-nextgen YAML configuration file for processing a sample.
@@ -128,7 +138,7 @@ def _group_same_samples(ldetails):
         sample_groups[(ldetail["project_name"], ldetail["description"])].append(ldetail)
     return sample_groups.values()
 
-def get_runinfo(galaxy_url, galaxy_apikey, run_folder):
+def get_runinfo(galaxy_url, galaxy_apikey, run_folder, storedir):
     """Retrieve flattened run information for a processed directory from Galaxy nglims API.
     """
     galaxy_api = GalaxyApiAccess(galaxy_url, galaxy_apikey)
@@ -137,12 +147,15 @@ def get_runinfo(galaxy_url, galaxy_apikey, run_folder):
     ldetails = _flatten_lane_details(galaxy_info)
     out = []
     for item in ldetails:
-        item["upload"] = {"method": "galaxy", "run_id": galaxy_info["run_id"],
-                          "fc_name": fc_name, "fc_date": fc_date,
-                          "galaxy_url": galaxy_url, "galaxy_api_key": galaxy_apikey}
-        for k in ["lab_association", "private_libs", "researcher", "researcher_id", "sample_id",
-                  "galaxy_library", "galaxy_role"]:
-            item["upload"][k] = item.pop(k, "")
+        # Do uploads for all non-controls
+        if item["description"] != "control" or item["project_name"] != "control":
+            item["upload"] = {"method": "galaxy", "run_id": galaxy_info["run_id"],
+                              "fc_name": fc_name, "fc_date": fc_date,
+                              "dir": storedir,
+                              "galaxy_url": galaxy_url, "galaxy_api_key": galaxy_apikey}
+            for k in ["lab_association", "private_libs", "researcher", "researcher_id", "sample_id",
+                      "galaxy_library", "galaxy_role"]:
+                item["upload"][k] = item.pop(k, "")
         out.append(item)
     return out
 
@@ -151,6 +164,9 @@ def _flatten_lane_details(runinfo):
     """
     out = []
     for ldetail in runinfo["details"]:
+        # handle controls
+        if "project_name" not in ldetail and ldetail["description"] == "control":
+            ldetail["project_name"] = "control"
         for i, barcode in enumerate(ldetail.get("multiplex", [{}])):
             cur = copy.deepcopy(ldetail)
             cur["name"] = "%s-%s" % (ldetail["name"], i + 1)

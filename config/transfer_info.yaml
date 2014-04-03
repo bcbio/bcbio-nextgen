@@ -9,10 +9,13 @@ dump_directories:
 # Locaton of processing machine. Files will be rsync'ed using the
 # provided username which assumes correct setup of passwordless ssh-keys.
 # Starts a remote bcbio server for kicking off analysis.
+# dir -- directory for processing/transfer
+# storedir -- Base directory for long term storage
 process:
   host: workserver.you.org
   username: bcbio_user
   dir: /array1/bcbio
+  storedir: /array2/storage
   server: http://workserver.you.org/bcbio
 # Local cores to use for processing bcl to bgzipped fastq files
 algorithm:
