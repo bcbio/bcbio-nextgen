@@ -4,7 +4,7 @@ Parallel execution
 The pipeline runs in parallel in two different ways:
 
 -  multiple cores -- Analyses will run in parallel using multiple cores
-   on a single machine. This requires only the ``mulitprocessing``
+   on a single machine. This requires only the ``multiprocessing``
    Python library, included by default with most Python installations.
 
 -  parallel messaging -- This allows scaling beyond the cores
