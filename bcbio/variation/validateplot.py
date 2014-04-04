@@ -5,7 +5,9 @@ differences.
 """
 import bisect
 import collections
+import csv
 import math
+import os
 
 import numpy as np
 try:
@@ -14,14 +16,22 @@ try:
 except ImportError:
     gg, pd, ppl = None, None, None
 
+from bcbio import utils
 from bcbio.variation import bamprep
+
+def create_from_csv(in_csv):
+    df = pd.read_csv(in_csv)
+    create(df, None, 0, {}, os.path.splitext(in_csv)[0])
 
 def create(plot_data, header, ploti, sample_config, out_file_base):
     """Create plots of validation results for a sample, labeling prep strategies.
     """
     if pd is None or ppl is None:
         return None
-    df = pd.DataFrame(plot_data, columns=header)
+    if header:
+        df = pd.DataFrame(plot_data, columns=header)
+    else:
+        df = plot_data
     df["aligner"] = [get_aligner(x, sample_config) for x in df["sample"]]
     df["bamprep"] = [get_bamprep(x, sample_config) for x in df["sample"]]
     floors = get_group_floors(df)
@@ -171,10 +181,10 @@ def get_group_floors(df):
     return floors
 
 def get_aligner(x, config):
-    return config["algorithm"].get("aligner", "")
+    return utils.get_in(config, ("algorithm", "aligner"), "")
 
 def get_bamprep(x, config):
-    params = bamprep._get_prep_params({"config": {"algorithm": config["algorithm"]}})
+    params = bamprep._get_prep_params({"config": {"algorithm": config.get("algorithm", {})}})
     if params["realign"] == "gatk" and params["recal"] == "gatk":
         return "gatk"
     elif not params["realign"] and not params["recal"]:
