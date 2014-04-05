@@ -367,13 +367,29 @@ class StandardPipeline(AbstractPipeline):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with prun.start(_wres(parallel, ["aligner"]),
                         lane_items, config, dirs, "multicore") as run_parallel:
-            logger.info("Timing: alignment")
-            samples = run_parallel("process_alignment", lane_items)
-        ## Finalize (per-sample cluster)
-        with prun.start(_wres(parallel, ["fastqc", "bamtools"]),
-                        samples, config, dirs, "persample") as run_parallel:
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("alignment", dirs):
+                samples = run_parallel("process_alignment", lane_items)
+            with profile.report("callable regions", dirs):
+                samples = run_parallel("postprocess_alignment", samples)
+                regions = run_parallel("combine_sample_regions", [samples])[0]
+                samples = region.add_region_info(samples, regions)
+                samples = region.clean_sample_data(samples)
+        ## Processing on sub regions
+        with prun.start(_wres(parallel, ["gatk", "picard", "samtools"]),
+                        samples, config, dirs, "full",
+                        multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
+            with profile.report("alignment post-processing", dirs):
+                samples = region.parallel_prep_region(samples, regions, run_parallel)
+                samples = region.parallel_variantcall_region(samples, run_parallel)
+        print len(samples)
+        ## Finalize BAMs and QC
+        with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools"]),
+                        samples, config, dirs, "multicore2") as run_parallel:
+            with profile.report("prepped BAM merging", dirs):
+                samples = region.delayed_bamprep_merge(samples, run_parallel)
+            print len(samples)
+            with profile.report("quality control", dirs):
+                samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
         return samples
 
