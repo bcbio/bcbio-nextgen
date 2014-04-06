@@ -86,7 +86,9 @@ def _select_default_algorithm(analysis):
     """Provide default algorithm sections from templates or standard
     """
     if not analysis or analysis == "Standard":
-        return "Standard", {"aligner": "bwa", "platform": "illumina", "quality_format": "Standard"}
+        return "Standard", {"aligner": "bwa", "platform": "illumina", "quality_format": "Standard",
+                            "recalibrate": False, "realign": False, "mark_duplicates": "samtools",
+                            "variantcaller": False}
     elif "variant" in analysis:
         try:
             config, _ = template.name_to_config(analysis)
@@ -131,12 +133,12 @@ def _concat_bgzip_fastq(finputs, out_dir, read, ldetail):
     return out_file
 
 def _group_same_samples(ldetails):
-    """Move samples into groups -- same groups have identical projects and descriptions
+    """Move samples into groups -- same groups have identical names.
     """
     sample_groups = collections.defaultdict(list)
     for ldetail in ldetails:
-        sample_groups[(ldetail["project_name"], ldetail["description"])].append(ldetail)
-    return sample_groups.values()
+        sample_groups[ldetail["name"]].append(ldetail)
+    return sorted(sample_groups.values(), key=lambda xs: xs[0]["name"])
 
 def get_runinfo(galaxy_url, galaxy_apikey, run_folder, storedir):
     """Retrieve flattened run information for a processed directory from Galaxy nglims API.
