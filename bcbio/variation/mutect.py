@@ -68,10 +68,11 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     for x in align_bams:
         bam.index(x, base_config)
 
-    params = ["-R", ref_file, "-T", "MuTect", "-U", "ALLOW_N_CIGAR_READS"]
-    params += ["--downsample_to_coverage", max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000))]
-    params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     paired = vcfutils.get_paired_bams(align_bams, items)
+    params = ["-R", ref_file, "-T", "MuTect", "-U", "ALLOW_N_CIGAR_READS"]
+    params += ["--downsample_to_coverage", max(200, get_in(paired.tumor_config,
+                                                           ("algorithm", "coverage_depth_max"), 10000))]
+    params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     params += ["-I:tumor", paired.tumor_bam]
     params += ["--tumor_sample_name", paired.tumor_name]
     if paired.normal_bam is not None:
@@ -92,7 +93,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
         base_config = items[0]["config"]
         broad_runner = broad.runner_from_config(base_config, "mutect")
         if "appistry" in broad_runner.get_mutect_version():
-            out_file_mutect = out_file.replace(".vcf","-mutect.vcf") if "vcf" in out_file else out_file + "-mutect.vcf"
+            out_file_mutect = (out_file.replace(".vcf", "-mutect.vcf")
+                               if "vcf" in out_file else out_file + "-mutect.vcf")
         else:
             out_file_mutect = out_file
         broad_runner, params = \
@@ -108,21 +110,21 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             broad_runner.run_mutect(params)
         if "appistry" in broad_runner.get_mutect_version():
             # SomaticIndelDetector modifications
-            out_file_indels = out_file.replace(".vcf","-somaticIndels.vcf")  if "vcf" in out_file else out_file + "-mutect.vcf"
+            out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
+                               if "vcf" in out_file else out_file + "-mutect.vcf")
             params_indels = _SID_call_prep(align_bams, items, ref_file, assoc_files,
-                                       region, out_file_indels)
+                                           region, out_file_indels)
             with file_transaction(out_file_indels) as tx_out_file:
                 params_indels += ["-o", tx_out_file]
                 broad_runner.run_mutect(params_indels)
-            out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect,out_file_indels],
-                                           out_file=out_file, 
-                                           ref_file=items[0]["sam_ref"], 
-                                           config=items[0]["config"], 
-                                           region=region)
+            out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
+                                                      out_file=out_file,
+                                                      ref_file=items[0]["sam_ref"],
+                                                      config=items[0]["config"],
+                                                      region=region)
     return out_file
 
-def _SID_call_prep(align_bams, items, ref_file, assoc_files,
-                       region=None, out_file=None):
+def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
     """Preparation work for SomaticIndelDetector.
     """
     base_config = items[0]["config"]
@@ -132,23 +134,24 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files,
     params = ["-R", ref_file, "-T", "SomaticIndelDetector", "-U", "ALLOW_N_CIGAR_READS"]
     # Limit per base read start count to between 200-10000, i.e. from any base
     # can no more 10000 new reads begin.
-    # Further, limit maxNumberOfReads accordingly, otherwise SID discards 
+    # Further, limit maxNumberOfReads accordingly, otherwise SID discards
     # windows for high coverage panels.
-    window_size = 200 # default SID value
-    max_depth = min(max(200, get_in(base_config, ("algorithm", "coverage_depth_max"), 10000)), 10000)
+    window_size = 200  # default SID value
+    paired = vcfutils.get_paired_bams(align_bams, items)
+    max_depth = min(max(200, get_in(paired.tumor_config,
+                                    ("algorithm", "coverage_depth_max"), 10000)), 10000)
     params += ["--downsample_to_coverage", max_depth]
     params += ["--maxNumberOfReads", str(int(max_depth) * window_size)]
     params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
-    paired = vcfutils.get_paired_bams(align_bams, items)
     params += ["-I:tumor", paired.tumor_bam]
+    min_af = float(get_in(paired.tumor_config, ("algorithm", "min_allele_fraction"), 20)) / 100.0
     if paired.normal_bam is not None:
         params += ["-I:normal", paired.normal_bam]
-        # lower minimum AF from default 30% to 0.5%, filter more downstream
         # notice there must be at least 4 reads of coverage in normal
-        params += ["--filter_expressions", "T_COV<6||N_COV<4||T_INDEL_F<0.005||T_INDEL_CF<0.7"]
+        params += ["--filter_expressions", "T_COV<6||N_COV<4||T_INDEL_F<%s||T_INDEL_CF<0.7" % min_af]
     else:
         params += ["--unpaired"]
-        params += ["--filter_expressions", "COV<6||INDEL_F<0.005||INDEL_CF<0.7"]
+        params += ["--filter_expressions", "COV<6||INDEL_F<%s||INDEL_CF<0.7" % min_af]
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
                    "INTERSECTION"]

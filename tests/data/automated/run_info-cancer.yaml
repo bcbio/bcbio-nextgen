@@ -30,6 +30,7 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [mutect, varscan, freebayes]
+      min_allele_fraction: 10
       svcaller: [cn.mops]
   - analysis: variant2
     description: c-tumor2
@@ -45,4 +46,5 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [mutect, varscan, freebayes]
+      min_allele_fraction: 5.0
       svcaller: [cn.mops]
