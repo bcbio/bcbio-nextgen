@@ -340,7 +340,8 @@ Cancer variant calling
 
 - ``min_allele_fraction`` Minimum allele fraction to detect variants in
   heterogeneous tumor samples, set as the float or integer percentage to
-  resolve (ie 20 = alleles in 20% of the sample). Defaults to 20.
+  resolve (ie 20 = alleles in 20% of the sample). Defaults to 20. Specify this
+  in the tumor sample of a tumor/normal pair.
 
 parallelization
 ===============
