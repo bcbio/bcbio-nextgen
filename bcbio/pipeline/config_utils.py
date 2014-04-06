@@ -1,7 +1,6 @@
 """Loads configurations from .yaml files and expands environment variables.
 """
 import copy
-import collections
 import glob
 import math
 import os
