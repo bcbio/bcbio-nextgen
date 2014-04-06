@@ -111,7 +111,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
         if "appistry" in broad_runner.get_mutect_version():
             # SomaticIndelDetector modifications
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
-                               if "vcf" in out_file else out_file + "-mutect.vcf")
+                               if "vcf" in out_file else out_file + "-somaticIndels.vcf")
             params_indels = _SID_call_prep(align_bams, items, ref_file, assoc_files,
                                            region, out_file_indels)
             with file_transaction(out_file_indels) as tx_out_file:
