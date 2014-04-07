@@ -7,7 +7,7 @@ from bcbio.provenance import do
 from bcbio import bam
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
-ALIGN_TAGS =  ["NH", "HI", "NM", "MD"]
+ALIGN_TAGS =  ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
