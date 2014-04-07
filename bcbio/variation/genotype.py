@@ -36,7 +36,8 @@ def combine_multiple_callers(data):
     """
     by_bam = collections.defaultdict(list)
     for x in data:
-        by_bam[x[0]["work_bam"]].append(x[0])
+        work_bam = utils.get_in(x[0], ("combine", "work_bam", "out"), x[0]["work_bam"])
+        by_bam[work_bam].append(x[0])
     out = []
     for grouped_calls in by_bam.itervalues():
         ready_calls = [{"variantcaller": get_variantcaller(x),
