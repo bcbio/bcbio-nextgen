@@ -70,12 +70,8 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
-    fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
-                                                        if fc_dir else None,
-                                                        config, config_file)
-    config_file = os.path.join(config_dir, os.path.basename(config_file))
-    dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
-            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+    dirs = setup_directories(work_dir, fc_dir, config, config_file)
+    config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     samples = run_info.organize(dirs, config, run_info_yaml)
     pipelines = _pair_lanes_with_pipelines(samples)
     final = []
@@ -88,6 +84,13 @@ def _run_toplevel(config, config_file, work_dir, parallel,
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
                     final.append(xs[0])
+
+def setup_directories(work_dir, fc_dir, config, config_file):
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
+                                                        if fc_dir else None,
+                                                        config, config_file)
+    return {"fastq": fastq_dir, "galaxy": galaxy_dir,
+            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
 
 def _add_provenance(items, dirs, parallel, config):
     p = programs.write_versions(dirs, config, is_wrapper=parallel.get("wrapper") is not None)

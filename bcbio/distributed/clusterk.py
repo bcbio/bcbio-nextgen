@@ -25,7 +25,7 @@ def runner(queue, parallel):
         fn = getattr(__import__("{base}.clusterktasks".format(base=parallel["module"]),
                                 fromlist=["clusterktasks"]),
                      parallel["wrapper"])
-        wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources"])}
+        wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources", "pack"])}
         out = []
         for data in [fn(fn_name, queue, parallel.get("wrapper_args"), wrap_parallel, x) for x in items]:
             if data:
