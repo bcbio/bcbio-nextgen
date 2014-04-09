@@ -144,7 +144,7 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
     params += ["--maxNumberOfReads", str(int(max_depth) * window_size)]
     params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     params += ["-I:tumor", paired.tumor_bam]
-    min_af = float(get_in(paired.tumor_config, ("algorithm", "min_allele_fraction"), 20)) / 100.0
+    min_af = float(get_in(paired.tumor_config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
     if paired.normal_bam is not None:
         params += ["-I:normal", paired.normal_bam]
         # notice there must be at least 4 reads of coverage in normal
