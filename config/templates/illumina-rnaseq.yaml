@@ -4,7 +4,7 @@ details:
   - analysis: RNA-seq
     genome_build: GRCh37
     algorithm:
-      aligner: star
+      aligner: tophat2
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
