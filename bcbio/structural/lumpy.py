@@ -74,7 +74,7 @@ def run(items):
         sr_bam, disc_bam = _extract_split_and_discordants(data["work_bam"], work_dir, data)
         sr_bams.append(sr_bam)
         disc_bams.append(disc_bam)
-    pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, data)
+    pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items[0])
     out = []
     for data in items:
         if "sv" not in data:

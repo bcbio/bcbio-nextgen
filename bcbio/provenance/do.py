@@ -109,6 +109,8 @@ def _do_run(cmd, checks, log_stdout=False):
                 logger.debug(line.rstrip())
         exitcode = s.poll()
         if exitcode is not None:
+            for line in s.stdout:
+                debug_stdout.append(line)
             if exitcode is not None and exitcode != 0:
                 error_msg = " ".join(cmd) if not isinstance(cmd, basestring) else cmd
                 error_msg += "\n"
