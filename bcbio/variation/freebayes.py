@@ -13,7 +13,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, ploidy
-from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis
+from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
 
 import vcf
 
@@ -41,7 +41,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
         opts += resources["options"]
     if "--min-alternate-fraction" not in " ".join(opts) and "-F" not in " ".join(opts):
         # add minimum reportable allele frequency, for which FreeBayes defaults to 20
-         min_af = float(utils.get_in(config, ("algorithm", 
+         min_af = float(utils.get_in(config, ("algorithm",
                                               "min_allele_fraction"),20)) / 100.0
          opts += ["--min-alternate-fraction", str(min_af)]
     return opts
@@ -112,9 +112,9 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             opts += " -f {}".format(ref_file)
             if "--min-alternate-fraction" not in opts and "-F" not in opts:
                 # add minimum reportable allele frequency
-                # FreeBayes defaults to 20%, but use 10% by default for the 
+                # FreeBayes defaults to 20%, but use 10% by default for the
                 # tumor case
-                min_af = float(utils.get_in(paired.tumor_config, ("algorithm", 
+                min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
                                                                   "min_allele_fraction"),10)) / 100.0
                 opts += " --min-alternate-fraction %s" % min_af
             # NOTE: The first sample name in the vcfsamplediff call is
@@ -132,7 +132,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
-    fix_somatic_calls(out_file)
+    fix_somatic_calls(out_file, config)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"], ref_file,
                                                config)
@@ -190,7 +190,7 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
             out_handle.write("Moved to {0}".format(orig_file))
 
 
-def fix_somatic_calls(in_file):
+def fix_somatic_calls(in_file, config):
 
     """Fix somatic variant output, standardize it to the SOMATIC flag."""
 
@@ -200,7 +200,9 @@ def fix_somatic_calls(in_file):
 
     base, ext = utils.splitext_plus(in_file)
     name = "somaticfix"
-    out_file = "{0}-{1}{2}".format(base, name, ext)
+
+    # NOTE: PyVCF will write an uncompressed VCF
+    out_file = "{0}-{1}{2}".format(base, name, ".vcf")
 
     if utils.file_exists(in_file):
         reader = vcf.VCFReader(filename=in_file)
@@ -222,6 +224,8 @@ def fix_somatic_calls(in_file):
 
                     writer.write_record(record)
 
+        # Re-compress the file
+        out_file = bgzip_and_index(out_file, config)
         _move_vcf(in_file, "{0}.orig".format(in_file))
         _move_vcf(out_file, in_file)
         with open(out_file, "w") as out_handle:
