@@ -60,7 +60,7 @@ def run(samples, run_parallel):
                 if svcaller in _BATCH_CALLERS and batch:
                     batches = batch if isinstance(batch, (list, tuple)) else [batch]
                     for b in batches:
-                        to_process[b].append(x)
+                        to_process[(svcaller, b)].append(x)
                 else:
                     to_process[x["name"][-1]] = [x]
         else:

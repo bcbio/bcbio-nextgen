@@ -96,7 +96,8 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
 
 def _allowed_cnmops_errorstates(msg):
     return (msg.find("No CNV regions in result object. Rerun cn.mops with different parameters") >= 0
-            or msg.find("Normalization might not be applicable for this small number of segments") >= 0)
+            or msg.find("Normalization might not be applicable for this small number of segments") >= 0
+            or msg.find("Error in if (is.finite(mv2m)) { : argument is of length zero") >= 0)
 
 def _prep_load_script(work_bams, names, chrom, items):
     pairmode = "paired" if bam.is_paired(work_bams[0]) else "unpaired"
