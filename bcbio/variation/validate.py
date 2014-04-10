@@ -11,7 +11,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.bam import callable
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
 from bcbio.variation import validateplot
 
@@ -103,6 +103,8 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
                 "preclean": True, "prep": True, "remove-refcalls": True}
     a_intervals = get_analysis_intervals(data)
+    if a_intervals:
+        a_intervals = shared.remove_lcr_regions(a_intervals, [data])
     if rm_interval_file:
         ref_call["intervals"] = rm_interval_file
     eval_call = {"file": vrn_file, "name": "eval", "remove-refcalls": True}

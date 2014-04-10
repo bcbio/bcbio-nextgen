@@ -26,7 +26,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
 
     variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
-    target = subset_variant_regions(variant_regions, region, out_file)
+    target = subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
             opts += ["--targets", target]

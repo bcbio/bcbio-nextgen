@@ -39,7 +39,8 @@ def _prep_bam_input(f, i, base):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
     cur["files"] = [os.path.abspath(f)]
-    cur["description"] = sample_name(f) or os.path.splitext(os.path.basename(f))[0]
+    cur["description"] = ((sample_name(f) if f.endswith(".bam") else None)
+                          or os.path.splitext(os.path.basename(f))[0])
     return cur
 
 def _prep_fastq_input(fs, base):
@@ -56,7 +57,7 @@ def _prep_items_from_base(base, in_files):
     """Prepare a set of configuration items for input files.
     """
     details = []
-    known_exts = {".bam": "bam", ".fq": "fastq",
+    known_exts = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
                   ".fastq": "fastq", ".txt": "fastq",
                   ".fastq.gz": "fastq", ".fq.gz": "fastq",
                   ".txt.gz": "fastq", ".gz": "fastq"}

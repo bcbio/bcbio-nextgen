@@ -8,9 +8,10 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation import annotation, bamprep, ploidy, vcfutils
 
-def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file):
+def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file):
     """Shared preparation work for GATK variant calling.
     """
+    config = items[0]["config"]
     broad_runner = broad.runner_from_config(config)
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
@@ -20,7 +21,7 @@ def _shared_gatk_call_prep(align_bams, ref_file, config, dbsnp, region, out_file
     coverage_depth_min = utils.get_in(config, ("algorithm", "coverage_depth_min"), 4)
     variant_regions = config["algorithm"].get("variant_regions", None)
     confidence = "4.0" if coverage_depth_min < 4 else "30.0"
-    region = subset_variant_regions(variant_regions, region, out_file)
+    region = subset_variant_regions(variant_regions, region, out_file, items)
 
     params = ["-R", ref_file,
               "--standard_min_confidence_threshold_for_calling", confidence,
@@ -47,8 +48,8 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         config = items[0]["config"]
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files["dbsnp"],
-                                   region, out_file)
+            _shared_gatk_call_prep(align_bams, items, ref_file, assoc_files["dbsnp"],
+                                   region, out_file, items)
         if (not isinstance(region, (list, tuple)) and
                 not all(has_aligned_reads(x, region) for x in align_bams)):
             vcfutils.write_empty_vcf(out_file, config)
@@ -73,7 +74,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         config = items[0]["config"]
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, ref_file, items[0]["config"], assoc_files["dbsnp"],
+            _shared_gatk_call_prep(align_bams, items, ref_file, assoc_files["dbsnp"],
                                    region, out_file)
         assert broad_runner.gatk_type() == "restricted", \
             "Require full version of GATK 2.4+ for haplotype calling"

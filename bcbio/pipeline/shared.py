@@ -2,6 +2,8 @@
 """
 import os
 from contextlib import closing
+import functools
+import operator
 
 try:
     import pybedtools
@@ -127,7 +129,35 @@ def _subset_bed_by_region(in_file, out_file, region):
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
     orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).merge().saveas(out_file)
 
-def subset_variant_regions(variant_regions, region, out_file):
+def remove_lcr_regions(orig_bed, items):
+    """If configured and available, update a BED file to remove low complexity regions.
+    """
+    lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
+    do_lcr = reduce(operator.and_,
+                    [utils.get_in(data, ("config", "algorithm", "remove_lcr"), True)
+                     for data in items])
+    if lcr_bed and do_lcr:
+        nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
+        with file_transaction(nolcr_bed) as tx_nolcr_bed:
+            pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed)).saveas(tx_nolcr_bed)
+        # If we have a non-empty file, convert to the LCR subtracted for downstream analysis
+        if utils.file_exists(nolcr_bed):
+            orig_bed = nolcr_bed
+    return orig_bed
+
+def subtract_low_complexity(f):
+    """Remove low complexity regions from callable regions if available.
+    """
+    @functools.wraps(f)
+    def wrapper(variant_regions, region, out_file, items=None):
+        region_bed = f(variant_regions, region, out_file, items)
+        if os.path.exists(region_bed) and items:
+            region_bed = remove_lcr_regions(region_bed, items)
+        return region_bed
+    return wrapper
+
+@subtract_low_complexity
+def subset_variant_regions(variant_regions, region, out_file, items=None):
     """Return BED file subset by a specified chromosome region.
 
     variant_regions is a BED file, region is a chromosome name or tuple
