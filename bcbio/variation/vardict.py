@@ -96,7 +96,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                         cmd = ("{var2vcf} -S -f {freq} {tmp_out2} | {vcfstreamsort} {compress_cmd} > {tmp_out3}")
                         do.run(cmd.format(**locals()), "Genotyping with VarDict: VCF output", {})
                 else:
-                    cmd = ("var2vcf_valid.pl -S -f {freq} {tmp_out2} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
+                    cmd = ("var2vcf_valid.pl -S -f {freq} -N {sample} {tmp_out2} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
                     do.run(cmd.format(**locals()), "Genotyping with VarDict: VCF output", {})
             if num_bams > 1:
                 # N.B. merge_variant_files wants region in 1-based end-inclusive 
