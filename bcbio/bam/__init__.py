@@ -2,11 +2,13 @@
 """
 import contextlib
 import os
+import itertools
 import subprocess
 
 import pysam
 
 from bcbio import broad, utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -73,6 +75,55 @@ def downsample(in_bam, data, target_counts):
                        "--subsample={ds_pct:.3} --subsampling-seed=42 {in_bam}")
                 do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
         return out_file
+
+def check_header(in_bam, rgnames, ref_file, config):
+    """Ensure passed in BAM header matches reference file and read groups names.
+    """
+    _check_bam_contigs(in_bam, ref_file, config)
+    _check_sample(in_bam, rgnames)
+
+def _check_sample(in_bam, rgnames):
+    """Ensure input sample name matches expected run group names.
+    """
+    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+        rg = bamfile.header.get("RG", [{}])
+    msgs = []
+    if len(rg) > 1:
+        msgs.append("Multiple read groups found in input BAM. Expect single RG per BAM.")
+    elif len(rg) == 0:
+        msgs.append("No read groups found in input BAM. Expect single RG per BAM.")
+    elif rg[0].get("SM") != rgnames["sample"]:
+        msgs.append("Read group sample name (SM) does not match configuration `description`: %s vs %s"
+                    % (rg[0].get("SM"), rgnames["sample"]))
+    if len(msgs) > 0:
+        raise ValueError("Problems with pre-aligned input BAM file: %s\n" % (in_bam)
+                         + "\n".join(msgs) +
+                         "\nSetting `bam_clean: picard` in the configuration can often fix this issue.")
+
+def _check_bam_contigs(in_bam, ref_file, config):
+    """Ensure a pre-aligned BAM file matches the expected reference genome.
+    """
+    ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
+    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+        bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
+    problems = []
+    warnings = []
+    for bc, rc in itertools.izip_longest(bam_contigs, ref_contigs):
+        if bc != rc:
+            if bc and rc:
+                problems.append("Reference mismatch. BAM: %s Reference: %s" % (bc, rc))
+            elif bc:
+                problems.append("Extra BAM chromosomes: %s" % bc)
+            elif rc:
+                warnings.append("Extra reference chromosomes: %s" % rc)
+    if problems:
+        raise ValueError("Unexpected order, name or contig mismatches between input BAM and reference file:\n%s\n"
+                         "Setting `bam_clean: picard` in the configuration can often fix this issue."
+                         % "\n".join(problems))
+    if warnings:
+        print("*** Potential problems in input BAM compared to reference:\n%s\n" %
+              "\n".join(warnings))
+
 
 def open_samfile(in_file):
     if is_bam(in_file):
@@ -182,7 +233,7 @@ def merge(bamfiles, out_bam, config):
     assert all(map(is_bam, bamfiles)), ("Not all of the files to merge are not BAM "
                                         "files: %s " % (bamfiles))
     assert all(map(utils.file_exists, bamfiles)), ("Not all of the files to merge "
-                                             "exist: %s" % (bamfiles))
+                                                   "exist: %s" % (bamfiles))
     sambamba = _get_sambamba(config)
     sambamba = None
     samtools = config_utils.get_program("samtools", config)
@@ -273,4 +324,3 @@ def sample_name(in_bam):
         if line.startswith("@RG"):
             name = [x.split(":")[1] for x in line.split() if x.split(":")[0] == "SM"]
     return name[0] if name else None
-

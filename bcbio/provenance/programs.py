@@ -38,13 +38,19 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
 def _broad_versioner(type):
     def get_version(config):
         from bcbio import broad
-        runner = broad.runner_from_config(config)
+        try:
+            runner = broad.runner_from_config(config)
+        except ValueError:
+            return ""
         if type == "gatk":
             return runner.get_gatk_version()
         elif type == "picard":
             return runner.get_picard_version("ViewSam")
         elif type == "mutect":
-            runner = broad.runner_from_config(config, "mutect")
+            try:
+                runner = broad.runner_from_config(config, "mutect")
+            except ValueError:
+                return ""
             return runner.get_mutect_version()
         else:
             raise NotImplementedError(type)

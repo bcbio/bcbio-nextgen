@@ -1,22 +1,16 @@
 """Top level driver functionality for processing a sequencing lane.
 """
-import contextlib
 import copy
-import itertools
 import os
 
-import pysam
-
-from bcbio import utils, broad
+from bcbio import bam, broad, utils
 from bcbio.log import logger
-from bcbio.bam import callable, ref
+from bcbio.bam import callable, fastq
 from bcbio.bam.trim import trim_adapters
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
 from bcbio.variation import bedutils, recalibrate
-from bcbio import bam
-from bcbio.bam import fastq
 
 def process_lane(item):
     """Prepare lanes, potentially splitting based on barcodes and reducing the
@@ -65,29 +59,6 @@ def link_bam_file(orig_file, new_dir):
     utils.symlink_plus(orig_file, sym_file)
     return sym_file
 
-def _check_prealigned_bam(in_bam, ref_file, config):
-    """Ensure a pre-aligned BAM file matches the expected reference genome.
-    """
-    ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
-        bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
-    problems = []
-    warnings = []
-    for bc, rc in itertools.izip_longest(bam_contigs, ref_contigs):
-        if bc != rc:
-            if bc and rc:
-                problems.append("Reference mismatch. BAM: %s Reference: %s" % (bc, rc))
-            elif bc:
-                problems.append("Extra BAM chromosomes: %s" % bc)
-            elif rc:
-                warnings.append("Extra reference chromosomes: %s" % rc)
-    if problems:
-        raise ValueError("Unexpected order, name or contig mismatches between input BAM and reference file:\n%s\n"
-                         % "\n".join(problems))
-    if warnings:
-        print("*** Potential problems in input BAM compared to reference:\n%s\n" %
-              "\n".join(warnings))
-
 def process_alignment(data):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
@@ -120,7 +91,7 @@ def process_alignment(data):
         else:
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))
-        _check_prealigned_bam(fastq1, data["sam_ref"], config)
+        bam.check_header(out_bam, data["rgnames"], data["sam_ref"], data["config"])
         data["work_bam"] = out_bam
     elif fastq1 is None and "vrn_file" in data:
         data["config"]["algorithm"]["variantcaller"] = ""

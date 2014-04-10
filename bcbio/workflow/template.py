@@ -101,7 +101,7 @@ def _expand_wildcards(in_files):
 
 # ## Read and write configuration files
 
-def _read_template(template):
+def name_to_config(template):
     """Read template file into a dictionary to use as base for all samples.
 
     Handles well-known template names, pulled from GitHub repository and local
@@ -263,7 +263,7 @@ def _add_metadata(item, metadata):
     return item
 
 def setup(args):
-    template, template_txt = _read_template(args.template)
+    template, template_txt = name_to_config(args.template)
     base_item = template["details"][0]
     project_name, metadata, global_vars = _pname_and_metadata(args.metadata)
     items = [_add_metadata(item, metadata)

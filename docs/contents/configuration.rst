@@ -335,7 +335,15 @@ Variant calling
   reference during variant calling. For tumor/normal paired calling use this to
   supply a panel of normal individuals.
 
-Parallelization
+Cancer variant calling
+======================
+
+- ``min_allele_fraction`` Minimum allele fraction to detect variants in
+  heterogeneous tumor samples, set as the float or integer percentage to
+  resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
+  in the tumor sample of a tumor/normal pair.
+
+parallelization
 ===============
 
 - ``nomap_split_size`` Unmapped base pair regions required to split
@@ -476,7 +484,7 @@ section of your ``bcbio_system.yaml`` file::
       dir: /path/to/resources/files
 
 .. _Example genome configuration files: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/genomes
-.. _GATK resource bundle: http://www.broadinstitute.org/gsa/wiki/index.php/GATK_resource_bundle
+.. _GATK resource bundle: http://www.broadinstitute.org/gatk/guide/article.php?id=1213
 
 Reference genome files
 ~~~~~~~~~~~~~~~~~~~~~~

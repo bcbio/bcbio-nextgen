@@ -39,6 +39,11 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     resources = config_utils.get_resources("freebayes", config)
     if resources.get("options"):
         opts += resources["options"]
+    if "--min-alternate-fraction" not in " ".join(opts) and "-F" not in " ".join(opts):
+        # add minimum reportable allele frequency, for which FreeBayes defaults to 20
+         min_af = float(utils.get_in(config, ("algorithm", 
+                                              "min_allele_fraction"),20)) / 100.0
+         opts += ["--min-alternate-fraction", str(min_af)]
     return opts
 
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
@@ -105,6 +110,13 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             opts += " -f {}".format(ref_file)
+            if "--min-alternate-fraction" not in opts and "-F" not in opts:
+                # add minimum reportable allele frequency
+                # FreeBayes defaults to 20%, but use 10% by default for the 
+                # tumor case
+                min_af = float(utils.get_in(paired.tumor_config, ("algorithm", 
+                                                                  "min_allele_fraction"),10)) / 100.0
+                opts += " --min-alternate-fraction %s" % min_af
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
 

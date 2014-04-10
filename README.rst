@@ -91,7 +91,7 @@ Contributors
 
 - `Miika Ahdesmaki`_, AstraZeneca
 - `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
-- `Alla Bushoy`_
+- `Alla Bushoy`_, AstraZeneca
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
@@ -104,6 +104,7 @@ Contributors
 - `Paul Tang`_, UCSF
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
+- `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
@@ -120,6 +121,7 @@ Contributors
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
 .. _Alla Bushoy: https://github.com/abushoy
+.. _Jeff Hammerbacher: https://github.com/hammer
 
 License
 -------

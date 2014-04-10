@@ -35,6 +35,7 @@ Non-conference talks
 --------------------
 
 - `Novartis slides`_ (21 January 2014)
+- `BIG meeting`_ (February 2014)
 
 Abstract
 ~~~~~~~~
@@ -131,3 +132,4 @@ Links from the presentation
 .. _Mt Sinai workshop website: http://www.hpcwire.com/event/strategies-accelerating-genomic-sequencing-pipeline/
 .. _Mt Sinai workshop slides: https://github.com/chapmanb/bcbb/raw/master/talks/mtsinai2013_bcbio_nextgen/chapman_mtsinai_bcbio.pdf
 .. _Novartis slides: https://github.com/chapmanb/bcbb/raw/master/talks/novartis2014_bcbio_nextgen/chapman_bcbio.pdf
+.. _BIG meeting: https://github.com/roryk/spliced-blog/blob/master/talks/BIG-meeting-feb-2014.pdf

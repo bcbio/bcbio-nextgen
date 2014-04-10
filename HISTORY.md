@@ -1,4 +1,19 @@
-## 0.7.8 (In development)
+## 0.7.9 (in progress)
+
+- Redo Illumina sequencer integration to be up to date with current
+  code base. Uses external bcl2fastq demultiplexing and new bcbio integrated
+  analysis server. Provide documentation on setting up automated infrastructure.
+- Update VQSR support for GATK to be up to date with latest best
+  practices. Re-organize GATK and filtering to be more modular to help with
+  transition to GATK 3.x gVCF approaches.
+- Improve checks for pre-aligned BAMs: ensure correct sample names and
+  provide more context on errors around mismatching reference genomes.
+- GATK HaplotypeCaller: ensure genotype depth annotation with DepthPerSampleHC
+  annotation. Enable GATK 3.1 hardware specific optimizations.
+- Use bgzipped VCFs for dbSNP, Cosmic and other resources to save disk
+  space. Upgrade to Cosmic v68.
+
+## 0.7.8 (March 21, 2014)
 
 - Add a check for mis-specified FASTQ format in the sample YAML file. Thanks
   to Alla Bushoy.

@@ -121,10 +121,8 @@ First get the input configuration file::
 Then the fastq reads, reference materials and analysis regions::
 
     cd .. && mkdir input && cd input
-    wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
-     CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_1.fastq.gz
-    wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
-     CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_2.fastq.gz
+    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_1.fastq.gz
+    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_2.fastq.gz
     wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
     wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
      NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz

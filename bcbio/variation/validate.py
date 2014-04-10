@@ -57,10 +57,12 @@ def compare_to_rm(data):
         work_dir = os.path.join(base_dir, "work")
         out = {"summary": os.path.join(work_dir, "validate-summary.csv"),
                "grading": os.path.join(work_dir, "validate-grading.yaml"),
-               "concordant": os.path.join(work_dir, "%s-ref-eval-concordance.vcf" % sample),
                "discordant": os.path.join(work_dir, "%s-eval-ref-discordance-annotate.vcf" % sample)}
-        if not utils.file_exists(out["concordant"]) or not utils.file_exists(out["grading"]):
+        if not utils.file_exists(out["discordant"]) or not utils.file_exists(out["grading"]):
             bcbio_variation_comparison(val_config_file, base_dir, data)
+        out["concordant"] = filter(os.path.exists,
+                                   [os.path.join(work_dir, "%s-%s-concordance.vcf" % (sample, x))
+                                    for x in ["eval-ref", "ref-eval"]])[0]
         data["validate"] = out
     return [[data]]
 

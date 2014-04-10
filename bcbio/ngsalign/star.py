@@ -7,6 +7,7 @@ from bcbio.provenance import do
 from bcbio import bam
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
+ALIGN_TAGS =  ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
@@ -25,7 +26,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq} "
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
            "--outReadsUnmapped Fastx --outFilterMultimapNmax 10 "
-           "--outSAMunmapped Within")
+           "--outSAMunmapped Within --outSAMattributes %s" % " ".join(ALIGN_TAGS))
     cmd += _read_group_option(names)
     fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
     if fusion_mode:

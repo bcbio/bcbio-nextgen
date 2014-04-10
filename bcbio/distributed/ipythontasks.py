@@ -124,11 +124,6 @@ def run_cufflinks(*args):
     with _setup_logging(args):
         return apply(rnaseq.run_cufflinks, *args)
 
-@require(sample)
-def generate_bigwig(*args):
-    with _setup_logging(args):
-        return apply(sample.generate_bigwig, *args)
-
 @require(shared)
 def combine_bam(*args):
     with _setup_logging(args):

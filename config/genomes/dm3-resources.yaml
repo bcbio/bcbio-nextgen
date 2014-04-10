@@ -1,0 +1,5 @@
+version: 1
+
+aliases:
+  ensembl: Fruitfly
+  snpeff: BDGP5.74

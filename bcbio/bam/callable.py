@@ -222,6 +222,7 @@ class NBlockRegionPicker:
         self._chr_last_blocks = {}
         target_blocks = int(config["algorithm"].get("nomap_split_targets", 2000))
         self._target_size = self._get_target_size(target_blocks, ref_regions)
+        self._ref_sizes = {x.chrom: x.stop for x in ref_regions}
 
     def _get_target_size(self, target_blocks, ref_regions):
         size = 0
@@ -235,6 +236,9 @@ class NBlockRegionPicker:
         last_pos = self._chr_last_blocks.get(x.chrom, 0)
         if (x.start - last_pos) > self._target_size:
             self._chr_last_blocks[x.chrom] = x.stop
+            return True
+        # fills an entire chromosome, handles smaller decoy and haplotype chromosomes
+        elif last_pos == 0 and x.stop >= self._ref_sizes.get(x.chrom, 0) - 100:
             return True
         else:
             return False
@@ -344,7 +348,7 @@ def combine_sample_regions(*samples):
         ec_regions = _combine_excessive_coverage(samples, ref_regions, min_n_size)
         block_filter = NBlockRegionPicker(ref_regions, config)
         nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
-        if len(nblock_size_filtered) > len(ref_regions):
+        if len(nblock_size_filtered) >= len(ref_regions):
             final_nblock_regions = nblock_size_filtered
         else:
             final_nblock_regions = nblock_regions

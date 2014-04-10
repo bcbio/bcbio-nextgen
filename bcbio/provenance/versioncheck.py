@@ -19,6 +19,11 @@ def samtools(config, items):
                 "Please upgrade to the latest version "
                 "from http://samtools.sourceforge.net/")
 
+def _has_pipeline(items):
+    """Only perform version checks when we're running an analysis pipeline.
+    """
+    return any(item.get("analysis", "") != "" for item in items)
+
 def _is_variant(items):
     return any(item.get("analysis", "").lower().startswith("variant") for item in items)
 
@@ -50,10 +55,11 @@ def testall(items):
     items = [x[0] for x in items]
     config = items[0]["config"]
     msgs = []
-    for fn in [samtools, java]:
-        out = fn(config, items)
-        if out:
-            msgs.append(out)
+    if _has_pipeline(items):
+        for fn in [samtools, java]:
+            out = fn(config, items)
+            if out:
+                msgs.append(out)
     if msgs:
         raise OSError("Program problems found. You can upgrade dependencies with:\n" +
                       "bcbio_nextgen.py upgrade -u skip --tooldir=/usr/local\n\n" +

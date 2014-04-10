@@ -35,9 +35,10 @@ def main(args, sys_argv):
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
     print("Installing data and third party dependencies")
-    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args, bcbio))
     system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
+    setup_manifest(args.datadir)
+    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args, bcbio))
     print("Finished: bcbio-nextgen, tools and data installed")
     print(" Genome data installed in:\n  %s" % args.datadir)
     if args.tooldir:
@@ -120,6 +121,13 @@ def install_anaconda_python(args, remotes):
     return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}
+
+def setup_manifest(datadir):
+    """Create barebones manifest to be filled in during update
+    """
+    manifest_dir = os.path.join(datadir, "manifest")
+    if not os.path.exists(manifest_dir):
+        os.makedirs(manifest_dir)
 
 def write_system_config(base_url, datadir, tooldir):
     """Write a bcbio_system.yaml configuration file with tool information.
@@ -224,7 +232,7 @@ if __name__ == "__main__":
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"],
-                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
+                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "phix"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa"],
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])

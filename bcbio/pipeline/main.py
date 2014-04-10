@@ -13,6 +13,7 @@ import tempfile
 
 from bcbio import install, log, structural, utils, upload
 from bcbio.distributed import clargs, prun, runfn
+from bcbio.illumina import flowcell, machine
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
@@ -20,7 +21,6 @@ from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, profile, system, versioncheck
 from bcbio.server import main as server_main
-from bcbio.solexa.flowcell import get_fastq_dir
 from bcbio.variation.genotype import combine_multiple_callers
 from bcbio.variation import coverage, ensemble, population, validate
 from bcbio.rnaseq.count import (combine_count_files,
@@ -34,7 +34,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     config, config_file = load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(workdir, "log")
-    if parallel["type"] in ["local"]:
+    if parallel["type"] in ["local", "clusterk"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
@@ -52,12 +52,12 @@ def _setup_resources():
     This allows us to avoid out of file handle limits where we can
     move beyond the soft limit up to the hard limit.
     """
-    target_procs = 50000
+    target_procs = 10240
     cur_proc, max_proc = resource.getrlimit(resource.RLIMIT_NPROC)
-    target_proc = min(max_proc, target_procs)
+    target_proc = min(max_proc, target_procs) if max_proc > 0 else target_procs
     resource.setrlimit(resource.RLIMIT_NPROC, (max(cur_proc, target_proc), max_proc))
     cur_hdls, max_hdls = resource.getrlimit(resource.RLIMIT_NOFILE)
-    target_hdls = min(max_hdls, target_procs)
+    target_hdls = min(max_hdls, target_procs) if max_hdls > 0 else target_procs
     resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
 
 def _run_toplevel(config, config_file, work_dir, parallel,
@@ -70,12 +70,8 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
-    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir)
-                                                        if fc_dir else None,
-                                                        config, config_file)
-    config_file = os.path.join(config_dir, os.path.basename(config_file))
-    dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
-            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+    dirs = setup_directories(work_dir, fc_dir, config, config_file)
+    config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     samples = run_info.organize(dirs, config, run_info_yaml)
     pipelines = _pair_lanes_with_pipelines(samples)
     final = []
@@ -88,6 +84,13 @@ def _run_toplevel(config, config_file, work_dir, parallel,
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
                     final.append(xs[0])
+
+def setup_directories(work_dir, fc_dir, config, config_file):
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
+                                                        if fc_dir else None,
+                                                        config, config_file)
+    return {"fastq": fastq_dir, "galaxy": galaxy_dir,
+            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
 
 def _add_provenance(items, dirs, parallel, config):
     p = programs.write_versions(dirs, config, is_wrapper=parallel.get("wrapper") is not None)
@@ -126,7 +129,8 @@ def parse_cl_args(in_args):
     sub_cmds = {"upgrade": install.add_subparser,
                 "server": server_main.add_subparser,
                 "runfn": runfn.add_subparser,
-                "version": programs.add_subparser}
+                "version": programs.add_subparser,
+                "sequencer": machine.add_subparser}
     parser = argparse.ArgumentParser(
         description="Best-practice pipelines for fully automated high throughput sequencing analysis.")
     sub_cmd = None
@@ -366,13 +370,29 @@ class StandardPipeline(AbstractPipeline):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with prun.start(_wres(parallel, ["aligner"]),
                         lane_items, config, dirs, "multicore") as run_parallel:
-            logger.info("Timing: alignment")
-            samples = run_parallel("process_alignment", lane_items)
-        ## Finalize (per-sample cluster)
-        with prun.start(_wres(parallel, ["fastqc", "bamtools"]),
-                        samples, config, dirs, "persample") as run_parallel:
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("alignment", dirs):
+                samples = run_parallel("process_alignment", lane_items)
+            with profile.report("callable regions", dirs):
+                samples = run_parallel("postprocess_alignment", samples)
+                regions = run_parallel("combine_sample_regions", [samples])[0]
+                samples = region.add_region_info(samples, regions)
+                samples = region.clean_sample_data(samples)
+        ## Processing on sub regions
+        with prun.start(_wres(parallel, ["gatk", "picard", "samtools"]),
+                        samples, config, dirs, "full",
+                        multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
+            with profile.report("alignment post-processing", dirs):
+                samples = region.parallel_prep_region(samples, regions, run_parallel)
+                samples = region.parallel_variantcall_region(samples, run_parallel)
+        print len(samples)
+        ## Finalize BAMs and QC
+        with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools"]),
+                        samples, config, dirs, "multicore2") as run_parallel:
+            with profile.report("prepped BAM merging", dirs):
+                samples = region.delayed_bamprep_merge(samples, run_parallel)
+            print len(samples)
+            with profile.report("quality control", dirs):
+                samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
         return samples
 
@@ -384,7 +404,7 @@ class RnaseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["picard"]),
+        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
                         samples, config, dirs, "trimming") as run_parallel:
             with profile.report("adapter trimming", dirs):
                 samples = run_parallel("process_lane", samples)
@@ -417,6 +437,7 @@ class RnaseqPipeline(AbstractPipeline):
                         samples, config, dirs, "persample") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
+        logger.info("Timing: finished")
         return samples
 
 class ChipseqPipeline(AbstractPipeline):

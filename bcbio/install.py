@@ -232,19 +232,20 @@ def upgrade_thirdparty_tools(args, remotes):
     s["actions"] = ["install_biolinux"]
     s["fabricrc_overrides"]["system_install"] = args.tooldir
     s["fabricrc_overrides"]["local_install"] = os.path.join(args.tooldir, "local_install")
-    manifest_dir = os.path.join(_get_data_dir(), "manifest")
-    _install_toolplus(args, manifest_dir)
     cbl = get_cloudbiolinux(remotes)
     sys.path.insert(0, cbl["dir"])
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
-    cbl_manifest = __import__("cloudbio.manifest", fromlist=["manifest"])
+    manifest_dir = os.path.join(_get_data_dir(), "manifest")
     print("Creating manifest of installed packages in %s" % manifest_dir)
+    cbl_manifest = __import__("cloudbio.manifest", fromlist=["manifest"])
     if os.path.exists(manifest_dir):
         for fname in os.listdir(manifest_dir):
             if not fname.startswith("toolplus"):
                 os.remove(os.path.join(manifest_dir, fname))
     cbl_manifest.create(manifest_dir, args.tooldir)
+    print("Installing additional tools")
+    _install_toolplus(args, manifest_dir)
 
 def _install_toolplus(args, manifest_dir):
     """Install additional tools we cannot distribute, updating local manifest.
@@ -442,7 +443,7 @@ def add_subparser(subparsers):
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=["GRCh37"],
-                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
+                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "phix"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=["bwa", "bowtie2"],
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])

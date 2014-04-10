@@ -5,7 +5,7 @@ import sys
 import os
 from setuptools import setup, find_packages
 
-version = "0.7.8a"
+version = "0.7.9a"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',
@@ -31,12 +31,7 @@ if "--record=/dev/null" in sys.argv:
     zip_safe = True
 else:
     zip_safe = False
-    scripts = ['scripts/bcbio_nextgen.py',
-               'scripts/bam_to_wiggle.py',
-               'scripts/barcode_sort_trim.py',
-               'scripts/illumina_finished_msg.py',
-               'scripts/nextgen_analysis_server.py',
-               'scripts/solexa_qseq_to_fastq.py']
+    scripts = ['scripts/bcbio_nextgen.py']
 
 write_version_py()
 setup(name="bcbio-nextgen",

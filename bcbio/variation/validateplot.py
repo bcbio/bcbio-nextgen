@@ -3,9 +3,8 @@
 Handles data normalization and plotting, emphasizing comparisons on methodology
 differences.
 """
-import bisect
 import collections
-import math
+import os
 
 import numpy as np
 try:
@@ -14,17 +13,25 @@ try:
 except ImportError:
     gg, pd, ppl = None, None, None
 
+from bcbio import utils
 from bcbio.variation import bamprep
+
+def create_from_csv(in_csv):
+    df = pd.read_csv(in_csv)
+    create(df, None, 0, {}, os.path.splitext(in_csv)[0])
 
 def create(plot_data, header, ploti, sample_config, out_file_base):
     """Create plots of validation results for a sample, labeling prep strategies.
     """
     if pd is None or ppl is None:
         return None
-    df = pd.DataFrame(plot_data, columns=header)
+    if header:
+        df = pd.DataFrame(plot_data, columns=header)
+    else:
+        df = plot_data
     df["aligner"] = [get_aligner(x, sample_config) for x in df["sample"]]
     df["bamprep"] = [get_bamprep(x, sample_config) for x in df["sample"]]
-    floors = get_group_floors(df)
+    floors = get_group_floors(df, cat_labels)
     df["value.floor"] = [get_floor_value(x, cat, vartype, floors)
                          for (x, cat, vartype) in zip(df["value"], df["category"], df["variant.type"])]
     out = []
@@ -89,8 +96,6 @@ def _get_chart_info(df, vtype, cat, prep, callers):
     """Retrieve values for a specific variant type, category and prep method.
     """
     maxval_raw = max(list(df["value.floor"]))
-    norm_ylim = 1000.0  # ceil to make plots more comparable
-    maxval = math.ceil(maxval_raw / norm_ylim) * norm_ylim
     curdf = df[(df["variant.type"] == vtype) & (df["category"] == cat)
                & (df["bamprep"] == prep)]
     vals = []
@@ -103,11 +108,10 @@ def _get_chart_info(df, vtype, cat, prep, callers):
         else:
             vals.append(1)
             labels.append("")
-    return vals, labels, maxval
+    return vals, labels, maxval_raw
 
 def _annotate(ax, annotate, height, left, width):
     """Annotate axis with labels. Adjusted from prettyplotlib to be more configurable.
-    Needed to adjust label size.
     """
     annotate_yrange_factor = 0.025
     xticks = np.array(left) + width / 2.0
@@ -134,11 +138,17 @@ def _annotate(ax, annotate, height, left, width):
         offset = offset_ if h >= 0 else -1 * offset_
         verticalalignment = 'bottom' if h >= 0 else 'top'
 
+        if len(str(annotation)) > 6:
+            size = 7
+        elif len(str(annotation)) > 5:
+            size = 8
+        else:
+            size = 10
         # Finally, add the text to the axes
         ax.annotate(annotation, (x, h + offset),
                     verticalalignment=verticalalignment,
                     horizontalalignment='center',
-                    size=10,
+                    size=size,
                     color=ppl.colors.almost_black)
 
 def _ggplot(df, out_file):
@@ -155,26 +165,49 @@ def _ggplot(df, out_file):
     gg.ggsave(p, out_file)
 
 def get_floor_value(x, cat, vartype, floors):
-    base = floors[(cat, vartype)]
-    #print cat, vartype, x, base
-    return x - base
+    """Modify values so all have the same relative scale for differences.
 
-def get_group_floors(df):
-    """Floor values to nearest 5,000 for each category.
+    Using the chosen base heights, adjusts an individual sub-plot to be consistent
+    relative to that height.
     """
-    fudge = 500
-    floors = {}
-    floor_vals = [x * 5e3 for x in range(50)]
+    all_base = floors[vartype]
+    cur_max = floors[(cat, vartype)]
+    if cur_max > all_base:
+        diff = cur_max - all_base
+        x = max(1, x - diff)
+    return x
+
+def get_group_floors(df, cat_labels):
+    """Retrieve the floor for a given row of comparisons, creating a normalized set of differences.
+
+    We need to set non-zero floors so large numbers (like concordance) don't drown out small
+    numbers (like discordance). This defines the height for a row of comparisons as either
+    the minimum height of any sub-plot, or the maximum difference between higher and lower
+    (plus 10%).
+    """
+    group_maxes = collections.defaultdict(list)
+    group_diffs = collections.defaultdict(list)
+    diff_pad = 0.1  # 10% padding onto difference to avoid large numbers looking like zero
     for name, group in df.groupby(["category", "variant.type"]):
-        min_value = max(0, min(group["value"]) - fudge)
-        floors[name] = int(floor_vals[bisect.bisect(floor_vals, min_value) - 1])
-    return floors
+        label, stype = name
+        if label in cat_labels:
+            diff = max(group["value"]) - min(group["value"])
+            group_diffs[stype].append(diff + int(diff_pad * diff))
+            group_maxes[stype].append(max(group["value"]))
+        group_maxes[name].append(max(group["value"]))
+    out = {}
+    for k, vs in group_maxes.iteritems():
+        if k in group_diffs:
+            out[k] = max(max(group_diffs[stype]), min(vs))
+        else:
+            out[k] = min(vs)
+    return out
 
 def get_aligner(x, config):
-    return config["algorithm"].get("aligner", "")
+    return utils.get_in(config, ("algorithm", "aligner"), "")
 
 def get_bamprep(x, config):
-    params = bamprep._get_prep_params({"config": {"algorithm": config["algorithm"]}})
+    params = bamprep._get_prep_params({"config": {"algorithm": config.get("algorithm", {})}})
     if params["realign"] == "gatk" and params["recal"] == "gatk":
         return "gatk"
     elif not params["realign"] and not params["recal"]:
