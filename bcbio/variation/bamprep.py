@@ -162,7 +162,8 @@ def _piped_extract_recal_cmd(data, region, prep_params, tmp_dir):
     config = data["config"]
     sambamba = config_utils.get_program("sambamba", config)
     clevel = "0" if prep_params["dup"] or prep_params["realign"] else "-1"
-    if not prep_params.get("recal") and not prep_params.get("max_depth"):
+    if ((not prep_params.get("recal") and not prep_params.get("max_depth"))
+          or not utils.get_in(config, ("algorithm", "variantcaller"))):
         prep_region = region_to_gatk(region)
         in_file = data["work_bam"]
         cmd = "{sambamba} view -f bam --compression-level {clevel} {in_file} {prep_region}"

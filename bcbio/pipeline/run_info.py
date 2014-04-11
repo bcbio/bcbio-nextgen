@@ -45,6 +45,8 @@ def organize(dirs, config, run_info_yaml):
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
+        elif isinstance("name", basestring):
+            item["name"] = [item["name"], item["description"]]
         item = add_reference_resources(item)
         out.append(item)
     return out

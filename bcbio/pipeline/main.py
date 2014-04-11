@@ -384,13 +384,11 @@ class StandardPipeline(AbstractPipeline):
             with profile.report("alignment post-processing", dirs):
                 samples = region.parallel_prep_region(samples, regions, run_parallel)
                 samples = region.parallel_variantcall_region(samples, run_parallel)
-        print len(samples)
         ## Finalize BAMs and QC
         with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools"]),
                         samples, config, dirs, "multicore2") as run_parallel:
             with profile.report("prepped BAM merging", dirs):
                 samples = region.delayed_bamprep_merge(samples, run_parallel)
-            print len(samples)
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
