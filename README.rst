@@ -105,6 +105,7 @@ Contributors
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
 - `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
+- `danielevo`_
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
@@ -122,6 +123,7 @@ Contributors
 .. _Kevin Ying: https://github.com/kevyin
 .. _Alla Bushoy: https://github.com/abushoy
 .. _Jeff Hammerbacher: https://github.com/hammer
+.. _danielevo: https://github.com/danielevo
 
 License
 -------
