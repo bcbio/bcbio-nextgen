@@ -42,12 +42,11 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
         fastq_inputs = sorted(reduce(operator.add, (_get_fastq_files(x, read, fastq_dir) for x in ldetail_group)))
         if len(fastq_inputs) > 0:
             files.append(_concat_bgzip_fastq(fastq_inputs, fastq_final_dir, read, ldetail_group[0]))
-    if len(files) == 0:
-        raise ValueError("Did not find input fastq files for %s %s" % (ldetail["project_name"], ldetail["name"]))
-    if _non_empty(files[0]):
-        out = ldetail_group[0]
-        out["files"] = files
-        return out
+    if len(files) > 0:
+        if _non_empty(files[0]):
+            out = ldetail_group[0]
+            out["files"] = files
+            return out
 
 def _non_empty(f):
     with gzip.open(f) as in_handle:
@@ -80,6 +79,7 @@ def _prepare_sample(data, run_folder):
         analysis, algorithm = _select_default_algorithm(out.get("analysis"))
         out["algorithm"] = algorithm
         out["analysis"] = analysis
+    out["name"] = [out["name"], clean_name(out["description"])]
     return out
 
 def _select_default_algorithm(analysis):
@@ -88,7 +88,7 @@ def _select_default_algorithm(analysis):
     if not analysis or analysis == "Standard":
         return "Standard", {"aligner": "bwa", "platform": "illumina", "quality_format": "Standard",
                             "recalibrate": False, "realign": False, "mark_duplicates": "samtools",
-                            "variantcaller": False}
+                            "nomap_split_targets": 50, "variantcaller": False}
     elif "variant" in analysis:
         try:
             config, _ = template.name_to_config(analysis)
@@ -146,6 +146,9 @@ def get_runinfo(galaxy_url, galaxy_apikey, run_folder, storedir):
     galaxy_api = GalaxyApiAccess(galaxy_url, galaxy_apikey)
     fc_name, fc_date = flowcell.parse_dirname(run_folder)
     galaxy_info = galaxy_api.run_details(fc_name, fc_date)
+    if not galaxy_info["run_name"].startswith(fc_date) and not galaxy_info["run_name"].endswith(fc_name):
+        raise ValueError("Galaxy NGLIMS information %s does not match flowcell %s %s" %
+                         (galaxy_info["run_name"], fc_date, fc_name))
     ldetails = _flatten_lane_details(galaxy_info)
     out = []
     for item in ldetails:
