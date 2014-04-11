@@ -138,7 +138,7 @@ The sample configuration file defines ``details`` of each sample to process::
 
 Setting up a test run
 ~~~~~~~~~~~~~~~~~~~~~
-The if you set the ``test_run`` option to ``True`` at the top of your sample
+If you set the ``test_run`` option to ``True`` at the top of your sample
 configuration file like this::
 
   test_run: True
