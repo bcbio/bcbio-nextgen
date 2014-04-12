@@ -136,7 +136,7 @@ def remove_lcr_regions(orig_bed, items):
     do_lcr = reduce(operator.and_,
                     [utils.get_in(data, ("config", "algorithm", "remove_lcr"), True)
                      for data in items])
-    if lcr_bed and do_lcr:
+    if lcr_bed and do_lcr and os.path.exists(lcr_bed):
         nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
         with file_transaction(nolcr_bed) as tx_nolcr_bed:
             pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed)).saveas(tx_nolcr_bed)

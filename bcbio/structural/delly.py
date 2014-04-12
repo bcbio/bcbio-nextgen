@@ -10,14 +10,23 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
-def _run_delly(bam_files, sv_type, ref_file, work_dir):
+def get_sv_exclude_file(items):
+    """Retrieve SV file of regions to exclude.
+    """
+    sv_bed = utils.get_in(items[0], ("genome_resources", "variation", "sv_repeat"))
+    if sv_bed and os.path.exists(sv_bed):
+        return sv_bed
+
+def _run_delly(bam_files, sv_type, ref_file, work_dir, items):
     """Run delly, calling structural variations for the specified type.
     """
     out_file = os.path.join(work_dir, "%s-svs%s.vcf"
                             % (os.path.splitext(os.path.basename(bam_files[0]))[0], sv_type))
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(out_file) as tx_out_file:
-            cmd = ["delly", "-g", ref_file, "-o", tx_out_file] + bam_files
+            sv_exclude_bed = get_sv_exclude_file(items)
+            exclude = ["-x", sv_exclude_bed] if sv_exclude_bed else []
+            cmd = ["delly", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
             try:
                 do.run(cmd, "delly structural variant")
             except subprocess.CalledProcessError, msg:
@@ -35,7 +44,8 @@ def run(items):
                                                items[0]["name"][-1], "delly"))
     work_bams = [data["work_bam"] for data in items]
     ref_file = utils.get_in(items[0], ("reference", "fasta", "base"))
-    bytype_vcfs = [_run_delly(work_bams, sv_type, ref_file, work_dir) for sv_type in ["DEL", "DUP", "INV", "TRA"]]
+    bytype_vcfs = [_run_delly(work_bams, sv_type, ref_file, work_dir, items)
+                   for sv_type in ["DEL", "DUP", "INV", "TRA"]]
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
     delly_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
     out = []

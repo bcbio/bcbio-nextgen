@@ -11,6 +11,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
+from bcbio.structural import delly
 
 # ## Read preparation
 
@@ -21,6 +22,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
     disc_file = os.path.join(work_dir, "%s-disc.bam" % os.path.splitext(os.path.basename(in_bam))[0])
     samblaster = config_utils.get_program("samblaster", data["config"])
     sambamba = config_utils.get_program("sambamba", data["config"])
+    samtools = config_utils.get_program("samtools", data["config"])
     cores = utils.get_in(data, ("config", "algorithm", "num_cores"), 1)
     resources = config_utils.get_resources("sambamba", data["config"])
     mem = config_utils.adjust_memory(resources.get("memory", "2G"),
@@ -29,14 +31,14 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
         with file_transaction(sr_file) as tx_sr_file:
             with file_transaction(disc_file) as tx_disc_file:
                 with utils.curdir_tmpdir() as tmpdir:
-                    tobam_cmd = ("{sambamba} view -S -f bam -l 0 /dev/stdin | "
+                    tobam_cmd = ("{samtools} view -S -u /dev/stdin | "
                                  "{sambamba} sort -t {cores} -m {mem} --tmpdir {tmpdir} "
                                  "-o {out_file} /dev/stdin")
                     splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, **locals())
                     discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, **locals())
-                    cmd = ("{sambamba} sort -t {cores} -m {mem} --tmpdir={tmpdir} "
-                           "-n -o /dev/stdout -l 0 {in_bam} | "
-                           "{sambamba} view -h /dev/stdin | "
+                    out_base = os.path.join(tmpdir, "%s-namesort" % os.path.splitext(in_bam)[0])
+                    cmd = ("{samtools} sort -n -o -@ {cores} -m {mem} {in_bam} {out_base} | "
+                           "{samtools} view -h - | "
                            "{samblaster} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
                            "-o /dev/null")
                     do.run(cmd.format(**locals()), "samblaster: split and discordant reads", data)
@@ -44,11 +46,11 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
 
 # ## Lumpy main
 
-def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, data):
+def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """Run lumpy-sv, using speedseq pipeline.
     """
     out_file = os.path.join(work_dir, "%s-svs.bedpe"
-                            % os.path.splitext(os.path.basename(data["work_bam"]))[0])
+                            % os.path.splitext(os.path.basename(items[0]["work_bam"]))[0])
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with utils.curdir_tmpdir() as tmpdir:
@@ -56,9 +58,11 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, data):
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)
                 disc_bams = ",".join(disc_bams)
-                cmd = ("speedseq lumpy -B {full_bams} -S {sr_bams} -D {disc_bams} "
+                sv_exclude_bed = delly.get_sv_exclude_file(items)
+                exclude = "-x %s" % sv_exclude_bed if sv_exclude_bed else ""
+                cmd = ("speedseq lumpy -B {full_bams} -S {sr_bams} -D {disc_bams} {exclude} "
                        "-T {tmpdir} -o {out_base}")
-                do.run(cmd.format(**locals()), "speedseq lumpy", data)
+                do.run(cmd.format(**locals()), "speedseq lumpy", items[0])
     return out_file
 
 def run(items):
@@ -74,7 +78,7 @@ def run(items):
         sr_bam, disc_bam = _extract_split_and_discordants(data["work_bam"], work_dir, data)
         sr_bams.append(sr_bam)
         disc_bams.append(disc_bam)
-    pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items[0])
+    pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
     out = []
     for data in items:
         if "sv" not in data:
