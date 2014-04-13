@@ -26,6 +26,8 @@ def hard_w_expression(vcf_file, expression, data, filterext=""):
             cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '+' "
                    "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
+    if out_file.endswith(".vcf.gz"):
+        out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
 
 # ## Caller specific

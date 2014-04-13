@@ -22,7 +22,7 @@ from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, profile, system, versioncheck
 from bcbio.server import main as server_main
 from bcbio.variation.genotype import combine_multiple_callers
-from bcbio.variation import coverage, ensemble, population, validate
+from bcbio.variation import coverage, ensemble, genotype, population, validate
 from bcbio.rnaseq.count import (combine_count_files,
                                 annotate_combined_count_file)
 
@@ -323,13 +323,14 @@ class Variant2Pipeline(AbstractPipeline):
             with profile.report("alignment post-processing", dirs):
                 samples = region.parallel_prep_region(samples, regions, run_parallel)
             with profile.report("variant calling", dirs):
-                samples = region.parallel_variantcall_region(samples, run_parallel)
+                samples = genotype.parallel_variantcall_region(samples, run_parallel)
 
         ## Finalize variants (per-sample cluster)
         with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation"]),
                         samples, config, dirs, "persample") as run_parallel:
             with profile.report("variant post-processing", dirs):
                 samples = run_parallel("postprocess_variants", samples)
+                samples = run_parallel("split_variants_by_sample", samples)
             with profile.report("validation", dirs):
                 samples = run_parallel("compare_to_rm", samples)
                 samples = combine_multiple_callers(samples)

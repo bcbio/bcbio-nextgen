@@ -89,10 +89,9 @@ def filter_vcf_by_sex(vcf_file, data):
     Handles sex chromosomes and mitochondrial. Does not try to resolve called
     hets into potential homozygotes when converting diploid to haploid.
 
-    Skips filtering on cancer samples. Since these will be pooled, need special
-    functionality to handle them
+    Skips filtering on pooled samples, we still need to implement.
     """
-    if vcfutils.get_paired_phenotype(data):
+    if len(vcfutils.get_samples(vcf_file)) > 1:
         return vcf_file
     _, sexes = _configured_ploidy_sex([data])
     sex = sexes.pop()

@@ -3,6 +3,10 @@
 - Redo Illumina sequencer integration to be up to date with current
   code base. Uses external bcl2fastq demultiplexing and new bcbio integrated
   analysis server. Provide documentation on setting up automated infrastructure.
+- Rework batched regional analysis in variant calling to remove custom cases and
+  simplify structure. Filtering now happens explicitly on the combined batch
+  file. This is functionally equivalent to previous filters but now the workflow
+  is clearer. Avoids special cases for tumor/normal inputs.
 - Update VQSR support for GATK to be up to date with latest best
   practices. Re-organize GATK and filtering to be more modular to help with
   transition to GATK 3.x gVCF approaches.
