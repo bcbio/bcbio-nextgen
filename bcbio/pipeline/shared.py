@@ -151,7 +151,7 @@ def subtract_low_complexity(f):
     @functools.wraps(f)
     def wrapper(variant_regions, region, out_file, items=None):
         region_bed = f(variant_regions, region, out_file, items)
-        if os.path.exists(region_bed) and items:
+        if region_bed and os.path.exists(region_bed) and items:
             region_bed = remove_lcr_regions(region_bed, items)
         return region_bed
     return wrapper

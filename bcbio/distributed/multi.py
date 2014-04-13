@@ -51,6 +51,8 @@ def zeromq_aware_logging(f):
                 break
             elif config_utils.is_nested_config_arg(arg):
                 config = arg["config"]
+            elif isinstance(arg, (list, tuple)) and config_utils.is_nested_config_arg(arg[0]):
+                config = arg[0]["config"]
                 break
         assert config, "Could not find config dictionary in function arguments."
         if config.get("parallel", {}).get("log_queue") and not config.get("parallel", {}).get("wrapper"):

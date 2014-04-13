@@ -57,6 +57,7 @@ def parallel_prep_region(samples, regions, run_parallel):
     extras = []
     torun = []
     for data in [x[0] for x in samples]:
+        data["align_bam"] = data["work_bam"]
         a = data["config"]["algorithm"]
         if (not a.get("mark_duplicates") and not a.get("recalibrate") and
               not a.get("realign", "gatk") and not a.get("variantcaller", "gatk")):

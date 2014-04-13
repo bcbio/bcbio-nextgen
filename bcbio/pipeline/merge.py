@@ -76,16 +76,17 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
         bam.index(out_file, config)
         return out_file
 
-def _samtools_cat(bam_files, tmpdir):
+def _samtools_merge(bam_files):
     """Concatenate multiple BAM files together with samtools.
     Creates short paths to shorten the commandline.
     """
-    short_bams = []
-    for i, bam_file in enumerate(bam_files):
-        short_bam = os.path.join(tmpdir, "%s.bam" % i)
-        utils.symlink_plus(bam_file, short_bam)
-        short_bams.append(short_bam)
-    return "{samtools} cat " + " ".join(os.path.relpath(b) for b in short_bams)
+    if len(bam_files) > system.open_file_limit():
+        raise IOError("More files to merge (%s) than available open file descriptors (%s)\n"
+                      "See documentation on tips for changing file limits:\n"
+                      "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
+                      "parallel.html#tuning-systems-for-scale"
+                      % (len(bam_files), system.open_file_limit()))
+    return "{samtools} merge - `cat {tx_bam_file_list}`"
 
 def _bamtools_merge(bam_files):
     """Use bamtools to merge multiple BAM files, requires a list from disk.

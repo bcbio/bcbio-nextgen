@@ -32,7 +32,7 @@ def _combine_multiple_svcallers(samples):
     """
     by_bam = collections.defaultdict(list)
     for x in samples:
-        by_bam[x[0]["work_bam"]].append(x[0])
+        by_bam[x[0]["align_bam"]].append(x[0])
     out = []
     for grouped_calls in by_bam.itervalues():
         def orig_svcaller_order(x):

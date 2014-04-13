@@ -7,7 +7,7 @@ https://github.com/arq5x/lumpy-sv
 """
 import os
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -18,6 +18,7 @@ from bcbio.structural import delly
 def _extract_split_and_discordants(in_bam, work_dir, data):
     """Retrieve split-read alignments from input BAM file.
     """
+    dedup_file = os.path.join(work_dir, "%s-dedup.bam" % os.path.splitext(os.path.basename(in_bam))[0])
     sr_file = os.path.join(work_dir, "%s-sr.bam" % os.path.splitext(os.path.basename(in_bam))[0])
     disc_file = os.path.join(work_dir, "%s-disc.bam" % os.path.splitext(os.path.basename(in_bam))[0])
     samblaster = config_utils.get_program("samblaster", data["config"])
@@ -27,22 +28,26 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
     resources = config_utils.get_resources("sambamba", data["config"])
     mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                      3, "decrease")
-    if not utils.file_exists(sr_file) or not utils.file_exists(disc_file):
+    if not utils.file_exists(sr_file) or not utils.file_exists(disc_file) or utils.file_exists(dedup_file):
         with file_transaction(sr_file) as tx_sr_file:
             with file_transaction(disc_file) as tx_disc_file:
-                with utils.curdir_tmpdir() as tmpdir:
-                    tobam_cmd = ("{samtools} view -S -u /dev/stdin | "
-                                 "{sambamba} sort -t {cores} -m {mem} --tmpdir {tmpdir} "
-                                 "-o {out_file} /dev/stdin")
-                    splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, **locals())
-                    discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, **locals())
-                    out_base = os.path.join(tmpdir, "%s-namesort" % os.path.splitext(in_bam)[0])
-                    cmd = ("{samtools} sort -n -o -@ {cores} -m {mem} {in_bam} {out_base} | "
-                           "{samtools} view -h - | "
-                           "{samblaster} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
-                           "-o /dev/null")
-                    do.run(cmd.format(**locals()), "samblaster: split and discordant reads", data)
-    return sr_file, disc_file
+                with file_transaction(dedup_file) as tx_dedup_file:
+                    with utils.curdir_tmpdir() as tmpdir:
+                        tobam_cmd = ("{samtools} view -S -u /dev/stdin | "
+                                     "{sambamba} sort -t {cores} -m {mem} --tmpdir {tmpdir} "
+                                     "-o {out_file} /dev/stdin")
+                        splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, **locals())
+                        discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, **locals())
+                        dedup_cmd = tobam_cmd.format(out_file=tx_dedup_file, **locals())
+                        out_base = os.path.join(tmpdir, "%s-namesort" % os.path.splitext(in_bam)[0])
+                        cmd = ("{samtools} sort -n -o -@ {cores} -m {mem} {in_bam} {out_base} | "
+                               "{samtools} view -h - | "
+                               "{samblaster} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
+                               "| {dedup_cmd}")
+                        do.run(cmd.format(**locals()), "samblaster: split and discordant reads", data)
+    for fname in [sr_file, disc_file, dedup_file]:
+        bam.index(fname, data["config"])
+    return dedup_file, sr_file, disc_file
 
 # ## Lumpy main
 
@@ -50,7 +55,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """Run lumpy-sv, using speedseq pipeline.
     """
     out_file = os.path.join(work_dir, "%s-svs.bedpe"
-                            % os.path.splitext(os.path.basename(items[0]["work_bam"]))[0])
+                            % os.path.splitext(os.path.basename(items[0]["align_bam"]))[0])
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with utils.curdir_tmpdir() as tmpdir:
@@ -74,8 +79,8 @@ def run(items):
                                                "lumpy"))
     full_bams, sr_bams, disc_bams = [], [], []
     for data in items:
-        full_bams.append(data["work_bam"])
-        sr_bam, disc_bam = _extract_split_and_discordants(data["work_bam"], work_dir, data)
+        dedup_bam, sr_bam, disc_bam = _extract_split_and_discordants(data["align_bam"], work_dir, data)
+        full_bams.append(dedup_bam)
         sr_bams.append(sr_bam)
         disc_bams.append(disc_bam)
     pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)

@@ -257,6 +257,8 @@ def get_algorithm_config(xs):
             return x["algorithm"]
         elif is_nested_config_arg(x):
             return x["config"]["algorithm"]
+        elif isinstance(x, (list, tuple)) and is_nested_config_arg(x[0]):
+            return x[0]["config"]["algorithm"]
     raise ValueError("Did not find algorithm configuration in items: {0}"
                      .format(xs))
 
@@ -276,17 +278,22 @@ def _update_config(args, update_fn):
     """
     new_i = None
     for i, arg in enumerate(args):
-        if is_std_config_arg(arg) or is_nested_config_arg(arg):
+        if (is_std_config_arg(arg) or is_nested_config_arg(arg) or
+              (isinstance(arg, (list, tuple)) and is_nested_config_arg(arg[0]))):
             new_i = i
             break
     if new_i is None:
-        raise ValueError("Could not find configuration in args: %s" % args)
+        raise ValueError("Could not find configuration in args: %s" % str(args))
 
     new_arg = copy.deepcopy(args[new_i])
     if is_nested_config_arg(new_arg):
         new_arg["config"] = update_fn(new_arg["config"])
     elif is_std_config_arg(new_arg):
         new_arg = update_fn(new_arg)
+    elif isinstance(arg, (list, tuple)) and is_nested_config_arg(new_arg[0]):
+        new_arg_first = new_arg[0]
+        new_arg_first["config"] = update_fn(new_arg_first["config"])
+        new_arg = [new_arg_first] + new_arg[1:]
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
     args = list(args)[:]

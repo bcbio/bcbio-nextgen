@@ -16,11 +16,11 @@ except ImportError:
 from bcbio import utils
 from bcbio.variation import bamprep
 
-def create_from_csv(in_csv):
+def create_from_csv(in_csv, config=None, outtype="pdf"):
     df = pd.read_csv(in_csv)
-    create(df, None, 0, {}, os.path.splitext(in_csv)[0])
+    create(df, None, 0, config or {}, os.path.splitext(in_csv)[0], outtype)
 
-def create(plot_data, header, ploti, sample_config, out_file_base):
+def create(plot_data, header, ploti, sample_config, out_file_base, outtype="pdf"):
     """Create plots of validation results for a sample, labeling prep strategies.
     """
     if pd is None or ppl is None:
@@ -36,7 +36,7 @@ def create(plot_data, header, ploti, sample_config, out_file_base):
                          for (x, cat, vartype) in zip(df["value"], df["category"], df["variant.type"])]
     out = []
     for i, prep in enumerate(df["bamprep"].unique()):
-        out.append(plot_prep_methods(df, prep, i + ploti, out_file_base))
+        out.append(plot_prep_methods(df, prep, i + ploti, out_file_base, outtype))
     return out
 
 cat_labels = {"concordant": "Concordant",
@@ -49,12 +49,12 @@ prep_labels = {"gatk": "GATK best-practice BAM preparation (recalibration, reali
 caller_labels = {"ensemble": "Ensemble", "freebayes": "FreeBayes",
                  "gatk": "GATK Unified\nGenotyper", "gatk-haplotype": "GATK Haplotype\nCaller"}
 
-def plot_prep_methods(df, prep, prepi, out_file_base):
+def plot_prep_methods(df, prep, prepi, out_file_base, outtype):
     """Plot comparison between BAM preparation methods.
     """
     samples = df[(df["bamprep"] == prep)]["sample"].unique()
     assert len(samples) >= 1, samples
-    out_file = "%s-%s.pdf" % (out_file_base, samples[0])
+    out_file = "%s-%s.%s" % (out_file_base, samples[0], outtype)
     df = df[df["category"].isin(cat_labels)]
     _prettyplot(df, prep, prepi, out_file)
     return out_file
@@ -82,7 +82,8 @@ def _prettyplot(df, prep, prepi, out_file):
             ax.set_ylim(0, maxval)
             if i == len(vtypes) - 1:
                 ax.set_xticks(np.arange(len(callers)) + width / 2.0)
-                ax.set_xticklabels([caller_labels.get(x, x) for x in callers], size=8, rotation=45)
+                ax.set_xticklabels([caller_labels.get(x, x).replace("__", "\n")
+                                    for x in callers], size=8, rotation=45)
             else:
                 ax.get_xaxis().set_ticks([])
             _annotate(ax, labels, vals, np.arange(len(callers)), width)

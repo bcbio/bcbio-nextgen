@@ -49,7 +49,7 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
         config = items[0]["config"]
         broad_runner, params = \
             _shared_gatk_call_prep(align_bams, items, ref_file, assoc_files["dbsnp"],
-                                   region, out_file, items)
+                                   region, out_file)
         if (not isinstance(region, (list, tuple)) and
                 not all(has_aligned_reads(x, region) for x in align_bams)):
             vcfutils.write_empty_vcf(out_file, config)
