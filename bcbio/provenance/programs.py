@@ -144,7 +144,8 @@ def _get_cl_version(p, config):
         elif p.get("paren_flag"):
             v = _parse_from_parenflag(stdout, p["paren_flag"])
         else:
-            v = stdout.read().strip()
+            lines = [l.strip() for l in stdout.read().split("\n") if l.strip()]
+            v = lines[-1]
     if v.endswith("."):
         v = v[:-1]
     return v
