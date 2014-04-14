@@ -83,14 +83,15 @@ your own research.
 - `The Translational Genomics Research Institute (TGen)`_: 
   Members of the `Huentelman lab`_ at TGen apply bcbio-nextgen to a wide 
   variety of studies of with a major focus in the neurobiology of aging 
-  and neurodegeneration in collaboration with the The Arizona Alzheimer's Consortium (`AAC`_), 
+  and neurodegeneration in collaboration with the The Arizona Alzheimer's Consortium (`AAC`_).
   We also use bcbio in studies of rare diseases in TGen's Center for
   Rare Childhood Disorders (`C4RCD`_),  and other rare diseases such as 
   Multiple System Atrophy (`MSA`_). bcbio-nextgen has also been instrumental in 
   projects for TGen's Program for Canine Health & Performance (`PCHP`_) 
   and numerous RNA-seq projects using rodent models. Our work with bcbio 
   started with a parnership with `Dell` and The Neuroblastoma and 
-  Medulloblastoma Translational Research Consortium (`NMTRC`_) and neuroblastoma in children.
+  Medulloblastoma Translational Research Consortium (`NMTRC`_) as part of 
+  a Phase I clinical trial in these rare childhood cancer.
   
 .. _The Translational Genomics Research Institute (TGen): http://www.tgen.org
 .. _Huentelman lab: http://www.tgen.org/research/research-faculty/matt-huentelman.aspx
