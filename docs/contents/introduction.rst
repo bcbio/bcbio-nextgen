@@ -83,21 +83,24 @@ your own research.
 - `The Translational Genomics Research Institute (TGen)`_: 
   Members of the `Huentelman lab`_ at TGen apply bcbio-nextgen to a wide 
   variety of studies of with a major focus in the neurobiology of aging 
-  and neurodegeneration in collaboration with the The Arizona Alzheimer's Consortium (`AAC`_).
-  We also use bcbio in studies of rare diseases in TGen's Center for
-  Rare Childhood Disorders (`C4RCD`_),  and other rare diseases such as 
+  and neurodegeneration in collaboration with the The Arizona Alzheimer's Consortium (`AAC`_)
+  and  the `McKnight Brain Research Foundation`_.
+  We also use bcbio in studies of rare diseases in children through TGen's 
+  Center for Rare Childhood Disorders (`C4RCD`_),  and other rare diseases such as 
   Multiple System Atrophy (`MSA`_). bcbio-nextgen has also been instrumental in 
   projects for TGen's Program for Canine Health & Performance (`PCHP`_) 
   and numerous RNA-seq projects using rodent models. Our work with bcbio 
   started with a parnership with `Dell` and The Neuroblastoma and 
-  Medulloblastoma Translational Research Consortium (`NMTRC`_) as part of
-  a Phase I clinical trial in these rare childhood cancers.
-  
+  Medulloblastoma Translational Research Consortium (`NMTRC`_), 
+  and TGen as part of a Phase I clinical trial in these rare childhood cancers.
+
 .. _The Translational Genomics Research Institute (TGen): http://www.tgen.org
 .. _Huentelman lab: http://www.tgen.org/research/research-faculty/matt-huentelman.aspx
 .. _AAC: http://www.azalz.org
+.. _McKnight Brain Research Foundation: http://tmbrf.org  
 .. _C4RCD: http://www.c4rcd.org
 .. _MSA: http://www.tgen.org/research/multiple-system-atrophy-(msa)-research-registry.aspx
 .. _PCHP: http://www.tgen.org/research/canine-health-performance.aspx
+.. _Dell: http://www.dell.com/learn/us/en/70/healthcare
 .. _NMTRC: http://nmtrc.org/about
    
