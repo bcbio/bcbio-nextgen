@@ -7,6 +7,11 @@ from collections import namedtuple
 import os
 import shutil
 
+try:
+    import vcf
+except ImportError:
+    vcf = None
+
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -14,9 +19,6 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, ploidy
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
-
-import vcf
-
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -142,7 +144,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 def _move_vcf(orig_file, new_file):
     """Move a VCF file with associated index.
     """
-    for ext in ["", ".idx"]:
+    for ext in ["", ".idx", ".tbi"]:
         to_move = orig_file + ext
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
@@ -191,17 +193,18 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
 
 
 def fix_somatic_calls(in_file, config):
-
-    """Fix somatic variant output, standardize it to the SOMATIC flag."""
+    """Fix somatic variant output, standardize it to the SOMATIC flag.
+    """
+    if vcf is None:
+        raise ImportError("Require PyVCF for manipulating cancer VCFs")
 
     # HACK: Needed to replicate the structure used by PyVCF
     Info = namedtuple('Info', ['id', 'num', 'type', 'desc'])
     somatic_info = Info(id='SOMATIC', num=0, type='Flag', desc='Somatic event')
 
+    # NOTE: PyVCF will write an uncompressed VCF
     base, ext = utils.splitext_plus(in_file)
     name = "somaticfix"
-
-    # NOTE: PyVCF will write an uncompressed VCF
     out_file = "{0}-{1}{2}".format(base, name, ".vcf")
 
     if utils.file_exists(in_file):
@@ -212,9 +215,7 @@ def fix_somatic_calls(in_file, config):
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "wb") as handle:
                 writer = vcf.VCFWriter(handle, template=reader)
-
                 for record in reader:
-
                     # Handle FreeBayes
                     if "VT" in record.INFO:
                         if record.INFO["VT"] == "somatic":

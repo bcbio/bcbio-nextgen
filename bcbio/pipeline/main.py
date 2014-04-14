@@ -385,6 +385,7 @@ class StandardPipeline(AbstractPipeline):
             with profile.report("alignment post-processing", dirs):
                 samples = region.parallel_prep_region(samples, regions, run_parallel)
                 samples = region.parallel_variantcall_region(samples, run_parallel)
+                samples = run_parallel("split_variants_by_sample", samples)
         ## Finalize BAMs and QC
         with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools"]),
                         samples, config, dirs, "multicore2") as run_parallel:
