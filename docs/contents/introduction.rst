@@ -80,7 +80,7 @@ your own research.
 
 .. _IRCCS "Mario Negri" Institute for Pharmacological Research: http://www.marionegri.it
 
--`The Translational Genomics Research Institute (TGen)`_: 
+- `The Translational Genomics Research Institute (TGen)`_: 
   Members of the `Huentelman lab`_ at TGen apply bcbio-nextgen to a wide 
   variety of studies of with a major focus in the neurobiology of aging 
   and neurodegeneration in collaboration with the The Arizona Alzheimer's Consortium (`AAC`_), 
@@ -94,7 +94,7 @@ your own research.
   
 .. _The Translational Genomics Research Institute (TGen): http://www.tgen.org
 .. _Huentelman lab: http://www.tgen.org/research/research-faculty/matt-huentelman.aspx
-.. _The Arizona Alzheimer's Consortium (AAC): http://www.azalz.org
+.. _AAC: http://www.azalz.org
 .. _C4RCD: http://www.c4rcd.org
 .. _MSA: http://www.tgen.org/research/multiple-system-atrophy-(msa)-research-registry.aspx
 .. _PCHP: http://www.tgen.org/research/canine-health-performance.aspx
