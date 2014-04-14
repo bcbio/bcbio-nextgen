@@ -90,7 +90,7 @@ your own research.
   projects for TGen's Program for Canine Health & Performance (`PCHP`_) 
   and numerous RNA-seq projects using rodent models. Our work with bcbio 
   started with a parnership with `Dell` and The Neuroblastoma and 
-  Medulloblastoma Translational Research Consortium (`NMTRC`_) as part of 
+  Medulloblastoma Translational Research Consortium (`NMTRC`_) as part of
   a Phase I clinical trial in these rare childhood cancer.
   
 .. _The Translational Genomics Research Institute (TGen): http://www.tgen.org
