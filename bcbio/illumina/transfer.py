@@ -8,8 +8,8 @@ import subprocess
 from bcbio import utils
 from bcbio.log import logger
 
-def copy_to_remote(dname, fastq_dir, sample_cfile, config):
-    """Copy required files for processing to remote server using rsync.
+def copy_flowcell(dname, fastq_dir, sample_cfile, config):
+    """Copy required files for processing using rsync, potentially to a remote server.
     """
     with utils.chdir(dname):
         reports = reduce(operator.add,
@@ -31,10 +31,15 @@ def copy_to_remote(dname, fastq_dir, sample_cfile, config):
         for fname in configs + fastq + run_info + reports:
             out_handle.write("+ %s\n" % fname)
         out_handle.write("- *\n")
-    cmd = ["rsync", "-akmrtv", "--include-from=%s" % include_file, dname,
-           "%s@%s:%s" % (utils.get_in(config, ("process", "username")),
-                         utils.get_in(config, ("process", "host")),
-                         utils.get_in(config, ("process", "dir")))]
+    # remote transfer
+    if utils.get_in(config, ("process", "host")):
+        dest = "%s@%s:%s" % (utils.get_in(config, ("process", "username")),
+                             utils.get_in(config, ("process", "host")),
+                             utils.get_in(config, ("process", "dir")))
+    # local transfer
+    else:
+        dest = utils.get_in(config, ("process", "dir"))
+    cmd = ["rsync", "-akmrtv", "--include-from=%s" % include_file, dname, dest]
     logger.info("Copying files to analysis machine")
     logger.info(" ".join(cmd))
     subprocess.check_call(cmd)

@@ -31,7 +31,8 @@ A fully automated setup consists of three components:
 - An analysis machine where bcbio-nextgen analysis occurs. The cronjob on the
   sequencer output machines transfers fastq files and initiates multi-core
   processing. On completion, the analysis machine uploads results to an attached
-  Galaxy instance.
+  Galaxy instance. The analysis machine can be the same as the sequencer output
+  machine for systems with shared filesystems.
 
 Sequencer output machine
 ************************
@@ -73,14 +74,42 @@ steps to perform, transfers the configuration and fastq files to the analysis
 machine, and initiates processing. Transfer between the sequencer output and
 analysis machines occurs using secure rsync, which requires the ability to
 securely login between machines without passwords using `ssh public key`_
-authentication.
+authentication. For shared filesystem setups, rsync will transfer the files to a
+local directory for processing.
 
 .. _transfer_info.yaml: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/transfer_info.yaml
 .. _bcl2fastq: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.ilmn
 .. _ssh public key: http://macnugget.org/projects/publickeys/
 
-Analysis server
-***************
+Analysis machine
+****************
+
+We support two approaches for automated analysis processing:
+
+- A remote analysis server. This is a long running server on a remote machine
+  without a shared filesystem with the dumping machine.
+- A cluster-based analysis server. This server mounts the output directories via
+  a shared filesystem and can submit to an attached cluster for processing.
+
+On analysis completion the pipeline transfers processed files to a Galaxy server
+based on a pre-specified :ref:`upload-configuration` configuration. This
+includes the alignment BAM files, quality control, and other pipeline specific
+files like variant calls or RNA-seq counts. It organizes files in project and
+sample specific folders within Galaxy's data libraries, making them available to
+researchers for additional analysis.
+
+Remote analysis server
+======================
+
+The first approach is to initial processing on a remote server. The ``process``
+section of your `transfer_info.yaml`_ file should look like::
+
+    process:
+      host: workserver.you.org
+      username: bcbio_user
+      dir: /array1/bcbio
+      storedir: /galaxydata/upload/storage
+      server: http://workserver.you.org/bcbio
 
 The analysis server runs bcbio-nextgen pipelines and uploads results to a local
 Galaxy server. A bcbio-nextgen server receives processing commands and start
@@ -110,16 +139,31 @@ Specify this URL as ``server: http://analysis.you.org/bcbio`` in your
 `transfer_info.yaml`_ file to enable the sequencing output machine to
 communicate with the analysis server.
 
-The analysis server currently handles multicore processing. We'd be happy to
+The remote analysis server currently handles multicore processing. We'd be happy to
 collaborate on approaches to allow it to automatically start bcbio-nextgen jobs
 on HPC clusters or other types of distributed environments.
 
-On analysis completion the pipeline transfers processed files to a Galaxy server
-based on a pre-specified :ref:`upload-configuration` configuration. This
-includes the alignment BAM files, quality control, and other pipeline
-specific files like variant calls or RNA-seq counts. It organizes files in
-project and sample specific folders within Galaxy's data libraries, making them
-available to researchers for additional analysis.
+Cluster-based analysis server
+=============================
+
+The alternative approach for post-processing submits directly to a cluster
+attached to the output filesystem. This requires a process configuration
+containing information about the batch scripts for submit for bcl2fastq
+processing and bcbio-nextgen analysis::
+
+    process:
+      dir: /array1/bcbio
+      storedir: /galaxydata/upload/storage
+      submit_cmd: "qsub {batch_script}"
+      bcl2fastq_batch: |
+        batch script template for bcl2fastq
+      bcbio_batch: |
+        batch script template for bcbio-nextgen processing
+
+The example `transfer_info.yaml`_ has batch script templates you can customize
+for your specific system. This provides a way to automatically prepare batch
+scripts for kicking off analyses, and supplements the IPython cluster
+integration that bcbio-nextgen provides.
 
 Debugging
 *********
