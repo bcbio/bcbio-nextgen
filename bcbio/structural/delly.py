@@ -3,6 +3,7 @@
 https://github.com/tobiasrausch/delly
 """
 import os
+import copy
 import subprocess
 
 from bcbio import utils
@@ -50,9 +51,16 @@ def run(items):
                                                items[0]["name"][-1], "delly"))
     work_bams = [data["align_bam"] for data in items]
     ref_file = utils.get_in(items[0], ("reference", "fasta", "base"))
+    # Add core request for delly
+    config = copy.deepcopy(items[0]["config"])
+    delly_config = utils.get_in(config, ("resources", "delly"), {})
+    delly_config["cores"] = len(items)
+    config["resources"]["delly"] = delly_config
+    parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1),
+                "progs": ["delly"]}
     bytype_vcfs = run_multicore(_run_delly, [(work_bams, sv_type, ref_file, work_dir, items)
                                              for sv_type in ["DEL", "DUP", "INV", "TRA"]],
-                                items[0]["config"])
+                                config, parallel)
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
     delly_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
     out = []

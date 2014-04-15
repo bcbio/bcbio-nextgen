@@ -29,16 +29,18 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
     mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                      3, "decrease")
     if not utils.file_exists(sr_file) or not utils.file_exists(disc_file) or utils.file_exists(dedup_file):
-        with file_transaction(sr_file) as tx_sr_file:
-            with file_transaction(disc_file) as tx_disc_file:
-                with file_transaction(dedup_file) as tx_dedup_file:
-                    with utils.curdir_tmpdir() as tmpdir:
+        with utils.curdir_tmpdir() as tmpdir:
+            with file_transaction(sr_file) as tx_sr_file:
+                with file_transaction(disc_file) as tx_disc_file:
+                    with file_transaction(dedup_file) as tx_dedup_file:
+                        for dname in ["spl", "disc", "full"]:
+                            utils.safe_makedir(os.path.join(tmpdir, dname))
                         tobam_cmd = ("{samtools} view -S -u /dev/stdin | "
-                                     "{sambamba} sort -t {cores} -m {mem} --tmpdir {tmpdir} "
+                                     "{sambamba} sort -t {cores} -m {mem} --tmpdir {tmpdir}/{dext} "
                                      "-o {out_file} /dev/stdin")
-                        splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, **locals())
-                        discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, **locals())
-                        dedup_cmd = tobam_cmd.format(out_file=tx_dedup_file, **locals())
+                        splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, dext="spl", **locals())
+                        discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, dext="disc", **locals())
+                        dedup_cmd = tobam_cmd.format(out_file=tx_dedup_file, dext="full", **locals())
                         out_base = os.path.join(tmpdir, "%s-namesort" % os.path.splitext(in_bam)[0])
                         cmd = ("{samtools} sort -n -o -@ {cores} -m {mem} {in_bam} {out_base} | "
                                "{samtools} view -h - | "
