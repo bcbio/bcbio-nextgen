@@ -1,11 +1,11 @@
-version: 5
+version: 6
 
 aliases:
   snpeff: GRCm38.74
   ensembl: mouse
 
 variation:
-  dbsnp: ../variation/mm10-dbSNP-2013-09-12.vcf
+  dbsnp: ../variation/mm10-dbSNP-2013-09-12.vcf.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
