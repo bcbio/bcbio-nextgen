@@ -1,9 +1,12 @@
-version: 3
+version: 4
 
 aliases:
   ensembl: dog
   snpeff: CanFam3.1.74
 
+variation:
+  dbsnp: ../variation/canFam3-dbSNP-2014-04-10.vcf.gz
+  
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
