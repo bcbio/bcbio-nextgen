@@ -3,8 +3,8 @@
 Samples may include multiple lanes, or barcoded subsections of lanes,
 processed together.
 """
-import os
 import copy
+import os
 
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
@@ -40,7 +40,13 @@ def delayed_bam_merge(data):
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
         file_key = data["combine"].keys()[0]
-        in_files = sorted(list(set([data[file_key]] + data["combine"][file_key].get("extras", []))))
+        extras = []
+        for x in data["combine"][file_key].get("extras", []):
+            if isinstance(x, (list, tuple)):
+                extras.extend(x)
+            else:
+                extras.append(x)
+        in_files = sorted(list(set([data[file_key]] + extras)))
         out_file = data["combine"][file_key]["out"]
         logger.debug("Combining BAM files to %s" % out_file)
         config = copy.deepcopy(data["config"])

@@ -3,6 +3,10 @@
 - Redo Illumina sequencer integration to be up to date with current
   code base. Uses external bcl2fastq demultiplexing and new bcbio integrated
   analysis server. Provide documentation on setting up automated infrastructure.
+- Perform de-duplication of BAM files as part of streaming alignment process
+  using samblaster or biobambam's bammarkduplicates. Removes need for secondary
+  split of files and BAM preparation unless recalibration and realignment
+  needed. Enables pre-processing of input files for structural variant detection.
 - Rework batched regional analysis in variant calling to remove custom cases and
   simplify structure. Filtering now happens explicitly on the combined batch
   file. This is functionally equivalent to previous filters but now the workflow

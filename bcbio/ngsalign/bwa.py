@@ -4,14 +4,14 @@ import os
 import subprocess
 
 from bcbio.pipeline import config_utils
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.ngsalign import alignprep, novoalign
+from bcbio.ngsalign import alignprep, novoalign, postalign
 from bcbio.provenance import do
 
 galaxy_location_file = "bwa_index.loc"
 
-def align_bam(in_bam, ref_file, names, align_dir, config):
+def align_bam(in_bam, ref_file, names, align_dir, data):
     """Perform direct alignment of an input BAM file with BWA using pipes.
 
     This avoids disk IO by piping between processes:
@@ -21,6 +21,7 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
      - samtools conversion to BAM
      - samtools sort to coordinate
     """
+    config = data["config"]
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
     samtools = config_utils.get_program("samtools", config)
     bedtools = config_utils.get_program("bedtools", config)
@@ -33,20 +34,18 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
         with utils.curdir_tmpdir() as work_dir:
-            with file_transaction(out_file) as tx_out_file:
+            with postalign.tobam_cl(data, out_file, bam.is_paired(in_bam)) as (tobam_cl, tx_out_file):
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
                 cmd = ("{samtools} sort -n -o -l 0 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
                        "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
-                       "| {bwa} mem -p -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} - "
-                       "| {samtools} view -b -S -u - "
-                       "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                cmd = cmd.format(**locals())
+                       "| {bwa} mem -p -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} - | ")
+                cmd = cmd.format(**locals()) + tobam_cl
                 do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
     return out_file
 
-def can_pipe(fastq_file, data):
+def _can_use_mem(fastq_file, data):
     """bwa-mem handle longer (> 70bp) reads with improved piping.
     Randomly samples 5000 reads from the first two million.
     Default to no piping if more than 75% of the sampled reads are small.
@@ -88,61 +87,53 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
             fastq_file = alignprep.fastq_convert_pipe_cl(fastq_file, data)
             if pair_file:
                 pair_file = alignprep.fastq_convert_pipe_cl(pair_file, data)
-    samtools = config_utils.get_program("samtools", data["config"])
-    bwa = config_utils.get_program("bwa", data["config"])
-    resources = config_utils.get_resources("samtools", data["config"])
-    num_cores = data["config"]["algorithm"].get("num_cores", 1)
-    # adjust memory for samtools since used alongside alignment
-    max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
-                                         3, "decrease")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         # If we cannot do piping, use older bwa aln approach
-        if not can_pipe(fastq_file, data):
-            return align(fastq_file, pair_file, ref_file, names, align_dir, data)
+        if not _can_use_mem(fastq_file, data):
+            out_file = _align_backtrack(fastq_file, pair_file, ref_file, out_file,
+                                        names, rg_info, data)
         else:
-            with utils.curdir_tmpdir() as work_dir:
-                with file_transaction(out_file) as tx_out_file:
-                    tx_out_prefix = os.path.splitext(tx_out_file)[0]
-                    cmd = ("{bwa} mem -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} "
-                           "{fastq_file} {pair_file} "
-                           "| {samtools} view -b -S -u - "
-                           "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                    cmd = cmd.format(**locals())
-                    do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
-                           [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
+            out_file = _align_mem(fastq_file, pair_file, ref_file, out_file,
+                                  names, rg_info, data)
     data["work_bam"] = out_file
     return data
 
-def align(fastq_file, pair_file, ref_file, names, align_dir, data):
-    """Perform a BWA alignment, generating a SAM file.
+def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
+    """Perform bwa-mem alignment on supported read lengths.
+    """
+    bwa = config_utils.get_program("bwa", data["config"])
+    num_cores = data["config"]["algorithm"].get("num_cores", 1)
+    with utils.curdir_tmpdir() as work_dir:
+        with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
+            cmd = ("{bwa} mem -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} "
+                   "{fastq_file} {pair_file} | ")
+            cmd = cmd.format(**locals()) + tobam_cl
+            do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
+                   [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
+    return out_file
+
+def _align_backtrack(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
+    """Perform a BWA alignment using 'aln' backtrack algorithm.
     """
     assert not data.get("align_split"), "Do not handle split alignments with non-piped bwa"
+    bwa = config_utils.get_program("bwa", data["config"])
     config = data["config"]
-    sai1_file = os.path.join(align_dir, "%s_1.sai" % names["lane"])
-    sai2_file = (os.path.join(align_dir, "%s_2.sai" % names["lane"])
-                 if pair_file else None)
-    sam_file = os.path.join(align_dir, "%s.sam" % names["lane"])
-    if not utils.file_exists(sam_file):
-        if not utils.file_exists(sai1_file):
-            with file_transaction(sai1_file) as tx_sai1_file:
-                _run_bwa_align(fastq_file, ref_file, tx_sai1_file, config)
-        if sai2_file and not utils.file_exists(sai2_file):
-            with file_transaction(sai2_file) as tx_sai2_file:
-                _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
+    sai1_file = "%s_1.sai" % os.path.splitext(out_file)[0]
+    sai2_file = "%s_2.sai" % os.path.splitext(out_file)[0] if pair_file else ""
+    if not utils.file_exists(sai1_file):
+        with file_transaction(sai1_file) as tx_sai1_file:
+            _run_bwa_align(fastq_file, ref_file, tx_sai1_file, config)
+    if sai2_file and not utils.file_exists(sai2_file):
+        with file_transaction(sai2_file) as tx_sai2_file:
+            _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
+    with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
         align_type = "sampe" if sai2_file else "samse"
-        rg_info = novoalign.get_rg_info(names)
-        sam_cl = [config_utils.get_program("bwa", config), align_type, "-r", "'%s'" % rg_info,
-                  ref_file, sai1_file]
-        if sai2_file:
-            sam_cl.append(sai2_file)
-        sam_cl.append(fastq_file)
-        if sai2_file:
-            sam_cl.append(pair_file)
-        with file_transaction(sam_file) as tx_sam_file:
-            cmd = "{cl} > {out_file}".format(cl=" ".join(sam_cl), out_file=tx_sam_file)
-            do.run(cmd, "bwa {align_type}".format(**locals()), None)
-    return sam_file
+        cmd = ("{bwa} {align_type} -r '{rg_info}' {ref_file} {sai1_file} {sai2_file} "
+               "{fastq_file} {pair_file} | ")
+        cmd = cmd.format(**locals()) + tobam_cl
+        do.run(cmd, "bwa %s" % align_type, data)
+    return out_file
 
 def _bwa_args_from_config(config):
     num_cores = config["algorithm"].get("num_cores", 1)

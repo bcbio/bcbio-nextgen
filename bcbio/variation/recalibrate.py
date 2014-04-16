@@ -14,28 +14,10 @@ from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import (process_bam_by_chromosome,
                                    subset_bam_by_region, write_nochr_reads,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
-
-# ## BAMutil recalibration
-
-def bamutil_dedup_recal_cl(in_file, out_file, data, do_recal):
-    """Prepare commandline for running deduplication and recalibration with bamutil.
-    http://genome.sph.umich.edu/wiki/BamUtil:_dedup
-    """
-    raise NotImplementedError("Not functional for piped BAM analysis")
-    config = data["config"]
-    bam_cmd = config_utils.get_program("bam", config)
-    ref_file = data["sam_ref"]
-    dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
-
-    cmd = "{bam_cmd} dedup --in {in_file} --out {out_file} --oneChrom"
-    if do_recal:
-        cmd += " --recab --refFile {ref_file} --dbsnp {dbsnp_file}"
-    return cmd.format(**locals())
 
 # ## GATK recalibration
 

@@ -35,12 +35,25 @@ def group_batches(xs):
             singles.append(data)
     batches = []
     for batch, items in batch_groups.iteritems():
-        batch_data = copy.deepcopy(items[0])
+        batch_data = copy.deepcopy(_pick_lead_item(items))
         batch_data["work_bam"] = [x["work_bam"] for x in items]
         batch_data["group_orig"] = items
         batch_data["group"] = batch
         batches.append(batch_data)
     return singles + batches
+
+def _pick_lead_item(items):
+    """Pick single representative sample for batch calling to attach calls to.
+
+    For cancer samples, attach to tumor.
+    """
+    if vcfutils.is_paired_analysis([x["work_bam"] for x in items], items):
+        for data in items:
+            if vcfutils.get_paired_phenotype(data) == "tumor":
+                return data
+        raise ValueError("Did not find tumor sample in paired tumor/normal calling")
+    else:
+        return items[0]
 
 def split_variants_by_sample(data):
     """Split a multi-sample call file into inputs for individual samples.
@@ -56,6 +69,8 @@ def split_variants_by_sample(data):
         out = []
         for i, sub_data in enumerate(data["group_orig"]):
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":
+                if "combine" in data:
+                    sub_data["combine"] = data["combine"]
                 sub_data["vrn_file"] = data["vrn_file"]
             out.append([sub_data])
         return out
@@ -68,6 +83,8 @@ def split_variants_by_sample(data):
                 vcfutils.select_sample(data["vrn_file"], sub_data["name"][-1], sub_vrn_file, data["config"])
             elif not os.path.exists(sub_vrn_file):
                 utils.symlink_plus(data["vrn_file"], sub_vrn_file)
+            if "combine" in data:
+                sub_data["combine"] = data["combine"]
             sub_data["vrn_file"] = sub_vrn_file
             out.append([sub_data])
         return out

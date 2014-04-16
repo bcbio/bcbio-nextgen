@@ -207,6 +207,8 @@ def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):
     extras = []
     for data in args:
         out_final, out_parts = split_fn(data)
+        if file_key in data and isinstance(data[file_key], basestring):
+            combine_map[data[file_key]] = data[file_key]
         for parts in out_parts:
             split_args.append([copy.deepcopy(data)] + list(parts))
         for part_file in [x[outfile_i] for x in out_parts]:

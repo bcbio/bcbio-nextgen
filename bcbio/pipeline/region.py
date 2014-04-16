@@ -51,15 +51,13 @@ def parallel_prep_region(samples, regions, run_parallel):
     """
     file_key = "work_bam"
     split_fn = _split_by_regions(regions, "bamprep", "-prep.bam", file_key)
-    # identify samples that do not need preparation -- no prep or
-    # variant calling
+    # identify samples that do not need preparation -- no recalibration or realignment
     extras = []
     torun = []
     for data in [x[0] for x in samples]:
         data["align_bam"] = data["work_bam"]
         a = data["config"]["algorithm"]
-        if (not a.get("mark_duplicates") and not a.get("recalibrate") and
-              not a.get("realign", "gatk") and not a.get("variantcaller", "gatk")):
+        if (not a.get("recalibrate") and not a.get("realign") and not a.get("variantcaller", "gatk")):
             extras.append([data])
         elif not data.get(file_key):
             extras.append([data])

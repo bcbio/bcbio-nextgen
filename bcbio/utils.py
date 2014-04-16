@@ -376,7 +376,9 @@ def get_in(d, t, default=None):
     example: get_in({1: {2: 3}}, (2, 3)) -> {}
     """
     result = reduce(lambda d, t: d.get(t, {}), t, d)
-    if not result:
+    if result is False:
+        return result
+    elif not result:
         return default
     else:
         return result
