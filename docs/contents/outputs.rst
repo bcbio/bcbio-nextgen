@@ -48,8 +48,19 @@ Project directory
   calls with a wide variety of third party annotations. This provides
   a queryable framework for assessing variant quality statistics.
 
-.. _GEMINI database: https://github.com/arq5x/gemini 
+.. _GEMINI database: https://github.com/arq5x/gemini
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
 - ``SAMPLE-caller.vcf`` -- Variants calls for an individual sample.
+
+Downstream analysis
+===================
+
+This section collects useful scripts and tools to do downstream analysis of
+bcbio-nextgen outputs. If you have pointers to useful tools, please add them to
+the documentation.
+
+- `Calculate and plot coverage`_ with matplolib, from Luca Beltrame.
+
+.. _Calculate and plot coverage:  https://github.com/chapmanb/bcbio-nextgen/issues/195#issuecomment-39071048

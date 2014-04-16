@@ -35,6 +35,7 @@ requirements:
   installed (the python-dev or python-devel packages).
 - Compilers: gcc and g++.
 - The git version control system (http://git-scm.com/).
+- wget for file retrieval (https://www.gnu.org/software/wget/)
 
 If you're using the ``--nosudo`` option, please see :ref:`isolated-install`
 for additional system requirements needed to bootstrap the full system.
