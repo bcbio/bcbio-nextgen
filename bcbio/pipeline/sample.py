@@ -6,6 +6,7 @@ processed together.
 import copy
 import os
 
+from bcbio import utils
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
 from bcbio.pipeline import config_utils
@@ -36,6 +37,8 @@ def merge_sample(data):
 
 def delayed_bam_merge(data):
     """Perform a merge on previously prepped files, delayed in processing.
+
+    Handles merging of associated split read and discordant files if present
     """
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
@@ -48,11 +51,18 @@ def delayed_bam_merge(data):
                 extras.append(x)
         in_files = sorted(list(set([data[file_key]] + extras)))
         out_file = data["combine"][file_key]["out"]
-        logger.debug("Combining BAM files to %s" % out_file)
-        config = copy.deepcopy(data["config"])
-        config["algorithm"]["save_diskspace"] = False
-        merged_file = merge_bam_files(in_files, os.path.dirname(out_file), config,
-                                      out_file=out_file)
+        for ext in ["-disc", "-sr", ""]:
+            if ext:
+                cur_in_files = list(filter(os.path.exists, (utils.append_stem(f, ext) for f in in_files)))
+                cur_out_file = utils.append_stem(out_file, ext) if len(in_files) > 0 else None
+            else:
+                cur_in_files, cur_out_file = in_files, out_file
+            if cur_out_file:
+                logger.debug("Combining BAM files to %s" % cur_out_file)
+                config = copy.deepcopy(data["config"])
+                config["algorithm"]["save_diskspace"] = False
+                merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), config,
+                                              out_file=cur_out_file)
         data.pop("region", None)
         data.pop("combine", None)
         data[file_key] = merged_file
