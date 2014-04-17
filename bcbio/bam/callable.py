@@ -28,6 +28,7 @@ from bcbio.distributed import multi, prun
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
+from bcbio.variation import multi as vmulti
 
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
@@ -326,41 +327,62 @@ def _combine_excessive_coverage(samples, ref_regions, min_n_size):
         return merge_ecs
 
 def combine_sample_regions(*samples):
-    """Create global set of callable regions for multi-sample calling.
+    """Create batch-level sets of callable regions for multi-sample calling.
 
-    Intersects all non-callable (nblock) regions from all samples,
+    Intersects all non-callable (nblock) regions from all samples in a batch,
     producing a global set of callable regions.
     """
-    config = samples[0]["config"]
-    work_dir = samples[0]["dirs"]["work"]
-    analysis_file = os.path.join(work_dir, "analysis_blocks.bed")
-    no_analysis_file = os.path.join(work_dir, "noanalysis_blocks.bed")
-    min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
+    # back compatibility -- global file for entire sample set
+    global_analysis_file = os.path.join(samples[0]["dirs"]["work"], "analysis_blocks.bed")
+    if utils.file_exists(global_analysis_file) and not _needs_region_update(global_analysis_file, samples):
+        global_no_analysis_file = os.path.join(os.path.dirname(global_analysis_file), "noanalysis_blocks.bed")
+    else:
+        global_analysis_file = None
+    out = []
+    for batch, items in vmulti.group_by_batch(samples).items():
+        if global_analysis_file:
+            analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
+        else:
+            analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
+        for data in items:
+            if analysis_file:
+                data["config"]["algorithm"]["callable_regions"] = analysis_file
+                data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
+            out.append([data])
+    assert len(out) == len(samples)
+    final_regions = pybedtools.BedTool(analysis_file)
+    _analysis_block_stats(final_regions)
+    return out
 
-    if not utils.file_exists(analysis_file) or _needs_region_update(analysis_file, samples):
+def _combine_sample_regions_batch(batch, items):
+    """Combine sample regions within a group of batched samples.
+    """
+    config = items[0]["config"]
+    work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "regions"))
+    analysis_file = os.path.join(work_dir, "%s-analysis_blocks.bed" % batch)
+    no_analysis_file = os.path.join(work_dir, "%s-noanalysis_blocks.bed" % batch)
+    if not utils.file_exists(analysis_file) or _needs_region_update(analysis_file, items):
         # Combine all nblocks into a final set of intersecting regions
         # without callable bases. HT @brentp for intersection approach
         # https://groups.google.com/forum/?fromgroups#!topic/bedtools-discuss/qA9wK4zN8do
-        nblock_regions = reduce(operator.add,
-                                (pybedtools.BedTool(x["regions"]["nblock"])
-                                 for x in samples if "regions" in x))
-        ref_regions = get_ref_bedtool(samples[0]["sam_ref"], config)
-        ec_regions = _combine_excessive_coverage(samples, ref_regions, min_n_size)
-        block_filter = NBlockRegionPicker(ref_regions, config)
-        nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
-        if len(nblock_size_filtered) >= len(ref_regions):
-            final_nblock_regions = nblock_size_filtered
+        bed_regions = [pybedtools.BedTool(x["regions"]["nblock"])
+                       for x in items if "regions" in x]
+        if len(bed_regions) == 0:
+            analysis_file, no_analysis_file = None, None
         else:
-            final_nblock_regions = nblock_regions
-        final_regions = ref_regions.subtract(final_nblock_regions)
-        if len(ec_regions) > 0:
-            final_regions = final_regions.subtract(ec_regions)
-        final_regions.merge(d=min_n_size)
-        _write_bed_regions(samples[0], final_regions, analysis_file, no_analysis_file)
-    else:
-        final_regions = pybedtools.BedTool(analysis_file)
-    _analysis_block_stats(final_regions)
-    regions = {"analysis": [(r.chrom, int(r.start), int(r.stop)) for r in final_regions],
-               "noanalysis": no_analysis_file,
-               "analysis_bed": analysis_file}
-    return [regions]
+            nblock_regions = reduce(operator.add, bed_regions)
+            ref_regions = get_ref_bedtool(items[0]["sam_ref"], config)
+            min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
+            ec_regions = _combine_excessive_coverage(items, ref_regions, min_n_size)
+            block_filter = NBlockRegionPicker(ref_regions, config)
+            nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
+            if len(nblock_size_filtered) >= len(ref_regions):
+                final_nblock_regions = nblock_size_filtered
+            else:
+                final_nblock_regions = nblock_regions
+            final_regions = ref_regions.subtract(final_nblock_regions)
+            if len(ec_regions) > 0:
+                final_regions = final_regions.subtract(ec_regions)
+            final_regions.merge(d=min_n_size)
+            _write_bed_regions(items[0], final_regions, analysis_file, no_analysis_file)
+    return analysis_file, no_analysis_file

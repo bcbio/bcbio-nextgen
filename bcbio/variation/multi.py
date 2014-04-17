@@ -10,6 +10,66 @@ import os
 from bcbio import utils
 from bcbio.variation import vcfutils
 
+def group_by_batch(items):
+    """Group a set of sample items by batch (or singleton) name.
+
+    Items in multiple batches cause two batches to be merged together.
+    """
+    out = collections.defaultdict(list)
+    batch_groups = _get_representative_batch(_merge_batches(_find_all_groups(items)))
+    for data in items:
+        batch = utils.get_in(data, ("metadata", "batch"), data["description"])
+        if isinstance(batch, (list, tuple)):
+            batch = batch[0]
+        batch = batch_groups[batch]
+        out[batch].append(data)
+    return dict(out)
+
+def _find_all_groups(items):
+    """Find all groups
+    """
+    all_groups = []
+    for data in items:
+        batches = utils.get_in(data, ("metadata", "batch"), data["description"])
+        if not isinstance(batches, (list, tuple)):
+            batches = [batches]
+        all_groups.append(batches)
+    return all_groups
+
+def _merge_batches(all_groups):
+    """Merge batches with overlapping groups. Uses merge approach from:
+
+    http://stackoverflow.com/a/4842897/252589
+    """
+    merged = []
+    while len(all_groups) > 0:
+        first, rest = all_groups[0], all_groups[1:]
+        first = set(first)
+        lf = -1
+        while len(first) > lf:
+            lf = len(first)
+
+            rest2 = []
+            for r in rest:
+                if len(first.intersection(set(r))) > 0:
+                    first |= set(r)
+                else:
+                    rest2.append(r)
+            rest = rest2
+        merged.append(first)
+        all_groups = rest
+    return merged
+
+def _get_representative_batch(merged):
+    """Prepare dictionary matching batch items to a representative within a group.
+    """
+    out = {}
+    for mgroup in merged:
+        mgroup = sorted(list(mgroup))
+        for x in mgroup:
+            out[x] = mgroup[0]
+    return out
+
 def group_batches(xs):
     """Group samples into batches for simultaneous variant calling.
 

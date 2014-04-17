@@ -70,7 +70,8 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                                     out_handle.write("%s\n" % f)
                             cmd = (merge_cl + " | "
                                    "{samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                            do.run(cmd.format(**locals()), "Merge bam files", None)
+                            do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
+                                   None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         bam.index(out_file, config)

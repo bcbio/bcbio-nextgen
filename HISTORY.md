@@ -11,6 +11,8 @@
   simplify structure. Filtering now happens explicitly on the combined batch
   file. This is functionally equivalent to previous filters but now the workflow
   is clearer. Avoids special cases for tumor/normal inputs.
+- Perform regional splitting of samples grouped by batch instead of globally,
+  enabling multiple organisms and experiments within a single input sample YAML.
 - Update VQSR support for GATK to be up to date with latest best
   practices. Re-organize GATK and filtering to be more modular to help with
   transition to GATK 3.x gVCF approaches.

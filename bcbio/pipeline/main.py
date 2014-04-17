@@ -310,8 +310,7 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = disambiguate.resolve(samples, run_parallel)
             with profile.report("callable regions", dirs):
                 samples = run_parallel("postprocess_alignment", samples)
-                regions = run_parallel("combine_sample_regions", [samples])[0]
-                samples = region.add_region_info(samples, regions)
+                samples = run_parallel("combine_sample_regions", [samples])
                 samples = region.clean_sample_data(samples)
             with profile.report("coverage", dirs):
                 samples = coverage.summarize_samples(samples, run_parallel)
@@ -319,9 +318,9 @@ class Variant2Pipeline(AbstractPipeline):
         ## Variant calling on sub-regions of the input file (full cluster)
         with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
                         samples, config, dirs, "full",
-                        multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
+                        multiplier=region.get_max_counts(samples), max_multicore=1) as run_parallel:
             with profile.report("alignment post-processing", dirs):
-                samples = region.parallel_prep_region(samples, regions, run_parallel)
+                samples = region.parallel_prep_region(samples, run_parallel)
             with profile.report("variant calling", dirs):
                 samples = genotype.parallel_variantcall_region(samples, run_parallel)
 
@@ -375,15 +374,14 @@ class StandardPipeline(AbstractPipeline):
                 samples = run_parallel("process_alignment", lane_items)
             with profile.report("callable regions", dirs):
                 samples = run_parallel("postprocess_alignment", samples)
-                regions = run_parallel("combine_sample_regions", [samples])[0]
-                samples = region.add_region_info(samples, regions)
+                samples = run_parallel("combine_sample_regions", [samples])
                 samples = region.clean_sample_data(samples)
         ## Processing on sub regions
         with prun.start(_wres(parallel, ["gatk", "picard", "samtools"]),
                         samples, config, dirs, "full",
-                        multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
+                        multiplier=region.get_max_counts(samples), max_multicore=1) as run_parallel:
             with profile.report("alignment post-processing", dirs):
-                samples = region.parallel_prep_region(samples, regions, run_parallel)
+                samples = region.parallel_prep_region(samples, run_parallel)
                 samples = genotype.parallel_variantcall_region(samples, run_parallel)
                 samples = run_parallel("split_variants_by_sample", samples)
         ## Finalize BAMs and QC

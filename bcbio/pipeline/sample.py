@@ -58,7 +58,6 @@ def delayed_bam_merge(data):
             else:
                 cur_in_files, cur_out_file = in_files, out_file
             if cur_out_file:
-                logger.debug("Combining BAM files to %s" % cur_out_file)
                 config = copy.deepcopy(data["config"])
                 config["algorithm"]["save_diskspace"] = False
                 merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), config,
