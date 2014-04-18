@@ -13,6 +13,8 @@
   is clearer. Avoids special cases for tumor/normal inputs.
 - Perform regional splitting of samples grouped by batch instead of globally,
   enabling multiple organisms and experiments within a single input sample YAML.
+- Add temporary directory usage to enable use of local high speed scratch disk
+  on setups with large enough global temporary storage.
 - Update VQSR support for GATK to be up to date with latest best
   practices. Re-organize GATK and filtering to be more modular to help with
   transition to GATK 3.x gVCF approaches.
@@ -22,6 +24,8 @@
   annotation. Enable GATK 3.1 hardware specific optimizations.
 - Use bgzipped VCFs for dbSNP, Cosmic and other resources to save disk
   space. Upgrade to Cosmic v68.
+- Avoid VCF concatenation errors when first input file is empty. Thanks to
+  Jiantao Shi.
 
 ## 0.7.8 (March 21, 2014)
 

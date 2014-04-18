@@ -225,6 +225,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            orig_files = [x for x in orig_files if vcf_has_variants(x)]
             if len(orig_files) > 0 and orig_files[0].endswith(".gz"):
                 orig_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
             sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
