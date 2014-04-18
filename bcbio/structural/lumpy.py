@@ -28,7 +28,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
     mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                      3, "decrease")
     if not utils.file_exists(sr_file) or not utils.file_exists(disc_file) or utils.file_exists(dedup_file):
-        with utils.curdir_tmpdir() as tmpdir:
+        with utils.curdir_tmpdir(data) as tmpdir:
             with file_transaction(sr_file) as tx_sr_file:
                 with file_transaction(disc_file) as tx_disc_file:
                     with file_transaction(dedup_file) as tx_dedup_file:
@@ -62,7 +62,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                             % os.path.splitext(os.path.basename(items[0]["align_bam"]))[0])
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            with utils.curdir_tmpdir() as tmpdir:
+            with utils.curdir_tmpdir(items[0]) as tmpdir:
                 out_base = utils.splitext_plus(tx_out_file)[0]
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)

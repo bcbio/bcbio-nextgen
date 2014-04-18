@@ -221,7 +221,7 @@ class BroadRunner:
 
     def run_gatk(self, params, tmp_dir=None, log_error=True, memory_retry=False,
                  data=None, region=None, memscale=None):
-        with curdir_tmpdir() as local_tmp_dir:
+        with curdir_tmpdir({"config": self._config}) as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
             cl = self.cl_gatk(params, tmp_dir, memscale=memscale)
@@ -235,7 +235,7 @@ class BroadRunner:
                        log_error=log_error)
 
     def run_mutect(self, params, tmp_dir=None):
-        with curdir_tmpdir() as local_tmp_dir:
+        with curdir_tmpdir({"config": self._config}) as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
             cl = self.cl_mutect(params, tmp_dir)

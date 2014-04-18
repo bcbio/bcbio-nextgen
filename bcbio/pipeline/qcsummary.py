@@ -202,7 +202,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
         ds_bam = bam.downsample(bam_file, data, 1e7)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         bam_file = ds_bam if ds_bam else bam_file
-        with utils.curdir_tmpdir(work_dir) as tx_tmp_dir:
+        with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 cl = [config_utils.get_program("fastqc", data["config"]),
                       "-t", str(num_cores), "-o", tx_tmp_dir, "-f", "bam", bam_file]

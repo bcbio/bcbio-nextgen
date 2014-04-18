@@ -16,6 +16,8 @@
 resources:
   log:
     dir: log
+  tmp:
+    dir: null
   ucsc_bigwig:
     memory: 36g
   bwa:

@@ -40,13 +40,13 @@ def prep_recal(data):
         intervals = config["algorithm"].get("variant_regions", None)
         data["work_bam"] = dup_align_bam
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file,
-                                                     platform, dbsnp_file, intervals)
+                                                     platform, dbsnp_file, intervals, data)
     return [[data]]
 
 # ## Identify recalibration information
 
 def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
-        dbsnp_file, intervals):
+                            dbsnp_file, intervals, data):
     """Step 1 of GATK recalibration process, producing table of covariates.
 
     Large whole genome BAM files take an excessively long time to recalibrate and
@@ -63,7 +63,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
         if has_aligned_reads(dup_align_bam, intervals):
-            with curdir_tmpdir() as tmp_dir:
+            with curdir_tmpdir(data) as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
                     params = ["-T", "BaseRecalibrator",
                               "-o", tx_out_file,
@@ -147,7 +147,7 @@ def _run_recal_bam(dup_align_bam, recal_file, region, ref_file, out_file, config
     if not file_exists(out_file):
         if _recal_available(recal_file):
             broad_runner = broad.runner_from_config(config)
-            with curdir_tmpdir() as tmp_dir:
+            with curdir_tmpdir({"config": config}) as tmp_dir:
                 with file_transaction(out_file) as tx_out_file:
                     params = ["-T", "PrintReads",
                               "-BQSR", recal_file,

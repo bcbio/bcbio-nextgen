@@ -11,7 +11,7 @@ from bcbio import bam, utils
 from bcbio.ngsalign import alignprep, postalign
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.utils import (memoize_outfile, file_exists, curdir_tmpdir)
+from bcbio.utils import (memoize_outfile, file_exists)
 
 # ## BAM realignment
 
@@ -31,7 +31,7 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
     extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
 
     if not file_exists(out_file):
-        with curdir_tmpdir(base_dir=align_dir) as work_dir:
+        with utils.curdir_tmpdir(data, base_dir=align_dir) as work_dir:
             with postalign.tobam_cl(data, out_file, bam.is_paired(in_bam)) as (tobam_cl, tx_out_file):
                 rg_info = get_rg_info(names)
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
@@ -67,7 +67,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     extra_novo_args = " ".join(_novoalign_args_from_config(data["config"]))
     rg_info = get_rg_info(names)
     if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
-        with utils.curdir_tmpdir() as work_dir:
+        with utils.curdir_tmpdir(data) as work_dir:
             with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 cmd = ("{novoalign} -o SAM '{rg_info}' -d {ref_file} -f {fastq_file} {pair_file} "

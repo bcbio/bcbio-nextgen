@@ -75,7 +75,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     samples = run_info.organize(dirs, config, run_info_yaml)
     pipelines = _pair_lanes_with_pipelines(samples)
     final = []
-    with utils.curdir_tmpdir() as tmpdir:
+    with utils.curdir_tmpdir({"config": config}) as tmpdir:
         tempfile.tempdir = tmpdir
         for pipeline, pipeline_items in pipelines.items():
             pipeline_items = _add_provenance(pipeline_items, dirs, parallel, config)

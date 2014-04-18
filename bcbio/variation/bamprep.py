@@ -139,7 +139,7 @@ def piped_bamprep(data, region=None, out_file=None):
                                                      data["config"])
         else:
             if not utils.file_exists(out_file):
-                with utils.curdir_tmpdir() as tmp_dir:
+                with utils.curdir_tmpdir(data) as tmp_dir:
                     _piped_bamprep_region(data, region, out_file, tmp_dir)
             prep_bam = out_file
         bam.index(prep_bam, data["config"])

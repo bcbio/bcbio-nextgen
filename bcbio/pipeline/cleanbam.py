@@ -34,7 +34,7 @@ def _filter_bad_reads(in_bam, ref_file, config):
     bam.index(in_bam, config)
     out_file = "%s-gatkfilter.bam" % os.path.splitext(in_bam)[0]
     if not utils.file_exists(out_file):
-        with utils.curdir_tmpdir() as tmp_dir:
+        with utils.curdir_tmpdir({"config": config}) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 params = ["-T", "PrintReads",
                           "-R", ref_file,

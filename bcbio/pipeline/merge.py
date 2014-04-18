@@ -59,7 +59,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
             if len(bam_files) > batch_size:
                 bam_files = [merge_bam_files(xs, work_dir, config, out_file, i)
                              for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
-            with utils.curdir_tmpdir() as tmpdir:
+            with utils.curdir_tmpdir({"config": config}) as tmpdir:
                 with utils.chdir(tmpdir):
                     merge_cl = _bamtools_merge(bam_files)
                     with file_transaction(out_file) as tx_out_file:

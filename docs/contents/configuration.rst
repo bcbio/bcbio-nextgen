@@ -442,6 +442,39 @@ and memory and compute resources to devote to them::
   the third party software tool. Include the path to a GATK supplied key file
   to disable the `GATK phone home`_ feature.
 
+Temporary directory
+===================
+
+You also use the resource section to specify system specific parameters like
+global temporary directories::
+
+    resources:
+      tmp:
+        dir: /scratch
+
+This is useful on cluster systems with large attached local storage, where you
+can avoid some shared filesystem IO by writing temporary files to the local
+disk. When setting this keep in mind that the global temporary disk must have
+enough space to handle intermediates. The space differs between steps but
+generally you'd need to have 2 times the largest input file per sample and
+account for samples running simultaneously on multiple core machines.
+
+Sample specific resources
+=========================
+
+To override any of the global resource settings in a sample specific manner, you
+write a resource section within your sample YAML configuration. For example, to
+create a sample specific temporary directory and pass a command line option to
+novoalign, write a sample resource specification like::
+
+    - description: Example
+      analysis: variant2
+      resources:
+        novoalign:
+          options: [-o, FullNW]
+        tmp:
+          dir: tmp/sampletmpdir
+
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
 .. _YAML format: https://en.wikipedia.org/wiki/YAML#Examples

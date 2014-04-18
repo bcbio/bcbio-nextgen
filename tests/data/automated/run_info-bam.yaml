@@ -38,6 +38,8 @@ details:
     resources:
       novoalign:
         options: [-o, FullNW]
+      tmp:
+        dir: tmp/sampletmpdir
       #gatk:
       #  dir: /usr/share/java/gatk-1.6-13-g91f02df
     metadata:

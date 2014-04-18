@@ -108,13 +108,14 @@ def gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
     return runner.cl_gatk(params, tmp_dir)
 
 def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
-                           region=None, out_file=None, deep_coverage=False):
+                           region=None, out_file=None, deep_coverage=False,
+                           config=None):
     """Perform realignment of BAM file in specified regions
     """
     if out_file is None:
         out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
     if not file_exists(out_file):
-        with curdir_tmpdir() as tmp_dir:
+        with curdir_tmpdir({"config": config}) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 logger.info("GATK IndelRealigner: %s %s" %
                             (os.path.basename(align_bam), region))
@@ -143,7 +144,7 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
                                                      variant_regions)
         realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,
                                              realign_target_file, region,
-                                             out_file, deep_coverage)
+                                             out_file, deep_coverage, config=config)
         # No longer required in recent GATK (> Feb 2011) -- now done on the fly
         # realign_sort_bam = runner.run_fn("picard_fixmate", realign_bam)
         return realign_bam

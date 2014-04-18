@@ -48,6 +48,11 @@ def organize(dirs, config, run_info_yaml):
         elif isinstance("name", basestring):
             item["name"] = [item["name"], item["description"]]
         item = add_reference_resources(item)
+        # Create temporary directories and make absolute
+        if utils.get_in(item, ("config", "resources", "tmp", "dir")):
+            utils.safe_makedir(utils.get_in(item, ("config", "resources", "tmp", "dir")))
+            item["config"]["resources"]["tmp"] = genome.abs_file_paths(
+                utils.get_in(item, ("config", "resources", "tmp")))
         out.append(item)
     return out
 

@@ -24,7 +24,7 @@ def tobam_cl(data, out_file, is_paired=False):
     - If unpaired, use biobambam's bammarkduplicates
     """
     do_dedup = _check_dedup(data)
-    with utils.curdir_tmpdir() as tmpdir:
+    with utils.curdir_tmpdir(data) as tmpdir:
         with file_transaction(out_file) as tx_out_file:
             if not do_dedup:
                 yield (_sam_to_sortbam_cl(data, tmpdir, tx_out_file), tx_out_file)
