@@ -121,6 +121,13 @@ def _sanity_check_args(args):
         elif args.paralleltype == "ipython" and (not args.queue or not args.scheduler):
             return "IPython parallel requires queue (-q) and scheduler (-s) arguments."
 
+def _sanity_check_kwargs(args):
+    """Sanity check after setting up input arguments, handling back compatibility
+    """
+    if not args.get("run_info_yaml"):
+        return ("Require a sample YAML file describing inputs: "
+                "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html")
+
 def parse_cl_args(in_args):
     """Parse input commandline arguments, handling multiple cases.
 
@@ -180,6 +187,9 @@ def parse_cl_args(in_args):
                   "workflow": args.workflow,
                   "workdir": args.workdir}
         kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
+        error_msg = _sanity_check_kwargs(kwargs)
+        if error_msg:
+            parser.error(error_msg)
     else:
         assert sub_cmd is not None
         kwargs = {"args": args,

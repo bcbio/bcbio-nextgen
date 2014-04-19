@@ -12,7 +12,6 @@ import yaml
 
 from bcbio import utils
 from bcbio.log import logger
-from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.variation import effects, genotype, population
@@ -24,19 +23,10 @@ def organize(dirs, config, run_info_yaml):
 
     Creates the high level structure used for subsequent processing.
     """
-    if run_info_yaml and os.path.exists(run_info_yaml):
-        logger.info("Using input YAML configuration: %s" % run_info_yaml)
-        run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
-    else:
-        logger.info("Fetching run details from Galaxy instance")
-        fc_name, fc_date = flowcell.parse_dirname(dirs["flowcell"])
-        galaxy_api = GalaxyApiAccess(config['galaxy_url'], config['galaxy_api_key'])
-        run_details = []
-        galaxy_info = galaxy_api.run_details(fc_name, fc_date)
-        for item in galaxy_info["details"]:
-            item["upload"] = {"method": "galaxy", "run_id": galaxy_info["run_id"],
-                              "fc_name": fc_name, "fc_date": fc_date}
-            run_details.append(item)
+    logger.info("Using input YAML configuration: %s" % run_info_yaml)
+    assert run_info_yaml and os.path.exists(run_info_yaml), \
+        "Did not find input sample YAML file: %s" % run_info_yaml
+    run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
     out = []
     for item in run_details:
         # add algorithm details to configuration, avoid double specification
