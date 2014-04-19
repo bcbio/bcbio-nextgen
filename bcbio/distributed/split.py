@@ -120,8 +120,10 @@ def _add_combine_extras(args, extras):
     # Pass along extras when we have no processed items
     if len(args) == 0:
         return [[x] for x in extras]
+    # Otherwise, proceed with merging
     extra_out_map = collections.defaultdict(list)
-    file_key = _get_combine_key(args[0][0])
+    combine_data = [x[0] for x in args if "combine" in x[0]]
+    file_key = _get_combine_key(combine_data[0])
     out = []
     no_combine_extras = 0
     for extra in extras:
@@ -173,23 +175,20 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
     extras = []
     for data in output:
         cur_file = data.get(file_key)
-        # Special case -- shared variant calls with another sample, do not need to process
-        if cur_file is None:
-            data.pop(file_key, None)
-            cur_out = combine_map[data.pop("%s-shared" % file_key)]
-        # Standard case -- want to combine all of the individual parts
+        if not cur_file:
+            extras.append([data])
         else:
             cur_out = combine_map[cur_file]
             out_map[cur_out].append(cur_file)
             extra_args[cur_out].append([data[x] for x in combine_arg_keys])
             data[file_key] = cur_out
-        if cur_out not in already_added:
-            already_added.append(cur_out)
-            final_args[cur_out] = data
-        elif "combine" in data:
-            final_args = _add_combine_parts(final_args, cur_out, data)
-        else:
-            extras.append([data])
+            if cur_out not in already_added:
+                already_added.append(cur_out)
+                final_args[cur_out] = data
+            elif "combine" in data:
+                final_args = _add_combine_parts(final_args, cur_out, data)
+            else:
+                extras.append([data])
     combine_args = [[v, k] + _get_extra_args(extra_args[k], combine_arg_keys)
                     for (k, v) in out_map.iteritems()]
     return combine_args, [[final_args[x]] for x in already_added] + extras
@@ -219,8 +218,10 @@ def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):
                     finished_order.append(out_final)
                     data[file_key] = out_final
                     finished_map[out_final] = data
-                else:
+                elif "combine" in data:
                     finished_map = _add_combine_parts(finished_map, out_final, data)
+                else:
+                    extras.append(data)
             else:
                 extras.append(data)
     finished_out = [[finished_map[x]] for x in finished_order]

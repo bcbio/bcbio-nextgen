@@ -233,9 +233,12 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             with open(input_vcf_file, "w") as out_handle:
                 for fname in sorted_files:
                     out_handle.write(fname + "\n")
-            compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
-            cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Concatenate variants")
+            if len(orig_files) > 0:
+                compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
+                cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Concatenate variants")
+            else:
+                write_empty_vcf(tx_out_file)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file

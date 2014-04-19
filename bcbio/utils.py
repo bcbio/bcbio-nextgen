@@ -165,7 +165,7 @@ def curdir_tmpdir(data=None, base_dir=None, remove=True):
 
     This can also handle a configured temporary directory to use.
     """
-    config_tmpdir = get_in(data, ("config", "resources", "tmp", "dir"))
+    config_tmpdir = get_in(data, ("config", "resources", "tmp", "dir")) if data else None
     if config_tmpdir:
         tmp_dir_base = os.path.join(config_tmpdir, "bcbiotmp")
     elif base_dir is not None:

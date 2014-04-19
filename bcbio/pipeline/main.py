@@ -361,6 +361,12 @@ class Variant2Pipeline(AbstractPipeline):
         logger.info("Timing: finished")
         return samples
 
+def _debug_samples(i, samples):
+    print "---", i, len(samples)
+    for sample in (x[0] for x in samples):
+        print "  ", sample["description"], sample.get("region"), \
+            utils.get_in(sample, ("config", "algorithm", "variantcaller"))
+
 class SNPCallingPipeline(Variant2Pipeline):
     """Back compatible: old name for variant analysis.
     """
@@ -386,19 +392,9 @@ class StandardPipeline(AbstractPipeline):
                 samples = run_parallel("postprocess_alignment", samples)
                 samples = run_parallel("combine_sample_regions", [samples])
                 samples = region.clean_sample_data(samples)
-        ## Processing on sub regions
-        with prun.start(_wres(parallel, ["gatk", "picard", "samtools"]),
-                        samples, config, dirs, "full",
-                        multiplier=region.get_max_counts(samples), max_multicore=1) as run_parallel:
-            with profile.report("alignment post-processing", dirs):
-                samples = region.parallel_prep_region(samples, run_parallel)
-                samples = genotype.parallel_variantcall_region(samples, run_parallel)
-                samples = run_parallel("split_variants_by_sample", samples)
-        ## Finalize BAMs and QC
+        ## Quality control
         with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools"]),
                         samples, config, dirs, "multicore2") as run_parallel:
-            with profile.report("prepped BAM merging", dirs):
-                samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")

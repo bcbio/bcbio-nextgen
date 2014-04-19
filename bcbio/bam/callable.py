@@ -259,7 +259,11 @@ def block_regions(in_bam, ref_file, config):
         nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
         nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
         nblock_regions.saveas(nblock_bed)
-        ref_regions.subtract(nblock_bed).merge(d=min_n_size).saveas(callblock_bed)
+        if len(ref_regions.subtract(nblock_regions)) > 0:
+            ref_regions.subtract(nblock_bed).merge(d=min_n_size).saveas(callblock_bed)
+        else:
+            raise ValueError("No callable regions found from BAM file. Alignment regions might "
+                             "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
     return callblock_bed, nblock_bed, callable_bed
 
 def _write_bed_regions(sample, final_regions, out_file, out_file_ref):

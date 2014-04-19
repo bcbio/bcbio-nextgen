@@ -52,6 +52,9 @@ def delayed_bam_merge(data):
         in_files = sorted(list(set([data[file_key]] + extras)))
         out_file = data["combine"][file_key]["out"]
         for ext in ["-disc", "-sr", ""]:
+            merged_file = None
+            if os.path.exists(utils.append_stem(out_file, ext)):
+                cur_out_file, cur_in_files = out_file, []
             if ext:
                 cur_in_files = list(filter(os.path.exists, (utils.append_stem(f, ext) for f in in_files)))
                 cur_out_file = utils.append_stem(out_file, ext) if len(in_files) > 0 else None
@@ -60,9 +63,14 @@ def delayed_bam_merge(data):
             if cur_out_file:
                 config = copy.deepcopy(data["config"])
                 config["algorithm"]["save_diskspace"] = False
-                merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), config,
-                                              out_file=cur_out_file)
+                if len(in_files) > 0:
+                    merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), config,
+                                                  out_file=cur_out_file)
+                else:
+                    assert os.path.exists(cur_out_file)
+                    merged_file = cur_out_file
         data.pop("region", None)
         data.pop("combine", None)
-        data[file_key] = merged_file
+        if merged_file:
+            data[file_key] = merged_file
     return [[data]]
