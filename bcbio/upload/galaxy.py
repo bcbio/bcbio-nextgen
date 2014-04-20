@@ -9,6 +9,7 @@ import os
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.upload import filesystem
+from bcbio.pipeline import qcsummary
 
 # Avoid bioblend import errors, raising at time of use
 try:
@@ -26,8 +27,16 @@ def update_file(finfo, sample_info, config):
                          "shared filesystem path to move files to.")
     folder_name = "%s_%s" % (config["fc_date"], config["fc_name"])
     storage_dir = utils.safe_makedir(os.path.join(config["dir"], folder_name))
-    storage_file = (filesystem.copy_finfo(finfo, storage_dir, pass_uptodate=True)
-                    if finfo.get("type") != "directory" else None)
+    if finfo.get("type") == "directory":
+        storage_file = None
+        if finfo.get("ext") == "qc":
+            pdf_file = qcsummary.prep_pdf(finfo["path"], config)
+            if pdf_file:
+                finfo["path"] = pdf_file
+                finfo["type"] = "pdf"
+                storage_file = filesystem.copy_finfo(finfo, storage_dir, pass_uptodate=True)
+    else:
+        storage_file = filesystem.copy_finfo(finfo, storage_dir, pass_uptodate=True)
     if "galaxy_url" in config and "galaxy_api_key" in config:
         galaxy_url = config["galaxy_url"]
         if not galaxy_url.endswith("/"):
@@ -50,6 +59,12 @@ def _file_to_folder(gi, fname, sample_info, libitems, library, folder):
     """Check if file exists on Galaxy, if not upload to specified folder.
     """
     full_name = os.path.join(folder["name"], os.path.basename(fname))
+
+    # Handle VCF: Galaxy reports VCF files without the gzip extension
+    file_type = "vcf_bgzip" if full_name.endswith(".vcf.gz") else "auto"
+    if full_name.endswith(".vcf.gz"):
+        full_name = full_name.replace(".vcf.gz", ".vcf")
+
     for item in libitems:
         if item["name"] == full_name:
             return item
@@ -57,10 +72,11 @@ def _file_to_folder(gi, fname, sample_info, libitems, library, folder):
     return gi.libraries.upload_from_galaxy_filesystem(str(library.id), fname, folder_id=str(folder["id"]),
                                                       link_data_only="link_to_files",
                                                       dbkey=sample_info["genome_build"],
-                                                      roles=str(library.roles))
+                                                      file_type=file_type,
+                                                      roles=str(library.roles) if library.roles else None)
 
 def _get_folder(gi, folder_name, library, libitems):
-    """Retrieve or create a folder inside the library with the right now.
+    """Retrieve or create a folder inside the library with the specified name.
     """
     for item in libitems:
         if item["type"] == "folder" and item["name"] == "/%s" % folder_name:
@@ -77,7 +93,7 @@ def _get_library(gi, sample_info, config):
     role = sample_info.get("galaxy_role",
                            config.get("galaxy_role"))
     if galaxy_lib:
-        return _get_library_from_name(gi, galaxy_lib, role, sample_info)
+        return _get_library_from_name(gi, galaxy_lib, role, sample_info, create=True)
     elif config.get("private_libs") or config.get("lab_association") or config.get("researcher"):
         return _library_from_nglims(gi, sample_info, config)
     else:
@@ -86,11 +102,17 @@ def _get_library(gi, sample_info, config):
 
 def _get_library_from_name(gi, name, role, sample_info, create=False):
     for lib in gi.libraries.get_libraries():
-        if lib["name"].lower().find(name.lower()) >= 0:
+        if lib["name"].lower() == name.lower() and not lib["deleted"]:
             return GalaxyLibrary(lib["id"], lib["name"], role)
     if create and name:
         logger.info("Creating Galaxy library: '%s'" % name)
-        lib = gi.libraries.create_library(name)[0]
+        lib = gi.libraries.create_library(name)
+        librole = str(gi.users.get_current_user()["id"] if not role else role)
+        try:
+            gi.libraries.set_library_permissions(str(lib["id"]), librole, librole, librole, librole)
+        # XXX Returns error on Galaxy side but seems to work -- ugly
+        except:
+            pass
         return GalaxyLibrary(lib["id"], lib["name"], role)
     else:
         raise ValueError("Could not find Galaxy library matching '%s' for sample %s" %

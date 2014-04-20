@@ -25,7 +25,7 @@ import bcbio.rnaseq.qc
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.rnaseq.coverage import plot_gene_coverage
 
-# ## High level functions to generate summary PDF
+# ## High level functions to generate summary
 
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
@@ -50,6 +50,24 @@ def pipeline_summary(data):
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = _run_qc_tools(work_bam, data)
     return [[data]]
+
+def prep_pdf(qc_dir, config):
+    """Create PDF from HTML summary outputs in QC directory.
+
+    Requires wkhtmltopdf installed: http://www.msweet.org/projects.php?Z1
+    Thanks to: https://www.biostars.org/p/16991/
+    """
+    html_file = os.path.join(qc_dir, "fastqc", "fastqc_report.html")
+    try:
+        topdf = config_utils.get_program("wkhtmltopdf", config)
+    except config_utils.CmdNotFound:
+        topdf = None
+    if topdf and utils.file_exists(html_file):
+        out_file = "%s.pdf" % os.path.splitext(html_file)[0]
+        if not utils.file_exists(out_file):
+            cmd = [topdf, html_file, out_file]
+            do.run(cmd, "Convert QC HTML to PDF")
+        return out_file
 
 def _run_qc_tools(bam_file, data):
     """Run a set of third party quality control tools, returning QC directory and metrics.
