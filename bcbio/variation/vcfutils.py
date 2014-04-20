@@ -249,9 +249,6 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
 
     Handles cases where we split files into SNPs/Indels for processing then
     need to merge back into a final file.
-
-    We could handle multiple input cases with recursion if needed but currently
-    only works with two inputs.
     """
     in_pipeline = False
     if isinstance(orig_files, dict):

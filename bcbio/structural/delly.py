@@ -42,7 +42,19 @@ def _run_delly(bam_files, sv_type, ref_file, work_dir, items):
                     vcfutils.write_empty_vcf(out_file)
                 else:
                     raise
-    return [out_file]
+    return [_clean_bgzip_delly(out_file)]
+
+def _clean_bgzip_delly(in_file):
+    """Provide bgzipped input files, removing problem GL specifications from output.
+
+    GATK does not like missing GLs like '.,.,.'. This converts them to the recognized '.'
+    """
+    out_file = "%s.gz" % in_file
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            cmd = "sed 's/\.,\.,\././' {in_file} | bgzip -c > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Clean and bgzip delly output")
+    return out_file
 
 def run(items):
     """Perform detection of structural variations with delly.
