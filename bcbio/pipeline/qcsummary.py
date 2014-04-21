@@ -252,15 +252,17 @@ def _run_fastqc(bam_file, data, fastqc_out):
     """Run fastqc, generating report in specified directory and parsing metrics.
 
     Downsamples to 10 million reads to avoid excessive processing times with large
-    files.
+    files, unless we're running a Standard/QC pipeline.
     """
     sentry_file = os.path.join(fastqc_out, "fastqc_report.html")
     if not os.path.exists(sentry_file):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
-        ds_bam = bam.downsample(bam_file, data, 1e7)
-        num_cores = data["config"]["algorithm"].get("num_cores", 1)
+        ds_bam = (bam.downsample(bam_file, data, 1e7)
+                  if data.get("analysis", "").lower() not in ["standard"]
+                  else None)
         bam_file = ds_bam if ds_bam else bam_file
+        num_cores = data["config"]["algorithm"].get("num_cores", 1)
         with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 cl = [config_utils.get_program("fastqc", data["config"]),

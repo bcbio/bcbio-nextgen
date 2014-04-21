@@ -87,8 +87,8 @@ def _select_default_algorithm(analysis):
     """
     if not analysis or analysis == "Standard":
         return "Standard", {"aligner": "bwa", "platform": "illumina", "quality_format": "Standard",
-                            "recalibrate": False, "realign": False, "mark_duplicates": "samtools",
-                            "nomap_split_targets": 50, "variantcaller": False}
+                            "recalibrate": False, "realign": False, "mark_duplicates": True,
+                            "variantcaller": False}
     elif "variant" in analysis:
         try:
             config, _ = template.name_to_config(analysis)

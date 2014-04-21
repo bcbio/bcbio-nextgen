@@ -124,7 +124,7 @@ def _sanity_check_args(args):
 def _sanity_check_kwargs(args):
     """Sanity check after setting up input arguments, handling back compatibility
     """
-    if not args.get("run_info_yaml"):
+    if not args.get("workflow") and not args.get("run_info_yaml"):
         return ("Require a sample YAML file describing inputs: "
                 "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html")
 
