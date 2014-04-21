@@ -1,5 +1,7 @@
 """Quality control and summary metrics for next-gen alignments and analysis.
 """
+import collections
+import csv
 import os
 import shutil
 import subprocess
@@ -19,7 +21,7 @@ except ImportError:
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, run_info
 from bcbio.provenance import do
 import bcbio.rnaseq.qc
 from bcbio.variation.realign import has_aligned_reads
@@ -38,6 +40,7 @@ def generate_parallel(samples, run_parallel):
             data[0]["summary"] = {}
         data[0]["summary"]["project"] = summary_file
         samples.append(data)
+    samples = _add_researcher_summary(samples, summary_file)
     return samples
 
 def pipeline_summary(data):
@@ -109,17 +112,17 @@ def write_project_summary(samples):
     date = str(datetime.now())
     prev_samples = _other_pipeline_samples(out_file, samples)
     with open(out_file, "w") as out_handle:
-        yaml.dump({"date": date}, out_handle,
-                  default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump({"date": date}, out_handle,
+                       default_flow_style=False, allow_unicode=False)
         if test_run:
-            yaml.dump({"test_run": True}, out_handle, default_flow_style=False,
-                      allow_unicode=False)
-        yaml.dump({"upload": upload_dir}, out_handle,
-                  default_flow_style=False, allow_unicode=False)
-        yaml.dump({"bcbio_system": samples[0][0]["config"].get("bcbio_system", "")}, out_handle,
-                  default_flow_style=False, allow_unicode=False)
-        yaml.dump({"samples": prev_samples + [_save_fields(sample[0]) for sample in samples]}, out_handle,
-                  default_flow_style=False, allow_unicode=False)
+            yaml.safe_dump({"test_run": True}, out_handle, default_flow_style=False,
+                           allow_unicode=False)
+        yaml.safe_dump({"upload": upload_dir}, out_handle,
+                       default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump({"bcbio_system": samples[0][0]["config"].get("bcbio_system", "")}, out_handle,
+                       default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump({"samples": prev_samples + [_save_fields(sample[0]) for sample in samples]}, out_handle,
+                       default_flow_style=False, allow_unicode=False)
     return out_file
 
 def _other_pipeline_samples(summary_file, cur_samples):
@@ -164,6 +167,44 @@ def _parse_disambiguate(disambiguatestatsfilename):
                 disambig_stats = [int(x) for x in disambig_stats_tmp]
     return disambig_stats
 
+# ## Generate researcher specific summaries
+
+def _add_researcher_summary(samples, summary_yaml):
+    """Generate summary files per researcher if organized via a LIMS.
+    """
+    by_researcher = collections.defaultdict(list)
+    for data in (x[0] for x in samples):
+        researcher = utils.get_in(data, ("upload", "researcher"))
+        if researcher:
+            by_researcher[researcher].append(data["description"])
+    out_by_researcher = {}
+    for researcher, descrs in by_researcher.items():
+        out_by_researcher[researcher] = _summary_csv_by_researcher(summary_yaml, researcher,
+                                                                   set(descrs), samples[0][0])
+    out = []
+    for data in (x[0] for x in samples):
+        researcher = utils.get_in(data, ("upload", "researcher"))
+        if researcher:
+            data["summary"]["researcher"] = out_by_researcher[researcher]
+        out.append([data])
+    return out
+
+def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
+    """Generate a CSV file with summary information for a researcher on this project.
+    """
+    out_file = os.path.join(utils.safe_makedir(os.path.join(data["dirs"]["work"], "researcher")),
+                            "%s-summary.tsv" % run_info.clean_name(researcher))
+    metrics = ["Total reads", "Mapped reads", "Mapped reads pct", "Duplicates", "Duplicates pct"]
+    with open(summary_yaml) as in_handle:
+        with open(out_file, "w") as out_handle:
+            writer = csv.writer(out_handle, dialect="excel-tab")
+            writer.writerow(["Name"] + metrics)
+            for sample in yaml.safe_load(in_handle)["samples"]:
+                if sample["description"] in descrs:
+                    row = [sample["description"]] + [utils.get_in(sample, ("summary", "metrics", x), "")
+                                                     for x in metrics]
+                    writer.writerow(row)
+    return out_file
 
 # ## Run and parse read information from FastQC
 

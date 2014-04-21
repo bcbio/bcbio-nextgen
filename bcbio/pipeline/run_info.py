@@ -8,6 +8,7 @@ import itertools
 import os
 from contextlib import closing
 
+import string
 import yaml
 
 from bcbio import utils
@@ -36,7 +37,9 @@ def organize(dirs, config, run_info_yaml):
         if "name" not in item:
             item["name"] = ["", item["description"]]
         elif isinstance("name", basestring):
-            item["name"] = [item["name"], item["description"]]
+            description = "%s-%s" % (item["name"], clean_name(item["description"]))
+            item["name"] = [item["name"], description]
+            item["description"] = description
         item = add_reference_resources(item)
         # Create temporary directories and make absolute
         if utils.get_in(item, ("config", "resources", "tmp", "dir")):
@@ -390,3 +393,16 @@ def _replace_global_vars(xs, global_vars):
         return final
     else:
         return xs
+
+def clean_name(xs):
+    final = []
+    safec = "_"
+    for x in xs:
+        if x not in string.ascii_letters + string.digits:
+            if len(final) > 0 and final[-1] != safec:
+                final.append(safec)
+        else:
+            final.append(x)
+    if final[-1] == safec:
+        final = final[:-1]
+    return "".join(final)

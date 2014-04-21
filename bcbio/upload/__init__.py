@@ -5,7 +5,7 @@ import os
 
 from bcbio import utils
 from bcbio.upload import shared, filesystem, galaxy, s3
-from bcbio.galaxy import nglims
+from bcbio.pipeline import run_info
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -60,11 +60,11 @@ def _add_meta(xs, sample=None, config=None):
     out = []
     for x in xs:
         x["mtime"] = shared.get_file_timestamp(x["path"])
-        if sample:
+        if sample and "sample" not in x:
             if isinstance(sample["name"], (tuple, list)):
                 name = sample["name"][-1]
             else:
-                name = "%s-%s" % (sample["name"], nglims.clean_name(sample["description"]))
+                name = "%s-%s" % (sample["name"], run_info.clean_name(sample["description"]))
             x["sample"] = name
         if config:
             if "fc_name" in config and "fc_date" in config:
@@ -130,6 +130,11 @@ def _maybe_add_summary(algorithm, sample, out):
             out.append({"path": sample["summary"]["qc"],
                         "type": "directory",
                         "ext": "qc"})
+        if utils.get_in(sample, ("summary", "researcher")):
+            out.append({"path": sample["summary"]["researcher"],
+                        "type": "tsv",
+                        "sample": run_info.clean_name(utils.get_in(sample, ("upload", "researcher"))),
+                        "ext": "summary"})
     return out
 
 def _maybe_add_alignment(algorithm, sample, out):

@@ -6,7 +6,6 @@ import glob
 import gzip
 import operator
 import os
-import string
 import subprocess
 
 import joblib
@@ -16,6 +15,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.illumina import flowcell
+from bcbio.pipeline.run_info import clean_name
 from bcbio.workflow import template
 
 def prep_samples_and_config(run_folder, ldetails, fastq_dir, config):
@@ -79,7 +79,7 @@ def _prepare_sample(data, run_folder):
         analysis, algorithm = _select_default_algorithm(out.get("analysis"))
         out["algorithm"] = algorithm
         out["analysis"] = analysis
-    out["name"] = [out["name"], clean_name(out["description"])]
+    out["name"] = [out["name"], "%s-%s" % (out["name"], clean_name(out["description"]))]
     return out
 
 def _select_default_algorithm(analysis):
@@ -180,16 +180,3 @@ def _flatten_lane_details(runinfo):
             cur["project_name"] = clean_name(ldetail["project_name"])
             out.append(cur)
     return out
-
-def clean_name(xs):
-    final = []
-    safec = "_"
-    for x in xs:
-        if x not in string.ascii_letters + string.digits:
-            if len(final) > 0 and final[-1] != safec:
-                final.append(safec)
-        else:
-            final.append(x)
-    if final[-1] == safec:
-        final = final[:-1]
-    return "".join(final)

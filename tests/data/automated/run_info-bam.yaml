@@ -1,6 +1,7 @@
 upload:
   dir: upload
   # method: galaxy
+  # researcher: Test Jones
   # galaxy_url: http://localhost:8080
   # galaxy_api_key: 3de311fb973eeabaafc9aebc667b5643
   # galaxy_library: test
