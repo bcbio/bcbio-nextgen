@@ -69,10 +69,15 @@ def calc_callable_loci(data, region=None, out_file=None):
 
 def _get_coverage_in_region(in_bam, region, depth):
     """Retrieve summary of coverage in a region.
+    Requires positive non-zero mapping quality at a position, matching GATK's
+    CallableLoci defaults.
+
     Uses chajo's approach of pre-allocating a numpy array for coverage before collapsing
     to cleanly handle non-covered positions. This uses 2Gb memory for human chr1. If memory
     requirements become an issue, could look at splitting long chromosomes at smart places.
-    XXX Can replace `positions` with chanjo functionality when it accepts max_depth keyword.
+
+    XXX Can replace `positions` with chanjo functionality when it accepts max_depth keyword
+    and handles mapping quality.
     """
     # special case, do not calculate if we are in a chromosome not covered by BED file
     if region.attrs.get("no_coverage"):
@@ -81,7 +86,8 @@ def _get_coverage_in_region(in_bam, region, depth):
         positions = numpy.zeros(region.end + 1 - region.start)
         for col in in_bam.pileup(str(region.chrom), region.start, region.end + 1, stepper="all",
                                  max_depth=depth["max"] + 10, truncate=True):
-            positions[col.pos - region.start] = col.n
+            n = sum(1 for read in col.pileups if read.alignment.mapq > 0)
+            positions[col.pos - region.start] = n
         cur_ctype = None
         cur_start = None
         for i, count in enumerate(positions):
