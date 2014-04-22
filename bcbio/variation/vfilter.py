@@ -2,6 +2,7 @@
 """
 from distutils.version import LooseVersion
 import os
+import shutil
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
@@ -18,14 +19,17 @@ def hard_w_expression(vcf_file, expression, data, filterext=""):
     out_file = "{base}-filter{filterext}{ext}".format(**locals())
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            bcftools = config_utils.get_program("bcftools", data["config"])
-            output_type = "z" if out_file.endswith(".gz") else "v"
-            variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
-            intervals = ("-t %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
-                         if variant_regions else "")
-            cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '+' "
-                   "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
-            do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
+            if vcfutils.vcf_has_variants(vcf_file):
+                bcftools = config_utils.get_program("bcftools", data["config"])
+                output_type = "z" if out_file.endswith(".gz") else "v"
+                variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
+                intervals = ("-t %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
+                             if variant_regions else "")
+                cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '+' "
+                       "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
+                do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
+            else:
+                shutil.copy(vcf_file, out_file)
     if out_file.endswith(".vcf.gz"):
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file

@@ -79,7 +79,9 @@ def _prepare_sample(data, run_folder):
         analysis, algorithm = _select_default_algorithm(out.get("analysis"))
         out["algorithm"] = algorithm
         out["analysis"] = analysis
-    out["name"] = [out["name"], "%s-%s" % (out["name"], clean_name(out["description"]))]
+    description = "%s-%s" % (out["name"], clean_name(out["description"]))
+    out["name"] = [out["name"], description]
+    out["description"] = description
     return out
 
 def _select_default_algorithm(analysis):

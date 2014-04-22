@@ -129,7 +129,7 @@ def split_variants_by_sample(data):
         out = []
         for i, sub_data in enumerate(data["group_orig"]):
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":
-                if "combine" in data:
+                if "combine" in data and "combine" not in sub_data:
                     sub_data["combine"] = data["combine"]
                 sub_data["vrn_file"] = data["vrn_file"]
             out.append([sub_data])
@@ -143,7 +143,7 @@ def split_variants_by_sample(data):
                 vcfutils.select_sample(data["vrn_file"], sub_data["name"][-1], sub_vrn_file, data["config"])
             elif not os.path.exists(sub_vrn_file):
                 utils.symlink_plus(data["vrn_file"], sub_vrn_file)
-            if "combine" in data:
+            if "combine" in data and "combine" not in sub_data:
                 sub_data["combine"] = data["combine"]
             sub_data["vrn_file"] = sub_vrn_file
             out.append([sub_data])

@@ -70,8 +70,9 @@ def run(items):
     config["resources"]["delly"] = delly_config
     parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1),
                 "progs": ["delly"]}
+    sv_types = ["DEL", "DUP", "INV"]  # "TRA" has invalid VCF END specifications that GATK doesn't like
     bytype_vcfs = run_multicore(_run_delly, [(work_bams, sv_type, ref_file, work_dir, items)
-                                             for sv_type in ["DEL", "DUP", "INV", "TRA"]],
+                                             for sv_type in sv_types],
                                 config, parallel)
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
     delly_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])

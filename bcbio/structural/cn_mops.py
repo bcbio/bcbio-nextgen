@@ -20,7 +20,7 @@ def run(items):
     """Detect copy number variations from batched set of samples using cn.mops.
     """
     names = [x["name"][-1] for x in items]
-    work_bams = [x["work_bam"] for x in items]
+    work_bams = [x["align_bam"] for x in items]
     if len(items) == 1:
         raise ValueError("cn.mops only works on batches with multiple samples")
     data = items[0]

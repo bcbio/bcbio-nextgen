@@ -57,7 +57,7 @@ def delayed_bam_merge(data):
                 cur_out_file, cur_in_files = out_file, []
             if ext:
                 cur_in_files = list(filter(os.path.exists, (utils.append_stem(f, ext) for f in in_files)))
-                cur_out_file = utils.append_stem(out_file, ext) if len(in_files) > 0 else None
+                cur_out_file = utils.append_stem(out_file, ext) if len(cur_in_files) > 0 else None
             else:
                 cur_in_files, cur_out_file = in_files, out_file
             if cur_out_file:
