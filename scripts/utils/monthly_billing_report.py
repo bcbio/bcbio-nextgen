@@ -20,12 +20,12 @@ from optparse import OptionParser
 import yaml
 
 from bcbio.galaxy.api import GalaxyApiAccess
-from bcbio.pipeline.config_utils import load_config
 
 def main(config_file, month, year):
-    config = load_config(config_file)
+    with open(config_file) as in_handle:
+        config = yaml.safe_load(in_handle)
     galaxy_api = GalaxyApiAccess(config["galaxy_url"],
-        config["galaxy_api_key"])
+        config["galaxy_apikey"])
     smonth, syear = (month - 1, year) if month > 1 else (12, year - 1)
     start_date = datetime(syear, smonth, 15, 0, 0, 0)
     # last day calculation useful if definition of month is
