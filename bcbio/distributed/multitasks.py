@@ -5,7 +5,7 @@ from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
                             rnaseq)
-from bcbio.variation import (bamprep, bedutils, coverage, realign, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 
 @utils.map_wrap
@@ -43,14 +43,6 @@ def piped_bamprep(*args):
 @utils.map_wrap
 def prep_recal(*args):
     return recalibrate.prep_recal(*args)
-
-@utils.map_wrap
-def write_recal_bam(*args):
-    return recalibrate.write_recal_bam(*args)
-
-@utils.map_wrap
-def realign_sample(*args):
-    return realign.realign_sample(*args)
 
 @utils.map_wrap
 def split_variants_by_sample(*args):

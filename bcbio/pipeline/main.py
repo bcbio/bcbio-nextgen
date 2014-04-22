@@ -351,6 +351,7 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("ensemble calling", dirs):
                 samples = ensemble.combine_calls_parallel(samples, run_parallel)
+            with profile.report("validation", dirs):
                 samples = validate.summarize_grading(samples)
             with profile.report("structural variation", dirs):
                 samples = structural.run(samples, run_parallel)
@@ -365,7 +366,8 @@ def _debug_samples(i, samples):
     print "---", i, len(samples)
     for sample in (x[0] for x in samples):
         print "  ", sample["description"], sample.get("region"), \
-            utils.get_in(sample, ("config", "algorithm", "variantcaller"))
+            utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
+            [x.get("variantcaller") for x in sample.get("variants", [])]
 
 class SNPCallingPipeline(Variant2Pipeline):
     """Back compatible: old name for variant analysis.

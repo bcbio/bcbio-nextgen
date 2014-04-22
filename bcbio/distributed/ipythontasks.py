@@ -11,7 +11,7 @@ from bcbio.pipeline import (config_utils, disambiguate, sample, lane, qcsummary,
 from bcbio.provenance import system
 from bcbio import structural
 from bcbio import chipseq
-from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, coverage, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
 
@@ -83,16 +83,6 @@ def recalibrate_sample(*args):
 def prep_recal(*args):
     with _setup_logging(args):
         return apply(recalibrate.prep_recal, *args)
-
-@require(recalibrate)
-def write_recal_bam(*args):
-    with _setup_logging(args):
-        return apply(recalibrate.write_recal_bam, *args)
-
-@require(realign)
-def realign_sample(*args):
-    with _setup_logging(args):
-        return apply(realign.realign_sample, *args)
 
 @require(multi)
 def split_variants_by_sample(*args):

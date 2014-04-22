@@ -52,7 +52,7 @@ def _clean_bgzip_delly(in_file):
     out_file = "%s.gz" % in_file
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            cmd = "sed 's/\.,\.,\././' {in_file} | bgzip -c > {tx_out_file}"
+            cmd = "sed 's/\.,\.,\././g' {in_file} | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "Clean and bgzip delly output")
     return out_file
 

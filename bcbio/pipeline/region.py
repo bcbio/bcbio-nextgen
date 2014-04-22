@@ -3,6 +3,7 @@
 Handle splitting and analysis of files from chromosomal subsets separated by
 no-read regions.
 """
+import collections
 import os
 
 from bcbio import utils
@@ -22,6 +23,8 @@ def to_safestr(region):
         return region[0]
     else:
         return "_".join([str(x) for x in region])
+
+# ## Split and delayed BAM combine
 
 def _split_by_regions(dirname, out_ext, in_key):
     """Split a BAM file data analysis into chromosomal regions.
@@ -46,6 +49,30 @@ def _split_by_regions(dirname, out_ext, in_key):
         return out_file, part_info
     return _do_work
 
+def _add_combine_info(output, combine_map, file_key):
+    """Do not actually combine, but add details for later combining work.
+
+    Each sample will contain information on the out file and additional files
+    to merge, enabling other splits and recombines without losing information.
+    """
+    files_per_output = collections.defaultdict(list)
+    for part_file, out_file in combine_map.items():
+        files_per_output[out_file].append(part_file)
+    out = []
+    for data in output:
+        cur_file = data[file_key]
+        # Do not pass along nochrom, noanalysis regions
+        if data["region"][0] not in ["nochrom", "noanalysis"]:
+            # If we didn't process, no need to add combine information
+            if cur_file in combine_map:
+                out_file = combine_map[cur_file]
+                if not "combine" in data:
+                    data["combine"] = {}
+                data["combine"][file_key] = {"out": out_file,
+                                             "extras": files_per_output.get(out_file, [])}
+            out.append([data])
+    return out
+
 def parallel_prep_region(samples, run_parallel):
     """Perform full pre-variant calling BAM prep work on regions.
     """
@@ -64,7 +91,7 @@ def parallel_prep_region(samples, run_parallel):
         else:
             torun.append([data])
     return extras + parallel_split_combine(torun, split_fn, run_parallel,
-                                           "piped_bamprep", None, file_key, ["config"])
+                                           "piped_bamprep", _add_combine_info, file_key, ["config"])
 
 def delayed_bamprep_merge(samples, run_parallel):
     """Perform a delayed merge on regional prepared BAM files.

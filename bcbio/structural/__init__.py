@@ -30,11 +30,14 @@ def _handle_multiple_svcallers(data):
 def _combine_multiple_svcallers(samples):
     """
     """
-    by_bam = collections.defaultdict(list)
+    by_bam = collections.OrderedDict()
     for x in samples:
-        by_bam[x[0]["align_bam"]].append(x[0])
+        try:
+            by_bam[x[0]["align_bam"]].append(x[0])
+        except KeyError:
+            by_bam[x[0]["align_bam"]] = [x[0]]
     out = []
-    for grouped_calls in by_bam.itervalues():
+    for grouped_calls in by_bam.values():
         def orig_svcaller_order(x):
             return _get_svcallers(x).index(x["config"]["algorithm"]["svcaller_active"])
         sorted_svcalls = sorted([x for x in grouped_calls if "sv" in x],
@@ -49,7 +52,7 @@ def _combine_multiple_svcallers(samples):
 def run(samples, run_parallel):
     """Run structural variation detection using configured methods.
     """
-    to_process = collections.defaultdict(list)
+    to_process = collections.OrderedDict()
     extras = []
     for data in (xs[0] for xs in samples):
         ready_data = _handle_multiple_svcallers(data)
@@ -60,12 +63,15 @@ def run(samples, run_parallel):
                 if svcaller in _BATCH_CALLERS and batch:
                     batches = batch if isinstance(batch, (list, tuple)) else [batch]
                     for b in batches:
-                        to_process[(svcaller, b)].append(x)
+                        try:
+                            to_process[(svcaller, b)].append(x)
+                        except KeyError:
+                            to_process[(svcaller, b)] = [x]
                 else:
                     to_process[x["name"][-1]] = [x]
         else:
             extras.append([data])
-    processed = run_parallel("detect_sv", ([xs, xs[0]["config"]] for xs in to_process.itervalues()))
+    processed = run_parallel("detect_sv", ([xs, xs[0]["config"]] for xs in to_process.values()))
     return extras + _combine_multiple_svcallers(processed)
 
 def detect_sv(items, config):
