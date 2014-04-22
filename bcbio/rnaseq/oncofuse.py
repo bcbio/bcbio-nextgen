@@ -31,10 +31,10 @@ def run(data):
         cl = ["java"]
         cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
         cl += ["-jar", oncofuse_jar, input_file, input_type, tissue_type, out_file]
-        with file_transaction(out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                cmd = " ".join(cl)
-                do.run(cmd, "oncofuse fusion detection", data)
+        #with file_transaction(out_file) as tx_out_file:
+        with open(out_file, "w") as out_handle:
+            cmd = " ".join(cl)
+            do.run(cmd, "oncofuse fusion detection", data)
     return out_file
 
 
@@ -48,13 +48,13 @@ def _get_input_para(data):
     if aligner == 'tophat2':
         aligner = 'tophat'
     names = data["rgnames"]
-    align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"], names["sample"]+"_%s" % aligner)
+    align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["lane"], names["sample"]+"_%s" % aligner)
     if aligner in ['tophat', 'tophat2']:
-        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"], names["sample"]+"_%s" % aligner)
+        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["lane"], names["sample"]+"_%s" % aligner)
         return 'tophat', align_dir_parts, os.path.join(align_dir_parts, TOPHAT_FUSION_OUTFILE)
     if aligner in ['star']:
-        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"])
-        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts,names["sample"]+STAR_FUSION_OUTFILE)
+        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["lane"])
+        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts,names["lane"]+STAR_FUSION_OUTFILE)
     return None
 
 
