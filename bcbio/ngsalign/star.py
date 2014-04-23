@@ -38,34 +38,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     run_message = "Running STAR aligner on %s and %s." % (pair_file, ref_file)
     do.run(cmd.format(**locals()), run_message, None)
     out_file = bam.sam_to_bam(out_file, config)
-    out_file = _fix_sam_header(out_file, config)
     if not file_exists(final_out):
         symlink_plus(out_file, final_out)
     return final_out
-
-def _fix_sam_header(in_file, config):
-    """
-    STAR outputs a duplicate cl: line in the header which breaks some downstream
-    tools like FastQC
-    https://groups.google.com/d/msg/rna-star/xxE4cUnafJQ/EUsgYId-dB8J
-    This can be safely removed whenever that bug gets fixed.
-    """
-    with bam.open_samfile(in_file) as in_handle:
-        header = in_handle.header
-    with tempfile.NamedTemporaryFile(delete=False) as header_handle:
-        for key, line in header.items():
-            line_key = "@" + str(key)
-            for line_item in line:
-                out_line = [line_key]
-                out_line += [":".join([str(k), str(v)])
-                             for k, v in line_item.items()
-                             if k != "cl"]
-                header_handle.write("\t".join(out_line) + "\n")
-    header_name = header_handle.name
-    header_handle.close()
-
-    return bam.reheader(header_name, in_file, config)
-
 
 def _read_group_option(names):
     rg_id = names["rg"]
