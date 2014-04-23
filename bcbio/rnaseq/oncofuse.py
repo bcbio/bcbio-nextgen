@@ -28,12 +28,14 @@ def run(data):
             input_file = _fix_tophat_junction_output(input_file)
     
     #handle cases when fusion file doesn't exist
-    if not os.path.exists(input_file):
-        return None
-    if os.stat(input_file).st_size == 0:
+    if not file_exists(input_file):
         return None
     
     out_file = os.path.join(input_dir, 'oncofuse_out.txt')
+    
+    if file_exists(out_file):
+        return out_file
+    
     oncofuse_jar = config_utils.get_jar("Oncofuse",
                                       config_utils.get_program("oncofuse",
                                                                config, "dir"))

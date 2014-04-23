@@ -47,6 +47,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
+    out = _maybe_add_oncofuse(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_chipseq(sample):
@@ -157,6 +158,13 @@ def _maybe_add_counts(algorithm, sample, out):
     if utils.file_exists(stats_file):
         out.append({"path": stats_file,
                     "type": "count_stats",
+                    "ext": "ready"})
+    return out
+
+def _maybe_add_oncofuse(algorithm, sample, out):
+    if sample["oncofuse_file"] is not None:
+        out.append({"path": sample["oncofuse_file"],
+                    "type": "oncofuse_outfile",
                     "ext": "ready"})
     return out
 
