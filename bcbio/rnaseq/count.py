@@ -326,7 +326,7 @@ def annotate_combined_count_file(count_file, gtf_file, out_file=None):
 
     df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=0)
 
-    df['symbol'] = df.apply(lambda x: symbol_lookup[x.name], axis=1)
+    df['symbol'] = df.apply(lambda x: symbol_lookup.get(x.name, ""), axis=1)
     df.to_csv(out_file, sep="\t", index_label="id")
     return out_file
 
