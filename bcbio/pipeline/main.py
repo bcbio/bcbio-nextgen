@@ -21,7 +21,6 @@ from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, profile, system, versioncheck
 from bcbio.server import main as server_main
-from bcbio.variation.genotype import combine_multiple_callers
 from bcbio.variation import coverage, ensemble, genotype, population, validate
 from bcbio.rnaseq.count import (combine_count_files,
                                 annotate_combined_count_file)
@@ -342,13 +341,14 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = run_parallel("split_variants_by_sample", samples)
             with profile.report("validation", dirs):
                 samples = run_parallel("compare_to_rm", samples)
-                samples = combine_multiple_callers(samples)
+                samples = genotype.combine_multiple_callers(samples)
         ## Finalizing BAMs and population databases, handle multicore computation
         with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools", "bcbio_variation",
                                          "bcbio-variation-recall"]),
                         samples, config, dirs, "multicore2") as run_parallel:
             with profile.report("prepped BAM merging", dirs):
                 samples = region.delayed_bamprep_merge(samples, run_parallel)
+                _debug_samples(6, samples)
             with profile.report("ensemble calling", dirs):
                 samples = ensemble.combine_calls_parallel(samples, run_parallel)
             with profile.report("validation", dirs):
@@ -367,7 +367,8 @@ def _debug_samples(i, samples):
     for sample in (x[0] for x in samples):
         print "  ", sample["description"], sample.get("region"), \
             utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
-            [x.get("variantcaller") for x in sample.get("variants", [])]
+            [x.get("variantcaller") for x in sample.get("variants", [])], \
+            sample.get("work_bam")
 
 class SNPCallingPipeline(Variant2Pipeline):
     """Back compatible: old name for variant analysis.

@@ -29,19 +29,21 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
 # ## High level functionality to run genotyping in parallel
 
 def get_variantcaller(data):
-    return data["config"]["algorithm"].get("variantcaller", "gatk")
+    if data.get("work_bam"):
+        return data["config"]["algorithm"].get("variantcaller", "gatk")
 
 def combine_multiple_callers(samples):
-    """Collapse together variant calls from multiple approaches into variants
+    """Collapse together variant calls from multiple approaches into single data item with `variants`.
     """
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
         work_bam = utils.get_in(data, ("combine", "work_bam", "out"), data["work_bam"])
         variantcaller = get_variantcaller(data)
+        key = (data["description"], work_bam)
         try:
-            by_bam[work_bam][variantcaller] = data
+            by_bam[key][variantcaller] = data
         except KeyError:
-            by_bam[work_bam] = {variantcaller: data}
+            by_bam[key] = {variantcaller: data}
     out = []
     for grouped_calls in [d.values() for d in by_bam.values()]:
         ready_calls = [{"variantcaller": get_variantcaller(x),
@@ -77,6 +79,26 @@ def _split_by_ready_regions(ext, file_key, dir_ext_fn):
             return None, []
     return _do_work
 
+def _collapse_by_bam_variantcaller(samples):
+    """Collapse regions to a single representative by BAM input and variant caller.
+    """
+    by_bam = collections.OrderedDict()
+    for data in (x[0] for x in samples):
+        work_bam = utils.get_in(data, ("combine", "work_bam", "out"), data["work_bam"])
+        variantcaller = get_variantcaller(data)
+        if isinstance(work_bam, list):
+            work_bam = tuple(work_bam)
+        key = (data["description"], work_bam, variantcaller)
+        try:
+            by_bam[key].append(data)
+        except KeyError:
+            by_bam[key] = [data]
+    out = []
+    for grouped_data in by_bam.values():
+        cur = grouped_data[0]
+        out.append([cur])
+    return out
+
 def parallel_variantcall_region(samples, run_parallel):
     """Perform variant calling and post-analysis on samples by region.
     """
@@ -90,10 +112,12 @@ def parallel_variantcall_region(samples, run_parallel):
         if not added:
             extras.append(x)
     split_fn = _split_by_ready_regions(".vcf.gz", "work_bam", get_variantcaller)
-    return extras + grouped_parallel_split_combine(to_process, split_fn,
-                                                   multi.group_batches, run_parallel,
-                                                   "variantcall_sample", "concat_variant_files",
-                                                   "vrn_file", ["region", "sam_ref", "config"])
+    samples = _collapse_by_bam_variantcaller(
+        grouped_parallel_split_combine(to_process, split_fn,
+                                       multi.group_batches, run_parallel,
+                                       "variantcall_sample", "concat_variant_files",
+                                       "vrn_file", ["region", "sam_ref", "config"]))
+    return extras + samples
 
 def handle_multiple_variantcallers(data):
     """Split samples that potentially require multiple variant calling approaches.
