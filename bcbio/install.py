@@ -46,27 +46,32 @@ def upgrade_bcbio(args):
         print("Upgrading bcbio-nextgen to latest stable version")
         sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
+        print("Upgrade of bcbio-nextgen code complete.")
     else:
         _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
         subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
+        print("Upgrade of bcbio-nextgen development code complete.")
 
     if args.tooldir:
         with bcbio_tmpdir():
             print("Upgrading third party tools to latest versions")
             upgrade_thirdparty_tools(args, REMOTES)
+            print("Third party tools upgrade complete.")
     if args.install_data:
         with bcbio_tmpdir():
             print("Upgrading bcbio-nextgen data files")
             upgrade_bcbio_data(args, REMOTES)
+            print("bcbio-nextgen data upgrade complete.")
     if args.isolate and args.tooldir:
         print("Installation directory not added to current PATH")
         print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
     save_install_defaults(args)
     args.datadir = _get_data_dir()
     _install_container_bcbio_system(args.datadir)
+    print("Upgrade completed successfully.")
     return args
 
 def _install_container_bcbio_system(datadir):
