@@ -36,7 +36,7 @@ def organize(dirs, config, run_info_yaml):
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
-        elif isinstance("name", basestring):
+        elif isinstance(item["name"], basestring):
             description = "%s-%s" % (item["name"], clean_name(item["description"]))
             item["name"] = [item["name"], description]
             item["description"] = description

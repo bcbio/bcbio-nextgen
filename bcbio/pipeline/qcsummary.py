@@ -59,8 +59,11 @@ def prep_pdf(qc_dir, config):
 
     Requires wkhtmltopdf installed: http://www.msweet.org/projects.php?Z1
     Thanks to: https://www.biostars.org/p/16991/
+
+    Works around issues with CSS conversion on CentOS by adjusting CSS.
     """
     html_file = os.path.join(qc_dir, "fastqc", "fastqc_report.html")
+    html_fixed = "%s-fixed%s" % os.path.splitext(html_file)
     try:
         topdf = config_utils.get_program("wkhtmltopdf", config)
     except config_utils.CmdNotFound:
@@ -68,7 +71,10 @@ def prep_pdf(qc_dir, config):
     if topdf and utils.file_exists(html_file):
         out_file = "%s.pdf" % os.path.splitext(html_file)[0]
         if not utils.file_exists(out_file):
-            cmd = [topdf, html_file, out_file]
+            cmd = ("sed 's/div.summary/div.summary-no/' %s | sed 's/div.main/div.main-no/' > %s"
+                   % (html_file, html_fixed))
+            do.run(cmd, "Fix fastqc CSS to be compatible with wkhtmltopdf")
+            cmd = [topdf, html_fixed, out_file]
             do.run(cmd, "Convert QC HTML to PDF")
         return out_file
 
@@ -84,7 +90,7 @@ def _run_qc_tools(bam_file, data):
         to_run.append(["bamtools", _run_bamtools_stats])
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
-    qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["name"][-1]))
+    qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     for program_name, qc_fn in to_run:
         cur_qc_dir = os.path.join(qc_dir, program_name)

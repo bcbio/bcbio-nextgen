@@ -102,7 +102,7 @@ def _get_library(gi, sample_info, config):
 
 def _get_library_from_name(gi, name, role, sample_info, create=False):
     for lib in gi.libraries.get_libraries():
-        if lib["name"].lower() == name.lower() and not lib["deleted"]:
+        if lib["name"].lower() == name.lower() and not lib.get("deleted", False):
             return GalaxyLibrary(lib["id"], lib["name"], role)
     if create and name:
         logger.info("Creating Galaxy library: '%s'" % name)
@@ -123,6 +123,13 @@ def _library_from_nglims(gi, sample_info, config):
     """
     names = [config.get(x, "").strip() for x in ["lab_association", "researcher"]
              if config.get(x)]
+    for name in names:
+        for ext in ["sequencing", "lab"]:
+            check_name = "%s %s" % (name.split()[0], ext)
+            try:
+                return _get_library_from_name(gi, check_name, None, sample_info)
+            except ValueError:
+                pass
     check_names = set([x.lower() for x in names])
     for libname, role in config["private_libs"]:
         # Try to find library for lab or rsearcher
