@@ -16,11 +16,13 @@ except ImportError:
 from bcbio import utils
 from bcbio.variation import bamprep
 
-def create_from_csv(in_csv, config=None, outtype="pdf"):
+def create_from_csv(in_csv, config=None, outtype="pdf", title=None, size=None):
     df = pd.read_csv(in_csv)
-    create(df, None, 0, config or {}, os.path.splitext(in_csv)[0], outtype)
+    create(df, None, 0, config or {}, os.path.splitext(in_csv)[0], outtype, title,
+           size)
 
-def create(plot_data, header, ploti, sample_config, out_file_base, outtype="pdf"):
+def create(plot_data, header, ploti, sample_config, out_file_base, outtype="pdf",
+           title=None, size=None):
     """Create plots of validation results for a sample, labeling prep strategies.
     """
     if pd is None or ppl is None:
@@ -36,7 +38,7 @@ def create(plot_data, header, ploti, sample_config, out_file_base, outtype="pdf"
                          for (x, cat, vartype) in zip(df["value"], df["category"], df["variant.type"])]
     out = []
     for i, prep in enumerate(df["bamprep"].unique()):
-        out.append(plot_prep_methods(df, prep, i + ploti, out_file_base, outtype))
+        out.append(plot_prep_methods(df, prep, i + ploti, out_file_base, outtype, title, size))
     return out
 
 cat_labels = {"concordant": "Concordant",
@@ -49,17 +51,18 @@ prep_labels = {"gatk": "GATK best-practice BAM preparation (recalibration, reali
 caller_labels = {"ensemble": "Ensemble", "freebayes": "FreeBayes",
                  "gatk": "GATK Unified\nGenotyper", "gatk-haplotype": "GATK Haplotype\nCaller"}
 
-def plot_prep_methods(df, prep, prepi, out_file_base, outtype):
+def plot_prep_methods(df, prep, prepi, out_file_base, outtype, title=None,
+                      size=None):
     """Plot comparison between BAM preparation methods.
     """
     samples = df[(df["bamprep"] == prep)]["sample"].unique()
     assert len(samples) >= 1, samples
     out_file = "%s-%s.%s" % (out_file_base, samples[0], outtype)
     df = df[df["category"].isin(cat_labels)]
-    _prettyplot(df, prep, prepi, out_file)
+    _prettyplot(df, prep, prepi, out_file, title, size)
     return out_file
 
-def _prettyplot(df, prep, prepi, out_file):
+def _prettyplot(df, prep, prepi, out_file, title=None, size=None):
     """Plot using prettyplot wrapper around matplotlib.
     """
     cats = ["concordant", "discordant-missing-total",
@@ -69,8 +72,9 @@ def _prettyplot(df, prep, prepi, out_file):
     callers = sorted(df["caller"].unique())
     width = 0.8
     for i, vtype in enumerate(vtypes):
+        ax_row = axs[i] if len(vtypes) > 1 else axs
         for j, cat in enumerate(cats):
-            ax = axs[i][j]
+            ax = ax_row[j]
             if i == 0:
                 ax.set_title(cat_labels[cat], size=14)
             ax.get_yaxis().set_ticks([])
@@ -87,10 +91,11 @@ def _prettyplot(df, prep, prepi, out_file):
             else:
                 ax.get_xaxis().set_ticks([])
             _annotate(ax, labels, vals, np.arange(len(callers)), width)
-    fig.text(.5, .95, prep_labels[prep], horizontalalignment='center', size=16)
+    fig.text(.5, .95, prep_labels[prep] if title is None else title, horizontalalignment='center', size=16)
     fig.subplots_adjust(left=0.05, right=0.95, top=0.87, bottom=0.15, wspace=0.1, hspace=0.1)
     #fig.tight_layout()
-    fig.set_size_inches(10, 5)
+    x, y = (10, 5) if size is None else size
+    fig.set_size_inches(x, y)
     fig.savefig(out_file)
 
 def _get_chart_info(df, vtype, cat, prep, callers):
