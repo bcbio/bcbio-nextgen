@@ -63,14 +63,6 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         bam.index(data["work_bam"], data["config"])
     return data
 
-def _align_from_fastq_pipe(fastq1, fastq2, aligner, align_ref, sam_ref, names, align_dir, data):
-    """Align longer reads using new piped strategies that avoid disk IO.
-    """
-    align_fn = TOOLS[aligner].pipe_align_fn
-    if align_fn is None:
-        raise NotImplementedError("Do not yet support piped alignment with %s" % aligner)
-    return align_fn(fastq1, fastq2, align_ref, names, align_dir, data)
-
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, data):
     assert not data.get("align_split"), "Do not handle split alignments with BAM yet"
     config = data["config"]

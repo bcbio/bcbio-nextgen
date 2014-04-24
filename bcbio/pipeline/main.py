@@ -306,7 +306,7 @@ class Variant2Pipeline(AbstractPipeline):
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with prun.start(_wres(parallel, ["aligner", "gatk"],
+        with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"],
                               (["reference", "fasta"], ["reference", "aligner"], ["files"])),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
