@@ -61,7 +61,7 @@ details:
   #     coverage_interval: regional
   #     variant_regions: ../data/automated/variant_regions-bam.bed
   #     nomap_split_size: 500
-  #     svcaller: [delly, lumpy, cn.mops]
+  #     # svcaller: [delly, lumpy, cn.mops]
   #   metadata:
   #     batch: TestBatch1
   #   analysis: variant2

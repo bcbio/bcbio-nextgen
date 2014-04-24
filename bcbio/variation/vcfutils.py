@@ -132,6 +132,8 @@ def select_sample(in_file, sample, out_file, config):
     """
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            if in_file.endswith(".gz"):
+                bgzip_and_index(in_file, config)
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
             cmd = "{bcftools} view -O {output_type} {in_file} -s {sample} > {tx_out_file}"

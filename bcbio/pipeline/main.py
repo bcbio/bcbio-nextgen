@@ -348,7 +348,6 @@ class Variant2Pipeline(AbstractPipeline):
                         samples, config, dirs, "multicore2") as run_parallel:
             with profile.report("prepped BAM merging", dirs):
                 samples = region.delayed_bamprep_merge(samples, run_parallel)
-                _debug_samples(6, samples)
             with profile.report("ensemble calling", dirs):
                 samples = ensemble.combine_calls_parallel(samples, run_parallel)
             with profile.report("validation", dirs):
