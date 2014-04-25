@@ -48,7 +48,10 @@ def run(data):
         cl += ["-jar", oncofuse_jar, input_file, input_type, tissue_type, out_file]
         with open(out_file, "w") as out_handle:
             cmd = " ".join(cl)
-            do.run(cmd, "oncofuse fusion detection", data)
+            try:
+                do.run(cmd, "oncofuse fusion detection", data)
+            except:
+                return None
     return out_file
 
 def is_non_zero_file(fpath):  
