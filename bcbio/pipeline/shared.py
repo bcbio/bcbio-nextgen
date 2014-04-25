@@ -3,7 +3,6 @@
 import os
 from contextlib import closing
 import functools
-import operator
 
 try:
     import pybedtools
@@ -133,9 +132,8 @@ def remove_lcr_regions(orig_bed, items):
     """If configured and available, update a BED file to remove low complexity regions.
     """
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
-    do_lcr = reduce(operator.and_,
-                    [utils.get_in(data, ("config", "algorithm", "remove_lcr"), True)
-                     for data in items])
+    do_lcr = any([utils.get_in(data, ("config", "algorithm", "remove_lcr"), False)
+                  for data in items])
     if lcr_bed and do_lcr and os.path.exists(lcr_bed):
         nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
         with file_transaction(nolcr_bed) as tx_nolcr_bed:

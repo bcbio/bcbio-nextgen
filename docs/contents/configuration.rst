@@ -320,6 +320,13 @@ Variant calling
    GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
+-  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
+   for human variant calling. `Heng Li's variant artifacts paper`_ provides
+   these regions, which cover ~2% of the genome but contribute to a large
+   fraction of problematic calls due to the difficulty of resolving variants
+   in repetitive regions. Removal can help facilitate comparisons between
+   methods and reduce false positives if you don't need calls in LCRs for your
+   biological analysis. [false, true]
 -  ``validate`` A VCF file of expected variant calls to perform
     validation and grading of output variants from the pipeline.
     This provides a mechanism to ensure consistency of calls against
@@ -339,6 +346,7 @@ Variant calling
 
 .. _samblaster: https://github.com/GregoryFaust/samblaster
 .. _biobambam's bammarkduplicates: https://github.com/gt1/biobambam
+.. _Heng Li's variant artifacts paper: http://arxiv.org/abs/1404.0929
 
 Cancer variant calling
 ======================

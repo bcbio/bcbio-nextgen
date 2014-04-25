@@ -162,7 +162,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "clinical_reporting", "nomap_split_size",
                       "nomap_split_targets", "ensemble", "background",
                       "disambiguate", "strandedness", "fusion_mode", "min_read_length",
-                      "coverage_depth_min", "coverage_depth_max", "min_allele_fraction"] +
+                      "coverage_depth_min", "coverage_depth_max", "min_allele_fraction", "remove_lcr"] +
                      # back compatibility
                       ["coverage_depth"])
 

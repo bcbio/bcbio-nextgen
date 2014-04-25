@@ -18,6 +18,8 @@
 - Update VQSR support for GATK to be up to date with latest best
   practices. Re-organize GATK and filtering to be more modular to help with
   transition to GATK 3.x gVCF approaches.
+- Provide configuration option, `remove_lcr`, to filter out variants in low
+  complexity regions.
 - Improve Galaxy upload for LIMS supports: enable upload of FastQC as PDF
   reports with wkhtmltopdf installed. Provide tabular summaries of mapped reads.
 - Improve checks for pre-aligned BAMs: ensure correct sample names and

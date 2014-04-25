@@ -1,4 +1,4 @@
-version: 9
+version: 10
 
 aliases:
   human: true
@@ -12,6 +12,8 @@ variation:
   train_1000G: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
   cosmic: ../variation/cosmic-v68-GRCh37.vcf.gz
+  lcr: ../variation/LCR.bed.gz
+  sv_repeat: ../variation/sv_repeat_telomere_centromere.bed
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
