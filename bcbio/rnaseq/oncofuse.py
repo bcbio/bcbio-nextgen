@@ -51,7 +51,7 @@ def run(data):
             try:
                 do.run(cmd, "oncofuse fusion detection", data)
             except:
-                return None
+                return out_file
     return out_file
 
 def is_non_zero_file(fpath):  
