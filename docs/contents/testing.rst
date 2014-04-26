@@ -51,11 +51,40 @@ There are 3 logging files in the ``log`` directory within your working folder:
 Example pipelines
 =================
 
-We supply example input configuration files for comparison purposes
+We supply example input configuration files for validation
 and to help in understanding the pipeline.
 
-Whole genome
-~~~~~~~~~~~~
+Whole genome trio (50x)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+This input configuration runs whole genome variant calling using bwa, GATK
+HaplotypeCaller and FreeBayes. It uses a father/mother/child
+trio from the `CEPH NA12878 family`_: NA12891, NA12892, NA12878.
+Illumina's `Platinum genomes project`_ has 50X whole genome sequencing of the
+three members. The analysis compares results against a reference
+NA12878 callset from NIST's `Genome in a Bottle`_ initiative.
+
+To run the analysis do::
+
+  mkdir -p NA12878-trio-eval/config NA12878-trio-eval/input NA12878-trio-eval/work
+  cd NA12878-trio-eval/config
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
+  cd ../input
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
+  bash NA12878-trio-wgs-validate-getdata.sh
+  cd ../work
+  bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
+
+This is a large whole genome analysis and meant to test both pipeline scaling
+and validation across the entire genome. It can take multiple days to run
+depending on available cores. It requires 300Gb for the input files and 1.3Tb
+for the work directory. Smaller examples below exercise the pipeline with
+less disk and computational requirements.
+
+.. _CEPH NA12878 family: http://blog.goldenhelix.com/wp-content/uploads/2013/03/Utah-Pedigree-1463-with-NA12878.png
+
+Whole genome (10x)
+~~~~~~~~~~~~~~~~~~
 An input configuration for running whole gnome variant calling with
 bwa and GATK, using Illumina's `Platinum genomes project`_
 (`NA12878-illumina.yaml`_). See this
@@ -122,7 +151,7 @@ Then the fastq reads, reference materials and analysis regions::
 
     cd .. && mkdir input && cd input
     wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_1.fastq.gz
-    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_2.fastq.gz
+    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_2.fastq.gjz
     wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
     wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
      NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
