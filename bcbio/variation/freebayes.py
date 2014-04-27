@@ -82,6 +82,9 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             input_bams = " ".join("-b %s" % x for x in align_bams)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
+            # Recommended options from 1000 genomes low-complexity evaluation
+            # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
+            opts += " --min-repeat-entropy 1 --experimental-gls"
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
                    "{vcffilter} -f 'QUAL > 5' -s | {vcfallelicprimitives} | {vcfstreamsort} "

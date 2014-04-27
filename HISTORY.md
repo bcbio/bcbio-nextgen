@@ -15,6 +15,8 @@
   enabling multiple organisms and experiments within a single input sample YAML.
 - Add temporary directory usage to enable use of local high speed scratch disk
   on setups with large enough global temporary storage.
+- Update FreeBayes to latest version and provide improved filtering for high
+  depth artifacts.
 - Update VQSR support for GATK to be up to date with latest best
   practices. Re-organize GATK and filtering to be more modular to help with
   transition to GATK 3.x gVCF approaches.

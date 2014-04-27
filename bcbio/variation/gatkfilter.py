@@ -23,11 +23,11 @@ def run(call_file, ref_file, vrn_files, data):
     out_file = "%scombined.vcf.gz" % os.path.commonprefix(orig_files)
     return vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
 
-def _apply_vqsr(in_file, ref_file, recal_file, tranch_file, filter_type, data):
+def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
+                sensitivity_cutoff, filter_type, data):
     """Apply VQSR based on the specified tranche, returning a filtered VCF file.
     """
     broad_runner = broad.runner_from_config(data["config"])
-    sensitivity_cutoff = "99.0"
     base, ext = utils.splitext_plus(in_file)
     out_file = "{base}-{filter}filter{ext}".format(base=base, ext=ext,
                                                    filter=filter_type)
@@ -76,9 +76,14 @@ def _get_vqsr_annotations(filter_type):
         assert filter_type == "INDEL"
         return ["DP", "FS", "MQRankSum", "ReadPosRankSum"]
 
-def _run_vqsr(in_file, ref_file, vrn_files, filter_type, data):
+def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, data):
     """Run variant quality score recalibration.
     """
+    cutoffs = ["100.0", "99.99", "99.98", "99.97", "99.96", "99.95", "99.94", "99.93", "99.92", "99.91",
+               "99.9", "99.8", "99.7", "99.6", "99.5", "99.0", "98.0", "90.0"]
+    if sensitivity_cutoff not in cutoffs:
+        cutoffs.append(sensitivity_cutoff)
+        cutoffs.sort()
     broad_runner = broad.runner_from_config(data["config"])
     base = utils.splitext_plus(in_file)[0]
     recal_file = "%s.recal" % base
@@ -91,6 +96,8 @@ def _run_vqsr(in_file, ref_file, vrn_files, filter_type, data):
                       "--mode", filter_type,
                       "--recal_file", tx_recal,
                       "--tranches_file", tx_tranches]
+            for cutoff in cutoffs:
+                params += ["-tranche", str(cutoff)]
             params += _get_vqsr_training(filter_type, vrn_files)
             for a in _get_vqsr_annotations(filter_type):
                 params += ["-an", a]
@@ -117,9 +124,12 @@ def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
     if not config_utils.use_vqsr([data["config"]["algorithm"]]) or _already_hard_filtered(in_file, filter_type):
         return hard_filter_fn(in_file, data)
     else:
-        recal_file, tranches_file = _run_vqsr(in_file, ref_file, vrn_files, filter_type, data)
+        sensitivities = {"INDEL": "98.0", "SNP": "99.97"}
+        recal_file, tranches_file = _run_vqsr(in_file, ref_file, vrn_files,
+                                              sensitivities[filter_type], filter_type, data)
         if recal_file is None:  # VQSR failed
             logger.info("VQSR failed due to lack of training data. Using hard filtering.")
             return hard_filter_fn(in_file, data)
         else:
-            return _apply_vqsr(in_file, ref_file, recal_file, tranches_file, filter_type, data)
+            return _apply_vqsr(in_file, ref_file, recal_file, tranches_file,
+                               sensitivities[filter_type], filter_type, data)

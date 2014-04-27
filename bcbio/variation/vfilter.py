@@ -1,8 +1,13 @@
 """Hard filtering of genomic variants.
 """
 from distutils.version import LooseVersion
+import math
 import os
 import shutil
+
+import numpy
+import vcf
+import yaml
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
@@ -70,16 +75,52 @@ def _freebayes_custom(in_file, ref_file, data):
 def _freebayes_hard(in_file, data):
     """Perform filtering of FreeBayes results, removing low confidence calls.
 
-    Filters using cutoffs on depth based on Meynert et al's work modeling sensitivity
+    Filters using cutoffs on low depth based on Meynert et al's work modeling sensitivity
     of homozygote and heterozygote calling on depth:
 
     http://www.ncbi.nlm.nih.gov/pubmed/23773188
 
+    and high depth heterozygote SNP filtering based on Heng Li's work
+    evaluating variant calling artifacts:
+
+    http://arxiv.org/abs/1404.0929
+
     Tuned based on NA12878 call comparisons to Genome in a Bottle reference genome.
+
     """
-    filters = ("(AF <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || "
-               "(AF > 0.5 && (DP < 4 && %QUAL < 50))")
+    stats = _calc_vcf_stats(in_file)
+    depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
+    filters = ('(AF <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
+               '(AF > 0.5 && (DP < 4 && %QUAL < 50)) || '
+               '(%QUAL < 500 && DP > {depth_thresh} && AF <= 0.5)'
+               .format(**locals()))
     return hard_w_expression(in_file, filters, data)
+
+def _calc_vcf_stats(in_file):
+    """Calculate statistics on VCF for filtering, saving to a file for quick re-runs.
+    """
+    out_file = "%s-stats.yaml" % utils.splitext_plus(in_file)[0]
+    if not utils.file_exists(out_file):
+        stats = {"avg_depth": _average_called_depth(in_file)}
+        with open(out_file, "w") as out_handle:
+            yaml.safe_dump(stats, out_handle, default_flow_style=False, allow_unicode=False)
+        return stats
+    else:
+        with open(out_file) as in_handle:
+            stats = yaml.safe_load(in_handle)
+        return stats
+
+def _average_called_depth(in_file):
+    """Retrieve the average depth of called reads in the provided VCF.
+    """
+    depths = []
+    with utils.open_gzipsafe(in_file) as in_handle:
+        reader = vcf.Reader(in_handle, in_file)
+        for rec in reader:
+            d = rec.INFO.get("DP")
+            if d is not None:
+                depths.append(d)
+    return int(math.ceil(numpy.mean(depths)))
 
 def gatk_snp_hard(in_file, data):
     """Perform hard filtering on GATK SNPs using best-practice recommendations.
