@@ -1,0 +1,62 @@
+# Configuration comparing alignment methods, preparation approaches
+# and variant callers for a CEPH NA12878 whole genome trio, using Illumina platinum
+# genome inputs and Genome in a Bottle reference calls.
+#
+# See the bcbio-nextgen documentation for full instructions to
+# run this analysis:
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#example-pipelines
+---
+upload:
+  dir: ../final
+details:
+  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
+    description: NA12878
+    metadata:
+      batch: ceph
+      sex: female
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      align_split_size: 5000000
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      variantcaller: [freebayes, gatk-haplotype]
+      quality_format: Standard
+      coverage_interval: genome
+      remove_lcr: true
+      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
+  - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
+    description: NA12891
+    metadata:
+      batch: ceph
+      sex: male
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      align_split_size: 5000000
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      variantcaller: [freebayes, gatk-haplotype]
+      quality_format: Standard
+      coverage_interval: genome
+  - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
+    description: NA12892
+    metadata:
+      batch: ceph
+      sex: female
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      align_split_size: 5000000
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      variantcaller: [freebayes, gatk-haplotype]
+      quality_format: Standard
+      coverage_interval: genome
