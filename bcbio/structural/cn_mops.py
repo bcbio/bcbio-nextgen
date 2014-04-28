@@ -125,7 +125,6 @@ def _paired_load_script(work_bams, names, chrom, pairmode, items):
     """
     paired = vcfutils.get_paired_bams(work_bams, items)
     bed_file = items[0]["config"]["algorithm"].get("variant_regions", None)
-    import pdb; pdb.set_trace()
     if utils.file_exists(bed_file):
         return _paired_prep_targeted.format(case_file=paired.tumor_bam, case_name=paired.tumor_name,
                                             ctrl_file=paired.normal_bam, ctrl_name=paired.normal_name,
