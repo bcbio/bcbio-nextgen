@@ -113,7 +113,8 @@ def _population_load_script(work_bams, names, chrom, pairmode, items):
     """Prepare BAMs for assessing CNVs in a population.
     """
     bed_file = items[0]["config"]["algorithm"].get("variant_regions", None)
-    if utils.file_exists(bed_file):
+    is_genome = items[0]["config"]["algorithm"].get("coverage_interval", "exome").lower() in ["genome"]
+    if utils.file_exists(bed_file) and not is_genome:
         return _population_prep_targeted.format(bam_file_str=",".join(work_bams), names_str=",".join(names),
                                                 chrom=chrom, num_cores=0, pairmode=pairmode, bed_file=bed_file)
     else:
@@ -125,7 +126,8 @@ def _paired_load_script(work_bams, names, chrom, pairmode, items):
     """
     paired = vcfutils.get_paired_bams(work_bams, items)
     bed_file = items[0]["config"]["algorithm"].get("variant_regions", None)
-    if utils.file_exists(bed_file):
+    is_genome = items[0]["config"]["algorithm"].get("coverage_interval", "exome").lower() in ["genome"]
+    if utils.file_exists(bed_file) and not is_genome:
         return _paired_prep_targeted.format(case_file=paired.tumor_bam, case_name=paired.tumor_name,
                                             ctrl_file=paired.normal_bam, ctrl_name=paired.normal_name,
                                             num_cores=0, chrom=chrom, pairmode=pairmode, bed_file=bed_file)
