@@ -141,27 +141,18 @@ variant calling approaches into a `combined ensemble callset`_.
 This is a large full exome example with multiple variant callers, so
 can take more than 24 hours on machines using multiple cores.
 
-First get the input configuration file::
+First get the input configuration file, fastq reads, reference materials and analysis regions::
 
-    mkdir config && cd config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
-     examples/NA12878-exome-methodcmp.yaml
-
-Then the fastq reads, reference materials and analysis regions::
-
-    cd .. && mkdir input && cd input
-    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_1.fastq.gz
-    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_2.fastq.gjz
-    wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed.gz
-    gunzip *.vcf.gz *.bed.gz
+    mkdir NA12878-exome-eval/config NA12878-exome-eval/input NA12878-exome-eval/work
+    cd NA12878-exome-eval/config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
+    cd ../input
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
+    bash NA12878-exome-methodcmp-getdata.sh
 
 Finally run the analysis, distributed on 8 local cores, with::
 
-    cd .. & mkdir work && cd work
+    cd ../work
     bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
