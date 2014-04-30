@@ -15,9 +15,10 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
-def prep_gemini_db(fnames, call_info, samples, data):
+def prep_gemini_db(fnames, call_info, samples):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
     """
+    data = samples[0]
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     name, caller, is_batch = call_info
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
@@ -155,10 +156,10 @@ def prep_db_parallel(samples, parallel_fn):
     has_batches = False
     for (name, caller), info in batch_groups.iteritems():
         fnames = [x[0] for x in info]
-        to_process.append([fnames, (str(name), caller, True), [x[1] for x in info], info[0][1]])
+        to_process.append([fnames, (str(name), caller, True), [x[1] for x in info]])
         has_batches = True
     for name, caller, data, fname in singles:
-        to_process.append([[fname], (str(name), caller, False), [data], data])
+        to_process.append([[fname], (str(name), caller, False), [data]])
     if len(samples) > 0 and not do_db_build([x[0] for x in samples], check_gemini=False) and not has_batches:
         return samples
     output = parallel_fn("prep_gemini_db", to_process)
