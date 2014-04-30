@@ -141,6 +141,7 @@ def split_variants_by_sample(data):
                 vcfutils.select_sample(data["vrn_file"], str(sub_data["name"][-1]), sub_vrn_file, data["config"])
             elif not os.path.exists(sub_vrn_file):
                 utils.symlink_plus(data["vrn_file"], sub_vrn_file)
+            sub_data["vrn_file_batch"] = data["vrn_file"]
             sub_data["vrn_file"] = sub_vrn_file
             out.append([sub_data])
         return out

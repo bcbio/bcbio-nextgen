@@ -27,8 +27,11 @@ def _setup_logging(args):
         elif config_utils.is_std_config_arg(arg):
             config = arg
             break
+        elif isinstance(arg, (list, tuple)) and config_utils.is_nested_config_arg(arg[0]):
+            config = arg[0]["config"]
+            break
     if config is None:
-        raise NotImplementedError("No config in %s:" % args[0])
+        raise NotImplementedError("No config found in arguments: %s" % args[0])
     handler = setup_local_logging(config, config.get("parallel", {}))
     try:
         yield None

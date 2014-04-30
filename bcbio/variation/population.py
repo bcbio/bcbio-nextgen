@@ -76,8 +76,12 @@ def get_multisample_vcf(fnames, name, caller, data):
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     if len(unique_fnames) > 1:
         gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
-        return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
-                                            data["config"])
+        if data.get("vrn_file_batch"):
+            utils.symlink_plus(data["vrn_file_batch"], gemini_vcf)
+            return gemini_vcf
+        else:
+            return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
+                                                data["config"])
     else:
         gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, utils.splitext_plus(unique_fnames[0])[1]))
         utils.symlink_plus(unique_fnames[0], gemini_vcf)
