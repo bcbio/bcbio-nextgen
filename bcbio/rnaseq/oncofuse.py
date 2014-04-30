@@ -19,8 +19,23 @@ from bcbio.provenance import do
 def run(data):
     #cmd line: java -Xmx1G -jar Oncofuse.jar input_file input_type tissue_type output_file
     config = data["config"]
+    genome_build = data.get("genome_build", "")
     input_type, input_dir, input_file = _get_input_para(data)
+    if genome_build == 'GRCh37': #assume genome_build is hg19 otherwise
+        if config["algorithm"].get("aligner") in ['star']:
+            input_file = _fix_star_junction_output(input_file)
+        if config["algorithm"].get("aligner") in ['tophat', 'tophat2']:
+            input_file = _fix_tophat_junction_output(input_file)
+    
+    #handle cases when fusion file doesn't exist
+    if not file_exists(input_file):
+        return None
+    
     out_file = os.path.join(input_dir, 'oncofuse_out.txt')
+    
+    if file_exists(out_file):
+        return out_file
+    
     oncofuse_jar = config_utils.get_jar("Oncofuse",
                                       config_utils.get_program("oncofuse",
                                                                config, "dir"))
@@ -31,32 +46,70 @@ def run(data):
         cl = ["java"]
         cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
         cl += ["-jar", oncofuse_jar, input_file, input_type, tissue_type, out_file]
-        with file_transaction(out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                cmd = " ".join(cl)
+        with open(out_file, "w") as out_handle:
+            cmd = " ".join(cl)
+            try:
                 do.run(cmd, "oncofuse fusion detection", data)
+            except:
+                return out_file
     return out_file
 
+def is_non_zero_file(fpath):  
+    return True if os.path.isfile(fpath) and os.path.getsize(fpath) > 0 else False
 
 def _get_input_para(data):
 
     TOPHAT_FUSION_OUTFILE = "fusions.out"
     STAR_FUSION_OUTFILE = 'Chimeric.out.junction'
-
+    
+    
     config = data["config"]
     aligner = config["algorithm"].get("aligner")
     if aligner == 'tophat2':
         aligner = 'tophat'
     names = data["rgnames"]
-    align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"], names["sample"]+"_%s" % aligner)
+    align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["lane"], names["sample"]+"_%s" % aligner)
     if aligner in ['tophat', 'tophat2']:
-        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"], names["sample"]+"_%s" % aligner)
+        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["lane"], names["sample"]+"_%s" % aligner)
         return 'tophat', align_dir_parts, os.path.join(align_dir_parts, TOPHAT_FUSION_OUTFILE)
     if aligner in ['star']:
-        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["sample"])
-        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts,names["sample"]+STAR_FUSION_OUTFILE)
+        align_dir_parts = os.path.join(data["dirs"]["work"], "align", names["lane"])
+        return 'rnastar', align_dir_parts, os.path.join(align_dir_parts,names["lane"]+STAR_FUSION_OUTFILE)
     return None
 
+def _fix_tophat_junction_output(chimeric_out_junction_file):
+    #for fusion.out
+    out_file = chimeric_out_junction_file + '.hg19'
+    with open(out_file, "w") as out_handle:
+        with open(chimeric_out_junction_file, "r") as in_handle:
+            for line in in_handle:
+                parts = line.split("\t")
+                left, right = parts[0].split("-")
+                parts[0] = "%s-%s" % (_h37tohg19(left), _h37tohg19(right))
+                out_handle.write("\t".join(parts))
+    return out_file    
+    
+def _fix_star_junction_output(chimeric_out_junction_file):
+    #for Chimeric.out.junction
+    out_file = chimeric_out_junction_file + '.hg19'
+    with open(out_file, "w") as out_handle:
+        with open(chimeric_out_junction_file, "r") as in_handle:
+            for line in in_handle:
+                parts = line.split("\t")
+                parts[0] = _h37tohg19(parts[0])
+                parts[3] = _h37tohg19(parts[3])
+                out_handle.write("\t".join(parts))
+    return out_file
+
+def _h37tohg19(chromosome):
+    MAX_CHROMOSOMES = 23
+    if chromosome in [str(x) for x in range(1, MAX_CHROMOSOMES)] + ["X", "Y"]:
+        new_chrom = "chr%s" % chromosome
+    elif chromosome == "MT":
+        new_chrom = "chrM"
+    else:
+        raise NotImplementedError(chromosome)
+    return new_chrom
 
 
 def _oncofuse_tissue_arg_from_config(data):
@@ -70,15 +123,8 @@ def _oncofuse_tissue_arg_from_config(data):
     MES (mesenchymal origin) and
     AVG (average expression, if tissue source is unknown).
     """
-    #potential check for tumor only analysis
-    #if data.get("metadata", {}).get("tissue") in ["tumor", "normal"]:
-    #    pass
     SUPPORTED_TIISUE_TYPE = ["EPI", "HEM", "MES", "AVG"]
     if data.get("metadata", {}).get("tissue") in SUPPORTED_TIISUE_TYPE:
         return data.get("metadata", {}).get("tissue")
     else:
-        #may handle exception later
         return 'AVG'
-
-
-

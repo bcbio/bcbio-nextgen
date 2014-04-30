@@ -14,7 +14,9 @@ def generate_transcript_counts(data):
     """Generate counts per transcript from an alignment"""
     data["count_file"] = featureCounts.count(data)
     if get_in(data, ("config", "algorithm", "fusion_mode"), False):
-        data["oncofuse_file"] = oncofuse.run(data)
+        oncofuse_file = oncofuse.run(data)
+        if oncofuse_file:
+            data["oncofuse_file"] = oncofuse.run(data)
     return [[data]]
 
 
