@@ -136,9 +136,9 @@ def split_variants_by_sample(data):
     else:
         out = []
         for sub_data in data["group_orig"]:
-            sub_vrn_file = data["vrn_file"].replace(data["group"][0] + "-", sub_data["name"][-1] + "-")
+            sub_vrn_file = data["vrn_file"].replace(str(data["group"][0]) + "-", str(sub_data["name"][-1]) + "-")
             if len(vcfutils.get_samples(data["vrn_file"])) > 1:
-                vcfutils.select_sample(data["vrn_file"], sub_data["name"][-1], sub_vrn_file, data["config"])
+                vcfutils.select_sample(data["vrn_file"], str(sub_data["name"][-1]), sub_vrn_file, data["config"])
             elif not os.path.exists(sub_vrn_file):
                 utils.symlink_plus(data["vrn_file"], sub_vrn_file)
             sub_data["vrn_file"] = sub_vrn_file
