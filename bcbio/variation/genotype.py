@@ -48,6 +48,7 @@ def combine_multiple_callers(samples):
     for grouped_calls in [d.values() for d in by_bam.values()]:
         ready_calls = [{"variantcaller": get_variantcaller(x),
                         "vrn_file": x.get("vrn_file"),
+                        "vrn_file_batch": x.get("vrn_file_batch"),
                         "validate": x.get("validate")}
                        for x in grouped_calls]
         final = grouped_calls[0]
@@ -58,6 +59,7 @@ def combine_multiple_callers(samples):
             final["config"]["algorithm"]["variantcaller"] = final["config"]["algorithm"].pop("orig_variantcaller")
         else:
             final["variants"] = ready_calls
+        final.pop("vrn_file_batch", None)
         out.append([final])
     return out
 
@@ -69,11 +71,13 @@ def _split_by_ready_regions(ext, file_key, dir_ext_fn):
             name = data["group"][0] if "group" in data else data["description"]
             out_dir = os.path.join(data["dirs"]["work"], dir_ext_fn(data))
             out_file = os.path.join(out_dir, "%s%s" % (name, ext))
+            assert isinstance(data["region"], (list, tuple))
             out_parts = []
-            out_region_dir = os.path.join(out_dir, data["region"][0])
-            out_region_file = os.path.join(out_region_dir,
-                                           "%s-%s%s" % (name, region.to_safestr(data["region"]), ext))
-            out_parts = [(data["region"], out_region_file)]
+            for r in data["region"]:
+                out_region_dir = os.path.join(out_dir, r[0])
+                out_region_file = os.path.join(out_region_dir,
+                                               "%s-%s%s" % (name, region.to_safestr(r), ext))
+                out_parts.append((r, out_region_file))
             return out_file, out_parts
         else:
             return None, []
@@ -96,6 +100,7 @@ def _collapse_by_bam_variantcaller(samples):
     out = []
     for grouped_data in by_bam.values():
         cur = grouped_data[0]
+        cur.pop("region", None)
         out.append([cur])
     return out
 
@@ -162,7 +167,7 @@ def variantcall_sample(data, region=None, out_file=None):
             items = [data]
         else:
             align_bams = data["work_bam"]
-            items = data["group_orig"]
+            items = multi.get_orig_items(data)
         call_file = "%s-raw%s" % utils.splitext_plus(out_file)
         call_file = caller_fn(align_bams, items, sam_ref,
                               data["genome_resources"]["variation"],
@@ -170,5 +175,7 @@ def variantcall_sample(data, region=None, out_file=None):
         if data["config"]["algorithm"].get("phasing", False) == "gatk":
             call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
         utils.symlink_plus(call_file, out_file)
+    if region:
+        data["region"] = region
     data["vrn_file"] = out_file
     return [data]

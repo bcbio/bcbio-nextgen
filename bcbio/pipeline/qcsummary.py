@@ -46,9 +46,7 @@ def generate_parallel(samples, run_parallel):
 def pipeline_summary(data):
     """Provide summary information on processing sample.
     """
-    work_bam = (data.get("work_bam")
-                if data["config"]["algorithm"].get("merge_bamprep", True)
-                else data.get("callable_bam"))
+    work_bam = data.get("work_bam")
     if data["sam_ref"] is not None and work_bam and has_aligned_reads(work_bam):
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = _run_qc_tools(work_bam, data)

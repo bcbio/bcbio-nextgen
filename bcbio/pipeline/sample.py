@@ -72,5 +72,6 @@ def delayed_bam_merge(data):
         data.pop("region", None)
         data.pop("combine", None)
         if merged_file:
+            data["%s-orig" % file_key] = data[file_key]
             data[file_key] = merged_file
     return [[data]]

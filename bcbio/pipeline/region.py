@@ -58,11 +58,12 @@ def _add_combine_info(output, combine_map, file_key):
     files_per_output = collections.defaultdict(list)
     for part_file, out_file in combine_map.items():
         files_per_output[out_file].append(part_file)
+    out_by_file = collections.defaultdict(list)
     out = []
     for data in output:
-        cur_file = data[file_key]
         # Do not pass along nochrom, noanalysis regions
         if data["region"][0] not in ["nochrom", "noanalysis"]:
+            cur_file = data[file_key]
             # If we didn't process, no need to add combine information
             if cur_file in combine_map:
                 out_file = combine_map[cur_file]
@@ -70,7 +71,16 @@ def _add_combine_info(output, combine_map, file_key):
                     data["combine"] = {}
                 data["combine"][file_key] = {"out": out_file,
                                              "extras": files_per_output.get(out_file, [])}
-            out.append([data])
+                out_by_file[out_file].append(data)
+            elif cur_file:
+                out_by_file[cur_file].append(data)
+            else:
+                out.append([data])
+    for samples in out_by_file.values():
+        regions = [x["region"] for x in samples]
+        data = samples[0]
+        data["region"] = regions
+        out.append([data])
     return out
 
 def parallel_prep_region(samples, run_parallel):

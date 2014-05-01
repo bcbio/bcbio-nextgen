@@ -10,6 +10,8 @@ import os
 from bcbio import utils
 from bcbio.variation import vcfutils
 
+# ## Group batches to process together
+
 def group_by_batch(items):
     """Group a set of sample items by batch (or singleton) name.
 
@@ -90,17 +92,44 @@ def group_batches(xs):
         if batch is not None:
             batches = batch if isinstance(batch, (list, tuple)) else [batch]
             for b in batches:
-                batch_groups[(b, region, caller)].append(data)
+                batch_groups[(b, region, caller)].append(copy.deepcopy(data))
         else:
             singles.append(data)
     batches = []
     for batch, items in batch_groups.iteritems():
         batch_data = copy.deepcopy(_pick_lead_item(items))
         batch_data["work_bam"] = [x["work_bam"] for x in items]
-        batch_data["group_orig"] = items
+        batch_data["group_orig"] = _collapse_subitems(batch_data, items)
         batch_data["group"] = batch
         batches.append(batch_data)
     return singles + batches
+
+# ## Collapse and uncollapse groups to save memory
+
+def _collapse_subitems(base, items):
+    """Collapse full data representations relative to a standard base.
+    """
+    out = []
+    for d in items:
+        newd = _diff_dict(base, d)
+        out.append(newd)
+    return out
+
+def _diff_dict(orig, new):
+    """Diff a nested dictionary, returning only key/values that differ.
+    """
+    final = {}
+    for k, v in new.items():
+        if isinstance(v, dict):
+            v = _diff_dict(orig.get(k, {}), v)
+            if len(v) > 0:
+                final[k] = v
+        elif v != orig.get(k):
+            final[k] = v
+    for k, v in orig.items():
+        if k not in new:
+            final[k] = None
+    return final
 
 def _pick_lead_item(items):
     """Pick single representative sample for batch calling to attach calls to.
@@ -115,6 +144,31 @@ def _pick_lead_item(items):
     else:
         return items[0]
 
+def get_orig_items(base):
+    """Retrieve original items from a diffed set of nested samples.
+    """
+    assert "group_orig" in base
+    out = []
+    for data_diff in base["group_orig"]:
+        new = copy.deepcopy(base)
+        new.pop("group_orig")
+        out.append(_patch_dict(data_diff, new))
+    return out
+
+def _patch_dict(diff, base):
+    """Patch a dictionary, substituting in changed items from the nested diff.
+    """
+    for k, v in diff.items():
+        if isinstance(v, dict):
+            base[k] = _patch_dict(v, base.get(k, {}))
+        elif not v:
+            base.pop(k, None)
+        else:
+            base[k] = v
+    return base
+
+# ## Split batched variants
+
 def split_variants_by_sample(data):
     """Split a multi-sample call file into inputs for individual samples.
 
@@ -127,15 +181,17 @@ def split_variants_by_sample(data):
     # cancer tumor/normal
     elif vcfutils.get_paired_phenotype(data):
         out = []
-        for i, sub_data in enumerate(data["group_orig"]):
+        for i, sub_data in enumerate(get_orig_items(data)):
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":
                 sub_data["vrn_file"] = data["vrn_file"]
+            else:
+                sub_data.pop("vrn_file", None)
             out.append([sub_data])
         return out
     # population or single sample
     else:
         out = []
-        for sub_data in data["group_orig"]:
+        for sub_data in get_orig_items(data):
             sub_vrn_file = data["vrn_file"].replace(str(data["group"][0]) + "-", str(sub_data["name"][-1]) + "-")
             if len(vcfutils.get_samples(data["vrn_file"])) > 1:
                 vcfutils.select_sample(data["vrn_file"], str(sub_data["name"][-1]), sub_vrn_file, data["config"])

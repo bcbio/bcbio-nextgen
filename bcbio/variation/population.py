@@ -5,7 +5,6 @@ database of variations for query and evaluation.
 """
 import collections
 from distutils.version import LooseVersion
-import glob
 import os
 import subprocess
 
@@ -76,8 +75,12 @@ def get_multisample_vcf(fnames, name, caller, data):
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     if len(unique_fnames) > 1:
         gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
-        if data.get("vrn_file_batch"):
-            utils.symlink_plus(data["vrn_file_batch"], gemini_vcf)
+        vrn_file_batch = None
+        for variant in data["variants"]:
+            if variant["variantcaller"] == caller and variant.get("vrn_file_batch"):
+                vrn_file_batch = variant["vrn_file_batch"]
+        if vrn_file_batch:
+            utils.symlink_plus(vrn_file_batch, gemini_vcf)
             return gemini_vcf
         else:
             return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
