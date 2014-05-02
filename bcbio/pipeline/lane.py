@@ -59,6 +59,21 @@ def link_bam_file(orig_file, new_dir):
     utils.symlink_plus(orig_file, sym_file)
     return sym_file
 
+def _add_supplemental_bams(data):
+    """Add supplemental files produced by alignment, useful for structural variant calling.
+    """
+    file_key = "work_bam"
+    if data.get(file_key):
+        for supext in ["disc", "sr"]:
+            base, ext = os.path.splitext(data[file_key])
+            test_file = "%s-%s%s" % (base, supext, ext)
+            if os.path.exists(test_file):
+                sup_key = file_key + "-plus"
+                if not sup_key in data:
+                    data[sup_key] = {}
+                data[sup_key][supext] = test_file
+    return data
+
 def process_alignment(data):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
@@ -74,6 +89,7 @@ def process_alignment(data):
     if fastq1 and os.path.exists(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
+        data = _add_supplemental_bams(data)
     elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
         bamclean = config["algorithm"].get("bam_clean")

@@ -140,14 +140,18 @@ def _maybe_add_summary(algorithm, sample, out):
 
 def _maybe_add_alignment(algorithm, sample, out):
     if _has_alignment_file(algorithm, sample):
-        out.append({"path": sample["work_bam"],
-                    "type": "bam",
-                    "ext": "ready"})
-        if utils.file_exists(sample["work_bam"] + ".bai"):
-            out.append({"path": sample["work_bam"] + ".bai",
-                        "type": "bam.bai",
-                        "index": True,
-                        "ext": "ready"})
+        for (fname, ext) in [(sample["work_bam"], "ready"),
+                             (utils.get_in(sample, ("work_bam-plus", "disc")), "disc"),
+                             (utils.get_in(sample, ("work_bam-plus", "sr")), "sr")]:
+            if fname and os.path.exists(fname):
+                out.append({"path": fname,
+                            "type": "bam",
+                            "ext": ext})
+                if utils.file_exists(fname + ".bai"):
+                    out.append({"path": fname + ".bai",
+                                "type": "bam.bai",
+                                "index": True,
+                                "ext": ext})
     return out
 
 def _maybe_add_counts(algorithm, sample, out):

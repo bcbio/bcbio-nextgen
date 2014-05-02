@@ -38,7 +38,7 @@ def merge_sample(data):
 def delayed_bam_merge(data):
     """Perform a merge on previously prepped files, delayed in processing.
 
-    Handles merging of associated split read and discordant files if present
+    Handles merging of associated split read and discordant files if present.
     """
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
@@ -51,13 +51,14 @@ def delayed_bam_merge(data):
                 extras.append(x)
         in_files = sorted(list(set([data[file_key]] + extras)))
         out_file = data["combine"][file_key]["out"]
-        for ext in ["-disc", "-sr", ""]:
+        sup_exts = data.get(file_key + "-plus", {}).keys()
+        for ext in sup_exts + [""]:
             merged_file = None
-            if os.path.exists(utils.append_stem(out_file, ext)):
+            if os.path.exists(utils.append_stem(out_file, "-" + ext)):
                 cur_out_file, cur_in_files = out_file, []
             if ext:
-                cur_in_files = list(filter(os.path.exists, (utils.append_stem(f, ext) for f in in_files)))
-                cur_out_file = utils.append_stem(out_file, ext) if len(cur_in_files) > 0 else None
+                cur_in_files = list(filter(os.path.exists, (utils.append_stem(f, "-" + ext) for f in in_files)))
+                cur_out_file = utils.append_stem(out_file, "-" + ext) if len(cur_in_files) > 0 else None
             else:
                 cur_in_files, cur_out_file = in_files, out_file
             if cur_out_file:
@@ -69,9 +70,12 @@ def delayed_bam_merge(data):
                 else:
                     assert os.path.exists(cur_out_file)
                     merged_file = cur_out_file
+            if merged_file:
+                if ext:
+                    data[file_key + "-plus"][ext] = merged_file
+                else:
+                    data["%s-orig" % file_key] = data[file_key]
+                    data[file_key] = merged_file
         data.pop("region", None)
         data.pop("combine", None)
-        if merged_file:
-            data["%s-orig" % file_key] = data[file_key]
-            data[file_key] = merged_file
     return [[data]]
