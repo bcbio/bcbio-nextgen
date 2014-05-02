@@ -32,6 +32,8 @@
   space. Upgrade to Cosmic v68.
 - Avoid VCF concatenation errors when first input file is empty. Thanks to
   Jiantao Shi.
+- Added preliminary support for oncofuse for calling gene fusion events. Thanks
+  to @tanglingfung.
 
 ## 0.7.8 (March 21, 2014)
 
