@@ -22,12 +22,51 @@ SUPPORTED_ADAPTERS = {
     "polya": ["AAAAAAAAAAAAA"],
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
+ALIENTRIMMER_ADAPTERS = {
+    "truseq": ["AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACATCACGATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACTTAGGCATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACTGACCAATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACACAGTGATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACGCCAATATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCAGATCATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACACTTGAATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACGATCAGATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACTAGCTTATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACGGCTACATCTCGTATGCCGTCTTCTGCTTG",
+               "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCTTGTAATCTCGTATGCCGTCTTCTGCTTG"],
+    "illumina": ["ACACTCTTTCCCTACACGACGCTCTTCCGATCT",
+                 "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
+                 "GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT"],
+    "polya": ["AAAAAAAAAAAAA"],
+    "nextera": ["AATGATACGGCGACCACCGAGATCTACACTAGATCGCTCGTCGGCAGCGTC",
+                "AATGATACGGCGACCACCGAGATCTACACCTCTCTATTCGTCGGCAGCGTC",
+                "AATGATACGGCGACCACCGAGATCTACACTATCCTCTTCGTCGGCAGCGTC",
+                "AATGATACGGCGACCACCGAGATCTACACAGAGTAGATCGTCGGCAGCGTC",
+                "AATGATACGGCGACCACCGAGATCTACACGTAAGGAGTCGTCGGCAGCGTC",
+                "AATGATACGGCGACCACCGAGATCTACACACTGCATATCGTCGGCAGCGTC",
+                "AATGATACGGCGACCACCGAGATCTACACAAGGAGTATCGTCGGCAGCGTC",
+                "AATGATACGGCGACCACCGAGATCTACACCTAAGCCTTCGTCGGCAGCGTC",
+                "CAAGCAGAAGACGGCATACGAGATTCGCCTTAGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATCTAGTACGGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATTTCTGCCTGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATGCTCAGGAGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATAGGAGTCCGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATCATGCCTAGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATGTAGAGAGGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATCCTCTCTGGTCTCGTGGGCTCGG"
+                "CAAGCAGAAGACGGCATACGAGATAGCGTAGCGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATCAGCCTCGGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATTGCCTCTTGTCTCGTGGGCTCGG",
+                "CAAGCAGAAGACGGCATACGAGATTCCTCTACGTCTCGTGGGCTCGG"]}
+
 QUALITY_FLAGS = {5: ['"E"', '"&"'],
                  20: ['"T"', '"5"']}
 
 def trim_adapters(fastq_files, dirs, config):
     QUALITY_CUTOFF = 5
-    to_trim = _get_sequences_to_trim(config)
+    to_trim = _get_sequences_to_trim(config, ALIENTRIMMER_ADAPTERS)
     resources = config_utils.get_resources("AlienTrimmer", config)
     try:
         jarpath = config_utils.get_program("AlienTrimmer", config, "dir")
@@ -37,7 +76,7 @@ def trim_adapters(fastq_files, dirs, config):
         return trim_read_through(fastq_files, dirs, config)
     jarfile = config_utils.get_jar("AlienTrimmer", jarpath)
     jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]))
-    base_cmd = ("java -jar {jvm_opts} {jarfile} -k 10 -l 20")
+    base_cmd = ("java -jar {jvm_opts} {jarfile} -k 10 -l 20 ")
     fastq1 = fastq_files[0]
     supplied_quality_format = _get_quality_format(config)
     cores = config["algorithm"].get("num_cores", 0)
@@ -93,7 +132,7 @@ def trim_read_through(fastq_files, dirs, lane_config):
 
     """
     quality_format = _get_quality_format(lane_config)
-    to_trim = _get_sequences_to_trim(lane_config)
+    to_trim = _get_sequences_to_trim(lane_config, SUPPORTED_FORMATS)
     out_files = _get_read_through_trimmed_outfiles(fastq_files, dirs)
     fixed_files = append_stem(out_files, ".fixed")
     if all(map(file_exists, fixed_files)):
@@ -137,8 +176,8 @@ def _get_read_through_trimmed_outfiles(fastq_files, dirs):
                                   out_dir)
     return out_files
 
-def _get_sequences_to_trim(lane_config):
-    builtin_adapters = _get_builtin_adapters(lane_config)
+def _get_sequences_to_trim(lane_config, builtin):
+    builtin_adapters = _get_builtin_adapters(lane_config, builtin)
     polya = builtin_adapters.get("polya", [None])[0]
     # allow for trimming of custom sequences for advanced users
     custom_trim = lane_config["algorithm"].get("custom_trim", [])
@@ -207,8 +246,8 @@ def _get_quality_format(lane_config):
         exit(1)
     return quality_format
 
-def _get_builtin_adapters(lane_config):
+def _get_builtin_adapters(lane_config, builtin):
     chemistries = lane_config["algorithm"].get("adapters", [])
-    adapters = {chemistry: SUPPORTED_ADAPTERS[chemistry] for
-                chemistry in chemistries if chemistry in SUPPORTED_ADAPTERS}
+    adapters = {chemistry: builtin[chemistry] for
+                chemistry in chemistries if chemistry in builtin}
     return adapters
