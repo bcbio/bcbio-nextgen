@@ -162,7 +162,7 @@ def _maybe_add_counts(algorithm, sample, out):
     return out
 
 def _maybe_add_oncofuse(algorithm, sample, out):
-    if sample["oncofuse_file"] is not None:
+    if sample.get("oncofuse_file", None) is not None:
         out.append({"path": sample["oncofuse_file"],
                     "type": "oncofuse_outfile",
                     "ext": "ready"})
