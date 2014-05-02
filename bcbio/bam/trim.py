@@ -37,7 +37,7 @@ def trim_adapters(fastq_files, dirs, config):
         return trim_read_through(fastq_files, dirs, config)
     jarfile = config_utils.get_jar("AlienTrimmer", jarpath)
     jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]))
-    base_cmd = ("java -jar {jvm_opts} {jarfile} -k 10 ")
+    base_cmd = ("java -jar {jvm_opts} {jarfile} -k 10 -l 20")
     fastq1 = fastq_files[0]
     supplied_quality_format = _get_quality_format(config)
     cores = config["algorithm"].get("num_cores", 0)
