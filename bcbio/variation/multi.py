@@ -72,6 +72,12 @@ def _get_representative_batch(merged):
             out[x] = mgroup[0]
     return out
 
+def _list_to_tuple(xs):
+    if isinstance(xs, (list, tuple)):
+        return tuple([_list_to_tuple(x) for x in xs])
+    else:
+        return xs
+
 def group_batches(xs):
     """Group samples into batches for simultaneous variant calling.
 
@@ -88,7 +94,7 @@ def group_batches(xs):
         data = args[0]
         batch = utils.get_in(data, ("metadata", "batch"))
         caller = data["config"]["algorithm"].get("variantcaller", "gatk")
-        region = tuple(data["region"]) if "region" in data else ()
+        region = _list_to_tuple(data["region"]) if "region" in data else ()
         if batch is not None:
             batches = batch if isinstance(batch, (list, tuple)) else [batch]
             for b in batches:

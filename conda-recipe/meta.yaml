@@ -1,6 +1,6 @@
 package:
   name: bcbio-nextgen
-  version: '0.7.8a'
+  version: '0.7.9a'
 
 build:
   number: 0
@@ -25,6 +25,7 @@ requirements:
     - ipython-cluster-helper
     - logbook
     - lxml
+    - pyvcf
     - pysam
     - pyyaml
     - pyzmq
