@@ -277,8 +277,6 @@ Alignment
 -  ``merge_bamprep`` Merge regional BAM prepped files into a final
    prepared BAM. false avoids the time consuming merge when you only
    want variant calls [true, false]
--  ``coverage_bigwig`` Generate a bigwig file of coverage, for loading
-   into the UCSC genome browser [true, false]
 -  ``strandedness`` For RNA-seq libraries, if your library is strand
    specific, set the appropriate flag form [unstranded, firststrand, secondstrand].
    Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for
@@ -360,10 +358,16 @@ Post-processing
 ===============
 
 - ``archive`` Specify targets for long term archival. ``cram`` does 8-bin
-  compression of BAM files into `CRAM format`_. Can be a list of multiple
-  inputs. Default: [] -- no archiving.
+  compression of BAM files into `CRAM format`_.
+  Default: [] -- no archiving.
+- ``tools_off`` Specify third party tools to skip as part of analysis
+  pipeline. Enables turning off specific components of pipelines if not
+  needed. `gemini`` provides a `GEMINI database`_ of variants for downstream
+  query during variant calling pipelines.
+  Default: [] -- all tools on.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
+.. _GEMINI database: https://github.com/arq5x/gemini
 
 parallelization
 ===============

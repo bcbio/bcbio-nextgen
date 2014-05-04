@@ -274,7 +274,6 @@ reference genome file throughout. Here's an example of these inputs::
                                          'jvm_opts': ['-Xms750m', '-Xmx3g']},
                               'stampy': {'dir': '~/install/stampy-1.0.18'},
                               'tophat': {'cores': None},
-                              'ucsc_bigwig': {'memory': '36g'},
                               'varscan': {'dir': '/usr/share/java/varscan'},
                               'vcftools': {'dir': '~/install/vcftools_0.1.9'}}},
     'genome_resources': {'aliases': {'ensembl': 'human',

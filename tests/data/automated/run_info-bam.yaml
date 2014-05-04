@@ -29,6 +29,7 @@ details:
       #recalibrate: gatk
       #svcaller: [delly, lumpy, cn.mops]
       variantcaller: freebayes
+      #tools_off: gemini
       #variantcaller: [gatk, gatk-haplotype]
       coverage_interval: genome
       quality_format: Standard

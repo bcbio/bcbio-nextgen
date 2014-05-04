@@ -153,7 +153,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "trim_reads", "adapters", "custom_trim",
                       "align_split_size", "quality_bin",
                       "quality_format", "write_summary",
-                      "merge_bamprep", "coverage", "coverage_bigwig",
+                      "merge_bamprep", "coverage",
                       "coverage_interval", "ploidy",
                       "variantcaller", "variant_regions",
                       "mark_duplicates", "svcaller", "recalibrate",
@@ -163,7 +163,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "nomap_split_targets", "ensemble", "background",
                       "disambiguate", "strandedness", "fusion_mode", "min_read_length",
                       "coverage_depth_min", "coverage_depth_max", "min_allele_fraction", "remove_lcr",
-                      "archive"] +
+                      "archive", "tools_off"] +
                      # back compatibility
                       ["coverage_depth"])
 
@@ -382,8 +382,9 @@ def _add_algorithm_defaults(algorithm):
     Converts allowed multiple inputs into lists if specified as a single item.
     """
     defaults = {"archive": [],
-                "min_allele_fraction": 10.0}
-    convert_to_list = set(["archive"])
+                "min_allele_fraction": 10.0,
+                "tools_off": []}
+    convert_to_list = set(["archive", "tools_off"])
     for k, v in defaults.items():
         if k not in algorithm:
             algorithm[k] = v

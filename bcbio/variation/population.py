@@ -106,12 +106,14 @@ def _has_gemini(config):
     return True
 
 def do_db_build(samples, check_gemini=True, need_bam=True):
-    """Confirm we should build a gemini database: need gemini + human samples.
+    """Confirm we should build a gemini database: need gemini + human samples + not in tool_skip.
     """
     genomes = set()
     for data in samples:
         if not need_bam or data.get("work_bam"):
             genomes.add(data["genome_build"])
+        if "gemini" in utils.get_in(data, ("config", "algorithm", "tools_off"), []):
+            return False
     if len(genomes) == 1:
         return (samples[0]["genome_resources"].get("aliases", {}).get("human", False)
                 and (not check_gemini or _has_gemini(samples[0]["config"])))
