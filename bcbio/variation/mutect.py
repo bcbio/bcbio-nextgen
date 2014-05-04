@@ -72,7 +72,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     params = ["-R", ref_file, "-T", "MuTect", "-U", "ALLOW_N_CIGAR_READS"]
     params += ["--downsample_to_coverage", max(200, get_in(paired.tumor_config,
                                                            ("algorithm", "coverage_depth_max"), 10000))]
-    params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
+    params += ["--read_filter", "NotPrimaryAlignment"]
     params += ["-I:tumor", paired.tumor_bam]
     params += ["--tumor_sample_name", paired.tumor_name]
     if paired.normal_bam is not None:
@@ -142,7 +142,7 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
                                     ("algorithm", "coverage_depth_max"), 10000)), 10000)
     params += ["--downsample_to_coverage", max_depth]
     params += ["--maxNumberOfReads", str(int(max_depth) * window_size)]
-    params += ["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"]
+    params += ["--read_filter", "NotPrimaryAlignment"]
     params += ["-I:tumor", paired.tumor_bam]
     min_af = float(get_in(paired.tumor_config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
     if paired.normal_bam is not None:
