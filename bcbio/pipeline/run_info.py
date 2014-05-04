@@ -162,7 +162,8 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "clinical_reporting", "nomap_split_size",
                       "nomap_split_targets", "ensemble", "background",
                       "disambiguate", "strandedness", "fusion_mode", "min_read_length",
-                      "coverage_depth_min", "coverage_depth_max", "min_allele_fraction", "remove_lcr"] +
+                      "coverage_depth_min", "coverage_depth_max", "min_allele_fraction", "remove_lcr",
+                      "archive"] +
                      # back compatibility
                       ["coverage_depth"])
 
@@ -368,12 +369,29 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
                                                   ignore_keys=["variantcaller", "realign", "recalibrate",
                                                                "phasing", "svcaller"])
-
+        item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details
+
+def _add_algorithm_defaults(algorithm):
+    """Central location specifying defaults for algorithm inputs.
+
+    Converts allowed multiple inputs into lists if specified as a single item.
+    """
+    defaults = {"archive": [],
+                "min_allele_fraction": 10.0}
+    convert_to_list = set(["archive"])
+    for k, v in defaults.items():
+        if k not in algorithm:
+            algorithm[k] = v
+    for k, v in algorithm.items():
+        if k in convert_to_list:
+            if not isinstance(v, (list, tuple)):
+                algorithm[k] = [v]
+    return algorithm
 
 def _replace_global_vars(xs, global_vars):
     """Replace globally shared names from input header with value.

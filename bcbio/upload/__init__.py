@@ -144,12 +144,18 @@ def _maybe_add_alignment(algorithm, sample, out):
                              (utils.get_in(sample, ("work_bam-plus", "disc")), "disc"),
                              (utils.get_in(sample, ("work_bam-plus", "sr")), "sr")]:
             if fname and os.path.exists(fname):
+                if fname.endswith("bam"):
+                    ftype, fext = "bam", ".bai"
+                elif fname.endswith("cram"):
+                    ftype, fext = "cram", ".crai"
+                else:
+                    raise ValueError("Unexpected alignment file type %s" % fname)
                 out.append({"path": fname,
-                            "type": "bam",
+                            "type": ftype,
                             "ext": ext})
-                if utils.file_exists(fname + ".bai"):
-                    out.append({"path": fname + ".bai",
-                                "type": "bam.bai",
+                if utils.file_exists(fname + fext):
+                    out.append({"path": fname + fext,
+                                "type": ftype + fext,
                                 "index": True,
                                 "ext": ext})
     return out

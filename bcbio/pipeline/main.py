@@ -16,7 +16,7 @@ from bcbio.distributed import clargs, prun, runfn
 from bcbio.illumina import flowcell, machine
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
+from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
                             version, rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, profile, system, versioncheck
@@ -350,7 +350,7 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("ensemble calling", dirs):
                 samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            with profile.report("validation", dirs):
+            with profile.report("validation summary", dirs):
                 samples = validate.summarize_grading(samples)
             with profile.report("structural variation", dirs):
                 samples = structural.run(samples, run_parallel)
@@ -358,6 +358,8 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = population.prep_db_parallel(samples, run_parallel)
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("archive", dirs):
+                samples = archive.compress(samples, run_parallel)
         logger.info("Timing: finished")
         return samples
 

@@ -6,7 +6,7 @@ from IPython.parallel import require
 
 from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (config_utils, disambiguate, sample, lane, qcsummary, shared,
+from bcbio.pipeline import (archive, config_utils, disambiguate, sample, lane, qcsummary, shared,
                             variation, rnaseq)
 from bcbio.provenance import system
 from bcbio import structural
@@ -184,3 +184,8 @@ def machine_info(*args):
 @require(chipseq)
 def clean_chipseq_alignment(*args):
     return chipseq.machine_info()
+
+@require(archive)
+def archive_to_cram(*args):
+    with _setup_logging(args):
+        return apply(archive.to_cram, *args)

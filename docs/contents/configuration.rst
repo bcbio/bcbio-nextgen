@@ -356,6 +356,15 @@ Cancer variant calling
   resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
   in the tumor sample of a tumor/normal pair.
 
+Post-processing
+===============
+
+- ``archive`` Specify targets for long term archival. ``cram`` does 8-bin
+  compression of BAM files into `CRAM format`_. Can be a list of multiple
+  inputs. Default: [] -- no archiving.
+
+.. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
+
 parallelization
 ===============
 

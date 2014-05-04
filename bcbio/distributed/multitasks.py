@@ -3,7 +3,7 @@
 from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
+from bcbio.pipeline import (archive, disambiguate, lane, qcsummary, sample, shared, variation,
                             rnaseq)
 from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
@@ -123,3 +123,7 @@ def run_disambiguate(*args):
 @utils.map_wrap
 def clean_chipseq_alignment(*args):
     return chipseq.clean_chipseq_alignment(*args)
+
+@utils.map_wrap
+def archive_to_cram(*args):
+    return archive.to_cram(*args)
