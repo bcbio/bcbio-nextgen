@@ -166,7 +166,7 @@ Cancer tumor normal
 ~~~~~~~~~~~~~~~~~~~
 
 This example calls variants in a paired cancer sample with tumor/normal
-sequencing data. using raw data from `Han et al in PLoS One
+sequencing data using raw data from `Han et al in PLoS One
 <http://www.plosone.org/article/info:doi/10.1371/journal.pone.0064271>`_. This
 is a work in progress and we welcome contributions. The goal is to use a full
 evaluation dataset to compare calling methods:
