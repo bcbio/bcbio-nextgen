@@ -5,12 +5,15 @@ https://github.com/cc2qe/speedseq
 https://github.com/GregoryFaust/samblaster
 https://github.com/arq5x/lumpy-sv
 """
+import operator
 import os
+
+import toolz as tz
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import postalign
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
 from bcbio.structural import delly
 
@@ -55,6 +58,14 @@ def _find_existing_inputs(in_bam):
 
 # ## Lumpy main
 
+def _get_sv_exclude_file(items):
+    """Retrieve exclusion file, using low complexity regions if configured.
+    """
+    exclude_bed = shared.get_lcr_bed(items)
+    if not exclude_bed:
+        exclude_bed = delly.get_sv_exclude_file(items)
+    return exclude_bed
+
 def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """Run lumpy-sv, using speedseq pipeline.
     """
@@ -67,11 +78,67 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)
                 disc_bams = ",".join(disc_bams)
-                sv_exclude_bed = delly.get_sv_exclude_file(items)
+                sv_exclude_bed = _get_sv_exclude_file(items)
                 exclude = "-x %s" % sv_exclude_bed if sv_exclude_bed else ""
                 cmd = ("speedseq lumpy -B {full_bams} -S {sr_bams} -D {disc_bams} {exclude} "
                        "-T {tmpdir} -o {out_base}")
                 do.run(cmd.format(**locals()), "speedseq lumpy", items[0])
+    return out_file
+
+def _get_support(parts):
+    """Retrieve supporting information for potentially multiple samples.
+
+    Convert speedseqs numbering scheme back into sample and support information.
+    sample_ids are generated like 20 or 21, where the first number is sample number
+    and the second is the type of supporting evidence.
+    """
+    support_nums = {"1": "discordant", "0": "split-reads"}
+    out = {}
+    for sample_id, read_count in (x.split(",") for x in parts[11].split(":")[-1].split(";")):
+        support_type = support_nums[sample_id[-1]]
+        sample_id = int(sample_id[:-1]) - 1
+        out = tz.update_in(out, [sample_id, support_type], lambda x: x + int(read_count), 0)
+    return out
+
+def _subset_to_sample(orig_file, index, data):
+    """Subset population based calls to those supported within a single sample.
+    """
+    out_file = utils.append_stem(orig_file, "-" + data["rgnames"]["sample"])
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            with open(orig_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    for parts in (l.rstrip().split("\t") for l in in_handle):
+                        support = _get_support(parts)
+                        if index in support:
+                            out_handle.write("\t".join(parts) + "\n")
+    return out_file
+
+def _filter_by_support(orig_file, index):
+    """Filter call file based on supporting evidence, adding pass/filter annotations to BEDPE.
+
+    Filters based on the following criteria:
+      - Multiple forms of evidence in any sample (split and paired end)
+      - Minimum read support for the call.
+    """
+    min_read_count = 4
+    out_file = utils.append_stem(orig_file, "-filter")
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            with open(orig_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    for parts in (l.rstrip().split("\t") for l in in_handle):
+                        support = _get_support(parts)
+                        evidence = set(reduce(operator.add, [x.keys() for x in support.values()]))
+                        read_count = reduce(operator.add, support[index].values())
+                        if len(evidence) < 2:
+                            lfilter = "ApproachSupport"
+                        elif read_count < min_read_count:
+                            lfilter = "ReadCountSupport"
+                        else:
+                            lfilter = "PASS"
+                        parts.append(lfilter)
+                        out_handle.write("\t".join(parts) + "\n")
     return out_file
 
 def run(items):
@@ -91,9 +158,9 @@ def run(items):
         disc_bams.append(disc_bam)
     pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
     out = []
-    for data in items:
+    for i, data in enumerate(items):
         if "sv" not in data:
             data["sv"] = {}
-        data["sv"]["lumpy"] = pebed_file
+        data["sv"]["lumpy"] = _filter_by_support(_subset_to_sample(pebed_file, i, data), i)
         out.append(data)
     return out

@@ -3,7 +3,7 @@
 import datetime
 import os
 
-from bcbio import utils
+from bcbio import log, utils
 from bcbio.upload import shared, filesystem, galaxy, s3
 from bcbio.pipeline import run_info
 
@@ -197,10 +197,11 @@ def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
     out = [{"path": sample["provenance"]["programs"]}]
-    out.append({"path": os.path.join(sample["config"]["log_dir"],
-                                     "bcbio-nextgen-commands.log"),
-                "type": "external_command_log",
-                "ext": ""})
+    for fname in ["bcbio-nextgen.log", "bcbio-nextgen-commands.log"]:
+        if os.path.exists(os.path.join(log.get_log_dir(sample["config"]), fname)):
+            out.append({"path": os.path.join(log.get_log_dir(sample["config"]), fname),
+                        "type": "external_command_log",
+                        "ext": ""})
 
     if "summary" in sample and sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})

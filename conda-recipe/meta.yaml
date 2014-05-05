@@ -23,6 +23,7 @@ requirements:
     - biopython
     - ipython
     - ipython-cluster-helper
+    - joblib
     - logbook
     - lxml
     - pyvcf
@@ -30,6 +31,7 @@ requirements:
     - pyyaml
     - pyzmq
     - requests
+    - toolz
     - tornado
 
 test:

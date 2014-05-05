@@ -128,13 +128,18 @@ def _subset_bed_by_region(in_file, out_file, region):
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
     orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).merge().saveas(out_file)
 
-def remove_lcr_regions(orig_bed, items):
-    """If configured and available, update a BED file to remove low complexity regions.
-    """
+def get_lcr_bed(items):
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
     do_lcr = any([utils.get_in(data, ("config", "algorithm", "remove_lcr"), False)
                   for data in items])
-    if lcr_bed and do_lcr and os.path.exists(lcr_bed):
+    if do_lcr and os.path.exists(lcr_bed):
+        return lcr_bed
+
+def remove_lcr_regions(orig_bed, items):
+    """If configured and available, update a BED file to remove low complexity regions.
+    """
+    lcr_bed = get_lcr_bed(items)
+    if lcr_bed:
         nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
         with file_transaction(nolcr_bed) as tx_nolcr_bed:
             pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed)).saveas(tx_nolcr_bed)
