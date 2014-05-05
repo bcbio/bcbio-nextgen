@@ -197,6 +197,11 @@ def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
     out = [{"path": sample["provenance"]["programs"]}]
+    out.append({"path": os.path.join(sample["config"]["log_dir"],
+                                     "bcbio-nextgen-commands.log"),
+                "type": "external_command_log",
+                "ext": ""})
+
     if "summary" in sample and sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
 
