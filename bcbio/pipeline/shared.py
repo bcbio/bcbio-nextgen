@@ -132,7 +132,7 @@ def get_lcr_bed(items):
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
     do_lcr = any([utils.get_in(data, ("config", "algorithm", "remove_lcr"), False)
                   for data in items])
-    if do_lcr and os.path.exists(lcr_bed):
+    if do_lcr and lcr_bed and os.path.exists(lcr_bed):
         return lcr_bed
 
 def remove_lcr_regions(orig_bed, items):

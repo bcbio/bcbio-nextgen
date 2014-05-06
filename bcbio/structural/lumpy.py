@@ -58,14 +58,6 @@ def _find_existing_inputs(in_bam):
 
 # ## Lumpy main
 
-def _get_sv_exclude_file(items):
-    """Retrieve exclusion file, using low complexity regions if configured.
-    """
-    exclude_bed = shared.get_lcr_bed(items)
-    if not exclude_bed:
-        exclude_bed = delly.get_sv_exclude_file(items)
-    return exclude_bed
-
 def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """Run lumpy-sv, using speedseq pipeline.
     """
@@ -78,7 +70,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)
                 disc_bams = ",".join(disc_bams)
-                sv_exclude_bed = _get_sv_exclude_file(items)
+                sv_exclude_bed = delly.prepare_exclude_file(items, out_file)
                 exclude = "-x %s" % sv_exclude_bed if sv_exclude_bed else ""
                 cmd = ("speedseq lumpy -B {full_bams} -S {sr_bams} -D {disc_bams} {exclude} "
                        "-T {tmpdir} -o {out_base}")

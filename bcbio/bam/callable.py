@@ -152,7 +152,7 @@ def sample_callable_bed(bam_file, ref_file, config):
                 filter_regions.saveas(tx_out_file)
     return out_file
 
-def get_ref_bedtool(ref_file, config):
+def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
     """
     broad_runner = broad.runner_from_config(config)
@@ -160,7 +160,8 @@ def get_ref_bedtool(ref_file, config):
     ref_lines = []
     with contextlib.closing(pysam.Samfile(ref_dict, "r")) as ref_sam:
         for sq in ref_sam.header["SQ"]:
-            ref_lines.append("%s\t%s\t%s" % (sq["SN"], 0, sq["LN"]))
+            if not chrom or sq["SN"] == chrom:
+                ref_lines.append("%s\t%s\t%s" % (sq["SN"], 0, sq["LN"]))
     return pybedtools.BedTool("\n".join(ref_lines), from_string=True)
 
 def _get_nblock_regions(in_file, min_n_size):

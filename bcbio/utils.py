@@ -213,7 +213,7 @@ def tmpfile(*args, **kwargs):
 def file_exists(fname):
     """Check if a file exists and is non-empty.
     """
-    return os.path.exists(fname) and os.path.getsize(fname) > 0
+    return fname and os.path.exists(fname) and os.path.getsize(fname) > 0
 
 def file_uptodate(fname, cmp_fname):
     """Check if a file exists, is non-empty and is more recent than cmp_fname.

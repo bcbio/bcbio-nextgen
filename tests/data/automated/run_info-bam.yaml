@@ -27,14 +27,15 @@ details:
       realign: false
       #realign: gatk
       #recalibrate: gatk
-      #svcaller: [delly, lumpy, cn.mops]
       variantcaller: freebayes
+      #svcaller: [delly, lumpy, cn.mops]
+      #remove_lcr: true
       #tools_off: gemini
       #variantcaller: [gatk, gatk-haplotype]
-      coverage_interval: genome
       quality_format: Standard
       nomap_split_size: 50
       nomap_split_targets: 100
+      coverage_interval: genome
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf

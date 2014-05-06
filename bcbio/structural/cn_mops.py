@@ -11,6 +11,7 @@ import pysam
 import toolz as tz
 
 from bcbio import bam, install, utils
+from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
@@ -26,15 +27,14 @@ def run(items, background=None):
     if len(items + background) < 2:
         raise ValueError("cn.mops only works on batches with multiple samples")
     data = items[0]
-    # XXX Can parallelize cn.mops with snow but currently causing
-    # errors. Could also parallelize by chromosome.
-    #num_cores = data["config"]["algorithm"].get("num_cores", 1)
-
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural", names[0],
                                                "cn_mops"))
+    parallel = {"type": "local", "cores": data["config"]["algorithm"].get("num_cores", 1),
+                "progs": ["delly"]}
     with closing(pysam.Samfile(work_bams[0], "rb")) as pysam_work_bam:
-        out_files = [_run_on_chrom(chrom, work_bams, names, work_dir, items)
-                     for chrom in pysam_work_bam.references]
+        out_files = run_multicore(_run_on_chrom, [(chrom, work_bams, names, work_dir, items)
+                                                  for chrom in pysam_work_bam.references],
+                                  data["config"], parallel)
     out_file = _combine_out_files(out_files, work_bams[0], work_dir)
     out = []
     for data in items:
@@ -70,6 +70,8 @@ def _prep_sample_cnvs(cnv_file, data):
             pybedtools.BedTool(cnv_file).filter(lambda x: x.name == sample_name).saveas(tx_out_file)
     return sample_file
 
+@utils.map_wrap
+@zeromq_aware_logging
 def _run_on_chrom(chrom, work_bams, names, work_dir, items):
     """Run cn.mops on work BAMs for a specific chromosome.
     """
@@ -95,7 +97,7 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
                 else:
                     logger.exception()
                     raise
-    return out_file
+    return [out_file]
 
 def _allowed_cnmops_errorstates(msg):
     return (msg.find("No CNV regions in result object. Rerun cn.mops with different parameters") >= 0
@@ -188,10 +190,10 @@ my_gr <- import.bed(c("{bed_file}"), trackLine=FALSE)
 my_gr_subset = subset(my_gr, seqnames(my_gr) == "{chrom}")
 if (length(my_gr_subset) < 1) stop("No CNV regions in result object. Rerun cn.mops with different parameters!")
 case_count <- getSegmentReadCountsFromBAM(c("{case_file}"), GR=my_gr,
-                                          sampleNames=c("{case_name}"), 
+                                          sampleNames=c("{case_name}"),
                                           mode="{pairmode}", parallel={num_cores})
-ctrl_count <- getSegmentReadCountsFromBAM(c("{ctrl_file}"), GR=my_gr, 
-                                          sampleNames=c("{case_name}"), 
+ctrl_count <- getSegmentReadCountsFromBAM(c("{ctrl_file}"), GR=my_gr,
+                                          sampleNames=c("{case_name}"),
                                           mode="{pairmode}", parallel={num_cores})
 prep_counts <- referencecn.mops(case_count, ctrl_count, parallel={num_cores})
 cnv_out <- calcFractionalCopyNumbers(prep_counts)
