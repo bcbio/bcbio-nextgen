@@ -8,6 +8,7 @@ import shutil
 import subprocess
 
 import pysam
+import toolz as tz
 
 from bcbio import bam, install, utils
 from bcbio.distributed.transaction import file_transaction
@@ -16,18 +17,19 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
-def run(items):
+def run(items, background=None):
     """Detect copy number variations from batched set of samples using cn.mops.
     """
-    names = [x["name"][-1] for x in items]
-    work_bams = [x["align_bam"] for x in items]
-    if len(items) == 1:
+    if not background: background = []
+    names = [tz.get_in(["rgnames", "sample"], x) for x in items + background]
+    work_bams = [x["align_bam"] for x in items + background]
+    if len(items + background) < 2:
         raise ValueError("cn.mops only works on batches with multiple samples")
     data = items[0]
     # XXX Can parallelize cn.mops with snow but currently causing
     # errors. Could also parallelize by chromosome.
     #num_cores = data["config"]["algorithm"].get("num_cores", 1)
-    
+
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural", names[0],
                                                "cn_mops"))
     with closing(pysam.Samfile(work_bams[0], "rb")) as pysam_work_bam:
@@ -61,7 +63,7 @@ def _prep_sample_cnvs(cnv_file, data):
     """Convert a multiple sample CNV file into a single BED file for a sample.
     """
     import pybedtools
-    sample_name = data["name"][-1]
+    sample_name = tz.get_in(["rgnames", "sample"], data)
     sample_file = os.path.join(os.path.dirname(cnv_file), "%s-cnv.bed" % sample_name)
     if not utils.file_exists(sample_file):
         with file_transaction(sample_file) as tx_out_file:
@@ -102,7 +104,6 @@ def _allowed_cnmops_errorstates(msg):
 
 def _prep_load_script(work_bams, names, chrom, items):
     pairmode = "paired" if bam.is_paired(work_bams[0]) else "unpaired"
-    print len(items), items[0].get("metadata")
     if len(items) == 2 and vcfutils.get_paired_phenotype(items[0]):
         load_script = _paired_load_script
     else:

@@ -3,10 +3,14 @@
 import collections
 import copy
 
+import toolz as tz
+
 from bcbio.structural import cn_mops, delly, lumpy
+from bcbio.variation import vcfutils
 
 _CALLERS = {}
 _BATCH_CALLERS = {"cn.mops": cn_mops.run, "delly": delly.run, "lumpy": lumpy.run}
+_NEEDS_BACKGROUND = set(["cn.mops"])
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
@@ -54,9 +58,11 @@ def run(samples, run_parallel):
     """
     to_process = collections.OrderedDict()
     extras = []
+    background = []
     for data in (xs[0] for xs in samples):
         ready_data = _handle_multiple_svcallers(data)
         if len(ready_data) > 0:
+            background.append(data)
             for x in ready_data:
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
                 batch = x.get("metadata", {}).get("batch")
@@ -68,13 +74,13 @@ def run(samples, run_parallel):
                         except KeyError:
                             to_process[(svcaller, b)] = [x]
                 else:
-                    to_process[x["name"][-1]] = [x]
+                    to_process[tz.get_in(["rgnames", "sample"], x)] = [x]
         else:
             extras.append([data])
-    processed = run_parallel("detect_sv", ([xs, xs[0]["config"]] for xs in to_process.values()))
+    processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"]] for xs in to_process.values()))
     return extras + _combine_multiple_svcallers(processed)
 
-def detect_sv(items, config):
+def detect_sv(items, all_items, config):
     """Top level parallel target for examining structural variation.
     """
     svcaller = config["algorithm"].get("svcaller_active")
@@ -86,8 +92,15 @@ def detect_sv(items, config):
             data["sv"] = _CALLERS[svcaller](data)
             out.append([data])
         elif svcaller in _BATCH_CALLERS:
-            for svdata in _BATCH_CALLERS[svcaller](items):
-                out.append([svdata])
+            if (svcaller in _NEEDS_BACKGROUND and
+                  not vcfutils.is_paired_analysis([x.get("work_bam") for x in items], items)):
+                names = set([tz.get_in(["rgnames", "sample"], x) for x in items])
+                background = [x for x in all_items if tz.get_in(["rgnames", "sample"], x) not in names]
+                for svdata in _BATCH_CALLERS[svcaller](items, background):
+                    out.append([svdata])
+            else:
+                for svdata in _BATCH_CALLERS[svcaller](items):
+                    out.append([svdata])
         else:
             raise ValueError("Unexpected structural variant caller: %s" % svcaller)
     else:
