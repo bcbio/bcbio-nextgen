@@ -16,7 +16,7 @@ class PicardMetricsParser(object):
     """Read metrics files produced by Picard analyses.
 
     Metrics info:
-    http://www.broadinstitute.org/~prodinfo/picard_metric_definitions.html
+    http://picard.sourceforge.net/picard-metric-definitions.shtml
     """
     def __init__(self):
         pass
