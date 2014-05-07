@@ -64,7 +64,7 @@ def delayed_bam_merge(data):
             if cur_out_file:
                 config = copy.deepcopy(data["config"])
                 config["algorithm"]["save_diskspace"] = False
-                if len(in_files) > 0:
+                if len(cur_in_files) > 0:
                     merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), config,
                                                   out_file=cur_out_file)
                 else:
@@ -74,7 +74,8 @@ def delayed_bam_merge(data):
                 if ext:
                     data[file_key + "-plus"][ext] = merged_file
                 else:
-                    data["%s-orig" % file_key] = data[file_key]
+                    if len(cur_in_files) == 0:
+                        data["%s-orig" % file_key] = data[file_key]
                     data[file_key] = merged_file
         data.pop("region", None)
         data.pop("combine", None)
