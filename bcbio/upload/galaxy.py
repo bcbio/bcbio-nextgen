@@ -5,6 +5,10 @@ Required configurable variables in upload:
 """
 import collections
 import os
+import time
+
+import bioblend
+import simplejson
 
 from bcbio import utils
 from bcbio.log import logger
@@ -45,7 +49,23 @@ def update_file(finfo, sample_info, config):
     else:
         raise ValueError("Galaxy upload requires `galaxy_url` and `galaxy_api_key` in config")
     if storage_file and sample_info and not finfo.get("index", False):
-        _to_datalibrary(storage_file, gi, folder_name, sample_info, config)
+        _to_datalibrary_safe(storage_file, gi, folder_name, sample_info, config)
+
+def _to_datalibrary_safe(fname, gi, folder_name, sample_info, config):
+    """Upload with retries for intermittent JSON failures.
+    """
+    num_tries = 0
+    max_tries = 5
+    while 1:
+        try:
+            _to_datalibrary(fname, gi, folder_name, sample_info, config)
+            break
+        except (simplejson.scanner.JSONDecodeError, bioblend.galaxy.client.ConnectionError) as e:
+            num_tries += 1
+            if num_tries > max_tries:
+                raise
+            print "Retrying upload, failed with:", str(e)
+            time.sleep(5)
 
 def _to_datalibrary(fname, gi, folder_name, sample_info, config):
     """Upload a file to a Galaxy data library in a project specific folder.
