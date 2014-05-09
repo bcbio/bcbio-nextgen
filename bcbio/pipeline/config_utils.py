@@ -368,7 +368,7 @@ def get_transcript_gtf(genome_dir):
     return out_file
 
 def get_rRNA_interval(genome_dir):
-    return os.path.join(genome_dir, "rnaseq", "rRNA.interval")
+    return os.path.join(genome_dir, "rnaseq", "rRNA.interval_list")
 
 def get_transcript_refflat(genome_dir):
     return os.path.join(genome_dir, "rnaseq", "ref-transcripts.refFlat")
