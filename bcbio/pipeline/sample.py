@@ -49,7 +49,9 @@ def delayed_bam_merge(data):
                 extras.extend(x)
             else:
                 extras.append(x)
-        in_files = sorted(list(set([data[file_key]] + extras)))
+        if file_key in data:
+            extras.append(data[file_key])
+        in_files = sorted(list(set(extras)))
         out_file = data["combine"][file_key]["out"]
         sup_exts = data.get(file_key + "-plus", {}).keys()
         for ext in sup_exts + [""]:
@@ -74,8 +76,6 @@ def delayed_bam_merge(data):
                 if ext:
                     data[file_key + "-plus"][ext] = merged_file
                 else:
-                    if len(cur_in_files) == 0:
-                        data["%s-orig" % file_key] = data[file_key]
                     data[file_key] = merged_file
         data.pop("region", None)
         data.pop("combine", None)

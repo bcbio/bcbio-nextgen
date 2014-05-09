@@ -77,9 +77,12 @@ def _add_combine_info(output, combine_map, file_key):
             else:
                 out.append([data])
     for samples in out_by_file.values():
-        regions = [x["region"] for x in samples]
         data = samples[0]
-        data["region"] = regions
+        data["region"] = [x["region"] for x in samples]
+        region_bams = [x["work_bam"] for x in samples]
+        if len(set(region_bams)) == 1:
+            region_bams = [region_bams[0]]
+        data["region_bams"] = region_bams
         out.append([data])
     return out
 
@@ -92,7 +95,8 @@ def parallel_prep_region(samples, run_parallel):
     extras = []
     torun = []
     for data in [x[0] for x in samples]:
-        data["align_bam"] = data["work_bam"]
+        if data.get("work_bam"):
+            data["align_bam"] = data["work_bam"]
         a = data["config"]["algorithm"]
         if (not a.get("recalibrate") and not a.get("realign") and not a.get("variantcaller", "gatk")):
             extras.append([data])

@@ -104,7 +104,7 @@ def group_batches(xs):
     batches = []
     for batch, items in batch_groups.iteritems():
         batch_data = copy.deepcopy(_pick_lead_item(items))
-        batch_data["work_bam"] = [x["work_bam"] for x in items]
+        batch_data["region_bams"] = [x["region_bams"] for x in items]
         batch_data["group_orig"] = _collapse_subitems(batch_data, items)
         batch_data["group"] = batch
         batches.append(batch_data)

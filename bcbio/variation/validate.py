@@ -120,8 +120,8 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
            "calls": [ref_call, eval_call]}
     if a_intervals and not eval_genome:
         exp["intervals"] = os.path.abspath(a_intervals)
-    if data.get("work_bam-orig") and not eval_genome:
-        exp["align"] = data["work_bam-orig"]
+    if data.get("align_bam") and not eval_genome:
+        exp["align"] = data["align_bam"]
     elif data.get("work_bam") and not eval_genome:
         exp["align"] = data["work_bam"]
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
@@ -132,8 +132,8 @@ def get_analysis_intervals(data):
     """
     if data.get("ensemble_bed"):
         return data["ensemble_bed"]
-    elif data.get("work_bam-orig"):
-        return callable.sample_callable_bed(data["work_bam-orig"],
+    elif data.get("align_bam"):
+        return callable.sample_callable_bed(data["align_bam"],
                                             utils.get_in(data, ("reference", "fasta", "base")), data["config"])
     elif data.get("work_bam"):
         return callable.sample_callable_bed(data["work_bam"],

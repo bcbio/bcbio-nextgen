@@ -29,7 +29,7 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
 # ## High level functionality to run genotyping in parallel
 
 def get_variantcaller(data):
-    if data.get("work_bam"):
+    if data.get("align_bam"):
         return data["config"]["algorithm"].get("variantcaller", "gatk")
 
 def combine_multiple_callers(samples):
@@ -37,7 +37,7 @@ def combine_multiple_callers(samples):
     """
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
-        work_bam = utils.get_in(data, ("combine", "work_bam", "out"), data["work_bam"])
+        work_bam = utils.get_in(data, ("combine", "work_bam", "out"), data.get("align_bam"))
         variantcaller = get_variantcaller(data)
         key = (data["description"], work_bam)
         try:
@@ -73,11 +73,17 @@ def _split_by_ready_regions(ext, file_key, dir_ext_fn):
             out_file = os.path.join(out_dir, "%s%s" % (name, ext))
             assert isinstance(data["region"], (list, tuple))
             out_parts = []
-            for r in data["region"]:
+            for i, r in enumerate(data["region"]):
                 out_region_dir = os.path.join(out_dir, r[0])
                 out_region_file = os.path.join(out_region_dir,
                                                "%s-%s%s" % (name, region.to_safestr(r), ext))
-                out_parts.append((r, out_region_file))
+                work_bams = []
+                for xs in data["region_bams"]:
+                    if len(xs) == 1:
+                        work_bams.append(xs[0])
+                    else:
+                        work_bams.append(xs[i])
+                out_parts.append((r, work_bams, out_region_file))
             return out_file, out_parts
         else:
             return None, []
@@ -88,7 +94,7 @@ def _collapse_by_bam_variantcaller(samples):
     """
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
-        work_bam = utils.get_in(data, ("combine", "work_bam", "out"), data["work_bam"])
+        work_bam = utils.get_in(data, ("combine", "work_bam", "out"), data.get("align_bam"))
         variantcaller = get_variantcaller(data)
         if isinstance(work_bam, list):
             work_bam = tuple(work_bam)
@@ -101,6 +107,9 @@ def _collapse_by_bam_variantcaller(samples):
     for grouped_data in by_bam.values():
         cur = grouped_data[0]
         cur.pop("region", None)
+        region_bams = cur.pop("region_bams", None)
+        if region_bams and len(region_bams[0]) > 1:
+            cur.pop("work_bam", None)
         out.append([cur])
     return out
 
@@ -153,7 +162,7 @@ def get_variantcallers():
             "varscan": varscan.run_varscan,
             "mutect": mutect.mutect_caller}
 
-def variantcall_sample(data, region=None, out_file=None):
+def variantcall_sample(data, region=None, align_bams=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
     """
     if out_file is None or not os.path.exists(out_file) or not os.path.lexists(out_file):
@@ -162,12 +171,11 @@ def variantcall_sample(data, region=None, out_file=None):
         config = data["config"]
         caller_fns = get_variantcallers()
         caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
-        if isinstance(data["work_bam"], basestring):
-            align_bams = [data["work_bam"]]
+        if len(align_bams) == 1:
             items = [data]
         else:
-            align_bams = data["work_bam"]
             items = multi.get_orig_items(data)
+            assert len(items) == len(align_bams)
         call_file = "%s-raw%s" % utils.splitext_plus(out_file)
         call_file = caller_fn(align_bams, items, sam_ref,
                               data["genome_resources"]["variation"],

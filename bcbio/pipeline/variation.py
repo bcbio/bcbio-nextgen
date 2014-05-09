@@ -11,7 +11,7 @@ def postprocess_variants(data):
     """
     cur_name = "%s, %s" % (data["name"][-1], get_variantcaller(data))
     logger.info("Finalizing variant calls: %s" % cur_name)
-    if data["work_bam"] and data.get("vrn_file"):
+    if data.get("align_bam") and data.get("vrn_file"):
         logger.info("Calculating variation effects for %s" % cur_name)
         ann_vrn_file = effects.snpeff_effects(data)
         if ann_vrn_file:

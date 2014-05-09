@@ -110,7 +110,7 @@ def do_db_build(samples, check_gemini=True, need_bam=True):
     """
     genomes = set()
     for data in samples:
-        if not need_bam or data.get("work_bam"):
+        if not need_bam or data.get("align_bam"):
             genomes.add(data["genome_build"])
         if "gemini" in utils.get_in(data, ("config", "algorithm", "tools_off"), []):
             return False
@@ -155,7 +155,7 @@ def _group_by_batches(samples, check_fn):
     return batch_groups, singles, out_retrieve, extras
 
 def _has_variant_calls(data):
-    return data["work_bam"] and data.get("vrn_file") and vcfutils.vcf_has_variants(data["vrn_file"])
+    return data.get("align_bam") and data.get("vrn_file") and vcfutils.vcf_has_variants(data["vrn_file"])
 
 def prep_db_parallel(samples, parallel_fn):
     """Prepares gemini databases in parallel, handling jointly called populations.
