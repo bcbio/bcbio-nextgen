@@ -148,7 +148,7 @@ def _prep_grabix_indexes(in_files, dirs, data):
     else:
         out = run_multicore(_bgzip_from_fastq,
                             [[{"in_file": x, "dirs": dirs, "config": data["config"]}] for x in in_files if x],
-                            config)
+                            data["config"])
     items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in out if x]
     run_multicore(_grabix_index, items, data["config"])
     return out

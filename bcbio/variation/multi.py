@@ -100,6 +100,7 @@ def group_batches(xs):
             for b in batches:
                 batch_groups[(b, region, caller)].append(copy.deepcopy(data))
         else:
+            data["region_bams"] = [data["region_bams"]]
             singles.append(data)
     batches = []
     for batch, items in batch_groups.iteritems():

@@ -86,7 +86,7 @@ def _get_files_variantcall(sample):
     return _add_meta(out, sample)
 
 def _maybe_add_variant_file(algorithm, sample, out):
-    if sample["work_bam"] is not None and sample.get("vrn_file"):
+    if sample.get("align_bam") is not None and sample.get("vrn_file"):
         for x in sample["variants"]:
             out.extend(_get_vcf(x, ("vrn_file",)))
             if x.get("bed_file"):
@@ -140,7 +140,7 @@ def _maybe_add_summary(algorithm, sample, out):
 
 def _maybe_add_alignment(algorithm, sample, out):
     if _has_alignment_file(algorithm, sample):
-        for (fname, ext) in [(sample["work_bam"], "ready"),
+        for (fname, ext) in [(sample.get("work_bam"), "ready"),
                              (utils.get_in(sample, ("work_bam-plus", "disc")), "disc"),
                              (utils.get_in(sample, ("work_bam-plus", "sr")), "sr")]:
             if fname and os.path.exists(fname):
@@ -189,7 +189,7 @@ def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
               or algorithm.get("recalibrate")) and
               algorithm.get("merge_bamprep", True)) and
-              sample["work_bam"] is not None)
+              sample.get("work_bam") is not None)
 
 # ## File information from full project
 

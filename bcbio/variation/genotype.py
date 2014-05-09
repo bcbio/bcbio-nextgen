@@ -83,6 +83,8 @@ def _split_by_ready_regions(ext, file_key, dir_ext_fn):
                         work_bams.append(xs[0])
                     else:
                         work_bams.append(xs[i])
+                for work_bam in work_bams:
+                    assert os.path.exists(work_bam), work_bam
                 out_parts.append((r, work_bams, out_region_file))
             return out_file, out_parts
         else:

@@ -77,12 +77,14 @@ def _add_combine_info(output, combine_map, file_key):
             else:
                 out.append([data])
     for samples in out_by_file.values():
-        data = samples[0]
-        data["region"] = [x["region"] for x in samples]
+        regions = [x["region"] for x in samples]
         region_bams = [x["work_bam"] for x in samples]
+        assert len(regions) == len(region_bams)
         if len(set(region_bams)) == 1:
             region_bams = [region_bams[0]]
+        data = samples[0]
         data["region_bams"] = region_bams
+        data["region"] = regions
         out.append([data])
     return out
 

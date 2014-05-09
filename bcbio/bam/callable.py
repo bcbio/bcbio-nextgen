@@ -350,6 +350,7 @@ def combine_sample_regions(*samples):
     else:
         global_analysis_file = None
     out = []
+    analysis_files = []
     for batch, items in vmulti.group_by_batch(samples).items():
         if global_analysis_file:
             analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
@@ -357,11 +358,12 @@ def combine_sample_regions(*samples):
             analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
         for data in items:
             if analysis_file:
+                analysis_files.append(analysis_file)
                 data["config"]["algorithm"]["callable_regions"] = analysis_file
                 data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
             out.append([data])
     assert len(out) == len(samples)
-    final_regions = pybedtools.BedTool(analysis_file)
+    final_regions = pybedtools.BedTool(analysis_files[0])
     _analysis_block_stats(final_regions)
     return out
 
