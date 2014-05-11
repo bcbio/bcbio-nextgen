@@ -33,7 +33,8 @@ requirements:
 
 - Python 2.6 or 2.7, with the development libraries
   installed (the python-dev or python-devel packages).
-- Compilers: gcc and g++.
+- Compilers: Recent versions of gcc and g++. gcc 4.8.x is well tested,
+  although other versions should work fine.
 - The git version control system (http://git-scm.com/).
 - wget for file retrieval (https://www.gnu.org/software/wget/)
 
@@ -221,12 +222,11 @@ OSX
 ~~~
 - Download and install `VirtualBox`_
 - Download and install `Vagrant for OSX`_
-- Get installer script::
+- Ensure your system has wget installed.
+- Get and run the installer script::
 
-    curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
-
-- Run the installer and follow the instructions::
-
+    mkdir bcbio && cd bcbio
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
     sh vagrant_osx.sh
 
 .. _Vagrant for OSX: http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/Vagrant-1.2.7.dmg

@@ -1,8 +1,6 @@
 #!/bin/bash
-mkdir bcbio
-cd bcbio
-curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/Vagrantfile
-curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/bootstrap.sh
+wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/Vagrantfile
+wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/bootstrap.sh
 vagrant up
 
 echo "Your VM is all set up. You can connect to the VM by typing 'vagrant ssh'."
