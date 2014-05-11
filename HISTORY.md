@@ -20,6 +20,8 @@
 - Update VQSR support for GATK to be up to date with latest best
   practices. Re-organize GATK and filtering to be more modular to help with
   transition to GATK 3.x gVCF approaches.
+- Support CRAM files as input to pipeline, including retrieval of reads from
+  defined sequence regions.
 - Support export of alignment data as CRAM instead of BAM for space storage
   and long term archiving.
 - Provide configuration option, `remove_lcr`, to filter out variants in low
