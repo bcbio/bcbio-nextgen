@@ -27,7 +27,7 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
     samtools = config_utils.get_program("samtools", config)
     resources = config_utils.get_resources("novoalign", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    max_mem = resources.get("memory", "4G")
+    max_mem = resources.get("memory", "4G").upper()
     extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
 
     if not file_exists(out_file):

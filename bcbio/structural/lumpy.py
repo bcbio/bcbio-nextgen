@@ -29,7 +29,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
     cores = utils.get_in(data, ("config", "algorithm", "num_cores"), 1)
     resources = config_utils.get_resources("sambamba", data["config"])
     mem = config_utils.adjust_memory(resources.get("memory", "2G"),
-                                     3, "decrease")
+                                     3, "decrease").upper()
     if not utils.file_exists(sr_file) or not utils.file_exists(disc_file) or utils.file_exists(dedup_file):
         with utils.curdir_tmpdir(data) as tmpdir:
             with file_transaction(sr_file) as tx_sr_file:

@@ -46,7 +46,7 @@ def _get_cores_memory(data, downscale=2):
     resources = config_utils.get_resources("samtools", data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
-                                         downscale, "decrease")
+                                         downscale, "decrease").upper()
     return num_cores, max_mem
 
 def _sam_to_sortbam_cl(data, tmpdir, tx_out_file):

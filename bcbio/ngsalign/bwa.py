@@ -30,7 +30,7 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
     num_cores = config["algorithm"].get("num_cores", 1)
     # adjust memory for samtools since used for input and output
     max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
-                                         3, "decrease")
+                                         3, "decrease").upper()
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
         with utils.curdir_tmpdir(data) as work_dir:
