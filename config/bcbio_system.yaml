@@ -32,6 +32,9 @@ resources:
   novoalign:
     cores: 16
     memory: 2G
+  snap:
+    cores: 16
+    memory: 4G
   gemini:
     cores: 16
   freebayes:

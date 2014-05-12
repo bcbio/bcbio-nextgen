@@ -8,7 +8,7 @@ import os
 from bcbio import bam, utils
 from bcbio.bam import cram
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2,
-                            novoalign, star)
+                            novoalign, snap, star)
 
 # Define a next-generation sequencing tool to plugin:
 # align_fn -- runs an aligner and generates SAM output
@@ -30,12 +30,12 @@ TOOLS = {
     "bowtie2": NgsTool(bowtie2.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
-#    "mosaik": NgsTool(mosaik.align, None, mosaik.galaxy_location_file, None),
     "novoalign": NgsTool(novoalign.align_pipe, novoalign.align_bam,
                          novoalign.galaxy_location_file, novoalign.remap_index_fn),
     "tophat": NgsTool(tophat.align, None,
                       bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "samtools": NgsTool(None, None, BASE_LOCATION_FILE, None),
+    "snap": NgsTool(snap.align, snap.align_bam, snap.galaxy_location_file, snap.remap_index_fn),
     "star": NgsTool(star.align, None, None, star.remap_index_fn),
     "tophat2": NgsTool(tophat.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn)}
@@ -51,10 +51,9 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
     align_dir = utils.safe_makedir(apply(os.path.join, align_dir_parts))
     if fastq1.endswith(".bam"):
-        out_bam = _align_from_bam(fastq1, aligner, utils.get_in(data, ("reference", aligner, "base")),
-                                  utils.get_in(data, ("reference", "fasta", "base")),
-                                  names, align_dir, data)
-        data["work_bam"] = out_bam
+        data = _align_from_bam(fastq1, aligner, utils.get_in(data, ("reference", aligner, "base")),
+                               utils.get_in(data, ("reference", "fasta", "base")),
+                               names, align_dir, data)
     else:
         data = _align_from_fastq(fastq1, fastq2, aligner, utils.get_in(data, ("reference", aligner, "base")),
                                  utils.get_in(data, ("reference", "fasta", "base")),
@@ -74,7 +73,13 @@ def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, data)
     align_fn = TOOLS[aligner].bam_align_fn
     if align_fn is None:
         raise NotImplementedError("Do not yet support BAM alignment with %s" % aligner)
-    return align_fn(fastq1, align_ref, names, align_dir, data)
+    out = align_fn(fastq1, align_ref, names, align_dir, data)
+    if isinstance(out, dict):
+        assert "work_bam" in out
+        return out
+    else:
+        data["work_bam"] = out
+        return data
 
 def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
                       align_dir, data):

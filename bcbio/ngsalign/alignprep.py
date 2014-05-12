@@ -25,19 +25,20 @@ def create_inputs(data):
     machine. Uses gbzip and grabix to prepare an indexed fastq file.
     """
     # CRAM files must be converted to bgzipped fastq
-    if ("files" in data and _is_cram_input(data["files"])
-          and not tz.get_in(["config", "algorithm", "align_split_size"], data)):
-        data = tz.update_in(data, ["config", "algorithm", "align_split_size"], int, default=20000000)
-    # skip indexing on samples without input files or not doing alignment
-    if ("files" not in data or data["files"][0] is None or
-          data["config"]["algorithm"].get("align_split_size") is None
-          or not data["config"]["algorithm"].get("aligner")):
-        return [[data]]
+    if not ("files" in data and _is_cram_input(data["files"])):
+        # skip indexing on samples without input files or not doing alignment
+        if ("files" not in data or data["files"][0] is None or
+              data["config"]["algorithm"].get("align_split_size") is None
+              or not data["config"]["algorithm"].get("aligner")):
+            return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data)
     data["files"] = ready_files
     # bgzip preparation takes care of converting illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
-    splits = _find_read_splits(ready_files[0], data["config"]["algorithm"]["align_split_size"])
+    if tz.get_in(["config", "algorithm", "align_split_size"], data):
+        splits = _find_read_splits(ready_files[0], data["config"]["algorithm"]["align_split_size"])
+    else:
+        splits = [None]
     if len(splits) == 1:
         return [[data]]
     else:
