@@ -60,11 +60,15 @@ def compress(in_bam, ref_file, config):
                    "--lossy-quality-score-spec '*8' "
                    "--output-cram-file {tx_out_file}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
-    if not utils.file_exists(out_file + ".crai"):
-        with file_transaction(out_file + ".crai") as tx_out_file:
-            tx_in_file = os.path.splitext(tx_out_file)[0]
-            utils.symlink_plus(out_file, tx_in_file)
-            cmd = ("cramtools {jvm_opts} index "
-                   "--input-file {tx_in_file}")
-            subprocess.check_call(cmd.format(**locals()), shell=True)
+    index(out_file)
     return out_file
+
+def index(in_cram):
+    """Ensure CRAM file has a .crai index file using cram_index from scramble.
+    """
+    if not utils.file_exists(in_cram + ".crai"):
+        with file_transaction(in_cram + ".crai") as tx_out_file:
+            tx_in_file = os.path.splitext(tx_out_file)[0]
+            utils.symlink_plus(in_cram, tx_in_file)
+            cmd = "cram_index {tx_in_file}"
+            subprocess.check_call(cmd.format(**locals()), shell=True)

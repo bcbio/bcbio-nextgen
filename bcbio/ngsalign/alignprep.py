@@ -12,6 +12,7 @@ except ImportError:
     pybedtools = None
 
 from bcbio import bam, utils
+from bcbio.bam import cram
 from bcbio.log import logger
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
@@ -172,6 +173,7 @@ def _bgzip_from_cram(cram_file, dirs, data):
                                           (utils.splitext_plus(os.path.basename(cram_file))[0], fext))
                              for fext in ["s1", "p1", "p2"]]
     if not utils.file_exists(out_s) and not utils.file_exists(out_p1):
+        cram.index(cram_file)
         fastqs = _cram_to_fastq_regions(regions, cram_file, dirs, data)
         if len(fastqs[0]) == 1:
             with file_transaction(out_s) as tx_out_file:
