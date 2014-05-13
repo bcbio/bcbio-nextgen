@@ -89,10 +89,10 @@ def _freebayes_hard(in_file, data):
     """
     stats = _calc_vcf_stats(in_file)
     depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
-    qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter 
-    filters = ('(AF <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
-               '(AF > 0.5 && (DP < 4 && %QUAL < 50)) || '
-               '(%QUAL < {qual_thresh} && DP > {depth_thresh} && AF <= 0.5)'
+    qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter
+    filters = ('(AF[0] <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
+               '(AF[0] > 0.5 && (DP < 4 && %QUAL < 50)) || '
+               '(%QUAL < {qual_thresh} && DP > {depth_thresh} && AF[0] <= 0.5)'
                .format(**locals()))
     return hard_w_expression(in_file, filters, data)
 

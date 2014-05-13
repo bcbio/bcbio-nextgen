@@ -104,8 +104,8 @@ class VCFUtilTest(unittest.TestCase):
     def test_4_vcf_sample_select(self):
         """Select a sample from a VCF file.
         """
-        fname = os.path.join(self.var_dir, "S1-variants.vcf")
-        out_file = "%s-sampleselect%s.gz" % os.path.splitext(fname)
+        fname = os.path.join(self.var_dir, "S1_S2-combined.vcf.gz")
+        out_file = "%s-sampleselect%s" % utils.splitext_plus(fname)
         out_file = vcfutils.select_sample(fname, "S2", out_file, {})
         self._remove_vcf(out_file)
 
