@@ -2,10 +2,11 @@
 
 https://github.com/tobiasrausch/delly
 """
-import os
 from contextlib import closing
 import copy
 import itertools
+import os
+import re
 import subprocess
 
 try:
@@ -30,6 +31,25 @@ def _get_sv_exclude_file(items):
     if sv_bed and os.path.exists(sv_bed):
         return sv_bed
 
+def _get_variant_regions(items):
+    """Retrieve variant regions defined in any of the input items.
+    """
+    return filter(lambda x: x is not None,
+                  [tz.get_in(("config", "algorithm", "variant_regions"), data)
+                   for data in items
+                   if tz.get_in(["config", "algorithm", "coverage_interval"], data) != "genome"])
+
+def _has_variant_regions(items, base_file, chrom=None):
+    """Determine if we should process this chromosome: needs variant regions defined.
+    """
+    if chrom:
+        all_vrs = _get_variant_regions(items)
+        if len(all_vrs) > 0:
+            test = shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
+            if test == chrom:
+                return False
+    return True
+
 def prepare_exclude_file(items, base_file, chrom=None):
     """Prepare a BED file for exclusion, incorporating variant regions and chromosome.
 
@@ -38,19 +58,17 @@ def prepare_exclude_file(items, base_file, chrom=None):
     false positive structural variant calls.
     """
     out_file = "%s-exclude.bed" % utils.splitext_plus(base_file)[0]
-    all_vrs = filter(lambda x: x is not None,
-                     [tz.get_in(("config", "algorithm", "variant_regions"), data)
-                      for data in items
-                      if tz.get_in(["config", "algorithm", "coverage_interval"], data) != "genome"])
+    all_vrs = _get_variant_regions(items)
+    ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
+                    if len(all_vrs) > 0 else chrom)
     # Get a bedtool for the full region if no variant regions
-    if len(all_vrs) == 0:
+    if ready_region == chrom:
         want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                 items[0]["config"], chrom)
         lcr_bed = shared.get_lcr_bed(items)
         if lcr_bed:
             want_bedtool = want_bedtool.subtract(pybedtools.BedTool(lcr_bed))
     else:
-        ready_region = shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
         want_bedtool = pybedtools.BedTool(ready_region).saveas()
     sv_exclude_bed = _get_sv_exclude_file(items)
     if sv_exclude_bed and len(want_bedtool) > 0:
@@ -74,32 +92,56 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
                             % (os.path.splitext(os.path.basename(bam_files[0]))[0], sv_type, chrom))
     cores = min(utils.get_in(items[0], ("config", "algorithm", "num_cores"), 1),
                 len(bam_files))
-    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
+    if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            exclude = ["-x", prepare_exclude_file(items, out_file, chrom)]
-            cmd = ["delly", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
-            multi_cmd = "export OMP_NUM_THREADS=%s && " % cores
-            try:
-                do.run(multi_cmd + " ".join(cmd), "delly structural variant")
-            except subprocess.CalledProcessError, msg:
-                # delly returns an error exit code if there are no variants
-                if "No structural variants found" in str(msg):
-                    vcfutils.write_empty_vcf(out_file)
-                else:
-                    raise
-    return [_clean_bgzip_delly(out_file)]
+            if not _has_variant_regions(items, out_file, chrom):
+                vcfutils.write_empty_vcf(out_file)
+            else:
+                exclude = ["-x", prepare_exclude_file(items, out_file, chrom)]
+                cmd = ["delly", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
+                multi_cmd = "export OMP_NUM_THREADS=%s && " % cores
+                try:
+                    do.run(multi_cmd + " ".join(cmd), "delly structural variant")
+                except subprocess.CalledProcessError, msg:
+                    # delly returns an error exit code if there are no variants
+                    if "No structural variants found" in str(msg):
+                        vcfutils.write_empty_vcf(out_file)
+                    else:
+                        raise
+    return [vcfutils.bgzip_and_index(_clean_delly_output(out_file, items), items[0]["config"])]
 
-def _clean_bgzip_delly(in_file):
-    """Provide bgzipped input files, removing problem GL specifications from output.
+def _clean_delly_output(in_file, items):
+    """Clean delly output, fixing sample names and removing problem GL specifications from output.
 
     GATK does not like missing GLs like '.,.,.'. This converts them to the recognized '.'
     """
-    out_file = "%s.gz" % in_file
-    if not utils.file_exists(out_file):
+    pat = re.compile(r"\.,\.,\.")
+    out_file = "%s-clean.vcf" % utils.splitext_plus(in_file)[0]
+    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(out_file) as tx_out_file:
-            cmd = "sed 's/\.,\.,\././g' {in_file} | bgzip -c > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Clean and bgzip delly output")
+            with open(in_file) as in_handle:
+                with open(out_file, "w") as out_handle:
+                    for line in in_handle:
+                        if line.startswith("#"):
+                            if line.startswith("#CHROM"):
+                                line = _fix_sample_names(line, items)
+                        else:
+                            line = pat.sub(".", line)
+                        out_handle.write(line)
     return out_file
+
+def _fix_sample_names(line, items):
+    """Substitute Delly output sample names (filenames) with actual sample names.
+    """
+    names = [tz.get_in(["rgnames", "sample"], x) for x in items]
+    parts = line.split("\t")
+    # If we're not empty and actually have genotype information
+    if "FORMAT" in parts:
+        format_i = parts.index("FORMAT") + 1
+        assert len(parts[format_i:]) == len(names), (parts[format_i:], names)
+        return "\t".join(parts[:format_i] + names) + "\n"
+    else:
+        return line
 
 def run(items):
     """Perform detection of structural variations with delly.

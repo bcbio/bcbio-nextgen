@@ -232,8 +232,9 @@ def _cram_to_fastq_regions(regions, cram_file, dirs, data):
                 do.run(cmd.format(**locals()), "CRAM to fastq %s" % region if region else "")
         if is_paired or not _is_gzip_empty(out_p1):
             fnames.append((out_p1, out_p2))
+            is_paired = True
         else:
-            fnames.append(out_s)
+            fnames.append((out_s,))
     return fnames
 
 def _is_gzip_empty(fname):

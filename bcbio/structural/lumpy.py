@@ -72,7 +72,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                 disc_bams = ",".join(disc_bams)
                 sv_exclude_bed = delly.prepare_exclude_file(items, out_file)
                 exclude = "-x %s" % sv_exclude_bed if sv_exclude_bed else ""
-                cmd = ("speedseq lumpy -B {full_bams} -S {sr_bams} -D {disc_bams} {exclude} "
+                cmd = ("speedseq lumpy -v -B {full_bams} -S {sr_bams} -D {disc_bams} {exclude} "
                        "-T {tmpdir} -o {out_base}")
                 do.run(cmd.format(**locals()), "speedseq lumpy", items[0])
     return out_file
@@ -110,8 +110,9 @@ def _filter_by_support(orig_file, index):
     """Filter call file based on supporting evidence, adding pass/filter annotations to BEDPE.
 
     Filters based on the following criteria:
-      - Multiple forms of evidence in any sample (split and paired end)
       - Minimum read support for the call.
+    Other filters not currently applied due to being too restrictive:
+      - Multiple forms of evidence in any sample (split and paired end)
     """
     min_read_count = 4
     out_file = utils.append_stem(orig_file, "-filter")
@@ -123,10 +124,10 @@ def _filter_by_support(orig_file, index):
                         support = _get_support(parts)
                         evidence = set(reduce(operator.add, [x.keys() for x in support.values()]))
                         read_count = reduce(operator.add, support[index].values())
-                        if len(evidence) < 2:
-                            lfilter = "ApproachSupport"
-                        elif read_count < min_read_count:
+                        if read_count < min_read_count:
                             lfilter = "ReadCountSupport"
+                        #elif len(evidence) < 2:
+                        #    lfilter = "ApproachSupport"
                         else:
                             lfilter = "PASS"
                         parts.append(lfilter)

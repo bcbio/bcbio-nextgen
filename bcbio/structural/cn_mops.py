@@ -32,8 +32,9 @@ def run(items, background=None):
     parallel = {"type": "local", "cores": data["config"]["algorithm"].get("num_cores", 1),
                 "progs": ["delly"]}
     with closing(pysam.Samfile(work_bams[0], "rb")) as pysam_work_bam:
+        chroms = [None] if _get_regional_bed_file(items[0]) else pysam_work_bam.references
         out_files = run_multicore(_run_on_chrom, [(chrom, work_bams, names, work_dir, items)
-                                                  for chrom in pysam_work_bam.references],
+                                                  for chrom in chroms],
                                   data["config"], parallel)
     out_file = _combine_out_files(out_files, work_bams[0], work_dir)
     out = []
@@ -78,7 +79,7 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
     local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                  "lib", "R", "site-library")
     out_file = os.path.join(work_dir, "%s-%s-cnv.bed" % (os.path.splitext(os.path.basename(work_bams[0]))[0],
-                                                         chrom))
+                                                         chrom if chrom else "all"))
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             rcode = "%s-run.R" % os.path.splitext(out_file)[0]
@@ -105,6 +106,7 @@ def _allowed_cnmops_errorstates(msg):
             or msg.find("Error in if (is.finite(mv2m)) { : argument is of length zero") >= 0)
 
 def _prep_load_script(work_bams, names, chrom, items):
+    if not chrom: chrom = ""
     pairmode = "paired" if bam.is_paired(work_bams[0]) else "unpaired"
     if len(items) == 2 and vcfutils.get_paired_phenotype(items[0]):
         load_script = _paired_load_script
@@ -112,12 +114,19 @@ def _prep_load_script(work_bams, names, chrom, items):
         load_script = _population_load_script
     return load_script(work_bams, names, chrom, pairmode, items)
 
+def _get_regional_bed_file(data):
+    """If we are running a non-genome analysis, pull the regional file for analysis.
+    """
+    bed_file = data["config"]["algorithm"].get("variant_regions", None)
+    is_genome = data["config"]["algorithm"].get("coverage_interval", "exome").lower() in ["genome"]
+    if bed_file and utils.file_exists(bed_file) and not is_genome:
+        return bed_file
+
 def _population_load_script(work_bams, names, chrom, pairmode, items):
     """Prepare BAMs for assessing CNVs in a population.
     """
-    bed_file = items[0]["config"]["algorithm"].get("variant_regions", None)
-    is_genome = items[0]["config"]["algorithm"].get("coverage_interval", "exome").lower() in ["genome"]
-    if utils.file_exists(bed_file) and not is_genome:
+    bed_file = _get_regional_bed_file(items[0])
+    if bed_file:
         return _population_prep_targeted.format(bam_file_str=",".join(work_bams), names_str=",".join(names),
                                                 chrom=chrom, num_cores=0, pairmode=pairmode, bed_file=bed_file)
     else:
@@ -128,9 +137,8 @@ def _paired_load_script(work_bams, names, chrom, pairmode, items):
     """Prepare BAMs for assessing CNVs in a paired tumor/normal setup.
     """
     paired = vcfutils.get_paired_bams(work_bams, items)
-    bed_file = items[0]["config"]["algorithm"].get("variant_regions", None)
-    is_genome = items[0]["config"]["algorithm"].get("coverage_interval", "exome").lower() in ["genome"]
-    if utils.file_exists(bed_file) and not is_genome:
+    bed_file = _get_regional_bed_file(items[0])
+    if bed_file:
         return _paired_prep_targeted.format(case_file=paired.tumor_bam, case_name=paired.tumor_name,
                                             ctrl_file=paired.normal_bam, ctrl_name=paired.normal_name,
                                             num_cores=0, chrom=chrom, pairmode=pairmode, bed_file=bed_file)
@@ -176,9 +184,9 @@ cnv_out <- calcFractionalCopyNumbers(prep_counts)
 _population_prep_targeted = """
 bam_files <- strsplit("{bam_file_str}", ",")[[1]]
 sample_names <- strsplit("{names_str}", ",")[[1]]
-my_gr <- import.bed(c("{bed_file}"), trackLine=FALSE)
-my_gr_subset = subset(my_gr, seqnames(my_gr) == "{chrom}")
-if (length(my_gr_subset) < 1) stop("No CNV regions in result object. Rerun cn.mops with different parameters!")
+my_gr <- import.bed(c("{bed_file}"), trackLine=FALSE, asRangedData=FALSE)
+if ("{chrom}" != "") my_gr = subset(my_gr, seqnames(my_gr) == "{chrom}")
+if (length(my_gr) < 1) stop("No CNV regions in result object. Rerun cn.mops with different parameters!")
 count_drs <- getSegmentReadCountsFromBAM(bam_files, sampleNames=sample_names, mode="{pairmode}",
                                          GR=my_gr, parallel={num_cores})
 prep_counts <- cn.mops(count_drs, parallel={num_cores})
@@ -186,9 +194,9 @@ cnv_out <- calcIntegerCopyNumbers(prep_counts)
 """
 
 _paired_prep_targeted = """
-my_gr <- import.bed(c("{bed_file}"), trackLine=FALSE)
-my_gr_subset = subset(my_gr, seqnames(my_gr) == "{chrom}")
-if (length(my_gr_subset) < 1) stop("No CNV regions in result object. Rerun cn.mops with different parameters!")
+my_gr <- import.bed(c("{bed_file}"), trackLine=FALSE, asRangedData=FALSE)
+if ("{chrom}" != "") my_gr = subset(my_gr, seqnames(my_gr) == "{chrom}")
+if (length(my_gr) < 1) stop("No CNV regions in result object. Rerun cn.mops with different parameters!")
 case_count <- getSegmentReadCountsFromBAM(c("{case_file}"), GR=my_gr,
                                           sampleNames=c("{case_name}"),
                                           mode="{pairmode}", parallel={num_cores})
