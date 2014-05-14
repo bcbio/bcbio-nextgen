@@ -18,6 +18,7 @@ fabric>=1.7.0
 gffutils>=0.8.1
 HTSeq >= 0.5.4p5
 joblib>=0.7.0d
+prettyplotlib>=0.1.7
 psutil>=1.2.0
 pybedtools>=0.6.2
 PyVCF>=0.6.7
