@@ -6,10 +6,11 @@ import os
 import shutil
 
 import numpy
+import toolz as tz
 import vcf
 import yaml
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
@@ -17,7 +18,7 @@ from bcbio.variation import vcfutils
 
 # ## General functionality
 
-def hard_w_expression(vcf_file, expression, data, filterext="", name="+"):
+def hard_w_expression(vcf_file, expression, data, name="+", filterext=""):
     """Perform hard filtering using bcftools expressions like %QUAL < 20 || DP < 4.
     """
     base, ext = utils.splitext_plus(vcf_file)
@@ -35,6 +36,28 @@ def hard_w_expression(vcf_file, expression, data, filterext="", name="+"):
                 do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
             else:
                 shutil.copy(vcf_file, out_file)
+    if out_file.endswith(".vcf.gz"):
+        out_file = vcfutils.bgzip_and_index(out_file, data["config"])
+    return out_file
+
+def genotype_filter(vcf_file, expression, data, name, filterext=""):
+    """Perform genotype based filtering using GATK with the provided expression.
+
+    Adds FT tags to genotypes, rather than the general FILTER flag.
+    """
+    base, ext = utils.splitext_plus(vcf_file)
+    out_file = "{base}-filter{filterext}{ext}".format(**locals())
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            params = ["-T", "VariantFiltration",
+                      "-R", tz.get_in(["reference", "fasta", "base"], data),
+                      "--variant", vcf_file,
+                      "--out", tx_out_file,
+                      "--genotypeFilterName", name,
+                      "--genotypeFilterExpression", "'%s'" % expression]
+            jvm_opts = broad.get_gatk_framework_opts(data["config"])
+            cmd = [config_utils.get_program("gatk-framework", data["config"])] + jvm_opts + params
+            do.run(cmd, "Filter with expression: %s" % expression)
     if out_file.endswith(".vcf.gz"):
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
@@ -132,10 +155,10 @@ def gatk_snp_hard(in_file, data):
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"), "gatk")
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
-    return hard_w_expression(in_file, " || ".join(filters), data, "SNP", name="GATKHardSNP")
+    return hard_w_expression(in_file, " || ".join(filters), data, "GATKHardSNP", "SNP")
 
 def gatk_indel_hard(in_file, data):
     """Perform hard filtering on GATK indels using best-practice recommendations.
     """
     filters = ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"]
-    return hard_w_expression(in_file, " || ".join(filters), data, "INDEL", name="GATKHardIndel")
+    return hard_w_expression(in_file, " || ".join(filters), data, "GATKHardIndel", "INDEL")

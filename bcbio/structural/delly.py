@@ -22,7 +22,7 @@ from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.provenance import do
-from bcbio.variation import vcfutils
+from bcbio.variation import vcfutils, vfilter
 
 def _get_sv_exclude_file(items):
     """Retrieve SV file of regions to exclude.
@@ -145,6 +145,13 @@ def _fix_sample_names(line, items):
 
 def run(items):
     """Perform detection of structural variations with delly.
+
+    Performs post-call filtering with a custom filter tuned based
+    on NA12878 Moleculo and PacBio data, using calls prepared by
+    @ryanlayer and @cc2qe
+
+    Filters using the high quality variant pairs (DV) compared with
+    high quality reference pairs (DR).
     """
     work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "structural",
                                                items[0]["name"][-1], "delly"))
@@ -164,7 +171,9 @@ def run(items):
                                                  in itertools.product(pysam_work_bam.references, sv_types)],
                                     config, parallel)
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
-    delly_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
+    combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
+    delly_vcf = vfilter.genotype_filter(combo_vcf, 'DV / (DV + DR) > 0.35 && DV > 4', data,
+                                        "DVSupport")
     out = []
     for data in items:
         if "sv" not in data:
