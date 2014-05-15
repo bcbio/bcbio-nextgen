@@ -17,7 +17,7 @@ from bcbio.variation import vcfutils
 
 # ## General functionality
 
-def hard_w_expression(vcf_file, expression, data, filterext=""):
+def hard_w_expression(vcf_file, expression, data, filterext="", name="+"):
     """Perform hard filtering using bcftools expressions like %QUAL < 20 || DP < 4.
     """
     base, ext = utils.splitext_plus(vcf_file)
@@ -30,7 +30,7 @@ def hard_w_expression(vcf_file, expression, data, filterext=""):
                 variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
                 intervals = ("-t %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
                              if variant_regions else "")
-                cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '+' "
+                cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '{name}' "
                        "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
             else:
@@ -94,7 +94,7 @@ def _freebayes_hard(in_file, data):
                '(AF[0] > 0.5 && (DP < 4 && %QUAL < 50)) || '
                '(%QUAL < {qual_thresh} && DP > {depth_thresh} && AF[0] <= 0.5)'
                .format(**locals()))
-    return hard_w_expression(in_file, filters, data)
+    return hard_w_expression(in_file, filters, data, name="FBQualDepth")
 
 def _calc_vcf_stats(in_file):
     """Calculate statistics on VCF for filtering, saving to a file for quick re-runs.
@@ -132,10 +132,10 @@ def gatk_snp_hard(in_file, data):
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"), "gatk")
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
-    return hard_w_expression(in_file, " || ".join(filters), data, "SNP")
+    return hard_w_expression(in_file, " || ".join(filters), data, "SNP", name="GATKHardSNP")
 
 def gatk_indel_hard(in_file, data):
     """Perform hard filtering on GATK indels using best-practice recommendations.
     """
     filters = ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"]
-    return hard_w_expression(in_file, " || ".join(filters), data, "INDEL")
+    return hard_w_expression(in_file, " || ".join(filters), data, "INDEL", name="GATKHardIndel")
