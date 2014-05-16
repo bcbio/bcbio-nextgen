@@ -63,13 +63,21 @@ def _combine_out_files(chr_files, base_bam, work_dir):
 
 def _prep_sample_cnvs(cnv_file, data):
     """Convert a multiple sample CNV file into a single BED file for a sample.
+
+    Handles matching and fixing names where R converts numerical IDs (1234) into
+    strings by adding an X (X1234).
     """
     import pybedtools
     sample_name = tz.get_in(["rgnames", "sample"], data)
+    def matches_sample_name(feat):
+        return feat.name == sample_name or feat.name == "X%s" % sample_name
+    def update_sample_name(feat):
+        feat.name = sample_name
+        return feat
     sample_file = os.path.join(os.path.dirname(cnv_file), "%s-cnv.bed" % sample_name)
     if not utils.file_exists(sample_file):
         with file_transaction(sample_file) as tx_out_file:
-            pybedtools.BedTool(cnv_file).filter(lambda x: x.name == sample_name).saveas(tx_out_file)
+            pybedtools.BedTool(cnv_file).filter(matches_sample_name).each(update_sample_name).saveas(tx_out_file)
     return sample_file
 
 @utils.map_wrap
