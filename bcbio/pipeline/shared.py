@@ -82,16 +82,14 @@ def write_noanalysis_reads(in_file, region_file, out_file, config):
     the BAM index to perform well on large files. The tricky part is avoiding
     command line limits. There is a nice discussion on SeqAnswers:
     http://seqanswers.com/forums/showthread.php?t=29538
+    sambamba supports intersection via an input BED file so avoids command line
+    length issues.
     """
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             bedtools = config_utils.get_program("bedtools", config)
-            samtools = config_utils.get_program("samtools", config)
-            region_str = " ".join("%s:%s-%s" % tuple(r) for r in pybedtools.BedTool(region_file))
-            region_str_file = "%s-region_str.txt" % utils.splitext_plus(tx_out_file)[0]
-            with open(region_str_file, "w") as out_handle:
-                out_handle.write(region_str)
-            cl = ("{samtools} view -b {in_file} `cat {region_str_file}` | "
+            sambamba = config_utils.get_program("sambamba", config)
+            cl = ("{sambamba} view -f bam -L {region_file} {in_file} | "
                   "{bedtools} intersect -abam - -b {region_file} -f 1.0 "
                   "> {tx_out_file}")
             do.run(cl.format(**locals()), "Select unanalyzed reads")
