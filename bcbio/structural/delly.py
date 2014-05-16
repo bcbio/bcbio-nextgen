@@ -177,7 +177,11 @@ def run(items):
     out = []
     for data in items:
         if "sv" not in data:
-            data["sv"] = {}
-        data["sv"]["delly"] = delly_vcf
+            data["sv"] = []
+        base, ext = utils.splitext_plus(delly_vcf)
+        sample = tz.get_in(["rgnames", "sample"], data)
+        delly_sample_vcf = "%s-%s%s" % (base, sample, ext)
+        data["sv"].append({"variantcaller": "delly",
+                           "vrn_file": vcfutils.select_sample(delly_vcf, sample, delly_sample_vcf, data["config"])})
         out.append(data)
     return out

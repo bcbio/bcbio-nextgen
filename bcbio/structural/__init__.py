@@ -2,6 +2,7 @@
 """
 import collections
 import copy
+import operator
 
 import toolz as tz
 
@@ -46,7 +47,7 @@ def _combine_multiple_svcallers(samples):
             return _get_svcallers(x).index(x["config"]["algorithm"]["svcaller_active"])
         sorted_svcalls = sorted([x for x in grouped_calls if "sv" in x],
                                 key=orig_svcaller_order)
-        final_calls = [x["sv"] for x in sorted_svcalls]
+        final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
         final = grouped_calls[0]
         final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]

@@ -83,12 +83,13 @@ def _get_files_variantcall(sample):
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
+    out = _maybe_add_sv(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _maybe_add_variant_file(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("vrn_file"):
         for x in sample["variants"]:
-            out.extend(_get_vcf(x, ("vrn_file",)))
+            out.extend(_get_variant_file(x, ("vrn_file",)))
             if x.get("bed_file"):
                 out.append({"path": x["bed_file"],
                             "type": "bed",
@@ -96,13 +97,19 @@ def _maybe_add_variant_file(algorithm, sample, out):
                             "variantcaller": x["variantcaller"]})
     return out
 
-def _get_vcf(x, key):
+def _maybe_add_sv(algorithm, sample, out):
+    if sample.get("align_bam") is not None and sample.get("sv"):
+        for svcall in sample["sv"]:
+            out.extend(_get_variant_file(svcall, ("vrn_file",)))
+    return out
+
+def _get_variant_file(x, key):
     """Retrieve VCF file with the given key if it exists, handling bgzipped.
     """
     out = []
     fname = utils.get_in(x, key)
     if fname:
-        if fname.endswith(".gz"):
+        if fname.endswith(".vcf.gz"):
             out.append({"path": fname,
                         "type": "vcf.gz",
                         "ext": x["variantcaller"],
@@ -113,9 +120,10 @@ def _get_vcf(x, key):
                             "index": True,
                             "ext": x["variantcaller"],
                             "variantcaller": x["variantcaller"]})
-        else:
+        elif fname.endswith((".vcf", ".bed", ".bedpe")):
+            ftype = utils.splitext_plus(fname)[-1][1:]
             out.append({"path": fname,
-                        "type": "vcf",
+                        "type": ftype,
                         "ext": x["variantcaller"],
                         "variantcaller": x["variantcaller"]})
     return out
@@ -218,7 +226,7 @@ def _get_files_project(sample, upload_config):
                 out.append({"path": pop_db,
                             "type": "sqlite",
                             "variantcaller": x["variantcaller"]})
-            out.extend(_get_vcf(x, ("population", "vcf")))
+            out.extend(_get_variant_file(x, ("population", "vcf")))
     for x in sample.get("variants", []):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})

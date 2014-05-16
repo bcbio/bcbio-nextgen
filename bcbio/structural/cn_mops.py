@@ -40,8 +40,9 @@ def run(items, background=None):
     out = []
     for data in items:
         if "sv" not in data:
-            data["sv"] = {}
-        data["sv"]["cnv"] = _prep_sample_cnvs(out_file, data)
+            data["sv"] = []
+        data["sv"].append({"variantcaller": "cn_mops",
+                           "vrn_file": _prep_sample_cnvs(out_file, data)})
         out.append(data)
     return out
 

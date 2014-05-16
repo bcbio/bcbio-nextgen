@@ -153,7 +153,8 @@ def run(items):
     out = []
     for i, data in enumerate(items):
         if "sv" not in data:
-            data["sv"] = {}
-        data["sv"]["lumpy"] = _filter_by_support(_subset_to_sample(pebed_file, i, data), i)
+            data["sv"] = []
+        data["sv"].append({"variantcaller": "lumpy",
+                           "vrn_file": _filter_by_support(_subset_to_sample(pebed_file, i, data), i)})
         out.append(data)
     return out
