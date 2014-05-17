@@ -188,6 +188,61 @@ Once implemented, add the variant caller into the pipeline by updating
 .. _bcbio/variation/genotype.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/variation/genotype.py#L548
 .. _bcbio/pipeline/shared.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/shared.py#L176
 
+Adding new organisms
+====================
+
+While bcbio-nextgen and supporting tools receive the most testing and
+development on human or human-like diploid organisms, the algorithms are generic
+and we strive to support the wide diversity of organisms used in your
+research. We welcome contributors interested in setting up and maintaining
+support for their particular research organism, and this section defines the
+steps in integrating a new genome. We also welcome suggestions and
+implementations that improve this process.
+
+Setup CloudBioLinux to automatically download and prepare the genome:
+
+- Add the genome database key and organism name to list of supported organisms in
+  the CloudBioLinux configuration (`config/biodata.yaml`_).
+- Add download details to specify where to get the fasta genome files
+  (`cloubbio/biodata/genomes.py`_). CloudBioLinux supports common genome
+  providers like UCSC and Ensembl directly.
+
+Add the organism to the supported installs within bcbio:
+
+- This happens in two places: for the initial installer
+  (`scripts/bcbio_nextgen_install.py`_) and the updater (`bcbio/install.py`_).
+
+Test installation of genomes by pointing to your local cloudbiolinux edits
+during a data installation::
+
+  mkdir -p tmpbcbio-install
+  ln -s ~/bio/cloudbiolinux tmpbcbio-install
+  bcbio_nextgen.py upgrade --data --genomes DBKEY
+
+Add configuration information to bcbio-nextgen by creating a
+``config/genomes/DBKEY-resources.yaml`` file. Copy an existing minimal
+template like ``canFam3`` and edit with pointers to snpEff and other genome
+resources.
+
+Finally, send pull requests for CloudBioLinux and bcbio-nextgen and we'll
+happily integrate the new genome.
+
+This will provide basic integration with bcbio and allow running a minimal
+pipeline with alignment and quality control. We also have utility scripts in
+CloudBioLinux to help with preparing dbSNP (`utils/prepare_dbsnp.py`_)
+and RNA-seq (`utils/prepare_tx_gff.py`_) resources. We are still working on ways
+to best include these as part of the standard build and install since they
+either require additional tools to run locally, or require preparing copies in
+S3 buckets.
+
+.. _config/biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
+.. _cloudbio/biodata/genomes.py: https://github.com/chapmanb/cloudbiolinux/blob/master/cloudbio/biodata/genomes.py#L253
+.. _scripts/bcbio_nextgen_install.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/bcbio_nextgen_install.py#L235
+.. _bcbio/install.py:
+https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/install.py#L451
+.. _utils/prepare_dbsnp.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_dbsnp.py
+.. _utils/prepare_tx_gff.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_tx_gff.py
+
 Standard function arguments
 ===========================
 
