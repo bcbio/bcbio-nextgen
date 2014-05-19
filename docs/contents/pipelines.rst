@@ -5,26 +5,25 @@ Variant calling
 ~~~~~~~~~~~~~~~
 
 bcbio-nextgen implements configurable best-practice pipelines for SNP
-and small indel calling:
+and small indel calling. By including fully integrated whole genome and exome
+evaluations against reference materials from the `Genome in a Bottle`_
+consortium, we regularly assess new alignment and variant calling algorithms and
+adjust best practices. For more details see blog posts on the
+`variant evaluation framework`_, `FreeBayes and BAM post-alignment processing`_
+and `improvements to filtering and VQSR`_.
 
 -  Sequence alignment:
 
    - `bwa mem`_
    - `novoalign`_
-   - `bowtie2`_
-   - `mosaik`_
 
--  Base Quality Recalibration
--  Realignment around indels
--  Variant calling:
+-  Optional BAM post-alignment preparation: Base Quality Recalibration and Realignment around indels
+-  Germline variant calling:
 
+   -  `FreeBayes`_
+   -  `GATK Haplotype caller`_ (part of the commercially restricted GATK 2.4+)
    -  `GATK Unified Genotyper`_ (supports both GATK-lite in GATK 2.3
       and commercial restricted version in GATK 2.4+)
-   -  `GATK Haplotype caller`_ (part of the commercially restricted GATK 2.4+)
-   -  `FreeBayes`_
-   -  `samtools mpileup`_
-   -  `cortex\_var`_
-   -  `VarScan`_
 
 -  Paired tumor / normal variant calling:
 
@@ -48,7 +47,6 @@ It follows approaches from:
 
 - `GATK best practice`_ guidelines for variant calling
 - Marth Lab's `gkno pipelines`_
-
 
 RNA-seq
 ~~~~~~~
@@ -220,7 +218,6 @@ templating system.
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _bwa mem: http://bio-bwa.sourceforge.net/
 .. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
-.. _mosaik: https://github.com/wanpinglee/MOSAIK
 .. _novoalign: http://www.novocraft.com
 .. _gkno pipelines: http://gkno.me/pipelines.html
 .. _GEMINI: http://gemini.readthedocs.org/en/latest/
@@ -239,3 +236,7 @@ templating system.
 .. _VarScan: http://varscan.sourceforge.net
 .. _MuTect: http://www.broadinstitute.org/cancer/cga/mutect
 .. _AlienTrimmer: http://www.ncbi.nlm.nih.gov/pubmed/23912058
+.. _Genome in a Bottle: http://www.genomeinabottle.org/
+.. _variant evaluation framework: http://bcbio.wordpress.com/2014/05/12/wgs-trio-variant-evaluation/
+.. _FreeBayes and BAM post-alignment processing: https://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+.. _improvements to filtering and VQSR: https://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
