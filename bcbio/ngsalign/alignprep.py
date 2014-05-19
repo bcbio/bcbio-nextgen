@@ -177,27 +177,42 @@ def _bgzip_from_cram(cram_file, dirs, data):
         fastqs = _cram_to_fastq_regions(regions, cram_file, dirs, data)
         if len(fastqs[0]) == 1:
             with file_transaction(out_s) as tx_out_file:
-                _merge_and_bgzip([xs[0] for xs in fastqs], tx_out_file)
+                _merge_and_bgzip([xs[0] for xs in fastqs], tx_out_file, out_s)
         else:
             for i, out_file in enumerate([out_p1, out_p2]):
+                ext = "/%s" % (i + 1)
                 with file_transaction(out_file) as tx_out_file:
-                    _merge_and_bgzip([xs[i] for xs in fastqs], tx_out_file)
+                    _merge_and_bgzip([xs[i] for xs in fastqs], tx_out_file, out_file, ext)
     if utils.file_exists(out_p1):
         return [out_p1, out_p2]
     else:
         assert utils.file_exists(out_s)
         return [out_s]
 
-def _merge_and_bgzip(orig_files, out_file):
+def _merge_and_bgzip(orig_files, out_file, base_file, ext=""):
     """Merge a group of gzipped input files into a final bgzipped output.
+
+    Also handles providing unique names for each input file to avoid
+    collisions on multi-region output. Handles renaming with awk magic from:
+    https://www.biostars.org/p/68477/
 
     Removes orig_files after merging.
     """
-    list_file = "%s.list" % utils.splitext_plus(out_file)[0]
-    with open(list_file, "w") as out_handle:
-        out_handle.write("\n".join(orig_files))
-    cmd = "zcat `cat {list_file}` | bgzip -c > {out_file}"
-    do.run(cmd.format(**locals()), "Merge and bgzip")
+    assert out_file.endswith(".gz")
+    full_file = out_file.replace(".gz", "")
+    run_file = "%s-merge.bash" % utils.splitext_plus(base_file)[0]
+
+    cmds = ["set -e\n"]
+    for i, fname in enumerate(orig_files):
+        cmd = ("""zcat %s | awk '{print (NR%%4 == 1) ? "@%s_" ++i "%s" : $0}' >> %s\n"""
+               % (fname, i, ext, full_file))
+        cmds.append(cmd)
+    cmds.append("bgzip %s\n" % full_file)
+
+    with open(run_file, "w") as out_handle:
+        out_handle.write("".join("".join(cmds)))
+    do.run([do.find_bash(), run_file], "Rename, merge and bgzip CRAM fastq output")
+    assert os.path.exists(out_file) and not _is_gzip_empty(out_file)
     for fname in orig_files:
         os.remove(fname)
 
