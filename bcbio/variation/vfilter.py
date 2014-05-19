@@ -29,7 +29,7 @@ def hard_w_expression(vcf_file, expression, data, name="+", filterext=""):
                 bcftools = config_utils.get_program("bcftools", data["config"])
                 output_type = "z" if out_file.endswith(".gz") else "v"
                 variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
-                intervals = ("-t %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
+                intervals = ("-T %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
                              if variant_regions else "")
                 cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '{name}' "
                        "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")

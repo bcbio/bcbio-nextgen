@@ -67,7 +67,7 @@ def _descr_str(descr, data, region):
         descr = "{0} : {1}".format(descr, region)
     return descr
 
-def _find_bash():
+def find_bash():
     try:
         which_bash = subprocess.check_output(["which", "bash"]).strip()
     except subprocess.CalledProcessError:
@@ -85,7 +85,7 @@ def _normalize_cmd_args(cmd):
     if isinstance(cmd, basestring):
         # check for standard or anonymous named pipes
         if cmd.find(" | ") > 0 or cmd.find(">(") or cmd.find("<("):
-            return "set -o pipefail; " + cmd, True, _find_bash()
+            return "set -o pipefail; " + cmd, True, find_bash()
         else:
             return cmd, True, None
     else:
