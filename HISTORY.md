@@ -1,4 +1,4 @@
-## 0.7.9 (in progress)
+## 0.7.9 (May 19, 2014)
 
 - Redo Illumina sequencer integration to be up to date with current
   code base. Uses external bcl2fastq demultiplexing and new bcbio integrated
