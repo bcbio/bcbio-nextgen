@@ -43,16 +43,17 @@ def _get_machine_info(parallel, sys_config, dirs, config):
                             "torque": _torque_info,
                             "sge": _sge_info
                           }
-        try:
-            return sched_info_dict[parallel["scheduler"].lower()](parallel["queue"])
-        except KeyError:
+        if parallel["scheduler"].lower() in sched_info_dict:
+            try:
+                return sched_info_dict[parallel["scheduler"].lower()](parallel.get("queue", ""))
+            except:
+                # If something goes wrong, just hit the queue
+                logger.exception("Couldn't get machine information from resource query function for queue "
+                                 "'{0}' on scheduler \"{1}\"; "
+                                 "submitting job to queue".format(parallel.get("queue", ""), parallel["scheduler"]))
+        else:
             logger.info("Resource query function not implemented for scheduler \"{0}\"; "
                          "submitting job to queue".format(parallel["scheduler"]))
-        except:
-            # If something goes wrong, just hit the queue
-            logger.warn("Couldn't get machine information from resource query function for queue "
-                        "'{0}' on scheduler \"{1}\"; "
-                         "submitting job to queue".format(parallel["queue"], parallel["scheduler"]))
     from bcbio.distributed import prun
     with prun.start(parallel, [[sys_config]], config, dirs) as run_parallel:
         return run_parallel("machine_info", [[sys_config]])
@@ -114,7 +115,8 @@ def _sge_info(queue):
     """Returns machine information for an sge job scheduler.
     """
     qhost_out = subprocess.check_output(["qhost", "-q", "-xml"])
-    qstat_out = subprocess.check_output(["qstat", "-f", "-xml", "-q", queue])
+    qstat_queue = ["-q", queue] if queue and "," not in queue else []
+    qstat_out = subprocess.check_output(["qstat", "-f", "-xml"] + qstat_queue)
     slot_info = _sge_get_slots(qstat_out)
     mem_info = _sge_get_mem(qhost_out, queue)
     machine_keys = slot_info.keys()
@@ -147,14 +149,14 @@ def _sge_get_mem(xmlstring, queue_name):
     my_machine_dict = {}
     # on some machines rootxml.tag looks like "{...}qhost" where the "{...}" gets prepended to all attributes
     rootTag = rootxml.tag.rstrip("qhost")
-    for hosts in rootxml.findall(rootTag + 'host'):
+    for host in rootxml.findall(rootTag + 'host'):
         # find all hosts supporting queues
-        for queues in hosts.findall(rootTag + 'queue'):
+        for queues in host.findall(rootTag + 'queue'):
             # if the user specified queue matches that in the xml:
-            if(queue_name in queues.attrib['name']):
-                my_machine_dict[hosts.attrib['name']] = {}
+            if not queue_name or any(q in queues.attrib['name'] for q in queue_name.split(",")):
+                my_machine_dict[host.attrib['name']] = {}
                 # values from xml for number of processors and mem_total on each machine
-                for hostvalues in hosts.findall(rootTag + 'hostvalue'):
+                for hostvalues in host.findall(rootTag + 'hostvalue'):
                     if('mem_total' == hostvalues.attrib['name']):
                         if hostvalues.text.lower().endswith('g'):
                             multip = 1
@@ -164,8 +166,9 @@ def _sge_get_mem(xmlstring, queue_name):
                             multip = 1024
                         else:
                             raise Exception("Unrecognized suffix in mem_tot from SGE")
-                        my_machine_dict[hosts.attrib['name']]['mem_total'] = \
+                        my_machine_dict[host.attrib['name']]['mem_total'] = \
                                 float(hostvalues.text[:-1]) * float(multip)
+                break
     return my_machine_dict
 
 def _combine_machine_info(xs):

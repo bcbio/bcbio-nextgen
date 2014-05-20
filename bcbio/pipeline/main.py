@@ -38,8 +38,11 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
         _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
     elif parallel["type"] == "ipython":
-        assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
         assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
+        if parallel["scheduler"] != "sge":
+            assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
+        elif not parallel["queue"]:
+            parallel["queue"] = ""
         _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
     else:
@@ -114,7 +117,8 @@ def _sanity_check_args(args):
     """
     if "scheduler" in args and "queue" in args:
         if args.scheduler and not args.queue:
-            return "IPython parallel scheduler (-s) specified. This also requires a queue (-q)."
+            if args.scheduler != "sge":
+                return "IPython parallel scheduler (-s) specified. This also requires a queue (-q)."
         elif args.queue and not args.scheduler:
             return "IPython parallel queue (-q) supplied. This also requires a scheduler (-s)."
         elif args.paralleltype == "ipython" and (not args.queue or not args.scheduler):
