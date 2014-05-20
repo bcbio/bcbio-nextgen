@@ -387,15 +387,14 @@ def _combine_sample_regions_batch(batch, items):
             ref_regions = get_ref_bedtool(items[0]["sam_ref"], config)
             min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
             ec_regions = _combine_excessive_coverage(items, ref_regions, min_n_size)
+            if len(ec_regions) > 0:
+                nblock_regions = nblock_regions.cat(ec_regions, d=min_n_size)
             block_filter = NBlockRegionPicker(ref_regions, config)
             nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
             if len(nblock_size_filtered) >= len(ref_regions):
                 final_nblock_regions = nblock_size_filtered
             else:
                 final_nblock_regions = nblock_regions
-            final_regions = ref_regions.subtract(final_nblock_regions)
-            if len(ec_regions) > 0:
-                final_regions = final_regions.subtract(ec_regions)
-            final_regions.merge(d=min_n_size)
+            final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
             _write_bed_regions(items[0], final_regions, analysis_file, no_analysis_file)
     return analysis_file, no_analysis_file
