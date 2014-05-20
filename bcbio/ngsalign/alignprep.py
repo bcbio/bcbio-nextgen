@@ -3,6 +3,7 @@
 import collections
 import copy
 import os
+import shutil
 import subprocess
 
 import toolz as tz
@@ -172,17 +173,20 @@ def _bgzip_from_cram(cram_file, dirs, data):
     out_s, out_p1, out_p2 = [os.path.join(work_dir, "%s-%s.fq.gz" %
                                           (utils.splitext_plus(os.path.basename(cram_file))[0], fext))
                              for fext in ["s1", "p1", "p2"]]
-    if not utils.file_exists(out_s) and not utils.file_exists(out_p1):
+    if (not utils.file_exists(out_s) and
+          (not utils.file_exists(out_p1) or not utils.file_exists(out_p2))):
         cram.index(cram_file)
-        fastqs = _cram_to_fastq_regions(regions, cram_file, dirs, data)
+        fastqs, part_dir = _cram_to_fastq_regions(regions, cram_file, dirs, data)
         if len(fastqs[0]) == 1:
             with file_transaction(out_s) as tx_out_file:
                 _merge_and_bgzip([xs[0] for xs in fastqs], tx_out_file, out_s)
         else:
             for i, out_file in enumerate([out_p1, out_p2]):
-                ext = "/%s" % (i + 1)
-                with file_transaction(out_file) as tx_out_file:
-                    _merge_and_bgzip([xs[i] for xs in fastqs], tx_out_file, out_file, ext)
+                if not utils.file_exists(out_file):
+                    ext = "/%s" % (i + 1)
+                    with file_transaction(out_file) as tx_out_file:
+                        _merge_and_bgzip([xs[i] for xs in fastqs], tx_out_file, out_file, ext)
+        shutil.rmtree(part_dir)
     if utils.file_exists(out_p1):
         return [out_p1, out_p2]
     else:
@@ -195,8 +199,6 @@ def _merge_and_bgzip(orig_files, out_file, base_file, ext=""):
     Also handles providing unique names for each input file to avoid
     collisions on multi-region output. Handles renaming with awk magic from:
     https://www.biostars.org/p/68477/
-
-    Removes orig_files after merging.
     """
     assert out_file.endswith(".gz")
     full_file = out_file.replace(".gz", "")
@@ -207,14 +209,12 @@ def _merge_and_bgzip(orig_files, out_file, base_file, ext=""):
         cmd = ("""zcat %s | awk '{print (NR%%4 == 1) ? "@%s_" ++i "%s" : $0}' >> %s\n"""
                % (fname, i, ext, full_file))
         cmds.append(cmd)
-    cmds.append("bgzip %s\n" % full_file)
+    cmds.append("bgzip -f %s\n" % full_file)
 
     with open(run_file, "w") as out_handle:
         out_handle.write("".join("".join(cmds)))
     do.run([do.find_bash(), run_file], "Rename, merge and bgzip CRAM fastq output")
     assert os.path.exists(out_file) and not _is_gzip_empty(out_file)
-    for fname in orig_files:
-        os.remove(fname)
 
 def _cram_to_fastq_regions(regions, cram_file, dirs, data):
     """Convert CRAM files to fastq, potentially within sub regions.
@@ -224,33 +224,40 @@ def _cram_to_fastq_regions(regions, cram_file, dirs, data):
     base_name = utils.splitext_plus(os.path.basename(cram_file))[0]
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep",
                                                "%s-parts" % base_name))
+    fnames = run_multicore(_cram_to_fastq_region,
+                           [(cram_file, work_dir, base_name, region, data) for region in regions],
+                           data["config"])
+    # check if we have paired or single end data
+    if any(not _is_gzip_empty(p1) for p1, p2, s in fnames):
+        out = [[p1, p2] for p1, p2, s in fnames]
+    else:
+        out = [[s] for p1, p2, s in fnames]
+    return out, work_dir
+
+@utils.map_wrap
+@zeromq_aware_logging
+def _cram_to_fastq_region(cram_file, work_dir, base_name, region, data):
+    """Convert CRAM to fastq in a specified region.
+    """
     ref_file = tz.get_in(["reference", "fasta", "base"], data)
     resources = config_utils.get_resources("bamtofastq", data["config"])
     cores = tz.get_in(["config", "algorithm", "num_cores"], data, 1)
     max_mem = int(resources.get("memory", "1073741824")) * cores  # 1Gb/core default
-    fnames = []
-    is_paired = False
-    for region in regions:
-        rext = "-%s" % region.replace(":", "_").replace("-", "_") if region else "full"
-        out_s, out_p1, out_p2 = [os.path.join(work_dir, "%s%s-%s.fq.gz" %
-                                              (base_name, rext, fext))
-                                 for fext in ["s1", "p1", "p2"]]
-        if not utils.file_exists(out_p1):
-            with file_transaction(out_s, out_p1, out_p2) as (tx_out_s, tx_out_p1, tx_out_p2):
-                sortprefix = "%s-sort" % utils.splitext_plus(tx_out_s)[0]
-                cmd = ("bamtofastq filename={cram_file} inputformat=cram T={sortprefix} "
-                       "gz=1 collate=1 colsbs={max_mem} "
-                       "F={tx_out_p1} F2={tx_out_p2} S={tx_out_s} O=/dev/null O2=/dev/null "
-                       "reference={ref_file}")
-                if region:
-                    cmd += " ranges='{region}'"
-                do.run(cmd.format(**locals()), "CRAM to fastq %s" % region if region else "")
-        if is_paired or not _is_gzip_empty(out_p1):
-            fnames.append((out_p1, out_p2))
-            is_paired = True
-        else:
-            fnames.append((out_s,))
-    return fnames
+    rext = "-%s" % region.replace(":", "_").replace("-", "_") if region else "full"
+    out_s, out_p1, out_p2 = [os.path.join(work_dir, "%s%s-%s.fq.gz" %
+                                          (base_name, rext, fext))
+                             for fext in ["s1", "p1", "p2"]]
+    if not utils.file_exists(out_p1):
+        with file_transaction(out_s, out_p1, out_p2) as (tx_out_s, tx_out_p1, tx_out_p2):
+            sortprefix = "%s-sort" % utils.splitext_plus(tx_out_s)[0]
+            cmd = ("bamtofastq filename={cram_file} inputformat=cram T={sortprefix} "
+                   "gz=1 collate=1 colsbs={max_mem} "
+                   "F={tx_out_p1} F2={tx_out_p2} S={tx_out_s} O=/dev/null O2=/dev/null "
+                   "reference={ref_file}")
+            if region:
+                cmd += " ranges='{region}'"
+            do.run(cmd.format(**locals()), "CRAM to fastq %s" % region if region else "")
+    return [[out_p1, out_p2, out_s]]
 
 def _is_gzip_empty(fname):
     count = subprocess.check_output("zcat %s | head -1 | wc -l" % fname, shell=True,
@@ -314,7 +321,7 @@ def _grabix_index(data):
     gbi_file = in_file + ".gbi"
     if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
         do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
-    return gbi_file
+    return [gbi_file]
 
 def _is_partial_index(gbi_file):
     """Check for truncated output since grabix doesn't write to a transactional directory.
