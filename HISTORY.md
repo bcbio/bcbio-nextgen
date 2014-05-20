@@ -1,3 +1,7 @@
+## 0.8.0 (in progress)
+
+- Generalize SGE support to handle system setups. Thanks to Karl Gutwin.
+
 ## 0.7.9 (May 19, 2014)
 
 - Redo Illumina sequencer integration to be up to date with current

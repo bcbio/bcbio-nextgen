@@ -76,13 +76,16 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 instance. SLURM and Torque support specification of an account parameter with
 ``-r account=your_name``, which IPython transfers into ``-A``.
 
-Specify the `SGE parallel environment`_ to use for submitting multicore jobs
-with ``-r pename=your_pe``. Since this setup
-is system specific it is hard to write general code for find a
-suitable environment. Specifically, when there are multiple usable
-parallel environments, it will select the first one which may not be
-correct. Manually specifying it with a ``pename=`` flag to resources
-will ensure correct selection of the right environment.
+SGE supports special parameters passed using resources to help handle the
+heterogeneity of possible setups. Specify the `SGE parallel environment`_ to use
+for submitting multicore jobs with ``-r pename=your_pe``. Since this setup is
+system specific it is hard to write general code for find a suitable
+environment. Specifically, when there are multiple usable parallel environments,
+it will select the first one which may not be correct. Manually specifying it
+with a ``pename=`` flag to resources will ensure correct selection of the right
+environment. To specify an advanced reservation with the ``-ar`` flag, use
+``-r ar=ar_id``. To specify an alternative memory management model instead of
+``mem_free`` use ``-r memtype=approach``.
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
