@@ -156,7 +156,8 @@ def write_system_config(base_url, datadir, tooldir):
                 elif (in_resources and line[:2] == "  " and line[2] != " "
                       and not line.strip().startswith(rewrite_ignore)):
                     in_prog = line.split(":")[0].strip()
-                elif line.strip().startswith("dir:") and in_prog:
+                # Update java directories to point to install directory, avoid special cases
+                elif line.strip().startswith("dir:") and in_prog and in_prog not in ["log", "tmp"]:
                     final_dir = os.path.basename(line.split()[-1])
                     if tooldir:
                         line = "%s: %s\n" % (line.split(":")[0],
