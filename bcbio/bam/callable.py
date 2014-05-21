@@ -242,11 +242,14 @@ class NBlockRegionPicker:
         """Check for inclusion of block based on distance from previous.
         """
         last_pos = self._chr_last_blocks.get(x.chrom, 0)
-        if (x.start - last_pos) > self._target_size:
-            self._chr_last_blocks[x.chrom] = x.stop
+        # Region excludes an entire chromosome, typically decoy/haplotypes
+        if last_pos == 0 and x.stop >= self._ref_sizes.get(x.chrom, 0) - 100:
             return True
-        # fills an entire chromosome, handles smaller decoy and haplotype chromosomes
-        elif last_pos == 0 and x.stop >= self._ref_sizes.get(x.chrom, 0) - 100:
+        # Do not split on smaller decoy and haplotype chromosomes
+        elif self._ref_sizes.get(x.chrom, 0) <= self._target_size:
+            return False
+        elif (x.start - last_pos) > self._target_size:
+            self._chr_last_blocks[x.chrom] = x.stop
             return True
         else:
             return False
@@ -390,11 +393,7 @@ def _combine_sample_regions_batch(batch, items):
             if len(ec_regions) > 0:
                 nblock_regions = nblock_regions.cat(ec_regions, d=min_n_size)
             block_filter = NBlockRegionPicker(ref_regions, config)
-            nblock_size_filtered = nblock_regions.filter(block_filter.include_block).saveas()
-            if len(nblock_size_filtered) >= len(ref_regions):
-                final_nblock_regions = nblock_size_filtered
-            else:
-                final_nblock_regions = nblock_regions
+            final_nblock_regions = nblock_regions.filter(block_filter.include_block).saveas()
             final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
             _write_bed_regions(items[0], final_regions, analysis_file, no_analysis_file)
     return analysis_file, no_analysis_file

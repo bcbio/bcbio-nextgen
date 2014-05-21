@@ -1,5 +1,7 @@
 ## 0.8.0 (in progress)
 
+- Improve parallel region generation to avoid large numbers of segments on
+  organisms with many chromosomes.
 - Generalize SGE support to handle system setups. Thanks to Karl Gutwin.
 
 ## 0.7.9 (May 19, 2014)
