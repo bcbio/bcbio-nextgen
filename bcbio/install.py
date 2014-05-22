@@ -147,6 +147,9 @@ def upgrade_bcbio_data(args, remotes):
     data_dir = _get_data_dir()
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
+    tooldir = args.tooldir or get_defaults()["tooldir"]
+    if tooldir:
+        s["fabricrc_overrides"]["system_install"] = tooldir
     s["fabricrc_overrides"]["data_files"] = data_dir
     s["fabricrc_overrides"]["galaxy_home"] = os.path.join(data_dir, "galaxy")
     cbl = get_cloudbiolinux(remotes)
