@@ -101,6 +101,11 @@ def _maybe_add_sv(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("sv"):
         for svcall in sample["sv"]:
             out.extend(_get_variant_file(svcall, ("vrn_file",)))
+            if "sample_bed" in svcall:
+                out.append({"path": svcall["sample_bed"],
+                            "type": "bed",
+                            "ext": "%s-sample" % svcall["variantcaller"],
+                            "variantcaller": svcall["variantcaller"]})
     return out
 
 def _get_variant_file(x, key):

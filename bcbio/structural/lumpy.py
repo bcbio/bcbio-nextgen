@@ -13,7 +13,7 @@ import toolz as tz
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.ngsalign import postalign
-from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.structural import delly
 
@@ -58,6 +58,9 @@ def _find_existing_inputs(in_bam):
 
 # ## Lumpy main
 
+# Map from numbers used by speedseq to indicate paired and split read evidence
+SUPPORT_NUMS = {"1": "PE", "0": "SR"}
+
 def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """Run lumpy-sv, using speedseq pipeline.
     """
@@ -84,10 +87,9 @@ def _get_support(parts):
     sample_ids are generated like 20 or 21, where the first number is sample number
     and the second is the type of supporting evidence.
     """
-    support_nums = {"1": "discordant", "0": "split-reads"}
     out = {}
     for sample_id, read_count in (x.split(",") for x in parts[11].split(":")[-1].split(";")):
-        support_type = support_nums[sample_id[-1]]
+        support_type = SUPPORT_NUMS[sample_id[-1]]
         sample_id = int(sample_id[:-1]) - 1
         out = tz.update_in(out, [sample_id, support_type], lambda x: x + int(read_count), 0)
     return out
@@ -122,7 +124,7 @@ def _filter_by_support(orig_file, index):
                 with open(tx_out_file, "w") as out_handle:
                     for parts in (l.rstrip().split("\t") for l in in_handle):
                         support = _get_support(parts)
-                        evidence = set(reduce(operator.add, [x.keys() for x in support.values()]))
+                        #evidence = set(reduce(operator.add, [x.keys() for x in support.values()]))
                         read_count = reduce(operator.add, support[index].values())
                         if read_count < min_read_count:
                             lfilter = "ReadCountSupport"
@@ -132,6 +134,20 @@ def _filter_by_support(orig_file, index):
                             lfilter = "PASS"
                         parts.append(lfilter)
                         out_handle.write("\t".join(parts) + "\n")
+    return out_file
+
+def _write_samples_to_ids(base_file, items):
+    """Write BED file mapping samples to IDs used in the lumpy bedpe output.
+    """
+    out_file = "%s-samples.bed" % utils.splitext_plus(base_file)[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for i, data in enumerate(items):
+                    sample = tz.get_in(["rgnames", "sample"], data)
+                    for sid, stype in SUPPORT_NUMS.items():
+                        sample_id = "%s%s" % (i + 1, sid)
+                        out_handle.write("%s\t%s\t%s\n" % (sample, sample_id, stype))
     return out_file
 
 def run(items):
@@ -151,10 +167,12 @@ def run(items):
         disc_bams.append(disc_bam)
     pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
     out = []
+    sample_config_file = _write_samples_to_ids(pebed_file, items)
     for i, data in enumerate(items):
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append({"variantcaller": "lumpy",
-                           "vrn_file": _filter_by_support(_subset_to_sample(pebed_file, i, data), i)})
+                           "vrn_file": _filter_by_support(_subset_to_sample(pebed_file, i, data), i),
+                           "sample_bed": sample_config_file})
         out.append(data)
     return out
