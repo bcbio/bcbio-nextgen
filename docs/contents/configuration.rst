@@ -362,7 +362,7 @@ Post-processing
   Default: [] -- no archiving.
 - ``tools_off`` Specify third party tools to skip as part of analysis
   pipeline. Enables turning off specific components of pipelines if not
-  needed. `gemini`` provides a `GEMINI database`_ of variants for downstream
+  needed. ``gemini`` provides a `GEMINI database`_ of variants for downstream
   query during variant calling pipelines.
   Default: [] -- all tools on.
 
