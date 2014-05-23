@@ -120,7 +120,7 @@ def _clean_delly_output(in_file, items):
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(out_file) as tx_out_file:
             with open(in_file) as in_handle:
-                with open(out_file, "w") as out_handle:
+                with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
                         if line.startswith("#"):
                             if line.startswith("#CHROM"):

@@ -6,7 +6,7 @@ import operator
 
 import toolz as tz
 
-from bcbio.structural import cn_mops, delly, lumpy
+from bcbio.structural import cn_mops, delly, ensemble, lumpy
 from bcbio.variation import vcfutils
 
 _CALLERS = {}
@@ -49,6 +49,7 @@ def _combine_multiple_svcallers(samples):
                                 key=orig_svcaller_order)
         final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
         final = grouped_calls[0]
+        final_calls = ensemble.summarize(final_calls, final)
         final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]
         out.append([final])

@@ -7,6 +7,7 @@ https://github.com/arq5x/lumpy-sv
 """
 import operator
 import os
+import sys
 
 import toolz as tz
 
@@ -16,6 +17,7 @@ from bcbio.ngsalign import postalign
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.structural import delly
+from bcbio.variation import vcfutils
 
 # ## Read preparation
 
@@ -150,6 +152,50 @@ def _write_samples_to_ids(base_file, items):
                         out_handle.write("%s\t%s\t%s\n" % (sample, sample_id, stype))
     return out_file
 
+def _bedpe_to_vcf(bedpe_file, sconfig_file, items):
+    """Convert BEDPE output into a VCF file.
+    """
+    tovcf_script = do.find_cmd("bedpeToVcf")
+    if tovcf_script:
+        out_file = "%s.vcf" % utils.splitext_plus(bedpe_file)[0]
+        if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
+            with file_transaction(out_file) as tx_out_file:
+                ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
+                cmd = [sys.executable, tovcf_script, "-c", sconfig_file, "-f", ref_file,
+                       "-b", bedpe_file, "-o", tx_out_file]
+                do.run(cmd, "Convert lumpy bedpe output to VCF")
+        out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
+        return out_file
+
+def _filter_by_bedpe(vcf_file, bedpe_file, data):
+    """Add filters to VCF based on pre-filtered bedpe file.
+    """
+    out_file = "%s-filter%s" % utils.splitext_plus(vcf_file)
+    nogzip_out_file = out_file.replace(".vcf.gz", ".vcf")
+    if not utils.file_exists(out_file):
+        filters = {}
+        with open(bedpe_file) as in_handle:
+            for line in in_handle:
+                parts = line.split("\t")
+                name = parts[6]
+                cur_filter = parts[-1].strip()
+                if cur_filter != "PASS":
+                    filters[name] = cur_filter
+        with file_transaction(nogzip_out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                with utils.open_gzipsafe(vcf_file) as in_handle:
+                    for line in in_handle:
+                        if not line.startswith("#"):
+                            parts = line.split("\t")
+                            cur_filter = filters.get(parts[2], "PASS")
+                            if cur_filter != "PASS":
+                                parts[6] = cur_filter
+                            line = "\t".join(parts)
+                        out_handle.write(line)
+        if out_file.endswith(".gz"):
+            vcfutils.bgzip_and_index(nogzip_out_file, data["config"])
+    return out_file
+
 def run(items):
     """Perform detection of structural variations with lumpy, using bwa-mem alignment.
     """
@@ -168,11 +214,21 @@ def run(items):
     pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
     out = []
     sample_config_file = _write_samples_to_ids(pebed_file, items)
+    lumpy_vcf = _bedpe_to_vcf(pebed_file, sample_config_file, items)
     for i, data in enumerate(items):
         if "sv" not in data:
             data["sv"] = []
+        sample = tz.get_in(["rgnames", "sample"], data)
+        sample_bedpe = _filter_by_support(_subset_to_sample(pebed_file, i, data), i)
+        if lumpy_vcf:
+            sample_vcf = utils.append_stem(lumpy_vcf, "-%s" % sample)
+            sample_vcf = _filter_by_bedpe(vcfutils.select_sample(lumpy_vcf, sample, sample_vcf, data["config"]),
+                                          sample_bedpe, data)
+        else:
+            sample_vcf = None
         data["sv"].append({"variantcaller": "lumpy",
-                           "vrn_file": _filter_by_support(_subset_to_sample(pebed_file, i, data), i),
+                           "vrn_file": sample_vcf,
+                           "bedpe_file": sample_bedpe,
                            "sample_bed": sample_config_file})
         out.append(data)
     return out

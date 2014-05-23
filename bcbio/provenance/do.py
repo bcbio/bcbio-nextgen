@@ -68,14 +68,16 @@ def _descr_str(descr, data, region):
     return descr
 
 def find_bash():
-    try:
-        which_bash = subprocess.check_output(["which", "bash"]).strip()
-    except subprocess.CalledProcessError:
-        which_bash = None
-    for test_bash in [which_bash, "/bin/bash", "/usr/bin/bash", "/usr/local/bin/bash"]:
+    for test_bash in [find_cmd("bash"), "/bin/bash", "/usr/bin/bash", "/usr/local/bin/bash"]:
         if test_bash and os.path.exists(test_bash):
             return test_bash
     raise IOError("Could not find bash in any standard location. Needed for unix pipes")
+
+def find_cmd(cmd):
+    try:
+        return subprocess.check_output(["which", cmd]).strip()
+    except subprocess.CalledProcessError:
+        return None
 
 def _normalize_cmd_args(cmd):
     """Normalize subprocess arguments to handle list commands, string and pipes.
