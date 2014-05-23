@@ -95,7 +95,7 @@ def _merge_system_configs(host_config, container_config, out_file=None):
                                                              "universe_wsgi.ini"))
     if out_file:
         with open(out_file, "w") as out_handle:
-            yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+            yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out
 
 def _get_docker_config():

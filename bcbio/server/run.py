@@ -57,11 +57,11 @@ def get_handler(args):
             if "system_config" in rargs:
                 system_config = os.path.join(rargs["work_dir"], "web-system_config.yaml")
                 with open(system_config, "w") as out_handle:
-                    yaml.dump(rargs["system_config"], out_handle, default_flow_style=False, allow_unicode=False)
+                    yaml.safe_dump(rargs["system_config"], out_handle, default_flow_style=False, allow_unicode=False)
             if "sample_config" in rargs:
                 sample_config = os.path.join(rargs["work_dir"], "web-sample_config.yaml")
                 with open(sample_config, "w") as out_handle:
-                    yaml.dump(rargs["sample_config"], out_handle, default_flow_style=False, allow_unicode=False)
+                    yaml.safe_dump(rargs["sample_config"], out_handle, default_flow_style=False, allow_unicode=False)
             else:
                 sample_config = rargs.get("run_config")
             kwargs = {"workdir": rargs["work_dir"],

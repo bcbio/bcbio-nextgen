@@ -139,7 +139,7 @@ def _write_config_file(batch_id, caller_names, base_dir, data):
     if intervals:
         econfig["intervals"] = os.path.abspath(intervals)
     with open(config_file, "w") as out_handle:
-        yaml.dump(econfig, out_handle, allow_unicode=False, default_flow_style=False)
+        yaml.safe_dump(econfig, out_handle, allow_unicode=False, default_flow_style=False)
     return config_file
 
 def _run_ensemble_w_caller(batch_id, vrn_files, bam_files, base_dir, edata):

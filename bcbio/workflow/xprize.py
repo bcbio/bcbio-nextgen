@@ -72,7 +72,7 @@ def setup(args):
                            "type": "svm"},
                        "trusted-pct": 0.65}}}]}
     with open(out_config_file, "w") as out_handle:
-        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
     workdir = utils.safe_makedir(os.path.join(args.base_dir, args.sample, "work"))
     return workdir, {"config_file": args.bcbio_config_file,

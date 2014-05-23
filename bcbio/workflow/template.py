@@ -150,7 +150,7 @@ def _write_config_file(items, global_vars, template, project_name, out_dir):
         shutil.move(out_config_file,
                     out_config_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     with open(out_config_file, "w") as out_handle:
-        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_config_file
 
 def _safe_name(x):

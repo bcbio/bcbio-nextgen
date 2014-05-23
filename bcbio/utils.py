@@ -1,6 +1,7 @@
 """Helpful utilities for building analysis pipelines.
 """
 import gzip
+import json
 import os
 import tempfile
 import time
@@ -20,6 +21,7 @@ except ImportError:
 import collections
 import yaml
 import fnmatch
+import zlib
 
 
 @contextlib.contextmanager
@@ -46,7 +48,6 @@ def map_wrap(f):
     def wrapper(*args, **kwargs):
         return apply(f, *args, **kwargs)
     return wrapper
-
 
 def transform_to(ext):
     """

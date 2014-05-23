@@ -106,7 +106,7 @@ def csv2yaml(in_file, out_file=None):
     barcode_ids = _generate_barcode_ids(_read_input_csv(in_file))
     lanes = _organize_lanes(_read_input_csv(in_file), barcode_ids)
     with open(out_file, "w") as out_handle:
-        out_handle.write(yaml.dump(lanes, default_flow_style=False))
+        out_handle.write(yaml.safe_dump(lanes, default_flow_style=False))
     return out_file
 
 def run_has_samplesheet(fc_dir, config, require_single=True):

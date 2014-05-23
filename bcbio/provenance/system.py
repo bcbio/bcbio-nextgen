@@ -31,7 +31,7 @@ def write_info(dirs, parallel, config):
             sys_config = copy.deepcopy(config)
             minfos = _get_machine_info(parallel, sys_config, dirs, config)
             with open(out_file, "w") as out_handle:
-                yaml.dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
+                yaml.safe_dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
 
 def _get_machine_info(parallel, sys_config, dirs, config):
     """Get machine resource information from the job scheduler via either the command line or the queue.

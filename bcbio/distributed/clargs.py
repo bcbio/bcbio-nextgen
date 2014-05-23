@@ -10,7 +10,8 @@ def to_parallel(args, module="bcbio.distributed"):
                 "scheduler": args.scheduler, "queue": args.queue,
                 "tag": args.tag, "module": module,
                 "resources": args.resources, "timeout": args.timeout,
-                "retries": args.retries}
+                "retries": args.retries,
+                "run_local": args.queue == "localrun"}
     return parallel
 
 def _get_cores_and_type(numcores, paralleltype, scheduler):
