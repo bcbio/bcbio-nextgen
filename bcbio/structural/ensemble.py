@@ -24,11 +24,18 @@ def _vcf_to_bed(in_file, caller, out_file):
             with open(out_file, "w") as out_handle:
                 for rec in vcf.Reader(in_handle, in_file):
                     if not rec.FILTER:
-                        if not (hasattr(rec.samples[0].data, "FT") and rec.samples[0].data.FT):
+                        if (rec.samples[0].gt_type and
+                              not (hasattr(rec.samples[0].data, "FT") and rec.samples[0].data.FT)):
                             out_handle.write("\t".join([rec.CHROM, str(rec.start - 1),
                                                         str(rec.INFO.get("END", rec.start)),
-                                                        "%s_%s" % (rec.INFO["SVTYPE"], caller)])
+                                                        "%s_%s" % (_get_svtype(rec), caller)])
                                              + "\n")
+
+def _get_svtype(rec):
+    try:
+        return rec.INFO["SVTYPE"]
+    except KeyError:
+        return "-".join(str(x).replace("<", "").replace(">", "") for x in rec.ALT)
 
 def _cnvbed_to_bed(in_file, caller, out_file):
     """Convert cn_mops CNV based bed files into flattened BED
@@ -70,7 +77,7 @@ def summarize(calls, data):
         with file_transaction(out_file) as tx_out_file:
             input_beds = filter(lambda x: x is not None,
                                 [_create_bed(c, out_file) for c in calls])
-            if len(input_beds) > 1:
+            if len(input_beds) > 0:
                 all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
                 with open(all_file, "w") as out_handle:
                     for line in fileinput.input(input_beds):
