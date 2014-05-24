@@ -8,6 +8,8 @@ import itertools
 import os
 import subprocess
 
+import toolz as tz
+
 from bcbio import broad, utils
 from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
@@ -285,6 +287,20 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
         return [{file_key: out_file, "region": region, "sam_ref": ref_file, "config": config}]
     else:
         return out_file
+
+def sort_by_ref(vcf_file, data):
+    """Sort a VCF file by genome reference and position.
+    """
+    out_file = "%s-prep%s" % utils.splitext_plus(vcf_file)
+    if not utils.file_exists(out_file):
+        bv_jar = config_utils.get_jar("bcbio.variation",
+                                      config_utils.get_program("bcbio_variation", data["config"], "dir"))
+        resources = config_utils.get_resources("bcbio_variation", data["config"])
+        jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
+        cmd = ["java"] + jvm_opts + ["-jar", bv_jar, "variant-utils", "sort-vcf",
+                                     vcf_file, tz.get_in(["reference", "fasta", "base"], data), "--sortpos"]
+        do.run(cmd, "Sort VCF by reference")
+    return out_file
 
 # ## Parallel VCF file combining
 

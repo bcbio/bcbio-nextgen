@@ -35,7 +35,8 @@ def java(config, items):
         java = config_utils.get_program("java", config)
     except config_utils.CmdNotFound:
         return ("java not found on PATH. Java %s or better required." % want_version)
-    p = subprocess.Popen([java, "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen([java, "-Xms250m", "-Xmx250m", "-version"],
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
     p.stdout.close()
     version = ""

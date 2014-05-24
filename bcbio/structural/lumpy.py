@@ -157,14 +157,20 @@ def _bedpe_to_vcf(bedpe_file, sconfig_file, items):
     """
     tovcf_script = do.find_cmd("bedpeToVcf")
     if tovcf_script:
-        out_file = "%s.vcf" % utils.splitext_plus(bedpe_file)[0]
-        if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-            with file_transaction(out_file) as tx_out_file:
-                ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
-                cmd = [sys.executable, tovcf_script, "-c", sconfig_file, "-f", ref_file,
-                       "-b", bedpe_file, "-o", tx_out_file]
-                do.run(cmd, "Convert lumpy bedpe output to VCF")
-        out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
+        out_file = "%s.vcf.gz" % utils.splitext_plus(bedpe_file)[0]
+        out_nogzip = out_file.replace(".vcf.gz", ".vcf")
+        raw_file = "%s-raw.vcf" % utils.splitext_plus(bedpe_file)[0]
+        if not utils.file_exists(out_file):
+            if not utils.file_exists(raw_file):
+                with file_transaction(raw_file) as tx_raw_file:
+                    ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
+                    cmd = [sys.executable, tovcf_script, "-c", sconfig_file, "-f", ref_file,
+                           "-b", bedpe_file, "-o", tx_raw_file]
+                    do.run(cmd, "Convert lumpy bedpe output to VCF")
+            prep_file = vcfutils.sort_by_ref(raw_file, items[0])
+            if not utils.file_exists(out_nogzip):
+                utils.symlink_plus(prep_file, out_nogzip)
+        out_file = vcfutils.bgzip_and_index(out_nogzip, items[0]["config"])
         return out_file
 
 def _filter_by_bedpe(vcf_file, bedpe_file, data):
@@ -187,7 +193,8 @@ def _filter_by_bedpe(vcf_file, bedpe_file, data):
                     for line in in_handle:
                         if not line.startswith("#"):
                             parts = line.split("\t")
-                            cur_filter = filters.get(parts[2], "PASS")
+                            cur_id = parts[2].split("_")[0]
+                            cur_filter = filters.get(cur_id, "PASS")
                             if cur_filter != "PASS":
                                 parts[6] = cur_filter
                             line = "\t".join(parts)

@@ -25,7 +25,8 @@ def _vcf_to_bed(in_file, caller, out_file):
                 for rec in vcf.Reader(in_handle, in_file):
                     if not rec.FILTER:
                         if not (hasattr(rec.samples[0].data, "FT") and rec.samples[0].data.FT):
-                            out_handle.write("\t".join([rec.CHROM, str(rec.start - 1), str(rec.INFO["END"]),
+                            out_handle.write("\t".join([rec.CHROM, str(rec.start - 1),
+                                                        str(rec.INFO.get("END", rec.start)),
                                                         "%s_%s" % (rec.INFO["SVTYPE"], caller)])
                                              + "\n")
 
