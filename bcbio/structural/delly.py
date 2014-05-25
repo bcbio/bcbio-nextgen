@@ -172,7 +172,7 @@ def run(items):
                                     config, parallel)
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
-    delly_vcf = vfilter.genotype_filter(combo_vcf, 'DV / (DV + DR) > 0.35 && DV > 4', data,
+    delly_vcf = vfilter.genotype_filter(combo_vcf, 'DV < 4 || (DV / (DV + DR)) < 0.35', data,
                                         "DVSupport")
     out = []
     for data in items:

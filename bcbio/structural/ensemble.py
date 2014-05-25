@@ -83,6 +83,7 @@ def summarize(calls, data):
                     for line in fileinput.input(input_beds):
                         out_handle.write(line)
                 pybedtools.BedTool(all_file).sort(stream=True).merge(nms=True).saveas(tx_out_file)
-                calls.append({"variantcaller": "ensemble",
-                              "vrn_file": out_file})
+    if utils.file_exists(out_file):
+        calls.append({"variantcaller": "ensemble",
+                      "vrn_file": out_file})
     return calls
