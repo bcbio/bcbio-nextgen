@@ -227,6 +227,7 @@ class NBlockRegionPicker:
     maintain the splitting.
     """
     def __init__(self, ref_regions, config):
+        self._end_buffer = 250
         self._chr_last_blocks = {}
         target_blocks = int(config["algorithm"].get("nomap_split_targets", 2000))
         self._target_size = self._get_target_size(target_blocks, ref_regions)
@@ -243,7 +244,7 @@ class NBlockRegionPicker:
         """
         last_pos = self._chr_last_blocks.get(x.chrom, 0)
         # Region excludes an entire chromosome, typically decoy/haplotypes
-        if last_pos == 0 and x.stop >= self._ref_sizes.get(x.chrom, 0) - 100:
+        if last_pos < self._end_buffer and x.stop >= self._ref_sizes.get(x.chrom, 0) - self._end_buffer:
             return True
         # Do not split on smaller decoy and haplotype chromosomes
         elif self._ref_sizes.get(x.chrom, 0) <= self._target_size:
@@ -253,6 +254,17 @@ class NBlockRegionPicker:
             return True
         else:
             return False
+
+    def expand_block(self, feat):
+        """Expand any blocks which are near the start or end of a contig.
+        """
+        chrom_end = self._ref_sizes.get(feat.chrom)
+        if chrom_end:
+            if feat.start < self._end_buffer:
+                feat.start = 0
+            if feat.stop >= chrom_end - self._end_buffer:
+                feat.stop = chrom_end
+        return feat
 
 def block_regions(in_bam, ref_file, config):
     """Find blocks of regions for analysis from mapped input BAM file.
@@ -393,7 +405,8 @@ def _combine_sample_regions_batch(batch, items):
             if len(ec_regions) > 0:
                 nblock_regions = nblock_regions.cat(ec_regions, d=min_n_size)
             block_filter = NBlockRegionPicker(ref_regions, config)
-            final_nblock_regions = nblock_regions.filter(block_filter.include_block).saveas()
+            final_nblock_regions = nblock_regions.filter(
+                block_filter.include_block).each(block_filter.expand_block).saveas()
             final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
             _write_bed_regions(items[0], final_regions, analysis_file, no_analysis_file)
     return analysis_file, no_analysis_file
