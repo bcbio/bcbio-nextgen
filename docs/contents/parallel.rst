@@ -85,7 +85,16 @@ it will select the first one which may not be correct. Manually specifying it
 with a ``pename=`` flag to resources will ensure correct selection of the right
 environment. To specify an advanced reservation with the ``-ar`` flag, use
 ``-r ar=ar_id``. To specify an alternative memory management model instead of
-``mem_free`` use ``-r memtype=approach``.
+``mem_free`` use ``-r memtype=approach``. It is further recommended to configure
+``mem_free`` (or any other chosen memory management model) as a consumable, requestable
+resource in SGE to prevent overfilling hosts that do not have sufficient memory per slot. 
+This can be done in two steps. First, launch ``qmon`` as an admin,
+select ``Complex Configuration`` in qmon, click on ``mem_free`, 
+under the ``Consumable`` dialog select ``JOB`` (instead of ``YES`` or ``NO``) and
+finally click ``Modify` for the changes to take effect. Secondly, for each host in
+the queue, configure ``mem_free`` as a complex value. If a host called ``myngshost`` 
+has 128GB of RAM, the command cooresponding command woul be 
+``qconf -mattr exechost complex_values mem_free=128G myngshost``
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
