@@ -281,13 +281,16 @@ def _check_sample_config(items, in_file):
 def _file_to_abs(x, dnames):
     """Make a file absolute using the supplied base directory choices.
     """
-    if os.path.isabs(x):
+    if x is None or os.path.isabs(x):
         return x
+    elif isinstance(x, basestring) and x.lower() == "none":
+        return None
     else:
         for dname in dnames:
-            normx = os.path.normpath(os.path.join(dname, x))
-            if os.path.exists(normx):
-                return normx
+            if dname:
+                normx = os.path.normpath(os.path.join(dname, x))
+                if os.path.exists(normx):
+                    return normx
         raise ValueError("Did not find input file %s in %s" % (x, dnames))
 
 def _normalize_files(item, fc_dir):
@@ -300,6 +303,7 @@ def _normalize_files(item, fc_dir):
             files = [files]
         fastq_dir = flowcell.get_fastq_dir(fc_dir) if fc_dir else os.getcwd()
         files = [_file_to_abs(x, [os.getcwd(), fc_dir, fastq_dir]) for x in files]
+        files = [x for x in files if x]
         _sanity_check_files(item, files)
         item["files"] = files
     return item
