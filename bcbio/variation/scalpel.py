@@ -23,7 +23,7 @@ from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_
 
 def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
     opts = []
-    opts += ["--format","vcf"]
+    opts += ["--format","vcf","--intarget"] # output vcf, report only variants within bed regions
     variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
     target = subset_variant_regions(variant_regions, region, out_file, items)
     if target:
@@ -50,7 +50,7 @@ def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
 
 def run_scalpel(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
-    """Run Scalpel indek calling, either paired tumor/normal or germline calling.
+    """Run Scalpel indel calling, either paired tumor/normal or germline calling.
     """
     if region == None:
         message = ("A region must be provided for Scalpel")
@@ -80,7 +80,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             scalpel = config_utils.get_program("scalpel", config)
             vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-            if len(align_bams > 1):
+            if len(align_bams) > 1:
                 message = ("Scalpel does not currently support batch calling!")
                 raise ValueError(message)
             input_bams = " ".join("%s" % x for x in align_bams)
@@ -95,7 +95,8 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             # parse produced variant file further
             scalpel_tmp_file = os.path.join(tmp_path, "variants."+min_cov+"x.indel.vcf")
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            cl2 = ("cat {scalpel_tmp_file} | {vcfallelicprimitives} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
+            sample_name_str = items[0]["name"][1]
+            cl2 = ("cat {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' | {vcfallelicprimitives} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"],
@@ -133,9 +134,10 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
-            scalpel_tmp_file = os.path.join(tmp_path, "somatic."+min_cov+"x.indel.vcf")
+            scalpel_tmp_file = os.path.join(tmp_path, "main/somatic."+min_cov+"x.indel.vcf")
+            scalpel_tmp_file_common = os.path.join(tmp_path, "main/common."+min_cov+"x.indel.vcf")
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            cl2 = ("cat {scalpel_tmp_file} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
+            cl2 = ("cat {scalpel_tmp_file} <(grep -vE '^#' {scalpel_tmp_file_common}) | sed 's/sample_name/{paired.tumor_name}/g' | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"], ref_file,

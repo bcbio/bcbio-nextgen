@@ -8,7 +8,7 @@ from bcbio.utils import file_exists, get_in
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.variation import bamprep, vcfutils
+from bcbio.variation import bamprep, vcfutils, scalpel
 from bcbio.log import logger
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
@@ -108,7 +108,24 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-        if "appistry" in broad_runner.get_mutect_version():
+        if True:
+            # Scalpel InDels
+            is_paired = "-I:normal" in params
+            out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
+                               if "vcf" in out_file else out_file + "-somaticIndels.vcf")
+            with file_transaction(out_file_indels) as tx_out_file2:
+                if not is_paired:
+                    scalpel._run_scalpel_caller(align_bams, items, ref_file, assoc_files,
+                                                region=region, out_file=tx_out_file2)
+                else:
+                    scalpel._run_scalpel_paired(align_bams, items, ref_file, assoc_files,
+                                                region=region, out_file=tx_out_file2)
+            out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
+                                                      out_file=out_file,
+                                                      ref_file=items[0]["sam_ref"],
+                                                      config=items[0]["config"],
+                                                      region=region)
+        elif "appistry" in broad_runner.get_mutect_version():
             # SomaticIndelDetector modifications
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
