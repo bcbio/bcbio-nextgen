@@ -92,11 +92,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
     if not file_exists(out_file):
         base_config = items[0]["config"]
         broad_runner = broad.runner_from_config(base_config, "mutect")
-        if "appistry" in broad_runner.get_mutect_version():
-            out_file_mutect = (out_file.replace(".vcf", "-mutect.vcf")
-                               if "vcf" in out_file else out_file + "-mutect.vcf")
-        else:
-            out_file_mutect = out_file
+        out_file_mutect = (out_file.replace(".vcf", "-mutect.vcf")
+                           if "vcf" in out_file else out_file + "-mutect.vcf")
         broad_runner, params = \
             _mutect_call_prep(align_bams, items, ref_file, assoc_files,
                                    region, out_file_mutect)
@@ -108,7 +105,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-        if True:
+        if True: # <- fixme
             # Scalpel InDels
             is_paired = "-I:normal" in params
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
