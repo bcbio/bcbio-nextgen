@@ -91,9 +91,9 @@ resource in SGE to prevent overfilling hosts that do not have sufficient memory 
 This can be done in two steps. First, launch ``qmon`` as an admin,
 select ``Complex Configuration`` in qmon, click on ``mem_free`, 
 under the ``Consumable`` dialog select ``JOB`` (instead of ``YES`` or ``NO``) and
-finally click ``Modify` for the changes to take effect. Secondly, for each host in
+finally click ``Modify`` for the changes to take effect. Secondly, for each host in
 the queue, configure ``mem_free`` as a complex value. If a host called ``myngshost`` 
-has 128GB of RAM, the command cooresponding command woul be 
+has 128GB of RAM, the corresponding command would be 
 ``qconf -mattr exechost complex_values mem_free=128G myngshost``
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
