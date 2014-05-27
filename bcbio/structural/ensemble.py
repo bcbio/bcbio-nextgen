@@ -19,7 +19,7 @@ from bcbio.distributed.transaction import file_transaction
 # ## Conversions to simplified BED files
 
 def _vcf_to_bed(in_file, caller, out_file):
-    if in_file.endswith((".vcf", "vcf.gz")):
+    if in_file and in_file.endswith((".vcf", "vcf.gz")):
         with utils.open_gzipsafe(in_file) as in_handle:
             with open(out_file, "w") as out_handle:
                 for rec in vcf.Reader(in_handle, in_file):
@@ -75,14 +75,16 @@ def summarize(calls, data):
     out_file = os.path.join(work_dir, "%s-ensemble.bed" % sample)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            input_beds = filter(lambda x: x is not None,
-                                [_create_bed(c, out_file) for c in calls])
-            if len(input_beds) > 0:
-                all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
-                with open(all_file, "w") as out_handle:
-                    for line in fileinput.input(input_beds):
-                        out_handle.write(line)
-                pybedtools.BedTool(all_file).sort(stream=True).merge(nms=True).saveas(tx_out_file)
+            with utils.curdir_tmpdir(data) as tmpdir:
+                pybedtools.set_tempdir(tmpdir)
+                input_beds = filter(lambda x: x is not None,
+                                    [_create_bed(c, out_file) for c in calls])
+                if len(input_beds) > 0:
+                    all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
+                    with open(all_file, "w") as out_handle:
+                        for line in fileinput.input(input_beds):
+                            out_handle.write(line)
+                    pybedtools.BedTool(all_file).sort(stream=True).merge(nms=True).saveas(tx_out_file)
     if utils.file_exists(out_file):
         calls.append({"variantcaller": "ensemble",
                       "vrn_file": out_file})

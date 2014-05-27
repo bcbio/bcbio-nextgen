@@ -142,14 +142,16 @@ def sample_callable_bed(bam_file, ref_file, config):
     input_regions_bed = config["algorithm"].get("variant_regions", None)
     if not utils.file_uptodate(out_file, callable_bed):
         with file_transaction(out_file) as tx_out_file:
-            callable_regions = pybedtools.BedTool(callable_bed)
-            filter_regions = callable_regions.filter(lambda x: x.name == "CALLABLE")
-            if input_regions_bed:
-                if not utils.file_uptodate(out_file, input_regions_bed):
-                    input_regions = pybedtools.BedTool(input_regions_bed)
-                    filter_regions.intersect(input_regions).saveas(tx_out_file)
-            else:
-                filter_regions.saveas(tx_out_file)
+            with utils.curdir_tmpdir({"config": config}) as tmpdir:
+                pybedtools.set_tempdir(tmpdir)
+                callable_regions = pybedtools.BedTool(callable_bed)
+                filter_regions = callable_regions.filter(lambda x: x.name == "CALLABLE")
+                if input_regions_bed:
+                    if not utils.file_uptodate(out_file, input_regions_bed):
+                        input_regions = pybedtools.BedTool(input_regions_bed)
+                        filter_regions.intersect(input_regions).saveas(tx_out_file)
+                else:
+                    filter_regions.saveas(tx_out_file)
     return out_file
 
 def get_ref_bedtool(ref_file, config, chrom=None):
@@ -277,15 +279,17 @@ def block_regions(in_bam, ref_file, config):
     nblock_bed = "%s-nblocks%s" % os.path.splitext(callable_bed)
     callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
     if not utils.file_uptodate(nblock_bed, callable_bed):
-        ref_regions = get_ref_bedtool(ref_file, config)
-        nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
-        nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
-        nblock_regions.saveas(nblock_bed)
-        if len(ref_regions.subtract(nblock_regions)) > 0:
-            ref_regions.subtract(nblock_bed).merge(d=min_n_size).saveas(callblock_bed)
-        else:
-            raise ValueError("No callable regions found from BAM file. Alignment regions might "
-                             "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
+        with utils.curdir_tmpdir({"config": config}) as tmpdir:
+            pybedtools.set_tempdir(tmpdir)
+            ref_regions = get_ref_bedtool(ref_file, config)
+            nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
+            nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
+            nblock_regions.saveas(nblock_bed)
+            if len(ref_regions.subtract(nblock_regions)) > 0:
+                ref_regions.subtract(nblock_bed).merge(d=min_n_size).saveas(callblock_bed)
+            else:
+                raise ValueError("No callable regions found from BAM file. Alignment regions might "
+                                 "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
     return callblock_bed, nblock_bed, callable_bed
 
 def _write_bed_regions(sample, final_regions, out_file, out_file_ref):
@@ -366,20 +370,22 @@ def combine_sample_regions(*samples):
         global_analysis_file = None
     out = []
     analysis_files = []
-    for batch, items in vmulti.group_by_batch(samples).items():
-        if global_analysis_file:
-            analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
-        else:
-            analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
-        for data in items:
-            if analysis_file:
-                analysis_files.append(analysis_file)
-                data["config"]["algorithm"]["callable_regions"] = analysis_file
-                data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
-            out.append([data])
-    assert len(out) == len(samples)
-    final_regions = pybedtools.BedTool(analysis_files[0])
-    _analysis_block_stats(final_regions)
+    with utils.curdir_tmpdir(samples[0]) as tmpdir:
+        pybedtools.set_tempdir(tmpdir)
+        for batch, items in vmulti.group_by_batch(samples).items():
+            if global_analysis_file:
+                analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
+            else:
+                analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
+            for data in items:
+                if analysis_file:
+                    analysis_files.append(analysis_file)
+                    data["config"]["algorithm"]["callable_regions"] = analysis_file
+                    data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
+                out.append([data])
+        assert len(out) == len(samples)
+        final_regions = pybedtools.BedTool(analysis_files[0])
+        _analysis_block_stats(final_regions)
     return out
 
 def _combine_sample_regions_batch(batch, items):

@@ -77,7 +77,9 @@ def _prep_sample_cnvs(cnv_file, data):
     sample_file = os.path.join(os.path.dirname(cnv_file), "%s-cnv.bed" % sample_name)
     if not utils.file_exists(sample_file):
         with file_transaction(sample_file) as tx_out_file:
-            pybedtools.BedTool(cnv_file).filter(matches_sample_name).each(update_sample_name).saveas(tx_out_file)
+            with utils.curdir_tmpdir(data) as tmpdir:
+                pybedtools.set_tempdir(tmpdir)
+                pybedtools.BedTool(cnv_file).filter(matches_sample_name).each(update_sample_name).saveas(tx_out_file)
     return sample_file
 
 @utils.map_wrap

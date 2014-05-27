@@ -61,26 +61,28 @@ def prepare_exclude_file(items, base_file, chrom=None):
     all_vrs = _get_variant_regions(items)
     ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
                     if len(all_vrs) > 0 else chrom)
-    # Get a bedtool for the full region if no variant regions
-    if ready_region == chrom:
-        want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
-                                                items[0]["config"], chrom)
-        lcr_bed = shared.get_lcr_bed(items)
-        if lcr_bed:
-            want_bedtool = want_bedtool.subtract(pybedtools.BedTool(lcr_bed))
-    else:
-        want_bedtool = pybedtools.BedTool(ready_region).saveas()
-    sv_exclude_bed = _get_sv_exclude_file(items)
-    if sv_exclude_bed and len(want_bedtool) > 0:
-        want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
-    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-        with file_transaction(out_file) as tx_out_file:
-            full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
-                                                    items[0]["config"])
-            if len(want_bedtool) > 0:
-                full_bedtool.subtract(want_bedtool).saveas(tx_out_file)
-            else:
-                full_bedtool.saveas(tx_out_file)
+    with utils.curdir_tmpdir(items[0]) as tmpdir:
+        pybedtools.set_tempdir(tmpdir)
+        # Get a bedtool for the full region if no variant regions
+        if ready_region == chrom:
+            want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
+                                                    items[0]["config"], chrom)
+            lcr_bed = shared.get_lcr_bed(items)
+            if lcr_bed:
+                want_bedtool = want_bedtool.subtract(pybedtools.BedTool(lcr_bed))
+        else:
+            want_bedtool = pybedtools.BedTool(ready_region).saveas()
+        sv_exclude_bed = _get_sv_exclude_file(items)
+        if sv_exclude_bed and len(want_bedtool) > 0:
+            want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
+        if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
+            with file_transaction(out_file) as tx_out_file:
+                full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
+                                                        items[0]["config"])
+                if len(want_bedtool) > 0:
+                    full_bedtool.subtract(want_bedtool).saveas(tx_out_file)
+                else:
+                    full_bedtool.saveas(tx_out_file)
     return out_file
 
 @utils.map_wrap

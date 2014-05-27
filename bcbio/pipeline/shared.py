@@ -154,10 +154,12 @@ def subtract_low_complexity(f):
     """
     @functools.wraps(f)
     def wrapper(variant_regions, region, out_file, items=None):
-        region_bed = f(variant_regions, region, out_file, items)
-        if region_bed and isinstance(region_bed, basestring) and os.path.exists(region_bed) and items:
-            region_bed = remove_lcr_regions(region_bed, items)
-        return region_bed
+        with utils.curdir_tmpdir(items[0] if items else None) as tmpdir:
+            pybedtools.set_tempdir(tmpdir)
+            region_bed = f(variant_regions, region, out_file, items)
+            if region_bed and isinstance(region_bed, basestring) and os.path.exists(region_bed) and items:
+                region_bed = remove_lcr_regions(region_bed, items)
+            return region_bed
     return wrapper
 
 @subtract_low_complexity
