@@ -14,6 +14,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 
 @contextlib.contextmanager
 def tobam_cl(data, out_file, is_paired=False):
@@ -103,3 +104,21 @@ def _check_dedup(data):
                     "Using best-practice choice based on input data.")
         dup_param = True
     return dup_param
+
+def dedup_bam(in_bam, data):
+    """Perform non-stream based deduplication of BAM input files using biobambam.
+    """
+    if _check_dedup(data):
+        out_file = "%s-dedup%s" % utils.splitext_plus(in_bam)
+        if not utils.file_exists(out_file):
+            with utils.curdir_tmpdir(data) as tmpdir:
+                with file_transaction(out_file) as tx_out_file:
+                    bammarkduplicates = config_utils.get_program("bammarkduplicates", data["config"])
+                    base_tmp = os.path.join(tmpdir, os.path.splitext(os.path.basename(tx_out_file))[0])
+                    cores, mem = _get_cores_memory(data, downscale=3)
+                    cmd = ("{bammarkduplicates} tmpfile={base_tmp}-markdup "
+                           "markthreads={cores} I={in_bam} O={tx_out_file}")
+                    do.run(cmd.format(**locals()), "De-duplication with biobambam")
+        return out_file
+    else:
+        return in_bam

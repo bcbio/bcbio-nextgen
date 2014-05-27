@@ -1,0 +1,75 @@
+<tool id="bcbio_variant" name="Variant calling (bcbio-nextgen)"
+      version="0.7.9.1"
+      force_history_refresh="True">
+  <description>SNP and indel detection</description>
+  <requirements>
+    <requirement type="package" version="0.7.9">bcbio-nextgen</requirement>
+  </requirements>
+  <command>bcbio_nextgen.py $sample_config -n \${GALAXY_SLOTS:-1}</command>
+  <inputs>
+    <param name="name" type="text" value="sample1" label="Sample name"/>
+    <param name="input1" type="data" format="fastq,fastqsanger,bam"
+           label="First read in fastq format, or BAM file"/>
+    <param name="input2" type="data" format="fastq,fastqsanger"
+           label="Optional second read for paired end fastq input" optional="true"/>
+    <param name="genome_build" type="select" label="Genome build">
+      <options from_data_table="bwa_indexes">
+        <filter type="unique_value" column="0" />
+      </options>
+    </param>
+    <param name="aligner" type="select" label="Aligner">
+      <option value="bwa">bwa</option>
+      <option value="novoalign">novoalign</option>
+    </param>
+    <param name="variantcaller" type="select" label="Variant caller">
+      <option value="freebayes">FreeBayes</option>
+      <option value="gatk-haplotype">GATK HaplotypeCaller</option>
+    </param>
+    <param name="variant_regions" type="data" format="bed"
+           label="Regions for variant calling (BED file)" optional="true"/>
+  </inputs>
+  <outputs>
+    <data name="out_align" format="bam">
+      <action type="metadata" name="dbkey">
+        <option type="from_param" name="genome_build.fields" param_attribute="dbkey"/>
+      </action>
+    </data>
+    <data name="out_variants" format="vcf">
+      <action type="metadata" name="dbkey">
+        <option type="from_param" name="genome_build.fields" param_attribute="dbkey"/>
+      </action>
+    </data>
+    <!-- <data name="out_qc" format="pdf">
+         </data>
+    -->
+  </outputs>
+  <configfiles>
+    <configfile name="sample_config" filename="bcbio_sample.yaml">
+upload:
+  method: galaxy
+  dir: final
+  outputs:
+    align: $out_align
+    variants: $out_variants
+details:
+  - analysis: variant2
+    genome_build: $genome_build.fields.dbkey
+    files: [$input1, $input2]
+    description: $name
+    algorithm:
+      aligner: $aligner
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      variantcaller: $variantcaller
+      platform: illumina
+      quality_format: Standard
+      variant_regions: $variant_regions
+    </configfile>
+  </configfiles>
+  <help>
+SNP and indel variant calling using `bcbio-nextgen`_.
+
+.. _bcbio-nextgen: https://github.com/chapmanb/bcbio-nextgen
+  </help>
+</tool>

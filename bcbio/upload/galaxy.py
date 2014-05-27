@@ -5,6 +5,7 @@ Required configurable variables in upload:
 """
 import collections
 import os
+import shutil
 import time
 
 import bioblend
@@ -29,6 +30,24 @@ def update_file(finfo, sample_info, config):
     if "dir" not in config:
         raise ValueError("Galaxy upload requires `dir` parameter in config specifying the "
                          "shared filesystem path to move files to.")
+    if "outputs" in config:
+        _galaxy_tool_copy(finfo, config["outputs"])
+    else:
+        _galaxy_library_upload(finfo, sample_info, config)
+
+def _galaxy_tool_copy(finfo, outputs):
+    """Copy information directly to pre-defined outputs from a Galaxy tool.
+
+    XXX Needs generalization
+    """
+    tool_map = {"align": "bam", "variants": "vcf.gz"}
+    for galaxy_key, finfo_type in tool_map.items():
+        if galaxy_key in outputs and finfo.get("type") == finfo_type:
+            shutil.copy(finfo["path"], outputs[galaxy_key])
+
+def _galaxy_library_upload(finfo, sample_info, config):
+    """Upload results to galaxy library.
+    """
     folder_name = "%s_%s" % (config["fc_date"], config["fc_name"])
     storage_dir = utils.safe_makedir(os.path.join(config["dir"], folder_name))
     if finfo.get("type") == "directory":
