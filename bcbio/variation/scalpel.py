@@ -61,7 +61,6 @@ def run_scalpel(align_bams, items, ref_file, assoc_files, region=None,
     else:
         call_file = _run_scalpel_caller(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
-
     return call_file
 
 def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
@@ -118,7 +117,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             if not paired.normal_bam:
                 ann_file = _run_scalpel_caller(align_bams, items, ref_file,
                                                assoc_files, region, out_file)
-                return
+                return ann_file
             vcffilter = config_utils.get_program("vcffilter", config)
             scalpel = config_utils.get_program("scalpel", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
@@ -128,7 +127,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             opts += " --dir %s" % tmp_path
             min_cov = "5" # minimum coverage (default 5)
             opts += " --mincov %s" % min_cov
-            cl = ("{scalpel} --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")      
+            cl = ("{scalpel} --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
@@ -141,4 +140,3 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                                                assoc_files["dbsnp"], ref_file,
                                                config)
     return ann_file
-
