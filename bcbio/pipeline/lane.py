@@ -7,6 +7,7 @@ from bcbio import bam, broad, utils
 from bcbio.log import logger
 from bcbio.bam import callable, fastq
 from bcbio.bam.trim import trim_adapters
+from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
@@ -108,7 +109,8 @@ def process_alignment(data):
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))
         bam.check_header(out_bam, data["rgnames"], data["sam_ref"], data["config"])
-        data["work_bam"] = out_bam
+        dedup_bam = postalign.dedup_bam(out_bam, data)
+        data["work_bam"] = dedup_bam
     elif fastq1 is None and "vrn_file" in data:
         data["config"]["algorithm"]["variantcaller"] = ""
         data["work_bam"] = None

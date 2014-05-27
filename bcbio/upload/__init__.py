@@ -201,7 +201,8 @@ def _maybe_add_cufflinks(algorithm, sample, out):
 
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
-              or algorithm.get("recalibrate")) and
+              or algorithm.get("recalibrate") or algorithm.get("bam_clean")
+              or algorithm.get("mark_duplicates")) and
               algorithm.get("merge_bamprep", True)) and
               sample.get("work_bam") is not None)
 

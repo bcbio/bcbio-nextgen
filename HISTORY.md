@@ -2,7 +2,9 @@
 
 - Improve parallel region generation to avoid large numbers of segments on
   organisms with many chromosomes.
-- Generalize SGE support to handle system setups. Thanks to Karl Gutwin.
+- Add de-duplication support back for pre-aligned input files. Thanks to
+  Severine Catreux.
+- Generalize SGE support to handle additional system setups. Thanks to Karl Gutwin.
 
 ## 0.7.9 (May 19, 2014)
 
