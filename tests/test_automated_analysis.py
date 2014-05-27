@@ -88,7 +88,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
                          DlInfo("genomes_automated_test.tar.gz", "genomes", 17),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 8),
-                         DlInfo("tcga_benchmark.tar.gz", None, 2)]
+                         DlInfo("tcga_benchmark.tar.gz", None, 3)]
         for dl in download_data:
             url = "http://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
             dirname = os.path.join(data_dir, os.pardir,
@@ -269,11 +269,11 @@ class AutomatedAnalysisTest(unittest.TestCase):
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
                   get_post_process_yaml(self.data_dir, workdir),
-                  os.path.join(self.data_dir, os.pardir, "tcga_benchmark"),
                   os.path.join(self.data_dir, "run_info-cancer.yaml")]
             subprocess.check_call(cl)
 
     @attr(cancer=True)
+    @attr(cancerpanel=True)
     def test_7_cancer_nonormal(self):
         """Test cancer calling without normal samples or with normal VCF panels.
         """
