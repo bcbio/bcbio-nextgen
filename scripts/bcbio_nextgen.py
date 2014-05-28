@@ -5,14 +5,14 @@ Handles runs in local or distributed mode based on the command line or
 configured parameters.
 
 The <config file> is a global YAML configuration file specifying details
-about the system. An example configuration file is in 'config/bcbio_sample.yaml'.
+about the system. An example configuration file is in 'config/bcbio_system.yaml'.
 This is optional for automated installations.
 
 <fc_dir> is an optional parameter specifying a directory of Illumina output
 or fastq files to process. If configured to connect to a Galaxy LIMS system,
 this can retrieve run information directly from Galaxy for processing.
 
-<YAML run information> is an optional file specifies details about the
+<YAML run information> is an optional file that specifies details about the
 flowcell lanes, instead of retrieving it from Galaxy. An example
 configuration file is located in 'config/bcbio_sample.yaml' This allows running
 on files in arbitrary locations with no connection to Galaxy required.
