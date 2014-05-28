@@ -1,6 +1,6 @@
 """Next gen sequence alignment with Mosaik.
 
-http://bioinformatics.bc.edu/marthlab/Mosaik
+https://code.google.com/p/mosaik-aligner/
 """
 import os
 import subprocess
