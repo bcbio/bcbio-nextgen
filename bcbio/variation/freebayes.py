@@ -1,6 +1,6 @@
 """Bayesian variant calling with FreeBayes.
 
-http://bioinformatics.bc.edu/marthlab/FreeBayes
+https://github.com/ekg/freebayes
 """
 
 from collections import namedtuple
