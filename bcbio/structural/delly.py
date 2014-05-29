@@ -61,8 +61,7 @@ def prepare_exclude_file(items, base_file, chrom=None):
     all_vrs = _get_variant_regions(items)
     ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
                     if len(all_vrs) > 0 else chrom)
-    with utils.curdir_tmpdir(items[0]) as tmpdir:
-        pybedtools.set_tempdir(tmpdir)
+    with shared.bedtools_tmpdir(items[0]):
         # Get a bedtool for the full region if no variant regions
         if ready_region == chrom:
             want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),

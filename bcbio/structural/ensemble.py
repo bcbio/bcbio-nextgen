@@ -15,6 +15,7 @@ import vcf
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import shared
 
 # ## Conversions to simplified BED files
 
@@ -75,8 +76,7 @@ def summarize(calls, data):
     out_file = os.path.join(work_dir, "%s-ensemble.bed" % sample)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            with utils.curdir_tmpdir(data) as tmpdir:
-                pybedtools.set_tempdir(tmpdir)
+            with shared.bedtools_tmpdir(data):
                 input_beds = filter(lambda x: x is not None,
                                     [_create_bed(c, out_file) for c in calls])
                 if len(input_beds) > 0:
