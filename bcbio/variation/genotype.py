@@ -155,14 +155,15 @@ def handle_multiple_variantcallers(data):
         return out
 
 def get_variantcallers():
-    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect
+    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, scalpel
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "freebayes": freebayes.run_freebayes,
             "cortex": cortex.run_cortex,
             "samtools": samtools.run_samtools,
             "varscan": varscan.run_varscan,
-            "mutect": mutect.mutect_caller}
+            "mutect": mutect.mutect_caller,
+            "scalpel": scalpel.run_scalpel}
 
 def variantcall_sample(data, region=None, align_bams=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
