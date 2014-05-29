@@ -21,20 +21,24 @@ try:
     import pybedtools
 except ImportError:
     pybedtools = None
+import toolz as tz
 
 from bcbio import bam, broad, utils
+from bcbio.bam import ref
 from bcbio.log import logger
 from bcbio.distributed import multi, prun
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import shared
+from bcbio.pipeline import config_utils, shared
+from bcbio.provenance import do
 from bcbio.variation import multi as vmulti
 
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
     config = copy.deepcopy(config)
     config["algorithm"]["memory_adjust"] = {"direction": "decrease", "magnitude": 2}
-    data = {"work_bam": in_bam, "sam_ref": ref_file, "config": config}
+    data = {"work_bam": in_bam, "config": config,
+            "reference": {"fasta": {"base": ref_file}}}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
     items = [[data]]
     with prun.start(parallel, items, config, multiplier=int(num_cores)) as runner:
@@ -59,48 +63,55 @@ def calc_callable_loci(data, region=None, out_file=None):
              "min": utils.get_in(data, ("config", "algorithm", "coverage_depth_min"), 4)}
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            bam.index(data["work_bam"], data["config"])
-            with contextlib.closing(pysam.Samfile(data["work_bam"], "rb")) as in_bam:
-                with open(tx_out_file, "w") as out_handle:
-                    for r in _regions_for_coverage(data, region, tx_out_file):
-                        for chrom, start, end, info in _get_coverage_in_region(in_bam, r, depth):
-                            out_handle.write("%s\t%s\t%s\t%s\n" % (chrom, start, end, info))
+            with utils.curdir_tmpdir(data) as tmpdir:
+                pybedtools.set_tempdir(tmpdir)
+                ref_file = tz.get_in(["reference", "fasta", "base"], data)
+                region_file, calc_callable = _regions_for_coverage(data, region, ref_file, tx_out_file)
+                if calc_callable:
+                    _group_by_ctype(_get_coverage_file(data["work_bam"], ref_file, region_file, depth,
+                                                       tx_out_file, data),
+                                    depth, region_file, tx_out_file)
+                # special case, do not calculate if we are in a chromosome not covered by BED file
+                else:
+                    os.move(region_file, tx_out_file)
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
-def _get_coverage_in_region(in_bam, region, depth):
+def _group_by_ctype(bed_file, depth, region_file, out_file):
+    """Group adjacent callable/uncallble regions into defined intervals.
+
+    Uses tips from bedtools discussion:
+    https://groups.google.com/d/msg/bedtools-discuss/qYDE6XF-GRA/2icQtUeOX_UJ
+    https://gist.github.com/arq5x/b67196a46db5b63bee06
+    """
+    def assign_coverage(feat):
+        feat.name = _get_ctype(int(feat.name), depth)
+        return feat
+    full_out_file = "%s-full%s" % utils.splitext_plus(out_file)
+    with open(full_out_file, "w") as out_handle:
+        for line in open(pybedtools.BedTool(bed_file).each(assign_coverage)
+                                                     .groupby(g=[1, 4], c=[1, 2, 3, 4],
+                                                              ops=["first", "first", "max", "first"]).fn):
+            out_handle.write("\t".join(line.split("\t")[2:]))
+    pybedtools.BedTool(full_out_file).intersect(region_file).saveas(out_file)
+
+def _get_coverage_file(in_bam, ref_file, region_file, depth, base_file, data):
     """Retrieve summary of coverage in a region.
     Requires positive non-zero mapping quality at a position, matching GATK's
     CallableLoci defaults.
-
-    Uses chajo's approach of pre-allocating a numpy array for coverage before collapsing
-    to cleanly handle non-covered positions. This uses 2Gb memory for human chr1. If memory
-    requirements become an issue, could look at splitting long chromosomes at smart places.
-
-    XXX Can replace `positions` with chanjo functionality when it accepts max_depth keyword
-    and handles mapping quality.
     """
-    # special case, do not calculate if we are in a chromosome not covered by BED file
-    if region.attrs.get("no_coverage"):
-        yield region.chrom, region.start, region.end, "NO_COVERAGE"
-    else:
-        positions = numpy.zeros(region.end + 1 - region.start)
-        for col in in_bam.pileup(str(region.chrom), region.start, region.end + 1, stepper="all",
-                                 max_depth=depth["max"] + 10, truncate=True):
-            n = sum(1 for read in col.pileups if read.alignment.mapq > 0)
-            positions[col.pos - region.start] = n
-        cur_ctype = None
-        cur_start = None
-        for i, count in enumerate(positions):
-            ctype = _get_ctype(count, depth)
-            if cur_ctype is None:
-                cur_ctype = ctype
-                cur_start = i
-            elif cur_ctype != ctype:
-                yield region.chrom, region.start + cur_start, region.start + i, cur_ctype
-                cur_ctype = ctype
-                cur_start = i
-        if i > cur_start:
-            yield region.chrom, region.start + cur_start, region.start + i, cur_ctype
+    out_file = "%s-genomecov.bed" % utils.splitext_plus(base_file)[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            bam.index(in_bam, data["config"])
+            fai_file = ref.fasta_idx(ref_file, data["config"])
+            sambamba = config_utils.get_program("sambamba", data["config"])
+            bedtools = config_utils.get_program("bedtools", data["config"])
+            max_depth = depth["max"] + 1
+            cmd = ("{sambamba} view -F 'mapping_quality > 0' -L {region_file} -f bam -l 0 {in_bam} | "
+                   "{bedtools} genomecov -ibam stdin -bga -g {fai_file} -max {max_depth} "
+                   "> {tx_out_file}")
+            do.run(cmd.format(**locals()), "Bedtools genomecov", data)
+    return out_file
 
 def _get_ctype(count, depth):
     if count == 0:
@@ -112,27 +123,27 @@ def _get_ctype(count, depth):
     else:
         return "CALLABLE"
 
-def _regions_for_coverage(data, region, out_file):
-    """Retrieve BedTool iterator over regions we need to calculate coverage in.
+def _regions_for_coverage(data, region, ref_file, out_file):
+    """Retrieve BED file of regions we need to calculate coverage in.
     """
     variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
     ready_region = shared.subset_variant_regions(variant_regions, region, out_file)
+    custom_file = "%s-coverageregions.bed" % utils.splitext_plus(out_file)[0]
     if not ready_region:
-        return get_ref_bedtool(data["sam_ref"], data["config"])
+        get_ref_bedtool(ref_file, data["config"]).saveas(custom_file)
+        return custom_file, True
     elif os.path.isfile(ready_region):
-        return pybedtools.BedTool(ready_region).intervals
+        return ready_region, True
     elif isinstance(ready_region, (list, tuple)):
         c, s, e = ready_region
-        return [pybedtools.Interval(c, s, e)]
+        pybedtools.BedTool("%s\t%s\t%s\n" % (c, s, e), from_string=True).saveas(custom_file)
+        return custom_file, True
     else:
+        def add_nocoverage(feat):
+            feat.name = "NO_COVERAGE"
         assert isinstance(ready_region, basestring)
-        out = []
-        for r in [x for x in get_ref_bedtool(data["sam_ref"], data["config"])
-                  if x.chrom == ready_region]:
-            # If we have variant regions but none in this region, don't calculate coverage
-            r.attrs["no_coverage"] = variant_regions is not None
-            out.append(r)
-        return out
+        get_ref_bedtool(ref_file, data["config"], ready_region).each(add_nocoverage).saveas(custom_file)
+        return custom_file, False
 
 def sample_callable_bed(bam_file, ref_file, config):
     """Retrieve callable regions for a sample subset by defined analysis regions.
@@ -292,8 +303,9 @@ def block_regions(in_bam, ref_file, config):
                                  "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
     return callblock_bed, nblock_bed, callable_bed
 
-def _write_bed_regions(sample, final_regions, out_file, out_file_ref):
-    ref_regions = get_ref_bedtool(sample["sam_ref"], sample["config"])
+def _write_bed_regions(data, final_regions, out_file, out_file_ref):
+    ref_file = tz.get_in(["reference", "fasta", "base"], data)
+    ref_regions = get_ref_bedtool(ref_file, data["config"])
     noanalysis_regions = ref_regions.subtract(final_regions)
     final_regions.saveas(out_file)
     noanalysis_regions.saveas(out_file_ref)
@@ -405,7 +417,8 @@ def _combine_sample_regions_batch(batch, items):
             analysis_file, no_analysis_file = None, None
         else:
             nblock_regions = reduce(operator.add, bed_regions)
-            ref_regions = get_ref_bedtool(items[0]["sam_ref"], config)
+            ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
+            ref_regions = get_ref_bedtool(ref_file, config)
             min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
             ec_regions = _combine_excessive_coverage(items, ref_regions, min_n_size)
             if len(ec_regions) > 0:

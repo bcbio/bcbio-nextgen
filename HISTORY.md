@@ -1,5 +1,9 @@
 ## 0.8.0 (in progress)
 
+- Rework calculation of callable regions to use bedtools/pybedtools thanks to
+  groupby tricks from Aaron Quinlan. Improves speed and memory usage for
+  coverage calculations. Use local temporary directories for
+  pybedtools to avoid filling global temporary space.
 - Improve parallel region generation to avoid large numbers of segments on
   organisms with many chromosomes.
 - Add de-duplication support back for pre-aligned input files. Thanks to

@@ -1,8 +1,9 @@
 """Pipeline functionality shared amongst multiple analysis types.
 """
 import os
-from contextlib import closing
+from contextlib import closing, contextmanager
 import functools
+import tempfile
 
 try:
     import pybedtools
@@ -149,13 +150,23 @@ def remove_lcr_regions(orig_bed, items):
             orig_bed = nolcr_bed
     return orig_bed
 
+@contextmanager
+def bedtools_tmpdir(data):
+    with utils.curdir_tmpdir(data) as tmpdir:
+        orig_tmpdir = tempfile.gettempdir()
+        pybedtools.set_tempdir(tmpdir)
+        yield
+        if os.path.exists(orig_tmpdir):
+            pybedtools.set_tempdir(orig_tmpdir)
+        else:
+            tempfile.tempdir = None
+
 def subtract_low_complexity(f):
     """Remove low complexity regions from callable regions if available.
     """
     @functools.wraps(f)
     def wrapper(variant_regions, region, out_file, items=None):
-        with utils.curdir_tmpdir(items[0] if items else None) as tmpdir:
-            pybedtools.set_tempdir(tmpdir)
+        with bedtools_tmpdir(items[0] if items else None):
             region_bed = f(variant_regions, region, out_file, items)
             if region_bed and isinstance(region_bed, basestring) and os.path.exists(region_bed) and items:
                 region_bed = remove_lcr_regions(region_bed, items)
