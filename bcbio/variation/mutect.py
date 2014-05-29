@@ -3,7 +3,7 @@
 from distutils.version import LooseVersion
 import os
 
-from bcbio import bam, broad
+from bcbio import bam, broad, utils
 from bcbio.utils import file_exists, get_in
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
@@ -105,23 +105,26 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-        if "appistry" not in broad_runner.get_mutect_version(): # 
+        if "appistry" not in broad_runner.get_mutect_version():
             # Scalpel InDels
             is_paired = "-I:normal" in params
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
-            with file_transaction(out_file_indels) as tx_out_file2:
-                if not is_paired:
-                    scalpel._run_scalpel_caller(align_bams, items, ref_file, assoc_files,
-                                                region=region, out_file=tx_out_file2)
-                else:
-                    scalpel._run_scalpel_paired(align_bams, items, ref_file, assoc_files,
-                                                region=region, out_file=tx_out_file2)
-            out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
-                                                      out_file=out_file,
-                                                      ref_file=items[0]["sam_ref"],
-                                                      config=items[0]["config"],
-                                                      region=region)
+            if scalpel.is_installed(items[0]["config"]):
+                with file_transaction(out_file_indels) as tx_out_file2:
+                    if not is_paired:
+                        scalpel._run_scalpel_caller(align_bams, items, ref_file, assoc_files,
+                                                    region=region, out_file=tx_out_file2)
+                    else:
+                        scalpel._run_scalpel_paired(align_bams, items, ref_file, assoc_files,
+                                                    region=region, out_file=tx_out_file2)
+                out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
+                                                          out_file=out_file,
+                                                          ref_file=items[0]["sam_ref"],
+                                                          config=items[0]["config"],
+                                                          region=region)
+            else:
+                utils.symlink_plus(out_file_mutect, out_file)
         else:
             # SomaticIndelDetector modifications
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
