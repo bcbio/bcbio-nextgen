@@ -66,7 +66,7 @@ def calc_callable_loci(data, region=None, out_file=None):
             ref_file = tz.get_in(["reference", "fasta", "base"], data)
             region_file, calc_callable = _regions_for_coverage(data, region, ref_file, tx_out_file)
             if calc_callable:
-                _group_by_ctype(_get_coverage_file(data["work_bam"], ref_file, region_file, depth,
+                _group_by_ctype(_get_coverage_file(data["work_bam"], ref_file, region, region_file, depth,
                                                    tx_out_file, data),
                                 depth, region_file, tx_out_file)
             # special case, do not calculate if we are in a chromosome not covered by BED file
@@ -82,7 +82,7 @@ def _group_by_ctype(bed_file, depth, region_file, out_file):
     https://gist.github.com/arq5x/b67196a46db5b63bee06
     """
     def assign_coverage(feat):
-        feat.name = _get_ctype(int(feat.name), depth)
+        feat.name = _get_ctype(float(feat.name), depth)
         return feat
     full_out_file = "%s-full%s" % utils.splitext_plus(out_file)
     with open(full_out_file, "w") as out_handle:
@@ -92,7 +92,7 @@ def _group_by_ctype(bed_file, depth, region_file, out_file):
             out_handle.write("\t".join(line.split("\t")[2:]))
     pybedtools.BedTool(full_out_file).intersect(region_file).saveas(out_file)
 
-def _get_coverage_file(in_bam, ref_file, region_file, depth, base_file, data):
+def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, data):
     """Retrieve summary of coverage in a region.
     Requires positive non-zero mapping quality at a position, matching GATK's
     CallableLoci defaults.
@@ -108,7 +108,13 @@ def _get_coverage_file(in_bam, ref_file, region_file, depth, base_file, data):
             cmd = ("{sambamba} view -F 'mapping_quality > 0' -L {region_file} -f bam -l 0 {in_bam} | "
                    "{bedtools} genomecov -ibam stdin -bga -g {fai_file} -max {max_depth} "
                    "> {tx_out_file}")
-            do.run(cmd.format(**locals()), "Bedtools genomecov", data)
+            do.run(cmd.format(**locals()), "bedtools genomecov: %s" % (str(region)), data)
+    # Empty output file, no coverage for the whole contig
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for feat in get_ref_bedtool(ref_file, data["config"], region):
+                    out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, 0))
     return out_file
 
 def _get_ctype(count, depth):
