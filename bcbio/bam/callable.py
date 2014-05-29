@@ -138,11 +138,12 @@ def _regions_for_coverage(data, region, ref_file, out_file):
         return custom_file, True
     else:
         def add_nocoverage(feat):
-            feat.name = "NO_COVERAGE"
+            if variant_regions is not None:
+                feat.name = "NO_COVERAGE"
             return feat
         assert isinstance(ready_region, basestring)
-        get_ref_bedtool(ref_file, data["config"], ready_region).each(add_nocoverage).saveas(custom_file)
-        return custom_file, False
+        get_ref_bedtool(ref_file, data["config"], ready_region).saveas().each(add_nocoverage).saveas(custom_file)
+        return custom_file, variant_regions is None
 
 def sample_callable_bed(bam_file, ref_file, config):
     """Retrieve callable regions for a sample subset by defined analysis regions.
