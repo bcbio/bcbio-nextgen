@@ -62,6 +62,28 @@ def genotype_filter(vcf_file, expression, data, name, filterext=""):
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
 
+def genotype_filter_toref(vcf_file, expression, data, filterext=""):
+    """Perform genotype filters by converting failing calls to reference, using bcftools
+
+    Prefer the FT approach used in genotype_filter, but bcftools handles complex filter
+    expressions that GATK will not.
+    """
+    base, ext = utils.splitext_plus(vcf_file)
+    out_file = "{base}-filter{filterext}{ext}".format(**locals())
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            if vcfutils.vcf_has_variants(vcf_file):
+                bcftools = config_utils.get_program("bcftools", data["config"])
+                output_type = "z" if tx_out_file.endswith(".gz") else "v"
+                cmd = ("{bcftools} filter -O {output_type} "
+                       "-e '{expression}' -S 0 {vcf_file} > {tx_out_file}")
+                do.run(cmd.format(**locals()), "Genotype filtering to ref %s with %s" % (vcf_file, expression), data)
+            else:
+                shutil.copy(vcf_file, out_file)
+    if out_file.endswith(".vcf.gz"):
+        out_file = vcfutils.bgzip_and_index(out_file, data["config"])
+    return out_file
+
 # ## Caller specific
 
 def freebayes(in_file, ref_file, vrn_files, data):

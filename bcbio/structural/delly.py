@@ -173,16 +173,17 @@ def run(items):
                                     config, parallel)
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
-    delly_vcf = vfilter.genotype_filter(combo_vcf, 'DV < 4 || (DV / (DV + DR)) < 0.35', data,
-                                        "DVSupport")
     out = []
     for data in items:
         if "sv" not in data:
             data["sv"] = []
-        base, ext = utils.splitext_plus(delly_vcf)
+        base, ext = utils.splitext_plus(combo_vcf)
         sample = tz.get_in(["rgnames", "sample"], data)
-        delly_sample_vcf = "%s-%s%s" % (base, sample, ext)
-        data["sv"].append({"variantcaller": "delly",
-                           "vrn_file": vcfutils.select_sample(delly_vcf, sample, delly_sample_vcf, data["config"])})
+        delly_sample_vcf = vcfutils.select_sample(combo_vcf, sample,
+                                                  "%s-%s%s" % (base, sample, ext), data["config"])
+        delly_vcf = vfilter.hard_w_expression(delly_sample_vcf,
+                                              "FMT/DV < 4 || (FMT/DV / (FMT/DV + FMT/DR)) < 0.2", data,
+                                              name="DVSupport")
+        data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf})
         out.append(data)
     return out
