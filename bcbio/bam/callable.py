@@ -71,7 +71,7 @@ def calc_callable_loci(data, region=None, out_file=None):
                                 depth, region_file, tx_out_file)
             # special case, do not calculate if we are in a chromosome not covered by BED file
             else:
-                os.move(region_file, tx_out_file)
+                os.rename(region_file, tx_out_file)
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
 def _group_by_ctype(bed_file, depth, region_file, out_file):
@@ -143,12 +143,10 @@ def _regions_for_coverage(data, region, ref_file, out_file):
         pybedtools.BedTool("%s\t%s\t%s\n" % (c, s, e), from_string=True).saveas(custom_file)
         return custom_file, True
     else:
-        def add_nocoverage(feat):
-            if variant_regions is not None:
-                feat.name = "NO_COVERAGE"
-            return feat
-        assert isinstance(ready_region, basestring)
-        get_ref_bedtool(ref_file, data["config"], ready_region).saveas().each(add_nocoverage).saveas(custom_file)
+        with file_transaction(custom_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for feat in get_ref_bedtool(ref_file, data["config"], region):
+                    out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, "NO_COVERAGE"))
         return custom_file, variant_regions is None
 
 def sample_callable_bed(bam_file, ref_file, config):
