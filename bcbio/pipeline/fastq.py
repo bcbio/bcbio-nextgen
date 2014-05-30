@@ -68,6 +68,6 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     if not file_exists(out1):
         broad_runner = broad.runner_from_config(config)
         broad_runner.run_fn("picard_bam_to_fastq", in_file, out1, out2)
-    if os.path.getsize(out2) == 0:
+    if out2 and os.path.getsize(out2) == 0:
         out2 = None
     return [out1, out2]
