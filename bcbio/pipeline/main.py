@@ -411,6 +411,22 @@ class StandardPipeline(AbstractPipeline):
 class MinimalPipeline(StandardPipeline):
     name = "Minimal"
 
+class SailfishPipeline(AbstractPipeline):
+    name = "sailfish"
+
+    @classmethod
+    def run(self, config, config_file, parallel, dirs, samples):
+        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
+                        samples, config, dirs, "trimming") as run_parallel:
+            with profile.report("adapter trimming", dirs):
+                samples = run_parallel("process_lane", samples)
+                samples = run_parallel("trim_lane", samples)
+            with prun.start(_wres(parallel, ["sailfish"]), samples, config, dirs,
+                            "sailfish") as run_parallel:
+                with profile.report("sailfish", dirs):
+                    samples = run_parallel("run_sailfish", samples)
+        return samples
+
 class RnaseqPipeline(AbstractPipeline):
     name = "RNA-seq"
 

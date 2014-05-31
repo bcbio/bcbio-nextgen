@@ -168,6 +168,19 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
             subprocess.check_call(cl)
 
+    @attr(rnaseq=True)
+    @attr(sailfish=True)
+    def test_2_sailfish(self):
+        """Run an RNA-seq analysis with Sailfish
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
+                  os.path.join(self.data_dir, "run_info-sailfish.yaml")]
+            subprocess.check_call(cl)
+
     @attr(fusion=True)
     def test_2_fusion(self):
         """Run an RNA-seq analysis and test fusion genes

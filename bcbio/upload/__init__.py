@@ -37,8 +37,17 @@ def _get_files(sample):
         return _get_files_rnaseq(sample)
     elif analysis.lower() in ["chip-seq"]:
         return _get_files_chipseq(sample)
+    elif analysis.lower() in ["sailfish"]:
+        return _get_files_sailfish(sample)
     else:
         return []
+
+def _get_files_sailfish(sample):
+    out = []
+    out.append({"path": sample["sailfish_dir"],
+                "type": "directory",
+                "ext": "sailfish"})
+    return _add_meta(out, sample)
 
 def _get_files_rnaseq(sample):
     out = []

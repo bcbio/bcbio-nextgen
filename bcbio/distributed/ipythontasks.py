@@ -8,6 +8,7 @@ from IPython.parallel import require
 
 from bcbio import chipseq, structural
 from bcbio.bam import callable
+from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample, lane, qcsummary, shared,
@@ -55,6 +56,12 @@ def trim_lane(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(lane.trim_lane, *args), config)
+
+@require(sailfish)
+def run_sailfish(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return apply(sailfish.run_sailfish, *args)
 
 @require(lane)
 def process_alignment(*args):

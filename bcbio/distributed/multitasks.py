@@ -2,11 +2,16 @@
 """
 from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
+from bcbio.rnaseq import sailfish
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, lane, qcsummary, sample, shared, variation,
                             rnaseq)
 from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
+
+@utils.map_wrap
+def run_sailfish(*args):
+    return sailfish.run_sailfish(*args)
 
 @utils.map_wrap
 def process_lane(*args):
