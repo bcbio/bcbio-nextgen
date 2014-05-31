@@ -42,7 +42,7 @@ def _get_ipython_fn(fn_name, parallel):
                               fromlist=["ipythontasks"]),
                    import_fn_name)
 
-def _zip_args(items, config):
+def zip_args(items, config):
     """Compress and JSON encode arguments before sending to IPython, if configured.
     """
     if tz.get_in(["algorithm", "compress_msg"], config):
@@ -50,6 +50,14 @@ def _zip_args(items, config):
         items = [zlib.compress(json.dumps(x, separators=(',', ':')), 9) for x in items]
         #print [len(x) for x in items]
     return items
+
+def unzip_args(args):
+    """Unzip arguments if passed as compressed JSON string.
+    """
+    if len(args) > 0 and all(isinstance(arg, basestring) for arg in args):
+        return [json.loads(zlib.decompress(arg)) for arg in args]
+    else:
+        return args
 
 def runner(view, parallel, dirs, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -67,9 +75,9 @@ def runner(view, parallel, dirs, config):
             if "wrapper" in parallel:
                 wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources"])}
                 items = [[fn_name] + parallel.get("wrapper_args", []) + [wrap_parallel] + list(x) for x in items]
-            items = _zip_args(items, config)
+            items = zip_args(items, config)
             for data in view.map_sync(fn, items, track=False):
                 if data:
-                    out.extend(data)
+                    out.extend(unzip_args(data))
         return out
     return run
