@@ -141,6 +141,13 @@ def _get_data_dir():
                          "located in the same directory as `galaxy` `genomes` and `gemini_data` directories.")
     return os.path.dirname(base_dir)
 
+def get_gemini_dir():
+    try:
+        data_dir = _get_data_dir()
+        return os.path.join(data_dir, "gemini_data")
+    except ValueError:
+        return None
+
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
     """

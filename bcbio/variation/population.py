@@ -8,7 +8,7 @@ from distutils.version import LooseVersion
 import os
 import subprocess
 
-from bcbio import utils
+from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
@@ -43,6 +43,13 @@ def prep_gemini_db(fnames, call_info, samples):
                         load_opts += " --skip-gene-tables"
                     if "/test_automated_output/" in gemini_vcf:
                         load_opts += " --test-mode"
+                # Skip CADD or gerp-bp if neither are loaded
+                if gemini_ver and LooseVersion(gemini_ver) >= LooseVersion("0.7.0"):
+                    gemini_dir = install.get_gemini_dir()
+                    for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz"),
+                                                 ("--skip-gerp-bp", "hg19.gerp.bw")]:
+                        if not os.path.exists(os.path.join(gemini_dir, check_file)):
+                            load_opts += " %s" % skip_cmd
                 num_cores = data["config"]["algorithm"].get("num_cores", 1)
                 cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
                 cmd = cmd.format(**locals())
