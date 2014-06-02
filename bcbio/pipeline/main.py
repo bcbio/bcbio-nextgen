@@ -437,7 +437,7 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("adapter trimming", dirs):
                 samples = run_parallel("process_lane", samples)
                 samples = run_parallel("trim_lane", samples)
-        with prun.start(_wres(parallel, ["aligner"],
+        with prun.start(_wres(parallel, ["aligner", "picard"],
                               ensure_mem={"tophat": 8, "tophat2": 8, "star": 40}),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:

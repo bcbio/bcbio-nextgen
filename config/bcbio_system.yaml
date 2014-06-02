@@ -47,7 +47,7 @@ resources:
   gatk-vqsr:
     jvm_opts: ["-Xms2g", "-Xmx4000m"]
   picard:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    jvm_opts: ["-Xms750m", "-Xmx4000m"]
     dir: /usr/local/share/java/picard
   snpeff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
