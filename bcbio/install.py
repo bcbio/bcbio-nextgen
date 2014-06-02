@@ -167,6 +167,7 @@ def upgrade_bcbio_data(args, remotes):
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
+    _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"])
     if 'data' in set([x.name for x in args.toolplus]):
         gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
         subprocess.check_call([gemini, "update", "--dataonly"])
@@ -193,6 +194,10 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
                 print("Updating %s genome resources configuration" % dbkey)
                 with open(local_file, "w") as out_handle:
                     out_handle.write(r.text)
+
+def _upgrade_vep_data(galaxy_dir):
+    for dbkey, ref_file in genome.get_builds(galaxy_dir):
+        effects.prep_vep_cache(dbkey, ref_file)
 
 def _upgrade_snpeff_data(galaxy_dir, args, remotes):
     """Install or upgrade snpEff databases, localized to reference directory.

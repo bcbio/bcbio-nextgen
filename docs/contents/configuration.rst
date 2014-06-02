@@ -316,6 +316,7 @@ Variant calling
 -  ``realign`` Perform realignment around indels on the aligned BAM
    file. Defaults to no realignment since realigning callers like FreeBayes and
    GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
+- ``effects`` Calculate expected variant effects [snpeff, vep, false]
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 -  ``remove_lcr`` Remove variants in low complexity regions (LCRs)

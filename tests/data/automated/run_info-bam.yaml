@@ -28,6 +28,7 @@ details:
       #realign: gatk
       #recalibrate: gatk
       variantcaller: freebayes
+      #effects: vep
       #svcaller: [delly, lumpy, cn.mops]
       #remove_lcr: true
       #tools_off: gemini

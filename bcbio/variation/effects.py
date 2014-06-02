@@ -2,16 +2,104 @@
 
 Supported:
   snpEff: http://sourceforge.net/projects/snpeff/
+  VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
 """
 import os
-import csv
 import glob
+import shutil
+import subprocess
+
+import toolz as tz
+import yaml
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+
+# ## Ensembl VEP
+
+def vep_version(config):
+    try:
+        vep = config_utils.get_program("variant_effect_predictor.pl", config)
+        help_str = subprocess.check_output([vep, "--help"])
+        for line in help_str.split("\n"):
+            if line.startswith("version"):
+                return line.split()[-1].strip()
+        return None
+    except config_utils.CmdNotFound:
+        return None
+        return False
+
+def _special_dbkey_maps(dbkey, ref_file):
+    """Avoid duplicate VEP information for databases with chromosome differences like hg19/GRCh37.
+    """
+    remaps = {"hg19": "GRCh37"}
+    if dbkey in remaps:
+        base_dir = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir))
+        vep_dir = os.path.normpath(os.path.join(base_dir, "vep"))
+        other_dir = os.path.relpath(os.path.normpath(os.path.join(base_dir, os.pardir, remaps[dbkey], "vep")),
+                                    base_dir)
+        if not os.path.lexists(vep_dir):
+            os.symlink(other_dir, vep_dir)
+        return vep_dir
+    else:
+        return None
+
+def prep_vep_cache(dbkey, ref_file, config=None):
+    """Ensure correct installation of VEP cache file.
+    """
+    if config is None: config = {}
+    resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
+    vepv = vep_version(config)
+    if os.path.exists(resource_file) and vepv:
+        with open(resource_file) as in_handle:
+            resources = yaml.load(in_handle)
+        ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
+        symlink_dir = _special_dbkey_maps(dbkey, ref_file)
+        if symlink_dir:
+            return symlink_dir, ensembl_name
+        elif ensembl_name:
+            vep_dir = utils.safe_makedir(os.path.normpath(os.path.join(
+                os.path.dirname(os.path.dirname(ref_file)), "vep")))
+            out_dir = os.path.join(vep_dir, ensembl_name, vepv)
+            if not os.path.exists(out_dir):
+                cmd = ["vep_install.pl", "-a", "c", "-s", ensembl_name,
+                       "-c", vep_dir]
+                do.run(cmd, "Prepare VEP directory for %s" % ensembl_name)
+                cmd = ["vep_convert_cache.pl", "-species", ensembl_name, "-version", vepv,
+                       "-d", vep_dir]
+                do.run(cmd, "Convert VEP cache to tabix %s" % ensembl_name)
+            tmp_dir = os.path.join(vep_dir, "tmp")
+            if os.path.exists(tmp_dir):
+                shutil.rmtree(tmp_dir)
+            return vep_dir, ensembl_name
+    return None, None
+
+def run_vep(data):
+    """Annotate input VCF file with Ensembl variant effect predictor.
+    """
+    out_file = utils.append_stem(data["vrn_file"], "-vepeffects")
+    assert data["vrn_file"].endswith(".gz") and out_file.endswith(".gz")
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            vep_dir, ensembl_name = prep_vep_cache(data["genome_build"],
+                                                   tz.get_in(["reference", "fasta", "base"], data))
+            if vep_dir:
+                vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
+                cmd = [vep, "--vcf", "-o", "stdout", "--fork", "4",
+                       "--species", ensembl_name,
+                       "--no_stats",
+                       "--cache", "--offline", "--dir", vep_dir,
+                       "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",
+                       "--fields",
+                       "Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen,SIFT,Protein_position,BIOTYPE"]
+                cmd = "gunzip -c %s | %s | bgzip -c > %s" % (data["vrn_file"], " ".join(cmd), tx_out_file)
+                do.run(cmd, "Ensembl variant effect predictor", data)
+    if utils.file_exists(out_file):
+        vcfutils.bgzip_and_index(out_file, data["config"])
+        return out_file
 
 # ## snpEff variant effects
 
