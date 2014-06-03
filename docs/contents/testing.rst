@@ -211,7 +211,7 @@ Get the FASTQ files from the SEQC project::
   tar xvf seqc.tar
   cd ..
 
-Use the [templating system](https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration) to set up an analysis::
+Use the `templating system`_ to set up an analysis::
 
   bcbio_nextgen.py -w template rnaseq-seqc.yalm seqc.csv fastq
 
@@ -223,9 +223,11 @@ Go into the work directory and run your analysis::
 This will run a full scale RNAseq experiment using Tophat2 as the
 aligner and will take a long time to finish on a single machine. At
 the end it will output counts, Cufflinks quantitation and a set of QC
-results about each lane. If you have a cluster you can [parallelize
-it](https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html) to
-speed it up considerably.
+results about each lane. If you have a cluster you can `parallelize it`_
+to speed it up considerably.
+
+.. _templating system: https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
+.. _parallelize it: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
 
 Test suite
 ==========
