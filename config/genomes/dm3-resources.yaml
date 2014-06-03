@@ -1,5 +1,5 @@
-version: 1
+version: 2
 
 aliases:
-  ensembl: Fruitfly
-  snpeff: BDGP5.74
+  ensembl: drosophila_melanogaster
+  snpeff: BDGP5.75

@@ -8,6 +8,8 @@ from distutils.version import LooseVersion
 import os
 import subprocess
 
+import toolz as tz
+
 from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -51,7 +53,9 @@ def prep_gemini_db(fnames, call_info, samples):
                         if not os.path.exists(os.path.join(gemini_dir, check_file)):
                             load_opts += " %s" % skip_cmd
                 num_cores = data["config"]["algorithm"].get("num_cores", 1)
-                cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t snpEff --cores {num_cores} {tx_gemini_db}"
+                eanns = ("snpEff" if tz.get_in(("config", "algorithm", "effects"), data, "snpeff") == "snpeff"
+                         else "VEP")
+                cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t {eanns} --cores {num_cores} {tx_gemini_db}"
                 cmd = cmd.format(**locals())
                 do.run(cmd, "Create gemini database for %s %s" % (name, caller), data)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,

@@ -1,8 +1,8 @@
-version: 6
+version: 7
 
 aliases:
-  snpeff: GRCm38.74
-  ensembl: mouse
+  snpeff: GRCm38.75
+  ensembl: mus_musculus
 
 variation:
   dbsnp: ../variation/mm10-dbSNP-2013-09-12.vcf.gz

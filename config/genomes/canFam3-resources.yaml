@@ -1,8 +1,8 @@
-version: 5
+version: 6
 
 aliases:
-  ensembl: dog
-  snpeff: CanFam3.1.74
+  ensembl: canis_familiaris
+  snpeff: CanFam3.1.75
 
 variation:
   dbsnp: ../variation/canFam3-dbSNP-2014-05-10.vcf.gz

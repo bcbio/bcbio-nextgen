@@ -161,7 +161,7 @@ def get_cmd(cmd_name, datadir, config):
     resources = config_utils.get_resources("snpeff", config)
     memory = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"]))
     try:
-        snpeff = config_utils.get_program("snpeff", config)
+        snpeff = config_utils.get_program("snpEff", config)
         cmd = "{snpeff} {memory} {cmd_name} -dataDir {datadir}"
     except config_utils.CmdNotFound:
         snpeff_jar = config_utils.get_jar("snpEff",

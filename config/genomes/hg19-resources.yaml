@@ -1,9 +1,9 @@
-version: 8
+version: 9
 
 aliases:
   human: true
   snpeff: hg19
-  ensembl: human
+  ensembl: home_sapiens
 
 variation:
   dbsnp: ../variation/dbsnp_138.vcf.gz
