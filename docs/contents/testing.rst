@@ -191,6 +191,42 @@ Run::
     cd .. & mkdir work && cd work
     bcbio_nextgen.py ../config/cancer-paired.yaml -n 8
 
+RNAseq example
+~~~~~~~~~~~~~~
+
+This example aligns and creates count files for use with downstream analyses
+using the SEQC data from the FDA's Sequencing Quality Control project. The
+rnaseq-seqc.yaml is
+
+Get the input configuration files::
+
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc.yaml
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/seqc.csv
+
+Get the FASTQ files from the SEQC project::
+
+  mkdir fastq
+  cd fastq
+  wget https://s3.amazonaws.com/bcbio-nextgen-test-data/seqc.tar
+  tar xvf seqc.tar
+  cd ..
+
+Use the [templating system](https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration) to set up an analysis::
+
+  bcbio_nextgen.py -w template rnaseq-seqc.yalm seqc.csv fastq
+
+Go into the work directory and run your analysis::
+
+  cd seqc/work
+  bcbio_nextgen.py ../config/seqc.yaml -n 16
+
+This will run a full scale RNAseq experiment using Tophat2 as the
+aligner and will take a long time to finish on a single machine. At
+the end it will output counts, Cufflinks quantitation and a set of QC
+results about each lane. If you have a cluster you can [parallelize
+it](https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html) to
+speed it up considerably.
+
 Test suite
 ==========
 
