@@ -1,6 +1,8 @@
 Presentations
 =============
 
+- `bcbio hackathon at Biogen`_ (3 June 2014)
+
 - `Harvard ABCD group slides`_ (17 April 2014)
 
 - `BIG meeting`_ (February 2014)
@@ -118,4 +120,5 @@ Links from the presentation
 .. _Novartis slides: https://github.com/chapmanb/bcbb/raw/master/talks/novartis2014_bcbio_nextgen/chapman_bcbio.pdf
 .. _BIG meeting: https://github.com/roryk/spliced-blog/blob/master/talks/BIG-meeting-feb-2014.pdf
 .. _Harvard ABCD group slides: https://github.com/chapmanb/bcbb/raw/master/talks/abcd2014_bcbio_nextgen/chapman_bcbio.pdf
+.. _bcbio hackathon at Biogen: https://github.com/chapmanb/bcbb/raw/master/talks/biogen2014_bcbio_nextgen/chapman_bcbio.pdf
 .. _slides are on GitHub: https://github.com/chapmanb/bcbb/tree/master/talks

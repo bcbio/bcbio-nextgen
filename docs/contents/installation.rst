@@ -4,18 +4,19 @@ Installation
 Automated
 =========
 
-We provide an automated script that installs 3rd party analysis tools,
-required genome data, python library dependencies bundled into a
-virtual environment, and produces a ready to use system configuration
-file::
+We provide an automated script that installs third party analysis tools,
+required genome data and python library dependencies for running human variant
+and RNA-seq analysis, bundled into an isolated directory or virtual environment::
 
      wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
      python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
 
-This installs bcbio-nextgen along with third party tools and
-biological data for running human variant and RNA-seq analysis.
 It places genomes, indexes and associated data files in
-``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``.
+``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``. You should edit
+the pre-created system configuration file in
+``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml``
+to match your local system or cluster configuration.
+
 The installation is highly customizable, and you can install
 additional software and data later using ``bcbio_nextgen.py upgrade``.
 Run ``python bcbio_nextgen_install.py`` with no arguments to see options
@@ -37,6 +38,7 @@ requirements:
   although other versions should work fine.
 - The git version control system (http://git-scm.com/).
 - wget for file retrieval (https://www.gnu.org/software/wget/)
+- unzip
 
 If you're using the ``--nosudo`` option, please see :ref:`isolated-install`
 for additional system requirements needed to bootstrap the full system.
@@ -58,25 +60,6 @@ directories. The :ref:`upgrade-install` section has additional
 documentation on including additional genome data, and the section on
 :ref:`toolplus-install` describes how to add commercially restricted software
 like GATK.
-
-Troubleshooting
-===============
-
-ImportError: No module named conda.cli
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Having a PYTHONHOME or PYTHONPATH set can cause installation troubles,
-if you are seeing an error like the above, unsetting these two environment
-variables will help. Fix that with::
-
-    $ unset PYTHONHOME
-    $ unset PYTHONPATH
-
-Other import errors
-~~~~~~~~~~~~~~~~~~~
-Having a .pydistutils.cfg file in your home directory can mess with
-where the libraries get installed. If you have this file in your
-home directory, temporarily renaming it to something else may fix
-your installation issue.
 
 .. _isolated-install:
 
@@ -210,6 +193,25 @@ you find the arguments are out of date is to do a ``bcbio_nextgen.py
 upgrade -u stable`` to get the latest version, then proceed
 again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
 ``bcbio_nextgen.py -u stable`` to get up to date.
+
+Troubleshooting
+===============
+
+ImportError: No module named conda.cli
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Having a PYTHONHOME or PYTHONPATH set can cause installation troubles,
+if you are seeing an error like the above, unsetting these two environment
+variables will help. Fix that with::
+
+    $ unset PYTHONHOME
+    $ unset PYTHONPATH
+
+Other import errors
+~~~~~~~~~~~~~~~~~~~
+Having a .pydistutils.cfg file in your home directory can mess with
+where the libraries get installed. If you have this file in your
+home directory, temporarily renaming it to something else may fix
+your installation issue.
 
 On a Virtual Machine
 ====================
