@@ -168,9 +168,13 @@ def upgrade_bcbio_data(args, remotes):
                               remotes["genome_resources"])
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
     _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"])
-    if 'data' in set([x.name for x in args.toolplus]):
+    toolplus = set([x.name for x in args.toolplus])
+    if 'data' in toolplus:
         gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
-        subprocess.check_call([gemini, "update", "--dataonly"])
+        extras = []
+        if "cadd" in toolplus:
+            extras.extend(["--extra", "cadd_score"])
+        subprocess.check_call([gemini, "update", "--dataonly"] + extras)
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -235,8 +239,16 @@ def _get_biodata(base_file, args):
         config = yaml.load(in_handle)
     config["install_liftover"] = False
     config["genome_indexes"] = args.aligners
-    config["genomes"] = [g for g in config["genomes"] if g["dbkey"] in args.genomes]
+    config["genomes"] = [_add_biodata_flags(g, args) for g in config["genomes"] if g["dbkey"] in args.genomes]
     return config
+
+def _add_biodata_flags(g, args):
+    toolplus = set([x.name for x in args.toolplus])
+    if g["dbkey"] in ["hg19", "GRCh37"]:
+        for flag in ["dbnsfp"]:
+            if flag in toolplus:
+                g[flag] = True
+    return g
 
 def upgrade_thirdparty_tools(args, remotes):
     """Install and update third party tools used in the pipeline.
@@ -279,6 +291,8 @@ def _install_toolplus(args, manifest_dir):
         elif tool.name in set(["gatk", "mutect"]):
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
         elif tool.name in set(["protected"]):  # back compatibility
+            pass
+        elif tool.name in set(["cadd", "dbnsfp"]):  # larger data targets
             pass
         else:
             raise ValueError("Unexpected toolplus argument: %s %s" (tool.name, tool.fname))
@@ -436,7 +450,7 @@ def get_defaults():
 def _check_toolplus(x):
     """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
     """
-    std_choices = set(["data"])
+    std_choices = set(["data", "cadd", "dbnsfp"])
     if x in std_choices:
         return Tool(x, None)
     elif "=" in x and len(x.split("=")) == 2:

@@ -301,6 +301,8 @@ Experimental information
    low-depth calling options for GATK.
 -  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
 
+.. _variant-config:
+
 Variant calling
 ===============
 
@@ -316,7 +318,10 @@ Variant calling
 -  ``realign`` Perform realignment around indels on the aligned BAM
    file. Defaults to no realignment since realigning callers like FreeBayes and
    GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
-- ``effects`` Calculate expected variant effects [snpeff, vep, false]
+- ``effects`` Method used to calculate expected variant effects. Defaults to
+  `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
+  with support for `dbNSFP`_ annotation, when downloaded using
+  :ref:`toolplus-install`. [snpeff, vep, false]
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 -  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
@@ -343,6 +348,9 @@ Variant calling
   reference during variant calling. For tumor/normal paired calling use this to
   supply a panel of normal individuals.
 
+.. _snpEff: http://snpeff.sourceforge.net/
+.. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html
+.. _dbNSFP: https://sites.google.com/site/jpopgen/dbNSFP
 .. _samblaster: https://github.com/GregoryFaust/samblaster
 .. _biobambam's bammarkduplicates: https://github.com/gt1/biobambam
 .. _Heng Li's variant artifacts paper: http://arxiv.org/abs/1404.0929

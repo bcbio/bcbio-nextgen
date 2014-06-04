@@ -94,12 +94,28 @@ def run_vep(data):
                        "--cache", "--offline", "--dir", vep_dir,
                        "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",
                        "--fields",
-                       "Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen,SIFT,Protein_position,BIOTYPE"]
+                       "Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen," +
+                       "SIFT,Protein_position,BIOTYPE"] + _get_dbnsfp(data)
                 cmd = "gunzip -c %s | %s | bgzip -c > %s" % (data["vrn_file"], " ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
         vcfutils.bgzip_and_index(out_file, data["config"])
         return out_file
+
+def _get_dbnsfp(data):
+    """Retrieve dbNSFP file options for VEP if downloaded and available.
+
+    Uses high level combined annotations from this GEMINI discussion as a
+    starting point:
+    https://groups.google.com/d/msg/gemini-variation/WeZ6C2YvfUA/mII9uum_pGoJ
+    """
+    dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
+    if dbnsfp_file and os.path.exists(dbnsfp_file):
+        annotations = ["RadialSVM_score", "RadialSVM_pred", "LR_score", "LR_pred",
+                       "CADD_raw", "CADD_phred", "Reliability_index"]
+        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))]
+    else:
+        return []
 
 # ## snpEff variant effects
 

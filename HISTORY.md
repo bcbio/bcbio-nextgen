@@ -1,5 +1,8 @@
 ## 0.8.0 (in progress)
 
+- Add support for Ensembl variant effects predictor (VEP). Enables annotation
+  of variants with dbNSFP. Thanks to Daniel MacArthur for VEP suggestion.
+- Support CADD annotations through new GEMINI database creation support.
 - Rework calculation of callable regions to use bedtools/pybedtools thanks to
   groupby tricks from Aaron Quinlan. Improves speed and memory usage for
   coverage calculations. Use local temporary directories for

@@ -97,12 +97,13 @@ installation.
 
 .. _toolplus-install:
 
-Non-distributable software
-==========================
+Extra software and data
+=======================
 
 We're not able to automatically install some useful tools due to licensing
 restrictions, so provide a mechanism to manually download and add these to
-bcbio-nextgen during an upgrade with the ``--toolplus`` command line.
+bcbio-nextgen during an upgrade with the ``--toolplus`` command line. This also
+includes mechanisms to add in large annotation files not included by default.
 
 GATK and muTect
 ~~~~~~~~~~~~~~~
@@ -142,6 +143,28 @@ include these tools in the default install, but for now include  GEMINI with::
 
     bcbio_nextgen.py upgrade --tools --toolplus data
 
+dbNSFP and CADD
+~~~~~~~~~~~~~~~
+
+Two useful databases for evaluating the potential impact of variations are
+`CADD`_ and `dbNSFP`_. They provide integrated and generalized metrics from
+multiple sources to help with prioritizing variations for follow up. The files
+are large: dbNSFP is 10Gb, expanding to 100Gb during preparation; and CADD is
+30Gb. As a result they are not included in an install by default. You can add them,
+either together or individually, using ``--toolplus``::
+
+    bcbio_nextgen.py upgrade --tools --toolplus cadd --toolplus dbnsfp
+
+When installed, GEMINI will automatically include `CADD`_ annotations as part of
+the created SQLite database. Setting `VEP`_ in the :ref:`variant-config`
+configuration will include annotation of VCFs with `dbNSFP`_.
+
+Both tools are freely available for non-commercial research, but require licensing
+for commercial usage.
+
+.. _CADD: http://cadd.gs.washington.edu/home
+.. _dbNSFP: https://sites.google.com/site/jpopgen/dbNSFP
+.. _VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
 .. _GATK download: http://www.broadinstitute.org/gatk/download
 .. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
 .. _FreeBayes and GATK comparison: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/

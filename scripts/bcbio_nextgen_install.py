@@ -202,7 +202,7 @@ def _check_toolplus(x):
     """
     import argparse
     Tool = collections.namedtuple("Tool", ["name", "fname"])
-    std_choices = set(["data"])
+    std_choices = set(["data", "cadd", "dbnsfp"])
     if x in std_choices:
         return Tool(x, None)
     elif "=" in x and len(x.split("=")) == 2:

@@ -1,4 +1,4 @@
-version: 11
+version: 12
 
 aliases:
   human: true
@@ -14,6 +14,7 @@ variation:
   cosmic: ../variation/cosmic-v68-GRCh37.vcf.gz
   lcr: ../variation/LCR.bed.gz
   sv_repeat: ../variation/sv_repeat_telomere_centromere.bed
+  dbnsfp: ../variation/dbNSFP_v2.5.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
