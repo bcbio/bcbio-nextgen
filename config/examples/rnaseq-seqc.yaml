@@ -1,0 +1,13 @@
+# Template for human RNA-seq using Illumina prepared samples
+---
+details:
+  - analysis: RNA-seq
+    genome_build: hg19
+    algorithm:
+      aligner: tophat2
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq, polya]
+      strandedness: unstranded 
+upload:
+  dir: ../final
