@@ -218,5 +218,7 @@ def get_bamprep(x, config):
         return "gatk"
     elif not params["realign"] and not params["recal"]:
         return "none"
+    elif not params.get("recal") or not params.get("realign"):
+        return "mixed"
     else:
-        raise ValueError("Unexpected bamprep approach: %s" % params)
+        return ""
