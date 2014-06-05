@@ -130,7 +130,7 @@ def combine_pairs(input_files):
             if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
                   b[s[0]] in PAIR_FILE_IDENTIFIERS):
 
-                if b[s[0]- 1] in ("R", "_", "-"):
+                if b[s[0]- 1] in ("R", "_", "-", "."):
 
                             used.add(in_file)
                             used.add(comp_file)
