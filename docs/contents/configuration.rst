@@ -558,22 +558,35 @@ Reference genome files
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The pipeline requires access to reference genomes, including the raw
-FASTA sequence and pre-built indexes for aligners. For human genomes, the
-automated installer provides hg19 and GRCh37 1000 genomes references as
-provided in the `GATK resource bundle`_.
-:ref:`data-requirements` section describes the expected layout of
-`Galaxy .loc files`_ pointing to the actual sequence and index
-files.
+FASTA sequence and pre-built indexes for aligners. The automated installer
+will install reference files and indexes for commonly used genomes (see the
+:ref:`upgrade-install` documentation for command line options). For human,
+GRCh37 and hg19, we use the 1000 genome references provided in the
+`GATK resource bundle`_.
 
-The pipeline identifies the root ``galaxy`` directory, in which it
-expects a ``tool-data`` sub-directory with the ``.loc`` files, in two
-ways:
+You can use pre-existing data and reference indexes by pointing bcbio-nextgen at
+these resources. We use the `Galaxy .loc files`_ approach to describing the
+location of the sequence and index data, as described in
+:ref:`data-requirements`. This does not require a Galaxy installation since the
+installer sets up a minimal set of ``.loc`` files. It finds these by identifying
+the root ``galaxy`` directory, in which it expects a ``tool-data`` sub-directory
+with the ``.loc`` files. It can do this in two ways:
 
 - Using the directory of your ``bcbio-system.yaml``. This is the
-  default mechanism setup by the automated installer.
+  default mechanism setup by the automated installer and requires no additional
+  work.
 
 - From the path specified by the ``galaxy_config`` option in your
   ``bcbio-system.yaml``. If you'd like to move your system YAML file,
-  add the full path to your ``galaxy`` directory here.
+  add the full path to your ``galaxy`` directory here. This is useful if you
+  have a pre-existing Galaxy installation with reference data.
+
+To manually make genomes available to bcbio-nextgen, edit the individual
+``.loc`` files with locations to your reference and index genomes. You need to
+edit ``sam_fa_indices.loc`` to point at the FASTA files and then any genome
+indexes corresponding to aligners you'd like to use (for example:
+``bwa_index.loc`` for bwa and ``bowtie2_indices.loc`` for bowtie2). The database
+key names used (like ``GRCh37`` and ``mm10``) should match those used in the
+``genome_build`` of your sample input configuration file.
 
 .. _Galaxy .loc files: http://wiki.galaxyproject.org/Admin/NGS%20Local%20Setup
