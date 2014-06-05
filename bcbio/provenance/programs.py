@@ -245,6 +245,15 @@ def write_versions(dirs, config=None, is_wrapper=False):
                 out_handle.write("{program},{version}\n".format(**p))
     return out_file
 
+def get_version_manifest(name):
+    """Retrieve a version from the currently installed manifest.
+    """
+    manifest_vs = _get_versions_manifest()
+    for x in manifest_vs:
+        if x["program"] == name:
+            return x.get("version", "")
+    return ""
+
 def add_subparser(subparsers):
     """Add command line option for exporting version information.
     """
