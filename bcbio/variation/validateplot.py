@@ -91,7 +91,7 @@ def _prettyplot(df, prep, prepi, out_file, title=None, size=None):
             else:
                 ax.get_xaxis().set_ticks([])
             _annotate(ax, labels, vals, np.arange(len(callers)), width)
-    fig.text(.5, .95, prep_labels[prep] if title is None else title, horizontalalignment='center', size=16)
+    fig.text(.5, .95, prep_labels.get(prep, "") if title is None else title, horizontalalignment='center', size=16)
     fig.subplots_adjust(left=0.05, right=0.95, top=0.87, bottom=0.15, wspace=0.1, hspace=0.1)
     #fig.tight_layout()
     x, y = (10, 5) if size is None else size

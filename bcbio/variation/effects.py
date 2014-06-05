@@ -137,8 +137,10 @@ def _snpeff_args_from_config(data):
     if resources.get("options"):
         args += [str(x) for x in resources.get("options", [])]
     # cancer specific calling arguments
-    if vcfutils.get_paired_phenotype(data):
-        args += ["-cancer"]
+    # XXX not used properly right now and interferes with snpEff shell script parsing
+    # in homebrew (`-c` flags picked up from start of `-cancer` by regexp)
+    #if vcfutils.get_paired_phenotype(data):
+    #    args += ["-cancer"]
     # Provide options tuned to reporting variants in clinical environments
     if config["algorithm"].get("clinical_reporting"):
         args += ["-canon", "-hgvs"]
