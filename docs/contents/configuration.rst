@@ -308,7 +308,16 @@ Variant calling
 
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
    multiple options [gatk, freebayes, varscan, samtools,
-   gatk-haplotype, cortex, mutect]
+   gatk-haplotype, cortex, mutect, scalpel]
+    - Paired (typically somatic, tumor-normal) variant calling is currently
+      supported by freebayes, varscan, mutect (see disclaimer below) 
+      and scalpel (indels only). See ``phenotype`` below for how to pair tumor 
+      and normal samples.
+    - Selecting mutect (SNP caller) will implicitly also call indels using scalpel and 
+      combine the output. Mutect operates in both tumor-normal and tumor-only modes.
+      In tumor-only mode the indels from scalpel will reflect all indels in the sample,
+      as there is currently no way of separating the germline from somatic indels in
+      tumor-only mode.
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [true, false]
    If true, will perform streaming duplicate marking with `samblaster`_ for
