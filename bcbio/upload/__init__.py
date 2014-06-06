@@ -3,6 +3,8 @@
 import datetime
 import os
 
+import toolz as tz
+
 from bcbio import log, utils
 from bcbio.upload import shared, filesystem, galaxy, s3
 from bcbio.pipeline import run_info
@@ -93,7 +95,15 @@ def _get_files_variantcall(sample):
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
     out = _maybe_add_sv(algorithm, sample, out)
+    out = _maybe_add_validate(algorithm, sample, out)
     return _add_meta(out, sample)
+
+def _maybe_add_validate(algorith, sample, out):
+    for i, plot in enumerate(tz.get_in(("validate", "grading_plots"), sample, [])):
+        out.append({"path": plot,
+                    "type": "pdf",
+                    "ext": "validate%s" % ("" if i == 0 else "-%s" % (i + 1))})
+    return out
 
 def _maybe_add_variant_file(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("vrn_file"):

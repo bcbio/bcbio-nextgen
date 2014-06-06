@@ -231,7 +231,6 @@ def _get_snpeff_version(args):
     tooldir = args.tooldir or get_defaults()["tooldir"]
     raw_version = programs.get_version_manifest("snpeff")
     if not raw_version:
-        raise NotImplementedError
         config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
                                            "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
         raw_version = programs.java_versioner("snpeff", "snpEff",
