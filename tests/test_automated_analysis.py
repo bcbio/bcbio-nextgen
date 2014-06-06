@@ -170,6 +170,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
 
     @attr(rnaseq=True)
     @attr(sailfish=True)
+    @unittest.skip('sailfish support is in progress, skipping the unit test.')
     def test_2_sailfish(self):
         """Run an RNA-seq analysis with Sailfish
         """
