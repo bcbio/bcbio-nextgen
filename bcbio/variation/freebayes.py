@@ -204,7 +204,8 @@ def fix_somatic_calls(in_file, config):
     # HACK: Needed to replicate the structure used by PyVCF
     Info = namedtuple('Info', ['id', 'num', 'type', 'desc'])
     somatic_info = Info(id='SOMATIC', num=0, type='Flag', desc='Somatic event')
-
+    Filter = namedtuple('Filter', ['id', 'desc'])
+    reject_filter = Filter(id='REJECT', desc='Rejected as non-SOMATIC or by quality')
     # NOTE: PyVCF will write an uncompressed VCF
     base, ext = utils.splitext_plus(in_file)
     name = "somaticfix"
@@ -214,7 +215,7 @@ def fix_somatic_calls(in_file, config):
         reader = vcf.VCFReader(filename=in_file)
         # Add info to the header of the reader
         reader.infos["SOMATIC"] = somatic_info
-
+        reader.filters["REJECT"] = reject_filter
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "wb") as handle:
                 writer = vcf.VCFWriter(handle, template=reader)
