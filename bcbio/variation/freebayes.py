@@ -220,12 +220,15 @@ def fix_somatic_calls(in_file, config):
                 writer = vcf.VCFWriter(handle, template=reader)
                 for record in reader:
                     # Handle FreeBayes
+                    is_somatic = False
                     if "VT" in record.INFO:
                         if record.INFO["VT"] == "somatic":
                             record.add_info("SOMATIC", True)
+                            is_somatic = True
                         # Discard old record
                         del record.INFO["VT"]
-
+                    if not is_somatic:
+                        record.add_filter("REJECT")
                     writer.write_record(record)
 
         # Re-compress the file
