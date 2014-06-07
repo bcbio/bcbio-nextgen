@@ -88,14 +88,16 @@ def run_vep(data):
                                                    tz.get_in(["reference", "fasta", "base"], data))
             if vep_dir:
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
+                dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
+                std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
+                              "EXON", "PolyPhen", "SIFT", "Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 cmd = [vep, "--vcf", "-o", "stdout", "--fork", "4",
                        "--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
                        "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",
-                       "--fields",
-                       "Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen," +
-                       "SIFT,Protein_position,BIOTYPE"] + _get_dbnsfp(data)
+                       "--canonical", "--ccds",
+                       "--fields", ",".join(std_fields + dbnsfp_fields)] + dbnsfp_args
                 cmd = "gunzip -c %s | %s | bgzip -c > %s" % (data["vrn_file"], " ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
@@ -113,9 +115,9 @@ def _get_dbnsfp(data):
     if dbnsfp_file and os.path.exists(dbnsfp_file):
         annotations = ["RadialSVM_score", "RadialSVM_pred", "LR_score", "LR_pred",
                        "CADD_raw", "CADD_phred", "Reliability_index"]
-        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))]
+        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
     else:
-        return []
+        return [], []
 
 # ## snpEff variant effects
 
