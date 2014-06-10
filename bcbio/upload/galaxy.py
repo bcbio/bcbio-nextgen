@@ -8,9 +8,6 @@ import os
 import shutil
 import time
 
-import bioblend
-import simplejson
-
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.upload import filesystem
@@ -18,9 +15,11 @@ from bcbio.pipeline import qcsummary
 
 # Avoid bioblend import errors, raising at time of use
 try:
+    import bioblend
     from bioblend.galaxy import GalaxyInstance
+    import simplejson
 except ImportError:
-    GalaxyInstance = None
+    GalaxyInstance, bioblend, simplejson = None, None, None
 
 def update_file(finfo, sample_info, config):
     """Update file in Galaxy data libraries.
