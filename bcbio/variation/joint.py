@@ -7,36 +7,67 @@ GATK's incremental joint discovery (http://www.broadinstitute.org/gatk/guide/art
 and FreeBayes's N+1 approach (https://groups.google.com/d/msg/freebayes/-GK4zI6NsYY/Wpcp8nt_PVMJ)
 as implemented in bcbio.variation.recall (https://github.com/chapmanb/bcbio.variation.recall).
 """
+import contextlib
+import os
+
+try:
+    import pybedtools
+except ImportError:
+    pybedtools = None
+import pysam
 import toolz as tz
 
+from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
+from bcbio.pipeline import region
 from bcbio.variation import multi
+
+def _get_callable_regions(data):
+    """Retrieve regions to parallelize by from callable regions, variant regions or chromosomes
+    """
+    callable_files = data.get("callable_regions") or data.get("variant_regions")
+    if callable_files:
+        assert len(callable_files) == 1
+        regions = [(r.chrom, int(r.start), int(r.stop)) for r in pybedtools.BedTool(callable_files[0])]
+    else:
+        work_bam = tz.first(filter(lambda x: x.endswith(".bam"), data["work_bams"]))
+        if work_bam:
+            with contextlib.closing(pysam.Samfile(work_bam, "rb")) as pysam_bam:
+                regions = [(chrom, 0, length) for (chrom, length) in zip(pysam_bam.references,
+                                                                         pysam_bam.lengths)]
+        else:
+            raise NotImplementedError("No variant regions or BAM files to calculate chromosomes")
+    return regions
 
 def _split_by_callable_region(data):
     """Split by callable or variant regions.
 
     We expect joint calling to be deep in numbers of samples per region, so prefer
-    splitting aggressively.
+    splitting aggressively by regions.
     """
-    print tz.get_in(("config", "algorithm", "callable_regions"), data)
-    print tz.get_in(("config", "algorithm", "variant_regions"), data)
+    batch = tz.get_in(("metadata", "batch"), data)
+    name = batch if batch else tz.get_in(("rgnames", "sample"), data)
+    out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "joint", name))
+    parts = []
+    for feat in _get_callable_regions(data):
+        region_dir = utils.safe_makedir(os.path.join(out_dir, feat[0]))
+        region_outfile = os.path.join(region_dir, "%s-%s.vcf.gz" % (batch, region.to_safestr(feat)))
+        parts.append((feat, data["work_bams"], data["vrn_files"], region_outfile))
+    out_file = os.path.join(out_dir, "%s-joint.vcf.gz" % name)
+    return out_file, parts
 
 def square_off(samples, run_parallel):
     """Perform joint calling at all variants within a batch.
     """
-    # XXX work in progress
-    return samples
-
     to_process = []
     extras = []
     for data in [x[0] for x in samples]:
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         batch = tz.get_in(("metadata", "batch"), data)
         if jointcaller and batch:
-            to_process.append(data)
+            to_process.append([data])
         else:
             extras.append([data])
-
     processed = grouped_parallel_split_combine(to_process, _split_by_callable_region,
                                                multi.group_batches_joint, run_parallel,
                                                "square_batch_region", "concat_variant_files",
@@ -46,4 +77,4 @@ def square_off(samples, run_parallel):
 def square_batch_region(data, region, align_bams, vrn_files, out_file):
     """Perform squaring of a batch in a supplied region, with input BAMs
     """
-    pass
+    print region, align_bams, vrn_files

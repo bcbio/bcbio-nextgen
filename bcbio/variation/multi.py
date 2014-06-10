@@ -91,6 +91,32 @@ def _list_to_tuple(xs):
     else:
         return xs
 
+def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
+    """Shared functionality for grouping by batches for variant calling and joint calling.
+    """
+    singles = []
+    batch_groups = collections.defaultdict(list)
+    for args in xs:
+        assert len(args) == 1
+        data = args[0]
+        caller, batch = caller_batch_fn(data)
+        region = _list_to_tuple(data["region"]) if "region" in data else ()
+        if batch is not None:
+            batches = batch if isinstance(batch, (list, tuple)) else [batch]
+            for b in batches:
+                batch_groups[(b, region, caller)].append(copy.deepcopy(data))
+        else:
+            data = prep_data_fn(data, [data])
+            singles.append(data)
+    batches = []
+    for batch, items in batch_groups.iteritems():
+        batch_data = copy.deepcopy(_pick_lead_item(items))
+        batch_data = prep_data_fn(data, items)
+        batch_data["group_orig"] = _collapse_subitems(batch_data, items)
+        batch_data["group"] = batch
+        batches.append(batch_data)
+    return singles + batches
+
 def group_batches(xs):
     """Group samples into batches for simultaneous variant calling.
 
@@ -101,35 +127,31 @@ def group_batches(xs):
     expected files.
     Only batches files if joint calling not specified.
     """
-    singles = []
-    batch_groups = collections.defaultdict(list)
-    for args in xs:
-        assert len(args) == 1
-        data = args[0]
+    def _caller_batches(data):
         caller = tz.get_in(("config", "algorithm", "variantcaller"), data, "gatk")
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         batch = tz.get_in(("metadata", "batch"), data) if not jointcaller else None
-        region = _list_to_tuple(data["region"]) if "region" in data else ()
-        if batch is not None:
-            batches = batch if isinstance(batch, (list, tuple)) else [batch]
-            for b in batches:
-                batch_groups[(b, region, caller)].append(copy.deepcopy(data))
-        else:
-            data["region_bams"] = [data["region_bams"]]
-            singles.append(data)
-    batches = []
-    for batch, items in batch_groups.iteritems():
-        batch_data = copy.deepcopy(_pick_lead_item(items))
-        batch_data["region_bams"] = [x["region_bams"] for x in items]
-        batch_data["group_orig"] = _collapse_subitems(batch_data, items)
-        batch_data["group"] = batch
-        batches.append(batch_data)
-    return singles + batches
+        return caller, batch
+    def _prep_data(data, items):
+        data["region_bams"] = [x["region_bams"] for x in items]
+        return data
+    return _group_batches_shared(xs, _caller_batches, _prep_data)
 
 def group_batches_joint(samples):
-    """Perform grouping by batches for joint calling
+    """Perform grouping by batches for joint calling/squaring off.
     """
-    pass
+    def _caller_batches(data):
+        jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
+        batch = tz.get_in(("metadata", "batch"), data) if jointcaller else None
+        return jointcaller, batch
+    def _prep_data(data, items):
+        for r in ["callable_regions", "variant_regions"]:
+            data[r] = list(set(filter(lambda x: x is not None,
+                                      [tz.get_in(("config", "algorithm", r), d) for d in items])))
+        data["work_bams"] = [x["work_bam"] for x in items]
+        data["vrn_files"] = [x["vrn_file"] for x in items]
+        return data
+    return _group_batches_shared(samples, _caller_batches, _prep_data)
 
 # ## Collapse and uncollapse groups to save memory
 
