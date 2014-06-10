@@ -155,7 +155,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "quality_format", "write_summary",
                       "merge_bamprep", "coverage",
                       "coverage_interval", "ploidy",
-                      "variantcaller", "variant_regions", "effects",
+                      "variantcaller", "jointcaller", "variant_regions", "effects",
                       "mark_duplicates", "svcaller", "recalibrate",
                       "realign", "phasing", "validate",
                       "validate_regions", "validate_genome_build",
@@ -372,7 +372,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
                                                   ignore_keys=["variantcaller", "realign", "recalibrate",
-                                                               "phasing", "svcaller"])
+                                                               "phasing", "svcaller", "jointcaller"])
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)

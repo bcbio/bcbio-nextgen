@@ -26,12 +26,13 @@ def create_inputs(data):
     Allows parallelization of alignment beyond processors available on a single
     machine. Uses gbzip and grabix to prepare an indexed fastq file.
     """
-    # CRAM files must be converted to bgzipped fastq
-    if not ("files" in data and _is_cram_input(data["files"])):
+    aligner = tz.get_in(("config", "algorithm", "aligner"), data)
+    # CRAM files must be converted to bgzipped fastq, unless not aligning
+    if not ("files" in data and _is_cram_input(data["files"]) and aligner):
         # skip indexing on samples without input files or not doing alignment
         if ("files" not in data or data["files"][0] is None or
               data["config"]["algorithm"].get("align_split_size") is None
-              or not data["config"]["algorithm"].get("aligner")):
+              or not aligner):
             return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data)
     data["files"] = ready_files

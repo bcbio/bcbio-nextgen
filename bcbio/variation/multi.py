@@ -7,6 +7,8 @@ import collections
 import copy
 import os
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.variation import vcfutils
 
@@ -20,21 +22,32 @@ def group_by_batch(items):
     out = collections.defaultdict(list)
     batch_groups = _get_representative_batch(_merge_batches(_find_all_groups(items)))
     for data in items:
-        batch = utils.get_in(data, ("metadata", "batch"), data["description"])
-        if isinstance(batch, (list, tuple)):
-            batch = batch[0]
-        batch = batch_groups[batch]
+        batch = batch_groups[_get_batches(data)[0]]
         out[batch].append(data)
     return dict(out)
+
+def bam_needs_processing(data):
+    """Check if a work input needs processing for parallelization.
+    """
+    return (data["work_bam"] and
+            any(tz.get_in(["config", "algorithm", x], data) for x in
+                ["variantcaller", "mark_duplicates", "recalibrate", "realign"]))
+
+def _get_batches(data):
+    if bam_needs_processing(data):
+        batches = utils.get_in(data, ("metadata", "batch"), data["description"])
+    else:
+        batches = data["description"]
+    if not isinstance(batches, (list, tuple)):
+        batches = [batches]
+    return batches
 
 def _find_all_groups(items):
     """Find all groups
     """
     all_groups = []
     for data in items:
-        batches = utils.get_in(data, ("metadata", "batch"), data["description"])
-        if not isinstance(batches, (list, tuple)):
-            batches = [batches]
+        batches = _get_batches(data)
         all_groups.append(batches)
     return all_groups
 
@@ -86,14 +99,16 @@ def group_batches(xs):
     Pull together all BAM files from this batch and process together,
     Provide details to pull these finalized files back into individual
     expected files.
+    Only batches files if joint calling not specified.
     """
     singles = []
     batch_groups = collections.defaultdict(list)
     for args in xs:
         assert len(args) == 1
         data = args[0]
-        batch = utils.get_in(data, ("metadata", "batch"))
-        caller = data["config"]["algorithm"].get("variantcaller", "gatk")
+        caller = tz.get_in(("config", "algorithm", "variantcaller"), data, "gatk")
+        jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
+        batch = tz.get_in(("metadata", "batch"), data) if not jointcaller else None
         region = _list_to_tuple(data["region"]) if "region" in data else ()
         if batch is not None:
             batches = batch if isinstance(batch, (list, tuple)) else [batch]
@@ -110,6 +125,11 @@ def group_batches(xs):
         batch_data["group"] = batch
         batches.append(batch_data)
     return singles + batches
+
+def group_batches_joint(samples):
+    """Perform grouping by batches for joint calling
+    """
+    pass
 
 # ## Collapse and uncollapse groups to save memory
 

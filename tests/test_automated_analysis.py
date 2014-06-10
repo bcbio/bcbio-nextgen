@@ -313,6 +313,17 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(fc_dir, "8_100326_FC6107FAAXX.bam")]
             subprocess.check_call(cl)
 
+    @attr(joint=True)
+    def test_9_joint(self):
+        """Perform joint calling/backfilling/squaring off following variant calling.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, "run_info-joint.yaml")]
+            subprocess.check_call(cl)
+
     @attr(docker=True)
     def test_docker(self):
         """Run an analysis with code and tools inside a docker container.
