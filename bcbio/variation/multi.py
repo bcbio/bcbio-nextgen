@@ -111,7 +111,7 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
     batches = []
     for batch, items in batch_groups.iteritems():
         batch_data = copy.deepcopy(_pick_lead_item(items))
-        batch_data = prep_data_fn(data, items)
+        batch_data = prep_data_fn(batch_data, items)
         batch_data["group_orig"] = _collapse_subitems(batch_data, items)
         batch_data["group"] = batch
         batches.append(batch_data)
