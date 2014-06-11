@@ -19,8 +19,10 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
-from bcbio.pipeline import region
-from bcbio.variation import multi
+from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils, region
+from bcbio.provenance import do
+from bcbio.variation import bamprep, multi
 
 def _get_callable_regions(data):
     """Retrieve regions to parallelize by from callable regions, variant regions or chromosomes
@@ -30,9 +32,9 @@ def _get_callable_regions(data):
         assert len(callable_files) == 1
         regions = [(r.chrom, int(r.start), int(r.stop)) for r in pybedtools.BedTool(callable_files[0])]
     else:
-        work_bam = tz.first(filter(lambda x: x.endswith(".bam"), data["work_bams"]))
+        work_bam = list(tz.take(1, filter(lambda x: x.endswith(".bam"), data["work_bams"])))
         if work_bam:
-            with contextlib.closing(pysam.Samfile(work_bam, "rb")) as pysam_bam:
+            with contextlib.closing(pysam.Samfile(work_bam[0], "rb")) as pysam_bam:
                 regions = [(chrom, 0, length) for (chrom, length) in zip(pysam_bam.references,
                                                                          pysam_bam.lengths)]
         else:
@@ -74,7 +76,28 @@ def square_off(samples, run_parallel):
                                                "vrn_file", ["region", "sam_ref", "config"])
     return processed + extras
 
-def square_batch_region(data, region, align_bams, vrn_files, out_file):
+def square_batch_region(data, region, bam_files, vrn_files, out_file):
     """Perform squaring of a batch in a supplied region, with input BAMs
     """
-    print region, align_bams, vrn_files
+    if not utils.file_exists(out_file):
+        jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
+        if jointcaller == "bcbio-variation-recall":
+            _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file)
+        else:
+            raise ValueError("Unexpected joint calling approach: %s" % jointcaller)
+    return out_file
+
+def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file):
+    """
+    """
+    ref_file = tz.get_in(("reference", "fasta", "base"), data)
+    cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
+    resources = config_utils.get_resources("bcbio-variation-recall", data["config"])
+    jvm_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]),
+                                        {"algorithm": {"memory_adjust": {"direction": "increase",
+                                                                         "magnitude": cores}}})
+    cmd = ["bcbio-variation-recall", "square"] + jvm_opts + \
+          ["-c", cores, "-r", bamprep.region_to_gatk(region)] + \
+          [out_file, ref_file] + vrn_files + bam_files
+    do.run(cmd, "Squaring off in region: %s" % bamprep.region_to_gatk(region))
+    return out_file

@@ -4,7 +4,7 @@ details:
   - description: Test1
     analysis: variant2
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
-    vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+    vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-Test1.vcf.gz
     genome_build: hg19
     metadata:
       batch: TestBatch1
@@ -14,14 +14,14 @@ details:
       recalibrate: false
       realign: false
       variantcaller: false
-      jointcaller: bcbio.variation.recall
+      jointcaller: bcbio-variation-recall
       effects: vep
   - algorithm:
       aligner: bwa
       recalibrate: false
       realign: false
       variantcaller: freebayes
-      jointcaller: bcbio.variation.recall
+      jointcaller: bcbio-variation-recall
       effects: vep
       quality_format: Standard
       nomap_split_size: 50
