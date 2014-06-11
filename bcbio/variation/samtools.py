@@ -14,7 +14,6 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do, programs
 from bcbio.variation import annotation, bamprep, realign, vcfutils
 
-
 def shared_variantcall(call_fn, name, align_bams, ref_file, items,
                        assoc_files, region=None, out_file=None):
     """Provide base functionality for prepping and indexing for variant calling.
@@ -32,9 +31,8 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
             bam.index(x, config)
         variant_regions = config["algorithm"].get("variant_regions", None)
         target_regions = subset_variant_regions(variant_regions, region, out_file)
-        if ((variant_regions is not None and isinstance(target_regions, basestring)
-              and not os.path.isfile(target_regions))
-              or not all(realign.has_aligned_reads(x, region) for x in align_bams)):
+        if (variant_regions is not None and isinstance(target_regions, basestring)
+              and not os.path.isfile(target_regions)):
             vcfutils.write_empty_vcf(out_file, config)
         else:
             with file_transaction(out_file) as tx_out_file:
@@ -43,7 +41,6 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files["dbsnp"],
                                                ref_file, config)
     return ann_file
-
 
 def run_samtools(align_bams, items, ref_file, assoc_files, region=None,
                  out_file=None):
@@ -90,10 +87,15 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_fil
         bcftools_opts = "view -v -c -g"
     compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
     vcfutils = config_utils.get_program("vcfutils.pl", config)
-    cmd = ("{mpileup} "
-           "| {bcftools} {bcftools_opts} - "
-           "| {vcfutils} varFilter -D {max_read_depth} "
-           "| sed 's/,Version=3>/>/'"
-           "{compress_cmd} > {out_file}")
-    logger.info(cmd.format(**locals()))
-    do.run(cmd.format(**locals()), "Variant calling with samtools", {})
+    # XXX Check if we need this when supporting samtools 0.2.0 calling.
+    # 0.1.9 fails on regions without reads.
+    if not any(realign.has_aligned_reads(x, target_regions) for x in align_bams):
+        vcfutils.write_empty_vcf(out_file, config)
+    else:
+        cmd = ("{mpileup} "
+               "| {bcftools} {bcftools_opts} - "
+               "| {vcfutils} varFilter -D {max_read_depth} "
+               "| sed 's/,Version=3>/>/'"
+               "{compress_cmd} > {out_file}")
+        logger.info(cmd.format(**locals()))
+        do.run(cmd.format(**locals()), "Variant calling with samtools", {})

@@ -6,7 +6,7 @@ from bcbio.rnaseq import sailfish
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, lane, qcsummary, sample, shared, variation,
                             rnaseq)
-from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble, joint, multi, population,
                              recalibrate, validate, vcfutils)
 
 @utils.map_wrap
@@ -132,3 +132,7 @@ def clean_chipseq_alignment(*args):
 @utils.map_wrap
 def archive_to_cram(*args):
     return archive.to_cram(*args)
+
+@utils.map_wrap
+def square_batch_region(*args):
+    return joint.square_batch_region(*args)

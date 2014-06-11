@@ -19,7 +19,7 @@ def run(cmd, descr, data=None, checks=None, region=None, log_error=True,
     # TODO: Extract entity information from data input
     cmd_id = diagnostics.start_cmd(descr, data, cmd)
     try:
-        logger_cl.debug(" ".join(cmd) if not isinstance(cmd, basestring) else cmd)
+        logger_cl.debug(" ".join(str(x) for x in cmd) if not isinstance(cmd, basestring) else cmd)
         _do_run(cmd, checks, log_stdout)
     except:
         diagnostics.end_cmd(cmd_id, False)
@@ -91,7 +91,7 @@ def _normalize_cmd_args(cmd):
         else:
             return cmd, True, None
     else:
-        return cmd, False, None
+        return [str(x) for x in cmd], False, None
 
 def _do_run(cmd, checks, log_stdout=False):
     """Perform running and check results, raising errors for issues.

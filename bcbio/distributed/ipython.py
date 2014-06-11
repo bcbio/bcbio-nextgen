@@ -53,8 +53,22 @@ def zip_args(items, config):
 
 def unzip_args(args):
     """Unzip arguments if passed as compressed JSON string.
+
+    Checks string if zlib compressed to handle zipped and unzipped cases:
+    http://stackoverflow.com/questions/5322860/how-to-detect-quickly-if-a-string-is-zlib-compressed
+    https://github.com/mgoldfar/ECE595-WikiTrace/blob/master/WikiTrace.py#L66
     """
-    if len(args) > 0 and all(isinstance(arg, basestring) for arg in args):
+    def _is_zlib_compressed(arg):
+        if not arg or not isinstance(arg, basestring) or len(arg) < 2:
+            return False
+        cmf = ord(arg[0])
+        if cmf & 0x0f != 0x08 and cmf & 0xf0 != 0x70:
+            return False
+        flg = ord(arg[1])
+        if (cmf * 256 + flg) % 31 != 0:
+            return False
+        return True
+    if len(args) > 0 and all(_is_zlib_compressed(arg) for arg in args):
         return [json.loads(zlib.decompress(arg)) for arg in args]
     else:
         return args
