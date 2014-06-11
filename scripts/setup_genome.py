@@ -15,7 +15,6 @@ import sys
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
-PREPARE_TX_GFF = "/v-data/cloudbiolinux/utils/prepare_tx_gff.py"
 
 def _index_w_command(dir_name, command, ref_file, ext=None):
     index_name = os.path.splitext(os.path.basename(ref_file))[0]
