@@ -204,7 +204,7 @@ Setup CloudBioLinux to automatically download and prepare the genome:
 - Add the genome database key and organism name to list of supported organisms in
   the CloudBioLinux configuration (`config/biodata.yaml`_).
 - Add download details to specify where to get the fasta genome files
-  (`cloubbio/biodata/genomes.py`_). CloudBioLinux supports common genome
+  (`cloudbio/biodata/genomes.py`_). CloudBioLinux supports common genome
   providers like UCSC and Ensembl directly.
 
 Add the organism to the supported installs within bcbio:
