@@ -7,6 +7,7 @@ GATK's incremental joint discovery (http://www.broadinstitute.org/gatk/guide/art
 and FreeBayes's N+1 approach (https://groups.google.com/d/msg/freebayes/-GK4zI6NsYY/Wpcp8nt_PVMJ)
 as implemented in bcbio.variation.recall (https://github.com/chapmanb/bcbio.variation.recall).
 """
+import collections
 import contextlib
 import os
 
@@ -19,7 +20,6 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
-from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, region
 from bcbio.provenance import do
 from bcbio.variation import bamprep, multi
@@ -74,7 +74,22 @@ def square_off(samples, run_parallel):
                                                multi.group_batches_joint, run_parallel,
                                                "square_batch_region", "concat_variant_files",
                                                "vrn_file", ["region", "sam_ref", "config"])
-    return processed + extras
+    return _combine_to_jointcaller(processed) + extras
+
+def _combine_to_jointcaller(processed):
+    """Add joint calling information to variants, while collapsing independent regions.
+    """
+    by_vrn_file = collections.OrderedDict()
+    for data in (x[0] for x in processed):
+        key = (tz.get_in(("config", "algorithm", "jointcaller"), data), data["vrn_file"])
+        if key not in by_vrn_file:
+            by_vrn_file[key] = []
+        by_vrn_file[key].append(data)
+    out = []
+    for grouped_data in by_vrn_file.values():
+        cur = grouped_data[0]
+        out.append([cur])
+    return out
 
 def square_batch_region(data, region, bam_files, vrn_files, out_file):
     """Perform squaring of a batch in a supplied region, with input BAMs
@@ -85,7 +100,24 @@ def square_batch_region(data, region, bam_files, vrn_files, out_file):
             _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file)
         else:
             raise ValueError("Unexpected joint calling approach: %s" % jointcaller)
-    return out_file
+    if region:
+        data["region"] = region
+    data = _fix_orig_vcf_refs(data)
+    data["vrn_file"] = out_file
+    return [data]
+
+def _fix_orig_vcf_refs(data):
+    """Supply references to initial variantcalls if run in addition to batching.
+    """
+    variantcaller = tz.get_in(("config", "algorithm", "variantcaller"), data)
+    if variantcaller:
+        data["vrn_file_orig"] = data["vrn_file"]
+    for i, sub in enumerate(data["group_orig"]):
+        sub_vc = tz.get_in(("config", "algorithm", "variantcaller"), sub)
+        if sub_vc:
+            sub["vrn_file_orig"] = sub.pop("vrn_file")
+            data["group_orig"][i] = sub
+    return data
 
 def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file):
     """

@@ -157,10 +157,11 @@ def _group_by_batches(samples, check_fn):
             else:
                 out_retrieve.append((name, data))
             for vrn in data["variants"]:
-                if batch:
-                    batch_groups[(str(batch), vrn["variantcaller"])].append((vrn["vrn_file"], data))
-                else:
-                    singles.append((name, vrn["variantcaller"], data, vrn["vrn_file"]))
+                if vrn.get("population", True):
+                    if batch:
+                        batch_groups[(str(batch), vrn["variantcaller"])].append((vrn["vrn_file"], data))
+                    else:
+                        singles.append((name, vrn["variantcaller"], data, vrn["vrn_file"]))
         else:
             extras.append(data)
     return batch_groups, singles, out_retrieve, extras
@@ -190,7 +191,9 @@ def prep_db_parallel(samples, parallel_fn):
     for batch_name, data in out_retrieve:
         out_variants = []
         for vrn in data["variants"]:
-            vrn["population"] = out_fetch[(batch_name, vrn["variantcaller"])]
+            use_population = vrn.pop("population", True)
+            if use_population:
+                vrn["population"] = out_fetch[(batch_name, vrn["variantcaller"])]
             out_variants.append(vrn)
         data["variants"] = out_variants
         out.append([data])
