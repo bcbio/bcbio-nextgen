@@ -13,7 +13,6 @@ tests/data/genomes*
 tests/data/tcga_benchmark
 tests/test_automated_output/
 tests/data/automated/*-sorted.bed
-tests/data/reference_material/*-passonly.vcf.gz*
 tests/data/variants/S1_S2-combined*
 tests/unit/data/
 tests/unit/unit_test_data.tar.gz

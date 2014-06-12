@@ -148,7 +148,7 @@ def group_batches_joint(samples):
         for r in ["callable_regions", "variant_regions"]:
             data[r] = list(set(filter(lambda x: x is not None,
                                       [tz.get_in(("config", "algorithm", r), d) for d in items])))
-        data["work_bams"] = [x["work_bam"] for x in items]
+        data["work_bams"] = [x.get("align_bam", x["work_bam"]) for x in items]
         data["vrn_files"] = [x["vrn_file"] for x in items]
         return data
     return _group_batches_shared(samples, _caller_batches, _prep_data)
