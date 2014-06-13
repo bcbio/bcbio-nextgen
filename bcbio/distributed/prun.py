@@ -9,8 +9,10 @@ from bcbio.provenance import system
 from bcbio.distributed import clusterk, ipython, multi, resources
 
 @contextlib.contextmanager
-def start(parallel, items, config, dirs=None, name=None, multiplier=1, max_multicore=None):
-    """Start a parallel cluster or machines to be used for running remote functions.
+def start(parallel, items, config, dirs=None, name=None, multiplier=1,
+          max_multicore=None):
+    """Start a parallel cluster or machines to be used for running remote
+    functions.
 
     Returns a function used to process, in parallel items with a given function.
 
@@ -18,23 +20,27 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1, max_multi
     identical resource requirements. Uses local execution for non-distributed
     clusters or completed jobs.
 
-    A checkpoint directory keeps track of finished tasks, avoiding spinning up clusters
-    for sections that have been previous processed.
+    A checkpoint directory keeps track of finished tasks, avoiding spinning up
+    clusters for sections that have been previous processed.
 
-    multiplier - Number of expected jobs per initial input item. Used to avoid underscheduling
-      cores when an item is split during processing.
-    max_multicore -- The maximum number of cores to use for each process. Can be used
-      to process less multicore usage when jobs run faster on more single cores.
+    multiplier - Number of expected jobs per initial input item. Used to avoid
+    underscheduling cores when an item is split during processing.
+    max_multicore -- The maximum number of cores to use for each process. Can be
+    used to process less multicore usage when jobs run faster on more single
+    cores.
     """
     if name:
-        checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"], "checkpoints_parallel"))
+        checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"],
+                                                         "checkpoints_parallel"))
         checkpoint_file = os.path.join(checkpoint_dir, "%s.done" % name)
     else:
         checkpoint_file = None
     sysinfo = system.get_info(dirs, parallel)
     items = [x for x in items if x is not None] if items else []
-    parallel = resources.calculate(parallel, items, sysinfo, config, multiplier=multiplier,
-                                   max_multicore=int(max_multicore or sysinfo.get("cores", 1)))
+    max_multicore = int(max_multicore or sysinfo.get("cores", 1))
+    parallel = resources.calculate(parallel, items, sysinfo, config,
+                                   multiplier=multiplier,
+                                   max_multicore=max_multicore)
     try:
         if checkpoint_file and os.path.exists(checkpoint_file):
             logger.info("run local -- checkpoint passed: %s" % name)
