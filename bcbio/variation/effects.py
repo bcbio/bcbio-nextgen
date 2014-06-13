@@ -89,6 +89,7 @@ def run_vep(data):
             if vep_dir:
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
                 dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
+                loftee_args, loftee_fields = _get_loftee(data)
                 std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
                               "EXON", "PolyPhen", "SIFT", "Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 cmd = [vep, "--vcf", "-o", "stdout", "--fork", "4",
@@ -97,7 +98,7 @@ def run_vep(data):
                        "--cache", "--offline", "--dir", vep_dir,
                        "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",
                        "--canonical", "--ccds",
-                       "--fields", ",".join(std_fields + dbnsfp_fields)] + dbnsfp_args
+                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + dbnsfp_args + loftee_args
                 cmd = "gunzip -c %s | %s | bgzip -c > %s" % (data["vrn_file"], " ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
@@ -118,6 +119,17 @@ def _get_dbnsfp(data):
         return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
     else:
         return [], []
+
+def _get_loftee(data):
+    """Retrieve loss of function plugin parameters for LOFTEE.
+    https://github.com/konradjk/loftee
+    """
+    ancestral_file = tz.get_in(("genome_resources", "variation", "ancestral"), data)
+    if not ancestral_file or not os.path.exists(ancestral_file):
+        ancestral_file = "false"
+    annotations = ["LoF", "LoF_filter", "LoF_flags"]
+    args = ["--plugin", "LoF,human_ancestor_fa=%s" % ancestral_file]
+    return args, annotations
 
 # ## snpEff variant effects
 

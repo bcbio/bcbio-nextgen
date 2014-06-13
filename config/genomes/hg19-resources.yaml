@@ -1,4 +1,4 @@
-version: 10
+version: 11
 
 aliases:
   human: true
@@ -15,6 +15,7 @@ variation:
   lcr: ../variation/LCR.bed.gz
   sv_repeat: ../variation/sv_repeat_telomere_centromere.bed
   dbnsfp: ../variation/dbNSFP_v2.5.gz
+  ancestral: ../variation/human_ancestor.fa.rz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
