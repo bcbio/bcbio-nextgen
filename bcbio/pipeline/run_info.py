@@ -163,7 +163,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "nomap_split_targets", "ensemble", "background",
                       "disambiguate", "strandedness", "fusion_mode", "min_read_length",
                       "coverage_depth_min", "coverage_depth_max", "min_allele_fraction", "remove_lcr",
-                      "archive", "tools_off"] +
+                      "archive", "tools_off", "assemble_transcripts"] +
                      # back compatibility
                       ["coverage_depth"])
 
