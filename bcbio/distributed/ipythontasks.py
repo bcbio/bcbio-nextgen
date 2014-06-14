@@ -232,3 +232,9 @@ def square_batch_region(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(joint.square_batch_region, *args), config)
+
+@require(rnaseq)
+def cufflinks_assemble(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.cufflinks_assemble, *args), config)

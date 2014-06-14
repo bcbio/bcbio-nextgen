@@ -58,6 +58,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
+    out = _maybe_add_assembly(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
     return _add_meta(out, sample)
 
@@ -76,7 +77,8 @@ def _add_meta(xs, sample=None, config=None):
             if isinstance(sample["name"], (tuple, list)):
                 name = sample["name"][-1]
             else:
-                name = "%s-%s" % (sample["name"], run_info.clean_name(sample["description"]))
+                name = "%s-%s" % (sample["name"],
+                                  run_info.clean_name(sample["description"]))
             x["sample"] = name
         if config:
             if "fc_name" in config and "fc_date" in config:
@@ -216,6 +218,13 @@ def _maybe_add_cufflinks(algorithm, sample, out):
         out.append({"path": sample["cufflinks_dir"],
                     "type": "directory",
                     "ext": "cufflinks"})
+    return out
+
+def _maybe_add_assembly(algorithm, sample, out):
+    if "assembly" in sample:
+        out.append({"path": sample["cufflinks_dir"],
+                    "type": "directory",
+                    "ext": "assembly"})
     return out
 
 def _has_alignment_file(algorithm, sample):

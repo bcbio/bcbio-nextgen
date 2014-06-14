@@ -4,10 +4,11 @@ from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (archive, disambiguate, lane, qcsummary, sample, shared, variation,
-                            rnaseq)
-from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble, joint, multi, population,
-                             recalibrate, validate, vcfutils)
+from bcbio.pipeline import (archive, disambiguate, lane, qcsummary, sample,
+                            shared, variation, rnaseq)
+from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble,
+                             joint, multi, population, recalibrate, validate,
+                             vcfutils)
 
 @utils.map_wrap
 def run_sailfish(*args):
@@ -136,3 +137,7 @@ def archive_to_cram(*args):
 @utils.map_wrap
 def square_batch_region(*args):
     return joint.square_batch_region(*args)
+
+@utils.map_wrap
+def cufflinks_assemble(*args):
+    return rnaseq.cufflinks_assemble(*args)
