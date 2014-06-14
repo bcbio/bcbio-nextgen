@@ -54,7 +54,7 @@ def _str_memory_to_gb(memory):
         assert units.lower() == "g", "Unexpected memory units: %s" % memory
     return val
 
-def _get_prog_memory(resources):
+def _get_prog_memory(resources, cores_per_job):
     """Get expected memory usage, in Gb per core, for a program from resource specification.
     """
     out = None
@@ -64,6 +64,11 @@ def _get_prog_memory(resources):
     memory = resources.get("memory")
     if memory:
         out = _str_memory_to_gb(memory)
+    prog_cores = resources.get("cores", 1)
+    # if a single core with memory is requested for the job
+    # and we run multiple cores, scale down to avoid overscheduling
+    if out and prog_cores == 1 and cores_per_job > prog_cores:
+        out = out / float(cores_per_job)
     return out
 
 def _scale_cores_to_memory(cores, mem_per_core, sysinfo, system_memory):
@@ -107,37 +112,39 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
     system_memory = 0.25
     algs = [config_utils.get_algorithm_config(x) for x in items]
     progs = _get_resource_programs(parallel.get("progs", []), algs)
+    # Calculate cores
     for prog in progs:
         resources = config_utils.get_resources(prog, config)
-        cores = resources.get("cores", 1)
-        memory = _get_prog_memory(resources)
-        all_cores.append(cores)
-        if memory:
-            all_memory.append(memory)
-    # Use modest 1Gb memory usage per core as min baseline if not specified
-    if len(all_memory) == 0:
-        all_memory.append(1)
+        all_cores.append(resources.get("cores", 1))
     if len(all_cores) == 0:
         all_cores.append(1)
-    logger.debug("Resource requests: {progs}; memory: {memory}; cores: {cores}".format(
-        progs=", ".join(progs), memory=", ".join("%.1f" % x for x in all_memory),
-        cores=", ".join(str(x) for x in all_cores)))
-
     cores_per_job = max(all_cores)
     if max_multicore:
         cores_per_job = min(cores_per_job, max_multicore)
     if "cores" in sysinfo:
         cores_per_job = min(cores_per_job, int(sysinfo["cores"]))
-    memory_per_core = max(all_memory)
-
-    cores_per_job, memory_per_core = _ensure_min_resources(progs, cores_per_job, memory_per_core,
-                                                           min_memory=parallel.get("ensure_mem", {}))
-
     total = parallel["cores"]
     if total > cores_per_job:
         num_jobs = total // cores_per_job
     else:
         num_jobs, cores_per_job = 1, total
+
+    # Calculate memory. Use 1Gb memory usage per core as min baseline if not specified
+    for prog in progs:
+        resources = config_utils.get_resources(prog, config)
+        memory = _get_prog_memory(resources, cores_per_job)
+        if memory:
+            all_memory.append(memory)
+    if len(all_memory) == 0:
+        all_memory.append(1)
+    memory_per_core = max(all_memory)
+
+    logger.debug("Resource requests: {progs}; memory: {memory}; cores: {cores}".format(
+        progs=", ".join(progs), memory=", ".join("%.1f" % x for x in all_memory),
+        cores=", ".join(str(x) for x in all_cores)))
+
+    cores_per_job, memory_per_core = _ensure_min_resources(progs, cores_per_job, memory_per_core,
+                                                           min_memory=parallel.get("ensure_mem", {}))
     if cores_per_job == 1:
         memory_per_job = "%.1f" % (memory_per_core + system_memory)
         num_jobs = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
