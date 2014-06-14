@@ -22,7 +22,10 @@ def prep_recal(data):
         logger.info("Recalibrating %s with GATK" % str(data["name"]))
         ref_file = data["sam_ref"]
         config = data["config"]
-        dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
+        dbsnp_file = None
+        if ("variation" in data["genome_resources"] and 
+            "dbsnp" in data["genome_resources"]["variation"]):
+            dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
         broad_runner = broad.runner_from_config(config)
         platform = config["algorithm"].get("platform", "illumina")
         broad_runner.run_fn("picard_index_ref", ref_file)
