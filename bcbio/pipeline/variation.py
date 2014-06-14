@@ -27,6 +27,6 @@ def postprocess_variants(data):
                 data["vrn_file"] = ann_vrn_file
         logger.info("Filtering for %s" % cur_name)
         data["vrn_file"] = variant_filtration(data["vrn_file"], data["sam_ref"],
-                                              data["genome_resources"]["variation"],
+                                              tz.get_in(("genome_resources", "variation"), data, {}),
                                               data)
     return [[data]]

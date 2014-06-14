@@ -4,6 +4,8 @@ runs of this step.
 """
 import os
 
+import toolz as tz
+
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
@@ -60,7 +62,7 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
             cmd = "{cl} -o {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
     bam.index(pa_bam, data["config"])
-    dbsnp_vcf = data["genome_resources"]["variation"]["dbsnp"]
+    dbsnp_vcf = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
                                                 dbsnp=dbsnp_vcf, region=region_to_gatk(region))
     recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],

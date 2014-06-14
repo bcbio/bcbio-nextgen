@@ -194,7 +194,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
             assert len(items) == len(align_bams)
         call_file = "%s-raw%s" % utils.splitext_plus(out_file)
         call_file = caller_fn(align_bams, items, sam_ref,
-                              data["genome_resources"]["variation"],
+                              tz.get_in(("genome_resources", "variation"), data, {}),
                               region, call_file)
         if data["config"]["algorithm"].get("phasing", False) == "gatk":
             call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
