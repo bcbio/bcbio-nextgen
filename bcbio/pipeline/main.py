@@ -337,9 +337,13 @@ class Variant2Pipeline(AbstractPipeline):
             with profile.report("variant calling", dirs):
                 samples = genotype.parallel_variantcall_region(samples, run_parallel)
 
-        ## Finalize variants (per-sample cluster)
-        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation"]),
-                        samples, config, dirs, "persample") as run_parallel:
+        ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
+        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
+                                         "gemini", "samtools", "fastqc", "bamtools",
+                                         "bcbio-variation-recall"]),
+                        samples, config, dirs, "multicore2") as run_parallel:
+            with profile.report("prepped BAM merging", dirs):
+                samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("joint squaring off/backfilling", dirs):
                 samples = joint.square_off(samples, run_parallel)
             with profile.report("variant post-processing", dirs):
@@ -348,12 +352,6 @@ class Variant2Pipeline(AbstractPipeline):
             with profile.report("validation", dirs):
                 samples = run_parallel("compare_to_rm", samples)
                 samples = genotype.combine_multiple_callers(samples)
-        ## Finalizing BAMs and population databases, handle multicore computation
-        with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools", "bcbio_variation",
-                                         "bcbio-variation-recall"]),
-                        samples, config, dirs, "multicore2") as run_parallel:
-            with profile.report("prepped BAM merging", dirs):
-                samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("ensemble calling", dirs):
                 samples = ensemble.combine_calls_parallel(samples, run_parallel)
             with profile.report("validation summary", dirs):

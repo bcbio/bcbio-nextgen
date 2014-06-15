@@ -361,6 +361,16 @@ def use_vqsr(algs):
             return True
     return False
 
+def use_snpeff(algs):
+    """Processing uses snpEff. Avoids memory requirements if not used.
+    """
+    return any(alg.get("effects", "snpeff") == "snpeff" and alg.get("variantcaller") for alg in algs)
+
+def use_bcbio_variation_recall(algs):
+    """Processing uses bcbio-variation-recall. Avoids core requirement if not used.
+    """
+    return any(alg.get("jointcaller") == "bcbio-variation-recall" for alg in algs)
+
 ## functions for navigating through the standard galaxy directory of files
 
 def get_transcript_gtf(genome_dir):

@@ -87,13 +87,17 @@ def run_vep(data):
             vep_dir, ensembl_name = prep_vep_cache(data["genome_build"],
                                                    tz.get_in(["reference", "fasta", "base"], data))
             if vep_dir:
+                cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
+                fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
                 dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
                 loftee_args, loftee_fields = _get_loftee(data)
                 std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
                               "EXON", "PolyPhen", "SIFT", "Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
-                cmd = [vep, "--vcf", "-o", "stdout", "--fork", "4",
-                       "--species", ensembl_name,
+                resources = config_utils.get_resources("vep", data["config"])
+                extra_args = [str(x) for x in resources.get("options", [])]
+                cmd = [vep, "--vcf", "-o", "stdout"] + fork_args + extra_args + \
+                      ["--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
                        "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",

@@ -13,6 +13,9 @@ def _get_resource_programs(progs, algs):
     """Retrieve programs used in analysis based on algorithm configurations.
     Handles special cases like aligners and variant callers.
     """
+    checks = {"gatk-vqsr": config_utils.use_vqsr,
+              "snpeff": config_utils.use_snpeff,
+              "bcbio-variation-recall": config_utils.use_bcbio_variation_recall}
     out = set([])
     for p in progs:
         if p == "aligner":
@@ -29,9 +32,9 @@ def _get_resource_programs(progs, algs):
                             out.add(x)
                     else:
                         out.add(vc)
-        elif p == "gatk-vqsr":
-            if config_utils.use_vqsr(algs):
-                out.add("gatk-vqsr")
+        elif p in checks:
+            if checks[p](algs):
+                out.add(p)
         else:
             out.add(p)
     return sorted(list(out))
