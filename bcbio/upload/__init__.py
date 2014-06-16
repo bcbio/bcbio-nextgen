@@ -271,5 +271,7 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["combined_counts"]})
     if "annotated_combined_counts" in sample:
         out.append({"path": sample["annotated_combined_counts"]})
+    if "combined_fpkm" in sample:
+        out.append({"path": sample["combined_fpkm"]})
 
     return _add_meta(out, config=upload_config)

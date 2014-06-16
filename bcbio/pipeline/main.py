@@ -22,8 +22,6 @@ from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, profile, system, versioncheck
 from bcbio.server import main as server_main
 from bcbio.variation import coverage, ensemble, genotype, joint, population, validate
-from bcbio.rnaseq.count import (combine_count_files,
-                                annotate_combined_count_file)
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -454,15 +452,6 @@ class RnaseqPipeline(AbstractPipeline):
                 samples = rnaseq.assemble_transcripts(run_parallel, samples)
             with profile.report("estimate expression", dirs):
                 samples = rnaseq.estimate_expression(samples, run_parallel)
-
-        combined = combine_count_files([x[0].get("count_file") for x in samples])
-        gtf_file = utils.get_in(samples[0][0], ('genome_resources', 'rnaseq',
-                                                'transcripts'), None)
-        annotated = annotate_combined_count_file(combined, gtf_file)
-        for x in samples:
-            x[0]["combined_counts"] = combined
-            if annotated:
-                x[0]["annotated_combined_counts"] = annotated
 
         with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc"]),
                         samples, config, dirs, "persample") as run_parallel:

@@ -1,6 +1,6 @@
 import os
 import bcbio.bam as bam
-from bcbio.rnaseq import featureCounts, cufflinks, oncofuse
+from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count
 from bcbio.utils import get_in, safe_makedir
 
 def detect_fusion(samples, run_parallel):
@@ -9,7 +9,22 @@ def detect_fusion(samples, run_parallel):
 
 def estimate_expression(samples, run_parallel):
     samples = run_parallel("generate_transcript_counts", samples)
+    combined = count.combine_count_files([x[0]["count_file"] for x in samples
+                                          if "count_file" in x[0]])
+    gtf_file = get_in(samples[0][0], ('genome_resources', 'rnaseq',
+                                      'transcripts'), None)
+    annotated = count.annotate_combined_count_file(combined, gtf_file)
     samples = run_parallel("run_cufflinks", samples)
+    fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
+    to_combine = [x[0]["fpkm"] for x in samples if "fpkm" in x[0]]
+    fpkm_combined = count.combine_count_files(to_combine, fpkm_combined_file)
+    #fpkm_combined = cufflinks.combine_fpkm([x[0].get("fpkm_file" for x in samples]))
+    for x in samples:
+        x[0]["combined_counts"] = combined
+        if annotated:
+            x[0]["annotated_combined_counts"] = annotated
+        if fpkm_combined:
+            x[0]["combined_fpkm"] = fpkm_combined
     return samples
 
 def generate_transcript_counts(data):
@@ -25,7 +40,9 @@ def run_cufflinks(data):
     """Quantitate transcript expression with Cufflinks"""
     work_bam = data["work_bam"]
     ref_file = data["sam_ref"]
-    data["cufflinks_dir"] = cufflinks.run(work_bam, ref_file, data)
+    out_dir, fpkm_file = cufflinks.run(work_bam, ref_file, data)
+    data["cufflinks_dir"] = out_dir
+    data["fpkm"] = fpkm_file
     return [[data]]
 
 def cufflinks_assemble(*samples):
