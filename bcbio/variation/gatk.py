@@ -2,6 +2,8 @@
 """
 from distutils.version import LooseVersion
 
+import toolz as tz
+
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.shared import subset_variant_regions
@@ -47,7 +49,8 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         config = items[0]["config"]
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, items, ref_file, assoc_files["dbsnp"],
+            _shared_gatk_call_prep(align_bams, items, 
+                                   ref_file, tz.get_in(["dbsnp"], assoc_files),
                                    region, out_file)
         with file_transaction(out_file) as tx_out_file:
             params += ["-T", "UnifiedGenotyper",
@@ -69,7 +72,8 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         config = items[0]["config"]
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, items, ref_file, assoc_files["dbsnp"],
+            _shared_gatk_call_prep(align_bams, items, 
+                                   ref_file, tz.get_in(["dbsnp"], assoc_files),
                                    region, out_file)
         assert broad_runner.gatk_type() == "restricted", \
             "Require full version of GATK 2.4+ for haplotype calling"
