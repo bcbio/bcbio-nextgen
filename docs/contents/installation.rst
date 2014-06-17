@@ -153,7 +153,7 @@ are large: dbNSFP is 10Gb, expanding to 100Gb during preparation; and CADD is
 30Gb. As a result they are not included in an install by default. You can add them,
 either together or individually, using ``--toolplus``::
 
-    bcbio_nextgen.py upgrade --tools --toolplus cadd --toolplus dbnsfp
+    bcbio_nextgen.py upgrade --tools --toolplus cadd --toolplus dbnsfp --data
 
 When installed, GEMINI will automatically include `CADD`_ annotations as part of
 the created SQLite database. Setting `VEP`_ in the :ref:`variant-config`
