@@ -50,9 +50,13 @@ def _split_by_callable_region(data):
     batch = tz.get_in(("metadata", "batch"), data)
     name = batch if batch else tz.get_in(("rgnames", "sample"), data)
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "joint", name))
+    utils.safe_makedir(os.path.join(out_dir, "inprep"))
     parts = []
     for feat in _get_callable_regions(data):
         region_dir = utils.safe_makedir(os.path.join(out_dir, feat[0]))
+        region_prep_dir = os.path.join(region_dir, "inprep")
+        if not os.path.exists(region_prep_dir):
+            os.symlink(os.path.join(os.pardir, "inprep"), region_prep_dir)
         region_outfile = os.path.join(region_dir, "%s-%s.vcf.gz" % (batch, region.to_safestr(feat)))
         parts.append((feat, data["work_bams"], data["vrn_files"], region_outfile))
     out_file = os.path.join(out_dir, "%s-joint.vcf.gz" % name)
