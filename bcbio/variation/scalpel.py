@@ -21,7 +21,7 @@ from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis
 
 def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
     opts = []
-    opts += ["--format", "vcf", "--intarget"]  # output vcf, report only variants within bed regions
+    opts += ["--format", "vcf", "--intarget", "--covthr 3", "--lowcov 1"]  # output vcf, report only variants within bed regions
     variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
     target = subset_variant_regions(variant_regions, region, out_file, items)
     if target:
@@ -94,7 +94,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             tmp_path = os.path.dirname(tx_out_file)
             opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
             opts += " --dir %s" % tmp_path
-            min_cov = "5"  # minimum coverage (default 5)
+            min_cov = "3"  # minimum coverage (default 5)
             opts += " --mincov %s" % min_cov
             cmd = ("{scalpel} --single {opts} --ref {ref_file} --bam {input_bams} ")
             # first run into temp folder
