@@ -12,6 +12,7 @@ from bcbio.distributed.transaction import file_transaction
 from fabric.api import *
 import subprocess
 import sys
+import shutils
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
@@ -44,12 +45,14 @@ def setup_base_directories(genome_dir, name, build, gtf=None):
 
 def install_fasta_file(build_dir, fasta, build):
     out_file = os.path.join(build_dir, SEQ_DIR, build + ".fa")
-    os.rename(fasta, out_file)
+    if not os.path.exists(out_file):
+        shutils.copyfile(fasta, out_file)
     return out_file
 
 def install_gtf_file(build_dir, gtf, build):
     out_file = os.path.join(build_dir, RNASEQ_DIR, "ref-transcripts.gtf")
-    os.rename(gtf, out_file)
+    if not os.path.exists(out_file):
+        shutils.copyfile(gtf, out_file)
     return out_file
 
 def make_indices(ref_file, indices):
