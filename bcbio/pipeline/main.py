@@ -21,9 +21,7 @@ from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import programs, profile, system, versioncheck
 from bcbio.server import main as server_main
-from bcbio.variation import coverage, ensemble, genotype, population, validate
-from bcbio.rnaseq.count import (combine_count_files,
-                                annotate_combined_count_file)
+from bcbio.variation import coverage, ensemble, genotype, joint, population, validate
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -337,21 +335,21 @@ class Variant2Pipeline(AbstractPipeline):
             with profile.report("variant calling", dirs):
                 samples = genotype.parallel_variantcall_region(samples, run_parallel)
 
-        ## Finalize variants (per-sample cluster)
-        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation"]),
-                        samples, config, dirs, "persample") as run_parallel:
+        ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
+        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
+                                         "gemini", "samtools", "fastqc", "bamtools",
+                                         "bcbio-variation-recall"]),
+                        samples, config, dirs, "multicore2") as run_parallel:
+            with profile.report("prepped BAM merging", dirs):
+                samples = region.delayed_bamprep_merge(samples, run_parallel)
+            with profile.report("joint squaring off/backfilling", dirs):
+                samples = joint.square_off(samples, run_parallel)
             with profile.report("variant post-processing", dirs):
                 samples = run_parallel("postprocess_variants", samples)
                 samples = run_parallel("split_variants_by_sample", samples)
             with profile.report("validation", dirs):
                 samples = run_parallel("compare_to_rm", samples)
                 samples = genotype.combine_multiple_callers(samples)
-        ## Finalizing BAMs and population databases, handle multicore computation
-        with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools", "bcbio_variation",
-                                         "bcbio-variation-recall"]),
-                        samples, config, dirs, "multicore2") as run_parallel:
-            with profile.report("prepped BAM merging", dirs):
-                samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("ensemble calling", dirs):
                 samples = ensemble.combine_calls_parallel(samples, run_parallel)
             with profile.report("validation summary", dirs):
@@ -445,21 +443,15 @@ class RnaseqPipeline(AbstractPipeline):
                 samples = disambiguate.split(samples)
                 samples = run_parallel("process_alignment", samples)
 
+
         with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
             with profile.report("disambiguation", dirs):
                 samples = disambiguate.resolve(samples, run_parallel)
+            with profile.report("transcript assembly", dirs):
+                samples = rnaseq.assemble_transcripts(run_parallel, samples)
             with profile.report("estimate expression", dirs):
                 samples = rnaseq.estimate_expression(samples, run_parallel)
-
-        combined = combine_count_files([x[0].get("count_file") for x in samples])
-        gtf_file = utils.get_in(samples[0][0], ('genome_resources', 'rnaseq',
-                                                'transcripts'), None)
-        annotated = annotate_combined_count_file(combined, gtf_file)
-        for x in samples:
-            x[0]["combined_counts"] = combined
-            if annotated:
-                x[0]["annotated_combined_counts"] = annotated
 
         with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc"]),
                         samples, config, dirs, "persample") as run_parallel:

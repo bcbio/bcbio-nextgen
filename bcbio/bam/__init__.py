@@ -234,6 +234,8 @@ def merge(bamfiles, out_bam, config):
                                         "files: %s " % (bamfiles))
     assert all(map(utils.file_exists, bamfiles)), ("Not all of the files to merge "
                                                    "exist: %s" % (bamfiles))
+    if len(bamfiles) == 1:
+        return bamfiles[0]
     sambamba = _get_sambamba(config)
     sambamba = None
     samtools = config_utils.get_program("samtools", config)

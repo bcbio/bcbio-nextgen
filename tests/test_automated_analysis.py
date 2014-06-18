@@ -85,7 +85,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-                         DlInfo("genomes_automated_test.tar.gz", "genomes", 18),
+                         DlInfo("genomes_automated_test.tar.gz", "genomes", 19),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 8),
                          DlInfo("tcga_benchmark.tar.gz", None, 3)]
@@ -311,6 +311,17 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_1_fastq.txt"),
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_2_fastq.txt"),
                   os.path.join(fc_dir, "8_100326_FC6107FAAXX.bam")]
+            subprocess.check_call(cl)
+
+    @attr(joint=True)
+    def test_9_joint(self):
+        """Perform joint calling/backfilling/squaring off following variant calling.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, "run_info-joint.yaml")]
             subprocess.check_call(cl)
 
     @attr(docker=True)

@@ -36,7 +36,6 @@ from bcbio.variation import multi as vmulti
 def parallel_callable_loci(in_bam, ref_file, config):
     num_cores = config["algorithm"].get("num_cores", 1)
     config = copy.deepcopy(config)
-    config["algorithm"]["memory_adjust"] = {"direction": "decrease", "magnitude": 2}
     data = {"work_bam": in_bam, "config": config,
             "reference": {"fasta": {"base": ref_file}}}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
@@ -397,8 +396,9 @@ def combine_sample_regions(*samples):
                     data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
                 out.append([data])
         assert len(out) == len(samples)
-        final_regions = pybedtools.BedTool(analysis_files[0])
-        _analysis_block_stats(final_regions)
+        if len(analysis_files) > 0:
+            final_regions = pybedtools.BedTool(analysis_files[0])
+            _analysis_block_stats(final_regions)
     return out
 
 def _combine_sample_regions_batch(batch, items):

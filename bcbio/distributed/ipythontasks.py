@@ -1,8 +1,6 @@
 """Ipython parallel ready entry points for parallel execution
 """
 import contextlib
-import json
-import zlib
 
 from IPython.parallel import require
 
@@ -14,7 +12,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample, lane, qcsummary, shared,
                             variation, rnaseq)
 from bcbio.provenance import system
-from bcbio.variation import (bamprep, coverage, genotype, ensemble, multi, population,
+from bcbio.variation import (bamprep, coverage, genotype, ensemble, joint, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
 
@@ -228,3 +226,15 @@ def archive_to_cram(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(archive.to_cram, *args), config)
+
+@require(joint)
+def square_batch_region(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(joint.square_batch_region, *args), config)
+
+@require(rnaseq)
+def cufflinks_assemble(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.cufflinks_assemble, *args), config)

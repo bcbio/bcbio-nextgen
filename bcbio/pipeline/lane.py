@@ -12,6 +12,7 @@ from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
 from bcbio.variation import bedutils, recalibrate
+from bcbio.variation import multi as vmulti
 
 def process_lane(item):
     """Prepare lanes, potentially splitting based on barcodes and reducing the
@@ -111,8 +112,10 @@ def process_alignment(data):
         bam.check_header(out_bam, data["rgnames"], data["sam_ref"], data["config"])
         dedup_bam = postalign.dedup_bam(out_bam, data)
         data["work_bam"] = dedup_bam
+    elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".cram"):
+        data["work_bam"] = fastq1
     elif fastq1 is None and "vrn_file" in data:
-        data["config"]["algorithm"]["variantcaller"] = ""
+        data["config"]["algorithm"]["variantcaller"] = False
         data["work_bam"] = None
     else:
         raise ValueError("Could not process input file: %s" % fastq1)
@@ -124,7 +127,7 @@ def postprocess_alignment(data):
     Cleans input BED files to avoid issues with overlapping input segments.
     """
     data = bedutils.clean_inputs(data)
-    if data["work_bam"]:
+    if vmulti.bam_needs_processing(data):
         callable_region_bed, nblock_bed, callable_bed = \
             callable.block_regions(data["work_bam"], data["sam_ref"], data["config"])
         data["regions"] = {"nblock": nblock_bed, "callable": callable_bed}

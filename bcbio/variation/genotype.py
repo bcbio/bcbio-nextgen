@@ -4,6 +4,8 @@ import os
 import collections
 import copy
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import region
@@ -37,21 +39,31 @@ def combine_multiple_callers(samples):
     """
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
-        work_bam = utils.get_in(data, ("combine", "work_bam", "out"), data.get("align_bam"))
+        work_bam = tz.get_in(("combine", "work_bam", "out"), data, data.get("align_bam"))
+        jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         variantcaller = get_variantcaller(data)
         key = (data["description"], work_bam)
-        try:
-            by_bam[key][variantcaller] = data
-        except KeyError:
-            by_bam[key] = {variantcaller: data}
+        if key not in by_bam:
+            by_bam[key] = []
+        by_bam[key].append((variantcaller, jointcaller, data))
     out = []
-    for grouped_calls in [d.values() for d in by_bam.values()]:
-        ready_calls = [{"variantcaller": get_variantcaller(x),
-                        "vrn_file": x.get("vrn_file"),
-                        "vrn_file_batch": x.get("vrn_file_batch"),
-                        "validate": x.get("validate")}
-                       for x in grouped_calls]
-        final = grouped_calls[0]
+    for callgroup in by_bam.values():
+        ready_calls = []
+        for variantcaller, jointcaller, data in callgroup:
+            if variantcaller:
+                cur = {"variantcaller": variantcaller,
+                       "vrn_file": data.get("vrn_file_orig") if jointcaller else data.get("vrn_file"),
+                       "vrn_file_batch": data.get("vrn_file_batch") if not jointcaller else None,
+                       "validate": data.get("validate") if not jointcaller else None}
+                if jointcaller:
+                    cur["population"] = False
+                ready_calls.append(cur)
+            if jointcaller:
+                ready_calls.append({"variantcaller": jointcaller,
+                                    "vrn_file": data.get("vrn_file"),
+                                    "vrn_file_batch": data.get("vrn_file_batch"),
+                                    "validate": data.get("validate")})
+        final = callgroup[0][-1]
         def orig_variantcaller_order(x):
             return final["config"]["algorithm"]["orig_variantcaller"].index(x["variantcaller"])
         if len(ready_calls) > 1 and "orig_variantcaller" in final["config"]["algorithm"]:
@@ -60,6 +72,7 @@ def combine_multiple_callers(samples):
         else:
             final["variants"] = ready_calls
         final.pop("vrn_file_batch", None)
+        final.pop("vrn_file_orig", None)
         out.append([final])
     return out
 
@@ -181,7 +194,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
             assert len(items) == len(align_bams)
         call_file = "%s-raw%s" % utils.splitext_plus(out_file)
         call_file = caller_fn(align_bams, items, sam_ref,
-                              data["genome_resources"]["variation"],
+                              tz.get_in(("genome_resources", "variation"), data, {}),
                               region, call_file)
         if data["config"]["algorithm"].get("phasing", False) == "gatk":
             call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)

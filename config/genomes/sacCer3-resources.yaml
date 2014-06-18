@@ -1,0 +1,5 @@
+version: 3
+
+aliases:
+  ensembl: Saccharomyces_cerevisiae
+  snpeff: R64-1-1.75

@@ -41,6 +41,8 @@ details:
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     resources:
+      vep:
+        options: [--pick]
       novoalign:
         options: [-o, FullNW]
       tmp:

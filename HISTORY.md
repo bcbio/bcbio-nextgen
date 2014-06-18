@@ -1,14 +1,21 @@
 ## 0.8.0 (in progress)
 
 - Add support for Ensembl variant effects predictor (VEP). Enables annotation
-  of variants with dbNSFP. Thanks to Daniel MacArthur for VEP suggestion.
+  of variants with dbNSFP and LOFTEE. Thanks to Daniel MacArthur for VEP
+  suggestion.
 - Support CADD annotations through new GEMINI database creation support.
+- Rework parallelization during variant calling to enable additional multicore
+  parallelization for effects prediction with VEP and backfilling/squaring off
+  with bcbio-variation-recall.
 - Rework calculation of callable regions to use bedtools/pybedtools thanks to
   groupby tricks from Aaron Quinlan. Improves speed and memory usage for
   coverage calculations. Use local temporary directories for
   pybedtools to avoid filling global temporary space.
 - Improve parallel region generation to avoid large numbers of segments on
   organisms with many chromosomes.
+- Provide optional support for compressing messages on large IPython jobs to
+  reduce memory usage. Enable by adding `compress_msg` to `alogrithm` section of
+  `bcbio_system.yaml`. Will be made the default after more testing.
 - Add de-duplication support back for pre-aligned input files. Thanks to
   Severine Catreux.
 - Generalize SGE support to handle additional system setups. Thanks to Karl Gutwin.

@@ -1,4 +1,4 @@
-FROM stackbrew/ubuntu:13.10
+FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
 # Setup a base system 
@@ -19,14 +19,14 @@ RUN mkdir -p /tmp/fuse-hack && cd /tmp/fuse-hack && \
     rm -rf /tmp/fuse-hack
 
 # bcbio-nextgen installation
-RUN git config --global url.https://github.com/.insteadOf git://github.com/
-RUN mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
+RUN git config --global url.https://github.com/.insteadOf git://github.com/ && \
+    mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     wget --no-check-certificate \
       https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local \
-      --toolplus data --nodata --nosudo -u development && \
-    bcbio_nextgen.py upgrade --isolate -u development && \
-    echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile && \
+      --nodata --nosudo -u development
+RUN bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data
+RUN echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile && \
     echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/profile && \
     echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/profile && \
     apt-get clean && \

@@ -1,6 +1,6 @@
 package:
   name: bcbio-nextgen
-  version: '0.7.9a'
+  version: '0.8.0a'
 
 build:
   number: 0

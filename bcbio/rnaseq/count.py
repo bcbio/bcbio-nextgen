@@ -31,18 +31,6 @@ def _get_files(data):
     return in_file, gtf_file, out_file, stats_file
 
 
-def is_countfile(in_file):
-    with open(in_file) as in_handle:
-        firstline = in_handle.next().split("\t")
-    if len(firstline) != 2:
-        return False
-    try:
-        int(firstline[1])
-    except ValueError:
-        return False
-    return True
-
-
 def invert_strand(iv):
     iv2 = iv.copy()
     if iv2.strand == "+":
@@ -280,7 +268,6 @@ def combine_count_files(files, out_file=None):
     """
     for f in files:
         assert file_exists(f), "%s does not exist or is empty." % f
-        assert is_countfile(f), "%s does not seem to be a count file." % f
     col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))

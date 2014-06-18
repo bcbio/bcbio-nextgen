@@ -7,6 +7,8 @@ http://www.broadinstitute.org/gsa/wiki/index.php/Base_quality_score_recalibratio
 """
 import os
 
+import toolz as tz
+
 from bcbio import bam, broad
 from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists
@@ -22,7 +24,7 @@ def prep_recal(data):
         logger.info("Recalibrating %s with GATK" % str(data["name"]))
         ref_file = data["sam_ref"]
         config = data["config"]
-        dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
+        dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
         broad_runner = broad.runner_from_config(config)
         platform = config["algorithm"].get("platform", "illumina")
         broad_runner.run_fn("picard_index_ref", ref_file)

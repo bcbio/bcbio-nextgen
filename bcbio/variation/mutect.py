@@ -105,7 +105,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-        if "appistry" not in broad_runner.get_mutect_version():
+        disable_SID = True # SID isn't great, so use Scalpel instead
+        if "appistry" not in broad_runner.get_mutect_version() or disable_SID:
             # Scalpel InDels
             is_paired = "-I:normal" in params
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
