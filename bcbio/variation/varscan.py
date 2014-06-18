@@ -17,7 +17,7 @@ from bcbio.utils import file_exists, append_stem
 from bcbio.variation import freebayes, samtools, vcfutils
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
                                       get_paired_bams, is_paired_analysis,
-                                      bgzip_and_index)
+                                      bgzip_and_index, move_vcf)
 
 import pysam
 import vcf
@@ -183,14 +183,7 @@ def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
                             continue
                         out_handle.write(line)
 
-def _move_vcf(orig_file, new_file):
-    # FIXME: Duplicated between VarScan and FreeBayes
-    """Move a VCF file with associated index.
-    """
-    for ext in ["", ".idx", ".tbi"]:
-        to_move = orig_file + ext
-        if os.path.exists(to_move):
-            shutil.move(to_move, new_file + ext)
+
 
 def _add_reject_flag(in_file, config):
 
@@ -215,14 +208,15 @@ def _add_reject_flag(in_file, config):
                 for record in reader:
                     if "SS" in record.INFO:
                         # VarScan encodes it as a string
+                        # TODO: Set it as integer when cleaning
                         if record.INFO["SS"] != "2":
                             record.add_filter("REJECT")
                     writer.write_record(record)
 
         # Re-compress the file
         out_file = bgzip_and_index(out_file, config)
-        _move_vcf(in_file, "{0}.orig".format(in_file))
-        _move_vcf(out_file, in_file)
+        move_vcf(in_file, "{0}.orig".format(in_file))
+        move_vcf(out_file, in_file)
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(in_file))
 
@@ -241,6 +235,7 @@ def _fix_varscan_output(line, normal_name, tumor_name):
     """
     line = line.strip()
 
+    # FIXME: Handle also SS (which is an integer handled as a string?)
     if(line.startswith("##")):
         line = line.replace('FREQ,Number=1,Type=String',
                             'FREQ,Number=1,Type=Float')
