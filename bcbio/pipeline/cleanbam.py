@@ -40,7 +40,9 @@ def _filter_bad_reads(in_bam, ref_file, config):
                           "-R", ref_file,
                           "-I", in_bam,
                           "--out", tx_out_file,
-                          "--filter_mismatching_base_and_quals"]
+                          "--filter_mismatching_base_and_quals",
+                          "--filter_bases_not_stored",
+                          "--filter_reads_with_N_cigar"]
                 jvm_opts = broad.get_gatk_framework_opts(config, tmp_dir)
                 cmd = [config_utils.get_program("gatk-framework", config)] + jvm_opts + params
                 do.run(cmd, "Filter problem reads")
