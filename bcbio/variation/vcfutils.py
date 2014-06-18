@@ -328,6 +328,15 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
 
 # ## VCF preparation
 
+def move_vcf(orig_file, new_file):
+
+    """Move a VCF file with associated index.
+    """
+    for ext in ["", ".idx", ".tbi"]:
+        to_move = orig_file + ext
+        if os.path.exists(to_move):
+            shutil.move(to_move, new_file + ext)
+
 def bgzip_and_index(in_file, config, remove_orig=True):
     """bgzip and tabix index an input file, handling VCF and BED.
     """
