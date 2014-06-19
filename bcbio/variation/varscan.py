@@ -156,7 +156,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             write_empty_vcf(out_file)
 
         if orig_out_file.endswith(".gz"):
-            bgzip_and_index(out_file, config)
+            out_file = bgzip_and_index(out_file, config)
 
         _add_reject_flag(out_file, config)
 
@@ -209,6 +209,7 @@ def _add_reject_flag(in_file, config):
                     if "SS" in record.INFO:
                         # VarScan encodes it as a string
                         # TODO: Set it as integer when cleaning
+
                         if record.INFO["SS"] != "2":
                             record.add_filter("REJECT")
                     writer.write_record(record)
