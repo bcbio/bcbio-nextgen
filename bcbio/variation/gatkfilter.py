@@ -5,6 +5,8 @@ Performs hard filtering when VQSR fails on smaller sets of variant calls.
 from distutils.version import LooseVersion
 import os
 
+import toolz as tz
+
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -121,7 +123,9 @@ def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
     """Filter SNP and indel variant calls using GATK best practice recommendations.
     """
     # hard filter if configuration indicates too little data or already finished a hard filtering
-    if not config_utils.use_vqsr([data["config"]["algorithm"]]) or _already_hard_filtered(in_file, filter_type):
+    human = tz.get_in(["genome_resources", "aliases", "human"], data)
+    if (not config_utils.use_vqsr([data["config"]["algorithm"]]) or 
+        _already_hard_filtered(in_file, filter_type) or not human:
         return hard_filter_fn(in_file, data)
     else:
         sensitivities = {"INDEL": "98.0", "SNP": "99.97"}
