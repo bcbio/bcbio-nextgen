@@ -2,13 +2,16 @@
 
 from distutils.version import LooseVersion
 import os
+import re
+import shutil
 
 from bcbio import bam, broad, utils
-from bcbio.utils import file_exists, get_in
+from bcbio.utils import file_exists, get_in, open_gzipsafe, remove_safe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils, scalpel
+from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio.log import logger
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
@@ -87,6 +90,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Run the MuTect paired analysis algorithm.
     """
+    config = items[0]["config"]
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
@@ -105,6 +109,12 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
+            #change FA for FREQ
+        #with file_transaction(out_file_mutect) as tx_out_file:
+        #print "open file %s\n ori file %s" % (out_file_mutect)
+        fix_call(out_file_mutect,config)
+        #raise "exit test"
+
         disable_SID = True # SID isn't great, so use Scalpel instead
         if "appistry" not in broad_runner.get_mutect_version() or disable_SID:
             # Scalpel InDels
@@ -174,3 +184,29 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
                    "INTERSECTION"]
     return params
+
+
+def fix_call(out_file,config):
+    """Fix somatic variant output, standardize it to the SOMATIC flag.
+    """
+    if out_file is None:
+        raise ImportError("Require PyVCF for manipulating cancer VCFs")
+
+    #out_file = in_file.replace(".vcf.gz", "-fixed.vcf")
+    in_file = out_file.replace(".vcf.gz","-fix.vcf")
+    with file_transaction(in_file) as tx_in_file:       
+        writer = open(tx_in_file,'w')
+        with open_gzipsafe(out_file) as handle:
+            for line in handle.readlines():
+                if re.match("##FORMAT=<ID=FA",line):
+                    line = line.replace("=FA","=FREQ")
+                if not re.match("#",line):
+                    line = line.replace("FA","FREQ")
+                writer.write(line)
+        writer.close()
+    remove_safe(out_file)
+    shutil.move(in_file, out_file.replace(".gz",""))
+    out_file = bgzip_and_index(out_file.replace(".gz",""), config)
+
+
+
