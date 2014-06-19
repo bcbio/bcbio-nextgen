@@ -6,6 +6,7 @@ import copy
 import gzip
 import itertools
 import os
+import shutil
 import subprocess
 
 import toolz as tz
