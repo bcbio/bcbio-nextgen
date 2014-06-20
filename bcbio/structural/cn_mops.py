@@ -4,6 +4,7 @@ http://www.bioconductor.org/packages/release/bioc/html/cn.mops.html
 """
 from contextlib import closing
 import os
+import re
 import shutil
 import subprocess
 
@@ -65,12 +66,16 @@ def _prep_sample_cnvs(cnv_file, data):
     """Convert a multiple sample CNV file into a single BED file for a sample.
 
     Handles matching and fixing names where R converts numerical IDs (1234) into
-    strings by adding an X (X1234).
+    strings by adding an X (X1234), and converts other characters into '.'s.
+    http://stat.ethz.ch/R-manual/R-devel/library/base/html/make.names.html
     """
     import pybedtools
     sample_name = tz.get_in(["rgnames", "sample"], data)
+    def make_names(name):
+        return re.sub("[^\w.]", '.', name)
     def matches_sample_name(feat):
-        return feat.name == sample_name or feat.name == "X%s" % sample_name
+        return (feat.name == sample_name or feat.name == "X%s" % sample_name or
+                feat.name == make_names(sample_name))
     def update_sample_name(feat):
         feat.name = sample_name
         return feat
