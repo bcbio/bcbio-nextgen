@@ -187,7 +187,7 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
 
 
 def fix_call(out_file,config):
-    """Fix somatic variant output, standardize it to the SOMATIC flag.
+    """Fix somatic variant output, standardize it to the FREQ flag.
     """
     if out_file is None:
         raise ImportError("Require PyVCF for manipulating cancer VCFs")
@@ -204,9 +204,12 @@ def fix_call(out_file,config):
                     line = line.replace("FA","FREQ")
                 writer.write(line)
         writer.close()
+    if not file_exists(in_file):
+        raise ImportError("Something happened in the conversion of FA->FREQ")     
     remove_safe(out_file)
-    shutil.move(in_file, out_file.replace(".gz",""))
-    out_file = bgzip_and_index(out_file.replace(".gz",""), config)
+    out_file = out_file.replace(".gz","")
+    shutil.move(in_file, out_file )
+    out_file = bgzip_and_index(out_file, config)
 
 
 
