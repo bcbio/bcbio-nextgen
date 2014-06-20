@@ -109,12 +109,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-            #change FA for FREQ
-        #with file_transaction(out_file_mutect) as tx_out_file:
-        #print "open file %s\n ori file %s" % (out_file_mutect)
-        fix_call(out_file_mutect,config)
-        #raise "exit test"
-
+        _fix_mutect_vcf(out_file_mutect,config)
         disable_SID = True # SID isn't great, so use Scalpel instead
         if "appistry" not in broad_runner.get_mutect_version() or disable_SID:
             # Scalpel InDels
@@ -186,29 +181,25 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
     return params
 
 
-def fix_call(out_file,config):
+def _fix_mutect_vcf(orig_file,config):
     """Fix somatic variant output, standardize it to the FREQ flag.
     """
-    if out_file is None:
-        raise ImportError("Require PyVCF for manipulating cancer VCFs")
-
-    #out_file = in_file.replace(".vcf.gz", "-fixed.vcf")
-    in_file = out_file.replace(".vcf.gz","-fix.vcf")
-    with file_transaction(in_file) as tx_in_file:       
-        writer = open(tx_in_file,'w')
-        with open_gzipsafe(out_file) as handle:
-            for line in handle.readlines():
-                if re.match("##FORMAT=<ID=FA",line):
-                    line = line.replace("=FA","=FREQ")
-                if not re.match("#",line):
-                    line = line.replace("FA","FREQ")
-                writer.write(line)
-        writer.close()
-    if not file_exists(in_file):
-        raise ImportError("Something happened in the conversion of FA->FREQ")     
-    remove_safe(out_file)
-    out_file = out_file.replace(".gz","")
-    shutil.move(in_file, out_file )
+    tmp_file = orig_file.replace(".vcf.gz","-fix.vcf")
+    with file_transaction(tmp_file) as tx_in_file:       
+        with open(tx_in_file,'w') as out_handle:
+            with open_gzipsafe(orig_file) as handle:
+                for line in handle:
+                    if line.startswith("##FORMAT=<ID=FA"):
+                        line = line.replace("=FA","=FREQ")
+                    if not line.startswith("#"):
+                        line = line.replace("FA","FREQ")
+                    out_handle.write(line)
+    if not file_exists(tmp_file):
+        raise IOError("Something happened in the conversion"
+            " of FA->FREQ: %s",tmp_file)     
+    out_file = orig_file.replace(".gz","")
+    remove_safe(orig_file)
+    shutil.move(tmp_file, out_file )
     out_file = bgzip_and_index(out_file, config)
 
 
