@@ -81,7 +81,7 @@ your own research.
   provides more details on usage in ovarian cancer.
 
 .. _IRCCS "Mario Negri" Institute for Pharmacological Research: http://www.marionegri.it
-.. _poster from the 2014 European Society of Human Genetics meeting :https://github.com/chapmanb/bcbb/raw/master/posters/beltrame_ESHG_poster_05_2014.reduced.pdf
+.. _poster from the 2014 European Society of Human Genetics meeting: https://github.com/chapmanb/bcbb/raw/master/posters/beltrame_ESHG_poster_05_2014.reduced.pdf
 
 - `The Translational Genomics Research Institute (TGen)`_: 
   Members of the `Huentelman lab`_ at TGen apply bcbio-nextgen to a wide 
