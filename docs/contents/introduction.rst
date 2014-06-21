@@ -76,9 +76,12 @@ your own research.
   bcbio-nextgen for targeted resequencing (using an Illumina MiSeq) to
   identify mutations and other variants in tumor samples to
   investigate their link to tumor progression, patient survival and
-  drug sensitivity and resistance.
+  drug sensitivity and resistance. A
+  `poster from the 2014 European Society of Human Genetics meeting`_
+  provides more details on usage in ovarian cancer.
 
 .. _IRCCS "Mario Negri" Institute for Pharmacological Research: http://www.marionegri.it
+.. _poster from the 2014 European Society of Human Genetics meeting :https://github.com/chapmanb/bcbb/raw/master/posters/beltrame_ESHG_poster_05_2014.reduced.pdf
 
 - `The Translational Genomics Research Institute (TGen)`_: 
   Members of the `Huentelman lab`_ at TGen apply bcbio-nextgen to a wide 
