@@ -200,6 +200,8 @@ def _fix_mutect_vcf(orig_file,config):
     out_file = orig_file.replace(".gz","")
     remove_safe(orig_file)
     shutil.move(tmp_file, out_file )
+    with open(tmp_file, "w") as out_handle:
+        out_handle.write("Moved to {0}".format(out_file))
     out_file = bgzip_and_index(out_file, config)
 
 
