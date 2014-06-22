@@ -3,12 +3,13 @@
 This handles two methods of getting processing information: from a Galaxy
 next gen LIMS system or an on-file YAML configuration.
 """
+from contextlib import closing
 import copy
 import itertools
 import os
-from contextlib import closing
-
 import string
+
+import toolz as tz
 import yaml
 
 from bcbio import utils
@@ -123,7 +124,7 @@ def _check_for_batch_clashes(xs):
     names = set([x["description"] for x in xs])
     dups = set([])
     for x in xs:
-        batches = utils.get_in(x, ("metadata", "batch"))
+        batches = tz.get_in(("metadata", "batch"), x)
         if batches:
             if not isinstance(batches, (list, tuple)):
                 batches = [batches]

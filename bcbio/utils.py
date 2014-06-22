@@ -1,7 +1,6 @@
 """Helpful utilities for building analysis pipelines.
 """
 import gzip
-import json
 import os
 import tempfile
 import time
@@ -11,6 +10,11 @@ import itertools
 import functools
 import random
 import ConfigParser
+import collections
+import fnmatch
+
+import toolz as tz
+import yaml
 try:
     from concurrent import futures
 except ImportError:
@@ -18,11 +22,6 @@ except ImportError:
         import futures
     except ImportError:
         futures = None
-import collections
-import yaml
-import fnmatch
-import zlib
-
 
 @contextlib.contextmanager
 def cpmap(cores=1):
@@ -379,14 +378,7 @@ def get_in(d, t, default=None):
     example: get_in({1: {2: 3}}, (1, 2)) -> 3
     example: get_in({1: {2: 3}}, (2, 3)) -> {}
     """
-    result = reduce(lambda d, t: d.get(t, {}), t, d)
-    if result is False:
-        return result
-    elif not result:
-        return default
-    else:
-        return result
-
+    return tz.get_in(t, d, default)
 
 def flatten(l):
     """

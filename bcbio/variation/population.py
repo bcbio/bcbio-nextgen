@@ -150,7 +150,7 @@ def _group_by_batches(samples, check_fn):
     extras = []
     for data in [x[0] for x in samples]:
         if check_fn(data):
-            batch = data.get("metadata", {}).get("batch")
+            batch = tz.get_in(["metadata", "batch"], data)
             name = str(data["name"][-1])
             if batch:
                 out_retrieve.append((str(batch), data))

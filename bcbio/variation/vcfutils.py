@@ -54,7 +54,7 @@ def get_paired_phenotype(data):
     """Retrieve the phenotype for a paired tumor/normal analysis.
     """
     allowed_names = set(["tumor", "normal"])
-    p = data.get("metadata", {}).get("phenotype")
+    p = tz.get_in(["metadata", "phenotype"], data)
     return p if p in allowed_names else None
 
 # ## General utilities

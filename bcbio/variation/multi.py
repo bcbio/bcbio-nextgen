@@ -35,7 +35,7 @@ def bam_needs_processing(data):
 
 def _get_batches(data):
     if bam_needs_processing(data):
-        batches = utils.get_in(data, ("metadata", "batch"), data["description"])
+        batches = tz.get_in(("metadata", "batch"), data, data["description"])
     else:
         batches = data["description"]
     if not isinstance(batches, (list, tuple)):
