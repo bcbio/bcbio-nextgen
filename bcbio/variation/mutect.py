@@ -194,9 +194,6 @@ def _fix_mutect_vcf(orig_file,config):
                     if not line.startswith("#"):
                         line = line.replace("FA","FREQ")
                     out_handle.write(line)
-    if not file_exists(tmp_file):
-        raise IOError("Something happened in the conversion"
-            " of FA->FREQ: %s",tmp_file)     
     out_file = orig_file.replace(".gz","")
     remove_safe(orig_file)
     shutil.move(tmp_file, out_file )
