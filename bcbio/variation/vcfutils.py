@@ -7,6 +7,7 @@ import gzip
 import itertools
 import os
 import subprocess
+import vcf
 
 import toolz as tz
 
@@ -67,7 +68,6 @@ def write_empty_vcf(out_file, config=None, my_samples=None):
     with open(out_file, "w") as out_handle:
         format_samples = "\tFORMAT\t" + "\t".join(my_samples) if my_samples else ""
         out_handle.write("##fileformat=VCFv4.1\n"
-                         "## No variants; no reads aligned in region\n"
                          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO%s\n" % (format_samples))
     if needs_bgzip:
         return bgzip_and_index(out_file, config or {})
@@ -246,14 +246,11 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 # try to rescue sample names from individual vcf files
                 my_samples = None
                 for vrn_file in sorted_files:
-                    uncompress_str = tools.get_tabix_cmd(config)+" -H " if vrn_file.endswith(".gz") else "cat "
                     if vrn_file.endswith(".gz"):
                         tabix_index(vrn_file, config)
-                    cmd = '{uncompress_str} {vrn_file} | grep "#CHROM"'
-                    vrn_header = subprocess.check_output(cmd.format(**locals()), shell=True)
-                    vrn_header_split = vrn_header.strip().split("\t")
-                    if len(vrn_header_split) > 9:
-                        my_samples = vrn_header_split[9:]
+                    my_reader = vcf.Reader(filename = vrn_file)
+                    if len(my_reader.samples) > 0:
+                        my_samples = my_reader.samples[:]
                         break
                 write_empty_vcf(tx_out_file, None, my_samples)
     if out_file.endswith(".gz"):
