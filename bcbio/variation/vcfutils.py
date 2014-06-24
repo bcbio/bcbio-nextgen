@@ -7,6 +7,7 @@ import gzip
 import itertools
 import os
 import subprocess
+import vcf
 
 import toolz as tz
 
@@ -59,15 +60,15 @@ def get_paired_phenotype(data):
 
 # ## General utilities
 
-def write_empty_vcf(out_file, config=None):
+def write_empty_vcf(out_file, config=None, my_samples=None):
     needs_bgzip = False
     if out_file.endswith(".vcf.gz"):
         needs_bgzip = True
         out_file = out_file.replace(".vcf.gz", ".vcf")
     with open(out_file, "w") as out_handle:
+        format_samples = "\tFORMAT\t" + "\t".join(my_samples) if my_samples else ""
         out_handle.write("##fileformat=VCFv4.1\n"
-                         "## No variants; no reads aligned in region\n"
-                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO%s\n" % (format_samples))
     if needs_bgzip:
         return bgzip_and_index(out_file, config or {})
     else:
@@ -242,7 +243,16 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Concatenate variants")
             else:
-                write_empty_vcf(tx_out_file)
+                # try to rescue sample names from individual vcf files
+                my_samples = None
+                for vrn_file in sorted_files:
+                    if vrn_file.endswith(".gz"):
+                        tabix_index(vrn_file, config)
+                    my_reader = vcf.Reader(filename = vrn_file)
+                    if len(my_reader.samples) > 0:
+                        my_samples = my_reader.samples[:]
+                        break
+                write_empty_vcf(tx_out_file, None, my_samples)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file

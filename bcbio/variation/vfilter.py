@@ -132,6 +132,15 @@ def _freebayes_hard(in_file, data):
 
     Tuned based on NA12878 call comparisons to Genome in a Bottle reference genome.
     """
+    if not vcfutils.vcf_has_variants(in_file):
+        base, ext = utils.splitext_plus(in_file)
+        out_file = "{base}-filter{ext}".format(**locals())
+        if not utils.file_exists(out_file):
+            shutil.copy(in_file, out_file)
+        if out_file.endswith(".vcf.gz"):
+            out_file = vcfutils.bgzip_and_index(out_file, data["config"])
+        return out_file
+    
     stats = _calc_vcf_stats(in_file)
     depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
     qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter

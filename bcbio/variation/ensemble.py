@@ -16,7 +16,7 @@ from bcbio import utils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.variation import effects, population, validate
+from bcbio.variation import effects, population, validate, vcfutils
 
 def combine_calls(batch_id, samples, data):
     """Combine multiple callsets into a final set of merged calls.
@@ -26,16 +26,28 @@ def combine_calls(batch_id, samples, data):
     edata = copy.deepcopy(data)
     base_dir = utils.safe_makedir(os.path.join(edata["dirs"]["work"], "ensemble", batch_id))
     caller_names, vrn_files, bam_files = _organize_variants(samples, batch_id)
-    if "caller" in edata["config"]["algorithm"]["ensemble"]:
-        callinfo = _run_ensemble_w_caller(batch_id, vrn_files, bam_files, base_dir, edata)
+    exist_variants = False
+    for tmp_vrn_file in vrn_files:
+        if vcfutils.vcf_has_variants(tmp_vrn_file):
+            exist_variants = True
+            break
+    if exist_variants:
+        if "caller" in edata["config"]["algorithm"]["ensemble"]:
+            callinfo = _run_ensemble_w_caller(batch_id, vrn_files, bam_files, base_dir, edata)
+        else:
+            config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
+            callinfo = _run_ensemble(batch_id, vrn_files, config_file, base_dir,
+                                     edata["sam_ref"], edata["config"])
+        edata["config"]["algorithm"]["variantcaller"] = "ensemble"
+        edata["vrn_file"] = callinfo["vrn_file"]
+        edata["ensemble_bed"] = callinfo["bed_file"]
+        callinfo["validate"] = validate.compare_to_rm(edata)[0][0].get("validate")
     else:
-        config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
-        callinfo = _run_ensemble(batch_id, vrn_files, config_file, base_dir,
-                                 edata["sam_ref"], edata["config"])
-    edata["config"]["algorithm"]["variantcaller"] = "ensemble"
-    edata["vrn_file"] = callinfo["vrn_file"]
-    edata["ensemble_bed"] = callinfo["bed_file"]
-    callinfo["validate"] = validate.compare_to_rm(edata)[0][0].get("validate")
+        out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(batch_id))
+        vcfutils.write_empty_vcf(out_vcf_file)
+        callinfo = {"variantcaller": "ensemble",
+                    "vrn_file": out_vcf_file,
+                    "bed_file": None}
     return [[batch_id, callinfo]]
 
 def combine_calls_parallel(samples, run_parallel):
