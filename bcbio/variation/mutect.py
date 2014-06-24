@@ -109,7 +109,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-        _fix_mutect_vcf(out_file_mutect,config)
+        _rename_allelic_fraction_field(out_file_mutect,config)
         disable_SID = True # SID isn't great, so use Scalpel instead
         if "appistry" not in broad_runner.get_mutect_version() or disable_SID:
             # Scalpel InDels
@@ -181,8 +181,9 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
     return params
 
 
-def _fix_mutect_vcf(orig_file,config):
-    """Fix somatic variant output, standardize it to the FREQ flag.
+def _rename_allelic_fraction_field(orig_file,config):
+    """Rename allelic fraction field in mutect output
+       from FA to FREQ to standarize with other tools
     """
     tmp_file = orig_file.replace(".vcf.gz","-fix.vcf")
     with file_transaction(tmp_file) as tx_in_file:       
