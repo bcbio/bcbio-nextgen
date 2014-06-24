@@ -238,7 +238,6 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             with open(input_vcf_file, "w") as out_handle:
                 for fname in filtered_files:
                     out_handle.write(fname + "\n")
-            import pdb; pdb.set_trace()
             if len(filtered_files) > 0:
                 compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
                 cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
