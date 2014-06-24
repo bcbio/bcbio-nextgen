@@ -247,6 +247,8 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 my_samples = None
                 for vrn_file in sorted_files:
                     uncompress_str = tools.get_tabix_cmd(config)+" -H " if vrn_file.endswith(".gz") else "cat "
+                    if vrn_file.endswith(".gz"):
+                        tabix_index(vrn_file, config)
                     cmd = '{uncompress_str} {vrn_file} | grep "#CHROM"'
                     vrn_header = subprocess.check_output(cmd.format(**locals()), shell=True)
                     vrn_header_split = vrn_header.strip().split("\t")
