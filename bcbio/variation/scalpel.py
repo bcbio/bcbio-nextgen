@@ -134,7 +134,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
             opts += " --ref {}".format(ref_file)
             opts += " --dir %s" % tmp_path
-            min_cov = "5"  # minimum coverage (default 5)
+            min_cov = "3"  # minimum coverage (default 5)
             opts += " --mincov %s" % min_cov
             cl = ("{scalpel} --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
             bam.index(paired.tumor_bam, config)
