@@ -10,6 +10,7 @@ import resource
 import shlex
 import socket
 import subprocess
+import numpy
 
 import yaml
 from xml.etree import ElementTree as ET
@@ -123,7 +124,7 @@ def _sge_info(queue):
     #num_cpus_vec = [slot_info[x]["slots_total"] for x in machine_keys]
     #mem_vec = [mem_info[x]["mem_total"] for x in machine_keys]
     mem_per_slot = [mem_info[x]["mem_total"] / float(slot_info[x]["slots_total"]) for x in machine_keys]
-    min_ratio_index = mem_per_slot.index(min(mem_per_slot))
+    min_ratio_index = mem_per_slot.index(numpy.median(mem_per_slot))
     mem_info[machine_keys[min_ratio_index]]["mem_total"]
     return [{"cores": slot_info[machine_keys[min_ratio_index]]["slots_total"],
              "memory": mem_info[machine_keys[min_ratio_index]]["mem_total"],
