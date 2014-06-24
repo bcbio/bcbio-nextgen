@@ -59,15 +59,16 @@ def get_paired_phenotype(data):
 
 # ## General utilities
 
-def write_empty_vcf(out_file, config=None):
+def write_empty_vcf(out_file, config=None, my_samples=None):
     needs_bgzip = False
     if out_file.endswith(".vcf.gz"):
         needs_bgzip = True
         out_file = out_file.replace(".vcf.gz", ".vcf")
     with open(out_file, "w") as out_handle:
+        format_samples = "\tFORMAT\t" + "\t".join(my_samples) if my_samples else ""
         out_handle.write("##fileformat=VCFv4.1\n"
                          "## No variants; no reads aligned in region\n"
-                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO%s\n" % (format_samples))
     if needs_bgzip:
         return bgzip_and_index(out_file, config or {})
     else:
@@ -237,12 +238,23 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             with open(input_vcf_file, "w") as out_handle:
                 for fname in filtered_files:
                     out_handle.write(fname + "\n")
+            import pdb; pdb.set_trace()
             if len(filtered_files) > 0:
                 compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
                 cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Concatenate variants")
             else:
-                write_empty_vcf(tx_out_file)
+                # try to rescue sample names from individual vcf files
+                my_samples = None
+                for vrn_file in sorted_files:
+                    uncompress_str = tools.get_tabix_cmd(config)+" -H " if vrn_file.endswith(".gz") else "cat "
+                    cmd = '{uncompress_str} {vrn_file} | grep "#CHROM"'
+                    vrn_header = subprocess.check_output(cmd.format(**locals()), shell=True)
+                    vrn_header_split = vrn_header.strip().split("\t")
+                    if len(vrn_header_split) > 9:
+                        my_samples = vrn_header_split[9:]
+                        break
+                write_empty_vcf(tx_out_file, None, my_samples)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
