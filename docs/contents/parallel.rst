@@ -182,6 +182,16 @@ with ``ulimit -a | grep open``. Setting open file handle limits is
 open system and cluster specific and below are tips for specific
 setups.
 
+In addition to open file handle limits (``ulimit -n``) large processes may also
+run into issues with available max user processes (``ulimit -u``). Some systems
+set a low soft limit (``ulimit -Su``) like 1024 but a higher hard limit
+(``ulimit -Hu``), allowing adjustment without root privileges. The IPython
+controllers and engines do this automatically, but the main ``bcbio_nextgen.py``
+driver process cannot. If this scheduler puts this process on the same node as
+worker processes, you may run into open file handle limits due to work happening
+on the workers. To fix this, manually set ``ulimit -u a_high_number`` as part of
+the submission process for the main process.
+
 For a Ubuntu system, edit ``/etc/security/limits.conf`` to set the
 soft and hard ``nofile`` descriptors, and edit
 ``/etc/pam.d/common-session`` to add ``pam_limits.so``. See

@@ -9,6 +9,7 @@ as implemented in bcbio.variation.recall (https://github.com/chapmanb/bcbio.vari
 """
 import collections
 import contextlib
+import math
 import os
 
 try:
@@ -124,16 +125,22 @@ def _fix_orig_vcf_refs(data):
     return data
 
 def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file):
-    """
+    """Run squaring analysis using bcbio.variation.recall.
     """
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
     resources = config_utils.get_resources("bcbio-variation-recall", data["config"])
-    jvm_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]),
+    # adjust memory by cores but leave room for run program memory
+    memcores = int(math.ceil(float(cores) / 5.0))
+    jvm_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms250m", "-Xmx2g"]),
                                         {"algorithm": {"memory_adjust": {"direction": "increase",
-                                                                         "magnitude": cores}}})
+                                                                         "magnitude": memcores}}})
+    # Write unique VCFs and BAMs to input file
+    input_file = "%s-inputs.txt" % os.path.splitext(out_file)[0]
+    with open(input_file, "w") as out_handle:
+        out_handle.write("\n".join(sorted(list(set(vrn_files))) + sorted(list(set(bam_files)))))
     cmd = ["bcbio-variation-recall", "square"] + jvm_opts + \
           ["-c", cores, "-r", bamprep.region_to_gatk(region)] + \
-          [out_file, ref_file] + vrn_files + bam_files
+          [out_file, ref_file, input_file]
     do.run(cmd, "Squaring off in region: %s" % bamprep.region_to_gatk(region))
     return out_file

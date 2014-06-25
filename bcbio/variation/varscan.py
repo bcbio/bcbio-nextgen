@@ -2,6 +2,8 @@
 
 http://varscan.sourceforge.net/
 """
+
+from collections import namedtuple
 import contextlib
 from distutils.version import LooseVersion
 import os
@@ -14,9 +16,11 @@ from bcbio.provenance import do, programs
 from bcbio.utils import file_exists, append_stem
 from bcbio.variation import freebayes, samtools, vcfutils
 from bcbio.variation.vcfutils import (combine_variant_files, write_empty_vcf,
-                                      get_paired_bams, is_paired_analysis)
+                                      get_paired_bams, is_paired_analysis,
+                                      bgzip_and_index, move_vcf)
 
 import pysam
+import vcf
 
 
 def run_varscan(align_bams, items, ref_file, assoc_files,
@@ -102,12 +106,12 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                        " {normal_tmp_mpileup} {tumor_tmp_mpileup} {base}"
                        " --output-vcf --min-coverage 5 --p-value 0.98 "
                        "--strand-filter 1 ")
-        # add minimum AF 
+        # add minimum AF
         if "--min-var-freq" not in varscan_cmd:
-            min_af = float(utils.get_in(paired.tumor_config, ("algorithm", 
+            min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
                                                               "min_allele_fraction"),10)) / 100.0
             varscan_cmd += "--min-var-freq {min_af} "
-        
+
         indel_file = base + ".indel.vcf"
         snp_file = base + ".snp.vcf"
 
@@ -152,7 +156,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             write_empty_vcf(out_file)
 
         if orig_out_file.endswith(".gz"):
-            vcfutils.bgzip_and_index(out_file, config)
+            out_file = bgzip_and_index(out_file, config)
+
+        _add_reject_flag(out_file, config)
 
 
 def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
@@ -178,6 +184,44 @@ def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
                         out_handle.write(line)
 
 
+
+def _add_reject_flag(in_file, config):
+
+    """Add REJECT flag to all records that aren't flagged somatic
+    (SS=2)"""
+
+    Filter = namedtuple('Filter', ['id', 'desc'])
+    reject_filter = Filter(id='REJECT',
+                           desc='Rejected as non-SOMATIC or by quality')
+    # NOTE: PyVCF will write an uncompressed VCF
+    base, ext = utils.splitext_plus(in_file)
+    name = "rejectfix"
+    out_file = "{0}-{1}{2}".format(base, name, ".vcf")
+
+    if utils.file_exists(in_file):
+        reader = vcf.VCFReader(filename=in_file)
+        # Add info to the header of the reader
+        reader.filters["REJECT"] = reject_filter
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "wb") as handle:
+                writer = vcf.VCFWriter(handle, template=reader)
+                for record in reader:
+                    if "SS" in record.INFO:
+                        # VarScan encodes it as a string
+                        # TODO: Set it as integer when cleaning
+
+                        if record.INFO["SS"] != "2":
+                            record.add_filter("REJECT")
+                    writer.write_record(record)
+
+        # Re-compress the file
+        out_file = bgzip_and_index(out_file, config)
+        move_vcf(in_file, "{0}.orig".format(in_file))
+        move_vcf(out_file, in_file)
+        with open(out_file, "w") as out_handle:
+            out_handle.write("Moved to {0}".format(in_file))
+
+
 def _fix_varscan_output(line, normal_name, tumor_name):
     """Fix a varscan VCF line
 
@@ -192,6 +236,7 @@ def _fix_varscan_output(line, normal_name, tumor_name):
     """
     line = line.strip()
 
+    # FIXME: Handle also SS (which is an integer handled as a string?)
     if(line.startswith("##")):
         line = line.replace('FREQ,Number=1,Type=String',
                             'FREQ,Number=1,Type=Float')
@@ -333,6 +378,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
 
     if orig_out_file.endswith(".gz"):
         vcfutils.bgzip_and_index(out_file, config)
+
 
 def _clean_varscan_line(line):
     """Avoid lines with non-GATC bases, ambiguous output bases make GATK unhappy.

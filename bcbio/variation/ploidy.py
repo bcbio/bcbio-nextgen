@@ -5,6 +5,8 @@ haploid mitochondrial DNA.
 """
 import re
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import vcfutils
@@ -20,10 +22,10 @@ def chromosome_special_cases(chrom):
         return chrom
 
 def _configured_ploidy_sex(items):
-    ploidies = set([data["config"]["algorithm"].get("ploidy", 2) for data in items])
+    ploidies = set([tz.get_in(["config", "algorithm", "ploidy"], data, 2) for data in items])
     assert len(ploidies) == 1, "Multiple ploidies set for group calling: %s" % ploidies
     ploidy = ploidies.pop()
-    sexes = set([data.get("metadata", {}).get("sex", "").lower() for data in items])
+    sexes = set([tz.get_in(["metadata", "sex"], data, "").lower() for data in items])
     return ploidy, sexes
 
 def get_ploidy(items, region):

@@ -6,7 +6,9 @@ import copy
 import gzip
 import itertools
 import os
+import shutil
 import subprocess
+import vcf
 
 import toolz as tz
 
@@ -54,20 +56,20 @@ def get_paired_phenotype(data):
     """Retrieve the phenotype for a paired tumor/normal analysis.
     """
     allowed_names = set(["tumor", "normal"])
-    p = data.get("metadata", {}).get("phenotype")
+    p = tz.get_in(["metadata", "phenotype"], data)
     return p if p in allowed_names else None
 
 # ## General utilities
 
-def write_empty_vcf(out_file, config=None):
+def write_empty_vcf(out_file, config=None, my_samples=None):
     needs_bgzip = False
     if out_file.endswith(".vcf.gz"):
         needs_bgzip = True
         out_file = out_file.replace(".vcf.gz", ".vcf")
     with open(out_file, "w") as out_handle:
+        format_samples = "\tFORMAT\t" + "\t".join(my_samples) if my_samples else ""
         out_handle.write("##fileformat=VCFv4.1\n"
-                         "## No variants; no reads aligned in region\n"
-                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+                         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO%s\n" % (format_samples))
     if needs_bgzip:
         return bgzip_and_index(out_file, config or {})
     else:
@@ -242,7 +244,16 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Concatenate variants")
             else:
-                write_empty_vcf(tx_out_file)
+                # try to rescue sample names from individual vcf files
+                my_samples = None
+                for vrn_file in sorted_files:
+                    if vrn_file.endswith(".gz"):
+                        tabix_index(vrn_file, config)
+                    my_reader = vcf.Reader(filename = vrn_file)
+                    if len(my_reader.samples) > 0:
+                        my_samples = my_reader.samples[:]
+                        break
+                write_empty_vcf(tx_out_file, None, my_samples)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
@@ -327,6 +338,15 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
     return out_file
 
 # ## VCF preparation
+
+def move_vcf(orig_file, new_file):
+
+    """Move a VCF file with associated index.
+    """
+    for ext in ["", ".idx", ".tbi"]:
+        to_move = orig_file + ext
+        if os.path.exists(to_move):
+            shutil.move(to_move, new_file + ext)
 
 def bgzip_and_index(in_file, config, remove_orig=True):
     """bgzip and tabix index an input file, handling VCF and BED.
