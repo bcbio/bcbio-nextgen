@@ -18,7 +18,8 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, ploidy
-from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
+from bcbio.variation.vcfutils import (get_paired_bams, is_paired_analysis,
+                                      bgzip_and_index, move_vcf)
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -144,14 +145,6 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     return ann_file
 
 
-def _move_vcf(orig_file, new_file):
-    """Move a VCF file with associated index.
-    """
-    for ext in ["", ".idx", ".tbi"]:
-        to_move = orig_file + ext
-        if os.path.exists(to_move):
-            shutil.move(to_move, new_file + ext)
-
 def _clean_freebayes_output(line):
     """Clean FreeBayes output to make post-processing with GATK happy.
 
@@ -189,8 +182,8 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
                         update_line = clean_fn(line)
                         if update_line:
                             out_handle.write(update_line)
-        _move_vcf(orig_file, "{0}.orig".format(orig_file))
-        _move_vcf(out_file, orig_file)
+        move_vcf(orig_file, "{0}.orig".format(orig_file))
+        move_vcf(out_file, orig_file)
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(orig_file))
 
@@ -234,7 +227,7 @@ def fix_somatic_calls(in_file, config):
 
         # Re-compress the file
         out_file = bgzip_and_index(out_file, config)
-        _move_vcf(in_file, "{0}.orig".format(in_file))
-        _move_vcf(out_file, in_file)
+        move_vcf(in_file, "{0}.orig".format(in_file))
+        move_vcf(out_file, in_file)
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(in_file))
