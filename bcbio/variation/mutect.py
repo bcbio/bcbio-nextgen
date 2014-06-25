@@ -2,13 +2,16 @@
 
 from distutils.version import LooseVersion
 import os
+import re
+import shutil
 
 from bcbio import bam, broad, utils
-from bcbio.utils import file_exists, get_in
+from bcbio.utils import file_exists, get_in, open_gzipsafe, remove_safe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils, scalpel
+from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio.log import logger
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
@@ -87,6 +90,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Run the MuTect paired analysis algorithm.
     """
+    config = items[0]["config"]
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
@@ -105,6 +109,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
+        _rename_allelic_fraction_field(out_file_mutect,config)
         disable_SID = True # SID isn't great, so use Scalpel instead
         if "appistry" not in broad_runner.get_mutect_version() or disable_SID:
             # Scalpel InDels
@@ -174,3 +179,28 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
                    "INTERSECTION"]
     return params
+
+
+def _rename_allelic_fraction_field(orig_file,config):
+    """Rename allelic fraction field in mutect output
+       from FA to FREQ to standarize with other tools
+    """
+    tmp_file = orig_file.replace(".vcf.gz","-fix.vcf")
+    with file_transaction(tmp_file) as tx_in_file:       
+        with open(tx_in_file,'w') as out_handle:
+            with open_gzipsafe(orig_file) as handle:
+                for line in handle:
+                    if line.startswith("##FORMAT=<ID=FA"):
+                        line = line.replace("=FA","=FREQ")
+                    if not line.startswith("#"):
+                        line = line.replace("FA","FREQ")
+                    out_handle.write(line)
+    out_file = orig_file.replace(".gz","")
+    remove_safe(orig_file)
+    shutil.move(tmp_file, out_file )
+    with open(tmp_file, "w") as out_handle:
+        out_handle.write("Moved to {0}".format(out_file))
+    out_file = bgzip_and_index(out_file, config)
+
+
+
