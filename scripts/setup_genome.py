@@ -12,7 +12,7 @@ from bcbio.distributed.transaction import file_transaction
 from fabric.api import *
 import subprocess
 import sys
-import shutils
+import shutil
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
