@@ -17,7 +17,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation
-from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis
+from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
 
 def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
     opts = []
@@ -101,10 +101,11 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             # first run into temp folder
             do.run(cmd.format(**locals()), "Genotyping with Scalpel", {})
             # parse produced variant file further
-            scalpel_tmp_file = os.path.join(tmp_path, "variants." + min_cov + "x.indel.vcf")
+            scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "variants." + min_cov + "x.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+            bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             sample_name_str = items[0]["name"][1]
-            cl2 = ("cat {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' | "
+            cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' | "
                    "{vcfallelicprimitives} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -141,14 +142,31 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
-            scalpel_tmp_file = os.path.join(tmp_path, "main/somatic." + min_cov + "x.indel.vcf")
-            scalpel_tmp_file_common = os.path.join(tmp_path, "main/common." + min_cov + "x.indel.vcf")
+            # somatic
+            scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "main/somatic." + min_cov + "x.indel.vcf"), config)
+            # common
+            scalpel_tmp_file_common = bgzip_and_index(os.path.join(tmp_path, "main/common." + min_cov + "x.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            cl2 = ("cat {scalpel_tmp_file} <(grep -vE '^#' {scalpel_tmp_file_common} | "
-                   "sed 's/PASS/REJECT/g') | sed 's/sample_name/{paired.tumor_name}/g' | "
+            bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
+            bcftools_cmd_common = get_scalpel_bcftools_filter_expression("reject", config)
+            cl2 = ("vcfcat <({bcftools_cmd_chi2} {scalpel_tmp_file}) "
+                   "<({bcftools_cmd_common} {scalpel_tmp_file_common}) | "
+                   " sed 's/sample_name/{paired.tumor_name}/g' | "
                    "{vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
+            
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files["dbsnp"], ref_file,
                                                config)
     return ann_file
+
+def get_scalpel_bcftools_filter_expression(filter_type, config):
+    bcftools = config_utils.get_program("bcftools", config)
+    filter_string = "{bcftools} filter -m '+' -O v --soft-filter "
+    if filter_type == "chi2":
+        filter_string += "'CHI2FILTER' -e 'INFO/CHI2 > 10.8' "
+    elif filter_type == "reject":
+        filter_string += "'REJECT' -e '%TYPE=\"indel\"' "
+    else:
+        return "zcat"
+    return filter_string.format(**locals())
