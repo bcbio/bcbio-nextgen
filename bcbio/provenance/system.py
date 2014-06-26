@@ -111,6 +111,13 @@ def _torque_queue_nodes(queue):
                 hosts.extend(line.strip().split(","))
     return tuple([h.split(".")[0].strip() for h in hosts if h.strip()])
 
+def median_left(x):
+    if len(x) < 1:
+        return None
+    sortedval = sorted(x)
+    centre = int((len(sortedval)-1)/2)
+    return sortedval[centre]
+
 def _sge_info(queue):
     """Returns machine information for an sge job scheduler.
     """
@@ -123,7 +130,7 @@ def _sge_info(queue):
     #num_cpus_vec = [slot_info[x]["slots_total"] for x in machine_keys]
     #mem_vec = [mem_info[x]["mem_total"] for x in machine_keys]
     mem_per_slot = [mem_info[x]["mem_total"] / float(slot_info[x]["slots_total"]) for x in machine_keys]
-    min_ratio_index = mem_per_slot.index(min(mem_per_slot))
+    min_ratio_index = mem_per_slot.index(median_left(mem_per_slot))
     mem_info[machine_keys[min_ratio_index]]["mem_total"]
     return [{"cores": slot_info[machine_keys[min_ratio_index]]["slots_total"],
              "memory": mem_info[machine_keys[min_ratio_index]]["mem_total"],

@@ -45,29 +45,43 @@ def run_cufflinks(data):
     data["fpkm"] = fpkm_file
     return [[data]]
 
-def cufflinks_assemble(*samples):
+def cufflinks_assemble(data):
+    config = data["config"]
+    dirs = data["dirs"]
+    bam_file = data["work_bam"]
+    ref_file = data["sam_ref"]
+    out_dir = os.path.join(dirs["work"], "assembly")
+    num_cores = config["algorithm"].get("num_cores", 1)
+    assembled_gtf = cufflinks.assemble(bam_file, ref_file, num_cores, out_dir)
+    data["assembled_gtf"] = assembled_gtf
+    return [[data]]
+
+def cufflinks_merge(*samples):
     rnaseq_resources = samples[0][0]["genome_resources"]["rnaseq"]
     config = samples[0][0]["config"]
     dirs = samples[0][0]["dirs"]
-    gtf_file = rnaseq_resources.get("transcripts", None)
+    bam_file = samples[0][0]["work_bam"]
     ref_file = samples[0][0]["sam_ref"]
-    bam_files = [data[0]['work_bam'] for data in samples]
-    num_cores = config["algorithm"].get("num_cores", 1)
+    gtf_file = rnaseq_resources.get("transcripts", None)
     out_dir = os.path.join(dirs["work"], "assembly")
-    safe_makedir(out_dir)
-    merged_file = os.path.join(out_dir, "merged.bam")
-    merged_file = bam.merge(bam_files, merged_file, config)
-    assembly_dir = cufflinks.assemble(merged_file, ref_file, gtf_file,
-                                      num_cores, out_dir)
-    transcripts = [os.path.join(assembly_dir, "assembly", "transcripts.gtf")]
-    merged_gtf = cufflinks.merge(transcripts, ref_file, gtf_file, num_cores)
+    num_cores = config["algorithm"].get("num_cores", 1)
+    to_merge = [data[0]["assembled_gtf"] for data in samples if
+                "assembled_gtf" in data[0]]
+    merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores)
     for data in samples:
-        data[0]['assembly'] = assembly_dir
+        data[0]['assembled_gtf'] = merged_gtf
     return samples
 
 def assemble_transcripts(run_parallel, samples):
-    # assemble with all reads
+    """
+    assembly strategy rationale implemented as suggested in
+    http://www.nature.com/nprot/journal/v7/n3/full/nprot.2012.016.html
+
+    run Cufflinks in without a reference GTF for each individual sample
+    merge the assemblies with Cuffmerge using a reference GTF
+    """
     config = samples[0][0]["config"]
     if config["algorithm"].get("assemble_transcripts", False):
-        samples = run_parallel("cufflinks_assemble", [samples])
+        samples = run_parallel("cufflinks_assemble", samples)
+    samples = run_parallel("cufflinks_merge", [samples])
     return samples
