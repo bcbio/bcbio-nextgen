@@ -103,7 +103,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             # parse produced variant file further
             scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "variants." + min_cov + "x.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2")
+            bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             sample_name_str = items[0]["name"][1]
             cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' | "
                    "{vcfallelicprimitives} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
@@ -147,12 +147,12 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             # common
             scalpel_tmp_file_common = bgzip_and_index(os.path.join(tmp_path, "main/common." + min_cov + "x.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2")
-            bcftools_cmd_common = get_scalpel_bcftools_filter_expression("reject")
+            bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
+            bcftools_cmd_common = get_scalpel_bcftools_filter_expression("reject", config)
             cl2 = ("vcfcat <({bcftools_cmd_chi2} {scalpel_tmp_file}) "
                    "<({bcftools_cmd_common} {scalpel_tmp_file_common}) | "
                    " sed 's/sample_name/{paired.tumor_name}/g' | "
-                   "{vcfstreamsort} {compress_cmd} > {tx_out_file}")            
+                   "{vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
             
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -160,8 +160,13 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                                                config)
     return ann_file
 
-def get_scalpel_bcftools_filter_expression(filter_type):
+def get_scalpel_bcftools_filter_expression(filter_type, config):
+    bcftools = config_utils.get_program("bcftools", config)
+    filter_string = "{bcftools} filter -m '+' -O v --soft-filter "
     if filter_type == "chi2":
-        return "bcftools filter -O v --soft-filter 'CHI2FILTER' -e 'INFO/CHI2 > 10.8' -m '+' "
+        filter_string += "'CHI2FILTER' -e 'INFO/CHI2 > 10.8' "
+    elif filter_type == "reject":
+        filter_string += "'REJECT' -e '%TYPE=\"indel\"' "
     else:
-        return "bcftools filter -O v --soft-filter 'REJECT' -e '%TYPE=\"indel\"' -m '+' "
+        return "zcat"
+    return filter_string.format(**locals())
