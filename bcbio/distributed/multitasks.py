@@ -141,3 +141,7 @@ def square_batch_region(*args):
 @utils.map_wrap
 def cufflinks_assemble(*args):
     return rnaseq.cufflinks_assemble(*args)
+
+@utils.map_wrap
+def cufflinks_merge(*args):
+    return rnaseq.cufflinks_merge(*args)

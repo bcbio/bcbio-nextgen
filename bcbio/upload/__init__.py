@@ -58,7 +58,6 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
-    out = _maybe_add_assembly(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
     return _add_meta(out, sample)
 
@@ -220,13 +219,6 @@ def _maybe_add_cufflinks(algorithm, sample, out):
                     "ext": "cufflinks"})
     return out
 
-def _maybe_add_assembly(algorithm, sample, out):
-    if "assembly" in sample:
-        out.append({"path": sample["cufflinks_dir"],
-                    "type": "directory",
-                    "ext": "assembly"})
-    return out
-
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
               or algorithm.get("recalibrate") or algorithm.get("bam_clean")
@@ -273,5 +265,7 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["annotated_combined_counts"]})
     if "combined_fpkm" in sample:
         out.append({"path": sample["combined_fpkm"]})
+    if "assembled_gtf" in sample:
+        out.append({"path": sample["assembled_gtf"]})
 
     return _add_meta(out, config=upload_config)

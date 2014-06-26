@@ -238,3 +238,9 @@ def cufflinks_assemble(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(rnaseq.cufflinks_assemble, *args), config)
+
+@require(rnaseq)
+def cufflinks_merge(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.cufflinks_merge, *args), config)
