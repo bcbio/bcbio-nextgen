@@ -84,6 +84,7 @@ if __name__ == "__main__":
                         help="Path to prepare_tx_gff.py (in utils/cloudbiolinux)")
 
     args = parser.parse_args()
+    env.hosts = ["localhost"]
     fabutils.configure_runsudo(env)
     args.genome_dir = os.path.abspath(args.genome_dir)
     args.fasta = os.path.abspath(args.fasta)
