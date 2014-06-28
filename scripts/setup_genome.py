@@ -118,6 +118,6 @@ if __name__ == "__main__":
 
         "Preparing transcriptome."
         os.chdir(os.path.join(build_dir, os.pardir))
-        cmd = ("python {args.prepare_tx} --gtf {gtf_file} {args.picard_dir} "
+        cmd = ("{sys.executable} {args.prepare_tx} --gtf {gtf_file} {args.picard_dir} "
                "{args.build}")
         subprocess.check_call(cmd.format(**locals()), shell=True)
