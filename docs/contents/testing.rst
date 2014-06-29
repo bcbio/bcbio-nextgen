@@ -226,8 +226,13 @@ the end it will output counts, Cufflinks quantitation and a set of QC
 results about each lane. If you have a cluster you can `parallelize it`_
 to speed it up considerably.
 
+A nice looking standalone `report`_ of the bcbio-nextgen can be generated using
+`bcbio.rnaseq`_. Check that repository for details.
+
 .. _templating system: https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
 .. _parallelize it: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
+.. _bcbio.rnaseq: https://github.com/roryk/bcbio.rnaseq
+.. _report: https://rawgit.com/roryk/bcbio.rnaseq/master/docs/qc-summary.html
 
 Test suite
 ==========

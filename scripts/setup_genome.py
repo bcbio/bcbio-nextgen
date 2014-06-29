@@ -70,9 +70,9 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--gtf", default=None,
                         help="GTF file of the transcriptome")
     parser.add_argument("-n", "--name", required=True,
-                        help="Name of genome.")
+                        help="Name of organism, for example Hsapiens.")
     parser.add_argument("-b", "--build", required=True,
-                        help="Build of genome.")
+                        help="Build of genome, for example hg19.")
     parser.add_argument("-d", "--genome-dir", required=True,
                         help="Path to bcbio-nextgen genomes directory.")
     parser.add_argument("-i", "--indexes", choices=genomes.INDEX_FNS.keys(),
@@ -118,6 +118,6 @@ if __name__ == "__main__":
 
         "Preparing transcriptome."
         os.chdir(os.path.join(build_dir, os.pardir))
-        cmd = ("python {args.prepare_tx} --gtf {gtf_file} {args.picard_dir} "
+        cmd = ("{sys.executable} {args.prepare_tx} --gtf {gtf_file} {args.picard_dir} "
                "{args.build}")
         subprocess.check_call(cmd.format(**locals()), shell=True)
