@@ -83,5 +83,5 @@ def assemble_transcripts(run_parallel, samples):
     config = samples[0][0]["config"]
     if config["algorithm"].get("assemble_transcripts", False):
         samples = run_parallel("cufflinks_assemble", samples)
-    samples = run_parallel("cufflinks_merge", [samples])
+        samples = run_parallel("cufflinks_merge", [samples])
     return samples
