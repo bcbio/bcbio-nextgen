@@ -456,7 +456,8 @@ def _run_gemini_stats(bam_file, data, out_dir):
     """Retrieve high level variant statistics from Gemini.
     """
     out = {}
-    gemini_db = data.get("variants", [{}])[0].get("population", {}).get("db")
+    gemini_db = (data.get("variants", [{}])[0].get("population", {}).get("db") 
+                 if data.get("variants") else None)
     if gemini_db:
         gemini_stat_file = "%s-stats.yaml" % os.path.splitext(gemini_db)[0]
         if not utils.file_uptodate(gemini_stat_file, gemini_db):
