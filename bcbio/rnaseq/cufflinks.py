@@ -20,15 +20,17 @@ def run(align_file, ref_file, data):
     out_dir = _get_output_dir(align_file, data)
     tracking_file = os.path.join(out_dir, "genes.fpkm_tracking")
     fpkm_file = os.path.join(out_dir, data['rgnames']['sample']) + ".fpkm"
-    if file_exists(fpkm_file):
-        return out_dir
-    with file_transaction(out_dir) as tmp_out_dir:
-        cmd.extend(["--output-dir", tmp_out_dir])
-        cmd.extend([align_file])
-        cmd = map(str, cmd)
-        do.run(cmd, "Cufflinks on %s." % (align_file))
-    fpkm_file = gene_tracking_to_fpkm(tracking_file, fpkm_file)
-    return out_dir, fpkm_file
+    tracking_file_isoform = os.path.join(out_dir, "isoforms.fpkm_tracking")
+    fpkm_file_isoform = os.path.join(out_dir, data['rgnames']['sample']) + ".isoform.fpkm"
+    if not file_exists(fpkm_file):
+        with file_transaction(out_dir) as tmp_out_dir:
+            cmd.extend(["--output-dir", tmp_out_dir])
+            cmd.extend([align_file])
+            cmd = map(str, cmd)
+            do.run(cmd, "Cufflinks on %s." % (align_file))
+        fpkm_file = gene_tracking_to_fpkm(tracking_file, fpkm_file)
+        fpkm_file_isoform = gene_tracking_to_fpkm(tracking_file_isoform, fpkm_file_isoform)
+    return out_dir, fpkm_file, fpkm_file_isoform
 
 def gene_tracking_to_fpkm(tracking_file, out_file):
     """
