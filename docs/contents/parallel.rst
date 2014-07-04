@@ -197,6 +197,10 @@ soft and hard ``nofile`` descriptors, and edit
 ``/etc/pam.d/common-session`` to add ``pam_limits.so``. See
 `this blog post`_ for more details.
 
+For CentOS/RedHat systems, edit ``/etc/security/limits.conf`` and
+``/etc/security/limits.d/90-nproc.conf`` to `increase maximum open files and
+user limits <http://ithubinfo.blogspot.com/2013/07/how-to-increase-ulimit-open-file-and.html>`_.
+
 SGE needs configuration at the qmaster level. Invoke ``qconf -mconf``
 from a host with admin privileges, and edit ``execd_params``::
 
