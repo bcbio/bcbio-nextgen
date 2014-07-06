@@ -96,17 +96,20 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             if not _has_variant_regions(items, out_file, chrom):
-                vcfutils.write_empty_vcf(out_file)
+                vcfutils.write_empty_vcf(tx_out_file)
             else:
                 exclude = ["-x", prepare_exclude_file(items, out_file, chrom)]
                 cmd = ["delly", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
                 multi_cmd = "export OMP_NUM_THREADS=%s && " % cores
                 try:
                     do.run(multi_cmd + " ".join(cmd), "delly structural variant")
+                    # Delly will write nothing if no variants found
+                    if not utils.file_exists(tx_out_file):
+                        vcfutils.write_empty_vcf(tx_out_file)
                 except subprocess.CalledProcessError, msg:
                     # delly returns an error exit code if there are no variants
                     if "No structural variants found" in str(msg):
-                        vcfutils.write_empty_vcf(out_file)
+                        vcfutils.write_empty_vcf(tx_out_file)
                     else:
                         raise
     return [vcfutils.bgzip_and_index(_clean_delly_output(out_file, items), items[0]["config"])]
