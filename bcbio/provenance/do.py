@@ -16,8 +16,7 @@ def run(cmd, descr, data=None, checks=None, region=None, log_error=True,
     """
     descr = _descr_str(descr, data, region)
     logger.debug(descr)
-    # TODO: Extract entity information from data input
-    cmd_id = diagnostics.start_cmd(descr, data, cmd)
+    cmd_id = diagnostics.start_cmd(cmd, descr, data)
     try:
         logger_cl.debug(" ".join(str(x) for x in cmd) if not isinstance(cmd, basestring) else cmd)
         _do_run(cmd, checks, log_stdout)
