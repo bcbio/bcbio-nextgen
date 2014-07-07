@@ -79,10 +79,28 @@ def prepare_exclude_file(items, base_file, chrom=None):
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
                 if len(want_bedtool) > 0:
-                    full_bedtool.subtract(want_bedtool).saveas(tx_out_file)
+                    full_bedtool.subtract(want_bedtool).merge(d=1000).saveas(tx_out_file)
                 else:
                     full_bedtool.saveas(tx_out_file)
     return out_file
+
+def get_sv_chroms(items, work_dir):
+    """Retrieve chromosomes to process on, avoiding extra skipped chromosomes.
+    """
+    work_bam = items[0]["work_bam"]
+    base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(work_bam))[0]))
+    exclude_file = prepare_exclude_file(items, base_file)
+    exclude_regions = {}
+    for region in pybedtools.BedTool(exclude_file):
+        if int(region.start) == 0:
+            exclude_regions[region.chrom] = int(region.end)
+    out = []
+    with closing(pysam.Samfile(work_bam, "rb")) as pysam_work_bam:
+        for chrom, length in zip(pysam_work_bam.references, pysam_work_bam.lengths):
+            exclude_length = exclude_regions.get(chrom, 0)
+            if exclude_length < length:
+                out.append(chrom)
+    return out
 
 @utils.map_wrap
 @zeromq_aware_logging
@@ -169,11 +187,10 @@ def run(items):
     parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1),
                 "progs": ["delly"]}
     sv_types = ["DEL", "DUP", "INV"]  # "TRA" has invalid VCF END specifications that GATK doesn't like
-    with closing(pysam.Samfile(work_bams[0], "rb")) as pysam_work_bam:
-        bytype_vcfs = run_multicore(_run_delly, [(work_bams, chrom, sv_type, ref_file, work_dir, items)
-                                                 for (chrom, sv_type)
-                                                 in itertools.product(pysam_work_bam.references, sv_types)],
-                                    config, parallel)
+    bytype_vcfs = run_multicore(_run_delly, [(work_bams, chrom, sv_type, ref_file, work_dir, items)
+                                             for (chrom, sv_type)
+                                             in itertools.product(get_sv_chroms(items, work_dir), sv_types)],
+                                config, parallel)
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
     out = []
