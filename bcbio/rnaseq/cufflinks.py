@@ -53,6 +53,7 @@ def _get_general_options(align_file, config):
     options.extend(["--quiet"])
     options.extend(["--no-update-check"])
     options.extend(["--max-bundle-frags", 2000000])
+    options.extend(_get_stranded_flag(config))
     return options
 
 def _get_no_assembly_options(ref_file, data):
@@ -68,6 +69,18 @@ def _get_no_assembly_options(ref_file, data):
         options.extend(["--mask-file", mask_file])
 
     return options
+
+def _get_stranded_flag(config):
+    strand_flag = {"unstranded": "fr-unstranded",
+                   "firststrand": "fr-firststrand",
+                   "secondstrand": "fr-secondstrand"}
+    stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
+    assert stranded in strand_flag, ("%s is not a valid strandedness value. "
+                                     "Valid values are 'firststrand', "
+                                     "'secondstrand' and 'unstranded" % (stranded))
+    flag = strand_flag[stranded]
+    return ["--library-type", flag]
+
 
 def _get_output_dir(align_file, data, sample_dir=True):
     config = data["config"]
