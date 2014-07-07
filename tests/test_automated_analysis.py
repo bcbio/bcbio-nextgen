@@ -257,7 +257,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
                   get_post_process_yaml(self.data_dir, workdir),
-                  os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
 
