@@ -39,9 +39,12 @@ requirements:
 - The git version control system (http://git-scm.com/).
 - wget for file retrieval (https://www.gnu.org/software/wget/)
 - unzip
+- zlib (with development libraries)
 
 If you're using the ``--nosudo`` option, please see :ref:`isolated-install`
-for additional system requirements needed to bootstrap the full system.
+for additional system requirements needed to bootstrap the full system. The
+`bcbio-nextgen Dockerfile <https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_
+contains bootstrap package information to install on bare Ubuntu systems.
 
 Some steps retrieve third party tools from GitHub, which can run into
 issues if you're behind a proxy or block git ports. To instruct git to
@@ -76,7 +79,6 @@ This requires the following additional system requirements to be in place:
 - Ruby
 - R with Rscript (currently optional, but increasingly used in the pipeline)
 - bzip2 (with development libraries)
-- zlib (with development libraries)
 - curl (with development libraries)
 
 Installing this way is as isolated and self-contained as possible

@@ -23,9 +23,10 @@ RUN git config --global url.https://github.com/.insteadOf git://github.com/ && \
     mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     wget --no-check-certificate \
       https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
-    python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local \
-      --nodata --nosudo -u development
-RUN bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data
+    python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
+      --nosudo --nodata -u development
+RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --tooldir=/usr/local --tools
+RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data 
 RUN echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile && \
     echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/profile && \
     echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/profile && \

@@ -19,7 +19,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
                             version, rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
-from bcbio.provenance import programs, profile, system, versioncheck
+from bcbio.provenance import diagnostics, programs, profile, system, versioncheck
 from bcbio.server import main as server_main
 from bcbio.variation import coverage, ensemble, genotype, joint, population, validate
 
@@ -94,17 +94,14 @@ def setup_directories(work_dir, fc_dir, config, config_file):
 
 def _add_provenance(items, dirs, parallel, config):
     p = programs.write_versions(dirs, config, is_wrapper=parallel.get("wrapper") is not None)
+    p_db = diagnostics.initialize(dirs)
     system.write_info(dirs, parallel, config)
     out = []
     for item in items:
-        if item.get("upload") and item["upload"].get("fc_name"):
-            entity_id = "%s.%s.%s" % (item["upload"]["fc_date"],
-                                      item["upload"]["fc_name"],
-                                      item["description"])
-        else:
-            entity_id = item["description"]
+        entity_id = diagnostics.store_entity(item)
         item["config"]["resources"]["program_versions"] = p
-        item["provenance"] = {"programs": p, "entity": entity_id}
+        item["provenance"] = {"programs": p, "entity": entity_id,
+                              "db": p_db}
         out.append([item])
     return out
 
@@ -442,8 +439,6 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("alignment", dirs):
                 samples = disambiguate.split(samples)
                 samples = run_parallel("process_alignment", samples)
-
-
         with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
             with profile.report("disambiguation", dirs):

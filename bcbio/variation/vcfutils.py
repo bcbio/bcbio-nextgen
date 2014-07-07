@@ -61,13 +61,13 @@ def get_paired_phenotype(data):
 
 # ## General utilities
 
-def write_empty_vcf(out_file, config=None, my_samples=None):
+def write_empty_vcf(out_file, config=None, samples=None):
     needs_bgzip = False
     if out_file.endswith(".vcf.gz"):
         needs_bgzip = True
         out_file = out_file.replace(".vcf.gz", ".vcf")
     with open(out_file, "w") as out_handle:
-        format_samples = "\tFORMAT\t" + "\t".join(my_samples) if my_samples else ""
+        format_samples = "\tFORMAT\t" + "\t".join(samples) if samples else ""
         out_handle.write("##fileformat=VCFv4.1\n"
                          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO%s\n" % (format_samples))
     if needs_bgzip:
@@ -249,7 +249,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 for vrn_file in sorted_files:
                     if vrn_file.endswith(".gz"):
                         tabix_index(vrn_file, config)
-                    my_reader = vcf.Reader(filename = vrn_file)
+                    my_reader = vcf.Reader(filename=vrn_file)
                     if len(my_reader.samples) > 0:
                         my_samples = my_reader.samples[:]
                         break

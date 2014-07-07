@@ -55,9 +55,9 @@ details:
     description: Test1
     genome_build: hg19
     lane: 7
-    #files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
-    files: 7_100326_FC6107FAAXX.bam
-    #files: 7_100326_FC6107FAAXX.cram
+    #files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
+    files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
+    #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
   # - algorithm:
   #     aligner: bwa
   #     variantcaller: freebayes
@@ -75,4 +75,4 @@ details:
   #   description: Test2
   #   genome_build: hg19
   #   lane: 8
-  #   files: [7_100326_FC6107FAAXX.bam]
+  #   files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam]

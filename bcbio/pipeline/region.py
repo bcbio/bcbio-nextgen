@@ -18,7 +18,11 @@ def get_max_counts(samples):
     if not bed_files:
         bed_files = list(set(utils.get_in(x[0], ("config", "algorithm", "variant_regions"))
                              for x in samples))
-    return max(sum(1 for line in open(f)) for f in bed_files if f)
+    bed_files = filter(lambda x: x is not None, bed_files)
+    if len(bed_files) > 0:
+        return max(sum(1 for line in open(f)) for f in bed_files if f)
+    else:
+        return 1
 
 # ## BAM preparation
 

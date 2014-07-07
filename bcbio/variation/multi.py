@@ -31,7 +31,8 @@ def bam_needs_processing(data):
     """
     return (data["work_bam"] and
             any(tz.get_in(["config", "algorithm", x], data) for x in
-                ["variantcaller", "mark_duplicates", "recalibrate", "realign"]))
+                ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
+                 "jointcaller"]))
 
 def _get_batches(data):
     if bam_needs_processing(data):
@@ -237,6 +238,9 @@ def split_variants_by_sample(data):
                 sub_data.pop("vrn_file", None)
             out.append([sub_data])
         return out
+    # joint calling, do not split back up due to potentially large sample sizes
+    elif tz.get_in(("config", "algorithm", "jointcaller"), data):
+        return [[data]]
     # population or single sample
     else:
         out = []
