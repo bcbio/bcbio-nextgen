@@ -21,7 +21,7 @@ def run(align_file, ref_file, data):
     tracking_file = os.path.join(out_dir, "genes.fpkm_tracking")
     fpkm_file = os.path.join(out_dir, data['rgnames']['sample']) + ".fpkm"
     if file_exists(fpkm_file):
-        return out_dir
+        return out_dir,fpkm_file
     with file_transaction(out_dir) as tmp_out_dir:
         cmd.extend(["--output-dir", tmp_out_dir])
         cmd.extend([align_file])
