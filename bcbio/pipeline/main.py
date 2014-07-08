@@ -337,13 +337,13 @@ class Variant2Pipeline(AbstractPipeline):
                                          "gemini", "samtools", "fastqc", "bamtools",
                                          "bcbio-variation-recall"]),
                         samples, config, dirs, "multicore2") as run_parallel:
-            with profile.report("prepped BAM merging", dirs):
-                samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("joint squaring off/backfilling", dirs):
                 samples = joint.square_off(samples, run_parallel)
             with profile.report("variant post-processing", dirs):
                 samples = run_parallel("postprocess_variants", samples)
                 samples = run_parallel("split_variants_by_sample", samples)
+            with profile.report("prepped BAM merging", dirs):
+                samples = region.delayed_bamprep_merge(samples, run_parallel)
             with profile.report("validation", dirs):
                 samples = run_parallel("compare_to_rm", samples)
                 samples = genotype.combine_multiple_callers(samples)

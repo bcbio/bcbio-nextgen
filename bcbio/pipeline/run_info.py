@@ -181,6 +181,15 @@ def _check_algorithm_keys(item):
                          "See configuration documentation for supported options:\n%s\n"
                          % (problem_keys, url))
 
+def _check_toplevel_misplaced(item):
+    """Check for algorithm keys accidentally placed at the top level.
+    """
+    problem_keys = [k for k in item.keys() if k in ALGORITHM_KEYS]
+    if len(problem_keys) > 0:
+        raise ValueError("Unexpected configuration keywords found in top level of %s: %s\n"
+                         "This should be placed in the 'algorithm' section."
+                         % (item["description"], problem_keys))
+
 
 def _detect_fastq_format(in_file, MAX_RECORDS=1000):
     ranges = {"sanger": (33, 73),
@@ -272,6 +281,7 @@ def _check_sample_config(items, in_file):
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
 
+    [_check_toplevel_misplaced(x) for x in items]
     [_check_algorithm_keys(x) for x in items]
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
