@@ -160,7 +160,6 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
         _add_reject_flag(out_file, config)
 
-
 def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
     """Fixes issues with the standard VarScan VCF output.
 
@@ -177,13 +176,11 @@ def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
                 with open(tx_out_file, "w") as out_handle:
 
                     for line in in_handle:
-                        line = _fix_varscan_output(line, normal_name,
-                                                   tumor_name)
+                        line = _clean_varscan_line(_fix_varscan_output(line, normal_name,
+                                                                       tumor_name))
                         if not line:
                             continue
                         out_handle.write(line)
-
-
 
 def _add_reject_flag(in_file, config):
 
