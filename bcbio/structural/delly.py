@@ -84,18 +84,19 @@ def prepare_exclude_file(items, base_file, chrom=None):
                     full_bedtool.saveas(tx_out_file)
     return out_file
 
-def get_sv_chroms(items, work_dir):
+def _get_full_exclude_file(items, work_dir):
+    base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(items[0]["work_bam"]))[0]))
+    return prepare_exclude_file(items, base_file)
+
+def get_sv_chroms(items, exclude_file):
     """Retrieve chromosomes to process on, avoiding extra skipped chromosomes.
     """
-    work_bam = items[0]["work_bam"]
-    base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(work_bam))[0]))
-    exclude_file = prepare_exclude_file(items, base_file)
     exclude_regions = {}
     for region in pybedtools.BedTool(exclude_file):
         if int(region.start) == 0:
             exclude_regions[region.chrom] = int(region.end)
     out = []
-    with closing(pysam.Samfile(work_bam, "rb")) as pysam_work_bam:
+    with closing(pysam.Samfile(items[0]["work_bam"], "rb")) as pysam_work_bam:
         for chrom, length in zip(pysam_work_bam.references, pysam_work_bam.lengths):
             exclude_length = exclude_regions.get(chrom, 0)
             if exclude_length < length:
@@ -188,9 +189,10 @@ def run(items):
     parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1),
                 "progs": ["delly"]}
     sv_types = ["DEL", "DUP", "INV"]  # "TRA" has invalid VCF END specifications that GATK doesn't like
+    exclude_file = _get_full_exclude_file(items, work_dir)
     bytype_vcfs = run_multicore(_run_delly, [(work_bams, chrom, sv_type, ref_file, work_dir, items)
                                              for (chrom, sv_type)
-                                             in itertools.product(get_sv_chroms(items, work_dir), sv_types)],
+                                             in itertools.product(get_sv_chroms(items, exclude_file), sv_types)],
                                 config, parallel)
     out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
@@ -205,6 +207,7 @@ def run(items):
         delly_vcf = vfilter.hard_w_expression(delly_sample_vcf,
                                               "FMT/DV < 4 || (FMT/DV / (FMT/DV + FMT/DR)) < 0.2", data,
                                               name="DVSupport")
-        data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf})
+        data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
+                           "exclude": exclude_file})
         out.append(data)
     return out

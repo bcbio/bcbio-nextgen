@@ -68,6 +68,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """
     out_file = os.path.join(work_dir, "%s-svs.bedpe"
                             % os.path.splitext(os.path.basename(items[0]["align_bam"]))[0])
+    sv_exclude_bed = delly.prepare_exclude_file(items, out_file)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with utils.curdir_tmpdir(items[0]) as tmpdir:
@@ -75,12 +76,11 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)
                 disc_bams = ",".join(disc_bams)
-                sv_exclude_bed = delly.prepare_exclude_file(items, out_file)
                 exclude = "-x %s" % sv_exclude_bed if sv_exclude_bed else ""
                 cmd = ("speedseq lumpy -v -B {full_bams} -S {sr_bams} -D {disc_bams} {exclude} "
                        "-T {tmpdir} -o {out_base}")
                 do.run(cmd.format(**locals()), "speedseq lumpy", items[0])
-    return out_file
+    return out_file, sv_exclude_bed
 
 def _get_support(parts):
     """Retrieve supporting information for potentially multiple samples.
@@ -218,7 +218,7 @@ def run(items):
         full_bams.append(dedup_bam)
         sr_bams.append(sr_bam)
         disc_bams.append(disc_bam)
-    pebed_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
+    pebed_file, exclude_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
     out = []
     sample_config_file = _write_samples_to_ids(pebed_file, items)
     lumpy_vcf = _bedpe_to_vcf(pebed_file, sample_config_file, items)
@@ -235,6 +235,7 @@ def run(items):
             sample_vcf = None
         data["sv"].append({"variantcaller": "lumpy",
                            "vrn_file": sample_vcf,
+                           "exclude_file": exclude_file,
                            "bedpe_file": sample_bedpe,
                            "sample_bed": sample_config_file})
         out.append(data)
