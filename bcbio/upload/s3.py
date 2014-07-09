@@ -4,13 +4,12 @@ import datetime
 import email
 import os
 
-import boto
-
 from bcbio.log import logger
 
 def get_file(local_dir, bucket_name, fname, params):
     """Retrieve file from amazon S3 to a local directory for processing.
     """
+    import boto
     out_file = os.path.join(local_dir, os.path.basename(fname))
     conn = boto.connect_s3(params.get("access_key_id"), params.get("secret_access_key"))
     bucket = conn.get_bucket(bucket_name)
@@ -29,6 +28,7 @@ def _update_val(key, val):
 def update_file(finfo, sample_info, config):
     """Update the file to an Amazon S3 bucket.
     """
+    import boto
     conn = boto.connect_s3(config.get("access_key_id"),
                            config.get("secret_access_key"))
     bucket = conn.lookup(config["bucket"])

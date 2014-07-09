@@ -1,9 +1,11 @@
 """Multiprocessing ready entry points for sample analysis.
 """
-from bcbio import utils
+from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
-from bcbio.pipeline import lane, qcsummary, sample, shared, variation
-from bcbio.variation import (bamprep, realign, genotype, ensemble, multi, population,
+from bcbio.ngsalign import alignprep
+from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
+                            rnaseq)
+from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 
 @utils.map_wrap
@@ -17,12 +19,14 @@ def trim_lane(*args):
 @utils.map_wrap
 def process_alignment(*args):
     return lane.process_alignment(*args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
 
 @utils.map_wrap
-def align_prep_full(*args):
-    return lane.align_prep_full(*args)
-align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+def postprocess_alignment(*args):
+    return lane.postprocess_alignment(*args)
+
+@utils.map_wrap
+def prep_align_inputs(*args):
+    return alignprep.create_inputs(*args)
 
 @utils.map_wrap
 def merge_sample(*args):
@@ -39,7 +43,6 @@ def piped_bamprep(*args):
 @utils.map_wrap
 def prep_recal(*args):
     return recalibrate.prep_recal(*args)
-prep_recal.metadata = {"resources": ["gatk"]}
 
 @utils.map_wrap
 def write_recal_bam(*args):
@@ -63,7 +66,11 @@ def pipeline_summary(*args):
 
 @utils.map_wrap
 def generate_transcript_counts(*args):
-    return sample.generate_transcript_counts(*args)
+    return rnaseq.generate_transcript_counts(*args)
+
+@utils.map_wrap
+def run_cufflinks(*args):
+    return rnaseq.run_cufflinks(*args)
 
 @utils.map_wrap
 def generate_bigwig(*args):
@@ -86,8 +93,12 @@ def concat_variant_files(*args):
     return vcfutils.concat_variant_files(*args)
 
 @utils.map_wrap
+def merge_variant_files(*args):
+    return vcfutils.merge_variant_files(*args)
+
+@utils.map_wrap
 def detect_sv(*args):
-    return variation.detect_sv(*args)
+    return structural.detect_sv(*args)
 
 @utils.map_wrap
 def combine_calls(*args):
@@ -96,7 +107,6 @@ def combine_calls(*args):
 @utils.map_wrap
 def prep_gemini_db(*args):
     return population.prep_gemini_db(*args)
-prep_gemini_db.metadata = {"resources": ["gemini"]}
 
 @utils.map_wrap
 def combine_bed(*args):
@@ -109,3 +119,15 @@ def calc_callable_loci(*args):
 @utils.map_wrap
 def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
+
+@utils.map_wrap
+def coverage_summary(*args):
+    return coverage.summary(*args)
+
+@utils.map_wrap
+def run_disambiguate(*args):
+    return disambiguate.run(*args)
+
+@utils.map_wrap
+def clean_chipseq_alignment(*args):
+    return chipseq.clean_chipseq_alignment(*args)

@@ -3,19 +3,20 @@
 import os
 import shutil
 from contextlib import closing
-import subprocess
 
 import pysam
 
-from bcbio import broad
+from bcbio import bam, broad
+from bcbio.bam import ref
 from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import (process_bam_by_chromosome, configured_ref_file,
+from bcbio.pipeline.shared import (process_bam_by_chromosome,
                                    write_nochr_reads, subset_bam_by_region,
                                    subset_variant_regions)
+from bcbio.provenance import do
 
 # ## gkno Marth lab realignment
 
@@ -51,7 +52,7 @@ def gkno_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{bamtools} filter -in {align_bam} {region} "
                    "| {realign_cmd} > {tx_out_file}")
-            subprocess.check_call(cmd.format(**locals()), shell=True)
+            do.run(cmd.format(**locals()), "gkno realignment", {})
     return out_file
 
 # ## GATK realignment
@@ -120,7 +121,7 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
                 cl = gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
                                                    tmp_dir, region, deep_coverage)
                 cl += ["-o", tx_out_file]
-                subprocess.check_call(cl)
+                do.run(cl, "GATK indel realignment", {})
     return out_file
 
 def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
@@ -128,13 +129,12 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     """Realign a BAM file around indels using GATK, returning sorted BAM.
     """
     runner = broad.runner_from_config(config)
-    runner.run_fn("picard_index", align_bam)
+    bam.index(align_bam, config)
     runner.run_fn("picard_index_ref", ref_file)
-    if not os.path.exists("%s.fai" % ref_file):
-        pysam.faidx(ref_file)
+    ref.fasta_idx(ref_file)
     if region:
         align_bam = subset_bam_by_region(align_bam, region, out_file)
-        runner.run_fn("picard_index", align_bam)
+        bam.index(align_bam, config)
     if has_aligned_reads(align_bam, region):
         variant_regions = config["algorithm"].get("variant_regions", None)
         realign_target_file = gatk_realigner_targets(runner, align_bam,
@@ -161,11 +161,10 @@ def has_aligned_reads(align_bam, region=None):
     region can be a chromosome string ("chr22"),
     a tuple region (("chr22", 1, 100)) or a file of regions.
     """
-    has_items = False
+    import pybedtools
     if region is not None:
         if isinstance(region, basestring) and os.path.isfile(region):
-            with open(region) as in_handle:
-                regions = [tuple(line.split()[:3]) for line in in_handle]
+            regions = [tuple(r) for r in pybedtools.BedTool(region)]
         else:
             regions = [region]
     with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
@@ -173,18 +172,15 @@ def has_aligned_reads(align_bam, region=None):
             for region in regions:
                 if isinstance(region, basestring):
                     for item in cur_bam.fetch(region):
-                        has_items = True
-                        break
+                        return True
                 else:
                     for item in cur_bam.fetch(region[0], int(region[1]), int(region[2])):
-                        has_items = True
-                        break
+                        return True
         else:
             for item in cur_bam:
                 if not item.is_unmapped:
-                    has_items = True
-                    break
-    return has_items
+                    return True
+    return False
 
 def parallel_realign_sample(sample_info, parallel_fn):
     """Realign samples, running in parallel over individual chromosomes.
@@ -192,8 +188,7 @@ def parallel_realign_sample(sample_info, parallel_fn):
     to_process = []
     finished = []
     for x in sample_info:
-        if (x[0]["config"]["algorithm"]["snpcall"] and
-            x[0]["config"]["algorithm"].get("realign", True)):
+        if x[0]["config"]["algorithm"].get("realign", True):
             to_process.append(x)
         else:
             finished.append(x)
@@ -217,17 +212,17 @@ def realign_sample(data, region=None, out_file=None):
     realigner = "gatk" if realigner is True else realigner
     realign_fn = _realign_approaches[realigner] if realigner else None
 
-    if data["config"]["algorithm"]["snpcall"] and realign_fn:
+    if realign_fn:
         logger.info("Realigning %s with %s: %s %s" % (data["name"], realigner,
                                                       os.path.basename(data["work_bam"]),
                                                       region))
         sam_ref = data["sam_ref"]
         config = data["config"]
         if region == "nochr":
-            realign_bam = write_nochr_reads(data["work_bam"], out_file)
+            realign_bam = write_nochr_reads(data["work_bam"], out_file, data["config"])
         else:
             realign_bam = realign_fn(data["work_bam"], sam_ref, config,
-                                     configured_ref_file("dbsnp", config, sam_ref),
+                                     data["genome_resources"]["variation"]["dbsnp"],
                                      region, out_file)
         if region is None:
             save_diskspace(data["work_bam"], "Realigned to %s" % realign_bam,

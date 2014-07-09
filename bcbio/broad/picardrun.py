@@ -128,6 +128,20 @@ def picard_fix_rgs(picard, in_bam, names):
                 picard.run("AddOrReplaceReadGroups", opts)
     return out_file
 
+def picard_downsample(picard, in_bam, ds_pct, random_seed=None):
+    out_file = "%s-downsample%s" % os.path.splitext(in_bam)
+    if not file_exists(out_file):
+        with curdir_tmpdir() as tmp_dir:
+            with file_transaction(out_file) as tx_out_file:
+                opts = [("INPUT", in_bam),
+                        ("OUTPUT", tx_out_file),
+                        ("PROBABILITY", "%.3f" % ds_pct),
+                        ("TMP_DIR", tmp_dir)]
+                if random_seed:
+                    opts += [("RANDOM_SEED", str(random_seed))]
+                picard.run("DownsampleSam", opts)
+    return out_file
+
 def picard_index_ref(picard, ref_file):
     """Provide a Picard style dict index file for a reference genome.
     """
@@ -139,30 +153,22 @@ def picard_index_ref(picard, ref_file):
             picard.run("CreateSequenceDictionary", opts)
     return dict_file
 
-def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir,
-                        platform, sample_name="", rg_name="", pu_name="",
-                        qual_format=None):
+def picard_fastq_to_bam(picard, fastq_one, fastq_two, out_dir, names, order="queryname"):
     """Convert fastq file(s) to BAM, adding sample, run group and platform information.
     """
-    qual_formats = {"illumina": "Illumina"}
-    if qual_format is None:
-        try:
-            qual_format = qual_formats[platform.lower()]
-        except KeyError:
-            raise ValueError("Need to specify quality format for %s" % platform)
     out_bam = os.path.join(out_dir, "%s-fastq.bam" %
                            os.path.splitext(os.path.basename(fastq_one))[0])
     if not file_exists(out_bam):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:
                 opts = [("FASTQ", fastq_one),
-                        ("QUALITY_FORMAT", qual_format),
-                        ("READ_GROUP_NAME", rg_name),
-                        ("SAMPLE_NAME", sample_name),
-                        ("PLATFORM_UNIT", pu_name),
-                        ("PLATFORM", platform),
+                        ("READ_GROUP_NAME", names["rg"]),
+                        ("SAMPLE_NAME", names["sample"]),
+                        ("PLATFORM_UNIT", names["pu"]),
+                        ("PLATFORM", names["pl"]),
                         ("TMP_DIR", tmp_dir),
-                        ("OUTPUT", tx_out_bam)]
+                        ("OUTPUT", tx_out_bam),
+                        ("SORT_ORDER", order)]
                 if fastq_two:
                     opts.append(("FASTQ2", fastq_two))
                 picard.run("FastqToSam", opts)
@@ -186,6 +192,7 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                       is_paired=False):
     """Convert SAM to BAM, including unmapped reads from fastq BAM file.
     """
+    to_retain = ["XS", "XG", "XM", "XN", "XO", "YT"]
     if align_sam.endswith(".sam"):
         out_bam = "%s.bam" % os.path.splitext(align_sam)[0]
     elif align_sam.endswith("-align.bam"):
@@ -202,6 +209,7 @@ def picard_sam_to_bam(picard, align_sam, fastq_bam, ref_file,
                         ("TMP_DIR", tmp_dir),
                         ("PAIRED_RUN", ("true" if is_paired else "false")),
                         ]
+                opts += [("ATTRIBUTES_TO_RETAIN", x) for x in to_retain]
                 picard.run("MergeBamAlignment", opts)
     return out_bam
 
@@ -213,7 +221,8 @@ def picard_formatconverter(picard, align_sam):
         with curdir_tmpdir() as tmp_dir:
             with file_transaction(out_bam) as tx_out_bam:
                 opts = [("INPUT", align_sam),
-                        ("OUTPUT", tx_out_bam)]
+                        ("OUTPUT", tx_out_bam),
+                        ("TMP_DIR", tmp_dir)]
                 picard.run("SamFormatConverter", opts)
     return out_bam
 
@@ -263,9 +272,11 @@ def picard_idxstats(picard, align_bam):
             if len(parts) == 2:
                 _, unaligned = parts
                 out.append(AlignInfo("nocontig", 0, 0, int(unaligned)))
-            else:
+            elif len(parts) == 7:
                 contig, _, length, _, aligned, _, unaligned = parts
                 out.append(AlignInfo(contig, int(length), int(aligned), int(unaligned)))
+            else:
+                raise ValueError("Unexpected output from BamIndexStats: %s" % line)
     return out
 
 def bed2interval(align_file, bed, out_file=None):
@@ -288,7 +299,7 @@ def bed2interval(align_file, bed, out_file=None):
 
     def reorder_line(line):
         splitline = line.strip().split("\t")
-        reordered = "\t".join([splitline[0], splitline[1], splitline[2],
+        reordered = "\t".join([splitline[0], splitline[1] + 1, splitline[2],
                                splitline[5], splitline[3]])
         return reordered + "\n"
 

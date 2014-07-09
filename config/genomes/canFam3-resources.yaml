@@ -1,0 +1,11 @@
+version: 3
+
+aliases:
+  ensembl: dog
+  snpeff: CanFam3.1.74
+
+rnaseq:
+  transcripts: ../rnaseq/ref-transcripts.gtf
+  transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
+  transcriptome_index:
+    tophat: ../rnaseq/tophat/CanFam3_transcriptome.ver

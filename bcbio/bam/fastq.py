@@ -1,8 +1,9 @@
 """Utilities for working with fastq files.
 """
 
-import difflib
-from itertools import izip
+from itertools import izip, product
+import os
+import random
 
 from Bio import SeqIO
 
@@ -66,7 +67,14 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
     fq1_in = SeqIO.parse(fq1, quality_format)
     fq2_in = SeqIO.parse(fq2, quality_format)
 
-    with open(fq1_out, 'w') as fq1_out_handle, open(fq2_out, 'w') as fq2_out_handle, open(fq1_single, 'w') as fq1_single_handle, open(fq2_single, 'w') as fq2_single_handle:
+    out_files = [fq1_out, fq2_out, fq1_single, fq2_single]
+
+    with file_transaction(out_files) as tmp_out_files:
+        fq1_out_handle = open(tmp_out_files[0], "w")
+        fq2_out_handle = open(tmp_out_files[1], "w")
+        fq1_single_handle = open(tmp_out_files[2], "w")
+        fq2_single_handle = open(tmp_out_files[3], "w")
+
         for fq1_record, fq2_record in izip(fq1_in, fq2_in):
             if len(fq1_record.seq) >= min_length and len(fq2_record.seq) >= min_length:
                 fq1_out_handle.write(fq1_record.format(quality_format))
@@ -76,38 +84,147 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
                     fq1_single_handle.write(fq1_record.format(quality_format))
                 if len(fq2_record.seq) > min_length:
                     fq2_single_handle.write(fq2_record.format(quality_format))
+        fq1_out_handle.close()
+        fq2_out_handle.close()
+        fq1_single_handle.close()
+        fq2_single_handle.close()
 
     return [fq1_out, fq2_out]
+
+def rstrip_extra(fname):
+    """Strip extraneous, non-discriminative filename info from the end of a file.
+    """
+    to_strip = ("_R", "_", "fastq", ".", "-")
+    while fname.endswith(to_strip):
+        for x in to_strip:
+            if fname.endswith(x):
+                fname = fname[:len(fname) - len(x)]
+                break
+    return fname
 
 def combine_pairs(input_files):
     """ calls files pairs if they are completely the same except
     for one has _1 and the other has _2 returns a list of tuples
     of pairs or singles.
-    From bipy.utils (https://github.com/roryk/bipy/blob/master/bipy/utils.py)"""
-    PAIR_FILE_IDENTIFIERS = ["1", "2"]
+    From bipy.utils (https://github.com/roryk/bipy/blob/master/bipy/utils.py)
+    Adjusted to allow different input paths or extensions for matching files.
+    """
+    PAIR_FILE_IDENTIFIERS = set(["1", "2"])
 
     pairs = []
-    used = []
+    used = set([])
     for in_file in input_files:
         if in_file in used:
             continue
         for comp_file in input_files:
-            if comp_file in used:
+            if comp_file in used or comp_file == in_file:
                 continue
-            s = difflib.SequenceMatcher(a=in_file, b=comp_file)
-            blocks = s.get_matching_blocks()
-            # length 3 means on match in the middle of the string
-            if len(s.get_matching_blocks()) is not 3:
-                continue
-            if comp_file[blocks[0][2]] in PAIR_FILE_IDENTIFIERS:
-                # e.g. _R1, _R2 or _1, _2
-                if comp_file[blocks[0][2] - 1] in ("R", "_"):
-                    used.append(in_file)
-                    used.append(comp_file)
-                    pairs.append([in_file, comp_file])
-                    break
+            a = rstrip_extra(utils.splitext_plus(os.path.basename(in_file))[0])
+            b = rstrip_extra(utils.splitext_plus(os.path.basename(comp_file))[0])
+            s = dif(a,b)
+            if len(s) > 1:
+                continue #there is only 1 difference
+            if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
+                  b[s[0]] in PAIR_FILE_IDENTIFIERS):
+ 
+                if b[s[0]- 1] in ("R", "_", "-"):
+                  
+                            used.add(in_file)
+                            used.add(comp_file)
+                            if b[s[0]] == "2":
+                                pairs.append([in_file, comp_file])
+                            else:
+                                pairs.append([comp_file, in_file])
+                            break
         if in_file not in used:
             pairs.append([in_file])
-            used.append(in_file)
+            used.add(in_file)
 
     return pairs
+
+def dif(a, b):
+    """ copy from http://stackoverflow.com/a/8545526 """
+    return [i for i in range(len(a)) if a[i] != b[i]]
+
+
+def is_fastq(in_file):
+    fastq_ends = [".fq", ".fastq"]
+    zip_ends = [".gzip", ".gz"]
+    base, first_ext = os.path.splitext(in_file)
+    second_ext = os.path.splitext(base)[1]
+    if first_ext in fastq_ends:
+        return True
+    elif second_ext + first_ext in product(fastq_ends, zip_ends):
+        return True
+    else:
+        return False
+
+def downsample(f1, f2, data, N, quick=False):
+    """ get N random headers from a fastq file without reading the
+    whole thing into memory
+    modified from: http://www.biostars.org/p/6544/
+    quick=True will just grab the first N reads rather than do a true
+    downsampling
+    """
+    if quick:
+        rand_records = range(N)
+    else:
+        records = sum(1 for _ in open(f1)) / 4
+        N = records if N > records else N
+        rand_records = random.sample(xrange(records), N)
+
+    fh1 = open(f1)
+    fh2 = open(f2) if f2 else None
+    outf1 = os.path.splitext(f1)[0] + ".subset" + os.path.splitext(f1)[1]
+    outf2 = os.path.splitext(f2)[0] + ".subset" + os.path.splitext(f2)[1] if f2 else None
+
+    if utils.file_exists(outf1):
+        if not outf2:
+            return outf1, outf2
+        elif utils.file_exists(outf2):
+            return outf1, outf2
+
+    out_files = (outf1, outf2) if outf2 else (outf1)
+
+    with file_transaction(out_files) as tx_out_files:
+        if isinstance(tx_out_files, basestring):
+            tx_out_f1 = tx_out_files
+        else:
+            tx_out_f1, tx_out_f2 = tx_out_files
+        sub1 = open(tx_out_f1, "w")
+        sub2 = open(tx_out_f2, "w") if outf2 else None
+        rec_no = - 1
+        for rr in rand_records:
+            while rec_no < rr:
+                rec_no += 1
+                for i in range(4): fh1.readline()
+                if fh2:
+                    for i in range(4): fh2.readline()
+            for i in range(4):
+                sub1.write(fh1.readline())
+                if sub2:
+                    sub2.write(fh2.readline())
+            rec_no += 1
+        fh1.close()
+        sub1.close()
+        if f2:
+            fh2.close()
+            sub2.close()
+
+    return outf1, outf2
+
+def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000):
+    """
+    estimate average read length of a fastq file
+    """
+
+    in_handle = SeqIO.parse(fastq_file, quality_format)
+    read = in_handle.next()
+    average = len(read.seq)
+    for _ in range(nreads):
+        try:
+            average = (average + len(in_handle.next().seq)) / 2
+        except StopIteration:
+            break
+    in_handle.close()
+    return average

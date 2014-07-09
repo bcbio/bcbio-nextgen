@@ -8,7 +8,6 @@ back into a summarized output file.
 This provides a framework for that process, making it easier to utilize with
 splitting specific code.
 """
-import os
 import copy
 import collections
 
@@ -48,7 +47,7 @@ def _check_group_status(xs, grouped_info):
     ready = []
     grouped = []
     for x in xs:
-        if x.has_key("group"):
+        if "group" in x:
             x["group_orig"] = grouped_info[x["group"]]
             grouped.append([x])
         else:
@@ -92,7 +91,7 @@ def _add_combine_info(output, combine_map, file_key):
     out = []
     for data in output:
         cur_file = data[file_key]
-        if not data.has_key("combine"):
+        if not "combine" in data:
             data["combine"] = {}
         data["combine"][file_key] = {"out": combine_map[cur_file],
                                      "extras": []}
@@ -112,6 +111,24 @@ def _add_combine_parts(args, cur_out, data):
     base_data["combine"][file_key]["extras"].append(data[file_key])
     args[cur_out] = base_data
     return args
+
+def group_combine_parts(xs):
+    """Group together a set of files which have been split but are not processed.
+
+    This occurs when doing bam preparation but not variant calling and helps merge
+    the combination information back together for later combining.
+    """
+    file_key = _get_combine_key(xs[0])
+    group_by_out = collections.defaultdict(list)
+    for x in xs:
+        group_by_out[x["combine"][file_key]["out"]].append(x)
+    out = []
+    for combined_xs in group_by_out.values():
+        base = combined_xs[0]
+        for combined_x in combined_xs:
+            base["combine"][file_key]["extras"].append(combined_x[file_key])
+        out.append([base])
+    return out
 
 def _add_combine_extras(args, extras):
     """Add in extra combination items: brings along non-processed items.
@@ -171,20 +188,26 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
     extra_args = collections.defaultdict(list)
     final_args = {}
     already_added = []
+    extras = []
     for data in output:
-        cur_file = data[file_key]
-        cur_out = combine_map[cur_file]
-        out_map[cur_out].append(cur_file)
-        extra_args[cur_out].append([data[x] for x in combine_arg_keys])
-        data[file_key] = cur_out
-        if cur_out not in already_added:
-            already_added.append(cur_out)
-            final_args[cur_out] = data
-        elif data.has_key("combine"):
-            final_args = _add_combine_parts(final_args, cur_out, data)
+        cur_file = data.get(file_key)
+        if cur_file:
+            cur_out = combine_map[cur_file]
+            out_map[cur_out].append(cur_file)
+            extra_args[cur_out].append([data[x] for x in combine_arg_keys])
+            data[file_key] = cur_out
+            if cur_out not in already_added:
+                already_added.append(cur_out)
+                final_args[cur_out] = data
+            elif "combine" in data:
+                final_args = _add_combine_parts(final_args, cur_out, data)
+            else:
+                extras.append([data])
+        else:
+            extras.append([data])
     combine_args = [[v, k] + _get_extra_args(extra_args[k], combine_arg_keys)
                     for (k, v) in out_map.iteritems()]
-    return combine_args, [[final_args[x]] for x in already_added]
+    return combine_args, [[final_args[x]] for x in already_added] + extras
 
 def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):
     """Split up input files and arguments, returning arguments for parallel processing.

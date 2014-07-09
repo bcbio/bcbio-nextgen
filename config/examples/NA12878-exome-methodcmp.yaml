@@ -4,86 +4,58 @@
 # See the bcbio-nextgen documentation for full instructions to
 # run this analysis:
 # https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#example-pipelines
-#
-# There is also an optional configuration item to compare with Illumina's
-# platinum genomes. This requires retrieving the input file from Illumina:
-# wget ftp://ftp.platinumgenomes.org/trio/NA12878.vcf.gz
-# and uncommenting the relevant section in the configuration.
 ---
 upload:
   dir: ../final
-fc_date: '2013-04-03'
-fc_name: methodcmp
 details:
-  - files: [NA12878-NGv3-LAB1360-A_1.fastq.gz, NA12878-NGv3-LAB1360-A_2.fastq.gz]
-    lane: 1
+  - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-1
+    metadata:
+      sex: female
     analysis: variant2
     genome_build: GRCh37
     algorithm:
-      aligner: novoalign
+      aligner: bwa
+      align_split_size: 5000000
       variantcaller: [gatk, freebayes, gatk-haplotype]
       quality_format: Standard
       coverage_interval: regional
-      merge_bamprep: false
-      validate: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-pass.vcf
-      validate_regions: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-regions.bed
-      variant_regions: /home/bradc/data/NA12878_exome/input/NGv3.bed
-  - files: [NA12878-NGv3-LAB1360-A_1.fastq.gz, NA12878-NGv3-LAB1360-A_2.fastq.gz]
-    lane: 2
+      merge_bamprep: true
+      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
+      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
+      variant_regions: ../input/NGv3.bed
+      ensemble:
+        format-filters: [DP < 4]
+        classifiers: 
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        classifier-params:
+          type: svm
+        trusted-pct: 0.65
+  - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-2
+    metadata:
+      sex: female
     analysis: variant2
     genome_build: GRCh37
     algorithm:
       aligner: bwa
+      align_split_size: 5000000
+      mark_duplicates: samtools                                                                                    
+      recalibrate: false                                                                                             
+      realign: false 
       variantcaller: [gatk, freebayes, gatk-haplotype]
       quality_format: Standard
       coverage_interval: regional
       merge_bamprep: false
-      validate: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-pass.vcf
-      validate_regions: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-regions.bed
-      variant_regions: /home/bradc/data/NA12878_exome/input/NGv3.bed
-  - files: [NA12878-NGv3-LAB1360-A_1.fastq.gz, NA12878-NGv3-LAB1360-A_2.fastq.gz]
-    lane: 3
-    description: NA12878-3
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: novoalign
-      mark_duplicates: samtools
-      recalibrate: false
-      realign: gkno
-      variantcaller: [gatk, freebayes, gatk-haplotype]
-      quality_format: Standard
-      coverage_interval: regional
-      merge_bamprep: false
-      validate: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-pass.vcf
-      validate_regions: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-regions.bed
-      variant_regions: /home/bradc/data/NA12878_exome/input/NGv3.bed
-  - files: [NA12878-NGv3-LAB1360-A_1.fastq.gz, NA12878-NGv3-LAB1360-A_2.fastq.gz]
-    lane: 4
-    description: NA12878-4
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: bwa
-      mark_duplicates: samtools
-      recalibrate: false
-      realign: gkno
-      variantcaller: [gatk, freebayes, gatk-haplotype]
-      quality_format: Standard
-      coverage_interval: regional
-      merge_bamprep: false
-      validate: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-pass.vcf
-      validate_regions: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-regions.bed
-      variant_regions: /home/bradc/data/NA12878_exome/input/NGv3.bed
-  # - vrn_file: /home/bradc/data/NA12878_exome/input/NA12878-illumina-platinum.vcf
-  #   lane: 5
-  #   description: Illumina-platinum
-  #   genome_build: hg19
-  #   analysis: variant2
-  #   algorithm:
-  #     validate: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-pass.vcf
-  #     validate_regions: /home/bradc/data/NA12878_exome/input/NA12878-nist-v2_13-NGv3-regions.bed
-  #     validate_genome_build: GRCh37
-  #     variant_regions: /home/bradc/data/NA12878_exome/input/NGv3.bed
+      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
+      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
+      variant_regions: ../input/NGv3.bed
+      ensemble:
+        format-filters: [DP < 4]
+        classifiers: 
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        classifier-params:
+          type: svm
+        trusted-pct: 0.65

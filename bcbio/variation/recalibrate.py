@@ -7,18 +7,15 @@ http://www.broadinstitute.org/gsa/wiki/index.php/Base_quality_score_recalibratio
 """
 import os
 import shutil
-from contextlib import closing
 
-import pysam
-
-from bcbio import broad, utils
+from bcbio import bam, broad, utils
 from bcbio.bam import cram
 from bcbio.log import logger
 from bcbio.utils import curdir_tmpdir, file_exists
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import (configured_ref_file, process_bam_by_chromosome,
+from bcbio.pipeline.shared import (process_bam_by_chromosome,
                                    subset_bam_by_region, write_nochr_reads,
                                    subset_variant_regions)
 from bcbio.variation.realign import has_aligned_reads
@@ -33,7 +30,7 @@ def bamutil_dedup_recal_cl(in_file, out_file, data, do_recal):
     config = data["config"]
     bam_cmd = config_utils.get_program("bam", config)
     ref_file = data["sam_ref"]
-    dbsnp_file = configured_ref_file("dbsnp", config, ref_file)
+    dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
 
     cmd = "{bam_cmd} dedup --in {in_file} --out {out_file} --oneChrom"
     if do_recal:
@@ -49,15 +46,15 @@ def prep_recal(data):
         logger.info("Recalibrating %s with GATK" % str(data["name"]))
         ref_file = data["sam_ref"]
         config = data["config"]
-        dbsnp_file = configured_ref_file("dbsnp", config, ref_file)
+        dbsnp_file = data["genome_resources"]["variation"]["dbsnp"]
         broad_runner = broad.runner_from_config(config)
-        platform = config["algorithm"]["platform"]
+        platform = config["algorithm"].get("platform", "illumina")
         broad_runner.run_fn("picard_index_ref", ref_file)
         if config["algorithm"].get("mark_duplicates", True):
             (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])
         else:
             dup_align_bam = data["work_bam"]
-        broad_runner.run_fn("picard_index", dup_align_bam)
+        bam.index(dup_align_bam, config)
         intervals = config["algorithm"].get("variant_regions", None)
         data["work_bam"] = dup_align_bam
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file,
@@ -66,8 +63,9 @@ def prep_recal(data):
 
 # ## Identify recalibration information
 
-def _get_downsample_pct(runner, in_bam):
-    """Calculate a downsampling percent to use for large BAM files.
+def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
+        dbsnp_file, intervals):
+    """Step 1 of GATK recalibration process, producing table of covariates.
 
     Large whole genome BAM files take an excessively long time to recalibrate and
     the extra inputs don't help much beyond a certain point. See the 'Downsampling analysis'
@@ -76,21 +74,10 @@ def _get_downsample_pct(runner, in_bam):
     http://gatkforums.broadinstitute.org/discussion/44/base-quality-score-recalibrator#latest
 
     This identifies large files and calculates the fraction to downsample to.
-    """
-    target_counts = 1e8 # 100 million reads per read group, 20x the plotted max
-    total = sum(x.aligned for x in runner.run_fn("picard_idxstats", in_bam))
-    with closing(pysam.Samfile(in_bam, "rb")) as work_bam:
-        n_rgs = max(1, len(work_bam.header["RG"]))
-    rg_target = n_rgs * target_counts
-    if total > rg_target:
-        return float(rg_target) / float(total)
-
-def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
-        dbsnp_file, intervals):
-    """Step 1 of GATK recalibration process, producing table of covariates.
 
     TODO: Use new GATK 2.6+ AnalyzeCovariates tool to plot recalibration results.
     """
+    target_counts = 1e8 # 100 million reads per read group, 20x the plotted max
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
     if not file_exists(out_file):
         if has_aligned_reads(dup_align_bam, intervals):
@@ -101,10 +88,13 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                               "-I", dup_align_bam,
                               "-R", ref_file,
                               ]
-                    downsample_pct = _get_downsample_pct(broad_runner, dup_align_bam)
+                    downsample_pct = bam.get_downsample_pct(broad_runner, dup_align_bam, target_counts)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
                                    "--downsampling_type", "ALL_READS"]
+                    if platform.lower() == "solid":
+                        params += ["--solid_nocall_strategy", "PURGE_READ",
+                                   "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
                     # GATK-lite does not have support for
                     # insertion/deletion quality modeling
                     if broad_runner.gatk_type() == "lite":
@@ -152,7 +142,7 @@ def write_recal_bam(data, region=None, out_file=None):
         out_file = "%s-gatkrecal.bam" % os.path.splitext(data["work_bam"])[0]
     logger.info("Writing recalibrated BAM for %s to %s" % (data["name"], out_file))
     if region == "nochr":
-        out_bam = write_nochr_reads(data["work_bam"], out_file)
+        out_bam = write_nochr_reads(data["work_bam"], out_file, data["config"])
     else:
         out_bam = _run_recal_bam(data["work_bam"], data["prep_recal"],
                                  region, data["sam_ref"], out_file, config)

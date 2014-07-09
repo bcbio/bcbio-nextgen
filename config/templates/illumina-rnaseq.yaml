@@ -1,0 +1,19 @@
+# Template for human RNA-seq using Illumina prepared samples
+---
+details:
+  - analysis: RNA-seq
+    genome_build: GRCh37
+    # include a lane (run group ID) for each sample
+    # lane: 1
+    # to do multi-sample variant calling, assign samples the same metadata / batch
+    metadata:
+       batch: your-arbitrary-batch-name
+       phenotype: tumor
+       tissue: AVG
+    algorithm:
+      aligner: tophat2 #can be star
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq, polya]
+      strandedness: unstranded #can be stranded
+

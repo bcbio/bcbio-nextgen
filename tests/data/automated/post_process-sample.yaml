@@ -5,11 +5,6 @@ algorithm:
   num_cores: 1
   platform: illumina
   recalibrate: false
-  snpcall: false
-  bc_mismatch: 2
-  bc_read: 1
-  bc_position: 3
-  bc_illumina_no_trailing: true
   save_diskspace: true
   upload_fastq: false
 
@@ -17,19 +12,13 @@ algorithm:
 custom_algorithms:
   variant:
     aligner: bwa
-    recalibrate: true
+    recalibrate: gatk
     snpcall: true
     coverage_depth: "low" # other options: high
     coverage_interval: "exome" # other options: genome
-    dbsnp: variation/dbsnp_132.vcf
-    train_hapmap: variation/hapmap_3.3.vcf
-    train_1000g_omni: variation/1000G_omni2.5.vcf
-    train_indels: variation/Mills_Devine_2hit.indels.vcf
   'RNA-seq':
-    aligner: tophat
+    aligner: tophat2
     transcript_assemble: true
-    transcripts: rnaseq/ref-transcripts.gtf
-    transcripts_mask: rnaseq/ref-transcripts-mask.gtf
   'Minimal':
     aligner: ""
 # Define resources to be used for individual programs on multicore machines.
@@ -39,15 +28,27 @@ custom_algorithms:
 # - Define cores that can be used for multicore programs.
 resources:
   bcbio_variation:
-    dir: /usr/share/java/bcbio_variation
+    dir: /usr/local/share/java/bcbio_variation
+  bcbio_coverage:
+    dir: /usr/local/share/java/bcbio_coverage
+    cores: 4
   ucsc_bigwig:
     memory: 36g
   bowtie:
     cores:
   tophat:
     cores:
+  star:
+    mem: 3g
+    cores: 4
   bwa:
     cores: 4
+  AlienTrimmer:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/AlienTrimmer
+  samtools:
+    cores: 4
+    memory: 1G
   novoalign:
     cores: 4
     memory: 4G
@@ -55,25 +56,30 @@ resources:
     cores: 4
   gatk:
     cores: 2
-    dir: /usr/share/java/gatk
+    dir: /usr/local/share/java/gatk
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
+  gatk-vqsr:
+    jvm_opts: ["-Xms1000m", "-Xmx2500m"]
   picard:
     cores: 1
-    dir: /usr/share/java/picard
+    dir: /usr/local/share/java/picard
   snpEff:
-    dir: /usr/share/java/snpeff
+    dir: /usr/local/share/java/snpeff
     jvm_opts: ["-Xms750m", "-Xmx3g"]
   varscan:
-    dir: /usr/share/java/varscan
+    dir: /usr/local/share/java/varscan
   mutect:
-    dir: /usr/share/java/mutect
+    dir: /usr/local/share/java/mutect
   cram:
-    dir: /usr/share/java/cram
+    dir: /usr/local/share/java/cram
   rnaseqc:
-    dir: /usr/share/java/RNA-SeQC
+    dir: /usr/local/share/java/RNA-SeQC
   stampy:
     dir: ~/install/stampy-1.0.18
   cortex:
     dir: ~/install/CORTEX_release_v1.0.5.14
   vcftools:
     dir: ~/install/vcftools_0.1.9
+  oncofuse:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/oncofuse

@@ -3,8 +3,6 @@
 details:
   - analysis: variant2
     genome_build: GRCh37
-    # include a lane (run group ID) for each sample
-    # lane: 1
     # to do multi-sample variant calling, assign samples the same metadata / batch
     # metadata:
     #   batch: your-arbitrary-batch-name

@@ -1,11 +1,25 @@
-import os
+"""Run Broad's RNA-SeqQC tool and handle reporting of useful summary metrics.
+"""
 
+import csv
+import os
+from random import shuffle
+from itertools import ifilter
+import shutil
+
+# Provide transition period to install via upgrade with conda
+try:
+    import pandas as pd
+    import statsmodels.formula.api as sm
+except ImportError:
+    pd, sm = None, None
+
+from bcbio import bam
+from bcbio import utils
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.utils import safe_makedir
-from bcbio.pipeline.qcsummary import is_paired
-from bcbio.broad import runner_from_config
-from bcbio.broad.picardrun import picard_index
+from bcbio.utils import safe_makedir, file_exists
+from bcbio.distributed.transaction import file_transaction
 
 
 class RNASeQCRunner(object):
@@ -46,47 +60,119 @@ def rnaseqc_runner_from_config(config):
     return RNASeQCRunner(rnaseqc_path, bwa_path, jvm_opts)
 
 
-def sample_summary(samples):
-    sample_config = samples[0]
-    config = sample_config[0]["config"]
-    work_dir = sample_config[0]["dirs"]["work"]
-    ref_file = sample_config[0]["sam_ref"]
-    genome_dir = os.path.dirname(os.path.dirname(ref_file))
-    gtf_file = config_utils.get_transcript_gtf(genome_dir)
-    rna_file = config_utils.get_rRNA_sequence(genome_dir)
+def sample_summary(bam_file, data, out_dir):
+    """Run RNA-SeQC on a single RNAseq sample, writing to specified output directory.
+    """
+    metrics_file = os.path.join(out_dir, "metrics.tsv")
+    if not file_exists(metrics_file):
+        with file_transaction(out_dir) as tx_out_dir:
+            config = data["config"]
+            ref_file = data["sam_ref"]
+            genome_dir = os.path.dirname(os.path.dirname(ref_file))
+            gtf_file = config_utils.get_transcript_gtf(genome_dir)
+            rna_file = config_utils.get_rRNA_sequence(genome_dir)
+            sample_file = os.path.join(safe_makedir(tx_out_dir), "sample_file.txt")
+            _write_sample_id_file(data, bam_file, sample_file)
+            runner = rnaseqc_runner_from_config(config)
+            bam.index(bam_file, config)
+            single_end = not bam.is_paired(bam_file)
+            runner.run(sample_file, ref_file, rna_file, gtf_file, tx_out_dir, single_end)
+            # we don't need this large directory for just the report
+            shutil.rmtree(os.path.join(tx_out_dir, data["description"]))
+    return _parse_rnaseqc_metrics(metrics_file, data["name"][-1])
 
-    out_dir = safe_makedir(os.path.join(work_dir, "qc", "rnaseqc"))
-    sample_file = os.path.join(out_dir, "sample_file.txt")
-    _write_sample_id_file(samples, sample_file)
-    _index_samples(samples)
-    runner = rnaseqc_runner_from_config(config)
-    single_end = is_paired(sample_config[0]["work_bam"])
-    runner.run(sample_file, ref_file, rna_file, gtf_file, out_dir, single_end)
 
-    return samples
-
-
-def _write_sample_id_file(samples, out_file):
+def _write_sample_id_file(data, bam_file, out_file):
     HEADER = "\t".join(["Sample ID", "Bam File", "Notes"]) + "\n"
-    sample_ids = _extract_sample_ids(samples)
+    sample_ids = ["\t".join([data["description"], bam_file, data["description"]])]
     with open(out_file, "w") as out_handle:
         out_handle.write(HEADER)
         for sample_id in sample_ids:
-            out_handle.write(sample_id)
+            out_handle.write(sample_id + "\n")
     return out_file
 
+# ## Parsing
 
-def _index_samples(samples):
-    for data in samples:
-        runner = runner_from_config(data[0]["config"])
-        picard_index(runner, data[0]["work_bam"])
+def _parse_rnaseqc_metrics(metrics_file, sample_name):
+    """Parse RNA-SeQC tab delimited metrics file.
+    """
+    out = {}
+    want = set(["Genes Detected", "Transcripts Detected",
+                "Mean Per Base Cov.", "Fragment Length Mean",
+                "Exonic Rate", "Intergenic Rate", "Intronic Rate",
+                "Mapped", "Mapping Rate", "Duplication Rate of Mapped",
+                "rRNA", "rRNA rate"])
+    with open(metrics_file) as in_handle:
+        reader = csv.reader(in_handle, dialect="excel-tab")
+        header = reader.next()
+        for metrics in reader:
+            if metrics[1] == sample_name:
+                for name, val in zip(header, metrics):
+                    if name in want:
+                        out[name] = val
+    return out
 
 
-def _extract_sample_ids(samples):
-    sample_ids = []
-    for data in samples:
-        names = data[0]["info"]["rgnames"]
-        description = data[0]["info"].get("description", "")
-        sample_ids.append("\t".join([names["pu"],
-                                     data[0]["work_bam"], description]) + "\n")
-    return sample_ids
+def starts_by_depth(bam_file, config, sample_size=None):
+    """
+    Return a set of x, y points where x is the number of reads sequenced and
+    y is the number of unique start sites identified
+    If sample size < total reads in a file the file will be downsampled.
+    """
+    binsize = (bam.count(bam_file, config) / 100) + 1
+    seen_starts = set()
+    counted = 0
+    num_reads = []
+    starts = []
+    buffer = []
+    with bam.open_samfile(bam_file) as samfile:
+        # unmapped reads should not be counted
+        filtered = ifilter(lambda x: not x.is_unmapped, samfile)
+        def read_parser(read):
+            return ":".join([str(read.tid), str(read.pos)])
+        # if no sample size is set, use the whole file
+        if not sample_size:
+            samples = map(read_parser, filtered)
+        else:
+            samples = utils.reservoir_sample(filtered, sample_size, read_parser)
+        shuffle(samples)
+        for read in samples:
+            counted += 1
+            buffer.append(read)
+            if counted % binsize == 0:
+                seen_starts.update(buffer)
+                buffer = []
+                num_reads.append(counted)
+                starts.append(len(seen_starts))
+        seen_starts.update(buffer)
+        num_reads.append(counted)
+        starts.append(len(seen_starts))
+    return pd.DataFrame({"reads": num_reads, "starts": starts})
+
+
+def estimate_library_complexity(df, algorithm="RNA-seq"):
+    """
+    estimate library complexity from the number of reads vs.
+    number of unique start sites. returns "NA" if there are
+    not enough data points to fit the line
+    """
+    DEFAULT_CUTOFFS = {"RNA-seq": (0.25, 0.40)}
+    cutoffs = DEFAULT_CUTOFFS[algorithm]
+    if len(df) < 5:
+        return {"unique_starts_per_read": 'nan',
+                "complexity": "NA"}
+    model = sm.ols(formula="starts ~ reads", data=df)
+    fitted = model.fit()
+    slope = fitted.params["reads"]
+    if slope <= cutoffs[0]:
+        complexity = "LOW"
+    elif slope <= cutoffs[1]:
+        complexity = "MEDIUM"
+    else:
+        complexity = "HIGH"
+
+    # for now don't return the complexity flag
+    return {"Unique Starts Per Read": float(slope)}
+    # return {"unique_start_per_read": float(slope),
+    #         "complexity": complexity}
+

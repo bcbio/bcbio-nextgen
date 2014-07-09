@@ -3,12 +3,13 @@
 Thanks to Zachary Voase: https://github.com/zacharyvoase/logbook-zmqpush
 Slightly modified to support Logbook 0.4.1.
 """
-
-import multiprocessing
+import errno
+import json
 import socket
 
 import zmq
 import logbook.queues
+from logbook.base import LogRecord
 
 class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
 
@@ -40,6 +41,9 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
         self.hostname = hostname
         if context is None:
             context = zmq.Context()
+            self._context = context
+        else:
+            self._context = None
         self.socket = context.socket(zmq.PUSH)
         if addr is not None:
             self.socket.connect(addr)
@@ -48,6 +52,11 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
         if self.hostname:
             inject_hostname.process(record)
         return super(ZeroMQPushHandler, self).emit(record)
+
+    def close(self):
+        if self._context:
+            self._context.destroy(linger=0)
+        self.socket.close(linger=0)
 
 class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
 
@@ -71,11 +80,28 @@ class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
         if addr is not None:
             self.socket.bind(addr)
 
+    def recv(self, timeout=None):
+        """Overwrite standard recv for timeout calls to catch interrupt errors.
+        """
+        if timeout:
+            try:
+                testsock = self._zmq.select([self.socket], [], [], timeout)[0]
+            except zmq.ZMQError as e:
+                if e.errno == errno.EINTR:
+                    testsock = None
+                else:
+                    raise
+            if not testsock:
+                return
+            rv = self.socket.recv(self._zmq.NOBLOCK)
+            return LogRecord.from_dict(json.loads(rv))
+        else:
+            return super(ZeroMQPullSubscriber, self).recv(timeout)
+
 @logbook.Processor
 def inject_hostname(log_record):
     """A Logbook processor to inject the current hostname into log records."""
     log_record.extra['source'] = socket.gethostname()
-
 
 def inject(**params):
 

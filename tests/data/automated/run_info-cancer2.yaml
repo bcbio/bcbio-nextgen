@@ -1,0 +1,25 @@
+# Test cancer runs without normal matched samples or using pre-called
+# normal panels input as VCF files
+---
+upload:
+  dir: upload
+fc_date: '2014-02-05'
+fc_name: tcancer2
+# XXX Need a useful file here to use as a real test
+globals:
+  normal_panel1: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+details:
+  - analysis: variant2
+    description: c-tumor
+    files: [../data/tcga_benchmark/HCC1143-tumor.bam]
+    genome_build: hg19
+    metadata:
+      batch: PairedBatch
+      phenotype: tumor
+    algorithm:
+      aligner: false
+      mark_duplicates: false
+      recalibrate: false
+      realign: false
+      variantcaller: mutect
+      background: normal_panel1

@@ -74,6 +74,43 @@ The most useful modules inside ``bcbio``, ordered by likely interest:
 - ``broad`` -- Code to handle calling Broad tools like GATK and
   Picard, as well as other Java-based programs.
 
+Development infrastructure
+==========================
+
+bcbio-nextgen uses GitHub for code development, and we welcome
+pull requests. GitHub makes it easy to establish custom forks of the
+code and contribute those back. The Biopython documentation has great
+information on `using git and GitHub`_ for a community developed
+project.
+
+The automated bcbio-nextgen installer creates an isolated Python
+environment using `Anaconda`_. This will be a subdirectory of your
+installation root, like ``/usr/local/share/bcbio_nextgen/anaconda``.
+You can manually use the ``bin/python`` within this subdirectory, or
+setup a Python virtual environment management system like
+`virtualenv-burrito`_ or `Python Env Wrapper`_ to switch in and out of
+this environment.
+
+You generally will want to make changes to your local copy of the
+bcbio-nextgen code and then install these into the code directory
+using ``/path/to/anaconda/bin/python setup.py install``. One tricky
+part that I don't yet know how to work around is that pip and standard
+``setup.py install`` have different ideas about how to write Python
+eggs. ``setup.py install`` will create an isolated python egg
+directory like ``bcbio_nextgen-0.7.5a-py2.7.egg``, while pip creates
+an egg pointing to a top level ``bcbio`` directory. Where this gets
+tricky is that the top level ``bcbio`` directory takes precedence. The
+best way to work around this problem is to manually remove the current
+pip installed bcbio-nextgen code (``rm -rf /path/to/anaconda/lib/python2.7/site-packages/bcbio*``)
+before managing it manually with ``python setup.py install``. We'd
+welcome tips about ways to force consistent installation across
+methods.
+
+.. _using git and GitHub: http://biopython.org/wiki/GitUsage
+.. _Anaconda: http://docs.continuum.io/anaconda/index.html
+.. _virtualenv-burrito: https://github.com/brainsik/virtualenv-burrito
+.. _Python Env Wrapper: https://github.com/berdario/invewrapper
+
 Adding tools
 ============
 
@@ -81,24 +118,18 @@ Aligner
 ~~~~~~~
 Write new aligners within their own submodule inside the ``ngsalign``
 directory. `bwa.py`_ is a good example to follow along with. There are
-three functions to implement, based on which type of alignment you'd
+two functions to implement, based on which type of alignment you'd
 like to allow:
 
 - ``align_bam`` -- Performs alignment given an input BAM file.
   Expected to return a sorted BAM output file.
 
-- ``align_pipe`` -- Performs alignment given FASTQ inputs (gzipped or
-  not). Expected to implemented an approach with unix-pipe that
-  minimizes intermediates and disk IO. Expected to return a sorted BAM
-  output file.
+- ``align`` -- Performs alignment given FASTQ inputs (gzipped or not). This is
+  generally expected to implement an approach with unix-pipe that minimizes
+  intermediates and disk IO, returning a sorted BAM output file. For
+  back-compatibility this can also return a text based SAM file.
 
-- ``align`` -- Performs alignment given FASTQ inputs, returning a text
-  based SAM file.
-
-``align_bam`` and ``align_pipe`` are most commonly used now, which
-``align`` provides functionality for older aligners that do not easily
-support a piped approach. See the :ref:`names-codedetails` section for more
-details on arguments.
+See the :ref:`names-codedetails` section for more details on arguments.
 
 Other required implementation details include:
 
@@ -198,19 +229,19 @@ step, but some of the most useful key/values available throughout are:
   inputs.
 - ``metadata`` -- Top level metadata associated with a sample, specified
   in the initial configuration.
+- ``genome_resources`` -- Naming aliases and associated files
+  associated with the current genome build. Retrieved from organism
+  specific configuration files (``buildname-resources.yaml``) this
+  specifies the location of supplemental organism specific files like
+  support files for variation and RNA-seq analysis.
 
 It also contains information the genome build, sample name and
 reference genome file throughout. Here's an example of these inputs::
 
     {'config': {'algorithm': {'aligner': 'bwa',
-                              'bc_illumina_no_trailing': True,
-                              'bc_mismatch': 2,
-                              'bc_position': 3,
-                              'bc_read': 1,
                               'callable_regions': 'analysis_blocks.bed',
                               'coverage_depth': 'low',
                               'coverage_interval': 'regional',
-                              'dbsnp': 'variation/dbsnp_132.vcf',
                               'mark_duplicates': 'samtools',
                               'max_errors': 2,
                               'nomap_split_size': 50,
@@ -221,10 +252,6 @@ reference genome file throughout. Here's an example of these inputs::
                               'realign': 'gkno',
                               'recalibrate': 'gatk',
                               'save_diskspace': True,
-                              'snpcall': True,
-                              'train_1000g_omni': 'variation/1000G_omni2.5.vcf',
-                              'train_hapmap': 'variation/hapmap_3.3.vcf',
-                              'train_indels': 'variation/Mills_Devine_2hit.indels.vcf',
                               'upload_fastq': False,
                               'validate': '../reference_material/7_100326_FC6107FAAXX-grade.vcf',
                               'variant_regions': '../data/automated/variant_regions-bam.bed',
@@ -251,9 +278,19 @@ reference genome file throughout. Here's an example of these inputs::
                               'ucsc_bigwig': {'memory': '36g'},
                               'varscan': {'dir': '/usr/share/java/varscan'},
                               'vcftools': {'dir': '~/install/vcftools_0.1.9'}}},
+    'genome_resources': {'aliases': {'ensembl': 'human',
+                                      'human': True,
+                                      'snpeff': 'hg19'},
+                          'rnaseq': {'transcripts': '/path/to/rnaseq/ref-transcripts.gtf',
+                                     'transcripts_mask': '/path/to/rnaseq/ref-transcripts-mask.gtf'},
+                          'variation': {'dbsnp': '/path/to/variation/dbsnp_132.vcf',
+                                        'train_1000g_omni': '/path/to/variation/1000G_omni2.5.vcf',
+                                        'train_hapmap': '/path/to/hg19/variation/hapmap_3.3.vcf',
+                                        'train_indels': '/path/to/variation/Mills_Devine_2hit.indels.vcf'},
+                          'version': 1},
      'dirs': {'fastq': 'input fastq directory',
-              'galaxy': 'directory with galaxy loc and other files',
-              'work': 'base work directory'},
+                  'galaxy': 'directory with galaxy loc and other files',
+                  'work': 'base work directory'},
      'metadata': {'batch': 'TestBatch1'},
      'genome_build': 'hg19',
      'name': ('', 'Test1'),
@@ -270,7 +307,7 @@ additional information supplied during a variant calling workflow::
                              ('Pair duplicates', '0', '(0.0\\%)'),
                              ('Insert size', '152.2', '+/- 31.4')],
                  'pdf': '7_100326_FC6107FAAXX-sort-prep-summary.pdf',
-                 'project': 'project-summary.csv'},
+                 'project': 'project-summary.yaml'},
      'validate': {'concordant': 'Test1-ref-eval-concordance.vcf',
                   'discordant': 'Test1-eval-ref-discordance-annotate.vcf',
                   'grading': 'validate-grading.yaml',
@@ -282,3 +319,103 @@ additional information supplied during a variant calling workflow::
                    'vrn_file': '7_100326_FC6107FAAXX-sort-variants-gatkann-filter-effects.vcf'}],
      'vrn_file': '7_100326_FC6107FAAXX-sort-variants-gatkann-filter-effects.vcf',
      'work_bam': '7_100326_FC6107FAAXX-sort-prep.bam'}
+
+Parallelization framework
+=========================
+
+bcbio-nextgen supports parallel runs on local machines using multiple cores and
+distributed on a cluster using IPython using a general framework.
+
+The first parallelization step starts up a set of resources for processing. On a
+cluster this spawns a IPython parallel controller and set of engines for
+processing. The `prun (parallel run)`_ ``start`` function is the entry point to
+spawning the cluster and the main argument is a ``parallel`` dictionary which
+contains arguments to the engine processing command. Here is an example input
+from an IPython parallel run::
+
+    {'cores': 12,
+     'type': 'ipython'
+     'progs': ['aligner', 'gatk'],
+     'ensure_mem': {'star': 30, 'tophat': 8, 'tophat2': 8},
+     'module': 'bcbio.distributed',
+     'queue': 'batch',
+     'scheduler': 'torque',
+     'resources': [],
+     'retries': 0,
+     'tag': '',
+     'timeout': 15}
+
+The ``cores`` and ``type`` arguments must be present, identifying the total
+cores to use and type of processing, respectively. Following that are arguments
+to help identify the resources to use. ``progs`` specifies the programs used,
+here the aligner, which bcbio looks up from the input sample file, and
+gatk. ``ensure_mem`` is an optional argument that specifies minimum memory
+requirements to programs if used in the workflow. The remaining
+arguments are all specific to IPython to help it spin up engines on the
+appropriate computing cluster.
+
+A shared component of all processing runs is the identification of used programs
+from the ``progs`` argument. The run creation process looks up required memory
+and CPU resources for each program from the :ref:`config-resources` section of
+your ``bcbio_system.yaml`` file. It combines these resources into required
+memory and cores using the logic described in the :ref:`memory-management`
+section of the parallel documentation. Passing these requirements to the cluster
+creation process ensures the available machines match program requirements.
+
+bcbio-nextgen's `pipeline.main`_ code contains examples of starting and using
+set of available processing engines. This example starts up machines that use
+samtools, gatk and cufflinks then runs an RNA-seq expression analysis::
+
+    with prun.start(_wprogs(parallel, ["samtools", "gatk", "cufflinks"]),
+                    samples, config, dirs, "rnaseqcount") as run_parallel:
+        samples = rnaseq.estimate_expression(samples, run_parallel)
+
+The pipelines often reuse a single set of machines for multiple distributed
+functions to avoid the overhead of starting up and tearing down machines and
+clusters.
+
+The ``run_parallel`` function returned from the ``prun.start`` function enables
+running on jobs in the parallel on the created machines. The `ipython wrapper`_
+code contains examples of implementing this. It is a simple function that takes
+two arguments, the name of the function to run and a set of multiple arguments
+to pass to that function::
+
+    def run(fn_name, items):
+
+The ``items`` arguments need to be strings, lists and dictionaries to allow
+serialization to JSON format. The internals of the run function take care of
+running all of the code in parallel and returning the results back to the caller
+function.
+
+In this setup, the main processing code is fully independent from the parallel
+method used so running on a single multicore machine or in parallel on a cluster
+return identical results and require no changes to the logical code defining the
+pipeline.
+
+During re-runs, we avoid the expense of spinning up processing clusters for
+completed tasks using simple checkpoint files in the ``checkpoints_parallel``
+directory. The ``prun.start`` wrapper writes these on completion of processing
+for a group of tasks with the same parallel architecture, and on subsequent runs
+will go through these on the local machine instead of parallelizing. The
+processing code supports these quick re-runs by checking for and avoiding
+re-running of tasks when it finds output files.
+
+Plugging new parallelization approaches into this framework involves writing
+interface code that handles the two steps. First, create a cluster of ready to
+run machines given the ``parallel`` function with expected core and memory
+utilization:
+
+- ``num_jobs`` -- Total number of machines to start.
+- ``cores_per_job`` -- Number of cores available on each machine.
+- ``mem`` -- Expected memory needed for each machine. Divide by ``cores_per_job`` to
+  get the memory usage per core on a machine.
+
+Second, implement a ``run_parallel`` function that handles using these resources
+to distribute jobs and return results. The `multicore wrapper`_ and
+`ipython wrapper`_ are useful starting points for understanding the current
+implementations.
+
+.. _prun (parallel run): https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/prun.py
+.. _pipeline.main: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/main.py
+.. _ipython wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/ipython.py
+.. _multicore wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/multi.py

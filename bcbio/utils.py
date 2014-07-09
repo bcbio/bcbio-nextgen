@@ -7,6 +7,7 @@ import shutil
 import contextlib
 import itertools
 import functools
+import random
 import ConfigParser
 try:
     from concurrent import futures
@@ -170,9 +171,9 @@ def curdir_tmpdir(remove=True, base_dir=None):
     safe_makedir(tmp_dir_base)
     tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
     safe_makedir(tmp_dir)
-    try :
+    try:
         yield tmp_dir
-    finally :
+    finally:
         if remove:
             try:
                 shutil.rmtree(tmp_dir)
@@ -188,9 +189,9 @@ def chdir(new_dir):
     cur_dir = os.getcwd()
     safe_makedir(new_dir)
     os.chdir(new_dir)
-    try :
+    try:
         yield
-    finally :
+    finally:
         os.chdir(cur_dir)
 
 @contextlib.contextmanager
@@ -251,6 +252,28 @@ def add_full_path(dirname, basedir=None):
         dirname = os.path.join(basedir, dirname)
     return dirname
 
+def splitext_plus(f):
+    """Split on file extensions, allowing for zipped extensions.
+    """
+    base, ext = os.path.splitext(f)
+    if ext in [".gz", ".bz2", ".zip"]:
+        base, ext2 = os.path.splitext(base)
+        ext = ext2 + ext
+    return base, ext
+
+def symlink_plus(orig, new):
+    """Create relative symlinks and handle associated biological index files.
+    """
+    for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
+        if os.path.exists(orig + ext) and not os.path.lexists(new + ext):
+            with chdir(os.path.dirname(new)):
+                os.symlink(os.path.relpath(orig + ext), os.path.basename(new + ext))
+    orig_noext = splitext_plus(orig)[0]
+    new_noext = splitext_plus(new)[0]
+    for sub_ext in [".bai"]:
+        if os.path.exists(orig_noext + sub_ext) and not os.path.lexists(new_noext + sub_ext):
+            with chdir(os.path.dirname(new_noext)):
+                os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
 
 def append_stem(to_transform, word):
     """
@@ -261,13 +284,9 @@ def append_stem(to_transform, word):
 
     """
     if is_sequence(to_transform):
-        transformed = []
-        for f in to_transform:
-            (base, ext) = os.path.splitext(f)
-            transformed.append("".join([base, word, ext]))
-        return transformed
+        return [append_stem(f, word) for f in to_transform]
     elif is_string(to_transform):
-        (base, ext) = os.path.splitext(to_transform)
+        (base, ext) = splitext_plus(to_transform)
         return "".join([base, word, ext])
     else:
         raise ValueError("append_stem takes a single filename as a string or "
@@ -306,7 +325,13 @@ def partition_all(n, iterable):
         if not chunk:
             break
         yield chunk
-        
+
+def partition(pred, iterable):
+    'Use a predicate to partition entries into false entries and true entries'
+    # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
+    t1, t2 = itertools.tee(iterable)
+    return itertools.ifilterfalse(pred, t1), itertools.ifilter(pred, t2)
+
 # ## Dealing with configuration files
 
 def merge_config_files(fnames):
@@ -464,3 +489,32 @@ def which(program):
                 return exe_file
 
     return None
+
+def reservoir_sample(stream, num_items, item_parser=lambda x: x):
+    """
+    samples num_items from the stream keeping each with equal probability
+    """
+    kept = []
+    for index, item in enumerate(stream):
+        if index < num_items:
+            kept.append(item_parser(item))
+        else:
+            r = random.randint(0, index)
+            if r < num_items:
+                kept[r] = item_parser(item)
+    return kept
+
+
+def compose(f, g):
+    return lambda x: f(g(x))
+
+def dictapply(d, fn):
+    """
+    apply a function to all non-dict values in a dictionary
+    """
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = dictapply(v, fn)
+        else:
+            d[k] = fn(v)
+    return d

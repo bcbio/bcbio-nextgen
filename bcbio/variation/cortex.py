@@ -18,12 +18,12 @@ import pysam
 from Bio import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
-from bcbio import broad
+from bcbio import bam
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.utils import file_exists, safe_makedir
-from bcbio.variation.genotype import write_empty_vcf
+from bcbio.variation import vcfutils
 
 def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
                out_file=None):
@@ -34,7 +34,6 @@ def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
         config = items[0]["config"]
     else:
         raise NotImplementedError("Need to add multisample calling for cortex_var")
-    broad_runner = broad.runner_from_config(config)
     if out_file is None:
         out_file = "%s-cortex.vcf" % os.path.splitext(align_bam)[0]
     if region is not None:
@@ -43,7 +42,7 @@ def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
     else:
         work_dir = os.path.dirname(out_file)
     if not file_exists(out_file):
-        broad_runner.run_fn("picard_index", align_bam)
+        bam.index(align_bam, config)
         variant_regions = config["algorithm"].get("variant_regions", None)
         if not variant_regions:
             raise ValueError("Only support regional variant calling with cortex_var: set variant_regions")
@@ -58,7 +57,7 @@ def run_cortex(align_bams, items, ref_file, assoc_files, region=None,
             _combine_variants(regional_vcfs, combine_file, ref_file, config)
             _select_final_variants(combine_file, out_file, config)
         else:
-            write_empty_vcf(out_file)
+            vcfutils.write_empty_vcf(out_file)
     return out_file
 
 def _passes_cortex_depth(line, min_depth):
@@ -138,7 +137,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
         if not file_exists(out_file):
             fastq = _get_fastq_in_region(region, align_bam, out_vcf_base)
             if _count_fastq_reads(fastq, min_reads) < min_reads:
-                write_empty_vcf(out_file)
+                vcfutils.write_empty_vcf(out_file)
             else:
                 local_ref, genome_size = _get_local_ref(region, ref_file, out_vcf_base)
                 indexes = _index_local_ref(local_ref, cortex_dir, stampy_dir, kmers)
@@ -150,7 +149,7 @@ def _run_cortex_on_region(region, align_bam, ref_file, work_dir, out_file_base, 
                 if cortex_out:
                     _remap_cortex_out(cortex_out, region, out_file)
                 else:
-                    write_empty_vcf(out_file)
+                    vcfutils.write_empty_vcf(out_file)
     finally:
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
@@ -328,4 +327,5 @@ def _count_fastq_reads(in_fastq, min_reads):
 
 def get_sample_name(align_bam):
     with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
-        return in_pysam.header["RG"][0]["SM"]
+        if "RG" in in_pysam.header:
+            return in_pysam.header["RG"][0]["SM"]

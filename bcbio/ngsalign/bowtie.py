@@ -24,11 +24,12 @@ def _bowtie_args_from_config(config):
     core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
     return core_flags + qual_flags + multi_flags
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
-          extra_args=None, names=None):
+def align(fastq_file, pair_file, ref_file, names, align_dir, data,
+          extra_args=None):
     """Do standard or paired end alignment with bowtie.
     """
-    out_file = os.path.join(align_dir, "%s.sam" % out_base)
+    config = data['config']
+    out_file = os.path.join(align_dir, "%s.sam" % names["lane"])
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             cl = [config_utils.get_program("bowtie", config)]
@@ -48,5 +49,5 @@ def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
                 cl += [fastq_file]
             cl += [tx_out_file]
             cl = [str(i) for i in cl]
-            do.run(cl)
+            do.run(cl, "Running Bowtie on %s and %s." % (fastq_file, pair_file), None)
     return out_file

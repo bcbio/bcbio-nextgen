@@ -97,22 +97,22 @@ def fix_vcf_line(parts, ref_base):
         varinfo[4] = ref
         genotypes = [swap[x] for x in genotypes]
     # reference is on alternate strand
-    elif ref_base != ref and complements[ref] == ref_base:
+    elif ref_base != ref and complements.get(ref) == ref_base:
         varinfo[3] = complements[ref]
-        varinfo[4] = complements[var]
+        varinfo[4] = ",".join([complements[v] for v in var.split(",")])
     # unspecified alternative base
     elif ref_base != ref and var in ["N", "0"]:
         varinfo[3] = ref_base
         varinfo[4] = ref
         genotypes = [swap[x] for x in genotypes]
     # swapped and on alternate strand
-    elif ref_base != ref and complements[var] == ref_base:
+    elif ref_base != ref and complements.get(var) == ref_base:
         varinfo[3] = complements[var]
-        varinfo[4] = complements[ref]
+        varinfo[4] = ",".join([complements[v] for v in ref.split(",")])
         genotypes = [swap[x] for x in genotypes]
     else:
-       print "Did not associate ref {0} with line: {1}".format(
-           ref_base, varinfo)
+        print "Did not associate ref {0} with line: {1}".format(
+            ref_base, varinfo)
     if varinfo is not None:
         return varinfo + genotypes
 

@@ -54,7 +54,7 @@ def _general_snpeff_version(snpeff_file):
     if not file_exists(safe_snpeff):
         with file_transaction(safe_snpeff) as tx_safe:
             with open(snpeff_file) as in_handle:
-                with open(safe_snpeff, "w") as out_handle:
+                with open(tx_safe, "w") as out_handle:
                     for line in in_handle:
                         if line.startswith("##SnpEffVersion"):
                             line = _fix_snpeff_version_line(line, gatk_versions)
@@ -74,22 +74,28 @@ def get_gatk_annotations(config):
         anns += ["DepthOfCoverage"]
     return anns
 
-def annotate_nongatk_vcf(orig_file, bam_file, dbsnp_file, ref_file, config):
+def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
     """Annotate a VCF file with dbSNP and standard GATK called annotations.
     """
-    broad_runner = broad.runner_from_config(config)
     out_file = "%s-gatkann%s" % os.path.splitext(orig_file)
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
+            # Avoid issues with incorrectly created empty GATK index files.
+            # Occurs when GATK cannot lock shared dbSNP database on previous run
+            idx_file = orig_file + ".idx"
+            if os.path.exists(idx_file) and not file_exists(idx_file):
+                os.remove(idx_file)
             annotations = get_gatk_annotations(config)
             params = ["-T", "VariantAnnotator",
                       "-R", ref_file,
-                      "-I", bam_file,
                       "--variant", orig_file,
                       "--dbsnp", dbsnp_file,
                       "--out", tx_out_file,
                       "-L", orig_file]
+            for bam_file in bam_files:
+                params += ["-I", bam_file]
             for x in annotations:
                 params += ["-A", x]
-            broad_runner.run_gatk(params)
+            broad_runner = broad.runner_from_config(config)
+            broad_runner.run_gatk(params, memory_retry=True)
     return out_file
