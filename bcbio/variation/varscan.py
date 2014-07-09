@@ -380,7 +380,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
 def _clean_varscan_line(line):
     """Avoid lines with non-GATC bases, ambiguous output bases make GATK unhappy.
     """
-    if not line.startswith("#"):
+    if line and not line.startswith("#"):
         parts = line.split("\t")
         alleles = [x.strip() for x in parts[4].split(",")] + [parts[3].strip()]
         for a in alleles:
