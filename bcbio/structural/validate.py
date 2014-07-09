@@ -5,12 +5,15 @@ a set of known regions.  Requires any overlap between ensemble set and
 known regions, and removes regions from analysis that overlap with
 exclusion regions.
 """
+import csv
 
 import toolz as tz
 try:
     import pybedtools
 except ImportError:
     pybedtools = None
+
+from bcbio import utils
 
 def _stat_str(x, n):
     return "%.1f%% (%s / %s)" % (float(x) / float(n) * 100.0, x, n)
@@ -24,25 +27,29 @@ def _evaluate_one(caller, svtype, ensemble, truth, exclude):
                 return True
         return False
     exfeats = pybedtools.BedTool(exclude)
-    efeats = pybedtools.BedTool(ensemble).filter(is_caller_svtype).intersect(exfeats, v=True, f=0.25, r=True).saveas()
-    tfeats = pybedtools.BedTool(truth).intersect(exfeats, v=True, f=0.25, r=True)
+    efeats = pybedtools.BedTool(ensemble).filter(is_caller_svtype).intersect(exfeats, v=True, f=0.50, r=True).saveas()
+    tfeats = pybedtools.BedTool(truth).intersect(exfeats, v=True, f=0.50, r=True)
     etotal = len(set(efeats))
     ttotal = len(set(tfeats))
     match = len(set(efeats.intersect(tfeats)))
     return {"sensitivity": _stat_str(match, ttotal),
-            "specificity": _stat_str(match, etotal)}
+            "precision": _stat_str(match, etotal)}
 
 def _evaluate_multi(callers, truth_svtypes, ensemble, exclude):
-    for svtype, truth in truth_svtypes.items():
-        for caller in callers:
-            evalout = _evaluate_one(caller, svtype, ensemble, truth, exclude)
-            print caller, svtype, evalout
+    out_file = "%s-validate.csv" % utils.splitext_plus(ensemble)[0]
+    with open(out_file, "w") as out_handle:
+        writer = csv.writer(out_handle)
+        writer.writerow(["svtype", "caller", "sensitivity", "precision"])
+        for svtype, truth in truth_svtypes.items():
+            for caller in callers:
+                evalout = _evaluate_one(caller, svtype, ensemble, truth, exclude)
+                writer.writerow([svtype, caller, evalout["sensitivity"], evalout["precision"]])
+    return out_file
 
 def evaluate(data, sv_calls):
     """Provide evaluations for multiple callers split by structural variant type.
     """
     truth_sets = tz.get_in(["config", "algorithm", "svvalidate"], data)
-    print truth_sets
     ensemble_callsets = [(i, x) for (i, x) in enumerate(sv_calls) if x["variantcaller"] == "ensemble"]
     if truth_sets and len(ensemble_callsets) > 0:
         callers = [x["variantcaller"] for x in sv_calls]

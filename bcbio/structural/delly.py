@@ -79,7 +79,7 @@ def prepare_exclude_file(items, base_file, chrom=None):
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
                 if len(want_bedtool) > 0:
-                    full_bedtool.subtract(want_bedtool).merge(d=1000).saveas(tx_out_file)
+                    full_bedtool.subtract(want_bedtool).saveas(tx_out_file)
                 else:
                     full_bedtool.saveas(tx_out_file)
     return out_file

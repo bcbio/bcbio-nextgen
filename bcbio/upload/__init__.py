@@ -127,6 +127,11 @@ def _maybe_add_sv(algorithm, sample, out):
                             "type": "bed",
                             "ext": "%s-sample" % svcall["variantcaller"],
                             "variantcaller": svcall["variantcaller"]})
+            if "validate" in svcall:
+                out.append({"path": svcall["validate"],
+                            "type": "csv",
+                            "ext": "%s-validate" % svcall["variantcaller"],
+                            "variantcaller": svcall["variantcaller"]})
     return out
 
 def _get_variant_file(x, key):
