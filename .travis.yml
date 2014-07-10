@@ -7,7 +7,7 @@ install:
     - pip install pyyaml --use-mirrors # Required by the installer
     - sudo apt-get install --yes git libz-dev unzip libssl-dev
     - wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-    - python bcbio_nextgen_install.py /usr/local /usr/local/share/bcbio-nextgen
+    - python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local  --distribution ubuntu --nodata
 
 notifications:
     email: false
