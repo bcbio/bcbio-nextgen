@@ -6,12 +6,14 @@ from bcbio import utils
 import os
 import time
 
+from nose.plugins.attrib import attr
 
 class Utils(unittest.TestCase):
 
     def setUp(self):
         self.out_dir = tempfile.mkdtemp()
 
+    @attr("unit")
     def test_transform_to(self):
         in_file = "test.sam"
         out_file = "test.bam"
@@ -24,6 +26,7 @@ class Utils(unittest.TestCase):
         self.assertTrue(f(in_file, out_dir=self.out_dir) ==
                         os.path.join(self.out_dir, out_file))
 
+    @attr("unit")
     def test_filter_to(self):
         in_file = "test.sam"
         out_file = "test_sorted.sam"
@@ -36,6 +39,7 @@ class Utils(unittest.TestCase):
         self.assertTrue(f(in_file, out_dir=self.out_dir) ==
                         os.path.join(self.out_dir, out_file))
 
+    @attr("unit")
     def test_memoize_outfile_ext(self):
         temp_file = tempfile.NamedTemporaryFile(dir=self.out_dir,
                                                 suffix=".sam")
@@ -48,6 +52,7 @@ class Utils(unittest.TestCase):
             return self._write_word(out_file, word)
         self._run_calls_no_dir(f, temp_file, word)
 
+    @attr("unit")
     def test_memoize_outfile_stem(self):
         temp_file = tempfile.NamedTemporaryFile(dir=self.out_dir,
                                                 suffix=".sam")
@@ -59,6 +64,7 @@ class Utils(unittest.TestCase):
             return self._write_word(out_file, word)
         self._run_calls_no_dir(f, temp_file, word)
 
+    @attr("unit")
     def test_memoize_outfile_stem_with_dir(self):
         temp_file = tempfile.NamedTemporaryFile(dir=self.out_dir,
                                                 suffix=".sam")
@@ -72,6 +78,7 @@ class Utils(unittest.TestCase):
 
         self._run_calls_with_dir(f, temp_file, word, out_dir=temp_dir)
 
+    @attr("unit")
     def test_memoize_outfile_ext_with_dir(self):
         temp_file = tempfile.NamedTemporaryFile(dir=self.out_dir,
                                                 suffix=".sam")
@@ -85,12 +92,14 @@ class Utils(unittest.TestCase):
 
         self._run_calls_with_dir(f, temp_file, word, out_dir=temp_dir)
 
+    @attr("unit")
     def test_replace_suffix_of_string(self):
         test_string = "/string/test/foo.txt"
         correct = "/string/test/foo.bar"
         out_string = utils.replace_suffix(test_string, ".bar")
         self.assertEquals(correct, out_string)
 
+    @attr("unit")
     def test_replace_suffix_of_list(self):
         test_list = ["/list/test/foo.txt", "/list/test/foobar.txt"]
         correct = ["/list/test/foo.bar", "/list/test/foobar.bar"]
@@ -98,12 +107,14 @@ class Utils(unittest.TestCase):
         for c, o in zip(correct, out_list):
             self.assertEquals(c, o)
 
+    @attr("unit")
     def test_append_stem_of_string(self):
         test_string = "/string/test/foo.txt"
         correct = "/string/test/foo_bar.txt"
         out_string = utils.append_stem(test_string, "_bar")
         self.assertEquals(correct, out_string)
 
+    @attr("unit")
     def test_append_stem_of_list(self):
         test_list = ["/list/test/foo.txt", "/list/test/foobar.txt"]
         correct = ["/list/test/foo_bar.txt", "/list/test/foobar_bar.txt"]
@@ -111,12 +122,14 @@ class Utils(unittest.TestCase):
         for c, o in zip(correct, out_list):
             self.assertEquals(c, o)
 
+    @attr("unit")
     def test_replace_directory_of_string(self):
         test_string = "/string/test/foo.txt"
         correct = "/new/dir/foo.txt"
         out_string = utils.replace_directory(test_string, "/new/dir")
         self.assertEquals(correct, out_string)
 
+    @attr("unit")
     def test_replace_directory_of_list(self):
         test_list = ["/list/test/bar.txt", "/list/test/foobar.txt"]
         correct = ["/new/dir/bar.txt", "/new/dir/foobar.txt"]

@@ -9,6 +9,7 @@ import shutil
 CONFIG_FILE = "data/trim_read_through/test_trim_read_through.yaml"
 CORRECT_DIR = "data/trim_read_through/correct"
 
+from nose.plugins.attrib import attr
 
 class TestTrimReadThrough(unittest.TestCase):
 
@@ -31,6 +32,7 @@ class TestTrimReadThrough(unittest.TestCase):
         correct_dir = os.path.join(CORRECT_DIR, "trim_paired")
         return os.path.join(correct_dir, os.path.basename(out_file))
 
+    @attr("unit-broken")
     def test_pairedend(self):
         paired = self.config["input_paired"]
         out_files = trim_read_through(paired, self.config["dir"], self.config)
@@ -38,6 +40,7 @@ class TestTrimReadThrough(unittest.TestCase):
         self.assertTrue(all(map(filecmp.cmp, correct_files, out_files)))
         shutil.rmtree(self.root_work)
 
+    @attr("unit-broken")
     def test_single(self):
         single = self.config["input_single"]
         out_file = trim_read_through(single, self.config["dir"], self.config)
