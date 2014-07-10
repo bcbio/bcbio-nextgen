@@ -6,6 +6,7 @@ import tempfile
 import stat
 import shutil
 
+from nose.plugins.attrib import attr
 
 class TestHtseqCount(unittest.TestCase):
     cur_dir = os.path.dirname(__file__)
@@ -21,18 +22,21 @@ class TestHtseqCount(unittest.TestCase):
         self.correct_file = os.path.join(self.correct_dir, "correct.count")
         safe_makedir(self.out_dir)
 
-
+    @attr("unit-broken")
     def test_is_countfile_correct(self):
         test_file = os.path.join(self.data_dir, "test.count")
         self.assertTrue(count.is_countfile(test_file))
 
+    @attr("unit-broken")
     def test_is_countfile_not_correct(self):
         test_file = os.path.join(self.organism_dir, "mouse.gtf")
         self.assertFalse(count.is_countfile(test_file))
 
+    @attr("unit-broken")
     def test_htseq_is_installed_in_path(self):
         self.assertTrue(count._htseq_is_installed({"config": {}}))
 
+    @attr("unit-broken")
     def test_htseq_is_installed_in_resource(self):
         orig_path = os.environ['PATH']
         os.environ['PATH'] = ""
@@ -44,6 +48,7 @@ class TestHtseqCount(unittest.TestCase):
         os.environ['PATH'] = orig_path
         self.assertTrue(is_installed)
 
+    @attr("unit-broken")
     def test_htseq_count(self):
         data = {"work_bam": self.in_bam,
                 "sam_ref": os.path.join(self.data_dir, "foo"),

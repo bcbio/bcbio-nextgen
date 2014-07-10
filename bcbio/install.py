@@ -58,6 +58,7 @@ def upgrade_bcbio(args):
     if args.tooldir:
         with bcbio_tmpdir():
             print("Upgrading third party tools to latest versions")
+            _symlink_bcbio(args)
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
     if args.install_data:
@@ -73,6 +74,17 @@ def upgrade_bcbio(args):
     _install_container_bcbio_system(args.datadir)
     print("Upgrade completed successfully.")
     return args
+
+def _symlink_bcbio(args):
+    """Ensure bcbio_nextgen.py symlink in final tool directory.
+    """
+    bcbio_anaconda = os.path.join(os.path.dirname(sys.executable), "bcbio_nextgen.py")
+    bcbio_final = os.path.join(args.tooldir, "bin", "bcbio_nextgen.py")
+    sudo_cmd = ["sudo"] if args.sudo else []
+    if not os.path.exists(bcbio_final):
+        if os.path.lexists(bcbio_final):
+            subprocess.check_call(sudo_cmd + ["rm", "-f", bcbio_final])
+        subprocess.check_call(sudo_cmd + ["ln", "-s", bcbio_anaconda, bcbio_final])
 
 def _install_container_bcbio_system(datadir):
     """Install limited bcbio_system.yaml file for setting core and memory usage.
