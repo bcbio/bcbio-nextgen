@@ -171,9 +171,10 @@ class BroadRunner:
         cl += ["--version"]
         p = subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # fix for issue #494
-        p = re.compile('([\d|\.]*)(\(\d*\)$)')  # matches '1.96(1510)'
-        m = p.search(p.stdout.read())
-        self._picard_version = m.group(1)
+        pat = re.compile('([\d|\.]*)(\(\d*\)$)')  # matches '1.96(1510)'
+        m = pat.search(p.stdout.read())
+        version = m.group(1)
+        self._picard_version = version
         p.wait()
         p.stdout.close()
         return version
