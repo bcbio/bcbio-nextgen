@@ -1,0 +1,21 @@
+If you working on the chanjo integration, you can add this code snipet
+to the main.py. That way you are only running chanjo. You will also
+need to provide a valid bam file associated with the 'work_bam' key.
+
+class ChanjoPipeline(AbstractPipeline):
+    """ Test only: This pipeline only calls the coverage tool. It was designed solely
+    to support integration with chanjo. Assumes the bam and bed files exist. 
+    """
+    name = "chanjo"
+
+    @classmethod
+    def run(self, config, config_file, parallel, dirs, samples):
+        with prun.start(_wres(parallel, ["chanjo"]),
+                        samples, config, dirs, "multicore") as run_parallel:
+            with profile.report("coverage", dirs):
+                samples[0][0]['work_bam'] = 'ready.bam'  # Todo: update with valid input
+                samples = coverage.summary(samples, run_parallel)
+        logger.info("Timing: finished")
+        return samples
+
+

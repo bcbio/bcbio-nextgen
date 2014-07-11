@@ -363,23 +363,6 @@ class Variant2Pipeline(AbstractPipeline):
         return samples
 
 
-class ChanjoPipeline(AbstractPipeline):
-    """ Test only: This pipeline only calls the coverage tool. It was designed solely
-    to support integration with chanjo. Assumes the bam and bed files exist. 
-    """
-    name = "chanjo"
-
-    @classmethod
-    def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["chanjo"]),
-                        samples, config, dirs, "multicore") as run_parallel:
-            with profile.report("coverage", dirs):
-                samples[0][0]['work_bam'] = '/mnt/bcbio/jkern/yeast-170/final/ERR302903/ERR302903-ready.bam'
-                samples = coverage.summary(samples, run_parallel)
-        logger.info("Timing: finished")
-        return samples
-
-
 def _debug_samples(i, samples):
     print "---", i, len(samples)
     for sample in (x[0] for x in samples):
