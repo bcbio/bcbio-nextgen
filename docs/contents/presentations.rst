@@ -1,6 +1,14 @@
 Presentations
 =============
 
+- Bioinformatics Open Source Conference (BOSC) 2014: `slides
+  <https://github.com/chapmanb/bcbb/raw/master/talks/bosc2014_bcbio/chapman_bcbio.pdf>`_,
+  `conference website <http://www.open-bio.org/wiki/BOSC_2014`_
+
+- Galaxy Community Conference 2014: `slides
+  <https://github.com/chapmanb/bcbb/raw/master/talks/gcc2014_bcbio/chapman_bcbio.pdf>`_,
+  `conference website <https://wiki.galaxyproject.org/Events/GCC2014>`_
+
 - `bcbio hackathon at Biogen`_ (3 June 2014)
 
 - `Harvard ABCD group slides`_ (17 April 2014)
