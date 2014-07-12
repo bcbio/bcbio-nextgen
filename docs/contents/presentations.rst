@@ -3,7 +3,7 @@ Presentations
 
 - Bioinformatics Open Source Conference (BOSC) 2014: `slides
   <https://github.com/chapmanb/bcbb/raw/master/talks/bosc2014_bcbio/chapman_bcbio.pdf>`_,
-  `conference website <http://www.open-bio.org/wiki/BOSC_2014`_
+  `conference website <http://www.open-bio.org/wiki/BOSC_2014>`_
 
 - Galaxy Community Conference 2014: `slides
   <https://github.com/chapmanb/bcbb/raw/master/talks/gcc2014_bcbio/chapman_bcbio.pdf>`_,
