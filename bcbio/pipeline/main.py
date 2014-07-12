@@ -7,21 +7,19 @@ from collections import defaultdict
 import copy
 import os
 import sys
-import argparse
 import resource
 import tempfile
 
-from bcbio import install, log, structural, utils, upload
-from bcbio.distributed import clargs, prun, runfn
-from bcbio.illumina import flowcell, machine
+from bcbio import log, structural, utils, upload
+from bcbio.distributed import prun
+from bcbio.illumina import flowcell
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
-                            version, rnaseq)
+                            rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
 from bcbio.provenance import diagnostics, programs, profile, system, versioncheck
-from bcbio.server import main as server_main
-from bcbio.variation import coverage, ensemble, genotype, joint, population, validate
+from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -107,143 +105,6 @@ def _add_provenance(items, dirs, parallel, config):
 
 # ## Utility functions
 
-def _sanity_check_args(args):
-    """Ensure dependent arguments are correctly specified
-    """
-    if "scheduler" in args and "queue" in args:
-        if args.scheduler and not args.queue:
-            if args.scheduler != "sge":
-                return "IPython parallel scheduler (-s) specified. This also requires a queue (-q)."
-        elif args.queue and not args.scheduler:
-            return "IPython parallel queue (-q) supplied. This also requires a scheduler (-s)."
-        elif args.paralleltype == "ipython" and (not args.queue or not args.scheduler):
-            return "IPython parallel requires queue (-q) and scheduler (-s) arguments."
-
-def _sanity_check_kwargs(args):
-    """Sanity check after setting up input arguments, handling back compatibility
-    """
-    if not args.get("workflow") and not args.get("run_info_yaml"):
-        return ("Require a sample YAML file describing inputs: "
-                "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html")
-
-def parse_cl_args(in_args):
-    """Parse input commandline arguments, handling multiple cases.
-
-    Returns the main config file and set of kwargs.
-    """
-    sub_cmds = {"upgrade": install.add_subparser,
-                "server": server_main.add_subparser,
-                "runfn": runfn.add_subparser,
-                "version": programs.add_subparser,
-                "sequencer": machine.add_subparser}
-    parser = argparse.ArgumentParser(
-        description="Best-practice pipelines for fully automated high throughput sequencing analysis.")
-    sub_cmd = None
-    if len(in_args) > 0 and in_args[0] in sub_cmds:
-        subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
-        sub_cmds[in_args[0]](subparsers)
-        sub_cmd = in_args[0]
-    else:
-        parser.add_argument("global_config", help="Global YAML configuration file specifying details "
-                            "about the system (optional, defaults to installed bcbio_system.yaml)",
-                            nargs="?")
-        parser.add_argument("fc_dir", help="A directory of Illumina output or fastq files to process (optional)",
-                            nargs="?")
-        parser.add_argument("run_config", help="YAML file with details about samples to process "
-                            "(required, unless using Galaxy LIMS as input)",
-                            nargs="*")
-        parser.add_argument("-n", "--numcores", help="Total cores to use for processing",
-                            type=int, default=1)
-        parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
-                            choices=["local", "ipython"], default="local")
-        parser.add_argument("-s", "--scheduler", help="Scheduler to use for ipython parallel",
-                            choices=["lsf", "sge", "torque", "slurm"])
-        parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
-        parser.add_argument("-r", "--resources",
-                            help=("Cluster specific resources specifications. Can be specified multiple times.\n"
-                                  "Supports SGE, Torque, LSF and SLURM parameters."),
-                            default=[], action="append")
-        parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
-                            default=15, type=int)
-        parser.add_argument("--retries",
-                            help=("Number of retries of failed tasks during distributed processing. "
-                                  "Default 0 (no retries)"),
-                            default=0, type=int)
-        parser.add_argument("-p", "--tag", help="Tag name to label jobs on the cluster",
-                            default="")
-        parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
-        parser.add_argument("--workdir", help="Directory to process in. Defaults to current working directory",
-                            default=os.getcwd())
-        parser.add_argument("-v", "--version", help="Print current version",
-                            action="store_true")
-    args = parser.parse_args(in_args)
-    if hasattr(args, "global_config"):
-        error_msg = _sanity_check_args(args)
-        if error_msg:
-            parser.error(error_msg)
-        kwargs = {"parallel": clargs.to_parallel(args),
-                  "workflow": args.workflow,
-                  "workdir": args.workdir}
-        kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
-        error_msg = _sanity_check_kwargs(kwargs)
-        if error_msg:
-            parser.error(error_msg)
-    else:
-        assert sub_cmd is not None
-        kwargs = {"args": args,
-                  "config_file": None,
-                  sub_cmd: True}
-    return kwargs
-
-def _add_inputs_to_kwargs(args, kwargs, parser):
-    """Convert input system config, flow cell directory and sample yaml to kwargs.
-
-    Handles back compatibility with previous commandlines while allowing flexible
-    specification of input parameters.
-    """
-    inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
-              if x is not None]
-    global_config = "bcbio_system.yaml"  # default configuration if not specified
-    if len(inputs) == 1:
-        if os.path.isfile(inputs[0]):
-            fc_dir = None
-            run_info_yaml = inputs[0]
-        else:
-            fc_dir = inputs[0]
-            run_info_yaml = None
-    elif len(inputs) == 2:
-        if os.path.isfile(inputs[0]):
-            global_config = inputs[0]
-            if os.path.isfile(inputs[1]):
-                fc_dir = None
-                run_info_yaml = inputs[1]
-            else:
-                fc_dir = inputs[1]
-                run_info_yaml = None
-        else:
-            fc_dir, run_info_yaml = inputs
-    elif len(inputs) == 3:
-        global_config, fc_dir, run_info_yaml = inputs
-    elif kwargs.get("workflow", "") == "template":
-        kwargs["inputs"] = inputs
-        return kwargs
-    elif args.version:
-        print version.__version__
-        sys.exit()
-    else:
-        print "Incorrect input arguments", inputs
-        parser.print_help()
-        sys.exit()
-    if fc_dir:
-        fc_dir = os.path.abspath(fc_dir)
-    if run_info_yaml:
-        run_info_yaml = os.path.abspath(run_info_yaml)
-    if kwargs.get("workflow"):
-        kwargs["inputs"] = inputs
-    kwargs["config_file"] = global_config
-    kwargs["fc_dir"] = fc_dir
-    kwargs["run_info_yaml"] = run_info_yaml
-    return kwargs
 
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.
