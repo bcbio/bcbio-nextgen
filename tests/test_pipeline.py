@@ -21,6 +21,7 @@ from test_automated_analysis import get_post_process_yaml, make_workdir
 class RunInfoTest(unittest.TestCase):
     def setUp(self):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data")
+        self.automated_dir = os.path.join(os.path.dirname(__file__), "data", "automated")
 
     @attr(speed=1)
     @attr(blah=True)
@@ -28,7 +29,7 @@ class RunInfoTest(unittest.TestCase):
         """Identify programs and versions used in analysis.
         """
         with make_workdir() as workdir:
-            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            config = load_config(get_post_process_yaml(self.automated_dir, workdir))
             print programs._get_versions(config)
 
 class VCFUtilTest(unittest.TestCase):
@@ -38,6 +39,7 @@ class VCFUtilTest(unittest.TestCase):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data")
         self.var_dir = os.path.join(self.data_dir, "variants")
         self.combo_file = os.path.join(self.var_dir, "S1_S2-combined.vcf.gz")
+        self.automated_dir = os.path.join(os.path.dirname(__file__), "data", "automated")
 
     @attr(speed=1)
     @attr(combo=True)
@@ -47,7 +49,7 @@ class VCFUtilTest(unittest.TestCase):
         files = [os.path.join(self.var_dir, "S1-variants.vcf"), os.path.join(self.var_dir, "S2-variants.vcf")]
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         with make_workdir() as workdir:
-            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            config = load_config(get_post_process_yaml(self.automated_dir, workdir))
             config["algorithm"] = {}
         region_dir = os.path.join(self.var_dir, "S1_S2-combined-regions")
         if os.path.exists(region_dir):
@@ -69,7 +71,7 @@ class VCFUtilTest(unittest.TestCase):
         """
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         with make_workdir() as workdir:
-            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            config = load_config(get_post_process_yaml(self.automated_dir, workdir))
             config["algorithm"] = {}
         out_file = utils.append_stem(self.combo_file, "-exclude")
         to_exclude = ["S1"]
@@ -83,7 +85,7 @@ class VCFUtilTest(unittest.TestCase):
         """Split a VCF file into SNPs and indels, then combine back together.
         """
         with make_workdir() as workdir:
-            config = load_config(get_post_process_yaml(self.data_dir, workdir))
+            config = load_config(get_post_process_yaml(self.automated_dir, workdir))
             config["algorithm"] = {}
         ref_file = os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
         fname = os.path.join(self.var_dir, "S1-variants.vcf")
