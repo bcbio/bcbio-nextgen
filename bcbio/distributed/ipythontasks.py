@@ -9,11 +9,11 @@ from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (archive, config_utils, disambiguate, sample, lane, qcsummary, shared,
-                            variation, rnaseq)
+from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
+                            qcsummary, shared, variation, rnaseq)
 from bcbio.provenance import system
-from bcbio.variation import (bamprep, coverage, genotype, ensemble, joint, multi, population,
-                             recalibrate, validate, vcfutils)
+from bcbio.variation import (bamprep, coverage, genotype, ensemble, joint,
+                             multi, population, recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
 
 @contextlib.contextmanager
@@ -43,17 +43,17 @@ def _setup_logging(args):
         if hasattr(handler, "close"):
             handler.close()
 
-@require(lane)
-def process_lane(*args):
+@require(sample)
+def prepare_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(lane.process_lane, *args), config)
+        return ipython.zip_args(apply(sample.prepare_sample, *args), config)
 
-@require(lane)
-def trim_lane(*args):
+@require(sample)
+def trim_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(lane.trim_lane, *args), config)
+        return ipython.zip_args(apply(sample.trim_sample, *args), config)
 
 @require(sailfish)
 def run_sailfish(*args):
@@ -61,11 +61,11 @@ def run_sailfish(*args):
     with _setup_logging(args):
         return apply(sailfish.run_sailfish, *args)
 
-@require(lane)
+@require(sample)
 def process_alignment(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(lane.process_alignment, *args), config)
+        return ipython.zip_args(apply(sample.process_alignment, *args), config)
 
 @require(alignprep)
 def prep_align_inputs(*args):
@@ -73,11 +73,11 @@ def prep_align_inputs(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(alignprep.create_inputs, *args), config)
 
-@require(lane)
+@require(sample)
 def postprocess_alignment(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(lane.postprocess_alignment, *args), config)
+        return ipython.zip_args(apply(sample.postprocess_alignment, *args), config)
 
 @require(sample)
 def merge_sample(*args):

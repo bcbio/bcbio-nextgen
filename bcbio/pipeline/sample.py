@@ -6,34 +6,150 @@ processed together.
 import copy
 import os
 
-from bcbio import utils
+from bcbio import utils, bam, broad
 from bcbio.log import logger
-from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
-from bcbio.pipeline import config_utils
+from bcbio.pipeline.merge import merge_bam_files
+from bcbio.bam import callable, fastq
+from bcbio.bam.trim import trim_adapters
+from bcbio.ngsalign import postalign
+from bcbio.pipeline.fastq import get_fastq_files
+from bcbio.pipeline.alignment import align_to_sort_bam
+from bcbio.pipeline import cleanbam
+from bcbio.variation import bedutils, recalibrate
+from bcbio.variation import multi as vmulti
 
-# ## Merging
 
-def merge_sample(data):
-    """Merge fastq and BAM files for multiple samples.
+def prepare_sample(data):
+    """Prepare a sample to be run, potentially converting from BAM to
+    FASTQ and/or downsampling the number of reads for a test run
     """
-    logger.debug("Combining fastq and BAM files %s" % str(data["name"]))
-    config = config_utils.update_w_custom(data["config"], data["info"])
-    if config["algorithm"].get("upload_fastq", False):
-        fastq1, fastq2 = combine_fastq_files(data["fastq_files"], data["dirs"]["work"],
-                                             config)
-    else:
-        fastq1, fastq2 = None, None
+    NUM_DOWNSAMPLE = 10000
+    logger.debug("Preparing %s" % item["rgnames"]["sample"])
+    file1, file2 = get_fastq_files(data)
+    if item.get("test_run", False):
+        if bam.is_bam(file1):
+            file1 = bam.downsample(file1, data, NUM_DOWNSAMPLE)
+            file2 = None
+        else:
+            file1, file2 = fastq.downsample(file1, file2, data,
+                                            NUM_DOWNSAMPLE, quick=True)
+    data["files"] = [file1, file2]
+    return [[data]]
 
-    out_file = os.path.join(data["dirs"]["work"],
-                            data["info"]["rgnames"]["sample"] + ".bam")
-    sort_bam = merge_bam_files(data["bam_files"], data["dirs"]["work"],
-                               config, out_file=out_file)
-    return [[{"name": data["name"], "metadata": data["info"].get("metadata", {}),
-              "info": data["info"],
-              "genome_build": data["genome_build"], "sam_ref": data["sam_ref"],
-              "work_bam": sort_bam, "fastq1": fastq1, "fastq2": fastq2,
-              "dirs": data["dirs"], "config": config,
-              "config_file": data["config_file"]}]]
+def trim_sample(data):
+    """Trim from a sample with the provided trimming method.
+    Support methods: read_through.
+    """
+    to_trim = [x for x in data["files"] if x is not None]
+    dirs = data["dirs"]
+    config = data["config"]
+    # this block is to maintain legacy configuration files
+    trim_reads = config["algorithm"].get("trim_reads", False)
+    if not trim_reads:
+        logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
+        return [[data]]
+
+    if trim_reads == "read_through":
+        logger.info("Trimming low quality ends and read through adapter "
+                    "sequence from %s." % (", ".join(to_trim)))
+        out_files = trim_adapters(to_trim, dirs, config)
+    item["files"] = out_files
+    return [[data]]
+
+# ## Alignment
+
+def link_bam_file(orig_file, new_dir):
+    """Provide symlinks of BAM file and existing indexes.
+    """
+    new_dir = utils.safe_makedir(new_dir)
+    sym_file = os.path.join(new_dir, os.path.basename(orig_file))
+    utils.symlink_plus(orig_file, sym_file)
+    return sym_file
+
+def _add_supplemental_bams(data):
+    """Add supplemental files produced by alignment, useful for structural
+    variant calling.
+    """
+    file_key = "work_bam"
+    if data.get(file_key):
+        for supext in ["disc", "sr"]:
+            base, ext = os.path.splitext(data[file_key])
+            test_file = "%s-%s%s" % (base, supext, ext)
+            if os.path.exists(test_file):
+                sup_key = file_key + "-plus"
+                if not sup_key in data:
+                    data[sup_key] = {}
+                data[sup_key][supext] = test_file
+    return data
+
+def process_alignment(data):
+    """Do an alignment of fastq files, preparing a sorted BAM output file.
+    """
+    if "files" not in data:
+        fastq1, fastq2 = None, None
+    elif len(data["files"]) == 2:
+        fastq1, fastq2 = data["files"]
+    else:
+        assert len(data["files"]) == 1, data["files"]
+        fastq1, fastq2 = data["files"][0], None
+    config = data["config"]
+    aligner = config["algorithm"].get("aligner", None)
+    if fastq1 and os.path.exists(fastq1) and aligner:
+        logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
+        data = align_to_sort_bam(fastq1, fastq2, aligner, data)
+        data = _add_supplemental_bams(data)
+    elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".bam"):
+        sort_method = config["algorithm"].get("bam_sort")
+        bamclean = config["algorithm"].get("bam_clean")
+        if bamclean is True or bamclean == "picard":
+            if sort_method and sort_method != "coordinate":
+                raise ValueError("Cannot specify `bam_clean: picard` with `bam_sort` other than coordinate: %s"
+                                 % sort_method)
+            out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], data["sam_ref"], data["dirs"],
+                                           config)
+        elif sort_method:
+            runner = broad.runner_from_config(config)
+            out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
+                os.path.splitext(os.path.basename(fastq1))[0]))
+            out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
+        else:
+            out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
+                                                         data["rgnames"]["sample"]))
+        bam.check_header(out_bam, data["rgnames"], data["sam_ref"], data["config"])
+        dedup_bam = postalign.dedup_bam(out_bam, data)
+        data["work_bam"] = dedup_bam
+    elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".cram"):
+        data["work_bam"] = fastq1
+    elif fastq1 is None and "vrn_file" in data:
+        data["config"]["algorithm"]["variantcaller"] = False
+        data["work_bam"] = None
+    else:
+        raise ValueError("Could not process input file: %s" % fastq1)
+    return [[data]]
+
+def postprocess_alignment(data):
+    """Perform post-processing steps required on full BAM files.
+    Prepares list of callable genome regions allowing subsequent parallelization.
+    Cleans input BED files to avoid issues with overlapping input segments.
+    """
+    data = bedutils.clean_inputs(data)
+    if vmulti.bam_needs_processing(data):
+        callable_region_bed, nblock_bed, callable_bed = \
+            callable.block_regions(data["work_bam"], data["sam_ref"], data["config"])
+        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed}
+        if (os.path.exists(callable_region_bed) and
+                not data["config"]["algorithm"].get("variant_regions")):
+            data["config"]["algorithm"]["variant_regions"] = callable_region_bed
+            data = bedutils.clean_inputs(data)
+        data = _recal_no_markduplicates(data)
+    return [data]
+
+def _recal_no_markduplicates(data):
+    orig_config = copy.deepcopy(data["config"])
+    data["config"]["algorithm"]["mark_duplicates"] = False
+    data = recalibrate.prep_recal(data)[0][0]
+    data["config"] = orig_config
+    return data
 
 def delayed_bam_merge(data):
     """Perform a merge on previously prepped files, delayed in processing.

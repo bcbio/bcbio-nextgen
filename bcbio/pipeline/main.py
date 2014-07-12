@@ -73,7 +73,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     dirs = setup_directories(work_dir, fc_dir, config, config_file)
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     samples = run_info.organize(dirs, config, run_info_yaml)
-    pipelines = _pair_lanes_with_pipelines(samples)
+    pipelines = _pair_samples_with_pipelines(samples)
     final = []
     with utils.curdir_tmpdir({"config": config}) as tmpdir:
         tempfile.tempdir = tmpdir
@@ -292,7 +292,7 @@ class AbstractPipeline:
         return
 
     @abc.abstractmethod
-    def run(self, config, config_file, parallel, dirs, lanes):
+    def run(self, config, config_file, parallel, dirs, samples):
         return
 
 class Variant2Pipeline(AbstractPipeline):
@@ -385,12 +385,12 @@ class StandardPipeline(AbstractPipeline):
     """
     name = "Standard"
     @classmethod
-    def run(self, config, config_file, parallel, dirs, lane_items):
+    def run(self, config, config_file, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with prun.start(_wres(parallel, ["aligner"]),
-                        lane_items, config, dirs, "multicore") as run_parallel:
+                        samples, config, dirs, "multicore") as run_parallel:
             with profile.report("alignment", dirs):
-                samples = run_parallel("process_alignment", lane_items)
+                samples = run_parallel("process_alignment", samples)
             with profile.report("callable regions", dirs):
                 samples = run_parallel("postprocess_alignment", samples)
                 samples = run_parallel("combine_sample_regions", [samples])
@@ -414,8 +414,8 @@ class SailfishPipeline(AbstractPipeline):
         with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
                         samples, config, dirs, "trimming") as run_parallel:
             with profile.report("adapter trimming", dirs):
-                samples = run_parallel("process_lane", samples)
-                samples = run_parallel("trim_lane", samples)
+                samples = run_parallel("prepare_sample", samples)
+                samples = run_parallel("trim_sample", samples)
             with prun.start(_wres(parallel, ["sailfish"]), samples, config, dirs,
                             "sailfish") as run_parallel:
                 with profile.report("sailfish", dirs):
@@ -430,8 +430,8 @@ class RnaseqPipeline(AbstractPipeline):
         with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
                         samples, config, dirs, "trimming") as run_parallel:
             with profile.report("adapter trimming", dirs):
-                samples = run_parallel("process_lane", samples)
-                samples = run_parallel("trim_lane", samples)
+                samples = run_parallel("prepare_sample", samples)
+                samples = run_parallel("trim_sample", samples)
         with prun.start(_wres(parallel, ["aligner", "picard"],
                               ensure_mem={"tophat": 8, "tophat2": 8, "star": 40}),
                         samples, config, dirs, "multicore",
@@ -463,8 +463,8 @@ class ChipseqPipeline(AbstractPipeline):
         with prun.start(_wres(parallel, ["aligner", "picard"]),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            samples = run_parallel("process_lane", samples)
-            samples = run_parallel("trim_lane", samples)
+            samples = run_parallel("prepare_sample", samples)
+            samples = run_parallel("trim_sample", samples)
             samples = disambiguate.split(samples)
             samples = run_parallel("process_alignment", samples)
         with prun.start(_wres(parallel, ["picard", "fastqc"]),
@@ -485,8 +485,8 @@ def _get_pipeline(item):
     else:
         return SUPPORTED_PIPELINES[analysis_type]
 
-def _pair_lanes_with_pipelines(lane_items):
-    paired = [(x, _get_pipeline(x)) for x in lane_items]
+def _pair_samples_with_pipelines(samples):
+    paired = [(x, _get_pipeline(x)) for x in samples]
     d = defaultdict(list)
     for x in paired:
         d[x[1]].append(x[0])

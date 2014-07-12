@@ -4,7 +4,7 @@ from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (archive, disambiguate, lane, qcsummary, sample,
+from bcbio.pipeline import (archive, disambiguate, qcsummary, sample,
                             shared, variation, rnaseq)
 from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble,
                              joint, multi, population, recalibrate, validate,
@@ -15,20 +15,20 @@ def run_sailfish(*args):
     return sailfish.run_sailfish(*args)
 
 @utils.map_wrap
-def process_lane(*args):
-    return lane.process_lane(*args)
+def prepare_sample(*args):
+    return sample.prepare_sample(*args)
 
 @utils.map_wrap
-def trim_lane(*args):
-    return lane.trim_lane(*args)
+def trim_sample(*args):
+    return sample.trim_sample(*args)
 
 @utils.map_wrap
 def process_alignment(*args):
-    return lane.process_alignment(*args)
+    return sample.process_alignment(*args)
 
 @utils.map_wrap
 def postprocess_alignment(*args):
-    return lane.postprocess_alignment(*args)
+    return sample.postprocess_alignment(*args)
 
 @utils.map_wrap
 def prep_align_inputs(*args):
