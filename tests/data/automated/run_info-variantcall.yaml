@@ -17,6 +17,7 @@ details:
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
         trusted_pct: 0.65
       quality_format: Standard
+      tools_off: [gemini]
       coverage_interval: regional
       trim_reads: true
       align_split_size: 9000

@@ -31,7 +31,7 @@ details:
       #effects: vep
       #svcaller: [delly, lumpy, cn.mops]
       #remove_lcr: true
-      #tools_off: gemini
+      tools_off: [gemini]
       #variantcaller: [gatk, gatk-haplotype]
       quality_format: Standard
       nomap_split_size: 50
