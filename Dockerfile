@@ -26,10 +26,14 @@ RUN git config --global url.https://github.com/.insteadOf git://github.com/ && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
       --nosudo --nodata -u development
 RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --tooldir=/usr/local --tools
-RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data 
-RUN echo 'export PATH=/usr/local/bin:$PATH' >> /etc/environment && \
-    echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/environment && \
-    echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/environment && \
+RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data
+ENV PATH /usrl/local/bin:${PATH}
+ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}
+ENV PERL5LIB /usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}
+RUN echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile.d/bcbio.sh && \
+    echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/profile.d/bcbio.sh && \
+    echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/profile.d/bcbio.sh && \
+    echo '/usr/local/lib' >> /etc/ld.so.conf.d/bcbio.conf && ldconfig && \\
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/tmp/* && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --yes qt && \
