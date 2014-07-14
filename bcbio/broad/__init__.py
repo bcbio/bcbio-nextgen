@@ -175,6 +175,16 @@ class BroadRunner:
         p.stdout.close()
         return version
 
+    def has_gatk(self):
+        try:
+            self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+            return True
+        except ValueError, msg:
+            if "Could not find jar" in str(msg):
+                return False
+            else:
+                raise
+
     def cl_gatk(self, params, tmp_dir, memscale=None):
         support_nt = set()
         support_nct = set(["BaseRecalibrator"])
