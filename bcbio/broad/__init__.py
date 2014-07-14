@@ -6,6 +6,7 @@
 from contextlib import closing
 import copy
 from distutils.version import LooseVersion
+import re
 import os
 import subprocess
 
@@ -169,7 +170,10 @@ class BroadRunner:
             cl = [self._picard_ref, command]
         cl += ["--version"]
         p = subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        version = float(p.stdout.read().split("(")[0])
+        # fix for issue #494
+        pat = re.compile('([\d|\.]*)(\(\d*\)$)')  # matches '1.96(1510)'
+        m = pat.search(p.stdout.read())
+        version = m.group(1)
         self._picard_version = version
         p.wait()
         p.stdout.close()

@@ -1,0 +1,49 @@
+If you working on the chanjo integration, you can add this code snippet
+to the main.py. That way you are only running chanjo. You will also
+need to provide a valid bam file associated with the 'work_bam' key.
+
+class ChanjoPipeline(AbstractPipeline):
+    """ Test only: This pipeline only calls the coverage tool. It was designed solely
+    to support integration with chanjo. Assumes the bam and bed files exist. 
+    """
+    name = "chanjo"
+
+    @classmethod
+    def run(self, config, config_file, parallel, dirs, samples):
+        with prun.start(_wres(parallel, ["chanjo"]),
+                        samples, config, dirs, "multicore") as run_parallel:
+            with profile.report("coverage", dirs):
+                samples[0][0]['work_bam'] = 'ready.bam'  # Todo: update with valid input
+                samples = coverage.summary(samples, run_parallel)
+        logger.info("Timing: finished")
+        return samples
+
+
+Here is an example of a sample config file for this test.
+
+ubuntu@ip-10-145-238-106:/mnt/bcbio/jkern/yeast-170/config$ cat ERR302903-yeast.yaml
+# Example configuration for running a whole genome variant calling
+# pipeline on public NA12878 data from Illumina's Platinum Genome project
+# http://www.illumina.com/platinumgenomes/
+#
+# For a quick-start guide to running this analysis, see the example
+# pipeline section of the documentation:
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#example-pipelines
+---
+upload:
+  dir: ../final
+fc_date: '140611'
+fc_name: yeast
+details:
+  - algorithm:
+      aligner: bwa
+      recalibrate: false
+      variantcaller: gatk
+      quality_format: Standard
+      coverage: ../input/yeast-repair.bed
+    analysis: chanjo
+    description: ERR302903
+    files: 
+    - ../input/ERR302903_1.fastq.gz
+    - ../input/ERR302903_2.fastq.gz
+    genome_build: sacCer3
