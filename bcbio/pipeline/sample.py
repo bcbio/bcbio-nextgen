@@ -24,9 +24,9 @@ def prepare_sample(data):
     FASTQ and/or downsampling the number of reads for a test run
     """
     NUM_DOWNSAMPLE = 10000
-    logger.debug("Preparing %s" % item["rgnames"]["sample"])
+    logger.debug("Preparing %s" % data["rgnames"]["sample"])
     file1, file2 = get_fastq_files(data)
-    if item.get("test_run", False):
+    if data.get("test_run", False):
         if bam.is_bam(file1):
             file1 = bam.downsample(file1, data, NUM_DOWNSAMPLE)
             file2 = None
@@ -53,7 +53,7 @@ def trim_sample(data):
         logger.info("Trimming low quality ends and read through adapter "
                     "sequence from %s." % (", ".join(to_trim)))
         out_files = trim_adapters(to_trim, dirs, config)
-    item["files"] = out_files
+    data["files"] = out_files
     return [[data]]
 
 # ## Alignment

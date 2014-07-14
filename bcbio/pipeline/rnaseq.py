@@ -15,16 +15,24 @@ def estimate_expression(samples, run_parallel):
                                       'transcripts'), None)
     annotated = count.annotate_combined_count_file(combined, gtf_file)
     samples = run_parallel("run_cufflinks", samples)
+    #gene
     fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
     to_combine = [x[0]["fpkm"] for x in samples if "fpkm" in x[0]]
     fpkm_combined = count.combine_count_files(to_combine, fpkm_combined_file)
-    #fpkm_combined = cufflinks.combine_fpkm([x[0].get("fpkm_file" for x in samples]))
+    #isoform
+    fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
+    to_combine_isoform = [x[0]["fpkm_isoform"] for x in samples if "fpkm_isoform" in x[0]]
+    fpkm_isoform_combined = count.combine_count_files(to_combine_isoform,
+                                                      fpkm_isoform_combined_file,
+                                                      ".isoform.fpkm")
     for x in samples:
         x[0]["combined_counts"] = combined
         if annotated:
             x[0]["annotated_combined_counts"] = annotated
         if fpkm_combined:
             x[0]["combined_fpkm"] = fpkm_combined
+        if fpkm_isoform_combined:
+            x[0]["combined_fpkm_isoform"] = fpkm_isoform_combined
     return samples
 
 def generate_transcript_counts(data):
@@ -40,9 +48,10 @@ def run_cufflinks(data):
     """Quantitate transcript expression with Cufflinks"""
     work_bam = data["work_bam"]
     ref_file = data["sam_ref"]
-    out_dir, fpkm_file = cufflinks.run(work_bam, ref_file, data)
+    out_dir, fpkm_file, fpkm_isoform_file = cufflinks.run(work_bam, ref_file, data)
     data["cufflinks_dir"] = out_dir
     data["fpkm"] = fpkm_file
+    data["fpkm_isoform"] = fpkm_isoform_file
     return [[data]]
 
 def cufflinks_assemble(data):

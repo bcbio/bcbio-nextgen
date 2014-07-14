@@ -262,13 +262,13 @@ def htseq_count(data):
 
     return out_file
 
-def combine_count_files(files, out_file=None):
+def combine_count_files(files, out_file=None, ext=".fpkm"):
     """
     combine a set of count files into a single combined file
     """
     for f in files:
         assert file_exists(f), "%s does not exist or is empty." % f
-    col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
+    col_names = [os.path.basename(x.split(ext)[0]) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
         out_file = os.path.join(out_dir, "combined.counts")

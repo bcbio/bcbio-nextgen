@@ -270,6 +270,8 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["annotated_combined_counts"]})
     if "combined_fpkm" in sample:
         out.append({"path": sample["combined_fpkm"]})
+    if "combined_fpkm_isoform" in sample:
+        out.append({"path": sample["combined_fpkm_isoform"]})
     if "assembled_gtf" in sample:
         out.append({"path": sample["assembled_gtf"]})
 
