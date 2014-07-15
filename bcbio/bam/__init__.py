@@ -4,8 +4,10 @@ import contextlib
 import os
 import itertools
 import subprocess
+import numpy
 
 import pysam
+import toolz as tz
 
 from bcbio import broad, utils
 from bcbio.bam import ref
@@ -326,3 +328,12 @@ def sample_name(in_bam):
         if line.startswith("@RG"):
             name = [x.split(":")[1] for x in line.split() if x.split(":")[0] == "SM"]
     return name[0] if name else None
+
+def estimate_read_length(bam_file, nreads=1000):
+    """
+    estimate median read length of a SAM/BAM file
+    """
+    with open_samfile(bam_file) as bam_handle:
+        reads = tz.itertoolz.take(nreads, bam_handle)
+        lengths = [len(x.seq) for x in reads]
+    return int(numpy.median(lengths))
