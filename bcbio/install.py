@@ -140,7 +140,7 @@ def _update_conda_packages():
             "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
             "pyyaml", "pyzmq", "requests", "scipy", "setuptools", "sqlalchemy",
             "statsmodels", "toolz", "tornado"]
-    channels = ["-c", "https://conda.binstar.org/collections/chapmanb/bcbio"]
+    channels = ["-c", "https://conda.binstar.org/bcbio"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
         subprocess.check_call([conda_bin, "install", "--yes"] + channels + pkgs)

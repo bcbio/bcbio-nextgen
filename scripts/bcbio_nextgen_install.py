@@ -90,7 +90,7 @@ def install_conda_pkgs(anaconda):
             "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
             "pyyaml", "pyzmq", "requests", "scipy", "setuptools", "sqlalchemy",
             "statsmodels", "toolz", "tornado"]
-    channels = ["-c", "https://conda.binstar.org/collections/chapmanb/bcbio"]
+    channels = ["-c", "https://conda.binstar.org/bcbio"]
     subprocess.check_call([anaconda["conda"], "install", "--yes", "numpy"])
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels + pkgs)
 
