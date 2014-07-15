@@ -76,7 +76,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     # if coverage_depth_max is not given, default to 10000
     downsample_cov = get_in(paired.tumor_config, ("algorithm", "coverage_depth_max"), 10000)
     # if coverage_depth_max is zero, default to Broad default value (currently 1500)
-    params += ["--downsample_to_coverage", max(200, downsample_cov)] if downsample_cov > 0 else []
+    params += ["--downsample_to_coverage", max(1500, downsample_cov)] if downsample_cov > 0 else []
     params += ["--read_filter", "NotPrimaryAlignment"]
     params += ["-I:tumor", paired.tumor_bam]
     params += ["--tumor_sample_name", paired.tumor_name]
