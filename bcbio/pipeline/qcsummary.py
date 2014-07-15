@@ -80,11 +80,11 @@ def _run_qc_tools(bam_file, data):
     """Run a set of third party quality control tools, returning QC directory and metrics.
     """
     to_run = [("fastqc", _run_fastqc)]
-    if data["analysis"].lower() == "rna-seq":
+    if data["analysis"].lower().startswith("rna-seq"):
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
 #        to_run.append(("coverage", _run_gene_coverage))
         to_run.append(("complexity", _run_complexity))
-    elif data["analysis"].lower() == "chip-seq":
+    elif data["analysis"].lower().startswith("chip-seq"):
         to_run.append(["bamtools", _run_bamtools_stats])
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]

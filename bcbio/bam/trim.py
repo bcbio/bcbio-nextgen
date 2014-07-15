@@ -5,7 +5,7 @@ import sys
 import tempfile
 
 from bcbio.utils import (file_exists, safe_makedir,
-                         replace_suffix, append_stem, is_pair,
+                         append_stem, is_pair,
                          replace_directory, map_wrap)
 from bcbio.log import logger
 from bcbio.bam import fastq
@@ -108,7 +108,6 @@ def trim_adapters(fastq_files, dirs, config):
             temp.write(adapter + "\n")
         temp.close()
 
-
     if len(fastq_files) == 1:
         with file_transaction(fastq1_out) as tx_fastq1_out:
             do.run(base_cmd.format(**locals()), message)
@@ -132,7 +131,7 @@ def trim_read_through(fastq_files, dirs, lane_config):
 
     """
     quality_format = _get_quality_format(lane_config)
-    to_trim = _get_sequences_to_trim(lane_config, SUPPORTED_FORMATS)
+    to_trim = _get_sequences_to_trim(lane_config, SUPPORTED_ADAPTERS)
     out_files = _get_read_through_trimmed_outfiles(fastq_files, dirs)
     fixed_files = append_stem(out_files, ".fixed")
     if all(map(file_exists, fixed_files)):
@@ -228,11 +227,9 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, cores):
 
 @map_wrap
 def _run_cutadapt_on_single_file(base_cmd, fastq_file, out_file):
-    stat_file = replace_suffix(out_file, ".trim_stats.txt")
-    with open(stat_file, "w") as stat_handle:
-        cmd = list(base_cmd)
-        cmd.extend(["--output=" + out_file, fastq_file])
-        do.run(cmd, "Running cutadapt on %s." % (fastq_file), None)
+    cmd = list(base_cmd)
+    cmd.extend(["--output=" + out_file, fastq_file])
+    do.run(cmd, "Running cutadapt on %s." % (fastq_file), None)
 
 
 def _get_quality_format(lane_config):
