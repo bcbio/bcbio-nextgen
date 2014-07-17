@@ -531,3 +531,21 @@ def dictapply(d, fn):
         else:
             d[k] = fn(v)
     return d
+
+def R_package_path(package):
+    """
+    return the path to an installed R package
+    """
+    cmd = "Rscript -e 'find.package(\"{package}\")'"
+    try:
+        output = subprocess.check_output(cmd.format(**locals()), shell=True)
+    except subprocess.CalledProcessError, e:
+        return None
+    for line in output.split("\n"):
+        if "[1]" not in line:
+            continue
+        dirname = line.split("[1]")[1].replace("\"", "").strip()
+        if os.path.exists(dirname):
+            return dirname
+    return None
+
