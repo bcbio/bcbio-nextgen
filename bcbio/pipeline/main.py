@@ -310,10 +310,11 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("estimate expression", dirs):
                 samples = rnaseq.estimate_expression(samples, run_parallel)
 
-        with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc"]),
+        with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc","kraken"]),
                         samples, config, dirs, "persample") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
+        
         logger.info("Timing: finished")
         return samples
 

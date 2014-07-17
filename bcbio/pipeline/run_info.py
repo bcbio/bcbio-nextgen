@@ -151,7 +151,7 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
-                      "trim_reads", "adapters", "custom_trim",
+                      "trim_reads", "adapters", "custom_trim","kraken",
                       "align_split_size", "quality_bin",
                       "quality_format", "write_summary",
                       "merge_bamprep", "coverage",

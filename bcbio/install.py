@@ -306,6 +306,8 @@ def _install_toolplus(args, manifest_dir):
     for tool in args.toolplus:
         if tool.name == "data":
             _install_gemini(args.tooldir, _get_data_dir(), args)
+        elif tool.name == "kraken":
+            _install_kraken_db(tool.fname,_get_data_dir(),args)
         elif tool.name in set(["gatk", "mutect"]):
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
         elif tool.name in set(["protected"]):  # back compatibility
@@ -384,6 +386,29 @@ def _install_gemini(tooldir, datadir, args):
             cmd.append("--nosudo")
         subprocess.check_call(cmd)
         os.remove(script)
+
+def _install_kraken_db( fname,datadir,args):
+    """Install kraken minimal DB in genome folder.
+    """
+    kraken = os.path.join( datadir, "genome/kraken")
+    url = "https://ccb.jhu.edu/software/kraken/dl/minikraken.tgz"
+    compress = os.path.join(kraken,os.path.basename(url))
+    base,ext = utils.splitext_plus(os.path.basename(url))
+    db = os.path.join(kraken,base)
+    tooldir = args.tooldir or get_defaults()["tooldir"]
+    if os.path.exists(os.path.join(tooldir,"bin","kraken")):
+        if not os.path.exists(kraken):
+            utils.safe_makedir(kraken)
+        if not os.path.exists(db):
+            if not os.path.exists(compress):
+                subprocess.check_call(["wget", "-O", compress,url, "--no-check-certificate"])          
+            cmd = ["tar","-xzvf",compress,"-C",kraken]
+            subprocess.check_call(cmd)
+            shutil.move(os.path.join(kraken,"minikraken_20140330"),os.path.join(kraken,"minikraken"))
+            utils.remove_safe(compress)
+    else:
+        raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
+            os.path.join(tooldir,"bin","kraken"))
 
 # ## Store a local configuration file with upgrade details
 
@@ -468,7 +493,7 @@ def get_defaults():
 def _check_toolplus(x):
     """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
     """
-    std_choices = set(["data", "cadd", "dbnsfp"])
+    std_choices = set(["data", "cadd", "dbnsfp", "kraken"])
     if x in std_choices:
         return Tool(x, None)
     elif "=" in x and len(x.split("=")) == 2:

@@ -61,6 +61,13 @@ def get_downsample_pct(runner, in_bam, target_counts):
     if total > rg_target:
         return float(rg_target) / float(total)
 
+def get_aligned_reads(in_bam,data):
+    broad_runner = broad.runner_from_config(data["config"])
+    index(in_bam, data["config"])
+    align = sum(x.aligned for x in broad_runner.run_fn("picard_idxstats", in_bam))
+    total = count(in_bam,data["config"])
+    return 1.0 * align / total
+
 def downsample(in_bam, data, target_counts):
     """Downsample a BAM file to the specified number of target counts.
     """
