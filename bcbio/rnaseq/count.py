@@ -266,6 +266,8 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
     """
     combine a set of count files into a single combined file
     """
+    assert all([file_exists(x) for x in files]), \
+        "Some count files in %s do not exist." % files
     for f in files:
         assert file_exists(f), "%s does not exist or is empty." % f
     col_names = [os.path.basename(x.split(ext)[0]) for x in files]
