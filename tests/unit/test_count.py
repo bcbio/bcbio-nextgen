@@ -6,13 +6,15 @@ import tempfile
 import stat
 import shutil
 
+DATA_DIR = os.path.join(os.path.dirname(__file__), "bcbio-nextgen-test-data", "data")
+
 from nose.plugins.attrib import attr
 
 class TestHtseqCount(unittest.TestCase):
     cur_dir = os.path.dirname(__file__)
-    organism_dir = os.path.join(cur_dir, "data", "organisms", "mouse")
-    data_dir = os.path.join(cur_dir, "data", "count", "test_data")
-    correct_dir = os.path.join(cur_dir, "data", "count", "correct")
+    organism_dir = os.path.join(DATA_DIR, "organisms", "mouse")
+    data_dir = os.path.join(DATA_DIR, "count", "test_data")
+    correct_dir = os.path.join(DATA_DIR, "count", "correct")
     out_dir = os.path.join(cur_dir, "htseq-test")
 
     def setUp(self):

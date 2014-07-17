@@ -8,10 +8,12 @@ import filecmp
 
 from nose.plugins.attrib import attr
 
+DATA_DIR = os.path.join(os.path.dirname(__file__), "bcbio-nextgen-test-data", "data")
+
 class TestBed2interval(unittest.TestCase):
 
     def setUp(self):
-        self.config_file = "data/bed2interval/test_bed2interval.yaml"
+        self.config_file = os.path.join(DATA_DIR, "bed2interval", "test_bed2interval.yaml")
         with open(self.config_file) as in_handle:
             self.config = yaml.load(in_handle)
         self.in_file = self.config["input"]

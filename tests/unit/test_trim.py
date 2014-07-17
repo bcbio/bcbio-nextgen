@@ -6,8 +6,10 @@ import filecmp
 import os
 import shutil
 
-CONFIG_FILE = "data/trim_read_through/test_trim_read_through.yaml"
-CORRECT_DIR = "data/trim_read_through/correct"
+DATA_DIR = os.path.join(os.path.dirname(__file__), "bcbio-nextgen-test-data", "data")
+TRIM_DIR = os.path.join(DATA_DIR, "trim_read_through")
+CONFIG_FILE = os.path.join(TRIM_DIR, "test_trim_read_through.yaml")
+CORRECT_DIR = os.path.join(TRIM_DIR, "correct")
 
 from nose.plugins.attrib import attr
 
