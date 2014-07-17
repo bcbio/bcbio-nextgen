@@ -12,6 +12,7 @@ import random
 import ConfigParser
 import collections
 import fnmatch
+import subprocess
 
 import toolz as tz
 import yaml
