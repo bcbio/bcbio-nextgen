@@ -37,6 +37,9 @@ resources:
     memory: 4G
   gemini:
     cores: 16
+  kraken:
+    cores: 6
+    memory: 4g
   freebayes:
     memory: 2g
   gatk:
