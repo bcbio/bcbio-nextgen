@@ -49,6 +49,8 @@ def load_system_config(config_file, work_dir=None):
     installs (galaxy/bcbio_system.yaml) and docker installs (config/bcbio_system.yaml).
     """
     docker_config = _get_docker_config()
+    if config_file is None:
+        config_file = "bcbio_system.yaml"
     if not os.path.exists(config_file):
         base_dir = get_base_installdir()
         test_config = os.path.join(base_dir, "galaxy", config_file)

@@ -1,5 +1,6 @@
 """Functionality to query and extract information from aligned BAM files.
 """
+import collections
 import contextlib
 import os
 import itertools
@@ -9,7 +10,7 @@ import numpy
 import pysam
 import toolz as tz
 
-from bcbio import broad, utils
+from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -51,36 +52,55 @@ def index(in_bam, config):
                        "Index BAM file (single core): %s" % os.path.basename(in_bam))
     return index_file if utils.file_uptodate(index_file, in_bam) else alt_index_file
 
-def get_downsample_pct(runner, in_bam, target_counts):
+def idxstats(in_bam, data):
+    """Return BAM index stats for the given file, using samtools idxstats.
+    """
+    index(in_bam, data["config"])
+    AlignInfo = collections.namedtuple("AlignInfo", ["contig", "length", "aligned", "unaligned"])
+    samtools = config_utils.get_program("samtools", data["config"])
+    idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam])
+    out = []
+    for line in idxstats_out.split("\n"):
+        if line.strip():
+            contig, length, aligned, unaligned = line.split("\t")
+            out.append(AlignInfo(contig, int(length), int(aligned), int(unaligned)))
+    return out
+
+def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.
     """
-    total = sum(x.aligned for x in runner.run_fn("picard_idxstats", in_bam))
+    total = sum(x.aligned for x in idxstats(in_bam, data))
     with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
         n_rgs = max(1, len(work_bam.header["RG"]))
     rg_target = n_rgs * target_counts
     if total > rg_target:
         return float(rg_target) / float(total)
 
-def get_aligned_reads(in_bam,data):
-    broad_runner = broad.runner_from_config(data["config"])
+def get_aligned_reads(in_bam, data):
     index(in_bam, data["config"])
-    align = sum(x.aligned for x in broad_runner.run_fn("picard_idxstats", in_bam))
-    total = count(in_bam,data["config"])
+    bam_stats = idxstats(in_bam, data)
+    align = sum(x.aligned for x in bam_stats)
+    unaligned = sum(x.unaligned for x in bam_stats)
+    total = float(align + unaligned)
     return 1.0 * align / total
 
-def downsample(in_bam, data, target_counts):
+def downsample(in_bam, data, target_counts, read_filter="", always_run=False,
+               work_dir=None):
     """Downsample a BAM file to the specified number of target counts.
     """
-    broad_runner = broad.runner_from_config(data["config"])
     index(in_bam, data["config"])
-    ds_pct = get_downsample_pct(broad_runner, in_bam, target_counts)
+    ds_pct = get_downsample_pct(in_bam, target_counts, data)
+    if always_run and not ds_pct:
+        ds_pct = 1.0
     if ds_pct:
         out_file = "%s-downsample%s" % os.path.splitext(in_bam)
+        if work_dir:
+            out_file = os.path.join(work_dir, os.path.basename(out_file))
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
                 sambamba = config_utils.get_program("sambamba", data["config"])
                 num_cores = data["config"]["algorithm"].get("num_cores", 1)
-                cmd = ("{sambamba} view -t {num_cores} -f bam -o {tx_out_file} "
+                cmd = ("{sambamba} view -t {num_cores} {read_filter} -f bam -o {tx_out_file} "
                        "--subsample={ds_pct:.3} --subsampling-seed=42 {in_bam}")
                 do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
         return out_file
@@ -255,6 +275,7 @@ def merge(bamfiles, out_bam, config):
         else:
             cmd = "{samtools} merge -@ {num_cores} {tx_out_bam} " + " ".join(bamfiles)
         do.run(cmd.format(**locals()), "Merge %s into %s." % (bamfiles, out_bam))
+    index(out_bam, config)
     return out_bam
 
 
