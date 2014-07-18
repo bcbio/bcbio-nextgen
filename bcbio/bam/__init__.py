@@ -71,7 +71,7 @@ def get_downsample_pct(in_bam, target_counts, data):
     """
     total = sum(x.aligned for x in idxstats(in_bam, data))
     with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
-        n_rgs = max(1, len(work_bam.header["RG"]))
+        n_rgs = max(1, len(work_bam.header.get("RG", [])))
     rg_target = n_rgs * target_counts
     if total > rg_target:
         return float(rg_target) / float(total)
