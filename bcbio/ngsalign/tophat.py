@@ -23,6 +23,7 @@ from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio import bam
 from bcbio import broad
+from bcbio.dd import dd
 
 
 _out_fnames = ["accepted_hits.sam", "junctions.bed",
@@ -46,7 +47,7 @@ def _set_transcriptome_option(options, data, ref_file):
         options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
         return options
 
-    gtf_file = data["genome_resources"]["rnaseq"].get("transcripts")
+    gtf_file = dd.get_gtf_file(data)
     if gtf_file:
         options["GTF"] = gtf_file
         return options
