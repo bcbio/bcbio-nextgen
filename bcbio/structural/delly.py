@@ -9,17 +9,35 @@ import re
 import subprocess
 
 import toolz as tz
+import vcf
 
 from bcbio import bam, utils
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
-from bcbio.variation import vcfutils, vfilter
+from bcbio.variation import vcfutils
 
 def _get_full_exclude_file(items, work_dir):
     base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(items[0]["work_bam"]))[0]))
     return sshared.prepare_exclude_file(items, base_file)
+
+def _delly_exclude_file(items, base_file, chrom):
+    """Prepare a delly-specific exclude file eliminating chromosomes.
+    Delly wants excluded chromosomes listed as just the chromosome, with no coordinates.
+    """
+    base_exclude = sshared.prepare_exclude_file(items, base_file, chrom)
+    out_file = "%s-delly%s" % utils.splitext_plus(base_exclude)
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            with open(base_exclude) as in_handle:
+                for line in in_handle:
+                    parts = line.split("\t")
+                    if parts[0] == chrom:
+                        out_handle.write(line)
+                    else:
+                        out_handle.write("%s\n" % parts[0])
+    return out_file
 
 @utils.map_wrap
 @zeromq_aware_logging
@@ -36,7 +54,7 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
             if not sshared.has_variant_regions(items, out_file, chrom):
                 vcfutils.write_empty_vcf(tx_out_file, samples=names)
             else:
-                exclude = ["-x", sshared.prepare_exclude_file(items, out_file, chrom)]
+                exclude = ["-x", _delly_exclude_file(items, out_file, chrom)]
                 cmd = ["delly", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
                 multi_cmd = "export OMP_NUM_THREADS=%s && " % cores
                 try:
@@ -108,6 +126,35 @@ def _prep_subsampled_bams(data, work_dir):
     bam.index(out_bam, data["config"])
     return [out_bam]
 
+def _delly_count_evidence_filter(in_file, data):
+    """Filter delly outputs based on read support (DV) and evidence (split and paired).
+
+    We require DV > 4 and either both paired end and split read evidence or
+    5 or more evidence for either individually.
+    """
+    filtname = "DVSupport"
+    filtdoc = "FMT/DV < 4 || (SR < 1 && PE < 5) || (SR < 5 && PE < 1)"
+    out_file = "%s-filter%s" % utils.splitext_plus(in_file)
+    cur_out_file = out_file.replace(".vcf.gz", ".vcf")
+    if not utils.file_exists(out_file):
+        with file_transaction(cur_out_file) as tx_out_file:
+            with utils.open_gzipsafe(in_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    inp = vcf.Reader(in_handle, in_file)
+                    inp.filters["DVSupport"] = vcf.parser._Filter(filtname, filtdoc)
+                    outp = vcf.Writer(out_handle, inp)
+                    for rec in inp:
+                        sr = rec.INFO.get("SR", 0)
+                        pe = rec.INFO.get("PE", 0)
+                        call = rec.samples[0].data
+                        dv = call.DV if hasattr(call, "DV") else 0
+                        if dv < 4 or (sr < 1 and pe < 5) or (sr < 5 and pe < 1):
+                            rec.add_filter(filtname)
+                        outp.write_record(rec)
+    if out_file.endswith(".vcf.gz"):
+        out_file = vcfutils.bgzip_and_index(cur_out_file, data["config"])
+    return out_file
+
 def run(items):
     """Perform detection of structural variations with delly.
 
@@ -148,9 +195,7 @@ def run(items):
         sample = tz.get_in(["rgnames", "sample"], data)
         delly_sample_vcf = vcfutils.select_sample(combo_vcf, sample,
                                                   "%s-%s%s" % (base, sample, ext), data["config"])
-        delly_vcf = vfilter.hard_w_expression(delly_sample_vcf,
-                                              "FMT/DV < 4 || (FMT/DV / (FMT/DV + FMT/DR)) < 0.2", data,
-                                              name="DVSupport")
+        delly_vcf = _delly_count_evidence_filter(delly_sample_vcf, data)
         data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
                            "exclude": exclude_file})
         out.append(data)
