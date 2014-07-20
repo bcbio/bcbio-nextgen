@@ -66,7 +66,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                               "-I", dup_align_bam,
                               "-R", ref_file,
                               ]
-                    downsample_pct = bam.get_downsample_pct(broad_runner, dup_align_bam, target_counts)
+                    downsample_pct = bam.get_downsample_pct(dup_align_bam, target_counts, data)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
                                    "--downsampling_type", "ALL_READS"]
