@@ -23,7 +23,7 @@ from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio import bam
 from bcbio import broad
-from bcbio.dd import dd
+import bcbio.pipeline.datadict as dd
 
 
 _out_fnames = ["accepted_hits.sam", "junctions.bed",

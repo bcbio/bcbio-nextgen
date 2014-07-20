@@ -375,10 +375,6 @@ def use_bcbio_variation_recall(algs):
 
 ## functions for navigating through the standard galaxy directory of files
 
-def get_transcript_gtf(genome_dir):
-    out_file = os.path.join(genome_dir, "rnaseq", "ref-transcripts.gtf")
-    return out_file
-
 def get_rRNA_interval(genome_dir):
     return os.path.join(genome_dir, "rnaseq", "rRNA.interval_list")
 

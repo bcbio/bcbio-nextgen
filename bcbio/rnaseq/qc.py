@@ -22,7 +22,7 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import safe_makedir, file_exists
 from bcbio.distributed.transaction import file_transaction
-
+import bcbio.pipeline.datadict as dd
 
 class RNASeQCRunner(object):
     """
@@ -70,7 +70,7 @@ def sample_summary(bam_file, data, out_dir):
             config = data["config"]
             ref_file = data["sam_ref"]
             genome_dir = os.path.dirname(os.path.dirname(ref_file))
-            gtf_file = config_utils.get_transcript_gtf(genome_dir)
+            gtf_file = dd.get_gtf_file(data)
             sample_file = os.path.join(safe_makedir(tx_out_dir), "sample_file.txt")
             _write_sample_id_file(data, bam_file, sample_file)
             runner = rnaseqc_runner_from_config(config)

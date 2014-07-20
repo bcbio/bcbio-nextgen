@@ -7,6 +7,7 @@ from bcbio.rnaseq.count import htseq_count
 from bcbio.bam import is_paired
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
+import bcbio.pipeline.datadict as dd
 
 try:
     import pandas as pd
@@ -19,12 +20,12 @@ def count(data):
     falls back on htseq_count method if featureCounts is not
     found
     """
-    in_bam = data["work_bam"]
-    gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
-    work_dir = data["dirs"].get("work", "work")
+    in_bam = dd.get_work_bam(data)
+    gtf_file = dd.get_gtf_file(data)
+    work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "htseq-count")
     safe_makedir(out_dir)
-    count_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
+    count_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts"
     if file_exists(count_file):
         return count_file
 

@@ -18,16 +18,18 @@ from bcbio.utils import (file_exists, get_in)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import bam
+import bcbio.pipeline.datadict as dd
 
 
 def _get_files(data):
     mapped = bam.mapped(data["work_bam"], data["config"])
     in_file = bam.sort(mapped, data["config"], order="queryname")
-    gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
-    work_dir = data["dirs"].get("work", "work")
+    gtf_file = dd.get_gtf_file(data)
+    work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "htseq-count")
-    out_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
-    stats_file = os.path.join(out_dir, data['rgnames']['sample']) + ".stats"
+    sample_name = dd.get_sample_name(data)
+    out_file = os.path.join(out_dir, sample_name + ".counts")
+    stats_file = os.path.join(out_dir, sample_name + ".stats")
     return in_file, gtf_file, out_file, stats_file
 
 
@@ -45,18 +47,15 @@ def invert_strand(iv):
 class UnknownChrom(Exception):
     pass
 
-def _get_stranded_flag(config):
+def _get_stranded_flag(data):
     strand_flag = {"unstranded": "no",
                    "firststrand": "reverse",
                    "secondstrand": "yes"}
-    stranded = _get_strandedness(config)
+    stranded = dd.get_strandedness(data, "unstranded").lower()
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
                                      "Valid values are 'firststrand', 'secondstrand', "
                                      "and 'unstranded")
     return strand_flag[stranded]
-
-def _get_strandedness(config):
-    return get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
 
 
 def htseq_count(data):
