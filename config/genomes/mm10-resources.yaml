@@ -1,4 +1,4 @@
-version: 7
+version: 8
 
 aliases:
   snpeff: GRCm38.75
@@ -12,3 +12,6 @@ rnaseq:
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
     tophat: ../rnaseq/tophat/mm10_transcriptome.ver
+  dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
+  refflat: ../rnaseq/ref-transcripts.refFlat
+  rRNA_fa: ../rnaseq/rRNA.fa

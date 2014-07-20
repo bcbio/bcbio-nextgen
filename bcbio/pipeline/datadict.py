@@ -14,7 +14,8 @@ LOOKUPS = {
     "work_dir": {"keys": ['dirs', 'work']},
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness']},
-    "work_bam": {"keys": ["work_bam"]}
+    "work_bam": {"keys": ["work_bam"]},
+    "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']}
 }
 
 def getter(keys):
@@ -36,3 +37,4 @@ for k, v in LOOKUPS.items():
     checker = v.get('checker', None)
     _g["get_" + k] = getter(keys)
     _g["set_" + k] = setter(keys, checker)
+

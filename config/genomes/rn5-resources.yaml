@@ -1,4 +1,4 @@
-version: 4
+version: 5
 
 aliases:
   ensembl: rattus_norvegicus
@@ -9,3 +9,6 @@ rnaseq:
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
     tophat: ../rnaseq/tophat/rn5_transcriptome.ver
+  dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
+  refflat: ../rnaseq/ref-transcripts.refFlat
+  rRNA_fa: ../rnaseq/rRNA.fa
