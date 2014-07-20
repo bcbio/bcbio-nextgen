@@ -40,5 +40,4 @@ class TestDEXSeqCount(unittest.TestCase):
         self.assertTrue(file_exists(out_file))
 
     def tearDown(self):
-        pass
         shutil.rmtree(self.out_dir)
