@@ -8,6 +8,7 @@ import toolz as tz
 from bcbio import log, utils
 from bcbio.upload import shared, filesystem, galaxy, s3
 from bcbio.pipeline import run_info
+import bcbio.pipeline.datadict as dd
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -274,5 +275,7 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["combined_fpkm_isoform"]})
     if "assembled_gtf" in sample:
         out.append({"path": sample["assembled_gtf"]})
+    if dd.get_dexseq_counts(sample):
+        out.append({"path": dd.get_dexseq_counts(sample)})
 
     return _add_meta(out, config=upload_config)

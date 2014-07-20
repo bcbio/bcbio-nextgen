@@ -1,7 +1,6 @@
 import os
-import bcbio.bam as bam
-from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count
-from bcbio.utils import get_in, safe_makedir
+from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq
+import bcbio.pipeline.datadict as dd
 
 def detect_fusion(samples, run_parallel):
     samples = run_parallel("run_oncofuse", samples)
@@ -11,8 +10,7 @@ def estimate_expression(samples, run_parallel):
     samples = run_parallel("generate_transcript_counts", samples)
     combined = count.combine_count_files([x[0]["count_file"] for x in samples
                                           if "count_file" in x[0]])
-    gtf_file = get_in(samples[0][0], ('genome_resources', 'rnaseq',
-                                      'transcripts'), None)
+    gtf_file = dd.get_gtf_file(samples[0][0], None)
     annotated = count.annotate_combined_count_file(combined, gtf_file)
     samples = run_parallel("run_cufflinks", samples)
     #gene
@@ -25,6 +23,15 @@ def estimate_expression(samples, run_parallel):
     fpkm_isoform_combined = count.combine_count_files(to_combine_isoform,
                                                       fpkm_isoform_combined_file,
                                                       ".isoform.fpkm")
+    dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
+    to_combine_dexseq = [dd.get_dexseq_counts(data[0]) for data in samples]
+    to_combine_dexseq = filter(lambda x: x, to_combine_dexseq)
+    if to_combine_dexseq:
+        dexseq_combined = count.combine_count_files(to_combine_dexseq,
+                                                    dexseq_combined_file, ".dexseq")
+    else:
+        dexseq_combined = None
+
     for x in samples:
         x[0]["combined_counts"] = combined
         if annotated:
@@ -33,15 +40,20 @@ def estimate_expression(samples, run_parallel):
             x[0]["combined_fpkm"] = fpkm_combined
         if fpkm_isoform_combined:
             x[0]["combined_fpkm_isoform"] = fpkm_isoform_combined
+        if dexseq_combined:
+            x[0] = dd.set_dexseq_counts(x[0], dexseq_combined_file)
+
     return samples
 
 def generate_transcript_counts(data):
-    """Generate counts per transcript from an alignment"""
+    """Generate counts per transcript and per exon from an alignment"""
     data["count_file"] = featureCounts.count(data)
-    if get_in(data, ("config", "algorithm", "fusion_mode"), False):
+    if dd.get_fusion_mode(data, False):
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data["oncofuse_file"] = oncofuse.run(data)
+    if dd.get_dexseq_gff(data, None):
+        data = dd.set_dexseq_counts(data, dexseq.bcbio_run(data))
     return [[data]]
 
 def run_cufflinks(data):

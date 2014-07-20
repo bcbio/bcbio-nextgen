@@ -25,11 +25,14 @@ def run_count(bam_file, dexseq_gff, stranded, out_file):
     run dexseq_count on a BAM file
     """
     assert file_exists(bam_file), "%s does not exist." % bam_file
-    assert file_exists(dexseq_gff), "%s does not exist." % dexseq_gff
     sort_order = bam._get_sort_order(bam_file, {})
     assert sort_order, "Cannot determine sort order of %s." % bam_file
     strand_flag = _strand_flag(stranded)
     assert strand_flag, "%s is not a valid strandedness value." % stranded
+    if not file_exists(dexseq_gff):
+        logger.info("%s was not found, so exon-level counting is being "
+                    "skipped." % dexseq_gff)
+        return None
 
     dexseq_count = _dexseq_count_path()
     if not dexseq_count:
