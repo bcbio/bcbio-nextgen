@@ -3,10 +3,22 @@ perform exon-level counting using DEXSeq
 """
 import os
 import sys
-from bcbio.utils import R_package_path, file_exists
+from bcbio.utils import R_package_path, file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio import bam
+import bcbio.pipeline.datadict as dd
+
+def bcbio_run(data):
+    out_dir = os.path.join(dd.get_work_dir(data), "dexseq")
+    safe_makedir(out_dir)
+    sample_name = dd.get_sample_name(data)
+    out_file = os.path.join(out_dir, sample_name + ".dexseq")
+    bam_file = dd.get_work_bam(data)
+    dexseq_gff = dd.get_dexseq_gff(data)
+    stranded = dd.get_strandedness(data)
+    return run_count(bam_file, dexseq_gff, stranded, out_file)
+
 
 def run_count(bam_file, dexseq_gff, stranded, out_file):
     """
