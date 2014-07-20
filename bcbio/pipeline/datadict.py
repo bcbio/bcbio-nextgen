@@ -13,13 +13,17 @@ LOOKUPS = {
                  "checker": file_exists},
     "work_dir": {"keys": ['dirs', 'work']},
     "sample_name": {"keys": ['rgnames', 'sample']},
-    "strandedness": {"keys": ['config', 'algorithm', 'strandedness']},
+    "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
+                     "default": "unstranded"},
     "work_bam": {"keys": ["work_bam"]},
-    "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']}
+    "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
+    "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
+    "dexseq_counts": {"keys": ['dexseq_counts']}
 }
 
-def getter(keys):
+def getter(keys, global_default=None):
     def lookup(config, default=None):
+        default = global_default if not default else default
         return tz.get_in(keys, config, default)
     return lookup
 
@@ -34,7 +38,6 @@ def setter(keys, checker):
 _g = globals()
 for k, v in LOOKUPS.items():
     keys = v['keys']
-    checker = v.get('checker', None)
-    _g["get_" + k] = getter(keys)
-    _g["set_" + k] = setter(keys, checker)
+    _g["get_" + k] = getter(keys, v.get('default', None))
+    _g["set_" + k] = setter(keys, v.get('checker', None))
 
