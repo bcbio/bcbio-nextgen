@@ -19,6 +19,25 @@
 - Add de-duplication support back for pre-aligned input files. Thanks to
   Severine Catreux.
 - Generalize SGE support to handle additional system setups. Thanks to Karl Gutwin.
+- Add reference guided transcriptome assembly with Cufflinks along with functions
+  to classify novel transcripts as protein coding or not as well as generally clean
+  the Cufflinks assembly of low quality transcripts.
+- Developer: provide datadict.py with encapsulation functions for looking up and
+  setting items in the data dictionary.
+- Unit tests fixed. Unit test data moved to external repository:
+  https://github.com/roryk/bcbio-nextgen-test-data
+- Add exon-level counting with DEXseq.
+- Bugfix: Fix for Tophat setting the PI flag as inner-distance-size and not insert size.
+- Added kraken support for contamination detection (@lpatano):
+  http://ccb.jhu.edu/software/kraken/
+- Isoform-level FPKM combined output file generated (@klrl262)
+- Use shared conda repository for tricky to install Python packages:
+  https://github.com/chapmanb/bcbio-conda
+- Added chanjo integration for coverage calculation (@kern3020):
+  https://github.com/robinandeer/chanjo
+- Initial support for automated evaluation of structural variant calling.
+- Bugfix: set library-type properly for Cufflinks runs.
+- Added genome_setup.py a script to prepare your own genome and rnaseq files.
 
 ## 0.7.9 (May 19, 2014)
 
