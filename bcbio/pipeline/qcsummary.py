@@ -96,9 +96,9 @@ def _run_qc_tools(bam_file, data):
         cur_qc_dir = os.path.join(qc_dir, program_name)
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
-    ratio = bam.get_aligned_reads(bam_file,data)
+    ratio = bam.get_aligned_reads(bam_file, data)
     if ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and data["analysis"].lower() == "rna-seq":
-        cur_metrics =_run_kraken(data, ratio)
+        cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
     metrics["Quality format"] = utils.get_in(data,
@@ -322,7 +322,11 @@ def _run_fastqc(bam_file, data, fastqc_out):
 
     Downsamples to 10 million reads to avoid excessive processing times with large
     files, unless we're running a Standard/QC pipeline.
+
+    Handles fastqc 0.11+, which use a single HTML file and older versions that use
+    a directory of files + images. The goal is to eventually move to only 0.11+
     """
+    fastqc_name = os.path.splitext(os.path.basename(bam_file))[0]
     sentry_file = os.path.join(fastqc_out, "fastqc_report.html")
     if not os.path.exists(sentry_file):
         work_dir = os.path.dirname(fastqc_out)
@@ -335,16 +339,20 @@ def _run_fastqc(bam_file, data, fastqc_out):
         with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 cl = [config_utils.get_program("fastqc", data["config"]),
-                      "-t", str(num_cores), "-o", tx_tmp_dir, "-f", "bam", bam_file]
+                      "-t", str(num_cores), "--extract", "-o", tx_tmp_dir, "-f", "bam", bam_file]
                 do.run(cl, "FastQC: %s" % data["name"][-1])
-                fastqc_outdir = os.path.join(tx_tmp_dir,
-                                             "%s_fastqc" % os.path.splitext(os.path.basename(bam_file))[0])
-                if os.path.exists("%s.zip" % fastqc_outdir):
-                    os.remove("%s.zip" % fastqc_outdir)
-                if not os.path.exists(sentry_file):
+                tx_fastqc_out = os.path.join(tx_tmp_dir, "%s_fastqc" % fastqc_name)
+                tx_combo_file = os.path.join(tx_tmp_dir, "%s_fastqc.html" % fastqc_name)
+                if os.path.exists("%s.zip" % tx_fastqc_out):
+                    os.remove("%s.zip" % tx_fastqc_out)
+                if not os.path.exists(sentry_file) and os.path.exists(tx_combo_file):
+                    utils.safe_makedir(fastqc_out)
+                    shutil.copy(os.path.join(tx_fastqc_out, "fastqc_data.txt"), fastqc_out)
+                    shutil.move(tx_combo_file, sentry_file)
+                elif not os.path.exists(sentry_file):
                     if os.path.exists(fastqc_out):
                         shutil.rmtree(fastqc_out)
-                    shutil.move(fastqc_outdir, fastqc_out)
+                    shutil.move(tx_fastqc_out, fastqc_out)
         if ds_bam and os.path.exists(ds_bam):
             os.remove(ds_bam)
     parser = FastQCParser(fastqc_out)
