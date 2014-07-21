@@ -136,10 +136,10 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
-    pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
-            "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
-            "pyyaml", "pyzmq", "requests", "scipy", "setuptools", "sqlalchemy",
-            "statsmodels", "toolz", "tornado"]
+    pkgs = ["biopython", "boto", "cpat", "cython", "ipython", "lxml",
+            "matplotlib", "nose", "numpy", "pandas", "patsy", "pycrypto",
+            "pip", "pysam", "pyyaml", "pyzmq", "requests", "scipy",
+            "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
@@ -401,7 +401,7 @@ def _install_kraken_db( fname,datadir,args):
             utils.safe_makedir(kraken)
         if not os.path.exists(db):
             if not os.path.exists(compress):
-                subprocess.check_call(["wget", "-O", compress,url, "--no-check-certificate"])          
+                subprocess.check_call(["wget", "-O", compress,url, "--no-check-certificate"])
             cmd = ["tar","-xzvf",compress,"-C",kraken]
             subprocess.check_call(cmd)
             shutil.move(os.path.join(kraken,"minikraken_20140330"),os.path.join(kraken,"minikraken"))

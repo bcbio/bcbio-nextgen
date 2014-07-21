@@ -9,7 +9,7 @@ from bcbio.utils import get_in, file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.rnaseq import gtf
+from bcbio.rnaseq import gtf, annotate_gtf
 import pandas as pd
 
 
@@ -44,7 +44,7 @@ def gene_tracking_to_fpkm(tracking_file, out_file):
     df = pd.io.parsers.read_table(tracking_file, sep="\t", header=0)
     df = df[['tracking_id', 'FPKM']]
     df = df.groupby(['tracking_id']).sum()
-    df.to_csv(out_file, sep="\t", header=False,index_label=False)
+    df.to_csv(out_file, sep="\t", header=False, index_label=False)
     return out_file
 
 def _get_general_options(align_file, config):
@@ -102,7 +102,7 @@ def assemble(bam_file, ref_file, num_cores, out_dir):
         do.run(cmd, "Assembling transcripts with Cufflinks using %s." % bam_file)
     return out_file
 
-def clean_assembly(gtf_file):
+def clean_assembly(gtf_file, clean=None, dirty=None):
     """
     clean the likely garbage transcripts from the GTF file including:
     1. any novel single-exon transcripts
@@ -110,8 +110,8 @@ def clean_assembly(gtf_file):
     """
     base, ext = os.path.splitext(gtf_file)
     db = gtf.get_gtf_db(gtf_file, in_memory=True)
-    clean = base + ".clean" + ext
-    dirty = base + ".dirty" + ext
+    clean = clean if clean else base + ".clean" + ext
+    dirty = dirty if dirty else base + ".dirty" + ext
     if file_exists(clean):
         return clean, dirty
     with open(clean, "w") as clean_handle, open(dirty, "w") as dirty_handle:
@@ -119,8 +119,8 @@ def clean_assembly(gtf_file):
             for transcript in db.children(gene, level=1):
                 if is_likely_noise(db, transcript):
                     write_transcript(db, dirty_handle, transcript)
-                    continue
-                write_transcript(db, clean_handle, transcript)
+                else:
+                    write_transcript(db, clean_handle, transcript)
     return clean, dirty
 
 def write_transcript(db, handle, transcript):
@@ -154,15 +154,16 @@ def is_novel_single_exon(db, transcript):
         return True
     return False
 
-def fix_cufflinks_attributes(ref_gtf, merged_gtf):
+def fix_cufflinks_attributes(ref_gtf, merged_gtf, out_file=None):
     """
     replace the cufflinks gene_id and transcript_id with the
-    gene_id and transcipt_id from ref_gtf, where available
+    gene_id and transcript_id from ref_gtf, where available
+
     """
     ref_db = gtf.get_gtf_db(ref_gtf, in_memory=True)
     merged_db = gtf.get_gtf_db(merged_gtf, in_memory=True)
     base, ext = os.path.splitext(merged_gtf)
-    fixed = base + ".fixed" + ext
+    fixed = out_file if out_file else base + ".clean.fixed" + ext
     if file_exists(fixed):
         return fixed
 
@@ -229,7 +230,9 @@ def merge(assembled_gtfs, ref_file, gtf_file, num_cores):
                "{assembled_file}")
         cmd = cmd.format(**locals())
         do.run(cmd, "Merging transcript assemblies with reference.")
-    clean, dirty = clean_assembly(merged_file)
+    clean, _ = clean_assembly(merged_file)
     fixed = fix_cufflinks_attributes(gtf_file, clean)
-    os.rename(fixed, out_file)
+    classified = annotate_gtf.annotate_novel_coding(fixed, gtf_file, ref_file)
+    filtered = annotate_gtf.cleanup_transcripts(classified, gtf_file, ref_file)
+    os.rename(filtered, out_file)
     return out_file

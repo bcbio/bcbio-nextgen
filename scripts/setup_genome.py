@@ -55,9 +55,6 @@ def install_gtf_file(build_dir, gtf, build):
         shutil.copyfile(gtf, out_file)
     return out_file
 
-def make_indices(ref_file, indices):
-    return False
-
 if __name__ == "__main__":
     description = ("Set up a custom genome for bcbio-nextgen. This will "
                    "stick the genome under name/build in the genomes "
