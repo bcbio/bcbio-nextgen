@@ -20,6 +20,10 @@ from bcbio.variation import effects, genotype, population
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
+
+ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
+                         "phasing", "svcaller", "jointcaller", "tools_off"]
+
 def organize(dirs, config, run_info_yaml):
     """Organize run information from a passed YAML file or the Galaxy API.
 
@@ -151,7 +155,7 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
-                      "trim_reads", "adapters", "custom_trim","kraken",
+                      "trim_reads", "adapters", "custom_trim", "kraken",
                       "align_split_size", "quality_bin",
                       "quality_format", "write_summary",
                       "merge_bamprep", "coverage",
@@ -382,8 +386,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             item["upload"] = upload
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
-                                                  ignore_keys=["variantcaller", "realign", "recalibrate",
-                                                               "phasing", "svcaller", "jointcaller"])
+                                                  ignore_keys=ALGORITHM_NOPATH_KEYS)
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
