@@ -264,6 +264,18 @@ def get_algorithm_config(xs):
     raise ValueError("Did not find algorithm configuration in items: {0}"
                      .format(xs))
 
+def get_dataarg(args):
+    """Retrieve the world 'data' argument from a set of input parameters.
+    """
+    for i, arg in enumerate(args):
+        if is_nested_config_arg(arg):
+            return i, arg
+        elif is_std_config_arg(arg):
+            return i, {"config": arg}
+        elif isinstance(arg, (list, tuple)) and is_nested_config_arg(arg[0]):
+            return i, arg[0]
+    raise ValueError("Did not find configuration or data object in arguments: %s" % args)
+
 def add_cores_to_config(args, cores_per_job, parallel=None):
     """Add information about available cores for a job to configuration.
     Ugly hack to update core information in a configuration dictionary.

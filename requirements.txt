@@ -27,4 +27,3 @@ sh>=1.07
 arvados-python-client>=0.1.1405019228.4a7ca04
 chanjo>=1.1.1
 bcbio-nextgen==0.7.9
-cpat>=1.2
