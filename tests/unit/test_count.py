@@ -5,10 +5,10 @@ from bcbio.utils import safe_makedir, file_exists
 import tempfile
 import stat
 import shutil
+from nose.plugins.attrib import attr
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "bcbio-nextgen-test-data", "data")
 
-from nose.plugins.attrib import attr
 
 class TestHtseqCount(unittest.TestCase):
     cur_dir = os.path.dirname(__file__)

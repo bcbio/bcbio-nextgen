@@ -18,7 +18,7 @@ from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.variation import effects, genotype, population
 from bcbio.variation.cortex import get_sample_name
-from bcbio.bam.fastq import open_fastq
+from bcbio.bam.fastq import open_fastq, is_fastq
 
 
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
@@ -337,6 +337,8 @@ def _sanity_check_files(item, files):
     elif file_type == "fastq":
         if len(files) not in [1, 2]:
             msg = "Expect either 1 (single end) or 2 (paired end) fastq inputs"
+        if len(files) == 2 and files[0] == files[1]:
+            msg = "Expect both fastq files to not be the same"
     if msg:
         raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
@@ -369,7 +371,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
             item["lane"] = str(i + 1)
         item["lane"] = _clean_characters(str(item["lane"]))
         if "description" not in item:
-            if len(item.get("files", [])) == 1 and item["files"][0].endswith(".bam"):
+            if _item_is_bam(item):
                 item["description"] = get_sample_name(item["files"][0])
             else:
                 raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
@@ -393,6 +395,10 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details
+
+def _item_is_bam(item):
+    files = item.get("files", [])
+    return len(files) == 1 and files[0].endswith(".bam")
 
 def _add_algorithm_defaults(algorithm):
     """Central location specifying defaults for algorithm inputs.
