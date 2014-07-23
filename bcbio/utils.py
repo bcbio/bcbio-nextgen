@@ -272,6 +272,17 @@ def remove_safe(f):
     except OSError:
         pass
 
+def file_plus_index(fname):
+    """Convert a file name into the file plus required indexes.
+    """
+    exts = {".vcf": ".idx", ".bam": ".bai", ".vcf.gz": ".tbi", ".bed.gz": ".tbi",
+            ".fq.gz": ".gbi"}
+    ext = splitext_plus(fname)[-1]
+    if ext in exts:
+        return [fname, fname + exts[ext]]
+    else:
+        return [fname]
+
 def symlink_plus(orig, new):
     """Create relative symlinks and handle associated biological index files.
     """

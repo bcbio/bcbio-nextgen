@@ -223,7 +223,6 @@ class Variant2Pipeline(AbstractPipeline):
         logger.info("Timing: finished")
         return samples
 
-
 def _debug_samples(i, samples):
     print "---", i, len(samples)
     for sample in (x[0] for x in samples):

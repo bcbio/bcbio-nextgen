@@ -17,7 +17,7 @@ from bcbio import utils
 def file_transaction(*rollback_files):
     """Wrap file generation in a transaction, moving to output if finishes.
     """
-    exts = {".vcf": ".idx", ".bam": ".bai", "vcf.gz": ".tbi"}
+    exts = {".vcf": ".idx", ".bam": ".bai", ".vcf.gz": ".tbi", ".bed.gz": ".tbi"}
     safe_names, orig_names = _flatten_plus_safe(rollback_files)
     _remove_files(safe_names)  # remove any half-finished transactions
     try:

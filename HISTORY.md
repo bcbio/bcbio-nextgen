@@ -13,9 +13,13 @@
   pybedtools to avoid filling global temporary space.
 - Improve parallel region generation to avoid large numbers of segments on
   organisms with many chromosomes.
+- Initial support for tumor normal calling with VarDict. Thanks to
+  Miika Ahdesmaki and Zhongwu Lai.
 - Provide optional support for compressing messages on large IPython jobs to
   reduce memory usage. Enable by adding `compress_msg` to `alogrithm` section of
-  `bcbio_system.yaml`. Will be made the default after more testing.
+  `bcbio_system.yaml`. There will be additional testing in future releases
+  before making the default, and this may be replaced by new methods like
+  transit (https://github.com/cognitect/transit-python).
 - Add de-duplication support back for pre-aligned input files. Thanks to
   Severine Catreux.
 - Generalize SGE support to handle additional system setups. Thanks to Karl Gutwin.
@@ -33,7 +37,7 @@
 - Isoform-level FPKM combined output file generated (@klrl262)
 - Use shared conda repository for tricky to install Python packages:
   https://github.com/chapmanb/bcbio-conda
-- Added chanjo integration for coverage calculation (@kern3020):
+- Added initial chanjo integration for coverage calculation (@kern3020):
   https://github.com/robinandeer/chanjo
 - Initial support for automated evaluation of structural variant calling.
 - Bugfix: set library-type properly for Cufflinks runs.
