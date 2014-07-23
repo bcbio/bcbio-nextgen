@@ -127,7 +127,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
             var2vcf_opts = " -v 50 " if coverage_interval == "regional" else "" # for deep targeted panels, require 50 worth of coverage
             cmd = ("{vardict} -G {ref_file} -f {freq} "
-                   "-N paired.tumor_name -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
+                   "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                    "| {strandbias} "
                    "| {var2vcf} -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
                    "| {vcfstreamsort} {compress_cmd} > {tx_out_file}")
