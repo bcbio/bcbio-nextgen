@@ -6,6 +6,9 @@ import numpy
 import shutil
 import tempfile
 import os
+import sys
+
+from bcbio import utils
 from bcbio.rnaseq import gtf
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
@@ -13,6 +16,9 @@ from bcbio.provenance import do
 from bcbio.bam import fasta
 
 def classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta):
+    cpat_cmd = _find_executable("cpat.py")
+    if not cpat_cmd:
+        return {}
     cutoff, hexamer, logit = get_coding_potential_cutoff(ref_gtf, ref_fasta)
     assembled_fasta = gtf.gtf_to_fasta(assembled_gtf, ref_fasta)
     cpat_fn = cpat(assembled_fasta, hexamer, logit)
@@ -28,13 +34,25 @@ def classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta):
             classification[transcript] = "ncRNA"
     return classification
 
+def _find_executable(name):
+    in_path = utils.which(name)
+    if in_path:
+        return in_path
+    else:
+        in_conda = os.path.join(os.path.dirname(sys.executable), name)
+        if os.path.exists(in_conda):
+            return in_conda
+        else:
+            return None
+
 def cpat(assembled_fasta, hexamer, logit, out_file=None):
     if out_file and file_exists(out_file):
         return out_file
     if not out_file:
         out_file = tempfile.NamedTemporaryFile(delete=False, suffix=".cpat").name
 
-    cmd = ("cpat.py --gene={assembled_fasta} --hex={hexamer} "
+    cpat_cmd = _find_executable("cpat.py")
+    cmd = ("{cpat_cmd} --gene={assembled_fasta} --hex={hexamer} "
            "--logitModel={logit} --outfile={tx_out_file}")
     message = "Predicing coding potential of %s." % (assembled_fasta)
     with file_transaction(out_file) as tx_out_file:
@@ -73,7 +91,7 @@ def grade_cpat(coding_transcripts, noncoding_transcripts, cpat, cutoff):
     sensitivity = tp / (tp + fn)
     specificity = tn / (tn + fp)
     accuracy = (tp + tn) / (tp + tn + fp + fn)
-    precision = tp / (tp + fp)
+    precision = tp / (tp + fp) if (tp + fp > 0) else -1
     return {"sensitivity": sensitivity, "specificity": specificity,
             "accuracy": accuracy, "precision": precision}
 
@@ -87,7 +105,8 @@ def make_logit_model(coding_fasta, noncoding_fasta, hexamers, out_dir=None):
     tx_prefix = tempfile.NamedTemporaryFile(delete=False).name
     tx_out_file = tx_prefix +  ".logit.RData"
 
-    cmd = ("make_logitModel.py --cgene={coding_fasta} --ngene={noncoding_fasta} "
+    logit_cmd = _find_executable("make_logitModel.py")
+    cmd = ("{logit_cmd} --cgene={coding_fasta} --ngene={noncoding_fasta} "
            "--hex={hexamers} --outfile={tx_prefix}")
     message = "Building coding/noncoding logistical model."
     do.run(cmd.format(**locals()), message)
@@ -135,11 +154,11 @@ def hexamer_table(cds_fasta, noncoding_fasta, out_file=None):
         return out_file
     if not out_file:
         out_file = tempfile.NamedTemporaryFile(delete=False, suffix=".hexamers").name
-    cmd = ("make_hexamer_tab.py --cod={cds_fasta} --noncod={noncoding_fasta} "
+    hex_cmd = _find_executable("make_hexamer_tab.py")
+    cmd = ("{hex_cmd} --cod={cds_fasta} --noncod={noncoding_fasta} "
            "> {tx_out_file}")
     with file_transaction(out_file) as tx_out_file:
         message = ("Calculating hexamer content in %s and %s."
                    % (cds_fasta, noncoding_fasta))
         do.run(cmd.format(**locals()), message)
     return out_file
-
