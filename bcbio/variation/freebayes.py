@@ -115,6 +115,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 
             vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
             vcffilter = config_utils.get_program("vcffilter", config)
+            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
+            vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             opts += " -f {}".format(ref_file)
@@ -136,7 +138,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                   "{opts} {paired.tumor_bam} {paired.normal_bam} "
                   "| {vcffilter} -f 'QUAL > 1' -s "
                   "| {vcfsamplediff} VT {paired.normal_name} {paired.tumor_name} - "
-                  "{compress_cmd} >  {tx_out_file}")
+                  "| {vcfallelicprimitives} | {vcfstreamsort} "
+                  "{compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
