@@ -31,6 +31,7 @@ from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
+from bcbio.variation import bedutils
 from bcbio.variation import multi as vmulti
 
 def parallel_callable_loci(in_bam, ref_file, config):
@@ -129,7 +130,8 @@ def _get_ctype(count, depth):
 def _regions_for_coverage(data, region, ref_file, out_file):
     """Retrieve BED file of regions we need to calculate coverage in.
     """
-    variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
+    variant_regions = bedutils.merge_overlaps(utils.get_in(data, ("config", "algorithm", "variant_regions")),
+                                              data)
     ready_region = shared.subset_variant_regions(variant_regions, region, out_file)
     custom_file = "%s-coverageregions.bed" % utils.splitext_plus(out_file)[0]
     if not ready_region:

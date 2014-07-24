@@ -5,7 +5,6 @@ https://github.com/ekg/freebayes
 
 from collections import namedtuple
 import os
-import shutil
 
 try:
     import vcf
@@ -17,7 +16,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation, ploidy
+from bcbio.variation import annotation, bedutils, ploidy
 from bcbio.variation.vcfutils import (get_paired_bams, is_paired_analysis,
                                       bgzip_and_index, move_vcf)
 
@@ -29,10 +28,16 @@ def region_to_freebayes(region):
         return region
 
 def _freebayes_options_from_config(items, config, out_file, region=None):
+    """Prepare standard options from configuration input.
+
+    Input BED target files are merged to avoid overlapping regions which
+    cause FreeBayes to call multiple times.
+    """
     opts = []
     opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
 
-    variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
+    variant_regions = bedutils.merge_overlaps(utils.get_in(config, ("algorithm", "variant_regions")),
+                                              items[0])
     target = subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
@@ -44,9 +49,9 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
         opts += resources["options"]
     if "--min-alternate-fraction" not in " ".join(opts) and "-F" not in " ".join(opts):
         # add minimum reportable allele frequency, for which FreeBayes defaults to 20
-         min_af = float(utils.get_in(config, ("algorithm",
-                                              "min_allele_fraction"),20)) / 100.0
-         opts += ["--min-alternate-fraction", str(min_af)]
+        min_af = float(utils.get_in(config, ("algorithm",
+                                             "min_allele_fraction"), 20)) / 100.0
+        opts += ["--min-alternate-fraction", str(min_af)]
     return opts
 
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
@@ -121,7 +126,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 # FreeBayes defaults to 20%, but use 10% by default for the
                 # tumor case
                 min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
-                                                                  "min_allele_fraction"),10)) / 100.0
+                                                                  "min_allele_fraction"), 10)) / 100.0
                 opts += " --min-alternate-fraction %s" % min_af
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one

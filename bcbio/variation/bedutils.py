@@ -3,6 +3,8 @@
 import os
 import shutil
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -10,19 +12,36 @@ from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
 def clean_file(in_file, data, prefix=""):
-    """Prepare a clean input BED file without headers or overlapping segments.
-
-    Overlapping regions (1:1-100, 1:90-100) cause issues with callers like FreeBayes
-    that don't collapse BEDs prior to using them.
+    """Prepare a clean sorted input BED file without headers
     """
-    bedtools = config_utils.get_program("bedtools", data["config"])
     if in_file:
         bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file)))
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
-                cmd = "grep -v ^track {in_file} | sort -k1,1 -k2,2n | {bedtools} merge -i stdin > {tx_out_file}"
+                cmd = "grep -v ^track {in_file} | sort -k1,1 -k2,2n > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
+        vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
+        return out_file
+
+def merge_overlaps(in_file, data):
+    """Merge bed file intervals to avoid overlapping regions.
+
+    Overlapping regions (1:1-100, 1:90-100) cause issues with callers like FreeBayes
+    that don't collapse BEDs prior to using them.
+    """
+    if in_file:
+        bedtools = config_utils.get_program("bedtools", data["config"])
+        work_dir = tz.get_in(["dirs", "work"], data)
+        if work_dir:
+            bedprep_dir = utils.safe_makedir(os.path.join(work_dir, "bedprep"))
+        else:
+            bedprep_dir = os.path.dirname(in_file)
+        out_file = os.path.join(bedprep_dir, "%s-merged.bed" % (utils.splitext_plus(os.path.basename(in_file))[0]))
+        if not utils.file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                cmd = "{bedtools} merge -i {in_file} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Prepare merged BED file", data)
         vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
         return out_file
 
