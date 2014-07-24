@@ -326,7 +326,6 @@ def _run_fastqc(bam_file, data, fastqc_out):
     Handles fastqc 0.11+, which use a single HTML file and older versions that use
     a directory of files + images. The goal is to eventually move to only 0.11+
     """
-    fastqc_name = os.path.splitext(os.path.basename(bam_file))[0]
     sentry_file = os.path.join(fastqc_out, "fastqc_report.html")
     if not os.path.exists(sentry_file):
         work_dir = os.path.dirname(fastqc_out)
@@ -335,6 +334,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
                   if data.get("analysis", "").lower() not in ["standard"]
                   else None)
         bam_file = ds_bam if ds_bam else bam_file
+        fastqc_name = os.path.splitext(os.path.basename(bam_file))[0]
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
