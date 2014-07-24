@@ -109,7 +109,9 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
         with file_transaction(out_file) as tx_out_file:
             paired = get_paired_bams(align_bams, items)
             if not paired.normal_bam:
-                raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
+                return _run_freebayes_caller(align_bams, items, ref_file,
+                                             assoc_files, region, out_file)
+                #raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
 
             vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
             vcffilter = config_utils.get_program("vcffilter", config)
