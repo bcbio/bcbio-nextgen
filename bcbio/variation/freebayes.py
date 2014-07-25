@@ -114,10 +114,14 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
         with file_transaction(out_file) as tx_out_file:
             paired = get_paired_bams(align_bams, items)
             if not paired.normal_bam:
-                raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
+                return _run_freebayes_caller(align_bams, items, ref_file,
+                                             assoc_files, region, out_file)
+                #raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
 
             vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
             vcffilter = config_utils.get_program("vcffilter", config)
+            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
+            vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             opts += " -f {}".format(ref_file)
@@ -139,7 +143,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                   "{opts} {paired.tumor_bam} {paired.normal_bam} "
                   "| {vcffilter} -f 'QUAL > 1' -s "
                   "| {vcfsamplediff} VT {paired.normal_name} {paired.tumor_name} - "
-                  "{compress_cmd} >  {tx_out_file}")
+                  "| {vcfallelicprimitives} | {vcfstreamsort} "
+                  "{compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
