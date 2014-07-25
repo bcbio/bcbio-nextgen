@@ -57,6 +57,7 @@ def prep_vep_cache(dbkey, ref_file, config=None):
         with open(resource_file) as in_handle:
             resources = yaml.load(in_handle)
         ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
+        ensembl_version = tz.get_in(["aliases", "ensembl_version"], resources)
         symlink_dir = _special_dbkey_maps(dbkey, ref_file)
         if symlink_dir:
             return symlink_dir, ensembl_name
@@ -67,6 +68,8 @@ def prep_vep_cache(dbkey, ref_file, config=None):
             if not os.path.exists(out_dir):
                 cmd = ["vep_install.pl", "-a", "c", "-s", ensembl_name,
                        "-c", vep_dir]
+                if ensembl_version:
+                    cmd += ["-v", ensembl_version]
                 do.run(cmd, "Prepare VEP directory for %s" % ensembl_name)
                 cmd = ["vep_convert_cache.pl", "-species", ensembl_name, "-version", vepv,
                        "-d", vep_dir]

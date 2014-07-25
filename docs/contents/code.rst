@@ -236,10 +236,9 @@ either require additional tools to run locally, or require preparing copies in
 S3 buckets.
 
 .. _config/biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
-.. _cloudbio/biodata/genomes.py: https://github.com/chapmanb/cloudbiolinux/blob/master/cloudbio/biodata/genomes.py#L253
-.. _scripts/bcbio_nextgen_install.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/bcbio_nextgen_install.py#L235
-.. _bcbio/install.py:
-https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/install.py#L451
+.. _cloudbio/biodata/genomes.py: https://github.com/chapmanb/cloudbiolinux/blob/7a2161a415d3dcd76f41095cd8f16bec84d4b1f3/cloudbio/biodata/genomes.py#L267
+.. _scripts/bcbio_nextgen_install.py: https://github.com/chapmanb/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/scripts/bcbio_nextgen_install.py#L236
+.. _bcbio/install.py: https://github.com/chapmanb/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/bcbio/install.py#L523
 .. _utils/prepare_dbsnp.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_dbsnp.py
 .. _utils/prepare_tx_gff.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_tx_gff.py
 
