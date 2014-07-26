@@ -113,12 +113,13 @@ def _prep_subsampled_bams(data, work_dir):
 
     https://groups.google.com/d/msg/delly-users/xmia4lwOd1Q/uaajoBkahAIJ
 
-    Subsamples correctly aligned reads to 5 million based on speedseq defaults:
+    Subsamples correctly aligned reads to 50 million based on speedseq defaults and
+    evaluations on NA12878 whole genome data:
 
     https://github.com/cc2qe/speedseq/blob/ca624ba9affb0bd0fb88834ca896e9122639ec94/bin/speedseq#L1102
     """
     full_bam, sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
-    ds_bam = bam.downsample(full_bam, data, 5e6, read_filter="-F 'not secondary_alignment and proper_pair'",
+    ds_bam = bam.downsample(full_bam, data, 5e7, read_filter="-F 'not secondary_alignment and proper_pair'",
                             always_run=True, work_dir=work_dir)
     out_bam = "%s-final%s" % utils.splitext_plus(ds_bam)
     if not utils.file_exists(out_bam):
@@ -170,7 +171,7 @@ def run(items):
     # Add core request for delly
     config = copy.deepcopy(items[0]["config"])
     delly_config = utils.get_in(config, ("resources", "delly"), {})
-    delly_config["cores"] = len(items)
+    delly_config["cores"] = 1
     config["resources"]["delly"] = delly_config
     parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1),
                 "progs": ["delly"]}
@@ -178,7 +179,7 @@ def run(items):
                               [(data, work_dir) for data in items],
                               config, parallel)
     ref_file = utils.get_in(items[0], ("reference", "fasta", "base"))
-    sv_types = ["DEL", "DUP", "INV"]  # "TRA" has invalid VCF END specifications that GATK doesn't like
+    sv_types = ["DEL", "DUP"] # "TRA" has invalid VCF END specifications that GATK doesn't like, "INV" very slow
     exclude_file = _get_full_exclude_file(items, work_dir)
     bytype_vcfs = run_multicore(_run_delly,
                                 [(work_bams, chrom, sv_type, ref_file, work_dir, items)

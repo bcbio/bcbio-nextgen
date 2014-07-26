@@ -21,17 +21,31 @@ def _stat_str(x, n):
 def _evaluate_one(caller, svtype, ensemble, truth, exclude):
     """Compare a ensemble results for a caller against a specific caller and SV type.
     """
+    def cnv_matches(name):
+        """Check for CNV matches -- XXX hardcoded for diploid comparisons.
+        """
+        if name.startswith("cnv"):
+            num = int(name.split("_")[0].replace("cnv", ""))
+            if svtype == "DEL" and num < 2:
+                return True
+            elif svtype == "DUP" and num > 2:
+                return True
+            else:
+                return False
+        else:
+            return False
     def is_caller_svtype(feat):
         for name in feat.name.split(","):
-            if name.startswith((svtype, "cnv")) and (caller == "ensemble" or name.endswith(caller)):
+            if (name.startswith(svtype) or cnv_matches(name)) and (caller == "ensemble" or name.endswith(caller)):
                 return True
         return False
     exfeats = pybedtools.BedTool(exclude)
-    efeats = pybedtools.BedTool(ensemble).filter(is_caller_svtype).intersect(exfeats, v=True, f=0.50, r=True).saveas()
-    tfeats = pybedtools.BedTool(truth).intersect(exfeats, v=True, f=0.50, r=True)
-    etotal = len(set(efeats))
-    ttotal = len(set(tfeats))
-    match = len(set(efeats.intersect(tfeats)))
+    efeats = pybedtools.BedTool(ensemble).filter(is_caller_svtype).saveas()\
+                       .intersect(exfeats, v=True, f=0.50, r=True).sort().merge().saveas()
+    tfeats = pybedtools.BedTool(truth).intersect(exfeats, v=True, f=0.50, r=True).sort().merge().saveas()
+    etotal = efeats.count()
+    ttotal = tfeats.count()
+    match = efeats.intersect(tfeats).sort().merge().saveas().count()
     return {"sensitivity": _stat_str(match, ttotal),
             "precision": _stat_str(match, etotal)}
 

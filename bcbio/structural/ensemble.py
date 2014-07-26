@@ -19,6 +19,8 @@ from bcbio.pipeline import shared
 
 # ## Conversions to simplified BED files
 
+MAX_SVSIZE = 1e6  # 1Mb maximum size from callers to avoid huge calls collapsing all structural variants
+
 def _vcf_to_bed(in_file, caller, out_file):
     if in_file and in_file.endswith((".vcf", "vcf.gz")):
         with utils.open_gzipsafe(in_file) as in_handle:
@@ -27,10 +29,12 @@ def _vcf_to_bed(in_file, caller, out_file):
                     if not rec.FILTER:
                         if (rec.samples[0].gt_type and
                               not (hasattr(rec.samples[0].data, "FT") and rec.samples[0].data.FT)):
-                            out_handle.write("\t".join([rec.CHROM, str(rec.start - 1),
-                                                        str(rec.INFO.get("END", rec.start)),
-                                                        "%s_%s" % (_get_svtype(rec), caller)])
-                                             + "\n")
+                            start = rec.start - 1
+                            end = int(rec.INFO.get("END", rec.start))
+                            if end - start < MAX_SVSIZE:
+                                out_handle.write("\t".join([rec.CHROM, str(start), str(end),
+                                                            "%s_%s" % (_get_svtype(rec), caller)])
+                                                 + "\n")
 
 def _get_svtype(rec):
     try:
