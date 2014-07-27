@@ -5,6 +5,8 @@ This works as part of the lane/flowcell process step of the pipeline.
 from collections import namedtuple
 import os
 
+import toolz as tz
+
 from bcbio import bam, utils
 from bcbio.bam import cram
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2,
@@ -50,16 +52,22 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     if data.get("disambiguate"):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
     align_dir = utils.safe_makedir(apply(os.path.join, align_dir_parts))
+    aligner_indexes = os.path.commonprefix(tz.get_in(("reference", aligner, "indexes"), data))
+    if aligner_indexes.endswith("."):
+        aligner_indexes = aligner_indexes[:-1]
+    ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
-        data = _align_from_bam(fastq1, aligner, utils.get_in(data, ("reference", aligner, "base")),
-                               utils.get_in(data, ("reference", "fasta", "base")),
+        data = _align_from_bam(fastq1, aligner, aligner_indexes, ref_file,
                                names, align_dir, data)
     else:
-        data = _align_from_fastq(fastq1, fastq2, aligner, utils.get_in(data, ("reference", aligner, "base")),
-                                 utils.get_in(data, ("reference", "fasta", "base")),
+        data = _align_from_fastq(fastq1, fastq2, aligner, aligner_indexes, ref_file,
                                  names, align_dir, data)
     if data["work_bam"] and utils.file_exists(data["work_bam"]):
         bam.index(data["work_bam"], data["config"])
+        for extra in ["-sr", "-disc"]:
+            extra_bam = utils.append_stem(data['work_bam'], extra)
+            if utils.file_exists(extra_bam):
+                bam.index(extra_bam, data["config"])
     return data
 
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, data):

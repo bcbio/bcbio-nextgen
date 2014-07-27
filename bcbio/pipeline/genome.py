@@ -175,9 +175,9 @@ def get_refs(genome_build, aligner, galaxy_base):
                 indexes = glob.glob(os.path.join(base, "*"))
             else:
                 indexes = glob.glob("%s*" % utils.splitext_plus(base)[0])
-            if base in indexes:
-                indexes.remove(base)
-            out[name_remap.get(name, name)] = {"base": base, "indexes": indexes}
+            out[name_remap.get(name, name)] = {"indexes": indexes}
+            if os.path.exists(base) and os.path.isfile(base):
+                out[name_remap.get(name, name)]["base"] = base
     return out
 
 def get_builds(galaxy_base):
