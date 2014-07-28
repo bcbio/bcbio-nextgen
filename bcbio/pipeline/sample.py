@@ -6,6 +6,8 @@ processed together.
 import copy
 import os
 
+import toolz as tz
+
 from bcbio import utils, bam, broad
 from bcbio.log import logger
 from bcbio.pipeline.merge import merge_bam_files
@@ -17,7 +19,6 @@ from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
 from bcbio.variation import bedutils, recalibrate
 from bcbio.variation import multi as vmulti
-
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -142,7 +143,7 @@ def postprocess_alignment(data):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
             data = bedutils.clean_inputs(data)
         data = _recal_no_markduplicates(data)
-    return [data]
+    return [[data]]
 
 def _recal_no_markduplicates(data):
     orig_config = copy.deepcopy(data["config"])
@@ -150,6 +151,21 @@ def _recal_no_markduplicates(data):
     data = recalibrate.prep_recal(data)[0][0]
     data["config"] = orig_config
     return data
+
+def _merge_out_from_infiles(in_files):
+    """Generate output merged file name from set of input files.
+
+    Handles non-shared filesystems where we don't know output path when setting
+    up split parts.
+    """
+    fname = os.path.commonprefix([os.path.basename(f) for f in in_files])
+    while fname.endswith(("-", "_", ".")):
+        fname = fname[:-1]
+    ext = os.path.splitext(in_files[0])[-1]
+    dirname = os.path.dirname(in_files[0])
+    while dirname.endswith(("split", "merge")):
+        dirname = os.path.dirname(dirname)
+    return os.path.join(dirname, "%s%s" % (fname, ext))
 
 def delayed_bam_merge(data):
     """Perform a merge on previously prepped files, delayed in processing.
@@ -168,7 +184,7 @@ def delayed_bam_merge(data):
         if file_key in data:
             extras.append(data[file_key])
         in_files = sorted(list(set(extras)))
-        out_file = data["combine"][file_key]["out"]
+        out_file = tz.get_in(["combine", file_key, "out"], data, _merge_out_from_infiles(in_files))
         sup_exts = data.get(file_key + "-plus", {}).keys()
         for ext in sup_exts + [""]:
             merged_file = None

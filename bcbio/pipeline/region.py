@@ -6,23 +6,14 @@ no-read regions.
 import collections
 import os
 
-from bcbio import utils
+import toolz as tz
+
 from bcbio.distributed.split import parallel_split_combine
 
 def get_max_counts(samples):
     """Retrieve the maximum region size from a set of callable regions
     """
-    bed_files = list(set(utils.get_in(x[0], ("config", "algorithm", "callable_regions"))
-                         for x in samples))
-    bed_files = filter(lambda x: x is not None, bed_files)
-    if not bed_files:
-        bed_files = list(set(utils.get_in(x[0], ("config", "algorithm", "variant_regions"))
-                             for x in samples))
-    bed_files = filter(lambda x: x is not None, bed_files)
-    if len(bed_files) > 0:
-        return max(sum(1 for line in open(f)) for f in bed_files if f)
-    else:
-        return 1
+    return max([tz.get_in(["config", "algorithm", "callable_count"], data[0], 1) for data in samples])
 
 # ## BAM preparation
 
@@ -36,9 +27,12 @@ def to_safestr(region):
 
 def _split_by_regions(dirname, out_ext, in_key):
     """Split a BAM file data analysis into chromosomal regions.
+
     """
     import pybedtools
     def _do_work(data):
+        # XXX Need to move retrieval of regions into preparation to avoid
+        # Need for files and pybedtools when running in non-shared filesystems
         regions = [(r.chrom, int(r.start), int(r.stop))
                    for r in pybedtools.BedTool(data["config"]["algorithm"]["callable_regions"])]
         bam_file = data[in_key]
@@ -138,8 +132,9 @@ def clean_sample_data(samples):
     """
     out = []
     for data in (x[0] for x in samples):
-        data["dirs"] = {"work": data["dirs"]["work"], "galaxy": data["dirs"]["galaxy"],
-                        "fastq": data["dirs"].get("fastq")}
+        if "dirs" in data:
+            data["dirs"] = {"work": data["dirs"]["work"], "galaxy": data["dirs"]["galaxy"],
+                            "fastq": data["dirs"].get("fastq")}
         data["config"] = {"algorithm": data["config"]["algorithm"],
                           "resources": data["config"]["resources"]}
         for remove_attr in ["config_file", "regions", "algorithm"]:

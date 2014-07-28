@@ -392,10 +392,14 @@ def combine_sample_regions(*samples):
             else:
                 analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
             for data in items:
+                vr_file = tz.get_in(["config", "algorithm", "variant_regions"], data)
                 if analysis_file:
                     analysis_files.append(analysis_file)
                     data["config"]["algorithm"]["callable_regions"] = analysis_file
                     data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
+                    data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(analysis_file).count()
+                elif vr_file:
+                    data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(vr_file).count()
                 out.append([data])
         assert len(out) == len(samples)
         if len(analysis_files) > 0:

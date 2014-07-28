@@ -179,7 +179,7 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = disambiguate.resolve(samples, run_parallel)
             with profile.report("callable regions", dirs):
                 samples = run_parallel("postprocess_alignment", samples)
-                samples = run_parallel("combine_sample_regions", [samples])
+                samples = run_parallel("combine_sample_regions", samples)
                 samples = region.clean_sample_data(samples)
             with profile.report("coverage", dirs):
                 samples = coverage.summarize_samples(samples, run_parallel)
@@ -254,7 +254,7 @@ class StandardPipeline(AbstractPipeline):
                 samples = run_parallel("process_alignment", samples)
             with profile.report("callable regions", dirs):
                 samples = run_parallel("postprocess_alignment", samples)
-                samples = run_parallel("combine_sample_regions", [samples])
+                samples = run_parallel("combine_sample_regions", samples)
                 samples = region.clean_sample_data(samples)
         ## Quality control
         with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools"]),

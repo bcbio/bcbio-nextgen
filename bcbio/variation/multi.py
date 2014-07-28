@@ -29,7 +29,7 @@ def group_by_batch(items):
 def bam_needs_processing(data):
     """Check if a work input needs processing for parallelization.
     """
-    return (data["work_bam"] and
+    return (data.get("work_bam") and
             any(tz.get_in(["config", "algorithm", x], data) for x in
                 ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
                  "jointcaller"]))

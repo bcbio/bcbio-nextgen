@@ -99,7 +99,10 @@ def merge_split_alignments(samples, run_parallel):
     to_merge = collections.defaultdict(list)
     for data in (xs[0] for xs in samples):
         if data.get("combine"):
-            to_merge[data["combine"][file_key]["out"]].append(data)
+            out_key = tz.get_in(["combine", file_key, "out"], data)
+            if not out_key:
+                out_key = data["rgnames"]["lane"]
+            to_merge[out_key].append(data)
         else:
             ready.append([data])
     ready_merge = []
