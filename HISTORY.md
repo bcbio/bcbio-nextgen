@@ -1,5 +1,9 @@
 ## 0.8.0 (in progress)
 
+- Change defaults for installation: do not use sudo default and require
+  `--sudo` flag for installing system packages. No longer includes default
+  genomes or aligners to enable more minimal installations. Users install
+  genomes by specifically enumerating them on the command line.
 - Add support for Ensembl variant effects predictor (VEP). Enables annotation
   of variants with dbNSFP and LOFTEE. Thanks to Daniel MacArthur for VEP
   suggestion.

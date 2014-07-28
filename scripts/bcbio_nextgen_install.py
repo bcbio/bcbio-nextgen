@@ -23,7 +23,7 @@ remotes = {"requirements":
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
-           "http://repo.continuum.io/miniconda/Miniconda-3.0.0-%s-x86_64.sh"}
+           "http://repo.continuum.io/miniconda/Miniconda-3.5.5-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_dependencies()
@@ -232,16 +232,16 @@ if __name__ == "__main__":
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"],
+                        action="append", default=[],
                         choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix", "sacCer3",
                                  "xenTro3", "TAIR10", "WBcel235"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa"],
+                        action="append", default=[],
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",
+                        dest="sudo", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to install",

@@ -19,13 +19,13 @@ RUN mkdir -p /tmp/fuse-hack && cd /tmp/fuse-hack && \
     rm -rf /tmp/fuse-hack
 
 # bcbio-nextgen installation
-RUN git config --global url.https://github.com/.insteadOf git://github.com/ && \
-    mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
+RUN mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     wget --no-check-certificate \
       https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
-      --nosudo --nodata -u development
-RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --tooldir=/usr/local --tools
+      --nodata -u development
+RUN git config --global url.https://github.com/.insteadOf git://github.com/ && \
+    /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --sudo --tooldir=/usr/local --tools
 RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data
 ENV PATH /usrl/local/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}

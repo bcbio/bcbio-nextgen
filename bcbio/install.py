@@ -62,10 +62,15 @@ def upgrade_bcbio(args):
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
     if args.install_data:
-        with bcbio_tmpdir():
-            print("Upgrading bcbio-nextgen data files")
-            upgrade_bcbio_data(args, REMOTES)
-            print("bcbio-nextgen data upgrade complete.")
+        if len(args.genomes) == 0:
+            print("Data not installed, no genomes provided with `--genomes` flag")
+        elif len(args.aligners) == 0:
+            print("Data not installed, no aligners provided with `--aligners` flag")
+        else:
+            with bcbio_tmpdir():
+                print("Upgrading bcbio-nextgen data files")
+                upgrade_bcbio_data(args, REMOTES)
+                print("bcbio-nextgen data upgrade complete.")
     if args.isolate and args.tooldir:
         print("Installation directory not added to current PATH")
         print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
@@ -166,7 +171,7 @@ def upgrade_bcbio_data(args, remotes):
     data_dir = _get_data_dir()
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
-    tooldir = args.tooldir or get_defaults()["tooldir"]
+    tooldir = args.tooldir or get_defaults().get("tooldir")
     if tooldir:
         s["fabricrc_overrides"]["system_install"] = tooldir
     s["fabricrc_overrides"]["data_files"] = data_dir
@@ -307,7 +312,7 @@ def _install_toolplus(args, manifest_dir):
         if tool.name == "data":
             _install_gemini(args.tooldir, _get_data_dir(), args)
         elif tool.name == "kraken":
-            _install_kraken_db(tool.fname,_get_data_dir(),args)
+            _install_kraken_db(tool. fname, _get_data_dir(), args)
         elif tool.name in set(["gatk", "mutect"]):
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
         elif tool.name in set(["protected"]):  # back compatibility
@@ -387,28 +392,28 @@ def _install_gemini(tooldir, datadir, args):
         subprocess.check_call(cmd)
         os.remove(script)
 
-def _install_kraken_db( fname,datadir,args):
+def _install_kraken_db(fname, datadir, args):
     """Install kraken minimal DB in genome folder.
     """
-    kraken = os.path.join( datadir, "genome/kraken")
+    kraken = os.path.join(datadir, "genome/kraken")
     url = "https://ccb.jhu.edu/software/kraken/dl/minikraken.tgz"
-    compress = os.path.join(kraken,os.path.basename(url))
-    base,ext = utils.splitext_plus(os.path.basename(url))
-    db = os.path.join(kraken,base)
+    compress = os.path.join(kraken, os.path.basename(url))
+    base, ext = utils.splitext_plus(os.path.basename(url))
+    db = os.path.join(kraken, base)
     tooldir = args.tooldir or get_defaults()["tooldir"]
-    if os.path.exists(os.path.join(tooldir,"bin","kraken")):
+    if os.path.exists(os.path.join(tooldir, "bin", "kraken")):
         if not os.path.exists(kraken):
             utils.safe_makedir(kraken)
         if not os.path.exists(db):
             if not os.path.exists(compress):
-                subprocess.check_call(["wget", "-O", compress,url, "--no-check-certificate"])
-            cmd = ["tar","-xzvf",compress,"-C",kraken]
+                subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
+            cmd = ["tar", "-xzvf", compress, "-C", kraken]
             subprocess.check_call(cmd)
-            shutil.move(os.path.join(kraken,"minikraken_20140330"),os.path.join(kraken,"minikraken"))
+            shutil.move(os.path.join(kraken, "minikraken_20140330"), os.path.join(kraken, "minikraken"))
             utils.remove_safe(compress)
     else:
         raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
-            os.path.join(tooldir,"bin","kraken"))
+                                         os.path.join(tooldir, "bin", "kraken"))
 
 # ## Store a local configuration file with upgrade details
 
@@ -519,16 +524,16 @@ def add_subparser(subparsers):
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"],
+                        action="append", default=[],
                         choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix", "sacCer3",
                                  "xenTro3", "TAIR10", "WBcel235"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa", "bowtie2"],
+                        action="append", default=[],
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",
+                        dest="sudo", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("--distribution", help="Operating system distribution",

@@ -52,7 +52,8 @@ Quick start
 1. `Install`_ ``bcbio-nextgen`` with all tool dependencies and data files::
 
          wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-         python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
+         python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
+           --genomes GRCh37 --aligners bwa --aligners bowtie2
 
    producing an editable `system configuration file`_ referencing the installed
    software, data and system information.

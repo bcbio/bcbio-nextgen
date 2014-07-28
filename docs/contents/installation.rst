@@ -9,7 +9,8 @@ required genome data and python library dependencies for running human variant
 and RNA-seq analysis, bundled into an isolated directory or virtual environment::
 
      wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
+     python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
+       --genomes GRCh37 --aligners bwa --aligners bowtie2
 
 It places genomes, indexes and associated data files in
 ``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``. You should edit
@@ -22,8 +23,8 @@ additional software and data later using ``bcbio_nextgen.py upgrade``.
 Run ``python bcbio_nextgen_install.py`` with no arguments to see options
 for configuring the installation process. Some useful arguments are:
 
-- ``--nosudo`` For running in environments where you lack administrator
-  privileges.
+- ``--sudo`` Enable installation in privileged directories and allow the
+  installer to update system packages.
 - ``--isolate`` Avoid updating the user's ``~/.bashrc`` if installing in a
   non-standard PATH. This facilitates creation of isolated modules
   without disrupting the user's environmental setup.
@@ -41,16 +42,11 @@ requirements:
 - unzip
 - zlib (with development libraries)
 
-If you're using the ``--nosudo`` option, please see :ref:`isolated-install`
-for additional system requirements needed to bootstrap the full system. The
+If you're not using the ``--sudo`` option, please see :ref:`isolated-install`
+for additional system requirements needed to bootstrap the full system on
+minimal machines. The
 `bcbio-nextgen Dockerfile <https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_
 contains bootstrap package information to install on bare Ubuntu systems.
-
-Some steps retrieve third party tools from GitHub, which can run into
-issues if you're behind a proxy or block git ports. To instruct git to
-use ``https://`` globally instead of ``git://``::
-
-    $ git config --global url.https://github.com/.insteadOf git://github.com/
 
 The automated installer creates a fully integrated environment that
 allows simultaneous updates of the framework, third party tools and
@@ -71,7 +67,8 @@ Isolated installations
 
 To install bcbio-nextgen in an isolated non-root environment::
 
-    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --nosudo --isolate
+    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --isolate \
+       --genomes GRCh37 --aligners bwa --aligners bowtie2
 
 This requires the following additional system requirements to be in place:
 
@@ -97,7 +94,70 @@ installation.
 
 .. _Docker: http://www.docker.io/
 
+.. _upgrade-install:
+
+Upgrade
+=======
+
+We use the same automated installation process for performing upgrades
+of tools, software and data in place. Since there are multiple targets
+and we want to avoid upgrading anything unexpectedly, we have specific
+arguments for each. Generally, you'd want to upgrade the code, tools
+and data together with::
+
+  bcbio_nextgen.py upgrade -u stable --tools --data
+
+Tune the upgrade with these options:
+
+- ``-u`` Type of upgrade to do for bcbio-nextgen code. ``stable``
+  gets the most recent released version and ``development``
+  retrieves the latest code from GitHub.
+
+- ``--toolplus`` Specify additional tools to include. See the section on
+  :ref:`toolplus-install` for more details.
+
+- ``--genomes`` and ``--aligners`` options add additional aligner
+  indexes to download and prepare. ``bcbio_nextgen.py upgrade -h`` lists
+  available genomes and aligners. If you want to install multiple genomes or
+  aligners at once, specify ``--genomes`` or ``--aligners``
+  multiple times, like this:
+  ``--genomes GRCh37 --genomes mm10 --aligners bwa --aligners bowtie2``
+
+- Leave out the ``--tools`` option if you don't want to upgrade third party
+  tools. If using ``--tools``, it will use the same directory as specified
+  during installation. If you're using an older version that has not yet went
+  through a successful upgrade or installation and saved the tool directory, you
+  should manually specify ``--tooldir`` for the first upgrade. You can also pass
+  ``--tooldir`` to install to a different directory.
+
+- Leave out the ``--data`` option if you don't want to get any upgrades
+  of associated genome data.
+
 .. _toolplus-install:
+
+System requirements
+===================
+
+bcbio-nextgen provides a wrapper around external tools and data, so the actual
+tools used drive the system requirements. For small projects, it should install
+on workstations or laptops with a couple Gb of memory, and then scale as needed
+on clusters or multicore machines.
+
+Disk space requirements for the tools, including all system packages are under
+4Gb. Biological data requirements will depend on the genomes and aligner indices
+used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses
+under 25Gb of storage::
+
+    $ du -shc genomes/Hsapiens/GRCh37/*
+    3.8G  bowtie2
+    5.1G  bwa
+    3.0G  rnaseq-2014-05-02
+    3.0G  seq
+    340M  snpeff
+    4.2G  variation
+    4.4G  vep
+    23.5G total
+
 
 Extra software and data
 =======================
@@ -171,45 +231,11 @@ for commercial usage.
 .. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
 .. _FreeBayes and GATK comparison: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 
-.. _upgrade-install:
+Troubleshooting
+===============
 
-Upgrade
-=======
-
-We use the same automated installation process for performing upgrades
-of tools, software and data in place. Since there are multiple targets
-and we want to avoid upgrading anything unexpectedly, we have specific
-arguments for each. Generally, you'd want to upgrade the code, tools
-and data together with::
-
-  bcbio_nextgen.py upgrade -u stable --tools --data
-
-Tune the upgrade with these options:
-
-- ``-u`` Type of upgrade to do for bcbio-nextgen code. ``stable``
-  gets the most recent released version and ``development``
-  retrieves the latest code from GitHub.
-
-- ``--toolplus`` Specify additional tools to include. See the section on
-  :ref:`toolplus-install` for more details.
-
-- ``--genomes`` and ``--aligners`` options add additional aligner
-  indexes to download and prepare. By default we prepare a minimal
-  human genome setup. If you want to install multiple genomes or
-  aligners at once, specify ``--genomes`` or ``--aligners``
-  multiple times, like this:
-  ``--genomes GRCh37 --genomes mm10 --aligners bwa --aligners bowtie2``
-
-- Leave out the ``--tools`` option if you don't want to upgrade third
-  party tools. If using ``--tools``, it will use the same installation
-  directory as specified during installation. If you're using an older
-  version that has not yet went through a successful upgrade or
-  installation and saved the tool directory, you should manually
-  specify ``--tooldir`` for the first upgrade. You can also pass
-  ``--tooldir`` to install to a different directory.
-
-- Leave out the ``--data`` option if you don't want to get any upgrades
-  of associated genome data.
+Old bcbio version support
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The upgrade approach changed slightly as of 0.7.5 to be more
 consistent.  In earlier versions, to get a full upgrade leave out the
@@ -219,8 +245,15 @@ upgrade -u stable`` to get the latest version, then proceed
 again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
 ``bcbio_nextgen.py -u stable`` to get up to date.
 
-Troubleshooting
-===============
+Proxy or firewall problems
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some steps retrieve third party tools from GitHub, which can run into
+issues if you're behind a proxy or block git ports. To instruct git to
+use ``https://`` globally instead of ``git://``::
+
+    $ git config --global url.https://github.com/.insteadOf git://github.com/
+
 
 ImportError: No module named conda.cli
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
