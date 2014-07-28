@@ -1,4 +1,4 @@
-## 0.8.0 (in progress)
+## 0.8.0 (July 28, 2014)
 
 - Change defaults for installation: do not use sudo default and require
   `--sudo` flag for installing system packages. No longer includes default
