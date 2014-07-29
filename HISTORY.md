@@ -1,3 +1,8 @@
+## 0.8.1 (in progress)
+
+- Enable structural variant analyses on shared batches (two tumors with same
+  normal). Thanks to Miika Ahdesmaki.
+
 ## 0.8.0 (July 28, 2014)
 
 - Change defaults for installation: do not use sudo default and require

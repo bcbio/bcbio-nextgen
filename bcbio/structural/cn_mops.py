@@ -17,6 +17,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
+from bcbio.structural import shared as sshared
 from bcbio.variation import vcfutils
 
 def run(items, background=None):
@@ -37,7 +38,7 @@ def run(items, background=None):
         out_files = run_multicore(_run_on_chrom, [(chrom, work_bams, names, work_dir, items)
                                                   for chrom in chroms],
                                   data["config"], parallel)
-    out_file = _combine_out_files(out_files, work_bams[0], work_dir)
+    out_file = _combine_out_files(out_files, work_dir)
     out = []
     for data in items:
         if "sv" not in data:
@@ -47,10 +48,10 @@ def run(items, background=None):
         out.append(data)
     return out
 
-def _combine_out_files(chr_files, base_bam, work_dir):
+def _combine_out_files(chr_files, work_dir):
     """Concatenate all CNV calls into a single file.
     """
-    out_file = os.path.join(work_dir, "%s-cnv.bed" % (os.path.splitext(os.path.basename(base_bam))[0]))
+    out_file = "%s.bed" % sshared.outname_from_inputs(chr_files)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
@@ -93,8 +94,10 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
     """
     local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                  "lib", "R", "site-library")
-    out_file = os.path.join(work_dir, "%s-%s-cnv.bed" % (os.path.splitext(os.path.basename(work_bams[0]))[0],
-                                                         chrom if chrom else "all"))
+    batch = sshared.get_cur_batch(items)
+    ext = "-%s-cnv" % batch if batch else "-cnv"
+    out_file = os.path.join(work_dir, "%s%s-%s.bed" % (os.path.splitext(os.path.basename(work_bams[0]))[0],
+                                                       ext, chrom if chrom else "all"))
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             rcode = "%s-run.R" % os.path.splitext(out_file)[0]
