@@ -96,5 +96,5 @@ def _is_unique(read):
     return "XS" not in tags
 
 
-ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
+ANALYSIS = {"chip-seq": {"params": ["--rg-id", "1", "-X", 2000]},
             "RNA-seq": {"params": ["--sensitive", "-X", 2000]}}
