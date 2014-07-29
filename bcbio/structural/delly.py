@@ -44,8 +44,10 @@ def _delly_exclude_file(items, base_file, chrom):
 def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
     """Run delly, calling structural variations for the specified type.
     """
-    out_file = os.path.join(work_dir, "%s-svs%s-%s.vcf"
-                            % (os.path.splitext(os.path.basename(bam_files[0]))[0], sv_type, chrom))
+    batch = sshared.get_cur_batch(items)
+    ext = "-%s-svs" % batch if batch else "-svs"
+    out_file = os.path.join(work_dir, "%s%s-%s-%s.vcf"
+                            % (os.path.splitext(os.path.basename(bam_files[0]))[0], ext, chrom, sv_type))
     cores = min(utils.get_in(items[0], ("config", "algorithm", "num_cores"), 1),
                 len(bam_files))
     if not utils.file_exists(out_file):
@@ -179,14 +181,14 @@ def run(items):
                               [(data, work_dir) for data in items],
                               config, parallel)
     ref_file = utils.get_in(items[0], ("reference", "fasta", "base"))
-    sv_types = ["DEL", "DUP"] # "TRA" has invalid VCF END specifications that GATK doesn't like, "INV" very slow
+    sv_types = ["DEL", "DUP"]  # "TRA" has invalid VCF END specifications that GATK doesn't like, "INV" very slow
     exclude_file = _get_full_exclude_file(items, work_dir)
     bytype_vcfs = run_multicore(_run_delly,
                                 [(work_bams, chrom, sv_type, ref_file, work_dir, items)
                                  for (chrom, sv_type)
                                  in itertools.product(sshared.get_sv_chroms(items, exclude_file), sv_types)],
                                 config, parallel)
-    out_file = "%s.vcf.gz" % os.path.commonprefix(bytype_vcfs)
+    out_file = "%s.vcf.gz" % sshared.outname_from_inputs(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
     out = []
     for data in items:

@@ -142,3 +142,26 @@ def get_split_discordants(data, work_dir):
     if not dedup_bam:
         dedup_bam, sr_bam, disc_bam = _extract_split_and_discordants(data["align_bam"], work_dir, data)
     return dedup_bam, sr_bam, disc_bam
+
+def get_cur_batch(items):
+    """Retrieve name of the batch shared between all items in a group.
+    """
+    batches = []
+    for data in items:
+        batch = tz.get_in(["metadata", "batch"], data, [])
+        batches.append(set(batch) if isinstance(batch, (list, tuple)) else set([batch]))
+    combo_batches = reduce(lambda b1, b2: b1.intersection(b2), batches)
+    if len(combo_batches) == 1:
+        return combo_batches.pop()
+    elif len(combo_batches) == 0:
+        return None
+    else:
+        raise ValueError("Found multiple overlapping batches: %s -- %s" % (combo_batches, batches))
+
+def outname_from_inputs(in_files):
+    base = os.path.commonprefix(in_files)
+    if base.endswith("chr"):
+        base = base[:-3]
+    while base.endswith(("-", "_", ".")):
+        base = base[:-1]
+    return base

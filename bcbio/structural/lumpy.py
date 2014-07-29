@@ -25,8 +25,10 @@ SUPPORT_NUMS = {"1": "PE", "0": "SR"}
 def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """Run lumpy-sv, using speedseq pipeline.
     """
-    out_file = os.path.join(work_dir, "%s-svs.bedpe"
-                            % os.path.splitext(os.path.basename(items[0]["align_bam"]))[0])
+    batch = sshared.get_cur_batch(items)
+    ext = "-%s-svs" % batch if batch else "-svs"
+    out_file = os.path.join(work_dir, "%s%s.bedpe"
+                            % (os.path.splitext(os.path.basename(items[0]["align_bam"]))[0], ext))
     sv_exclude_bed = sshared.prepare_exclude_file(items, out_file)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
