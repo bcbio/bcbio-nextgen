@@ -154,7 +154,7 @@ sample configuration file for that analysis::
     details:
       - files: [/full/path/to/control_rep1.fastq]
 	description: 'Control_rep1'
-	genome_build: GRCm38
+	genome_build: mm10
 	analysis: RNA-seq
 	algorithm:
              aligner: tophat2
@@ -163,7 +163,7 @@ sample configuration file for that analysis::
 	     adapters: [nextera, polya]
       - files: [/full/path/to/control_rep2.fastq]
 	description: 'Control_rep2'
-	genome_build: GRCm38
+	genome_build: mm10
 	analysis: RNA-seq
 	algorithm:
              aligner: tophat2
@@ -172,7 +172,7 @@ sample configuration file for that analysis::
 	     adapters: [nextera, polya]
       - files: [/full/path/to/case_rep1.fastq]
 	description: 'Case_rep1'
-	genome_build: GRCm38
+	genome_build: mm10
 	analysis: RNA-seq
 	algorithm:
              aligner: tophat2
@@ -181,7 +181,7 @@ sample configuration file for that analysis::
 	     adapters: [nextera, polya]
       - files: [/full/path/to/case_rep2.fastq]
 	description: 'Case_rep2'
-	genome_build: GRCm38
+	genome_build: mm10
 	analysis: RNA-seq
 	algorithm:
              aligner: tophat2
