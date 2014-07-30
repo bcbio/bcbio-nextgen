@@ -25,10 +25,12 @@ and `improvements to filtering and VQSR`_.
    -  `GATK Unified Genotyper`_ (supports both GATK-lite in GATK 2.3
       and commercial restricted version in GATK 2.4+)
 
--  Paired tumor / normal variant calling:
+-  Tumor (/ normal paired) variant calling:
 
    - `MuTect`_ (version 1.1.5 and above)
    - `VarScan`_
+   - `FreeBayes`_
+   - `VarDict`_
 
 -  Quality filtering, using either hard filtering or
    `GATK's Variant Quality Score Recalibrator`_ (VQSR). VQSR
@@ -240,3 +242,4 @@ templating system.
 .. _variant evaluation framework: http://bcbio.wordpress.com/2014/05/12/wgs-trio-variant-evaluation/
 .. _FreeBayes and BAM post-alignment processing: https://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 .. _improvements to filtering and VQSR: https://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
+.. _VarDict: https://github.com/AstraZeneca-NGS/VarDict
