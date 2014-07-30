@@ -21,11 +21,8 @@ class TestCufflinks(unittest.TestCase):
         dirty_fn = os.path.join(self.out_dir, "dirty.gtf")
         clean, dirty = cufflinks.clean_assembly(self.merged_gtf, clean_fn,
                                                 dirty_fn)
-#        fixed_fn = os.path.join(self.out_dir, "fixed.gtf")
-#        fixed = cufflinks.fix_cufflinks_attributes(self.ref_gtf, clean, fixed_fn)
         assert(file_exists(clean))
         assert(os.path.exists(dirty))
-#        assert(file_exists(fixed))
 
     def tearDown(self):
         shutil.rmtree(self.out_dir)
