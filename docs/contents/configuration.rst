@@ -308,10 +308,10 @@ Variant calling
 
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
    multiple options [gatk, freebayes, varscan, samtools,
-   gatk-haplotype, cortex, mutect, scalpel]
+   gatk-haplotype, cortex, mutect, scalpel, vardict]
     - Paired (typically somatic, tumor-normal) variant calling is currently
-      supported by freebayes, varscan, mutect (see disclaimer below) 
-      and scalpel (indels only). See ``phenotype`` below for how to pair tumor 
+      supported by freebayes, varscan, mutect (see disclaimer below), 
+      scalpel (indels only) and vardict. See ``phenotype`` below for how to pair tumor 
       and normal samples.
     - Selecting mutect (SNP caller) will implicitly also call indels using scalpel and 
       combine the output. Mutect operates in both tumor-normal and tumor-only modes.
