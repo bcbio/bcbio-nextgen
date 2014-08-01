@@ -1,0 +1,72 @@
+# Evaluate structural variant calling on NA12878 whole genome trio,
+# using Illumina platinum genome inputs and validated breakpoints from the LUMPY paper
+# (http://genomebiology.com/2014/15/6/R84/abstract).
+#
+# See the bcbio-nextgen documentation for full instructions to
+# run this analysis:
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#example-pipelines
+---
+details:
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    quality_format: Standard
+    coverage_interval: genome
+    recalibrate: false
+    realign: false
+    variantcaller: false
+    remove_lcr: true
+    svcaller: [cn.mops, lumpy, delly]
+    svvalidate:
+      DEL: ../input/NA12878.50X.ldgp.molpb_val.20140508.bed
+  analysis: variant2
+  description: NA12878
+  files:
+  - ../input/NA12878_1.fastq.gz
+  - ../input/NA12878_2.fastq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: ceu
+    sex: female
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    quality_format: Standard
+    coverage_interval: genome
+    recalibrate: false
+    realign: false
+    variantcaller: false
+    remove_lcr: true
+    svcaller: [cn.mops, lumpy, delly]
+  analysis: variant2
+  description: NA12891
+  files:
+  - ../input/NA12891_1.fastq.gz
+  - ../input/NA12891_2.fastq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: ceu
+    sex: male
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    quality_format: Standard
+    coverage_interval: genome
+    recalibrate: false
+    realign: false
+    variantcaller: false
+    remove_lcr: true
+    svcaller: [cn.mops, lumpy, delly]
+  analysis: variant2
+  description: NA12892
+  files:
+  - ../input/NA12892_1.fastq.gz
+  - ../input/NA12892_2.fastq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: ceu
+    sex: female
+fc_date: '2014-07-05'
+fc_name: ceu
+upload:
+  dir: ../final
