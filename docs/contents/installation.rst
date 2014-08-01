@@ -289,8 +289,8 @@ OSX
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
     sh vagrant_osx.sh
 
-.. _Vagrant for OSX: http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/Vagrant-1.2.7.dmg
-.. _VirtualBox: http://download.virtualbox.org/virtualbox/4.2.16/VirtualBox-4.2.16-86992-OSX.dmg
+.. _Vagrant for OSX: http://downloads.vagrantup.com/
+.. _VirtualBox: https://www.virtualbox.org/wiki/Downloads
 .. _Vagrant: http://www.vagrantup.com/
 
 Manual process
