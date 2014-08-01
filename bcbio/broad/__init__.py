@@ -48,10 +48,23 @@ def get_gatk_vqsr_opts(config, tmp_dir=None, memscale=None):
 def get_picard_opts(config, memscale=None):
     return _get_gatk_opts(config, ["picard", "gatk", "gatk-framework"], memscale=memscale, include_gatk=False)
 
+def _clean_java_out(version_str):
+    """Remove extra environmental information reported in java when querying for versions.
+
+    Java will report information like _JAVA_OPTIONS environmental variables in the output.
+    """
+    out = []
+    for line in version_str.split("\n"):
+        if line.startswith("Picked up"):
+            pass
+        else:
+            out.append(line)
+    return "\n".join(out)
+
 def get_gatk_version(gatk_jar):
     cl = ["java", "-Xms128m", "-Xmx256m", "-jar", gatk_jar, "-version"]
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
-        out = stdout.read().strip()
+        out = _clean_java_out(stdout.read().strip())
         # versions earlier than 2.4 do not have explicit version command,
         # parse from error output from GATK
         if out.find("ERROR") >= 0:
