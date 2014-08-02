@@ -6,8 +6,8 @@ VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  config.vm.box = "ubuntu_nextgen"
-  config.vm.box_url = "http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-vagrant-amd64-disk1.box"
+  config.vm.box = "ubuntu/trusty64"
+
   config.vm.provision :shell, :path => "bootstrap.sh", :privileged => false
 
   config.vm.network :forwarded_port, guest: 8090, host: 8090

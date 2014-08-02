@@ -289,7 +289,7 @@ OSX
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
     sh vagrant_osx.sh
 
-.. _Vagrant for OSX: http://downloads.vagrantup.com/
+.. _Vagrant for OSX: http://www.vagrantup.com/downloads.html
 .. _VirtualBox: https://www.virtualbox.org/wiki/Downloads
 .. _Vagrant: http://www.vagrantup.com/
 
