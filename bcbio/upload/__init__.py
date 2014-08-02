@@ -129,10 +129,13 @@ def _maybe_add_sv(algorithm, sample, out):
                             "ext": "%s-sample" % svcall["variantcaller"],
                             "variantcaller": svcall["variantcaller"]})
             if "validate" in svcall:
-                out.append({"path": svcall["validate"],
-                            "type": "csv",
-                            "ext": "%s-validate" % svcall["variantcaller"],
-                            "variantcaller": svcall["variantcaller"]})
+                for vkey, vext in [("csv", "csv"), ("plot", "pdf")]:
+                    vfile = tz.get_in(["validate", vkey], svcall)
+                    if vfile:
+                        out.append({"path": vfile,
+                                    "type": vext,
+                                    "ext": "%s-validate" % svcall["variantcaller"],
+                                    "variantcaller": svcall["variantcaller"]})
     return out
 
 def _get_variant_file(x, key):
