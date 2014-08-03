@@ -27,12 +27,31 @@ def check_and_postprocess(args):
     for dname in _find_unprocessed(config):
         lane_details = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname,
                                           utils.get_in(config, ("process", "storedir")))
-        fcid_ss = samplesheet.from_flowcell(dname, lane_details)
-        _update_reported(config["msg_db"], dname)
-        fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)
-        bcbio_config, ready_fastq_dir = nglims.prep_samples_and_config(dname, lane_details, fastq_dir, config)
-        transfer.copy_flowcell(dname, ready_fastq_dir, bcbio_config, config)
-        _start_processing(dname, bcbio_config, config)
+        if isinstance(lane_details, dict) and "error" in lane_details:
+            print "Flowcell not found in Galaxy: %s" % lane_details
+        else:
+            lane_details = _tweak_lane(lane_details, dname)
+            fcid_ss = samplesheet.from_flowcell(dname, lane_details)
+            _update_reported(config["msg_db"], dname)
+            fastq_dir = demultiplex.run_bcl2fastq(dname, fcid_ss, config)
+            bcbio_config, ready_fastq_dir = nglims.prep_samples_and_config(dname, lane_details, fastq_dir, config)
+            transfer.copy_flowcell(dname, ready_fastq_dir, bcbio_config, config)
+            _start_processing(dname, bcbio_config, config)
+
+def _tweak_lane(lane_details, dname):
+    """Potentially tweak lane information to handle custom processing, reading a lane_config.yaml file.
+    """
+    tweak_config_file = os.path.join(dname, "lane_config.yaml")
+    if os.path.exists(tweak_config_file):
+        with open(tweak_config_file) as in_handle:
+            tweak_config = yaml.safe_load(in_handle)
+        if tweak_config.get("uniquify_lanes"):
+            out = []
+            for ld in lane_details:
+                ld["name"] = "%s-%s" % (ld["name"], ld["lane"])
+                out.append(ld)
+            return out
+    return lane_details
 
 def _remap_dirname(local, remote):
     """Remap directory names from local to remote.

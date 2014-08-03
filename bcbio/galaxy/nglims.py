@@ -39,7 +39,8 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
     files = []
     print "->", ldetail_group[0]["name"], len(ldetail_group)
     for read in ["R1", "R2"]:
-        fastq_inputs = sorted(reduce(operator.add, (_get_fastq_files(x, read, fastq_dir) for x in ldetail_group)))
+        fastq_inputs = sorted(list(set(reduce(operator.add,
+                                              (_get_fastq_files(x, read, fastq_dir) for x in ldetail_group)))))
         if len(fastq_inputs) > 0:
             files.append(_concat_bgzip_fastq(fastq_inputs, fastq_final_dir, read, ldetail_group[0]))
     if len(files) > 0:
@@ -148,6 +149,8 @@ def get_runinfo(galaxy_url, galaxy_apikey, run_folder, storedir):
     galaxy_api = GalaxyApiAccess(galaxy_url, galaxy_apikey)
     fc_name, fc_date = flowcell.parse_dirname(run_folder)
     galaxy_info = galaxy_api.run_details(fc_name, fc_date)
+    if "error" in galaxy_info:
+        return galaxy_info
     if not galaxy_info["run_name"].startswith(fc_date) and not galaxy_info["run_name"].endswith(fc_name):
         raise ValueError("Galaxy NGLIMS information %s does not match flowcell %s %s" %
                          (galaxy_info["run_name"], fc_date, fc_name))

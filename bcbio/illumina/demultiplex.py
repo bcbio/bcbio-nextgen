@@ -16,7 +16,7 @@ def run_bcl2fastq(run_folder, ss_csv, config):
     bc_dir = os.path.join(run_folder, "Data", "Intensities", "BaseCalls")
     output_dir = os.path.join(run_folder, "fastq")
 
-    if not os.path.exists(output_dir):
+    if not os.path.exists(os.path.join(output_dir, "Makefile")):
         subprocess.check_call(["configureBclToFastq.pl", "--no-eamss",
                                "--input-dir", bc_dir, "--output-dir", output_dir,
                                "--sample-sheet", ss_csv])
