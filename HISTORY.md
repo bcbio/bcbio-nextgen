@@ -2,6 +2,7 @@
 
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
+- Fix GATK version detection when _JAVA_OPTIONS specified. Thanks to Miika Ahdesmaki.
 
 ## 0.8.0 (July 28, 2014)
 

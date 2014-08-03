@@ -310,10 +310,10 @@ Variant calling
    multiple options [gatk, freebayes, varscan, samtools,
    gatk-haplotype, cortex, mutect, scalpel, vardict]
     - Paired (typically somatic, tumor-normal) variant calling is currently
-      supported by freebayes, varscan, mutect (see disclaimer below), 
-      scalpel (indels only) and vardict. See ``phenotype`` below for how to pair tumor 
+      supported by freebayes, varscan, mutect (see disclaimer below),
+      scalpel (indels only) and vardict. See ``phenotype`` below for how to pair tumor
       and normal samples.
-    - Selecting mutect (SNP caller) will implicitly also call indels using scalpel and 
+    - Selecting mutect (SNP caller) will implicitly also call indels using scalpel and
       combine the output. Mutect operates in both tumor-normal and tumor-only modes.
       In tumor-only mode the indels from scalpel will reflect all indels in the sample,
       as there is currently no way of separating the germline from somatic indels in
@@ -363,6 +363,16 @@ Variant calling
 .. _samblaster: https://github.com/GregoryFaust/samblaster
 .. _biobambam's bammarkduplicates: https://github.com/gt1/biobambam
 .. _Heng Li's variant artifacts paper: http://arxiv.org/abs/1404.0929
+
+Structural variant calling
+==========================
+
+- ``svcaller`` -- List of structural variant callers to use. [lumpy, delly,
+  cn.mops]. LUMPY and DELLY require paired end reads, cn.mops requires whole
+  genome data.
+- ``svvalidate`` -- Dictionary of call types and pointer to BED file of known
+  regions. For example: ``DEL: known_deletions.bed`` does deletion based
+  validation of outputs against the BED file.
 
 Cancer variant calling
 ======================
