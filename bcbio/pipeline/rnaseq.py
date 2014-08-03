@@ -2,10 +2,6 @@ import os
 from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq
 import bcbio.pipeline.datadict as dd
 
-def detect_fusion(samples, run_parallel):
-    samples = run_parallel("run_oncofuse", samples)
-    return samples
-
 def estimate_expression(samples, run_parallel):
     samples = run_parallel("generate_transcript_counts", samples)
     combined = count.combine_count_files([x[0]["count_file"] for x in samples
