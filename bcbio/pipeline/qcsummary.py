@@ -632,7 +632,7 @@ def qsignature_summary(*samples):
 
     """ 
     count = 0
-    warnings = []
+    warnings, similar = [], []
     qsig = config_utils.get_program("qsignature", samples[0][0]["config"])
     jvm_opts = "-Xms750m -Xmx8g"
     out_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"],"qsignature"))
@@ -656,9 +656,11 @@ def qsignature_summary(*samples):
     	                    "-log {log} -dir {out_dir} "
     	                    "-o {file_txt_out} ")
                 do.run(base_cmd.format(**locals()),"qsignature 2")
-        warnings = _parse_qsignature_output(out_file,out_ma_file,out_warn_file)
+        warnings, similar = _parse_qsignature_output(out_file,out_ma_file,out_warn_file)
         return [{'qsig_matrix': out_ma_file,
                  'qsig_warnings': out_warn_file,
+                 'total samples' : count,
+                 'similar samples' : len(similar),
                  'warnings samples': list(warnings)}]
  
 def _parse_qsignature_output(in_file,out_file,warning_file):
@@ -674,6 +676,7 @@ def _parse_qsignature_output(in_file,out_file,warning_file):
     name = {}
     score = {}
     warnings = set()
+    similar = set()
     with open(in_file,'r') as in_handle:
         with file_transaction(out_file) as out_tx_file:
             with file_transaction(warning_file) as warn_tx_file:
@@ -692,7 +695,15 @@ def _parse_qsignature_output(in_file,out_file,warning_file):
                                     (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
                                 warnings.add(name[i.attrib['file1']])
                                 warnings.add(name[i.attrib['file2']])
-        return warnings
+                            elif float(i.attrib['score']) < 0.3:
+                                logger.info('qsignature: read similar samples:%s' %
+                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                warn_handle.write('qsignature NOTE: similar samples:%s\n' %
+                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                similar.add(name[i.attrib['file1']])
+                                similar.add(name[i.attrib['file2']])
+ 
+        return warnings, similar
 
 
 def _slice_chr22(in_bam, data):
