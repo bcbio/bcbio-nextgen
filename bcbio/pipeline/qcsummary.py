@@ -17,6 +17,8 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
+import pysam
+import contextlib
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
@@ -27,6 +29,7 @@ from bcbio.provenance import do
 import bcbio.rnaseq.qc
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.rnaseq.coverage import plot_gene_coverage
+import bcbio.pipeline.datadict as dd
 
 # ## High level functions to generate summary
 
@@ -34,7 +37,8 @@ def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
     sum_samples = run_parallel("pipeline_summary", samples)
-    summary_file = write_project_summary(sum_samples)
+    qsign_info = run_parallel("qsignature_summary",[sum_samples])
+    summary_file = write_project_summary(sum_samples,qsign_info)
     samples = []
     for data in sum_samples:
         if "summary" not in data[0]:
@@ -79,6 +83,11 @@ def prep_pdf(qc_dir, config):
 
 def _run_qc_tools(bam_file, data):
     """Run a set of third party quality control tools, returning QC directory and metrics.
+    
+        :param bam_file: alignments in bam format 
+        :param data: dict with all configuration information
+
+        :returns: dict with output of different tools
     """
     metrics = {}
     to_run = [("fastqc", _run_fastqc)]
@@ -90,6 +99,8 @@ def _run_qc_tools(bam_file, data):
         to_run.append(["bamtools", _run_bamtools_stats])
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
+    if data["analysis"].lower().startswith("standard"):
+        to_run.append(["qsignature",_run_qsignature_generator])
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     for program_name, qc_fn in to_run:
@@ -109,7 +120,7 @@ def _run_qc_tools(bam_file, data):
 
 # ## Generate project level QC summary for quickly assessing large projects
 
-def write_project_summary(samples):
+def write_project_summary(samples,qsign_info = False):
     """Write project summary information on the provided samples.
     write out dirs, genome resources,
 
@@ -126,6 +137,9 @@ def write_project_summary(samples):
                        default_flow_style=False, allow_unicode=False)
         if test_run:
             yaml.safe_dump({"test_run": True}, out_handle, default_flow_style=False,
+                           allow_unicode=False)
+        if qsign_info:
+            yaml.safe_dump({"qsignature": qsign_info}, out_handle, default_flow_style=False,
                            allow_unicode=False)
         yaml.safe_dump({"upload": upload_dir}, out_handle,
                        default_flow_style=False, allow_unicode=False)
@@ -558,3 +572,142 @@ def _run_gemini_stats(bam_file, data, out_dir):
             with open(gemini_stat_file) as in_handle:
                 out = yaml.safe_load(in_handle)
     return out
+
+
+## qsignature
+
+def _run_qsignature_generator(bam_file,data,out_dir):
+    """ Run SignatureGenerator to create normalize vcf
+    that later will be input of qsignature_summary
+
+    :param bam_file: (str) path of the bam_file
+    :param data: (list) list containing the all the dictionary
+                     for this sample
+    :param out_dir: (str) path of the output
+    
+    :returns: (dict) dict with the normalize vcf file 
+
+    """
+    position = dd.get_qsig_file(data)
+    if position:
+        slice_bam = _slice_chr22(bam_file, data)
+        resources = config_utils.get_resources("qsignature", data["config"])
+        qsig = config_utils.get_program("qsignature", data["config"])
+        jvm_opts = "-Xms750m -Xmx8g"
+        cores = resources.get("cores", 1)
+        utils.safe_makedir(out_dir)
+        out_name = os.path.basename(slice_bam).replace("bam","qsig.vcf")
+        out_file = os.path.join(out_dir, out_name)
+        log_file = os.path.join(out_dir, "qsig.log")
+        base_cmd = ("{qsig} {jvm_opts} "
+                    "org.qcmg.sig.SignatureGenerator "
+                    "--noOfThreads {cores} "
+                    "-log {log_file} -i {position} "
+                    "-i {down_file} ")
+        if not os.path.exists(out_file):    
+            down_file = bam.downsample(slice_bam, data, 20000000)
+            if not down_file:
+                down_file = slice_bam
+            file_qsign_out = down_file.replace("bam","bam.qsig.vcf")
+            do.run(base_cmd.format(**locals()),"qsignature 1: %s" % data["name"][-1])
+            if os.path.exists(file_qsign_out):
+                with file_transaction(out_file) as file_txt_out:
+                    shutil.move(file_qsign_out,file_txt_out)
+            else:
+    			raise IOError("File doesn't exist %s" % file_qsign_out)
+        return {'qsig_vcf':out_file}
+    else:
+        logger.info("There is no qsignature for this species: %s" 
+            % ['config']['algorithm']['genome_build'])
+
+def qsignature_summary(*samples):
+    """ Run SignatureCompareRelatedSimple module from 
+    qsignature tool to creata a matrix of pairwise 
+    comparison among samples. The function
+    will not run if the output exisits
+
+    :param samples: list with only one element containing 
+        all samples information
+    :returns: (dict) with the path of the output to be joined to summary
+
+    """ 
+    count = 0
+    warnings = []
+    qsig = config_utils.get_program("qsignature", samples[0][0]["config"])
+    jvm_opts = "-Xms750m -Xmx8g"
+    out_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"],"qsignature"))
+    log = os.path.join(samples[0][0]["dirs"]["work"], "qsig.log")
+    out_file = os.path.join(samples[0][0]["dirs"]["work"], "qc","qsignature.xml")
+    out_ma_file = os.path.join(samples[0][0]["dirs"]["work"], "qc","qsignature.ma")
+    out_warn_file = os.path.join(samples[0][0]["dirs"]["work"], "qc","qsignature.warnings")
+    for data in samples:
+        data = data[0]
+        if data['summary']['metrics'].get('qsig_vcf',False):
+            count += 1
+            vcf = data['summary']['metrics']['qsig_vcf']
+            vcf_name = os.path.basename(vcf)
+            if not os.path.lexists(os.path.join(out_dir,vcf_name)):
+                os.symlink(vcf,os.path.join(out_dir,vcf_name))
+    if count > 0:
+        if not os.path.exists(out_file):
+            with file_transaction(out_file) as file_txt_out:
+                base_cmd = ("{qsig} {jvm_opts} "
+    	                    "org.qcmg.sig.SignatureCompareRelatedSimple "
+    	                    "-log {log} -dir {out_dir} "
+    	                    "-o {file_txt_out} ")
+                do.run(base_cmd.format(**locals()),"qsignature 2")
+        warnings = _parse_qsignature_output(out_file,out_ma_file,out_warn_file)
+        return [{'qsig_matrix': out_ma_file,
+                 'qsig_warnings': out_warn_file,
+                 'warnings samples': list(warnings)}]
+ 
+def _parse_qsignature_output(in_file,out_file,warning_file):
+    """ Parse xml file produced by qsignature
+
+    :param in_file: (str) with the path to the xml file
+    :param out_file: (str) with the path to output file
+    :param warning_file: (str) with the path to warning file
+
+    :returns: (list) with samples that could be duplicated
+
+    """ 
+    name = {}
+    score = {}
+    warnings = set()
+    with open(in_file,'r') as in_handle:
+        with file_transaction(out_file) as out_tx_file:
+            with file_transaction(warning_file) as warn_tx_file:
+                with open(out_tx_file,'w') as out_handle:
+                    with open(warn_tx_file,'w') as warn_handle:
+                        ET = lxml.etree.parse(in_handle)
+                        for i in list(ET.iter('file')):
+                            name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".bam.qsig.vcf","")
+                        for i in list(ET.iter('comparison')):
+                            out_handle.write("%s\t%s\t%s\n" % 
+                            (name[i.attrib['file1']],name[i.attrib['file2']],i.attrib['score']))
+                            if float(i.attrib['score']) < 0.1:
+                                logger.info('qsignature WARNING: risk of duplicated samples:%s' %
+                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                warn_handle.write('qsignature WARNING: risk of duplicated samples:%s\n' %
+                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                warnings.add(name[i.attrib['file1']])
+                                warnings.add(name[i.attrib['file2']])
+        return warnings
+
+
+def _slice_chr22(in_bam, data):
+    """
+    return only one BAM file with only chromosome 22
+    """
+    sambamba = config_utils.get_program("sambamba", data["config"])
+    out_file = "%s-chr%s" % os.path.splitext(in_bam)
+    if not utils.file_exists(out_file):
+        with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+            bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
+        chromosome = "22"
+        if "chr22" in bam_contigs:
+            chromosome = "chr22"
+        with file_transaction(out_file) as tx_out_file:
+            cmd = ("{sambamba} slice -o {tx_out_file} {in_bam} {chromosome}" ).format(**locals())
+            out = subprocess.check_output(cmd, shell=True)
+    return out_file
