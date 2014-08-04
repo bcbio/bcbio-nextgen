@@ -48,6 +48,8 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                     params += ["-I", bam_file]
                 for x in annotations:
                     params += ["-A", x]
+                if "--allow_potentially_misencoded_quality_scores" not in params:
+                    params += ["--allow_potentially_misencoded_quality_scores"]
                 broad_runner = broad.runner_from_config(config)
                 broad_runner.run_gatk(params, memory_retry=True)
         vcfutils.bgzip_and_index(out_file, config)
