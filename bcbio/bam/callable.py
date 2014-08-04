@@ -106,7 +106,7 @@ def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, 
             bedtools = config_utils.get_program("bedtools", data["config"])
             max_depth = depth["max"] + 1
             cmd = ("{sambamba} view -F 'mapping_quality > 0' -L {region_file} -f bam -l 1 {in_bam} | "
-                   "{bedtools} genomecov -ibam stdin -bga -g {fai_file} -max {max_depth} "
+                   "{bedtools} genomecov -split -ibam stdin -bga -g {fai_file} -max {max_depth} "
                    "> {tx_out_file}")
             do.run(cmd.format(**locals()), "bedtools genomecov: %s" % (str(region)), data)
     # Empty output file, no coverage for the whole contig

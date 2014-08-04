@@ -61,7 +61,7 @@ def upgrade_bcbio(args):
             _symlink_bcbio(args)
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
-    if args.install_data:
+    if args.install_data or len(args.genomes) > 0 or len(args.aligners) > 0:
         if len(args.genomes) == 0:
             print("Data not installed, no genomes provided with `--genomes` flag")
         elif len(args.aligners) == 0:
