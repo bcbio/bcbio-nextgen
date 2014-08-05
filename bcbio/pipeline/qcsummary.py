@@ -593,6 +593,8 @@ def _run_qsignature_generator(bam_file,data,out_dir):
         slice_bam = _slice_chr22(bam_file, data)
         resources = config_utils.get_resources("qsignature", data["config"])
         qsig = config_utils.get_program("qsignature", data["config"])
+        if not qsig:
+            return False
         jvm_opts = "-Xms750m -Xmx8g"
         cores = resources.get("cores", 1)
         utils.safe_makedir(out_dir)
@@ -634,6 +636,8 @@ def qsignature_summary(*samples):
     count = 0
     warnings, similar = [], []
     qsig = config_utils.get_program("qsignature", samples[0][0]["config"])
+    if not qsig:
+        return False
     jvm_opts = "-Xms750m -Xmx8g"
     out_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"],"qsignature"))
     log = os.path.join(samples[0][0]["dirs"]["work"], "qsig.log")
