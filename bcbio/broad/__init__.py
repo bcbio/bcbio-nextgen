@@ -19,7 +19,7 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
     """Retrieve GATK memory specifications, moving down a list of potential specifications.
     """
     if include_gatk:
-        opts = ["-U", "ALL", "--read_filter",
+        opts = ["-U", "LENIENT_VCF_PROCESSING", "--read_filter",
                 "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     else:
         opts = []
@@ -222,7 +222,7 @@ class BroadRunner:
                                                             "magnitude": int(cores) // 2}
         if LooseVersion(self.gatk_major_version()) > LooseVersion("1.9"):
             if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
-                params.extend(["-U", "ALL"])
+                params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         if memscale:
             jvm_opts = get_gatk_opts(config, tmp_dir=tmp_dir, memscale=memscale, include_gatk=False)
