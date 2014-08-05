@@ -11,7 +11,7 @@ import toolz as tz
 from bcbio import utils, bam, broad
 from bcbio.log import logger
 from bcbio.pipeline.merge import merge_bam_files
-from bcbio.bam import callable, fastq
+from bcbio.bam import fastq, callable
 from bcbio.bam.trim import trim_adapters
 from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
@@ -19,6 +19,7 @@ from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
 from bcbio.variation import bedutils, recalibrate
 from bcbio.variation import multi as vmulti
+import bcbio.pipeline.datadict as dd
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -50,10 +51,13 @@ def trim_sample(data):
         logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
         return [[data]]
 
+    out_dir = os.path.join(dd.get_work_dir(data), "trimmed")
+    utils.safe_makedir(out_dir)
+
     if trim_reads == "read_through":
         logger.info("Trimming low quality ends and read through adapter "
                     "sequence from %s." % (", ".join(to_trim)))
-        out_files = trim_adapters(to_trim, dirs, config)
+        out_files = trim_adapters(to_trim, out_dir, config)
     data["files"] = out_files
     return [[data]]
 

@@ -236,7 +236,12 @@ def _check_quality_format(items):
     fastq_extensions = ["fq.gz", "fastq.gz", ".fastq" ".fq"]
 
     for item in items:
-        specified_format = item["algorithm"].get("quality_format", "").lower()
+        specified_format = item["algorithm"].get("quality_format", "standard").lower()
+        if specified_format not in SAMPLE_FORMAT.values():
+            raise ValueError("Quality format specified in the YAML file"
+                             "is not supported. Supported values are %s."
+                             % (SAMPLE_FORMAT.values()))
+
         fastq_file = next((file for file in item.get('files', []) if
                            any([ext for ext in fastq_extensions if ext in file])), None)
 

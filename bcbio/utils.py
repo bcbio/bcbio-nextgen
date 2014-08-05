@@ -561,3 +561,6 @@ def R_package_path(package):
             return dirname
     return None
 
+def is_gzipped(fname):
+    _, ext = os.path.splitext(fname)
+    return ext in [".gz", "gzip"]

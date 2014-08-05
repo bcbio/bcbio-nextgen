@@ -19,7 +19,11 @@ LOOKUPS = {
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "dexseq_counts": {"keys": ['dexseq_counts']},
-    "description": {"keys": ['description']}
+    "description": {"keys": ['description']},
+    "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],
+                       "default": "standard"},
+    "adapters": {"keys": ['config', 'algorithm', 'adapters'],
+                 "default": []}
 }
 
 def getter(keys, global_default=None):

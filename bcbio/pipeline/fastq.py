@@ -15,18 +15,7 @@ def get_fastq_files(item):
     assert "files" in item, "Did not find `files` in input; nothing to process"
     ready_files = []
     for fname in item["files"]:
-        if fname.endswith(".gz") and _pipeline_needs_fastq(item["config"], item):
-            fastq_dir = os.path.join(item["dirs"]["work"], "fastq")
-            safe_makedir(fastq_dir)
-            out_file = os.path.join(fastq_dir,
-                                    os.path.basename(os.path.splitext(fname)[0]))
-            if not os.path.exists(out_file):
-                with file_transaction(out_file) as tx_out_file:
-                    cmd = "gunzip -c {fname} > {tx_out_file}".format(**locals())
-                    with open(tx_out_file, "w") as out_handle:
-                        subprocess.check_call(cmd, shell=True)
-            ready_files.append(out_file)
-        elif fname.endswith(".bam"):
+        if fname.endswith(".bam"):
             if _pipeline_needs_fastq(item["config"], item):
                 ready_files = _convert_bam_to_fastq(fname, item["dirs"]["work"],
                                                     item, item["dirs"], item["config"])

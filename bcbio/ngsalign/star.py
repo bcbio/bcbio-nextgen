@@ -2,7 +2,8 @@ import os
 import tempfile
 
 from bcbio.pipeline import config_utils
-from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
+from bcbio.utils import (safe_makedir, file_exists, get_in, symlink_plus,
+                         is_gzipped)
 from bcbio.provenance import do
 from bcbio import bam
 
@@ -27,6 +28,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
            "--outReadsUnmapped Fastx --outFilterMultimapNmax 10 "
            "--outSAMunmapped Within --outSAMattributes %s" % " ".join(ALIGN_TAGS))
+    cmd = cmd + " --readFilesCommand zcat " if is_gzipped(fastq_file) else cmd
     cmd += _read_group_option(names)
     fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
     if fusion_mode:
