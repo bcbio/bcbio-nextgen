@@ -253,7 +253,8 @@ Alignment
   ``genome_build``  identifiers to check and remove from alignment. Currently
   supports cleaning a single organism. For example, with ``genome_build: hg19``
   and ``disambiguate: [mm10]``, it will align to hg19 and mm10, run
-  disambiguation and continue with reads confidently aligned to hg19.
+  disambiguation and continue with reads confidently aligned to hg19. Affects
+  fusion detection when ``star`` is chosen as the aligner.
 -  ``trim_reads`` Can be set to trim low quality ends or to also trim off,
     in conjunction with the ``adapters`` field a set of adapter sequences or
     poly-A tails that could appear on the ends of reads. Only used in RNA-seq
@@ -373,7 +374,11 @@ Structural variant calling
 - ``svvalidate`` -- Dictionary of call types and pointer to BED file of known
   regions. For example: ``DEL: known_deletions.bed`` does deletion based
   validation of outputs against the BED file.
-
+- ``fusion_mode`` Enable fusion detection in RNA-seq when using STAR (recommended)
+  or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
+  but currently only supports ``hg19`` and ``GRCh37``. For explant samples
+  ``disambiguate`` enables disambiguation of ``STAR`` output [false, true].
+  
 Cancer variant calling
 ======================
 
