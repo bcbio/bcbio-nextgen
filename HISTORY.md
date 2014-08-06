@@ -2,7 +2,10 @@
 - add qsignature tool to standard analysis
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
-- Fix GATK version detection when _JAVA_OPTIONS specified. Thanks to Miika Ahdesmaki.
+- Fix GATK version detection when _JAVA_OPTIONS specified. Thanks to Miika
+  Ahdesmaki.
+- Use msgpack for ipython serialization to reduce message sizes and IPython
+  controller memory instead of homemade json/zlib approach.
 
 ## 0.8.0 (July 28, 2014)
 

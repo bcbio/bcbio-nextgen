@@ -43,210 +43,221 @@ def _setup_logging(args):
         if hasattr(handler, "close"):
             handler.close()
 
+# Potential wrapper to avoid boilerplate if we can get dill working for closures
+from functools import wraps
+def _pack_n_log(f):
+    from bcbio.distributed import ipython
+    @wraps(f)
+    def wrapper(*args):
+        args = ipython.unzip_args(args)
+        with _setup_logging(args) as config:
+            return ipython.zip_args(fn(*args))
+    return wrapper
+
 @require(sample)
 def prepare_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(sample.prepare_sample, *args), config)
+        return ipython.zip_args(apply(sample.prepare_sample, *args))
 
 @require(sample)
 def trim_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(sample.trim_sample, *args), config)
+        return ipython.zip_args(apply(sample.trim_sample, *args))
 
 @require(sailfish)
 def run_sailfish(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
-        return apply(sailfish.run_sailfish, *args)
+        return ipython.zip_args(apply(sailfish.run_sailfish, *args))
 
 @require(sample)
 def process_alignment(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(sample.process_alignment, *args), config)
+        return ipython.zip_args(apply(sample.process_alignment, *args))
 
 @require(alignprep)
 def prep_align_inputs(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(alignprep.create_inputs, *args), config)
+        return ipython.zip_args(apply(alignprep.create_inputs, *args))
 
 @require(sample)
 def postprocess_alignment(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(sample.postprocess_alignment, *args), config)
+        return ipython.zip_args(apply(sample.postprocess_alignment, *args))
 
 @require(sample)
 def merge_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(sample.merge_sample, *args), config)
+        return ipython.zip_args(apply(sample.merge_sample, *args))
 
 @require(sample)
 def delayed_bam_merge(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(sample.delayed_bam_merge, *args), config)
+        return ipython.zip_args(apply(sample.delayed_bam_merge, *args))
 
 @require(sample)
 def recalibrate_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(sample.recalibrate_sample, *args), config)
+        return ipython.zip_args(apply(sample.recalibrate_sample, *args))
 
 @require(recalibrate)
 def prep_recal(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(recalibrate.prep_recal, *args), config)
+        return ipython.zip_args(apply(recalibrate.prep_recal, *args))
 
 @require(multi)
 def split_variants_by_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(multi.split_variants_by_sample, *args), config)
+        return ipython.zip_args(apply(multi.split_variants_by_sample, *args))
 
 @require(bamprep)
 def piped_bamprep(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(bamprep.piped_bamprep, *args), config)
+        return ipython.zip_args(apply(bamprep.piped_bamprep, *args))
 
 @require(variation)
 def postprocess_variants(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(variation.postprocess_variants, *args), config)
+        return ipython.zip_args(apply(variation.postprocess_variants, *args))
 
 @require(qcsummary)
 def pipeline_summary(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(qcsummary.pipeline_summary, *args), config)
+        return ipython.zip_args(apply(qcsummary.pipeline_summary, *args))
 
 @require(qcsummary)
 def qsignature_summary(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(qcsummary.qsignature_summary, *args), config)
+        return ipython.zip_args(apply(qcsummary.qsignature_summary, *args))
 
 @require(rnaseq)
 def generate_transcript_counts(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(rnaseq.generate_transcript_counts, *args), config)
+        return ipython.zip_args(apply(rnaseq.generate_transcript_counts, *args))
 
 @require(rnaseq)
 def run_cufflinks(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(rnaseq.run_cufflinks, *args), config)
+        return ipython.zip_args(apply(rnaseq.run_cufflinks, *args))
 
 @require(shared)
 def combine_bam(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(shared.combine_bam, *args), config)
+        return ipython.zip_args(apply(shared.combine_bam, *args))
 
 @require(callable)
 def combine_sample_regions(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(callable.combine_sample_regions, *args), config)
+        return ipython.zip_args(apply(callable.combine_sample_regions, *args))
 
 @require(genotype)
 def variantcall_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(genotype.variantcall_sample, *args), config)
+        return ipython.zip_args(apply(genotype.variantcall_sample, *args))
 
 @require(vcfutils)
 def combine_variant_files(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(vcfutils.combine_variant_files, *args), config)
+        return ipython.zip_args(apply(vcfutils.combine_variant_files, *args))
 
 @require(vcfutils)
 def concat_variant_files(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(vcfutils.concat_variant_files, *args), config)
+        return ipython.zip_args(apply(vcfutils.concat_variant_files, *args))
 
 @require(vcfutils)
 def merge_variant_files(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(vcfutils.merge_variant_files, *args), config)
+        return ipython.zip_args(apply(vcfutils.merge_variant_files, *args))
 
 @require(population)
 def prep_gemini_db(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(population.prep_gemini_db, *args), config)
+        return ipython.zip_args(apply(population.prep_gemini_db, *args))
 
 @require(structural)
 def detect_sv(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(structural.detect_sv, *args), config)
+        return ipython.zip_args(apply(structural.detect_sv, *args))
 
 @require(ensemble)
 def combine_calls(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(ensemble.combine_calls, *args), config)
+        return ipython.zip_args(apply(ensemble.combine_calls, *args))
 
 @require(validate)
 def compare_to_rm(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(validate.compare_to_rm, *args), config)
+        return ipython.zip_args(apply(validate.compare_to_rm, *args))
 
 @require(coverage)
 def coverage_summary(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(coverage.summary, *args), config)
+        return ipython.zip_args(apply(coverage.summary, *args))
 
 @require(disambiguate)
 def run_disambiguate(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(disambiguate.run, *args), config)
+        return ipython.zip_args(apply(disambiguate.run, *args))
 
 @require(system)
 def machine_info(*args):
     args = ipython.unzip_args(args)
-    return system.machine_info()
+    return ipython.zip_args(system.machine_info())
 
 @require(chipseq)
 def clean_chipseq_alignment(*args):
     args = ipython.unzip_args(args)
-    return chipseq.machine_info()
+    return ipython.zip_args(chipseq.machine_info())
 
 @require(archive)
 def archive_to_cram(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(archive.to_cram, *args), config)
+        return ipython.zip_args(apply(archive.to_cram, *args))
 
 @require(joint)
 def square_batch_region(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(joint.square_batch_region, *args), config)
+        return ipython.zip_args(apply(joint.square_batch_region, *args))
 
 @require(rnaseq)
 def cufflinks_assemble(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(rnaseq.cufflinks_assemble, *args), config)
+        return ipython.zip_args(apply(rnaseq.cufflinks_assemble, *args))
 
 @require(rnaseq)
 def cufflinks_merge(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(rnaseq.cufflinks_merge, *args), config)
+        return ipython.zip_args(apply(rnaseq.cufflinks_merge, *args))

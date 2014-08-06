@@ -8,10 +8,9 @@ Cluster implementation from ipython-cluster-helper:
 
 https://github.com/roryk/ipython-cluster-helper
 """
-import json
 import os
-import zlib
 
+import msgpack
 import toolz as tz
 
 from bcbio import utils
@@ -42,36 +41,15 @@ def _get_ipython_fn(fn_name, parallel):
                               fromlist=["ipythontasks"]),
                    import_fn_name)
 
-def zip_args(items, config):
-    """Compress and JSON encode arguments before sending to IPython, if configured.
+def zip_args(args, config=None):
+    """Compress arguments using msgpack.
     """
-    if tz.get_in(["algorithm", "compress_msg"], config):
-        #print [len(json.dumps(x)) for x in items]
-        items = [zlib.compress(json.dumps(x, separators=(',', ':')), 9) for x in items]
-        #print [len(x) for x in items]
-    return items
+    return [msgpack.packb(x, use_single_float=True, use_bin_type=True) for x in args]
 
 def unzip_args(args):
-    """Unzip arguments if passed as compressed JSON string.
-
-    Checks string if zlib compressed to handle zipped and unzipped cases:
-    http://stackoverflow.com/questions/5322860/how-to-detect-quickly-if-a-string-is-zlib-compressed
-    https://github.com/mgoldfar/ECE595-WikiTrace/blob/master/WikiTrace.py#L66
+    """Uncompress arguments using msgpack.
     """
-    def _is_zlib_compressed(arg):
-        if not arg or not isinstance(arg, basestring) or len(arg) < 2:
-            return False
-        cmf = ord(arg[0])
-        if cmf & 0x0f != 0x08 and cmf & 0xf0 != 0x70:
-            return False
-        flg = ord(arg[1])
-        if (cmf * 256 + flg) % 31 != 0:
-            return False
-        return True
-    if len(args) > 0 and all(_is_zlib_compressed(arg) for arg in args):
-        return [json.loads(zlib.decompress(arg)) for arg in args]
-    else:
-        return args
+    return [msgpack.unpackb(x) for x in args]
 
 def runner(view, parallel, dirs, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -89,7 +67,7 @@ def runner(view, parallel, dirs, config):
             if "wrapper" in parallel:
                 wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources"])}
                 items = [[fn_name] + parallel.get("wrapper_args", []) + [wrap_parallel] + list(x) for x in items]
-            items = zip_args(items, config)
+            items = zip_args(items)
             for data in view.map_sync(fn, items, track=False):
                 if data:
                     out.extend(unzip_args(data))
