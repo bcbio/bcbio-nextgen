@@ -5,7 +5,6 @@ functions to access the data dictionary in a clearer way
 import toolz as tz
 from bcbio.utils import file_exists
 from bcbio.log import logger
-from bcbio.pipeline import config_utils
 import sys
 
 LOOKUPS = {
@@ -23,7 +22,9 @@ LOOKUPS = {
     "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],
                        "default": "standard"},
     "adapters": {"keys": ['config', 'algorithm', 'adapters'],
-                 "default": []}
+                 "default": []},
+    "qsig_file": {"keys": ['genome_resources', 'variation', 'qsignature'],
+                  "checker": file_exists}
 }
 
 def getter(keys, global_default=None):
@@ -45,4 +46,3 @@ for k, v in LOOKUPS.items():
     keys = v['keys']
     _g["get_" + k] = getter(keys, v.get('default', None))
     _g["set_" + k] = setter(keys, v.get('checker', None))
-

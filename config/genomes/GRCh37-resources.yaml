@@ -16,6 +16,7 @@ variation:
   sv_repeat: ../variation/sv_repeat_telomere_centromere.bed
   dbnsfp: ../variation/dbNSFP_v2.5.gz
   ancestral: ../variation/human_ancestor.fa.rz
+  qsignature: ../variation/qsignature.vcf
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

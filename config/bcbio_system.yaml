@@ -40,6 +40,9 @@ resources:
   kraken:
     cores: 6
     memory: 4g
+  qsignature: 
+    cores: 1
+    memory: 8g
   freebayes:
     memory: 2g
   gatk:

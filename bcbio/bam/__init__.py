@@ -213,6 +213,7 @@ def count(in_bam, config=None):
     out = subprocess.check_output(cmd, shell=True)
     return int(out)
 
+
 def sam_to_bam(in_sam, config):
     if is_bam(in_sam):
         return in_sam

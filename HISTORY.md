@@ -1,5 +1,5 @@
 ## 0.8.1 (in progress)
-
+- add qsignature tool to standard analysis
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
 - Fix GATK version detection when _JAVA_OPTIONS specified. Thanks to Miika Ahdesmaki.
