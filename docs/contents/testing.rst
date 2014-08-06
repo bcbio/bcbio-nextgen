@@ -235,7 +235,7 @@ Get the FASTQ files from the SEQC project::
 
 Use the `templating system`_ to set up an analysis::
 
-  bcbio_nextgen.py -w template rnaseq-seqc.yalm seqc.csv fastq
+  bcbio_nextgen.py -w template rnaseq-seqc.yaml seqc.csv fastq
 
 Go into the work directory and run your analysis::
 
