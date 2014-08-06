@@ -127,6 +127,12 @@ def pipeline_summary(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(qcsummary.pipeline_summary, *args), config)
 
+@require(qcsummary)
+def qsignature_summary(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(qcsummary.qsignature_summary, *args), config)
+
 @require(rnaseq)
 def generate_transcript_counts(*args):
     args = ipython.unzip_args(args)

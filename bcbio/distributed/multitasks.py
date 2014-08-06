@@ -63,6 +63,10 @@ def pipeline_summary(*args):
     return qcsummary.pipeline_summary(*args)
 
 @utils.map_wrap
+def qsignature_summary(*args):
+    return qcsummary.qsignature_summary(*args)
+
+@utils.map_wrap
 def generate_transcript_counts(*args):
     return rnaseq.generate_transcript_counts(*args)
 
