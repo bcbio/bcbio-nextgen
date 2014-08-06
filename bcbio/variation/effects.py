@@ -47,11 +47,14 @@ def _special_dbkey_maps(dbkey, ref_file):
     else:
         return None
 
-def prep_vep_cache(dbkey, ref_file, config=None):
+def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
     """Ensure correct installation of VEP cache file.
     """
     if config is None: config = {}
     resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
+    if tooldir:
+        os.environ["PERL5LIB"] = "{t}/lib/perl5:{t}/lib/perl5/site_perl:{l}".format(
+            t=tooldir, l=os.environ.get("PERL5LIB", ""))
     vepv = vep_version(config)
     if os.path.exists(resource_file) and vepv:
         with open(resource_file) as in_handle:

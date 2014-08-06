@@ -73,7 +73,8 @@ def upgrade_bcbio(args):
                 print("bcbio-nextgen data upgrade complete.")
     if args.isolate and args.tooldir:
         print("Installation directory not added to current PATH")
-        print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
+        print(" Add:\n  {t}/bin to PATH\n  {t}/lib to LD_LIBRARY_PATH\n"
+              "  {t}/lib/perl5:{t}/lib/perl5/site_perl to PERL5LIB".format(t=args.tooldir))
     save_install_defaults(args)
     args.datadir = _get_data_dir()
     _install_container_bcbio_system(args.datadir)
@@ -184,7 +185,7 @@ def upgrade_bcbio_data(args, remotes):
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
-    _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"])
+    _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
     toolplus = set([x.name for x in args.toolplus])
     if 'data' in toolplus:
         gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
@@ -216,9 +217,9 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
                 with open(local_file, "w") as out_handle:
                     out_handle.write(r.text)
 
-def _upgrade_vep_data(galaxy_dir):
+def _upgrade_vep_data(galaxy_dir, tooldir):
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
-        effects.prep_vep_cache(dbkey, ref_file)
+        effects.prep_vep_cache(dbkey, ref_file, tooldir)
 
 def _upgrade_snpeff_data(galaxy_dir, args, remotes):
     """Install or upgrade snpEff databases, localized to reference directory.

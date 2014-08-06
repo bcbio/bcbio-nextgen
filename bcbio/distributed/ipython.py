@@ -10,8 +10,10 @@ https://github.com/roryk/ipython-cluster-helper
 """
 import os
 
-import msgpack
-import toolz as tz
+try:
+    import msgpack
+except ImportError:
+    msgpack = None
 
 from bcbio import utils
 from bcbio.log import logger, get_log_dir
@@ -44,12 +46,18 @@ def _get_ipython_fn(fn_name, parallel):
 def zip_args(args, config=None):
     """Compress arguments using msgpack.
     """
-    return [msgpack.packb(x, use_single_float=True, use_bin_type=True) for x in args]
+    if msgpack:
+        return [msgpack.packb(x, use_single_float=True, use_bin_type=True) for x in args]
+    else:
+        return args
 
 def unzip_args(args):
     """Uncompress arguments using msgpack.
     """
-    return [msgpack.unpackb(x) for x in args]
+    if msgpack:
+        return [msgpack.unpackb(x) for x in args]
+    else:
+        return args
 
 def runner(view, parallel, dirs, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
