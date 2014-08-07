@@ -99,7 +99,7 @@ def _run_qc_tools(bam_file, data):
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     if data["analysis"].lower().startswith("standard"):
-        to_run.append(["qsignature",_run_qsignature_generator])
+        to_run.append(["qsignature", _run_qsignature_generator])
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     for program_name, qc_fn in to_run:
@@ -617,7 +617,8 @@ def _run_qsignature_generator(bam_file, data, out_dir):
         return {'qsig_vcf':out_file}
     else:
         logger.info("There is no qsignature for this species: %s"
-                    % ['config']['algorithm']['genome_build'])
+                    % tz.get_in(['genome_build'], data))
+        return []
 
 def qsignature_summary(*samples):
     """Run SignatureCompareRelatedSimple module from qsignature tool.
