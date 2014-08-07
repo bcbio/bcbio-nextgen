@@ -369,8 +369,8 @@ Structural variant calling
 ==========================
 
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, delly,
-  cn.mops]. LUMPY and DELLY require paired end reads, cn.mops requires whole
-  genome data.
+  cn.mops]. LUMPY and DELLY require paired end reads, cn.mops works on whole
+  genome data as well as targeted experiments.
 - ``svvalidate`` -- Dictionary of call types and pointer to BED file of known
   regions. For example: ``DEL: known_deletions.bed`` does deletion based
   validation of outputs against the BED file.
