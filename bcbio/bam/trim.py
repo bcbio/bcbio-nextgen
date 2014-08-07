@@ -9,6 +9,8 @@ from bcbio.provenance import do
 from Bio.Seq import Seq
 from bcbio.distributed.transaction import file_transaction
 
+MINIMUM_LENGTH = 25
+
 SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
     "truseq": ["AGATCGGAAGAG"],
@@ -75,7 +77,7 @@ def _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files):
     adapter_cmd = " ".join(map(lambda x: "--adapter=" + x, adapters))
     base_cmd = ("cutadapt --times=2 --quality-base={quality_base} "
                 "--quality-cutoff=5 --format=fastq "
-                "--minimum-length=0 {adapter_cmd} ").format(**locals())
+                "{adapter_cmd} ").format(**locals())
     if len(fastq_files) == 1:
         return _cutadapt_se_cmd(fastq_files, out_files, base_cmd)
     else:
@@ -86,9 +88,11 @@ def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     this has to use the -o option, not redirect to stdout in order for gzipping to be
     honored
     """
+    min_length = MINIMUM_LENGTH
+    cmd = base_cmd + " --minimum-length={min_length} ".format(**locals())
     fq1 = fastq_files[0]
     of1 = out_files[0]
-    cmd = base_cmd + " -o {of1} " + str(fq1)
+    cmd += " -o {of1} " + str(fq1)
     return cmd
 
 def _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd):
@@ -96,11 +100,13 @@ def _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd):
     cutadapt can't handle paired end data but sickle can; trim the adapters
     off with cutadapt and then use sickle to trim the reads by length
     """
+    min_length = MINIMUM_LENGTH
     qformat = "sanger" if quality_format == "standard" else quality_format
     fq1, fq2 = fastq_files
+    base_cmd += " --minimum-length=0 "
     first_cmd = "<({base_cmd} {fq1})".format(**locals())
     second_cmd = "<({base_cmd} {fq2})".format(**locals())
-    sickle_cmd = ("sickle pe -f {first_cmd} -r {second_cmd} -l 25 -q 0 "
+    sickle_cmd = ("sickle pe -f {first_cmd} -r {second_cmd} -l {min_length} -q 0 "
                   "-t {qformat} ")
     sickle_cmd = sickle_cmd + " -g " if is_gzipped(fq1) else sickle_cmd
     sickle_cmd = sickle_cmd.format(**locals())
