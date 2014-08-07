@@ -1,7 +1,7 @@
 Presentations
 =============
 
-- Intel Life Sciences discussion (7 August 2014): `slides <https://github.com/chapmanb/bcbb/raw/master/talks/intel2014_bcbio/chapman_bcbio.pdf>`
+- Intel Life Sciences discussion (7 August 2014): `slides <https://github.com/chapmanb/bcbb/raw/master/talks/intel2014_bcbio/chapman_bcbio.pdf>`_
 
 - Bioinformatics Open Source Conference (BOSC) 2014: `slides
   <https://github.com/chapmanb/bcbb/raw/master/talks/bosc2014_bcbio/chapman_bcbio.pdf>`_,

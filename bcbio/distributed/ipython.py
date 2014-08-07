@@ -75,7 +75,7 @@ def runner(view, parallel, dirs, config):
             if "wrapper" in parallel:
                 wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources"])}
                 items = [[fn_name] + parallel.get("wrapper_args", []) + [wrap_parallel] + list(x) for x in items]
-            items = zip_args(items)
+            items = zip_args([args for args in items])
             for data in view.map_sync(fn, items, track=False):
                 if data:
                     out.extend(unzip_args(data))
