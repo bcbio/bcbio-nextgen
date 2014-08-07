@@ -45,11 +45,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     run_message = "Running STAR aligner on %s and %s." % (pair_file, ref_file)
     with file_transaction(final_out) as tx_final_out:
         do.run(cmd.format(**locals()), run_message, None)
-#    out_file = bam.sam_to_bam(out_file, config)
-#    if not file_exists(final_out):
-#        symlink_plus(out_file, final_out)
     return final_out
-
 
 def _read_group_option(names):
     rg_id = names["rg"]

@@ -259,7 +259,6 @@ def bam_to_sam(in_file, config):
     return out_file
 
 
-
 def reheader(header, bam_file, config):
     samtools = config_utils.get_program("samtools", config)
     base, ext = os.path.splitext(bam_file)
