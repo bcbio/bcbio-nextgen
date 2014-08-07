@@ -25,6 +25,9 @@ resources:
   bcbio_coverage:
     dir: /usr/local/share/java/bcbio_coverage
     cores: 4
+  qsignature:
+    cores: 1
+    mem: 8g
   bowtie:
     cores:
   tophat:
