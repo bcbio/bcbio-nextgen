@@ -47,6 +47,7 @@ def generate_parallel(samples, run_parallel):
     samples = _add_researcher_summary(samples, summary_file)
     return samples
 
+
 def pipeline_summary(data):
     """Provide summary information on processing sample.
     """
@@ -55,6 +56,7 @@ def pipeline_summary(data):
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = _run_qc_tools(work_bam, data)
     return [[data]]
+
 
 def prep_pdf(qc_dir, config):
     """Create PDF from HTML summary outputs in QC directory.
@@ -79,6 +81,7 @@ def prep_pdf(qc_dir, config):
             cmd = [topdf, html_fixed, out_file]
             do.run(cmd, "Convert QC HTML to PDF")
         return out_file
+
 
 def _run_qc_tools(bam_file, data):
     """Run a set of third party quality control tools, returning QC directory and metrics.
@@ -107,7 +110,7 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     ratio = bam.get_aligned_reads(bam_file, data)
-    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and data["analysis"].lower() == "rna-seq":
+    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and data["analysis"].startswith("rna-seq"):
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
@@ -161,6 +164,7 @@ def _other_pipeline_samples(summary_file, cur_samples):
                     out.append(s)
     return out
 
+
 def _save_fields(sample):
     to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata",
                "description"]
@@ -178,6 +182,7 @@ def _save_fields(sample):
                 saved["summary"]["metrics"]["Disambiguated %s reads" % disambigGenome] = disambigStats[1]
                 saved["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return saved
+
 
 def _parse_disambiguate(disambiguatestatsfilename):
     """Parse disambiguation stats from given file.
@@ -212,6 +217,7 @@ def _add_researcher_summary(samples, summary_yaml):
             data["summary"]["researcher"] = out_by_researcher[researcher]
         out.append([data])
     return out
+
 
 def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
     """Generate a CSV file with summary information for a researcher on this project.
@@ -272,52 +278,52 @@ def _run_gene_coverage(bam_file, data, out_dir):
     return {"gene_coverage": out_file}
 
 
-
-def _run_kraken(data,ratio):
+def _run_kraken(data, ratio):
     """Run kraken, generating report in specified directory and parsing metrics.
        Using only first paired reads.
     """
-    logger.info("Number of aligned reads < than 0.60 in %s: %s" % (str(data["name"]),ratio))
+    logger.info("Number of aligned reads < than 0.60 in %s: %s" % (str(data["name"]), ratio))
     logger.info("Running kraken to determine contaminant: %s" % str(data["name"]))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     kraken_out = os.path.join(qc_dir, "kraken")
     stats = out = out_stats = None
     db = data['config']["algorithm"]["kraken"] 
     if db == "minikraken":
-        db = os.path.join(_get_data_dir(),"genome","kraken","minikraken")
+        db = os.path.join(_get_data_dir(), "genome", "kraken", "minikraken")
     else:
         if not os.path.exists(db):
             logger.info("kraken: no database found %s, skipping" % db)
             return {"kraken_report" : "null"}
-    if not os.path.exists(os.path.join(kraken_out,"kraken_out")):
+    if not os.path.exists(os.path.join(kraken_out, "kraken_out")):
         work_dir = os.path.dirname(kraken_out)
         utils.safe_makedir(work_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         files = data["files"]        
         with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
-                out = os.path.join(tx_tmp_dir,"kraken_out")
-                out_stats = os.path.join(tx_tmp_dir,"kraken_stats")
+                out = os.path.join(tx_tmp_dir, "kraken_out")
+                out_stats = os.path.join(tx_tmp_dir, "kraken_stats")
                 cl = (" ").join([config_utils.get_program("kraken", data["config"]),
-                      "--db",db,"--quick",
-                      "--preload","--min-hits","2","--threads",str(num_cores), 
-                      "--out", out, files[0]," 2>",out_stats])
-                do.run(cl,"kraken: %s" % data["name"][-1])
+                      "--db", db ,"--quick",
+                      "--preload", "--min-hits", "2", "--threads", str(num_cores), 
+                      "--out", out, files[0], " 2>", out_stats])
+                do.run(cl, "kraken: %s" % data["name"][-1])
                 if os.path.exists(kraken_out):
                     shutil.rmtree(kraken_out)
                 shutil.move(tx_tmp_dir, kraken_out)
-    metrics = _parse_kraken_output(kraken_out,db,data)
+    metrics = _parse_kraken_output(kraken_out, db, data)
     return metrics
+
 
 def _parse_kraken_output(out_dir, db, data):
     """Parse kraken stat info comming from stderr, 
        generating report with kraken-report
     """
-    in_file = os.path.join(out_dir,"kraken_out")
-    stat_file = os.path.join(out_dir,"kraken_stats")
+    in_file = os.path.join(out_dir, "kraken_out")
+    stat_file = os.path.join(out_dir, "kraken_stats")
     out_file = os.path.join(out_dir, "kraken_summary")
     classify = unclassify = None
-    with open(stat_file,'r') as handle:
+    with open(stat_file, 'r') as handle:
         for line in handle:
             if line.find(" classified") > -1:
                 classify = line[line.find("(")+1:line.find(")")]
@@ -326,9 +332,10 @@ def _parse_kraken_output(out_dir, db, data):
     if os.path.getsize(in_file)>0:
         with file_transaction(out_file) as tx_out_file:
             cl = (" ").join([config_utils.get_program("kraken-report", data["config"]),
-                          "--db",db,in_file,">",tx_out_file])
+                          "--db", db, in_file, ">", tx_out_file])
             do.run(cl, "kraken report: %s" % data["name"][-1])
-    return {"kraken_report" : out_file,"kraken_clas": classify,"kraken_unclas": unclassify}
+    return {"kraken_report" : out_file, "kraken_clas": classify, "kraken_unclas": unclassify}
+
 
 def _run_fastqc(bam_file, data, fastqc_out):
     """Run fastqc, generating report in specified directory and parsing metrics.
@@ -371,6 +378,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
     parser = FastQCParser(fastqc_out)
     stats = parser.get_fastqc_summary()
     return stats
+
 
 def _run_complexity(bam_file, data, out_dir):
     try:
@@ -595,7 +603,7 @@ def _run_qsignature_generator(bam_file, data, out_dir):
         jvm_opts = "-Xms750m -Xmx8g"
         cores = resources.get("cores", 1)
         utils.safe_makedir(out_dir)
-        out_name = os.path.basename(slice_bam).replace("bam","qsig.vcf")
+        out_name = os.path.basename(slice_bam).replace("bam", "qsig.vcf")
         out_file = os.path.join(out_dir, out_name)
         log_file = os.path.join(out_dir, "qsig.log")
         base_cmd = ("{qsig} {jvm_opts} "
@@ -607,18 +615,19 @@ def _run_qsignature_generator(bam_file, data, out_dir):
             down_file = bam.downsample(slice_bam, data, 20000000)
             if not down_file:
                 down_file = slice_bam
-            file_qsign_out = down_file.replace("bam","bam.qsig.vcf")
-            do.run(base_cmd.format(**locals()),"qsignature 1: %s" % data["name"][-1])
+            file_qsign_out = down_file.replace("bam", "bam.qsig.vcf")
+            do.run(base_cmd.format(**locals()), "qsignature 1: %s" % data["name"][-1])
             if os.path.exists(file_qsign_out):
                 with file_transaction(out_file) as file_txt_out:
-                    shutil.move(file_qsign_out,file_txt_out)
+                    shutil.move(file_qsign_out, file_txt_out)
             else:
     			raise IOError("File doesn't exist %s" % file_qsign_out)
-        return {'qsig_vcf':out_file}
+        return {'qsig_vcf': out_file}
     else:
         logger.info("There is no qsignature for this species: %s"
                     % tz.get_in(['genome_build'], data))
         return []
+
 
 def qsignature_summary(*samples):
     """Run SignatureCompareRelatedSimple module from qsignature tool.
@@ -642,9 +651,9 @@ def qsignature_summary(*samples):
     out_warn_file = os.path.join(samples[0][0]["dirs"]["work"], "qc", "qsignature.warnings")
     for data in samples:
         data = data[0]
-        if tz.get_in(["summary", "metrics", "qsig_vcf"], data):
+        vcf = tz.get_in(["summary", "metrics", "qsig_vcf"], data)
+        if vcf:
             count += 1
-            vcf = data['summary']['metrics']['qsig_vcf']
             vcf_name = os.path.basename(vcf)
             if not os.path.lexists(os.path.join(out_dir, vcf_name)):
                 os.symlink(vcf, os.path.join(out_dir, vcf_name))
@@ -665,6 +674,7 @@ def qsignature_summary(*samples):
     else:
         return [[]]
 
+
 def _parse_qsignature_output(in_file, out_file, warning_file):
     """ Parse xml file produced by qsignature
 
@@ -679,29 +689,29 @@ def _parse_qsignature_output(in_file, out_file, warning_file):
     score = {}
     warnings = set()
     similar = set()
-    with open(in_file,'r') as in_handle:
+    with open(in_file, 'r') as in_handle:
         with file_transaction(out_file) as out_tx_file:
             with file_transaction(warning_file) as warn_tx_file:
-                with open(out_tx_file,'w') as out_handle:
-                    with open(warn_tx_file,'w') as warn_handle:
+                with open(out_tx_file, 'w') as out_handle:
+                    with open(warn_tx_file, 'w') as warn_handle:
                         ET = lxml.etree.parse(in_handle)
                         for i in list(ET.iter('file')):
-                            name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".bam.qsig.vcf","")
+                            name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".bam.qsig.vcf", "")
                         for i in list(ET.iter('comparison')):
                             out_handle.write("%s\t%s\t%s\n" % 
-                            (name[i.attrib['file1']],name[i.attrib['file2']],i.attrib['score']))
+                            (name[i.attrib['file1']], name[i.attrib['file2']], i.attrib['score']))
                             if float(i.attrib['score']) < 0.1:
                                 logger.info('qsignature WARNING: risk of duplicated samples:%s' %
-                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
                                 warn_handle.write('qsignature WARNING: risk of duplicated samples:%s\n' %
-                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
                                 warnings.add(name[i.attrib['file1']])
                                 warnings.add(name[i.attrib['file2']])
                             elif float(i.attrib['score']) < 0.3:
                                 logger.info('qsignature: read similar samples:%s' %
-                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
                                 warn_handle.write('qsignature NOTE: similar samples:%s\n' %
-                                    (' '.join([name[i.attrib['file1']],name[i.attrib['file2']]])))
+                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
                                 similar.add(name[i.attrib['file1']])
                                 similar.add(name[i.attrib['file2']])
  
@@ -721,6 +731,6 @@ def _slice_chr22(in_bam, data):
         if "chr22" in bam_contigs:
             chromosome = "chr22"
         with file_transaction(out_file) as tx_out_file:
-            cmd = ("{sambamba} slice -o {tx_out_file} {in_bam} {chromosome}" ).format(**locals())
+            cmd = ("{sambamba} slice -o {tx_out_file} {in_bam} {chromosome}").format(**locals())
             out = subprocess.check_output(cmd, shell=True)
     return out_file
