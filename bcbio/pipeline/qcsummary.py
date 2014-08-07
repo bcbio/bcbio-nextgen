@@ -1,6 +1,7 @@
 """Quality control and summary metrics for next-gen alignments and analysis.
 """
 import collections
+import contextlib
 import csv
 import os
 import shutil
@@ -9,7 +10,6 @@ import subprocess
 import lxml.html
 import yaml
 from datetime import datetime
-
 # allow graceful during upgrades
 try:
     import matplotlib
@@ -18,7 +18,7 @@ try:
 except ImportError:
     plt = None
 import pysam
-import contextlib
+import toolz as tz
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
@@ -27,7 +27,6 @@ from bcbio.pipeline import config_utils, run_info
 from bcbio.install import _get_data_dir
 from bcbio.provenance import do
 import bcbio.rnaseq.qc
-from bcbio.variation.realign import has_aligned_reads
 from bcbio.rnaseq.coverage import plot_gene_coverage
 import bcbio.pipeline.datadict as dd
 
@@ -37,8 +36,8 @@ def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
     sum_samples = run_parallel("pipeline_summary", samples)
-    qsign_info = run_parallel("qsignature_summary",[sum_samples])
-    summary_file = write_project_summary(sum_samples,qsign_info)
+    qsign_info = run_parallel("qsignature_summary", [sum_samples])
+    summary_file = write_project_summary(sum_samples, qsign_info)
     samples = []
     for data in sum_samples:
         if "summary" not in data[0]:
@@ -120,7 +119,7 @@ def _run_qc_tools(bam_file, data):
 
 # ## Generate project level QC summary for quickly assessing large projects
 
-def write_project_summary(samples,qsign_info = False):
+def write_project_summary(samples, qsign_info=None):
     """Write project summary information on the provided samples.
     write out dirs, genome resources,
 
@@ -543,7 +542,7 @@ def _run_gemini_stats(bam_file, data, out_dir):
     """Retrieve high level variant statistics from Gemini.
     """
     out = {}
-    gemini_db = (data.get("variants", [{}])[0].get("population", {}).get("db") 
+    gemini_db = (data.get("variants", [{}])[0].get("population", {}).get("db")
                  if data.get("variants") else None)
     if gemini_db:
         gemini_stat_file = "%s-stats.yaml" % os.path.splitext(gemini_db)[0]
@@ -576,17 +575,15 @@ def _run_gemini_stats(bam_file, data, out_dir):
 
 ## qsignature
 
-def _run_qsignature_generator(bam_file,data,out_dir):
-    """ Run SignatureGenerator to create normalize vcf
-    that later will be input of qsignature_summary
+def _run_qsignature_generator(bam_file, data, out_dir):
+    """ Run SignatureGenerator to create normalize vcf that later will be input of qsignature_summary
 
     :param bam_file: (str) path of the bam_file
     :param data: (list) list containing the all the dictionary
                      for this sample
     :param out_dir: (str) path of the output
-    
-    :returns: (dict) dict with the normalize vcf file 
 
+    :returns: (dict) dict with the normalize vcf file
     """
     position = dd.get_qsig_file(data)
     if position:
@@ -619,55 +616,55 @@ def _run_qsignature_generator(bam_file,data,out_dir):
     			raise IOError("File doesn't exist %s" % file_qsign_out)
         return {'qsig_vcf':out_file}
     else:
-        logger.info("There is no qsignature for this species: %s" 
-            % ['config']['algorithm']['genome_build'])
+        logger.info("There is no qsignature for this species: %s"
+                    % ['config']['algorithm']['genome_build'])
 
 def qsignature_summary(*samples):
-    """ Run SignatureCompareRelatedSimple module from 
-    qsignature tool to creata a matrix of pairwise 
-    comparison among samples. The function
-    will not run if the output exisits
+    """Run SignatureCompareRelatedSimple module from qsignature tool.
 
-    :param samples: list with only one element containing 
-        all samples information
+    Creates a matrix of pairwise comparison among samples. The
+    function will not run if the output exists
+
+    :param samples: list with only one element containing all samples information
     :returns: (dict) with the path of the output to be joined to summary
-
-    """ 
+    """
     count = 0
     warnings, similar = [], []
     qsig = config_utils.get_program("qsignature", samples[0][0]["config"])
     if not qsig:
         return False
     jvm_opts = "-Xms750m -Xmx8g"
-    out_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"],"qsignature"))
+    out_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"], "qsignature"))
     log = os.path.join(samples[0][0]["dirs"]["work"], "qsig.log")
-    out_file = os.path.join(samples[0][0]["dirs"]["work"], "qc","qsignature.xml")
-    out_ma_file = os.path.join(samples[0][0]["dirs"]["work"], "qc","qsignature.ma")
-    out_warn_file = os.path.join(samples[0][0]["dirs"]["work"], "qc","qsignature.warnings")
+    out_file = os.path.join(samples[0][0]["dirs"]["work"], "qc", "qsignature.xml")
+    out_ma_file = os.path.join(samples[0][0]["dirs"]["work"], "qc", "qsignature.ma")
+    out_warn_file = os.path.join(samples[0][0]["dirs"]["work"], "qc", "qsignature.warnings")
     for data in samples:
         data = data[0]
-        if data['summary']['metrics'].get('qsig_vcf',False):
+        if tz.get_in(["summary", "metrics", "qsig_vcf"], data):
             count += 1
             vcf = data['summary']['metrics']['qsig_vcf']
             vcf_name = os.path.basename(vcf)
-            if not os.path.lexists(os.path.join(out_dir,vcf_name)):
-                os.symlink(vcf,os.path.join(out_dir,vcf_name))
+            if not os.path.lexists(os.path.join(out_dir, vcf_name)):
+                os.symlink(vcf, os.path.join(out_dir, vcf_name))
     if count > 0:
         if not os.path.exists(out_file):
             with file_transaction(out_file) as file_txt_out:
                 base_cmd = ("{qsig} {jvm_opts} "
-    	                    "org.qcmg.sig.SignatureCompareRelatedSimple "
-    	                    "-log {log} -dir {out_dir} "
-    	                    "-o {file_txt_out} ")
-                do.run(base_cmd.format(**locals()),"qsignature 2")
-        warnings, similar = _parse_qsignature_output(out_file,out_ma_file,out_warn_file)
-        return [{'qsig_matrix': out_ma_file,
-                 'qsig_warnings': out_warn_file,
-                 'total samples' : count,
-                 'similar samples' : len(similar),
-                 'warnings samples': list(warnings)}]
- 
-def _parse_qsignature_output(in_file,out_file,warning_file):
+                            "org.qcmg.sig.SignatureCompareRelatedSimple "
+                            "-log {log} -dir {out_dir} "
+                            "-o {file_txt_out} ")
+                do.run(base_cmd.format(**locals()), "qsignature 2")
+        warnings, similar = _parse_qsignature_output(out_file, out_ma_file, out_warn_file)
+        return [[{'qsig_matrix': out_ma_file,
+                  'qsig_warnings': out_warn_file,
+                  'total samples': count,
+                  'similar samples': len(similar),
+                  'warnings samples': list(warnings)}]]
+    else:
+        return [[]]
+
+def _parse_qsignature_output(in_file, out_file, warning_file):
     """ Parse xml file produced by qsignature
 
     :param in_file: (str) with the path to the xml file
