@@ -15,6 +15,7 @@ LOOKUPS = {
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
     "work_bam": {"keys": ["work_bam"]},
+    "ref_file": {"keys": ["reference", "fasta", "base"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "dexseq_counts": {"keys": ['dexseq_counts']},

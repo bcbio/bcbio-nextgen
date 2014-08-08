@@ -138,7 +138,7 @@ def postprocess_alignment(data):
     Cleans input BED files to avoid issues with overlapping input segments.
     """
     data = bedutils.clean_inputs(data)
-    if vmulti.bam_needs_processing(data):
+    if vmulti.bam_needs_processing(data) and data["work_bam"].endswith(".bam"):
         callable_region_bed, nblock_bed, callable_bed = \
             callable.block_regions(data["work_bam"], data["sam_ref"], data["config"])
         data["regions"] = {"nblock": nblock_bed, "callable": callable_bed}

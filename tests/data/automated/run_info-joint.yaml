@@ -9,19 +9,28 @@ details:
     metadata:
       batch: TestBatch1
     algorithm:
-      aligner: false
-      mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: false
-      jointcaller: bcbio-variation-recall
+      aligner: bwa
+      mark_duplicates: true
+      variantcaller: gatk-haplotype
+      jointcaller: gatk-haplotype
+      #aligner: false
+      #mark_duplicates: false
+      #variantcaller: false
+      #jointcaller: bcbio-variation-recall
+      nomap_split_size: 50
+      nomap_split_targets: 100
+      variant_regions: ../data/automated/variant_regions-bam.bed
       effects: vep
   - algorithm:
       aligner: bwa
       recalibrate: false
       realign: false
-      variantcaller: freebayes
-      jointcaller: bcbio-variation-recall
+      #variantcaller: freebayes
+      #jointcaller: bcbio-variation-recall
+      variantcaller: gatk-haplotype
+      jointcaller: gatk-haplotype
       effects: vep
       quality_format: Standard
       nomap_split_size: 50

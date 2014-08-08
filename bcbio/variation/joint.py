@@ -23,7 +23,7 @@ from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import config_utils, region
 from bcbio.provenance import do
-from bcbio.variation import bamprep, multi
+from bcbio.variation import bamprep, gatkjoint, multi
 
 def _get_callable_regions(data):
     """Retrieve regions to parallelize by from callable regions, variant regions or chromosomes
@@ -49,8 +49,9 @@ def _split_by_callable_region(data):
     splitting aggressively by regions.
     """
     batch = tz.get_in(("metadata", "batch"), data)
+    jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
     name = batch if batch else tz.get_in(("rgnames", "sample"), data)
-    out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "joint", name))
+    out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "joint", jointcaller, name))
     utils.safe_makedir(os.path.join(out_dir, "inprep"))
     parts = []
     for feat in _get_callable_regions(data):
@@ -103,6 +104,8 @@ def square_batch_region(data, region, bam_files, vrn_files, out_file):
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         if jointcaller == "bcbio-variation-recall":
             _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file)
+        elif jointcaller == "gatk-haplotype":
+            gatkjoint.run_region(data, region, vrn_files, out_file)
         else:
             raise ValueError("Unexpected joint calling approach: %s" % jointcaller)
     if region:
