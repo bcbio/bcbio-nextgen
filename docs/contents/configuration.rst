@@ -388,6 +388,14 @@ Cancer variant calling
   resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
   in the tumor sample of a tumor/normal pair.
 
+Quality control
+===============
+
+- ``kraken`` Turn on kraken algorithm to detect possible contamination. You can add `kraken: True` and it will use a minimal database to detect possible `contaminants`_. As well, you can point to a `custom database`_ directory and kraken will use it. You will find the results in the `qc` directory. This tool only run during `rnaseq` pipeline.
+
+.. _contaminants: https://ccb.jhu.edu/software/kraken/
+.. _custom database: https://github.com/DerrickWood/kraken
+
 Post-processing
 ===============
 

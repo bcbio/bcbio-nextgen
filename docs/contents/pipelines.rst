@@ -84,6 +84,12 @@ about each sample and some provenance data. In that directory is also a
 differential expression calling using any count-based method such as EdgeR,
 DESeq2 or voom+limma, etc.
 
+Standard
+~~~~~~~~
+
+This pipeline implements `alignment` and `qc` tools. Furthermore, it will run `qsignature`_ to detect possible duplicated samples, or miss-labeling. It uses SNPs signature to create a distance matrix that helps easily to create groups. The project yaml file will show number of total samples analyzed, number of very similar samples, and samples that could be duplicated.
+
+.. _qsignature: http://sourceforge.net/p/adamajava/wiki/qSignature/
 
 Configuration
 =============
