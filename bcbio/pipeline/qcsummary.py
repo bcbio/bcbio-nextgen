@@ -13,7 +13,7 @@ from datetime import datetime
 # allow graceful during upgrades
 try:
     import matplotlib
-    matplotlib.use('Agg')
+    matplotlib.use('Agg', force=True)
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
@@ -85,8 +85,8 @@ def prep_pdf(qc_dir, config):
 
 def _run_qc_tools(bam_file, data):
     """Run a set of third party quality control tools, returning QC directory and metrics.
-    
-        :param bam_file: alignments in bam format 
+
+        :param bam_file: alignments in bam format
         :param data: dict with all configuration information
 
         :returns: dict with output of different tools
@@ -287,7 +287,7 @@ def _run_kraken(data, ratio):
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     kraken_out = os.path.join(qc_dir, "kraken")
     stats = out = out_stats = None
-    db = data['config']["algorithm"]["kraken"] 
+    db = data['config']["algorithm"]["kraken"]
     if db == "minikraken":
         db = os.path.join(_get_data_dir(), "genome", "kraken", "minikraken")
     else:
@@ -298,14 +298,14 @@ def _run_kraken(data, ratio):
         work_dir = os.path.dirname(kraken_out)
         utils.safe_makedir(work_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
-        files = data["files"]        
+        files = data["files"]
         with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 out = os.path.join(tx_tmp_dir, "kraken_out")
                 out_stats = os.path.join(tx_tmp_dir, "kraken_stats")
                 cl = (" ").join([config_utils.get_program("kraken", data["config"]),
                       "--db", db ,"--quick",
-                      "--preload", "--min-hits", "2", "--threads", str(num_cores), 
+                      "--preload", "--min-hits", "2", "--threads", str(num_cores),
                       "--out", out, files[0], " 2>", out_stats])
                 do.run(cl, "kraken: %s" % data["name"][-1])
                 if os.path.exists(kraken_out):
@@ -316,7 +316,7 @@ def _run_kraken(data, ratio):
 
 
 def _parse_kraken_output(out_dir, db, data):
-    """Parse kraken stat info comming from stderr, 
+    """Parse kraken stat info comming from stderr,
        generating report with kraken-report
     """
     in_file = os.path.join(out_dir, "kraken_out")
@@ -400,7 +400,6 @@ def _run_complexity(bam_file, data, out_dir):
 
     print "file saved as", out_file
     print "out_dir is", out_dir
-
     return bcbio.rnaseq.qc.estimate_library_complexity(df)
 
 
@@ -611,7 +610,7 @@ def _run_qsignature_generator(bam_file, data, out_dir):
                     "--noOfThreads {cores} "
                     "-log {log_file} -i {position} "
                     "-i {down_file} ")
-        if not os.path.exists(out_file):    
+        if not os.path.exists(out_file):
             down_file = bam.downsample(slice_bam, data, 20000000)
             if not down_file:
                 down_file = slice_bam
@@ -684,7 +683,7 @@ def _parse_qsignature_output(in_file, out_file, warning_file):
 
     :returns: (list) with samples that could be duplicated
 
-    """ 
+    """
     name = {}
     score = {}
     warnings = set()
@@ -698,7 +697,7 @@ def _parse_qsignature_output(in_file, out_file, warning_file):
                         for i in list(ET.iter('file')):
                             name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".bam.qsig.vcf", "")
                         for i in list(ET.iter('comparison')):
-                            out_handle.write("%s\t%s\t%s\n" % 
+                            out_handle.write("%s\t%s\t%s\n" %
                             (name[i.attrib['file1']], name[i.attrib['file2']], i.attrib['score']))
                             if float(i.attrib['score']) < 0.1:
                                 logger.info('qsignature WARNING: risk of duplicated samples:%s' %
@@ -714,7 +713,6 @@ def _parse_qsignature_output(in_file, out_file, warning_file):
                                     (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
                                 similar.add(name[i.attrib['file1']])
                                 similar.add(name[i.attrib['file2']])
- 
         return warnings, similar
 
 
