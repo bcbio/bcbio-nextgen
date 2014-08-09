@@ -58,7 +58,7 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
             else:
                 exclude = ["-x", _delly_exclude_file(items, out_file, chrom)]
                 cmd = ["delly", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
-                multi_cmd = "export OMP_NUM_THREADS=%s && " % cores
+                multi_cmd = "export OMP_NUM_THREADS=%s && export LC_ALL=C && " % cores
                 try:
                     do.run(multi_cmd + " ".join(cmd), "delly structural variant")
                     # Delly will write nothing if no variants found
