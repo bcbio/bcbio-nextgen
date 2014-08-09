@@ -21,6 +21,7 @@ from bcbio import broad, utils
 from bcbio.pipeline import genome
 from bcbio.variation import effects
 from bcbio.provenance import programs
+from bcbio.distributed.transaction import file_transaction
 
 REMOTES = {
     "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
@@ -55,6 +56,8 @@ def upgrade_bcbio(args):
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         print("Upgrade of bcbio-nextgen development code complete.")
 
+    _set_matplotlib_default_backend()
+
     if args.tooldir:
         with bcbio_tmpdir():
             print("Upgrading third party tools to latest versions")
@@ -80,6 +83,33 @@ def upgrade_bcbio(args):
     _install_container_bcbio_system(args.datadir)
     print("Upgrade completed successfully.")
     return args
+
+
+def _set_matplotlib_default_backend():
+    """
+    matplotlib will try to print to a display if it is available, but don't want
+    to run it in interactive mode. we tried setting the backend to 'Agg'' before
+    importing, but it was still resulting in issues. we replace the existing
+    backend with 'agg' in the default matplotlibrc. This is a hack until we can
+    find a better solution
+    """
+    if _matplotlib_installed():
+        import matplotlib
+        config = matplotlib.matplotlib_fname()
+        with file_transaction(config) as tx_out_file:
+            with open(config) as in_file, open(tx_out_file, "w") as out_file:
+                for line in in_file:
+                    if line.split(":")[0].strip() == "backend":
+                        out_file.write("backend: agg\n")
+                    else:
+                        out_file.write(line)
+
+def _matplotlib_installed():
+    try:
+        import matplotlib
+    except importError:
+        return False
+    return True
 
 def _symlink_bcbio(args):
     """Ensure bcbio_nextgen.py symlink in final tool directory.
