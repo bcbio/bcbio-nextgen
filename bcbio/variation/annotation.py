@@ -48,7 +48,8 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                     params += ["-I", bam_file]
                 for x in annotations:
                     params += ["-A", x]
-                if "--allow_potentially_misencoded_quality_scores" not in params and "-allowPotentiallyMisencodedQuals" not in params:
+                if ("--allow_potentially_misencoded_quality_scores" not in params
+                      and "-allowPotentiallyMisencodedQuals" not in params):
                     params += ["--allow_potentially_misencoded_quality_scores"]
                 # be less stringent about BAM and VCF files (esp. N in CIGAR for RNA-seq)
                 # start by removing existing -U or --unsafe opts
@@ -58,10 +59,9 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                     ind_to_rem = params.index(my_opt)
                     # are the options given as separate strings or in one?
                     if my_opt.strip() == "-U" or my_opt.strip() == "--unsafe":
-                        params.pop(ind_to_rem+1)
+                        params.pop(ind_to_rem + 1)
                     params.pop(ind_to_rem)
                 params.extend(["-U", "ALL"])
-                
                 broad_runner = broad.runner_from_config(config)
                 broad_runner.run_gatk(params, memory_retry=True)
         vcfutils.bgzip_and_index(out_file, config)

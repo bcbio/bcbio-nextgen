@@ -33,7 +33,7 @@ details:
       #remove_lcr: true
       tools_off: [gemini]
       #variantcaller: [gatk, gatk-haplotype]
-      quality_format: Standard
+      quality_format: standard
       nomap_split_size: 50
       nomap_split_targets: 100
       coverage_interval: regional

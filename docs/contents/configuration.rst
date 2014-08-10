@@ -243,7 +243,8 @@ Alignment
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
    handles adding read groups, sorting to a reference genome and
    filtering problem records that cause problems with GATK. Set to
-   ``picard`` to do Picard/GATK based cleaning.
+   ``picard`` to do Picard/GATK based cleaning. To fix misencoded input BAMs
+   with non-standard scores, set ``quality_format`` to ``illumina``.
 -  ``bam_sort`` Allow sorting of input BAMs when skipping alignment
    step (``aligner`` set to false). Options are coordinate or
    queryname. For additional processing through standard pipelines
@@ -273,8 +274,7 @@ Alignment
 -  ``quality_bin``: Perform binning of quality scores with CRAM to
    reduce file sizes. Uses the Illumina 8-bin approach. Supply a list
    of times to perform binning: [prealignment, postrecal]
--  ``quality_format`` Quality format of fastq inputs [illumina,
-   standard]
+-  ``quality_format`` Quality format of fastq or BAM inputs [standard, illumina]
 -  ``merge_bamprep`` Merge regional BAM prepped files into a final
    prepared BAM. false avoids the time consuming merge when you only
    want variant calls [true, false]

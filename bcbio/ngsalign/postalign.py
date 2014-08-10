@@ -10,7 +10,7 @@ biobambam bammarkduplicates: http://arxiv.org/abs/1306.0836
 import contextlib
 import os
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
@@ -119,6 +119,7 @@ def dedup_bam(in_bam, data):
                     cmd = ("{bammarkduplicates} tmpfile={base_tmp}-markdup "
                            "markthreads={cores} I={in_bam} O={tx_out_file}")
                     do.run(cmd.format(**locals()), "De-duplication with biobambam")
+        bam.index(out_file, data["config"])
         return out_file
     else:
         return in_bam

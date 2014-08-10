@@ -111,7 +111,7 @@ def process_alignment(data):
                 raise ValueError("Cannot specify `bam_clean: picard` with `bam_sort` other than coordinate: %s"
                                  % sort_method)
             out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], data["sam_ref"], data["dirs"],
-                                           config)
+                                           data)
         elif sort_method:
             runner = broad.runner_from_config(config)
             out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
