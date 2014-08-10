@@ -1,4 +1,9 @@
 ## 0.8.1 (in progress)
+- Support joint recalling with GATK HapolotypeCaller and FreeBayes. The
+  `jointcaller` configuration variable enables calling concurrently in large
+  populations by independently calling on samples them combining into a final
+  combined callset with no-call/reference calls at any position called
+  independently.
 - add qsignature tool to standard analysis
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
