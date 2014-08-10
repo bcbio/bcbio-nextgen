@@ -228,6 +228,7 @@ def _debug_samples(i, samples):
     for sample in (x[0] for x in samples):
         print "  ", sample["description"], sample.get("region"), \
             utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
+            utils.get_in(sample, ("config", "algorithm", "jointcaller")), \
             [x.get("variantcaller") for x in sample.get("variants", [])], \
             sample.get("work_bam")
 

@@ -13,12 +13,12 @@ details:
       realign: false
       aligner: bwa
       mark_duplicates: true
-      variantcaller: gatk-haplotype
-      jointcaller: gatk-haplotype
+      variantcaller: [gatk-haplotype, freebayes]
+      jointcaller: [gatk-haplotype-joint, freebayes-joint]
       #aligner: false
       #mark_duplicates: false
       #variantcaller: false
-      #jointcaller: bcbio-variation-recall
+      #jointcaller: freebayes-joint
       nomap_split_size: 50
       nomap_split_targets: 100
       variant_regions: ../data/automated/variant_regions-bam.bed
@@ -28,9 +28,9 @@ details:
       recalibrate: false
       realign: false
       #variantcaller: freebayes
-      #jointcaller: bcbio-variation-recall
-      variantcaller: gatk-haplotype
-      jointcaller: gatk-haplotype
+      #jointcaller: freebayes-joint
+      variantcaller: [gatk-haplotype, freebayes]
+      jointcaller: [gatk-haplotype-joint, freebayes-joint]
       effects: vep
       quality_format: Standard
       nomap_split_size: 50

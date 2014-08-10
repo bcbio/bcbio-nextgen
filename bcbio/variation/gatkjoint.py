@@ -12,7 +12,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.variation import bamprep
 
 def run_region(data, region, vrn_files, out_file):
-    """Perform variant calling on gVCF inputs in
+    """Perform variant calling on gVCF inputs in a specific genomic region.
     """
     vrn_files = _batch_gvcfs(data, region, vrn_files, dd.get_ref_file(data), out_file)
     return _run_genotype_gvcfs(data, region, vrn_files, dd.get_ref_file(data), out_file)
@@ -33,7 +33,7 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
 
 # ## gVCF batching
 
-MAX_BATCH = 2  # Recommended sample count from GATK team where we should use CombineGVCFs
+MAX_BATCH = 200  # Recommended sample count from GATK team where we should use CombineGVCFs
 
 def _batch_gvcfs(data, region, vrn_files, ref_file, out_file=None):
     """Perform batching of gVCF files if above recommended input count.
