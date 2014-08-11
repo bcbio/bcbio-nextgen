@@ -20,7 +20,7 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
     snap = config_utils.get_program("snap", data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     resources = config_utils.get_resources("snap", data["config"])
-    max_mem = resources.get("memory", "1G")
+    max_mem = config_utils.adjust_memory(resources.get("memory", "1G"), num_cores, "increase")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:

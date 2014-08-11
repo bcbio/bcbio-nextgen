@@ -238,7 +238,7 @@ Alignment
 
 - ``platform`` Sequencing platform used. Corresponds to the ``PL``
   parameter in BAM read groups. Default 'Illumina'.
--  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign, star,
+-  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign, snap, star,
    false]
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
    handles adding read groups, sorting to a reference genome and

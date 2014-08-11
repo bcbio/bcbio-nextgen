@@ -4,10 +4,12 @@
   populations by independently calling on samples them combining into a final
   combined callset with no-call/reference calls at any position called
   independently.
-- add qsignature tool to standard analysis
+- Add qsignature tool to standard analysis
+- Support the SNAP aligner, which provides improved speed on systems with
+  larger amount of memory (64Gb for human genome alignment).
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
-- Fix GATK version detection when _JAVA_OPTIONS specified. Thanks to Miika
+- Fix GATK version detection when `_JAVA_OPTIONS` specified. Thanks to Miika
   Ahdesmaki.
 - Use msgpack for ipython serialization to reduce message sizes and IPython
   controller memory instead of homemade json/zlib approach.
@@ -59,7 +61,7 @@
   https://github.com/robinandeer/chanjo
 - Initial support for automated evaluation of structural variant calling.
 - Bugfix: set library-type properly for Cufflinks runs.
-- Added genome_setup.py a script to prepare your own genome and rnaseq files.
+- Added `genome_setup.py` a script to prepare your own genome and rnaseq files.
 
 ## 0.7.9 (May 19, 2014)
 
