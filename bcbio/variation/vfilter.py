@@ -18,7 +18,8 @@ from bcbio.variation import vcfutils
 
 # ## General functionality
 
-def hard_w_expression(vcf_file, expression, data, name="+", filterext=""):
+def hard_w_expression(vcf_file, expression, data, name="+", filterext="",
+                      extra_cmd=""):
     """Perform hard filtering using bcftools expressions like %QUAL < 20 || DP < 4.
     """
     base, ext = utils.splitext_plus(vcf_file)
@@ -27,12 +28,12 @@ def hard_w_expression(vcf_file, expression, data, name="+", filterext=""):
         with file_transaction(out_file) as tx_out_file:
             if vcfutils.vcf_has_variants(vcf_file):
                 bcftools = config_utils.get_program("bcftools", data["config"])
-                output_type = "z" if out_file.endswith(".gz") else "v"
+                bgzip_cmd = "| bgzip -c" if out_file.endswith(".gz") else ""
                 variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
                 intervals = ("-T %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
                              if variant_regions else "")
-                cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '{name}' "
-                       "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
+                cmd = ("{bcftools} filter -O v {intervals} --soft-filter '{name}' "
+                       "-e '{expression}' -m '+' {vcf_file} {extra_cmd} {bgzip_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
             else:
                 shutil.copy(vcf_file, out_file)
@@ -140,7 +141,7 @@ def _freebayes_hard(in_file, data):
         if out_file.endswith(".vcf.gz"):
             out_file = vcfutils.bgzip_and_index(out_file, data["config"])
         return out_file
-    
+
     stats = _calc_vcf_stats(in_file)
     depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
     qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter
@@ -175,6 +176,17 @@ def _average_called_depth(in_file):
             if d is not None:
                 depths.append(d)
     return int(math.ceil(numpy.mean(depths)))
+
+def platypus(in_file, data):
+    """Filter Platypus calls, removing Q20 hard filter and replacing with depth and quality based filter.
+
+    Platypus uses its own VCF nomenclature: TC == DP, FR == AF
+    """
+    filters = ('(FR[0] <= 0.5 && TC < 4 && %QUAL < 20) || '
+               '(TC < 13 && %QUAL < 10) || '
+               '(FR[0] > 0.5 && TC < 4 && %QUAL < 50)')
+    return hard_w_expression(in_file, filters, data, name="PlatQualDepth",
+                             extra_cmd="| sed 's/\\tQ20\\t/\\tPASS\\t/'")
 
 def gatk_snp_hard(in_file, data):
     """Perform hard filtering on GATK SNPs using best-practice recommendations.

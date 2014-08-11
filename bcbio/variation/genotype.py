@@ -22,6 +22,8 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
     call_file = ploidy.filter_vcf_by_sex(call_file, data)
     if caller in ["freebayes"]:
         return vfilter.freebayes(call_file, ref_file, vrn_files, data)
+    elif caller in ["platypus"]:
+        return vfilter.platypus(call_file, data)
     elif caller in ["gatk", "gatk-haplotype"]:
         return gatkfilter.run(call_file, ref_file, vrn_files, data)
     # no additional filtration for callers that filter as part of call process
@@ -172,7 +174,7 @@ def handle_multiple_callers(data, key, default=None):
         return out
 
 def get_variantcallers():
-    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, scalpel, vardict
+    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, platypus, scalpel, vardict
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "freebayes": freebayes.run_freebayes,
@@ -180,6 +182,7 @@ def get_variantcallers():
             "samtools": samtools.run_samtools,
             "varscan": varscan.run_varscan,
             "mutect": mutect.mutect_caller,
+            "platypus": platypus.run,
             "scalpel": scalpel.run_scalpel,
             "vardict": vardict.run_vardict}
 

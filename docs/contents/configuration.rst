@@ -308,7 +308,7 @@ Variant calling
 ===============
 
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
-   multiple options [gatk, freebayes, gatk-haplotype,
+   multiple options [gatk, freebayes, gatk-haplotype, platypus,
    mutect, scalpel, vardict, varscan, samtools]
     - Paired (typically somatic, tumor-normal) variant calling is currently
       supported by freebayes, varscan, mutect (see disclaimer below),
@@ -322,14 +322,17 @@ Variant calling
 - ``jointcaller`` Joint calling algorithm, combining variants called with the
   specified ``variantcaller``. Can be a list of multiple options but needs to
   match with appropriate ``variantcaller``
-     - ``freebayes-joint`` Combine freebayes calls using `bcbio.variation.recall
-       <https://github.com/chapmanb/bcbio.variation.recall`_ with recalling at
-       all positions found in each individual sample. Requires ``freebayes``
-       variant calling.
      - ``gatk-haplotype-joint`` `GATK incremental joint discovery
        <http://www.broadinstitute.org/gatk/guide/article?id=3893>`_ with
        HaplotypeCaller. Takes individual gVCFs called by ``gatk-haploype`` and
        perform combined genotyping.
+     - ``freebayes-joint`` Combine freebayes calls using `bcbio.variation.recall
+       <https://github.com/chapmanb/bcbio.variation.recall`_ with recalling at
+       all positions found in each individual sample. Requires ``freebayes``
+       variant calling.
+     - ``platypus-joint`` Combine platypus calls using bcbio.variation.recall
+       with squaring off at all positions found in each individual
+       sample. Requires ``platypus`` variant calling.
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [true, false]
    If true, will perform streaming duplicate marking with `samblaster`_ for
