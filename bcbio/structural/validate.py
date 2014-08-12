@@ -18,7 +18,7 @@ try:
     import pandas as pd
     import prettyplotlib as ppl
 except ImportError:
-    pd, ppl = None
+    pd, ppl = None, None
 
 from bcbio import utils
 
