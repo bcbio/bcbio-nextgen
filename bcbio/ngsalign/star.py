@@ -42,7 +42,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     sam_to_bam = bam.sam_to_bam_stream_cmd(config)
     sort = bam.sort_cmd(config)
     cmd += "| {sam_to_bam} | {sort} -o {tx_final_out} "
-    run_message = "Running STAR aligner on %s and %s." % (pair_file, ref_file)
+    run_message = "Running STAR aligner on %s and %s." % (fastq_file, ref_file)
     with file_transaction(final_out) as tx_final_out:
         do.run(cmd.format(**locals()), run_message, None)
     return final_out
