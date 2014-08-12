@@ -20,7 +20,8 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
     snap = config_utils.get_program("snap", data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     resources = config_utils.get_resources("snap", data["config"])
-    max_mem = config_utils.adjust_memory(resources.get("memory", "1G"), num_cores, "increase")
+    sort_max_mem = int(config_utils.adjust_memory(resources.get("memory", "1G"), num_cores, "increase")[:-1]) - 68
+    sort_mem_arg = "-sm %s" % sort_max_mem if sort_max_mem > 0 else ""
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
@@ -30,7 +31,7 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
                 else:
                     cmd_name = "single" if not pair_file else "paired"
                 cmd = ("{snap} {cmd_name} {index_dir} {fastq_file} {pair_file} "
-                       "-rg '{rg_info}' -t {num_cores} -sa -so -sm {max_mem} -o {tx_out_file}")
+                       "-rg '{rg_info}' -t {num_cores} -sa -so {sort_mem_arg} -o {tx_out_file}")
                 do.run(cmd.format(**locals()), "SNAP alignment: %s" % names["sample"])
     data["work_bam"] = out_file
     return data
