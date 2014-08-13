@@ -258,7 +258,7 @@ class StandardPipeline(AbstractPipeline):
                 samples = run_parallel("combine_sample_regions", samples)
                 samples = region.clean_sample_data(samples)
         ## Quality control
-        with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools"]),
+        with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools", "qsignature"]),
                         samples, config, dirs, "multicore2") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
