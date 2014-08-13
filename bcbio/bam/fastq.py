@@ -11,6 +11,7 @@ from Bio import SeqIO
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import utils
+from bcbio.utils import open_possible_gzip
 
 
 @utils.memoize_outfile(stem=".groom")
@@ -161,7 +162,7 @@ def is_fastq(in_file):
         return True
     else:
         return False
-
+        
 def downsample(f1, f2, data, N, quick=False):
     """ get N random headers from a fastq file without reading the
     whole thing into memory
@@ -176,8 +177,8 @@ def downsample(f1, f2, data, N, quick=False):
         N = records if N > records else N
         rand_records = random.sample(xrange(records), N)
 
-    fh1 = open(f1)
-    fh2 = open(f2) if f2 else None
+    fh1 = open_possible_gzip(f1)
+    fh2 = open_possible_gzip(f2) if f2 else None
     outf1 = os.path.splitext(f1)[0] + ".subset" + os.path.splitext(f1)[1]
     outf2 = os.path.splitext(f2)[0] + ".subset" + os.path.splitext(f2)[1] if f2 else None
 
@@ -194,8 +195,8 @@ def downsample(f1, f2, data, N, quick=False):
             tx_out_f1 = tx_out_files
         else:
             tx_out_f1, tx_out_f2 = tx_out_files
-        sub1 = open(tx_out_f1, "w")
-        sub2 = open(tx_out_f2, "w") if outf2 else None
+        sub1 = open_possible_gzip(tx_out_f1, "w")
+        sub2 = open_possible_gzip(tx_out_f2, "w") if outf2 else None
         rec_no = - 1
         for rr in rand_records:
             while rec_no < rr:
@@ -240,4 +241,3 @@ def open_fastq(in_file):
         return gzip.open(in_file, 'rb')
     if ext in [".fastq", ".fq"]:
         return open(in_file, 'r')
-

@@ -564,3 +564,11 @@ def R_package_path(package):
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
     return ext in [".gz", "gzip"]
+
+def open_possible_gzip(fname, flag="r"):
+    if is_gzipped(fname):
+        if "b" not in flag:
+            flag += "b"
+        return gzip.open(fname, flag)
+    else:
+        return open(fname, flag)
