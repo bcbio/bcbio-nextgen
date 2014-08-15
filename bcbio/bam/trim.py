@@ -50,6 +50,8 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files):
     else:
         with file_transaction(out_files) as tx_out_files:
             of1_tx, of2_tx = out_files
+            tmp_fq1 = append_stem(of1_tx, ".tmp")
+            tmp_fq2 = append_stem(of2_tx, ".tmp")
             singles_file = of1_tx + ".single"
             message = "Trimming %s and %s in single end mode with cutadapt." % (fastq_files[0],
                                                                                 fastq_files[1])
@@ -81,7 +83,7 @@ def _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files):
     if len(fastq_files) == 1:
         return _cutadapt_se_cmd(fastq_files, out_files, base_cmd)
     else:
-        return _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd)
+        return _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd)
 
 def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     """
@@ -95,23 +97,18 @@ def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     cmd += " -o {of1} " + str(fq1)
     return cmd
 
-def _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd):
+def _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd):
     """
-    cutadapt can't handle paired end data but sickle can; trim the adapters
-    off with cutadapt and then use sickle to trim the reads by length
+    sickle has an issue with 0 length reads, here is the open issue for it:
+    https://github.com/najoshi/sickle/issues/32
+    until that is resolved, this is a workaround which avoids using sickle
     """
-    min_length = MINIMUM_LENGTH
-    qformat = "sanger" if quality_format == "standard" else quality_format
     fq1, fq2 = fastq_files
-    base_cmd += " --minimum-length=0 "
-    first_cmd = "<({base_cmd} {fq1})".format(**locals())
-    second_cmd = "<({base_cmd} {fq2})".format(**locals())
-    sickle_cmd = ("sickle pe -f {first_cmd} -r {second_cmd} -l {min_length} -q 0 "
-                  "-t {qformat} ")
-    sickle_cmd = sickle_cmd + " -g " if is_gzipped(fq1) else sickle_cmd
-    sickle_cmd = sickle_cmd.format(**locals())
-    sickle_cmd += " -o {of1_tx} -p {of2_tx} -s {singles_file} "
-    return sickle_cmd
+    of1, of2 = out_files
+    base_cmd += " --minimum-length={min_length} ".format(min_length=MINIMUM_LENGTH)
+    first_cmd = base_cmd + " -o {tmp_fq1} -p {tmp_fq2} " + fq1 + " " + fq2
+    second_cmd = base_cmd + " -o {of2_tx} -p {of1_tx} {tmp_fq2} {tmp_fq1}"
+    return first_cmd + ";" + second_cmd + "; rm {tmp_fq1} {tmp_fq2} "
 
 def _get_sequences_to_trim(lane_config, builtin):
     builtin_adapters = _get_builtin_adapters(lane_config, builtin)

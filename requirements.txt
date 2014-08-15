@@ -13,7 +13,7 @@ toolz>=0.6.0
 tornado>=3.1.0
 # soft dependencies -- not required for bcbio-nextgen-vm
 bioblend>=0.4.3
-cutadapt==1.5.0
+cutadapt==1.4.2
 fabric>=1.7.0
 gffutils>=0.8.1
 HTSeq >= 0.5.4p5
