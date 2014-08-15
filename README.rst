@@ -94,9 +94,13 @@ Contributors
 - `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
 - `Alla Bushoy`_, AstraZeneca
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
+- `Nick Carriero <http://www.simonsfoundation.org/about-us/staff/staff-bios/#nick-carriero-ph-d>`_, Simons Foundation
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
+- `Karl Gutwin <https://twitter.com/kgutwin>`_, Biogen
+- `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
+- `John Kern <https://github.com/kern3020>`_
 - `Rory Kirchner`_, Harvard School of Public Health
 - `Jakub Nowacki`_, AstraZeneca
 - `Brent Pedersen`_, University of Colorado Denver
@@ -105,8 +109,6 @@ Contributors
 - `Paul Tang`_, UCSF
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
-- `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
-- `danielevo`_
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
@@ -122,9 +124,7 @@ Contributors
 .. _Paul Tang: https://github.com/tanglingfung
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
-.. _Alla Bushoy: https://github.com/abushoy
 .. _Jeff Hammerbacher: https://github.com/hammer
-.. _danielevo: https://github.com/danielevo
 
 License
 -------

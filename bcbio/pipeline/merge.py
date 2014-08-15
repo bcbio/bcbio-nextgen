@@ -54,7 +54,8 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                                  2, "decrease").upper()
-            batch_size = system.open_file_limit() - 100
+            # sambamba opens 4 handles per file, so try to guess a reasonable batch size
+            batch_size = (system.open_file_limit() // 4) - 100
             if len(bam_files) > batch_size:
                 bam_files = [merge_bam_files(xs, work_dir, config, out_file, i)
                              for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
