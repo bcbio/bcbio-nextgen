@@ -15,6 +15,21 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import curdir_tmpdir
 
+def _get_default_jvm_opts(tmp_dir=None):
+    """Retrieve default JVM tuning options
+
+    Avoids issues with multiple spun up Java processes running into out of memory errors.
+    Parallel GC can use a lot of cores on big machines and primarily helps reduce task latency
+    and responsiveness which are not needed for batch jobs.
+    https://github.com/chapmanb/bcbio-nextgen/issues/532#issuecomment-50989027
+    https://wiki.csiro.au/pages/viewpage.action?pageId=545034311
+    http://stackoverflow.com/questions/9738911/javas-serial-garbage-collector-performing-far-better-than-other-garbage-collect
+    """
+    opts = ["-XX:+UseSerialGC"]
+    if tmp_dir:
+        opts.append("-Djava.io.tmpdir=%s" % tmp_dir)
+    return opts
+
 def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True):
     """Retrieve GATK memory specifications, moving down a list of potential specifications.
     """
@@ -23,8 +38,6 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
                 "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     else:
         opts = []
-    if tmp_dir:
-        opts.append("-Djava.io.tmpdir=%s" % tmp_dir)
     jvm_opts = ["-Xms750m", "-Xmx2g"]
     for n in names:
         resources = config_utils.get_resources(n, config)
@@ -33,6 +46,7 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
             break
     if memscale:
         jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust": memscale}})
+    jvm_opts += _get_default_jvm_opts(tmp_dir)
     return jvm_opts + opts
 
 def get_gatk_framework_opts(config, tmp_dir=None, memscale=None):
@@ -62,7 +76,7 @@ def _clean_java_out(version_str):
     return "\n".join(out)
 
 def get_gatk_version(gatk_jar):
-    cl = ["java", "-Xms128m", "-Xmx256m", "-jar", gatk_jar, "-version"]
+    cl = ["java", "-Xms128m", "-Xmx256m"] + _get_default_jvm_opts() + ["-jar", gatk_jar, "-version"]
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
         out = _clean_java_out(stdout.read().strip())
         # versions earlier than 2.4 do not have explicit version command,
@@ -82,7 +96,7 @@ def get_mutect_version(mutect_jar):
     """Retrieves version from input jar name since there is not an easy way to get MuTect version.
     Check mutect jar for SomaticIndelDetector, which is an Appistry feature
     """
-    cl = ["java", "-Xms128m", "-Xmx256m", "-jar", mutect_jar, "-h"]
+    cl = ["java", "-Xms128m", "-Xmx256m"] + _get_default_jvm_opts() + ["-jar", mutect_jar, "-h"]
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
         if "SomaticIndelDetector" in stdout.read().strip():
             mutect_type = "-appistry"
@@ -178,7 +192,7 @@ class BroadRunner:
             return self._picard_version
         if os.path.isdir(self._picard_ref):
             picard_jar = self._get_jar(command)
-            cl = ["java", "-Xms64m", "-Xmx128m", "-jar", picard_jar]
+            cl = ["java", "-Xms64m", "-Xmx128m"] + _get_default_jvm_opts() + ["-jar", picard_jar]
         else:
             cl = [self._picard_ref, command]
         cl += ["--version"]
@@ -206,7 +220,6 @@ class BroadRunner:
         support_nt = set()
         support_nct = set(["BaseRecalibrator"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-        local_args = []
         cores = self._config["algorithm"].get("num_cores", 1)
         config = copy.deepcopy(self._config)
         if cores and int(cores) > 1:
@@ -226,25 +239,23 @@ class BroadRunner:
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         if memscale:
             jvm_opts = get_gatk_opts(config, tmp_dir=tmp_dir, memscale=memscale, include_gatk=False)
-            local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
         else:
-            jvm_opts = config_utils.adjust_opts(self._jvm_opts, config)
+            # Decrease memory slightly from configuration to avoid memory allocation errors
+            jvm_opts = config_utils.adjust_opts(self._jvm_opts,
+                                                {"algorithm": {"memory_adjust":
+                                                               {"magnitude": 1.1, "direction": "decrease"}}})
+            jvm_opts += _get_default_jvm_opts(tmp_dir)
         if "keyfile" in self._gatk_resources:
             params = ["-et", "NO_ET", "-K", self._gatk_resources["keyfile"]] + params
-        return ["java"] + jvm_opts + local_args + \
-          ["-jar", gatk_jar] + [str(x) for x in params]
+        return ["java"] + jvm_opts + ["-jar", gatk_jar] + [str(x) for x in params]
 
     def cl_mutect(self, params, tmp_dir):
-
-        """Define parameters to run the mutect paired algorithm."""
-
+        """Define parameters to run the mutect paired algorithm.
+        """
         gatk_jar = self._get_jar("muTect")
-        local_args = []
         config = copy.deepcopy(self._config)
-
-        local_args.append("-Djava.io.tmpdir=%s" % tmp_dir)
-        return ["java"] + config_utils.adjust_opts(self._jvm_opts, config) + local_args + \
-          ["-jar", gatk_jar] + [str(x) for x in params]
+        return ["java"] + self._jvm_opts + _get_default_jvm_opts(tmp_dir) + \
+            ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None, log_error=True, memory_retry=False,
                  data=None, region=None, memscale=None):
@@ -335,7 +346,7 @@ class BroadRunner:
             jvm_opts = self._jvm_opts
         if os.path.isdir(self._picard_ref):
             dist_file = self._get_jar(command)
-            return ["java"] + jvm_opts + ["-jar", dist_file]
+            return ["java"] + jvm_opts + _get_default_jvm_opts() + ["-jar", dist_file]
         else:
             # XXX Cannot currently set JVM opts with picard-tools script
             return [self._picard_ref, command]

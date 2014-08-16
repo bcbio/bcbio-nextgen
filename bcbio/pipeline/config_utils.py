@@ -328,7 +328,7 @@ def adjust_memory(val, magnitude, direction="increase"):
                 modifier = "M" + modifier[1:]
             else:
                 raise ValueError("Unexpected decrease in memory: %s by %s" % (val, magnitude))
-        amount = new_amount
+        amount = int(new_amount)
     elif direction == "increase":
         # for increases with multiple cores, leave small percentage of
         # memory for system to maintain process running resource and
