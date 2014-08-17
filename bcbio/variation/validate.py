@@ -9,7 +9,7 @@ import os
 
 import yaml
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.bam import callable
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
@@ -75,8 +75,8 @@ def bcbio_variation_comparison(config_file, base_dir, data):
                                                            data["config"], "dir"))
     resources = config_utils.get_resources("bcbio_variation", data["config"])
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
-    java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
-    cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-compare", config_file]
+    cmd = ["java"] + jvm_opts + broad.get_default_jvm_opts(tmp_dir) + \
+          ["-jar", bv_jar, "variant-compare", config_file]
     do.run(cmd, "Comparing variant calls using bcbio.variation", data)
 
 def _create_validate_config_file(vrn_file, rm_file, rm_interval_file, rm_genome,

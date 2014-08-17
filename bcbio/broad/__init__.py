@@ -15,7 +15,7 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import curdir_tmpdir
 
-def _get_default_jvm_opts(tmp_dir=None):
+def get_default_jvm_opts(tmp_dir=None):
     """Retrieve default JVM tuning options
 
     Avoids issues with multiple spun up Java processes running into out of memory errors.
@@ -46,7 +46,7 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
             break
     if memscale:
         jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust": memscale}})
-    jvm_opts += _get_default_jvm_opts(tmp_dir)
+    jvm_opts += get_default_jvm_opts(tmp_dir)
     return jvm_opts + opts
 
 def get_gatk_framework_opts(config, tmp_dir=None, memscale=None):
@@ -76,7 +76,7 @@ def _clean_java_out(version_str):
     return "\n".join(out)
 
 def get_gatk_version(gatk_jar):
-    cl = ["java", "-Xms128m", "-Xmx256m"] + _get_default_jvm_opts() + ["-jar", gatk_jar, "-version"]
+    cl = ["java", "-Xms128m", "-Xmx256m"] + get_default_jvm_opts() + ["-jar", gatk_jar, "-version"]
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
         out = _clean_java_out(stdout.read().strip())
         # versions earlier than 2.4 do not have explicit version command,
@@ -96,7 +96,7 @@ def get_mutect_version(mutect_jar):
     """Retrieves version from input jar name since there is not an easy way to get MuTect version.
     Check mutect jar for SomaticIndelDetector, which is an Appistry feature
     """
-    cl = ["java", "-Xms128m", "-Xmx256m"] + _get_default_jvm_opts() + ["-jar", mutect_jar, "-h"]
+    cl = ["java", "-Xms128m", "-Xmx256m"] + get_default_jvm_opts() + ["-jar", mutect_jar, "-h"]
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
         if "SomaticIndelDetector" in stdout.read().strip():
             mutect_type = "-appistry"
@@ -192,7 +192,7 @@ class BroadRunner:
             return self._picard_version
         if os.path.isdir(self._picard_ref):
             picard_jar = self._get_jar(command)
-            cl = ["java", "-Xms64m", "-Xmx128m"] + _get_default_jvm_opts() + ["-jar", picard_jar]
+            cl = ["java", "-Xms64m", "-Xmx128m"] + get_default_jvm_opts() + ["-jar", picard_jar]
         else:
             cl = [self._picard_ref, command]
         cl += ["--version"]
@@ -244,7 +244,7 @@ class BroadRunner:
             jvm_opts = config_utils.adjust_opts(self._jvm_opts,
                                                 {"algorithm": {"memory_adjust":
                                                                {"magnitude": 1.1, "direction": "decrease"}}})
-            jvm_opts += _get_default_jvm_opts(tmp_dir)
+            jvm_opts += get_default_jvm_opts(tmp_dir)
         if "keyfile" in self._gatk_resources:
             params = ["-et", "NO_ET", "-K", self._gatk_resources["keyfile"]] + params
         return ["java"] + jvm_opts + ["-jar", gatk_jar] + [str(x) for x in params]
@@ -254,7 +254,7 @@ class BroadRunner:
         """
         gatk_jar = self._get_jar("muTect")
         config = copy.deepcopy(self._config)
-        return ["java"] + self._jvm_opts + _get_default_jvm_opts(tmp_dir) + \
+        return ["java"] + self._jvm_opts + get_default_jvm_opts(tmp_dir) + \
             ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None, log_error=True, memory_retry=False,
@@ -346,7 +346,7 @@ class BroadRunner:
             jvm_opts = self._jvm_opts
         if os.path.isdir(self._picard_ref):
             dist_file = self._get_jar(command)
-            return ["java"] + jvm_opts + _get_default_jvm_opts() + ["-jar", dist_file]
+            return ["java"] + jvm_opts + get_default_jvm_opts() + ["-jar", dist_file]
         else:
             # XXX Cannot currently set JVM opts with picard-tools script
             return [self._picard_ref, command]

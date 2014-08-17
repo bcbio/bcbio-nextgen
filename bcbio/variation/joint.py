@@ -19,7 +19,7 @@ except ImportError:
 import pysam
 import toolz as tz
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import config_utils, region
 from bcbio.provenance import do
@@ -152,7 +152,7 @@ def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file):
     with open(input_file, "w") as out_handle:
         out_handle.write("\n".join(sorted(list(set(vrn_files))) + sorted(list(set(bam_files)))))
     variantcaller = tz.get_in(("config", "algorithm", "jointcaller"), data).replace("-joint", "")
-    cmd = ["bcbio-variation-recall", "square"] + jvm_opts + \
+    cmd = ["bcbio-variation-recall", "square"] + jvm_opts + broad.get_default_jvm_opts() + \
           ["-c", cores, "-r", bamprep.region_to_gatk(region), "--caller", variantcaller] + \
           [out_file, ref_file, input_file]
     do.run(cmd, "Squaring off in region: %s" % bamprep.region_to_gatk(region))
