@@ -42,6 +42,7 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1,
                                    multiplier=multiplier,
                                    max_multicore=max_multicore)
     try:
+        view = None
         if checkpoint_file and os.path.exists(checkpoint_file):
             logger.info("run local -- checkpoint passed: %s" % name)
             parallel["cores_per_job"] = 1
@@ -56,6 +57,8 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1,
         else:
             yield multi.runner(parallel, config)
     except:
+        if view is not None:
+            ipython.stop(view)
         raise
     else:
         for x in ["cores_per_job", "num_jobs", "mem"]:

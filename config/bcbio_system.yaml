@@ -46,14 +46,14 @@ resources:
   freebayes:
     memory: 2g
   gatk:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    jvm_opts: ["-Xms500m", "-Xmx3500m"]
     dir: /usr/local/share/java/gatk
   gatk-haplotype:
-    jvm_opts: ["-Xms2g", "-Xmx5500m"]
+    jvm_opts: ["-Xms500m", "-Xmx3500m"]
   gatk-vqsr:
-    jvm_opts: ["-Xms2g", "-Xmx4000m"]
+    jvm_opts: ["-Xms500m", "-Xmx3500m"]
   picard:
-    jvm_opts: ["-Xms750m", "-Xmx4000m"]
+    jvm_opts: ["-Xms750m", "-Xmx3500m"]
     dir: /usr/local/share/java/picard
   snpeff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]

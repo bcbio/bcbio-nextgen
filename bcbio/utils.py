@@ -381,6 +381,22 @@ def merge_config_files(fnames):
                 out[k] = v
     return out
 
+def deepish_copy(org):
+    """Improved speed deep copy for dictionaries of simple python types.
+
+    Thanks to Gregg Lind:
+    http://writeonly.wordpress.com/2009/05/07/deepcopy-is-a-pig-for-simple-data/
+    """
+    out = dict().fromkeys(org)
+    for k,v in org.iteritems():
+        try:
+            out[k] = v.copy()   # dicts, sets
+        except AttributeError:
+            try:
+                out[k] = v[:]   # lists, tuples, strings, unicode
+            except TypeError:
+                out[k] = v      # ints
+    return out
 
 def get_in(d, t, default=None):
     """

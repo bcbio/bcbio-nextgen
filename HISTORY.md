@@ -13,6 +13,10 @@
   normal). Thanks to Miika Ahdesmaki.
 - Avoid Java out of memory errors for large numbers of running processes by
   avoiding Parallel GC collction. Thanks to Justin Johnson and Miika Ahdesmaki.
+- Speed improvements for re-running samples with large numbers of samples or
+  regions.
+- Improved cluster cleanup by providing better error handling and removal of
+  controllers and engines in additional failure cases.
 - Fix GATK version detection when `_JAVA_OPTIONS` specified. Thanks to Miika
   Ahdesmaki.
 - Use msgpack for ipython serialization to reduce message sizes and IPython

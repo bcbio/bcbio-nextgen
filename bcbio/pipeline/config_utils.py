@@ -237,14 +237,6 @@ def get_jar(base_name, dname):
 
 # ## Retrieval and update to configuration from arguments
 
-def _dictdissoc(orig, k):
-    """Imitates immutability: create a new dictionary with the key dropped.
-    """
-    v = orig.pop(k, None)
-    new = copy.deepcopy(orig)
-    orig[k] = v
-    return new
-
 def is_std_config_arg(x):
     return isinstance(x, dict) and "algorithm" in x and "resources" in x and not "files" in x
 
@@ -283,7 +275,8 @@ def add_cores_to_config(args, cores_per_job, parallel=None):
     def _update_cores(config):
         config["algorithm"]["num_cores"] = int(cores_per_job)
         if parallel:
-            config["parallel"] = _dictdissoc(parallel, "view")
+            parallel.pop("view", None)
+            config["parallel"] = parallel
         return config
     return _update_config(args, _update_cores)
 
@@ -299,14 +292,14 @@ def _update_config(args, update_fn):
     if new_i is None:
         raise ValueError("Could not find configuration in args: %s" % str(args))
 
-    new_arg = copy.deepcopy(args[new_i])
+    new_arg = args[new_i]
     if is_nested_config_arg(new_arg):
-        new_arg["config"] = update_fn(new_arg["config"])
+        new_arg["config"] = update_fn(copy.deepcopy(new_arg["config"]))
     elif is_std_config_arg(new_arg):
-        new_arg = update_fn(new_arg)
+        new_arg = update_fn(copy.deepcopy(new_arg))
     elif isinstance(arg, (list, tuple)) and is_nested_config_arg(new_arg[0]):
         new_arg_first = new_arg[0]
-        new_arg_first["config"] = update_fn(new_arg_first["config"])
+        new_arg_first["config"] = update_fn(copy.deepcopy(new_arg_first["config"]))
         new_arg = [new_arg_first] + new_arg[1:]
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)

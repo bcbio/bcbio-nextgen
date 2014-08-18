@@ -9,6 +9,7 @@ Cluster implementation from ipython-cluster-helper:
 https://github.com/roryk/ipython-cluster-helper
 """
 import os
+import time
 
 try:
     import msgpack
@@ -36,6 +37,13 @@ def create(parallel, dirs, config):
                                                       "tag": parallel.get("tag"),
                                                       "run_local": parallel.get("run_local")},
                                         retries=parallel.get("retries"))
+
+def stop(view):
+    try:
+        ipython_cluster.stop_from_view(view)
+        time.sleep(10)
+    except:
+        logger.exception("Did not stop IPython cluster correctly")
 
 def _get_ipython_fn(fn_name, parallel):
     import_fn_name = parallel.get("wrapper", fn_name)

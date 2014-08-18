@@ -8,8 +8,9 @@ back into a summarized output file.
 This provides a framework for that process, making it easier to utilize with
 splitting specific code.
 """
-import copy
 import collections
+
+from bcbio import utils
 
 def grouped_parallel_split_combine(args, split_fn, group_fn, parallel_fn,
                                    parallel_name, combine_name,
@@ -124,7 +125,7 @@ def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):
     for data in args:
         out_final, out_parts = split_fn(data)
         for parts in out_parts:
-            split_args.append([copy.deepcopy(data)] + list(parts))
+            split_args.append([utils.deepish_copy(data)] + list(parts))
         for part_file in [x[outfile_i] for x in out_parts]:
             combine_map[part_file] = out_final
         if len(out_parts) == 0:
