@@ -9,6 +9,8 @@
   larger amount of memory (64Gb for human genome alignment).
 - Support the Platypus haplotype based variant caller for germline samples with
   both batched and joint calling.
+- Fix issue with merging GATK produced VCF files with vcfcat by swapping to
+  GATK's CatVariants. Thanks to Matt De Both.
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
 - Avoid Java out of memory errors for large numbers of running processes by

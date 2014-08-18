@@ -228,32 +228,32 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     Lightweight approach to merging VCF files split by regions with the same
     sample information, so no complex merging needed. Handles both plain text
     and bgzipped/tabix indexed outputs.
+
+    Falls back to slower CombineVariants if fails due to GATK stringency issues.
     """
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-            filtered_files = [x for x in sorted_files if vcf_has_variants(x)]
-            if len(filtered_files) > 0 and filtered_files[0].endswith(".gz"):
-                filtered_files = run_multicore(p_bgzip_and_index, [[x, config] for x in filtered_files], config)
-            input_vcf_file = "%s-files.txt" % utils.splitext_plus(out_file)[0]
-            with open(input_vcf_file, "w") as out_handle:
-                for fname in filtered_files:
+            exist_files = [x for x in sorted_files if os.path.exists(x)]
+            ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
+            input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
+            with open(input_file_list, "w") as out_handle:
+                for fname in ready_files:
                     out_handle.write(fname + "\n")
-            if len(filtered_files) > 0:
-                compress_str = "| bgzip -c " if out_file.endswith(".gz") else ""
-                cmd = "vcfcat `cat {input_vcf_file}` {compress_str} > {tx_out_file}"
-                do.run(cmd.format(**locals()), "Concatenate variants")
-            else:
-                # try to rescue sample names from individual vcf files
-                my_samples = None
-                for vrn_file in sorted_files:
-                    if vrn_file.endswith(".gz"):
-                        tabix_index(vrn_file, config)
-                    my_reader = vcf.Reader(filename=vrn_file)
-                    if len(my_reader.samples) > 0:
-                        my_samples = my_reader.samples[:]
-                        break
-                write_empty_vcf(tx_out_file, None, my_samples)
+            params = ["org.broadinstitute.gatk.tools.CatVariants",
+                      "-R" , ref_file,
+                      "-V", input_file_list,
+                      "-out", tx_out_file,
+                      "-assumeSorted"]
+            jvm_opts = broad.get_gatk_framework_opts(config, include_gatk=False)
+            cmd = [config_utils.get_program("gatk-framework", config)] + params + jvm_opts
+            try:
+                do.run(cmd, "Concat variant files", log_error=False)
+            except subprocess.CalledProcessError, msg:
+                if str(msg).find("We require all VCFs to have complete VCF headers"):
+                    return combine_variant_files(orig_files, out_file, ref_file, config)
+                else:
+                    raise
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
@@ -272,7 +272,8 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
         orig_files = orig_files[file_key]
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
+            exist_files = [x for x in orig_files if os.path.exists(x)]
+            ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
             params = ["-T", "CombineVariants",
                       "-R", ref_file,
                       "--out", tx_out_file]
