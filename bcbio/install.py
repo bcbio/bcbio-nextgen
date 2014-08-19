@@ -426,7 +426,7 @@ def _install_gemini(tooldir, datadir, args):
 def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
     """
-    kraken = os.path.join(datadir, "genome/kraken")
+    kraken = os.path.join(datadir, "genomes/kraken")
     url = "https://ccb.jhu.edu/software/kraken/dl/minikraken.tgz"
     compress = os.path.join(kraken, os.path.basename(url))
     base, ext = utils.splitext_plus(os.path.basename(url))
