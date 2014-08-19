@@ -296,7 +296,7 @@ class RnaseqPipeline(AbstractPipeline):
                 samples = run_parallel("trim_sample", samples)
         with prun.start(_wres(parallel, ["aligner", "picard"],
                               ensure_mem={"tophat": 8, "tophat2": 8, "star": 40}),
-                        samples, config, dirs, "multicore",
+                        samples, config, dirs, "alignment",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             with profile.report("alignment", dirs):
                 samples = disambiguate.split(samples)
@@ -310,7 +310,7 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("estimate expression", dirs):
                 samples = rnaseq.estimate_expression(samples, run_parallel)
         with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc", "kraken"]),
-                        samples, config, dirs, "persample") as run_parallel:
+                        samples, config, dirs, "qc") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
