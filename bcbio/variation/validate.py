@@ -8,17 +8,26 @@ import csv
 import os
 
 import yaml
+import toolz as tz
 
 from bcbio import broad, utils
 from bcbio.bam import callable
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
-from bcbio.variation import validateplot
+from bcbio.variation import validateplot, multi
 
 # ## Individual sample comparisons
 
-def _has_validate(data):
-    return data.get("vrn_file") and "validate" in data["config"]["algorithm"]
+def _get_validate(data):
+    """Retrieve items to validate, from single samples or from combined joint calls.
+    """
+    if data.get("vrn_file") and "validate" in data["config"]["algorithm"]:
+        return data
+    elif "group_orig" in data:
+        for sub in multi.get_orig_items(data):
+            if "validate" in sub["config"]["algorithm"]:
+                return sub
+    return None
 
 def normalize_input_path(x, data):
     """Normalize path for input files, handling relative paths.
@@ -36,30 +45,36 @@ def normalize_input_path(x, data):
                     return cur_x
         raise IOError("Could not find validation file %s" % x)
 
+def _get_caller(data):
+    callers = [tz.get_in(["config", "algorithm", "jointcaller"], data),
+               tz.get_in(["config", "algorithm", "variantcaller"], data),
+               "precalled"]
+    return [c for c in callers if c][0]
+
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
-    if _has_validate(data):
-        if isinstance(data["vrn_file"], (list, tuple)):
-            vrn_file = [os.path.abspath(x) for x in data["vrn_file"]]
+    toval_data = _get_validate(data)
+    if toval_data:
+        if isinstance(toval_data["vrn_file"], (list, tuple)):
+            vrn_file = [os.path.abspath(x) for x in toval_data["vrn_file"]]
         else:
-            vrn_file = os.path.abspath(data["vrn_file"])
-        rm_file = normalize_input_path(data["config"]["algorithm"]["validate"], data)
-        rm_interval_file = normalize_input_path(data["config"]["algorithm"].get("validate_regions"), data)
-        rm_genome = data["config"]["algorithm"].get("validate_genome_build")
-        sample = data["name"][-1].replace(" ", "_")
-        caller = data["config"]["algorithm"].get("variantcaller")
-        if not caller:
-            caller = "precalled"
-        base_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "validate", sample, caller))
+            vrn_file = os.path.abspath(toval_data["vrn_file"])
+        rm_file = normalize_input_path(toval_data["config"]["algorithm"]["validate"], toval_data)
+        rm_interval_file = normalize_input_path(toval_data["config"]["algorithm"].get("validate_regions"),
+                                                toval_data)
+        rm_genome = toval_data["config"]["algorithm"].get("validate_genome_build")
+        sample = toval_data["name"][-1].replace(" ", "_")
+        caller = _get_caller(toval_data)
+        base_dir = utils.safe_makedir(os.path.join(toval_data["dirs"]["work"], "validate", sample, caller))
         val_config_file = _create_validate_config_file(vrn_file, rm_file, rm_interval_file,
-                                                       rm_genome, base_dir, data)
+                                                       rm_genome, base_dir, toval_data)
         work_dir = os.path.join(base_dir, "work")
         out = {"summary": os.path.join(work_dir, "validate-summary.csv"),
                "grading": os.path.join(work_dir, "validate-grading.yaml"),
                "discordant": os.path.join(work_dir, "%s-eval-ref-discordance-annotate.vcf" % sample)}
         if not utils.file_exists(out["discordant"]) or not utils.file_exists(out["grading"]):
-            bcbio_variation_comparison(val_config_file, base_dir, data)
+            bcbio_variation_comparison(val_config_file, base_dir, toval_data)
         out["concordant"] = filter(os.path.exists,
                                    [os.path.join(work_dir, "%s-%s-concordance.vcf" % (sample, x))
                                     for x in ["eval-ref", "ref-eval"]])[0]
@@ -160,7 +175,7 @@ def _flatten_grading(stats):
 def _has_grading_info(samples):
     for data in (x[0] for x in samples):
         for variant in data.get("variants", []):
-            if "validate" in variant:
+            if variant.get("validate"):
                 return True
     return False
 

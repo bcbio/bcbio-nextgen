@@ -4,7 +4,6 @@ Handles grouping of related families or batches to go through variant
 calling simultaneously.
 """
 import collections
-import copy
 import os
 
 import toolz as tz
@@ -105,13 +104,13 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
         if batch is not None:
             batches = batch if isinstance(batch, (list, tuple)) else [batch]
             for b in batches:
-                batch_groups[(b, region, caller)].append(copy.deepcopy(data))
+                batch_groups[(b, region, caller)].append(utils.deepish_copy(data))
         else:
             data = prep_data_fn(data, [data])
             singles.append(data)
     batches = []
     for batch, items in batch_groups.iteritems():
-        batch_data = copy.deepcopy(_pick_lead_item(items))
+        batch_data = utils.deepish_copy(_pick_lead_item(items))
         batch_data = prep_data_fn(batch_data, items)
         batch_data["group_orig"] = _collapse_subitems(batch_data, items)
         batch_data["group"] = batch
@@ -200,7 +199,7 @@ def get_orig_items(base):
     assert "group_orig" in base
     out = []
     for data_diff in base["group_orig"]:
-        new = copy.deepcopy(base)
+        new = utils.deepish_copy(base)
         new.pop("group_orig")
         out.append(_patch_dict(data_diff, new))
     return out

@@ -388,14 +388,17 @@ def deepish_copy(org):
     http://writeonly.wordpress.com/2009/05/07/deepcopy-is-a-pig-for-simple-data/
     """
     out = dict().fromkeys(org)
-    for k,v in org.iteritems():
-        try:
-            out[k] = v.copy()   # dicts, sets
-        except AttributeError:
+    for k, v in org.iteritems():
+        if isinstance(v, dict):
+            out[k] = deepish_copy(v)
+        else:
             try:
-                out[k] = v[:]   # lists, tuples, strings, unicode
-            except TypeError:
-                out[k] = v      # ints
+                out[k] = v.copy()   # dicts, sets
+            except AttributeError:
+                try:
+                    out[k] = v[:]   # lists, tuples, strings, unicode
+                except TypeError:
+                    out[k] = v      # ints
     return out
 
 def get_in(d, t, default=None):

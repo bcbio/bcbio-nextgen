@@ -27,7 +27,7 @@ details:
       realign: false
       #realign: gatk
       #recalibrate: gatk
-      variantcaller: gatk-haplotype
+      variantcaller: freebayes
       #effects: vep
       #svcaller: [delly, lumpy, cn.mops]
       #remove_lcr: true
