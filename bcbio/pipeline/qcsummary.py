@@ -111,7 +111,7 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     ratio = bam.get_aligned_reads(bam_file, data)
-    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False):
+    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and (data["analysis"].lower().startswith("rna-seq") or data["analysis"].lower().startswith("standard")):
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
@@ -318,8 +318,6 @@ def _run_kraken(data, ratio):
                 if os.path.exists(kraken_out):
                     shutil.rmtree(kraken_out)
                 shutil.move(tx_tmp_dir, kraken_out)
-                if data["files"][0].endswith("bam"):
-                    [os.remove(f) for f in files]
     metrics = _parse_kraken_output(kraken_out, db, data)
     return metrics
 
