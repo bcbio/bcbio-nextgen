@@ -111,7 +111,7 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     ratio = bam.get_aligned_reads(bam_file, data)
-    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and data["analysis"].lower().startswith("rna-seq"):
+    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False):
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
@@ -288,31 +288,38 @@ def _run_kraken(data, ratio):
     logger.info("Running kraken to determine contaminant: %s" % str(data["name"]))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     kraken_out = os.path.join(qc_dir, "kraken")
-    stats = out = out_stats = None
+    out = out_stats = None
     db = data['config']["algorithm"]["kraken"]
     if db == "minikraken":
-        db = os.path.join(_get_data_dir(), "genome", "kraken", "minikraken")
+        db = os.path.join(_get_data_dir(), "genomes", "kraken", "minikraken")
     else:
         if not os.path.exists(db):
             logger.info("kraken: no database found %s, skipping" % db)
-            return {"kraken_report" : "null"}
+            return {"kraken_report": "null"}
     if not os.path.exists(os.path.join(kraken_out, "kraken_out")):
         work_dir = os.path.dirname(kraken_out)
         utils.safe_makedir(work_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         files = data["files"]
+        if files[0].endswith("bam"):
+            logger.info("kraken: need fasta files as input")
+            return {"kraken_report": "null"}
         with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 out = os.path.join(tx_tmp_dir, "kraken_out")
                 out_stats = os.path.join(tx_tmp_dir, "kraken_stats")
-                cl = (" ").join([config_utils.get_program("kraken", data["config"]),
-                      "--db", db ,"--quick",
-                      "--preload", "--min-hits", "2", "--threads", str(num_cores),
-                      "--out", out, files[0], " 2>", out_stats])
+                cl = (" ").join(
+                    [config_utils.get_program("kraken", data["config"]),
+                        "--db", db, "--quick",
+                        "--preload", "--min-hits", "2",
+                        "--threads", str(num_cores),
+                        "--out", out, files[0], " 2>", out_stats])
                 do.run(cl, "kraken: %s" % data["name"][-1])
                 if os.path.exists(kraken_out):
                     shutil.rmtree(kraken_out)
                 shutil.move(tx_tmp_dir, kraken_out)
+                if data["files"][0].endswith("bam"):
+                    [os.remove(f) for f in files]
     metrics = _parse_kraken_output(kraken_out, db, data)
     return metrics
 
@@ -596,11 +603,11 @@ def _run_qsignature_generator(bam_file, data, out_dir):
     """
     position = dd.get_qsig_file(data)
     if position:
-        jvm_opts = "-Xms750m -Xmx8g"
+        jvm_opts = "-Xms750m -Xmx2g"
         limit_reads = 20000000
         if data['config']['algorithm'].get('qsignature', False) == "full":
             slice_bam = bam_file
-            jvm_opts = "-Xms750m -Xmx32g"
+            jvm_opts = "-Xms750m -Xmx8g"
             limit_reads = 100000000
         else:
             slice_bam = _slice_chr22(bam_file, data)
