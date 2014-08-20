@@ -287,8 +287,11 @@ Experimental information
 ========================
 
 -  ``coverage_interval`` Regions covered by sequencing. Influences GATK
-   options for filtering. GATK will use Variant Quality Score Recalibration
-   when set to 'genome', otherwise we apply hard filters. [exome, genome, regional]
+   options for filtering and GATK will use Variant Quality Score Recalibration
+   when set to 'genome', otherwise we apply hard filters. Also affects cn.mops
+   structural variant calling and deep panel calling in cancer samples, where
+   we tune regional/exome analyses to maximize sensitivity.
+   [exome, genome, regional]
 - ``coverage_depth_max`` Maximum depth of coverage. We downsample coverage
    regions with more than this value to approximately the specified
    coverage. Actual coverage depth per position will be higher since we
