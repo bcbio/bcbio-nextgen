@@ -307,7 +307,7 @@ def _update_config(args, update_fn):
     args[new_i] = new_arg
     return args
 
-def adjust_memory(val, magnitude, direction="increase"):
+def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     """Adjust memory based on number of cores utilized.
     """
     modifier = val[-1:]
@@ -328,6 +328,12 @@ def adjust_memory(val, magnitude, direction="increase"):
         # avoid OOM killers
         adjuster = 0.91
         amount = int(math.ceil(amount * (adjuster * magnitude)))
+    if out_modifier.upper().startswith("G") and modifier.upper().startswith("M"):
+        modifier = out_modifier
+        amount = int(math.floor(amount / 1024.0))
+    if out_modifier.upper().startswith("M") and modifier.upper().startswith("G"):
+        modifier = out_modifier
+        modifier = int(amount * 1024)
     return "{amount}{modifier}".format(amount=amount, modifier=modifier)
 
 def adjust_opts(in_opts, config):

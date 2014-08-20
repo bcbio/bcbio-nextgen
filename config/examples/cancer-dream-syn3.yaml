@@ -5,6 +5,7 @@
 details:
 - algorithm:
     aligner: bwa
+    align_split_size: 5000000
     mark_duplicates: true
     recalibrate: true
     realign: true
@@ -21,6 +22,7 @@ details:
     phenotype: normal
 - algorithm:
     aligner: bwa
+    align_split_size: 5000000
     mark_duplicates: true
     recalibrate: true
     realign: true
