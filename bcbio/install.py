@@ -343,7 +343,7 @@ def _install_toolplus(args, manifest_dir):
         if tool.name == "data":
             _install_gemini(args.tooldir, _get_data_dir(), args)
         elif tool.name == "kraken":
-            _install_kraken_db(tool. fname, _get_data_dir(), args)
+            _install_kraken_db(_get_data_dir(), args)
         elif tool.name in set(["gatk", "mutect"]):
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
         elif tool.name in set(["protected"]):  # back compatibility
@@ -423,10 +423,10 @@ def _install_gemini(tooldir, datadir, args):
         subprocess.check_call(cmd)
         os.remove(script)
 
-def _install_kraken_db(fname, datadir, args):
+def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
     """
-    kraken = os.path.join(datadir, "genome/kraken")
+    kraken = os.path.join(datadir, "genomes/kraken")
     url = "https://ccb.jhu.edu/software/kraken/dl/minikraken.tgz"
     compress = os.path.join(kraken, os.path.basename(url))
     base, ext = utils.splitext_plus(os.path.basename(url))
