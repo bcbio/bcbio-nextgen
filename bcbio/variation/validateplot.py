@@ -10,6 +10,8 @@ import numpy as np
 try:
     import matplotlib
     matplotlib.use('Agg', force=True)
+    import matplotlib.pyplot as plt
+    plt.ioff()
     import prettyplotlib as ppl
     import pandas as pd
 except ImportError:

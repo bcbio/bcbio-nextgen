@@ -15,6 +15,7 @@ try:
     import matplotlib
     matplotlib.use('Agg', force=True)
     import matplotlib.pyplot as plt
+    plt.ioff()
 except ImportError:
     plt = None
 import pysam
