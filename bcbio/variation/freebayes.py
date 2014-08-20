@@ -97,7 +97,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                    "{compress_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files["dbsnp"],
+                                               assoc_files.get("dbsnp"),
                                                ref_file, config)
     return ann_file
 
@@ -150,7 +150,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
     fix_somatic_calls(out_file, config)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files["dbsnp"], ref_file,
+                                               assoc_files.get("dbsnp"), ref_file,
                                                config)
     return ann_file
 

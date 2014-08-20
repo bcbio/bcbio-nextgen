@@ -5,10 +5,6 @@
   combined callset with no-call/reference calls at any position called
   independently.
 - Add qsignature tool to standard analysis
-- Support the SNAP aligner, which provides improved speed on systems with
-  larger amount of memory (64Gb for human genome alignment).
-- Support the Platypus haplotype based variant caller for germline samples with
-  both batched and joint calling.
 - Fix issue with merging GATK produced VCF files with vcfcat by swapping to
   GATK's CatVariants. Thanks to Matt De Both.
 - Enable structural variant analyses on shared batches (two tumors with same
@@ -19,6 +15,11 @@
   regions.
 - Improved cluster cleanup by providing better error handling and removal of
   controllers and engines in additional failure cases.
+- Support variant calling for organisms without dbSNP files. Thanks to Mark Rose.
+- Support the SNAP aligner, which provides improved speed on systems with
+  larger amount of memory (64Gb for human genome alignment).
+- Support the Platypus haplotype based variant caller for germline samples with
+  both batched and joint calling.
 - Fix GATK version detection when `_JAVA_OPTIONS` specified. Thanks to Miika
   Ahdesmaki.
 - Use msgpack for ipython serialization to reduce message sizes and IPython

@@ -109,7 +109,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
                    "{vcfallelicprimitives} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files["dbsnp"],
+                                               assoc_files.get("dbsnp"),
                                                ref_file, config)
     return ann_file
 
@@ -156,7 +156,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
             
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files["dbsnp"], ref_file,
+                                               assoc_files.get("dbsnp"), ref_file,
                                                config)
     return ann_file
 

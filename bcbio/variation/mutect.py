@@ -46,7 +46,7 @@ def _config_params(base_config, assoc_files, region, out_file):
     params = []
     contamination = base_config["algorithm"].get("fraction_contamination", 0)
     params += ["--fraction_contamination", contamination]
-    dbsnp = assoc_files["dbsnp"]
+    dbsnp = assoc_files.get("dbsnp")
     if dbsnp:
         params += ["--dbsnp", dbsnp]
     cosmic = assoc_files.get("cosmic")

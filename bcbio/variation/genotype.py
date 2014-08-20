@@ -201,9 +201,9 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
             items = multi.get_orig_items(data)
             assert len(items) == len(align_bams)
         call_file = "%s-raw%s" % utils.splitext_plus(out_file)
-        call_file = caller_fn(align_bams, items, sam_ref,
-                              tz.get_in(("genome_resources", "variation"), data, {}),
-                              region, call_file)
+        assoc_files = tz.get_in(("genome_resources", "variation"), data, {})
+        if not assoc_files: assoc_files = {}
+        call_file = caller_fn(align_bams, items, sam_ref, assoc_files, region, call_file)
         if data["config"]["algorithm"].get("phasing", False) == "gatk":
             call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
         utils.symlink_plus(call_file, out_file)

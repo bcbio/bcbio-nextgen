@@ -41,9 +41,10 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                 params = ["-T", "VariantAnnotator",
                           "-R", ref_file,
                           "--variant", orig_file,
-                          "--dbsnp", dbsnp_file,
                           "--out", tx_out_file,
                           "-L", orig_file]
+                if dbsnp_file:
+                    params += ["--dbsnp", dbsnp_file]
                 for bam_file in bam_files:
                     params += ["-I", bam_file]
                 for x in annotations:
