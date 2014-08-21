@@ -48,6 +48,11 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
             else:
                 cl += ["-U", fastq_file]
             cl += ["-S", tx_out_file]
+            if not names and names.has_key("rg"):
+                cl += ["--rg-id", names["rg"]]
+                for key, tag in [("sample", "SM"), ("pl", "PL"), ("pu", "PU")]:
+                    if names.has_key(key):
+                        cl += ["--rg", "%s:%s" % (tag, names[key])]
             cl = [str(i) for i in cl]
             do.run(cl, "Aligning %s and %s with Bowtie2." % (fastq_file, pair_file),
                    None)
@@ -96,5 +101,5 @@ def _is_unique(read):
     return "XS" not in tags
 
 
-ANALYSIS = {"chip-seq": {"params": ["--rg-id", "1", "-X", 2000]},
+ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
             "RNA-seq": {"params": ["--sensitive", "-X", 2000]}}
