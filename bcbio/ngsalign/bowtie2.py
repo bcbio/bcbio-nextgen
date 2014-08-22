@@ -48,7 +48,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
             else:
                 cl += ["-U", fastq_file]
             cl += ["-S", tx_out_file]
-            if not names and names.has_key("rg"):
+            if names and names.has_key("rg"):
                 cl += ["--rg-id", names["rg"]]
                 for key, tag in [("sample", "SM"), ("pl", "PL"), ("pu", "PU")]:
                     if names.has_key(key):
