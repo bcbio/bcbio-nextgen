@@ -4,12 +4,12 @@
   GATK -- Next-generation sequence processing.
 """
 from contextlib import closing
-import copy
 from distutils.version import LooseVersion
 import re
 import os
 import subprocess
 
+from bcbio import utils
 from bcbio.broad import picardrun
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
@@ -221,7 +221,7 @@ class BroadRunner:
         support_nct = set(["BaseRecalibrator"])
         gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
         cores = self._config["algorithm"].get("num_cores", 1)
-        config = copy.deepcopy(self._config)
+        config = self._config
         if cores and int(cores) > 1:
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
@@ -231,6 +231,7 @@ class BroadRunner:
             elif prog in support_nct:
                 params.extend(["-nct", str(cores)])
                 if config["algorithm"].get("memory_adjust") is None:
+                    config = utils.deepish_copy(config)
                     config["algorithm"]["memory_adjust"] = {"direction": "increase",
                                                             "magnitude": int(cores) // 2}
         if LooseVersion(self.gatk_major_version()) > LooseVersion("1.9"):
@@ -253,9 +254,12 @@ class BroadRunner:
         """Define parameters to run the mutect paired algorithm.
         """
         gatk_jar = self._get_jar("muTect")
-        config = copy.deepcopy(self._config)
-        return ["java"] + self._jvm_opts + get_default_jvm_opts(tmp_dir) + \
-            ["-jar", gatk_jar] + [str(x) for x in params]
+        # Decrease memory slightly from configuration to avoid memory allocation errors
+        jvm_opts = config_utils.adjust_opts(self._jvm_opts,
+                                            {"algorithm": {"memory_adjust":
+                                                           {"magnitude": 1.1, "direction": "decrease"}}})
+        return ["java"] + jvm_opts + get_default_jvm_opts(tmp_dir) + \
+               ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None, log_error=True, memory_retry=False,
                  data=None, region=None, memscale=None):
