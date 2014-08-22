@@ -125,6 +125,7 @@ Contributors
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
 .. _Jeff Hammerbacher: https://github.com/hammer
+.. _Matt Edwards: https://github.com/matted
 
 License
 -------
