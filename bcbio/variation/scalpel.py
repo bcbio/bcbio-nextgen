@@ -35,7 +35,8 @@ def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
                     message = ("Region must be a tuple - something odd just happened")
                     raise ValueError(message)
                 chrom, start, end = region
-                print("%s\t%s\t%s" % (chrom, start, end), file=tx_tmp_bed)
+                with open(tx_tmp_bed, "w") as out_handle:
+                    print("%s\t%s\t%s" % (chrom, start, end), file=out_handle)
             opts += ["--bed", tmp_bed]
     resources = config_utils.get_resources("scalpel", config)
     if resources.get("options"):

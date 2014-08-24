@@ -219,6 +219,9 @@ def fix_somatic_calls(in_file, config):
         # Add info to the header of the reader
         reader.infos["SOMATIC"] = somatic_info
         reader.filters["REJECT"] = reject_filter
+        for ext in [".gz", ".gz.tbi"]:
+            if os.path.exists(out_file + ext):
+                os.remove(out_file + ext)
         with file_transaction(out_file) as tx_out_file:
             with open(tx_out_file, "wb") as handle:
                 writer = vcf.VCFWriter(handle, template=reader)
