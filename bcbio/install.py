@@ -48,6 +48,8 @@ def upgrade_bcbio(args):
         sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
         print("Upgrade of bcbio-nextgen code complete.")
+    elif args.upgrade in ["deps"]:
+        _update_conda_packages()
     else:
         _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
@@ -175,7 +177,7 @@ def _update_conda_packages():
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
     pkgs = ["biopython", "boto", "cpat", "cython", "ipython", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "pandas", "patsy", "pycrypto",
-            "pip", "pysam", "pyyaml", "pyzmq", "requests", "scipy",
+            "pip", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests", "scipy",
             "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]
     if os.path.exists(conda_bin):
@@ -555,7 +557,7 @@ def add_subparser(subparsers):
                         help="Boolean argument specifying upgrade of tools. Uses previously saved install directory",
                         action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
-                        choices=["stable", "development", "system", "skip"], default="skip")
+                        choices=["stable", "development", "system", "deps", "skip"], default="skip")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
