@@ -77,7 +77,7 @@ def _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files):
     # more passes of cutadapt
     cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
     adapter_cmd = " ".join(map(lambda x: "--adapter=" + x, adapters))
-    base_cmd = ("cutadapt --times=2 --quality-base={quality_base} "
+    base_cmd = ("{cutadapt} --times=2 --quality-base={quality_base} "
                 "--quality-cutoff=5 --format=fastq "
                 "{adapter_cmd} ").format(**locals())
     if len(fastq_files) == 1:
