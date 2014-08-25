@@ -13,6 +13,7 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
 from bcbio.variation import vcfutils
@@ -27,19 +28,20 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     """
     batch = sshared.get_cur_batch(items)
     ext = "-%s-svs" % batch if batch else "-svs"
-    out_file = os.path.join(work_dir, "%s%s.bedpe"
+    out_file = os.path.join(work_dir, "%s%s.sv.bedpe"
                             % (os.path.splitext(os.path.basename(items[0]["align_bam"]))[0], ext))
     sv_exclude_bed = sshared.prepare_exclude_file(items, out_file)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
             with utils.curdir_tmpdir(items[0]) as tmpdir:
-                out_base = utils.splitext_plus(tx_out_file)[0]
+                out_base = tx_out_file.replace(".sv.bedpe", "")
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)
                 disc_bams = ",".join(disc_bams)
                 exclude = "-x %s" % sv_exclude_bed if sv_exclude_bed else ""
-                cmd = ("speedseq lumpy -v -B {full_bams} -S {sr_bams} -D {disc_bams} {exclude} "
-                       "-T {tmpdir} -o {out_base}")
+                ref_file = dd.get_ref_file(items[0])
+                cmd = ("speedseq sv -v -B {full_bams} -S {sr_bams} -D {disc_bams} -R {ref_file} "
+                       "{exclude} -A false -T {tmpdir} -o {out_base}")
                 do.run(cmd.format(**locals()), "speedseq lumpy", items[0])
     return out_file, sv_exclude_bed
 
@@ -124,9 +126,8 @@ def _bedpe_to_vcf(bedpe_file, sconfig_file, items):
         if not utils.file_exists(out_file):
             if not utils.file_exists(raw_file):
                 with file_transaction(raw_file) as tx_raw_file:
-                    ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
-                    cmd = [sys.executable, tovcf_script, "-c", sconfig_file, "-f", ref_file,
-                           "-b", bedpe_file, "-o", tx_raw_file]
+                    cmd = [sys.executable, tovcf_script, "-c", sconfig_file, "-f", dd.get_ref_file(items[0]),
+                           "-t", "LUMPY", "-b", bedpe_file, "-o", tx_raw_file]
                     do.run(cmd, "Convert lumpy bedpe output to VCF")
             prep_file = vcfutils.sort_by_ref(raw_file, items[0])
             if not utils.file_exists(out_nogzip):
