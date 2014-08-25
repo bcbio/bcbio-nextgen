@@ -6,12 +6,13 @@ import operator
 
 import toolz as tz
 
-from bcbio.structural import cn_mops, delly, ensemble, lumpy, validate
+from bcbio.structural import cn_mops, cnvkit, delly, ensemble, lumpy, validate
 from bcbio.variation import vcfutils
 
 _CALLERS = {}
-_BATCH_CALLERS = {"cn.mops": cn_mops.run, "delly": delly.run, "lumpy": lumpy.run}
-_NEEDS_BACKGROUND = set(["cn.mops"])
+_BATCH_CALLERS = {"cn.mops": cn_mops.run, "cnvkit": cnvkit.run,
+                  "delly": delly.run, "lumpy": lumpy.run}
+_NEEDS_BACKGROUND = set(["cn.mops", "cnvkit"])
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")

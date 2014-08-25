@@ -30,6 +30,7 @@ details:
       variantcaller: freebayes
       #effects: vep
       #svcaller: [delly, lumpy, cn.mops]
+      #svcaller: cnvkit
       #remove_lcr: true
       tools_off: [gemini]
       #variantcaller: [gatk, gatk-haplotype]
