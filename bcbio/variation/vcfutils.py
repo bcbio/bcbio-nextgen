@@ -115,7 +115,7 @@ def _get_exclude_samples(in_file, to_exclude):
             include.append(s)
     return include, exclude
 
-def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
+def exclude_samples(in_file, out_file, to_exclude, ref_file, config, filters=None):
     """Exclude specific samples from an input VCF file.
     """
     include, exclude = _get_exclude_samples(in_file, to_exclude)
@@ -127,11 +127,12 @@ def exclude_samples(in_file, out_file, to_exclude, ref_file, config):
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
             include_str = ",".join(include)
-            cmd = "{bcftools} view -O {output_type} -s {include_str} {in_file} > {tx_out_file}"
+            filter_str = "-f %s" % filters if filters is not None else "" # filters could be e.g. 'PASS,.'
+            cmd = "{bcftools} view -O {output_type} -s {include_str} {filter_str} {in_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Exclude samples: {}".format(to_exclude))
     return out_file
 
-def select_sample(in_file, sample, out_file, config):
+def select_sample(in_file, sample, out_file, config, filters=None):
     """Select a single sample from the supplied multisample VCF file.
     """
     if not utils.file_exists(out_file):
@@ -140,7 +141,8 @@ def select_sample(in_file, sample, out_file, config):
                 bgzip_and_index(in_file, config)
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
-            cmd = "{bcftools} view -O {output_type} {in_file} -s {sample} > {tx_out_file}"
+            filter_str = "-f %s" % filters if filters is not None else "" # filters could be e.g. 'PASS,.'
+            cmd = "{bcftools} view -O {output_type} {filter_str} {in_file} -s {sample} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Select sample: %s" % sample)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)

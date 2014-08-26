@@ -64,7 +64,10 @@ def combine_calls_parallel(samples, run_parallel):
     return out + extras
 
 def _has_ensemble(data):
-    return len(data["variants"]) > 1 and "ensemble" in data["config"]["algorithm"]
+    # for tumour-normal calling, a sample may have "ensemble" for the normal
+    # sample configured but there won't be any variant files per se
+    variants_to_process = True if len(data["variants"]) > 1 and any([x.get('vrn_file', None) is not None or x.get('vrn_file_batch', None) is not None for x in data["variants"]]) else False
+    return variants_to_process and "ensemble" in data["config"]["algorithm"]
 
 def _group_by_batches(samples, check_fn):
     """Group calls by batches, processing families together during ensemble calling.
@@ -93,7 +96,16 @@ def _organize_variants(samples, batch_id):
         if "work_bam" in data:
             bam_files.add(data["work_bam"])
         for vrn in data["variants"]:
-            calls[vrn["variantcaller"]].append(vrn["vrn_file"])
+            # for somatic ensemble, discard normal samples and filtered 
+            # variants from vcfs
+            vrn_file = vrn["vrn_file"]
+            if data.get("metadata", False) and data["metadata"].get("phenotype", "normal").lower().startswith("tumor"):
+                vrn_file_temp = vrn_file.replace(".vcf", "_tumorOnly_noFilteredCalls.vcf") if ".vcf" in vrn_file else vrn_file_temp + "_tumorOnly_noFilteredCalls.vcf.gz"
+                # Select tumor sample and keep only PASS and . calls
+                vrn_file = vcfutils.select_sample(in_file=vrn_file, sample=data["name"][1], 
+                                                  out_file=vrn_file_temp, 
+                                                  config=data["config"], filters="PASS,.")
+            calls[vrn["variantcaller"]].append(vrn_file)
     data = samples[0]
     vrn_files = []
     for caller in caller_names:
