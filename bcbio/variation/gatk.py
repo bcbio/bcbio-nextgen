@@ -7,6 +7,7 @@ import toolz as tz
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.shared import subset_variant_regions
+from bcbio.pipeline import datadict as dd
 from bcbio.variation import annotation, bamprep, ploidy
 
 def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file):
@@ -66,6 +67,8 @@ def _joint_calling(items):
     jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), items[0])
     if jointcaller:
         assert len(items) == 1, "Can only do joint calling preparation with GATK with single samples"
+        assert tz.get_in(("metadata", "batch"), items[0]) is not None, \
+            "Joint calling requires batched samples, %s has no metadata batch." % dd.get_sample_name(items[0])
     return jointcaller is not None
 
 def haplotype_caller(align_bams, items, ref_file, assoc_files,

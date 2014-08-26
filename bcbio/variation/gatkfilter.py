@@ -10,6 +10,7 @@ from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 from bcbio.variation import vcfutils, vfilter
 
 def run(call_file, ref_file, vrn_files, data):
@@ -22,7 +23,19 @@ def run(call_file, ref_file, vrn_files, data):
                                             vfilter.gatk_indel_hard)
     orig_files = [snp_filter_file, indel_filter_file]
     out_file = "%scombined.vcf.gz" % os.path.commonprefix(orig_files)
-    return vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
+    combined_file = vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
+    return _filter_nonref(combined_file, data)
+
+def _filter_nonref(in_file, data):
+    """Remove NON_REF gVCF items from GATK VCF output; these occasionally sneak through in joint calling.
+    """
+    out_file = "%s-gatkclean%s" % utils.splitext_plus(in_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            cmd = "gunzip -c {in_file} | grep -v NON_REF | bgzip -c > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Remove stray NON_REF gVCF information from VCF output", data)
+        vcfutils.bgzip_and_index(out_file, data["config"])
+    return out_file
 
 def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
                 sensitivity_cutoff, filter_type, data):
