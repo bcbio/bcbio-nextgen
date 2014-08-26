@@ -65,6 +65,7 @@ def fastq_convert_pipe_cl(in_file, data):
     Uses seqtk: https://github.com/lh3/seqt
     """
     seqtk = config_utils.get_program("seqtk", data["config"])
+    in_file = utils.remote_cl_input(in_file)
     return "<({seqtk} seq -Q64 -V {in_file})".format(**locals())
 
 # ## configuration
@@ -253,6 +254,7 @@ def _cram_to_fastq_region(cram_file, work_dir, base_name, region, data):
                              for fext in ["s1", "p1", "p2"]]
     if not utils.file_exists(out_p1):
         with file_transaction(out_s, out_p1, out_p2) as (tx_out_s, tx_out_p1, tx_out_p2):
+            cram_file = utils.remote_cl_input(cram_file)
             sortprefix = "%s-sort" % utils.splitext_plus(tx_out_s)[0]
             cmd = ("bamtofastq filename={cram_file} inputformat=cram T={sortprefix} "
                    "gz=1 collate=1 colsbs={max_mem} "
@@ -298,6 +300,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
                            "O2=/dev/null collate=1 colsbs={max_mem}")
             else:
                 out_str = "S=>({fq1_bgzip_cmd})"
+            bam_file = utils.remote_cl_input(bam_file)
             cmd = "{bamtofastq} filename={bam_file} T={sortprefix} " + out_str
             try:
                 do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
@@ -366,6 +369,7 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
         with file_transaction(out_file) as tx_out_file:
             assert needs_bgzip
             bgzip = tools.get_bgzip_cmd(config)
+            in_file = utils.remote_cl_input(in_file)
             if needs_convert:
                 in_file = fastq_convert_pipe_cl(in_file, {"config": config})
             if needs_gunzip:

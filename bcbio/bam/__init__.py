@@ -19,9 +19,11 @@ from bcbio.provenance import do
 def is_paired(bam_file):
     """Determine if a BAM file has paired reads.
     """
-    with contextlib.closing(pysam.Samfile(bam_file, "rb")) as in_pysam:
-        for read in in_pysam:
-            return read.is_paired
+    bam_file = utils.remote_cl_input(bam_file)
+    cmd = "samtools view -f 0x1 {bam_file} | head -1 | wc -l"
+    out = subprocess.check_output(cmd.format(**locals()), shell=True,
+                                  executable=do.find_bash())
+    return int(out) > 0
 
 def index(in_bam, config):
     """Index a BAM file, skipping if index present.

@@ -24,6 +24,20 @@ except ImportError:
     except ImportError:
         futures = None
 
+SUPPORTED_REMOTES = ("s3://",)
+
+def remote_cl_input(fname):
+    """Return command line input for a file, handling streaming remote cases.
+    """
+    if not fname:
+        return fname
+    elif fname.startswith("s3://"):
+        bucket, key = fname.split("//")[-1].split("/", 1)
+        gunzip = "| gunzip -c" if fname.endswith(".gz") else ""
+        return "<(gof3r get --no-md5 -k {key} -b {bucket} {gunzip})".format(**locals())
+    else:
+        return fname
+
 @contextlib.contextmanager
 def cpmap(cores=1):
     """Configurable parallel map context manager.
@@ -210,6 +224,14 @@ def tmpfile(*args, **kwargs):
         os.close(fd)
         if os.path.exists(fname):
             os.remove(fname)
+
+def file_exists_or_remote(fname):
+    """Check if a file exists or is accessible remotely.
+    """
+    if fname.startswith(SUPPORTED_REMOTES):
+        return True
+    else:
+        return file_exists(fname)
 
 def file_exists(fname):
     """Check if a file exists and is non-empty.

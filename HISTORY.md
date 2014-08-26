@@ -4,13 +4,15 @@
   populations by independently calling on samples them combining into a final
   combined callset with no-call/reference calls at any position called
   independently.
-- Add qsignature tool to standard analysis
+- Add qsignature tool to standard analysis.
 - Fix issue with merging GATK produced VCF files with vcfcat by swapping to
   GATK's CatVariants. Thanks to Matt De Both.
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
 - Avoid Java out of memory errors for large numbers of running processes by
   avoiding Parallel GC collction. Thanks to Justin Johnson and Miika Ahdesmaki.
+- Enable streaming S3 input to RNA-seq and variant processing. BAM and fastq
+  inputs can stream directly into alignment and trimming steps.
 - Speed improvements for re-running samples with large numbers of samples or
   regions.
 - Improved cluster cleanup by providing better error handling and removal of

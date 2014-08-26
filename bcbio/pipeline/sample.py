@@ -99,7 +99,7 @@ def process_alignment(data):
         fastq1, fastq2 = data["files"][0], None
     config = data["config"]
     aligner = config["algorithm"].get("aligner", None)
-    if fastq1 and os.path.exists(fastq1) and aligner:
+    if fastq1 and utils.file_exists_or_remote(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
         data = _add_supplemental_bams(data)
@@ -123,7 +123,7 @@ def process_alignment(data):
         bam.check_header(out_bam, data["rgnames"], data["sam_ref"], data["config"])
         dedup_bam = postalign.dedup_bam(out_bam, data)
         data["work_bam"] = dedup_bam
-    elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".cram"):
+    elif fastq1 and utils.file_exists_or_remote(fastq1) and fastq1.endswith(".cram"):
         data["work_bam"] = fastq1
     elif fastq1 is None and "vrn_file" in data:
         data["config"]["algorithm"]["variantcaller"] = False

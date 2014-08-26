@@ -18,8 +18,7 @@ from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.variation import effects, genotype, population
 from bcbio.variation.cortex import get_sample_name
-from bcbio.bam.fastq import open_fastq, is_fastq
-
+from bcbio.bam.fastq import open_fastq
 
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
                          "phasing", "svcaller", "jointcaller", "tools_off"]
@@ -302,6 +301,8 @@ def _file_to_abs(x, dnames):
     """Make a file absolute using the supplied base directory choices.
     """
     if x is None or os.path.isabs(x):
+        return x
+    elif isinstance(x, basestring) and x.lower().startswith(utils.SUPPORTED_REMOTES):
         return x
     elif isinstance(x, basestring) and x.lower() == "none":
         return None

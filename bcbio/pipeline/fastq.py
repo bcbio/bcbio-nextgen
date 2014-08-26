@@ -1,13 +1,11 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
-import subprocess
 
-from bcbio import bam, broad
+from bcbio import bam, broad, utils
 from bcbio.bam import cram
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
-from bcbio.distributed.transaction import file_transaction
 
 def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
@@ -21,6 +19,8 @@ def get_fastq_files(item):
                                                     item, item["dirs"], item["config"])
             else:
                 ready_files = [fname]
+        elif fname.startswith(utils.SUPPORTED_REMOTES):
+            ready_files.append(fname)
         else:
             assert os.path.exists(fname), fname
             ready_files.append(fname)
