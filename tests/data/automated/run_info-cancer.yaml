@@ -15,7 +15,12 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, varscan, freebayes]
+      variantcaller: [vardict, mutect, freebayes]
+      ensemble:
+        classifiers:
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        trusted_pct: 0.65
       svcaller: [cn.mops]
   - analysis: variant2
     description: c-tumor
@@ -29,7 +34,12 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, varscan, freebayes]
+      variantcaller: [vardict, mutect, freebayes]
+      ensemble:
+        classifiers:
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        trusted_pct: 0.65
       min_allele_fraction: 10
       svcaller: [cn.mops]
   - analysis: variant2
@@ -44,6 +54,11 @@ details:
       mark_duplicates: True
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, varscan, freebayes]
+      variantcaller: [vardict, mutect, freebayes]
+      ensemble:
+        classifiers:
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        trusted_pct: 0.65
       min_allele_fraction: 5.0
       svcaller: [cn.mops]
