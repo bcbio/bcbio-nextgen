@@ -223,8 +223,8 @@ Get the setup script and run it, this will download six samples from the SEQC pr
 three from the HBRR panel and three from the UHRR panel. It will also set up a configuration
 file for the run, using the templating system::
 
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-setup.sh
-  bash rnaseq-setup.sh
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-data.sh
+  bash rnaseq-seqc-data.sh
   
 Now go into the work directory and run the analysis::
 
