@@ -217,38 +217,27 @@ RNAseq example
 ~~~~~~~~~~~~~~
 
 This example aligns and creates count files for use with downstream analyses
-using the SEQC data from the FDA's Sequencing Quality Control project. The
-rnaseq-seqc.yaml is
+using a subset of the SEQC data from the FDA's Sequencing Quality Control project. 
 
-Get the input configuration files::
+Get the setup script and run it, this will download six samples from the SEQC project, 
+three from the HBRR panel and three from the UHRR panel. It will also set up a configuration
+file for the run, using the templating system::
 
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc.yaml
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/seqc.csv
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-setup.sh
+  bash rnaseq-setup.sh
+  
+Now go into the work directory and run the analysis::
 
-Get the FASTQ files from the SEQC project::
-
-  mkdir fastq
-  cd fastq
-  wget https://s3.amazonaws.com/bcbio-nextgen-test-data/seqc.tar
-  tar xvf seqc.tar
-  cd ..
-
-Use the `templating system`_ to set up an analysis::
-
-  bcbio_nextgen.py -w template rnaseq-seqc.yaml seqc.csv fastq
-
-Go into the work directory and run your analysis::
-
-  cd seqc/work
-  bcbio_nextgen.py ../config/seqc.yaml -n 16
-
+   cd seqc/work
+   bcbio_nextgen.py ../config/seqc.yaml -n 8
+   
 This will run a full scale RNAseq experiment using Tophat2 as the
 aligner and will take a long time to finish on a single machine. At
 the end it will output counts, Cufflinks quantitation and a set of QC
 results about each lane. If you have a cluster you can `parallelize it`_
-to speed it up considerably.
+to speed it up considerably. 
 
-A nice looking standalone `report`_ of the bcbio-nextgen can be generated using
+A nice looking standalone `report`_ of the bcbio-nextgen run can be generated using
 `bcbio.rnaseq`_. Check that repository for details.
 
 .. _templating system: https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
