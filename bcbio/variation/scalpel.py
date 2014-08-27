@@ -14,7 +14,7 @@ except ImportError:
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import subset_variant_regions
+from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
@@ -27,17 +27,17 @@ def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
     target = subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
-            opts += ["--bed", target]
+            target_bed = target
         else:
-            tmp_bed = os.path.join(tmp_path, "tmp.bed")
-            with file_transaction(tmp_bed) as tx_tmp_bed:
+            target_bed = os.path.join(tmp_path, "tmp.bed")
+            with file_transaction(target_bed) as tx_tmp_bed:
                 if not isinstance(region, (list, tuple)):
                     message = ("Region must be a tuple - something odd just happened")
                     raise ValueError(message)
                 chrom, start, end = region
                 with open(tx_tmp_bed, "w") as out_handle:
                     print("%s\t%s\t%s" % (chrom, start, end), file=out_handle)
-            opts += ["--bed", tmp_bed]
+        opts += ["--bed", remove_lcr_regions(target_bed, items)]
     resources = config_utils.get_resources("scalpel", config)
     if resources.get("options"):
         opts += resources["options"]
