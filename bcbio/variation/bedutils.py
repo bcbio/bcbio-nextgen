@@ -47,9 +47,12 @@ def merge_overlaps(in_file, data):
 
 def clean_inputs(data):
     """Clean BED input files to avoid overlapping segments that cause downstream issues.
+
+    Per-merges inputs to avoid needing to call multiple times during later parallel steps.
     """
-    data["config"]["algorithm"]["variant_regions"] = clean_file(
-        utils.get_in(data, ("config", "algorithm", "variant_regions")), data)
+    clean_vr = clean_file(utils.get_in(data, ("config", "algorithm", "variant_regions")), data)
+    merge_overlaps(clean_vr, data)
+    data["config"]["algorithm"]["variant_regions"] = clean_vr
     return data
 
 def combine(in_files, out_file, config):
