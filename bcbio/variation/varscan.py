@@ -221,21 +221,21 @@ def _add_reject_flag(in_file, config):
 def _fix_varscan_output(line, normal_name, tumor_name):
     """Fix a varscan VCF line
 
-    Fixes the ALT column and also fixes the FREQ field to be a floating point
-    value, easier for filtering.
+    Fixes the ALT column and also fixes floating point values
+    output as strings to by Floats: FREQ, SSC.
 
     :param line: a pre-split and stripped varscan line
 
     This function was contributed by Sean Davis <sdavis2@mail.nih.gov>,
     with minor modifications by Luca Beltrame <luca.beltrame@marionegri.it>.
-
     """
     line = line.strip()
 
-    # FIXME: Handle also SS (which is an integer handled as a string?)
+    tofix = ("##INFO=<ID=SSC", "##FORMAT=<ID=FREQ")
     if(line.startswith("##")):
-        line = line.replace('FREQ,Number=1,Type=String',
-                            'FREQ,Number=1,Type=Float')
+        if line.startswith(tofix):
+            line = line.replace('Number=1,Type=String',
+                                'Number=1,Type=Float')
         return line + "\n"
 
     line = line.split("\t")

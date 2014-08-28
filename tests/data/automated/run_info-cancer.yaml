@@ -15,7 +15,7 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes]
+      variantcaller: [vardict, mutect, freebayes, varscan]
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]
@@ -34,7 +34,7 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes]
+      variantcaller: [vardict, mutect, freebayes, varscan]
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]
@@ -54,7 +54,7 @@ details:
       mark_duplicates: True
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes]
+      variantcaller: [vardict, mutect, freebayes, varscan]
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]

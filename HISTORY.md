@@ -8,6 +8,8 @@
   sample swaps. Add `mixup_check` configuration variant to enable.
 - Fix issue with merging GATK produced VCF files with vcfcat by swapping to
   GATK's CatVariants. Thanks to Matt De Both.
+- Initial support for ensemble calling on cancer tumor/normal calling. Now
+  available for initial validation work. Thanks to Miika Ahdesmaki.
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
 - Avoid Java out of memory errors for large numbers of running processes by
