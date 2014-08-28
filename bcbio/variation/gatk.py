@@ -6,6 +6,7 @@ import toolz as tz
 
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import annotation, bamprep, ploidy
@@ -97,6 +98,9 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             if _joint_calling(items):  # Prepare gVCFs if doing joint calling
                 params += ["--emitRefConfidence", "GVCF", "--variant_index_type", "LINEAR",
                            "--variant_index_parameter", "128000"]
+            resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
+            if "options" in resources:
+                params += [str(x) for x in resources.get("options", [])]
             broad_runner.new_resources("gatk-haplotype")
             broad_runner.run_gatk(params)
     return out_file
