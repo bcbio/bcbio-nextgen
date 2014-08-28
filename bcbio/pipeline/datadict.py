@@ -25,7 +25,9 @@ LOOKUPS = {
     "adapters": {"keys": ['config', 'algorithm', 'adapters'],
                  "default": []},
     "qsig_file": {"keys": ['genome_resources', 'variation', 'qsignature'],
-                  "checker": file_exists}
+                  "checker": file_exists},
+    "mixup_check": {"keys": ["config", "algorithm", "mixup_check"],
+                    "default": False}
 }
 
 def getter(keys, global_default=None):

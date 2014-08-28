@@ -4,7 +4,8 @@
   populations by independently calling on samples them combining into a final
   combined callset with no-call/reference calls at any position called
   independently.
-- Add qsignature tool to standard analysis.
+- Add qsignature tool to standard and variant analyses, which helps identify
+  sample swaps. Add `mixup_check` configuration variant to enable.
 - Fix issue with merging GATK produced VCF files with vcfcat by swapping to
   GATK's CatVariants. Thanks to Matt De Both.
 - Enable structural variant analyses on shared batches (two tumors with same

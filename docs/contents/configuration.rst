@@ -396,7 +396,7 @@ Structural variant calling
   or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
   ``disambiguate`` enables disambiguation of ``STAR`` output [false, true].
-  
+
 Cancer variant calling
 ======================
 
@@ -408,6 +408,10 @@ Cancer variant calling
 Quality control
 ===============
 
+- ``mixup_check`` Detect potential sample mixups. Currently supports
+  `qSignature <https://sourceforge.net/p/adamajava/wiki/qSignature/>`_.
+  ``qsignature_full`` runs a larger analysis while ``qsignature`` runs a smaller
+  subset on chromosome 22.  [False, qsignature, qsignature_full]
 - ``kraken`` Turn on kraken algorithm to detect possible contamination. You can add `kraken: True` and it will use a minimal database to detect possible `contaminants`_. As well, you can point to a `custom database`_ directory and kraken will use it. You will find the results in the `qc` directory. This tool only run during `rnaseq` pipeline.
 
 .. _contaminants: https://ccb.jhu.edu/software/kraken/

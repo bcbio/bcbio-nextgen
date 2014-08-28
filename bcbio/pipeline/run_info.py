@@ -78,6 +78,17 @@ def add_reference_resources(data):
 
 # ## Sample and BAM read group naming
 
+
+def _clean_metadata(data):
+    batches = tz.get_in(("metadata", "batch"), data)
+    if batches:
+        if isinstance(batches, (list, tuple)):
+            batches = [str(x) for x in batches]
+        else:
+            batches = str(batches)
+        data["metadata"]["batch"] = batches
+    return data
+
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
@@ -167,7 +178,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "nomap_split_targets", "ensemble", "background",
                       "disambiguate", "strandedness", "fusion_mode", "min_read_length",
                       "coverage_depth_min", "coverage_depth_max", "min_allele_fraction", "remove_lcr",
-                      "archive", "tools_off", "assemble_transcripts"] +
+                      "archive", "tools_off", "assemble_transcripts", "mixup_check"] +
                      # back compatibility
                       ["coverage_depth"])
 
@@ -399,6 +410,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
+        item = _clean_metadata(item)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details

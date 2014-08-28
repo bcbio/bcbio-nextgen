@@ -103,7 +103,7 @@ def _run_qc_tools(bam_file, data):
         to_run.append(["bamtools", _run_bamtools_stats])
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
-    if data["analysis"].lower().startswith("standard"):
+    if data["analysis"].lower().startswith(("standard", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
@@ -112,7 +112,9 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     ratio = bam.get_aligned_reads(bam_file, data)
-    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and (data["analysis"].lower().startswith("rna-seq") or data["analysis"].lower().startswith("standard")):
+    if (ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and
+          (data["analysis"].lower().startswith("rna-seq") or
+           data["analysis"].lower().startswith("standard"))):
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
@@ -601,10 +603,11 @@ def _run_qsignature_generator(bam_file, data, out_dir):
     :returns: (dict) dict with the normalize vcf file
     """
     position = dd.get_qsig_file(data)
-    if position:
+    mixup_check = dd.get_mixup_check(data)
+    if position and mixup_check and mixup_check.startswith("qsignature"):
         jvm_opts = "-Xms750m -Xmx2g"
         limit_reads = 20000000
-        if data['config']['algorithm'].get('qsignature', False) == "full":
+        if mixup_check == "qsignature_full":
             slice_bam = bam_file
             jvm_opts = "-Xms750m -Xmx8g"
             limit_reads = 100000000
@@ -657,7 +660,6 @@ def qsignature_summary(*samples):
     if not qsig:
         return [[]]
     jvm_opts = "-Xms750m -Xmx8g"
-    out_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"], "qsignature"))
     work_dir = samples[0][0]["dirs"]["work"]
     log = os.path.join(work_dir, "qsig.log")
     out_file = os.path.join(work_dir, "qc", "qsignature.xml")
@@ -669,6 +671,7 @@ def qsignature_summary(*samples):
         if vcf:
             count += 1
             vcf_name = os.path.basename(vcf)
+            out_dir = utils.safe_makedir(os.path.join(work_dir, "qsignature"))
             if not os.path.lexists(os.path.join(out_dir, vcf_name)):
                 os.symlink(vcf, os.path.join(out_dir, vcf_name))
     if count > 0:
