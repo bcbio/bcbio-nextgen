@@ -27,4 +27,4 @@ sh>=1.07
 arvados-python-client>=0.1.1405019228.4a7ca04
 chanjo>=1.1.1
 msgpack-python>=0.4.0
-bcbio-nextgen==0.8.0
+bcbio-nextgen==0.8.1

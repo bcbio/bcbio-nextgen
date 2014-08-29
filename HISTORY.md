@@ -1,4 +1,4 @@
-## 0.8.1 (in progress)
+## 0.8.1 (August 29, 2014)
 - Support joint recalling with GATK HapolotypeCaller, FreeBayes and Platypus. The
   `jointcaller` configuration variable enables calling concurrently in large
   populations by independently calling on samples them combining into a final
