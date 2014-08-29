@@ -23,13 +23,19 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
     if not utils.file_exists(out_file):
         broad_runner = broad.runner_from_config(data["config"])
         with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "GenotypeGVCFs", "-nt", str(dd.get_cores(data)),
+            params = ["-T", "GenotypeGVCFs",
                       "-R", ref_file, "-o", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
                 params += ["--variant", vrn_file]
             broad_runner.new_resources("gatk-haplotype")
-            broad_runner.run_gatk(params, memscale=0.9 * dd.get_cores(data))
+            cores = dd.get_cores(data)
+            if cores > 1:
+                params += ["-nt", str(cores)]
+                memscale = {"magnitude": 0.9 * cores, "direction": "increase"}
+            else:
+                memscale = None
+            broad_runner.run_gatk(params, memscale=memscale)
     return out_file
 
 # ## gVCF batching

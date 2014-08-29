@@ -45,9 +45,7 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
             jvm_opts = resources.get("jvm_opts")
             break
     if memscale:
-        jvm_opts = config_utils.adjust_opts(jvm_opts,
-                                            {"algorithm": {"memory_adjust":
-                                                           {"magnitude": memscale, "direction": "increase"}}})
+        jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust": memscale}})
     jvm_opts += get_default_jvm_opts(tmp_dir)
     return jvm_opts + opts
 
