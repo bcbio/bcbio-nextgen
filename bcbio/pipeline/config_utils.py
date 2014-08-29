@@ -345,7 +345,7 @@ def adjust_opts(in_opts, config):
     memory_adjust = config["algorithm"].get("memory_adjust", {})
     out_opts = []
     for opt in in_opts:
-        if opt.startswith(("-Xmx", "-Xms")):
+        if opt.startswith("-Xmx") or (opt.startswith("-Xms") and memory_adjust.get("direction") == "decrease"):
             arg = opt[:4]
             opt = "{arg}{val}".format(arg=arg,
                                       val=adjust_memory(opt[4:],

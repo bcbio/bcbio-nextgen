@@ -11,6 +11,7 @@ LOOKUPS = {
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
     "work_dir": {"keys": ['dirs', 'work']},
+    "cores": {"keys": ["config", "algorithm", "num_cores"], "default": 1},
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
