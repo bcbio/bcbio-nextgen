@@ -2,7 +2,7 @@
 
 # We need about 100Gb for the input files. Confirm we have the space.
 REQ_DISK_SPACE=100  
-df --block-size=G --output='avail' . | sed s/G//g | awk -v req_disk_space=${REQ_DISK_SPACE} '{ if ($1 !~ /Avail/ && $1 < req_disk_space ) printf("Not enough disk space. \n Requires %sGb but only has %sGb.\n", req_disk_space, $1)  }'
+df --block-size=G --output='avail' . | sed s/G//g | awk -v req_disk_space=${REQ_DISK_SPACE} '{ if ($1 !~ /Avail/ && $1 < req_disk_space ) printf("Warning: Not enough disk space.\n Warning: Requires %sGb in total but only has %sGb.\n", req_disk_space, $1)  }'
 
 mkdir -p seqc-test/input
 cd seqc-test
