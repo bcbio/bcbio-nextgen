@@ -32,6 +32,9 @@ def copy_finfo_directory(finfo, storage_dir):
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
         shutil.copytree(finfo["path"], out_dir)
+        for tmpdir in ["tx", "tmp"]:
+            if os.path.exists(os.path.join(out_dir, tmpdir)):
+                shutil.rmtree(os.path.join(out_dir, tmpdir))
         os.utime(out_dir, None)
     return out_dir
 

@@ -21,7 +21,7 @@ from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
-                         "phasing", "svcaller", "jointcaller", "tools_off"]
+                         "phasing", "svcaller", "jointcaller", "tools_off", "mixup_check"]
 
 def organize(dirs, config, run_info_yaml):
     """Organize run information from a passed YAML file or the Galaxy API.
