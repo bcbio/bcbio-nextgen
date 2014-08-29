@@ -26,7 +26,9 @@ def _get_validate(data):
     elif "group_orig" in data:
         for sub in multi.get_orig_items(data):
             if "validate" in sub["config"]["algorithm"]:
-                return sub
+                sub_val = utils.deepish_copy(sub)
+                sub_val["vrn_file"] = data["vrn_file"]
+                return sub_val
     return None
 
 def normalize_input_path(x, data):

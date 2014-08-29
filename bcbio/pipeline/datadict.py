@@ -11,6 +11,7 @@ LOOKUPS = {
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
     "work_dir": {"keys": ['dirs', 'work']},
+    "cores": {"keys": ["config", "algorithm", "num_cores"], "default": 1},
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
@@ -25,7 +26,9 @@ LOOKUPS = {
     "adapters": {"keys": ['config', 'algorithm', 'adapters'],
                  "default": []},
     "qsig_file": {"keys": ['genome_resources', 'variation', 'qsignature'],
-                  "checker": file_exists}
+                  "checker": file_exists},
+    "mixup_check": {"keys": ["config", "algorithm", "mixup_check"],
+                    "default": False}
 }
 
 def getter(keys, global_default=None):

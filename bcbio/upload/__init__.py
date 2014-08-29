@@ -249,6 +249,10 @@ def _get_files_project(sample, upload_config):
 
     if "summary" in sample and sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
+    mixup_check = tz.get_in(["summary", "mixup_check"], sample)
+    if mixup_check:
+        out.append({"path": sample["summary"]["mixup_check"],
+                    "type": "directory", "ext": "mixup_check"})
 
     for x in sample.get("variants", []):
         if "pop_db" in x:

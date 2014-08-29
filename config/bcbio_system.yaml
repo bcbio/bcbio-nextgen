@@ -42,7 +42,7 @@ resources:
     memory: 4g
   qsignature: 
     cores: 1
-    memory: 8g
+    memory: 2g
   freebayes:
     memory: 2g
   gatk:

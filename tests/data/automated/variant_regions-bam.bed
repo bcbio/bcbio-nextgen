@@ -1,4 +1,5 @@
 track name=target_region description="Target Regions"
+browser position chrM:100-1000
 chrM	100	1000	name1
 chrM	2000	5000	name2
 chr22	14250	15500	name3

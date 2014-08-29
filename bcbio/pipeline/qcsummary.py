@@ -45,6 +45,8 @@ def generate_parallel(samples, run_parallel):
         if "summary" not in data[0]:
             data[0]["summary"] = {}
         data[0]["summary"]["project"] = summary_file
+        if qsign_info:
+            data[0]["summary"]["mixup_check"] = qsign_info[0]["out_dir"]
         samples.append(data)
     samples = _add_researcher_summary(samples, summary_file)
     return samples
@@ -103,7 +105,7 @@ def _run_qc_tools(bam_file, data):
         to_run.append(["bamtools", _run_bamtools_stats])
     else:
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
-    if data["analysis"].lower().startswith("standard"):
+    if data["analysis"].lower().startswith(("standard", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
@@ -112,7 +114,9 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     ratio = bam.get_aligned_reads(bam_file, data)
-    if ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and (data["analysis"].lower().startswith("rna-seq") or data["analysis"].lower().startswith("standard")):
+    if (ratio < 0.60 and data['config']["algorithm"].get("kraken", False) and
+          (data["analysis"].lower().startswith("rna-seq") or
+           data["analysis"].lower().startswith("standard"))):
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
@@ -144,7 +148,9 @@ def write_project_summary(samples, qsign_info=None):
             yaml.safe_dump({"test_run": True}, out_handle, default_flow_style=False,
                            allow_unicode=False)
         if qsign_info:
-            yaml.safe_dump({"qsignature": qsign_info}, out_handle, default_flow_style=False,
+            qsign_out = utils.deepish_copy(qsign_info[0])
+            qsign_out.pop("out_dir", None)
+            yaml.safe_dump({"qsignature": qsign_out}, out_handle, default_flow_style=False,
                            allow_unicode=False)
         yaml.safe_dump({"upload": upload_dir}, out_handle,
                        default_flow_style=False, allow_unicode=False)
@@ -601,24 +607,24 @@ def _run_qsignature_generator(bam_file, data, out_dir):
     :returns: (dict) dict with the normalize vcf file
     """
     position = dd.get_qsig_file(data)
-    if position:
+    mixup_check = dd.get_mixup_check(data)
+    if position and mixup_check and mixup_check.startswith("qsignature"):
         jvm_opts = "-Xms750m -Xmx2g"
         limit_reads = 20000000
-        if data['config']['algorithm'].get('qsignature', False) == "full":
+        if mixup_check == "qsignature_full":
             slice_bam = bam_file
             jvm_opts = "-Xms750m -Xmx8g"
             limit_reads = 100000000
         else:
             slice_bam = _slice_chr22(bam_file, data)
-        resources = config_utils.get_resources("qsignature", data["config"])
         qsig = config_utils.get_program("qsignature", data["config"])
         if not qsig:
             return {}
-        cores = resources.get("cores", 1)
         utils.safe_makedir(out_dir)
         out_name = os.path.basename(slice_bam).replace("bam", "qsig.vcf")
         out_file = os.path.join(out_dir, out_name)
         log_file = os.path.join(out_dir, "qsig.log")
+        cores = dd.get_cores(data)
         base_cmd = ("{qsig} {jvm_opts} "
                     "org.qcmg.sig.SignatureGenerator "
                     "--noOfThreads {cores} "
@@ -651,27 +657,28 @@ def qsignature_summary(*samples):
     :param samples: list with only one element containing all samples information
     :returns: (dict) with the path of the output to be joined to summary
     """
-    count = 0
     warnings, similar = [], []
     qsig = config_utils.get_program("qsignature", samples[0][0]["config"])
     if not qsig:
         return [[]]
     jvm_opts = "-Xms750m -Xmx8g"
-    out_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"], "qsignature"))
     work_dir = samples[0][0]["dirs"]["work"]
-    log = os.path.join(work_dir, "qsig.log")
-    out_file = os.path.join(work_dir, "qc", "qsignature.xml")
-    out_ma_file = os.path.join(work_dir, "qc", "qsignature.ma")
-    out_warn_file = os.path.join(work_dir, "qc", "qsignature.warnings")
+    count = 0
     for data in samples:
         data = data[0]
         vcf = tz.get_in(["summary", "metrics", "qsig_vcf"], data)
         if vcf:
             count += 1
             vcf_name = os.path.basename(vcf)
+            out_dir = utils.safe_makedir(os.path.join(work_dir, "qsignature"))
             if not os.path.lexists(os.path.join(out_dir, vcf_name)):
                 os.symlink(vcf, os.path.join(out_dir, vcf_name))
     if count > 0:
+        qc_out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "qsignature"))
+        out_file = os.path.join(qc_out_dir, "qsignature.xml")
+        out_ma_file = os.path.join(qc_out_dir, "qsignature.ma")
+        out_warn_file = os.path.join(qc_out_dir, "qsignature.warnings")
+        log = os.path.join(work_dir, "qsignature", "qsig-summary.log")
         if not os.path.exists(out_file):
             with file_transaction(out_file) as file_txt_out:
                 base_cmd = ("{qsig} {jvm_opts} "
@@ -680,13 +687,12 @@ def qsignature_summary(*samples):
                             "-o {file_txt_out} ")
                 do.run(base_cmd.format(**locals()), "qsignature score calculation")
         warnings, similar = _parse_qsignature_output(out_file, out_ma_file, out_warn_file)
-        return [[{'qsig_matrix': out_ma_file,
-                  'qsig_warnings': out_warn_file,
-                  'total samples': count,
-                  'similar samples': len(similar),
-                  'warnings samples': list(warnings)}]]
+        return [{'total samples': count,
+                 'similar samples': len(similar),
+                 'warnings samples': list(warnings),
+                 'out_dir': qc_out_dir}]
     else:
-        return [[]]
+        return []
 
 
 def _parse_qsignature_output(in_file, out_file, warning_file):

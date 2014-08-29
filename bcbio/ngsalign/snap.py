@@ -5,7 +5,7 @@ import os
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.ngsalign import novoalign
+from bcbio.ngsalign import novoalign, postalign
 from bcbio.provenance import do
 
 def align(fastq_file, pair_file, index_dir, names, align_dir, data):
@@ -20,20 +20,14 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
     snap = config_utils.get_program("snap", data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     resources = config_utils.get_resources("snap", data["config"])
-    sort_max_mem = int(config_utils.adjust_memory(resources.get("memory", "2g"),
-                                                  num_cores, "increase", "g")[:-1]) - 64
-    sort_mem_arg = "-sm %s" % sort_max_mem if sort_max_mem > 0 else ""
     rg_info = novoalign.get_rg_info(names)
+    is_paired = bam.is_paired(fastq_file) if fastq_file.endswith(".bam") else pair_file
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            with utils.curdir_tmpdir(data) as work_dir:
-                if fastq_file.endswith(".bam"):
-                    cmd_name = "paired" if bam.is_paired(fastq_file) else "single"
-                else:
-                    cmd_name = "single" if not pair_file else "paired"
-                cmd = ("{snap} {cmd_name} {index_dir} {fastq_file} {pair_file} "
-                       "-rg '{rg_info}' -t {num_cores} -so {sort_mem_arg} -o {tx_out_file}")
-                do.run(cmd.format(**locals()), "SNAP alignment: %s" % names["sample"])
+        with postalign.tobam_cl(data, out_file, is_paired) as (tobam_cl, tx_out_file):
+            cmd_name = "paired" if is_paired else "single"
+            cmd = ("{snap} {cmd_name} {index_dir} {fastq_file} {pair_file} "
+                   "-R '{rg_info}' -t {num_cores} -M -o -sam - | ")
+            do.run(cmd.format(**locals()) + tobam_cl, "SNAP alignment: %s" % names["sample"])
     data["work_bam"] = out_file
     return data
 

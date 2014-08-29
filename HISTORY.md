@@ -1,12 +1,15 @@
-## 0.8.1 (in progress)
+## 0.8.1 (August 29, 2014)
 - Support joint recalling with GATK HapolotypeCaller, FreeBayes and Platypus. The
   `jointcaller` configuration variable enables calling concurrently in large
   populations by independently calling on samples them combining into a final
   combined callset with no-call/reference calls at any position called
   independently.
-- Add qsignature tool to standard analysis.
+- Add qsignature tool to standard and variant analyses, which helps identify
+  sample swaps. Add `mixup_check` configuration variant to enable.
 - Fix issue with merging GATK produced VCF files with vcfcat by swapping to
   GATK's CatVariants. Thanks to Matt De Both.
+- Initial support for ensemble calling on cancer tumor/normal calling. Now
+  available for initial validation work. Thanks to Miika Ahdesmaki.
 - Enable structural variant analyses on shared batches (two tumors with same
   normal). Thanks to Miika Ahdesmaki.
 - Avoid Java out of memory errors for large numbers of running processes by

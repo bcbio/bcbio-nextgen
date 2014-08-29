@@ -196,7 +196,7 @@ ctrl_count <- getReadCountsFromBAM(c("{ctrl_file}"), sampleNames=c("{ctrl_name}"
                                    refSeqName="{chrom}", parallel={num_cores},
                                    WL=width(case_count)[[1]])
 prep_counts <- referencecn.mops(case_count, ctrl_count, parallel={num_cores})
-cnv_out <- calcFractionalCopyNumbers(prep_counts)
+cnv_out <- calcIntegerCopyNumbers(prep_counts)
 """
 
 _population_prep_targeted = """
@@ -222,5 +222,5 @@ ctrl_count <- getSegmentReadCountsFromBAM(c("{ctrl_file}"), GR=my_gr,
                                           sampleNames=c("{case_name}"),
                                           mode="{pairmode}", parallel={num_cores})
 prep_counts <- referencecn.mops(case_count, ctrl_count, parallel={num_cores})
-cnv_out <- calcFractionalCopyNumbers(prep_counts)
+cnv_out <- calcIntegerCopyNumbers(prep_counts)
 """

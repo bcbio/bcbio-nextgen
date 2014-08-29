@@ -20,9 +20,11 @@ def is_paired(bam_file):
     """Determine if a BAM file has paired reads.
     """
     bam_file = utils.remote_cl_input(bam_file)
-    cmd = "samtools view -f 0x1 {bam_file} | head -1 | wc -l"
+    cmd = ("sambamba view -h {bam_file} | head -50000 | "
+           "sambamba view -S -F paired /dev/stdin  | head -1 | wc -l")
     out = subprocess.check_output(cmd.format(**locals()), shell=True,
-                                  executable=do.find_bash())
+                                  executable=do.find_bash(),
+                                  stderr=open("/dev/null", "w"))
     return int(out) > 0
 
 def index(in_bam, config):
