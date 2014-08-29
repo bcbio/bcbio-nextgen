@@ -1,9 +1,13 @@
 #!/bin/bash
+
+# We need about 100Gb for the input files. Confirm we have the space.
+REQ_DISK_SPACE=100  
+df --block-size=G --output='avail' . | sed s/G//g | awk -v req_disk_space=${REQ_DISK_SPACE} '{ if ($1 !~ /Avail/ && $1 < req_disk_space ) printf("Not enough disk space. \n Requires %sGb but only has %sGb.\n", req_disk_space, $1)  }'
+
 mkdir -p seqc-test/input
 cd seqc-test
 wget --no-check-certificate https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc.yaml
 
-# These six input files are about 50Gb in total 
 cd input
 for SAMPLE in SRR950078 SRR950079 SRR950080 SRR950081 SRR950082 SRR950083
 do 
