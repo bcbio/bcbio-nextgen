@@ -47,11 +47,6 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     resources = config_utils.get_resources("freebayes", config)
     if resources.get("options"):
         opts += resources["options"]
-    if "--min-alternate-fraction" not in " ".join(opts) and "-F" not in " ".join(opts):
-        # add minimum reportable allele frequency, for which FreeBayes defaults to 20
-        min_af = float(utils.get_in(config, ("algorithm",
-                                             "min_allele_fraction"), 20)) / 100.0
-        opts += ["--min-alternate-fraction", str(min_af)]
     return opts
 
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
@@ -124,7 +119,6 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
-            opts += " -f {}".format(ref_file)
             if "--min-alternate-fraction" not in opts and "-F" not in opts:
                 # add minimum reportable allele frequency
                 # FreeBayes defaults to 20%, but use 10% by default for the
@@ -132,18 +126,21 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
                                                                   "min_allele_fraction"), 10)) / 100.0
                 opts += " --min-alternate-fraction %s" % min_af
+            opts += " --min-repeat-entropy 1 --experimental-gls"
+            # Recommended settings for cancer calling
+            # https://groups.google.com/d/msg/freebayes/dTWBtLyM4Vs/HAK_ZhJHguMJ
+            opts += " --pooled-discrete --genotype-qualities --report-genotype-likelihood-max"
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
-
             # NOTE: -s in vcfsamplediff (strict checking: i.e., require no
             # reads in the germline to call somatic) is not used as it is
             # too stringent
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-            cl = ("{freebayes} --pooled-discrete --genotype-qualities "
-                  "{opts} {paired.tumor_bam} {paired.normal_bam} "
-                  "| {vcffilter} -f 'QUAL > 1' -s "
-                  "| {vcfsamplediff} VT {paired.normal_name} {paired.tumor_name} - "
+            cl = ("{freebayes} -f {ref_file} {opts} "
+                  "{paired.tumor_bam} {paired.normal_bam} "
+                  "| {vcffilter} -f 'QUAL > 5' -s "
                   "| {vcfallelicprimitives} | {vcfstreamsort} "
+                  "| {vcfsamplediff} VT {paired.normal_name} {paired.tumor_name} - "
                   "{compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)

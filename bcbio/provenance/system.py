@@ -204,7 +204,7 @@ def machine_info():
     import psutil
     BYTES_IN_GIG = 1073741824.0
     free_bytes = psutil.virtual_memory().total
-    return [{"memory": float("%s.1f" % (free_bytes / BYTES_IN_GIG)), "cores": multiprocessing.cpu_count(),
+    return [{"memory": float("%.1f" % (free_bytes / BYTES_IN_GIG)), "cores": multiprocessing.cpu_count(),
              "name": socket.gethostname()}]
 
 def open_file_limit():
