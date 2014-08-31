@@ -9,6 +9,7 @@ details:
     mark_duplicates: true
     recalibrate: true
     realign: true
+    remove_lcr: true
     platform: illumina
     quality_format: standard
     variantcaller: [mutect, varscan, freebayes, vardict]
@@ -26,6 +27,7 @@ details:
     mark_duplicates: true
     recalibrate: true
     realign: true
+    remove_lcr: true
     platform: illumina
     quality_format: standard
     variantcaller: [mutect, varscan, freebayes, vardict]
