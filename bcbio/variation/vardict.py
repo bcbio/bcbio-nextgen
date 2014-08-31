@@ -9,9 +9,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation
-from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, merge_variant_files
-from bcbio.variation import bamprep
+from bcbio.variation import annotation, bamprep, vcfutils
 
 
 def _vardict_options_from_config(items, config, out_file, region=None):
@@ -37,7 +35,7 @@ def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Run VarDict variant calling.
     """
-    if is_paired_analysis(align_bams, items):
+    if vcfutils.is_paired_analysis(align_bams, items):
         call_file = _run_vardict_paired(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
     else:
@@ -71,12 +69,13 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 var2vcf_opts = " -v 50 " if coverage_interval == "regional" else "" # for deep targeted panels, require 50 worth of coverage
+                fix_ambig = vcfutils.fix_ambiguous_cl()
                 sample = item["name"][1]
                 cmd = ("{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
-                       "| {vcfallelicprimitives} | {vcfstreamsort} {compress_cmd}")
+                       "| {fix_ambig} | {vcfallelicprimitives} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz","").replace(".vcf","") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
@@ -91,9 +90,9 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
             if num_bams > 1:
                 # N.B. merge_variant_files wants region in 1-based end-inclusive
                 # coordinates. Thus use bamprep.region_to_gatk
-                merge_variant_files(orig_files=sample_vcf_names, 
-                                    out_file=tx_out_file, ref_file=ref_file, 
-                                    config=config, region=bamprep.region_to_gatk(region))
+                vcfutils.merge_variant_files(orig_files=sample_vcf_names, 
+                                             out_file=tx_out_file, ref_file=ref_file, 
+                                             config=config, region=bamprep.region_to_gatk(region))
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"),
                                                ref_file, config)
@@ -110,7 +109,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            paired = get_paired_bams(align_bams, items)
+            paired = vcfutils.get_paired_bams(align_bams, items)
             if not paired.normal_bam:
                 ann_file = _run_vardict_caller(align_bams, items, ref_file,
                                                assoc_files, region, out_file)
@@ -126,11 +125,12 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             opts = " ".join(_vardict_options_from_config(items, config, out_file, region))
             coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
             var2vcf_opts = " -v 50 " if coverage_interval == "regional" else "" # for deep targeted panels, require 50 worth of coverage
+            fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("{vardict} -G {ref_file} -f {freq} "
                    "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                    "| {strandbias} "
                    "| {var2vcf} -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
-                   "| {vcfstreamsort} {compress_cmd} > {tx_out_file}")
+                   "| {fix_ambig} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})

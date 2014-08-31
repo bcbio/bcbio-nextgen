@@ -61,6 +61,14 @@ def get_paired_phenotype(data):
 
 # ## General utilities
 
+def fix_ambiguous_cl():
+    """awk command to replace non-N ambiguous REF bases with N.
+
+    Some callers include these if present in the reference genome but GATK does
+    not like them.
+    """
+    return """awk -F$'\t' -v OFS='\t' '{if ($0 ~ !/^#/) gsub(/[KMRYSWBVHDX]/, "N", $4) } {print}'"""
+
 def write_empty_vcf(out_file, config=None, samples=None):
     needs_bgzip = False
     if out_file.endswith(".vcf.gz"):
@@ -351,7 +359,7 @@ def move_vcf(orig_file, new_file):
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
 
-def bgzip_and_index(in_file, config, remove_orig=True):
+def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd=""):
     """bgzip and tabix index an input file, handling VCF and BED.
     """
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
@@ -359,7 +367,10 @@ def bgzip_and_index(in_file, config, remove_orig=True):
         assert not in_file == out_file, "Input file is bgzipped but not found: %s" % in_file
         with file_transaction(out_file) as tx_out_file:
             bgzip = tools.get_bgzip_cmd(config)
-            cmd = "{bgzip} -c {in_file} > {tx_out_file}"
+            if prep_cmd:
+                cmd = "cat {in_file} | {prep_cmd} | {bgzip} -c > {tx_out_file}"
+            else:
+                cmd = "{bgzip} -c {in_file} > {tx_out_file}"
             try:
                 do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
             except subprocess.CalledProcessError:
