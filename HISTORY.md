@@ -1,5 +1,7 @@
 ## 0.8.2 (in progress)
 
+- Improve Platypus integration: correctly pass multiple BAM files, make use of
+  assembler, split MNPs, and correctly restrict to variant regions.
 - Be more aggressive with system memory usage to try and make better use of
   available resources. The hope is to take advantage of Java memory fixes that
   was previously forcing us to be conservative.
