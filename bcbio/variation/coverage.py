@@ -4,6 +4,7 @@ clinical sequencing.  This code integrates it with bcbio
 
 import os.path
 
+import chanjo
 import toolz as tz
 
 from bcbio import utils
@@ -35,8 +36,12 @@ def summary(samples, run_parallel):
         output = os.path.join(output_dir, sample_name, '{0}-coverage.bed'.format(sample_name))
         if not utils.file_exists(output):
             with file_transaction(output) as tx_out_file:
-                cmd = [cmd_name, 'annotate', bam, bed_file, "-o", tx_out_file, '-s', sample_name]
-                do.run(cmd, "Summarizing coverage with {0}".format(cmd_name), samples[0])
+                with codecs.open(bed_file, encoding='utf-8') as bed_stream:
+                    with codecs.open(output, "w", encoding='utf-8') as coverage_stream:
+                        for line in chanjo.annotate_bed_stream(bed_stream, bam):
+                            coverage_stream.write(chanjo.serialize_interval(line))
+                            coverage_stream.write('\n')
+
     out = []
     for x in samples[0]:
         output_dir = os.path.abspath(tz.get_in(['upload', 'dir'], data[0]))
