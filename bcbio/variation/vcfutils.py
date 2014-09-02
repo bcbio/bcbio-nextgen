@@ -135,7 +135,7 @@ def exclude_samples(in_file, out_file, to_exclude, ref_file, config, filters=Non
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
             include_str = ",".join(include)
-            filter_str = "-f %s" % filters if filters is not None else "" # filters could be e.g. 'PASS,.'
+            filter_str = "-f %s" % filters if filters is not None else ""  # filters could be e.g. 'PASS,.'
             cmd = "{bcftools} view -O {output_type} -s {include_str} {filter_str} {in_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Exclude samples: {}".format(to_exclude))
     return out_file
@@ -149,7 +149,7 @@ def select_sample(in_file, sample, out_file, config, filters=None):
                 bgzip_and_index(in_file, config)
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
-            filter_str = "-f %s" % filters if filters is not None else "" # filters could be e.g. 'PASS,.'
+            filter_str = "-f %s" % filters if filters is not None else ""  # filters could be e.g. 'PASS,.'
             cmd = "{bcftools} view -O {output_type} {filter_str} {in_file} -s {sample} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Select sample: %s" % sample)
     if out_file.endswith(".gz"):
@@ -222,6 +222,7 @@ def _sort_by_region(fnames, regions, ref_file, config):
     for i, sq in enumerate(ref.file_contigs(ref_file, config)):
         contig_order[sq.name] = i
     sitems = []
+    assert len(regions) == len(fnames), (regions, fnames)
     for region, fname in zip(regions, fnames):
         if isinstance(region, (list, tuple)):
             c, s, e = region
@@ -239,7 +240,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     sample information, so no complex merging needed. Handles both plain text
     and bgzipped/tabix indexed outputs.
 
-    Falls back to slower CombineVariants if fails due to GATK stringency issues.
+    Falls back to bcftools concat if fails due to GATK stringency issues.
     """
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
@@ -251,7 +252,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 for fname in ready_files:
                     out_handle.write(fname + "\n")
             params = ["org.broadinstitute.gatk.tools.CatVariants",
-                      "-R" , ref_file,
+                      "-R", ref_file,
                       "-V", input_file_list,
                       "-out", tx_out_file,
                       "-assumeSorted"]
@@ -261,9 +262,22 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 do.run(cmd, "Concat variant files", log_error=False)
             except subprocess.CalledProcessError, msg:
                 if str(msg).find("We require all VCFs to have complete VCF headers"):
-                    return combine_variant_files(orig_files, out_file, ref_file, config)
+                    return concat_variant_files_bcftools(input_file_list, out_file, ref_file, config)
                 else:
                     raise
+    if out_file.endswith(".gz"):
+        bgzip_and_index(out_file, config)
+    return out_file
+
+def concat_variant_files_bcftools(in_list, out_file, ref_file, config):
+    """Concatenate variant files using bcftools concat.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            bcftools = config_utils.get_program("bcftools", config)
+            output_type = "z" if out_file.endswith(".gz") else "v"
+            cmd = "{bcftools} concat -O {output_type} --file-list {in_list} -o {tx_out_file}"
+            do.run(cmd.format(**locals()), "bcftools concat variants")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
