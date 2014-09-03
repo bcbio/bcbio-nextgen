@@ -67,7 +67,7 @@ def fix_ambiguous_cl():
     Some callers include these if present in the reference genome but GATK does
     not like them.
     """
-    return """awk -F$'\t' -v OFS='\t' '{if ($0 ~ !/^#/) gsub(/[KMRYSWBVHDX]/, "N", $4) } {print}'"""
+    return r"""awk -F$'\t' -v OFS='\t' '{if ($0 !~ /^#/) gsub(/[KMRYSWBVHDX]/, "N", $4) } {print}'"""
 
 def write_empty_vcf(out_file, config=None, samples=None):
     needs_bgzip = False
