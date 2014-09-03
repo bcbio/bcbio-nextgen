@@ -1,15 +1,13 @@
 import os
-import tempfile
 
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.utils import (safe_makedir, file_exists, get_in, symlink_plus,
-                         is_gzipped)
+from bcbio.utils import (safe_makedir, file_exists, get_in, is_gzipped)
 from bcbio.provenance import do
-from bcbio import bam
+from bcbio import bam, utils
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
-ALIGN_TAGS =  ["NH", "HI", "NM", "MD", "AS"]
+ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
@@ -39,12 +37,13 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
                           "unstranded").lower()
     if strandedness == "unstranded":
         cmd += " --outSAMstrandField intronMotif "
-    sam_to_bam = bam.sam_to_bam_stream_cmd(config)
-    sort = bam.sort_cmd(config)
-    cmd += "| {sam_to_bam} | {sort} -o {tx_final_out} "
-    run_message = "Running STAR aligner on %s and %s." % (fastq_file, ref_file)
-    with file_transaction(final_out) as tx_final_out:
-        do.run(cmd.format(**locals()), run_message, None)
+    with utils.curdir_tmpdir(data) as tmp_dir:
+        sam_to_bam = bam.sam_to_bam_stream_cmd(config)
+        sort = bam.sort_cmd(config, tmp_dir)
+        cmd += "| {sam_to_bam} | {sort} -o {tx_final_out} "
+        run_message = "Running STAR aligner on %s and %s." % (fastq_file, ref_file)
+        with file_transaction(final_out) as tx_final_out:
+            do.run(cmd.format(**locals()), run_message, None)
     return final_out
 
 def _read_group_option(names):

@@ -332,14 +332,14 @@ def sort(in_bam, config, order="coordinate"):
                         os.path.basename(sort_file)))
     return sort_file
 
-def sort_cmd(config, named_pipe=None, order="coordinate"):
+def sort_cmd(config, tmp_dir, named_pipe=None, order="coordinate"):
     """ Get a sort command, suitable for piping
     """
     sambamba = _get_sambamba(config)
     pipe = named_pipe if named_pipe else "/dev/stdin"
     order_flag = "-n" if order is "queryname" else ""
     num_cores = config["algorithm"].get("num_cores", 1)
-    cmd = "{sambamba} sort -t {num_cores} {order_flag} {pipe}"
+    cmd = "{sambamba} sort --tmpdir {tmp_dir} -t {num_cores} {order_flag} {pipe}"
     return cmd.format(**locals())
 
 
