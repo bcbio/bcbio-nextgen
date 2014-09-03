@@ -3,9 +3,11 @@
 import os
 
 from bcbio import bam, broad, utils
+from bcbio.bam import fastq
 from bcbio.bam import cram
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
+from bcbio.provenance import do
 
 def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
@@ -22,11 +24,26 @@ def get_fastq_files(item):
         elif fname.startswith(utils.SUPPORTED_REMOTES):
             ready_files.append(fname)
         else:
-            assert os.path.exists(fname), fname
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]
+    ready_files = [_gzip_fastq(x) for x in ready_files]
+    for in_file in ready_files:
+        assert os.path.exists(in_file), "%s does not exist." % in_file
     return ((ready_files[0] if len(ready_files) > 0 else None),
             (ready_files[1] if len(ready_files) > 1 else None))
+
+def _gzip_fastq(in_file):
+    """
+    gzip a fastq file if it is not already gzipped
+    """
+    if fastq.is_fastq(in_file) and not utils.is_gzipped(in_file):
+        gzipped_file = in_file + ".gz"
+        if file_exists(gzipped_file):
+            return gzipped_file
+        message = "gzipping {in_file}.".format(in_file=in_file)
+        do.run("gzip -c {in_file} > {gzipped_file}".format(**locals()), message)
+        return gzipped_file
+    return in_file
 
 def _pipeline_needs_fastq(config, item):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.

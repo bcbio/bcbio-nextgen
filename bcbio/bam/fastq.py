@@ -152,7 +152,7 @@ def dif(a, b):
 
 
 def is_fastq(in_file):
-    fastq_ends = [".fq", ".fastq"]
+    fastq_ends = [".txt", ".fq", ".fastq"]
     zip_ends = [".gzip", ".gz"]
     base, first_ext = os.path.splitext(in_file)
     second_ext = os.path.splitext(base)[1]
@@ -162,7 +162,7 @@ def is_fastq(in_file):
         return True
     else:
         return False
-        
+
 def downsample(f1, f2, data, N, quick=False):
     """ get N random headers from a fastq file without reading the
     whole thing into memory
