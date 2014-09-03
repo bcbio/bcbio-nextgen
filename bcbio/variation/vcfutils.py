@@ -243,14 +243,15 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     Falls back to bcftools concat if fails due to GATK stringency issues.
     """
     if not utils.file_exists(out_file):
+        sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
+        exist_files = [x for x in sorted_files if os.path.exists(x)]
+        ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
+        input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
+        with open(input_file_list, "w") as out_handle:
+            for fname in ready_files:
+                out_handle.write(fname + "\n")
+        failed = False
         with file_transaction(out_file) as tx_out_file:
-            sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-            exist_files = [x for x in sorted_files if os.path.exists(x)]
-            ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
-            input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
-            with open(input_file_list, "w") as out_handle:
-                for fname in ready_files:
-                    out_handle.write(fname + "\n")
             params = ["org.broadinstitute.gatk.tools.CatVariants",
                       "-R", ref_file,
                       "-V", input_file_list,
@@ -261,10 +262,14 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             try:
                 do.run(cmd, "Concat variant files", log_error=False)
             except subprocess.CalledProcessError, msg:
-                if str(msg).find("We require all VCFs to have complete VCF headers"):
-                    return concat_variant_files_bcftools(input_file_list, out_file, ref_file, config)
+                if ("We require all VCFs to have complete VCF headers" in str(msg) or
+                      "Features added out of order" in str(msg)):
+                    os.remove(tx_out_file)
+                    failed = True
                 else:
                     raise
+        if failed:
+            return concat_variant_files_bcftools(input_file_list, out_file, ref_file, config)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
@@ -276,7 +281,7 @@ def concat_variant_files_bcftools(in_list, out_file, ref_file, config):
         with file_transaction(out_file) as tx_out_file:
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
-            cmd = "{bcftools} concat -O {output_type} --file-list {in_list} -o {tx_out_file}"
+            cmd = "{bcftools} concat --allow-overlaps -O {output_type} --file-list {in_list} -o {tx_out_file}"
             do.run(cmd.format(**locals()), "bcftools concat variants")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
