@@ -2,6 +2,7 @@
 clinical sequencing.  This code integrates it with bcbio
 """
 
+import codecs
 import os.path
 
 import chanjo
