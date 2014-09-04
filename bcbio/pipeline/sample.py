@@ -58,7 +58,7 @@ def trim_sample(data):
         logger.info("Trimming low quality ends and read through adapter "
                     "sequence from %s." % (", ".join(to_trim)))
         out_files = trim_adapters(to_trim, out_dir, config)
-    data["files"] = out_files
+        data["files"] = out_files
     return [[data]]
 
 # ## Alignment

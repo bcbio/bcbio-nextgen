@@ -1,3 +1,14 @@
+## 0.8.2 (in progress)
+
+- Fix issues with concatenating files that fail to work with GATK's
+  CatVariants. Fall back to bcftools concat which correctly handles problem
+  headers and overlapping segments.
+- Improve Platypus integration: correctly pass multiple BAM files, make use of
+  assembler, split MNPs, and correctly restrict to variant regions.
+- Be more aggressive with system memory usage to try and make better use of
+  available resources. The hope is to take advantage of Java memory fixes that
+  previously forced us to be conservative.
+
 ## 0.8.1 (August 29, 2014)
 - Support joint recalling with GATK HapolotypeCaller, FreeBayes and Platypus. The
   `jointcaller` configuration variable enables calling concurrently in large

@@ -21,7 +21,7 @@ details:
           balance: [AD, FS, Entropy]
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
         trusted_pct: 0.65
-      svcaller: [cn.mops]
+      #svcaller: [cn.mops, cnvkit]
   - analysis: variant2
     description: c-tumor
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
@@ -41,7 +41,7 @@ details:
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
         trusted_pct: 0.65
       min_allele_fraction: 10
-      svcaller: [cn.mops]
+      svcaller: [cn.mops, cnvkit]
   - analysis: variant2
     description: c-tumor2
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
@@ -61,4 +61,4 @@ details:
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
         trusted_pct: 0.65
       min_allele_fraction: 5.0
-      svcaller: [cn.mops]
+      #svcaller: [cn.mops, cnvkit]

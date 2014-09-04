@@ -202,9 +202,9 @@ def machine_info():
     """Retrieve core and memory information for the current machine.
     """
     import psutil
-    BYTES_IN_GIG = 1073741824
-    free_bytes = psutil.virtual_memory().available
-    return [{"memory": float(free_bytes / BYTES_IN_GIG), "cores": multiprocessing.cpu_count(),
+    BYTES_IN_GIG = 1073741824.0
+    free_bytes = psutil.virtual_memory().total
+    return [{"memory": float("%.1f" % (free_bytes / BYTES_IN_GIG)), "cores": multiprocessing.cpu_count(),
              "name": socket.gethostname()}]
 
 def open_file_limit():

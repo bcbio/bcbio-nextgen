@@ -261,7 +261,7 @@ class BroadRunner:
         return ["java"] + jvm_opts + get_default_jvm_opts(tmp_dir) + \
                ["-jar", gatk_jar] + [str(x) for x in params]
 
-    def run_gatk(self, params, tmp_dir=None, log_error=True, memory_retry=False,
+    def run_gatk(self, params, tmp_dir=None, log_error=True,
                  data=None, region=None, memscale=None):
         with curdir_tmpdir({"config": self._config}) as local_tmp_dir:
             if tmp_dir is None:
@@ -270,11 +270,8 @@ class BroadRunner:
             atype_index = cl.index("-T") if cl.count("-T") > 0 \
                           else cl.index("--analysis_type")
             prog = cl[atype_index + 1]
-            if memory_retry:
-                do.run_memory_retry(cl, "GATK: {0}".format(prog), data, region=region)
-            else:
-                do.run(cl, "GATK: {0}".format(prog), data, region=region,
-                       log_error=log_error)
+            do.run(cl, "GATK: {0}".format(prog), data, region=region,
+                   log_error=log_error)
 
     def run_mutect(self, params, tmp_dir=None):
         with curdir_tmpdir({"config": self._config}) as local_tmp_dir:

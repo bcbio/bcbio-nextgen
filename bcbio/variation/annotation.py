@@ -64,6 +64,6 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                     params.pop(ind_to_rem)
                 params.extend(["-U", "ALL"])
                 broad_runner = broad.runner_from_config(config)
-                broad_runner.run_gatk(params, memory_retry=True)
+                broad_runner.run_gatk(params)
         vcfutils.bgzip_and_index(out_file, config)
         return out_file

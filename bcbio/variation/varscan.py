@@ -112,21 +112,27 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         with file_transaction(indel_file, snp_file) as (tx_indel, tx_snp):
             with utils.curdir_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
+                fix_ambig = vcfutils.fix_ambiguous_cl()
+                tx_snp_in = "%s-orig" % os.path.splitext(tx_snp)[0]
+                tx_indel_in = "%s-orig" % os.path.splitext(tx_indel)[0]
                 varscan_cmd = ("java {jvm_opts} -jar {varscan_jar} somatic"
-                       " {normal_tmp_mpileup} {tumor_tmp_mpileup} {base}"
-                       " --output-vcf --min-coverage 5 --p-value 0.98 "
-                       "--strand-filter 1 ")
+                               " {normal_tmp_mpileup} {tumor_tmp_mpileup} "
+                               "--output-snp {tx_snp_in} --output-indel {tx_indel_in} "
+                               " --output-vcf --min-coverage 5 --p-value 0.98 "
+                               "--strand-filter 1 ")
                 # add minimum AF
                 if "--min-var-freq" not in varscan_cmd:
                     min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
                                                                       "min_allele_fraction"),10)) / 100.0
                     varscan_cmd += "--min-var-freq {min_af} "
                 do.run(varscan_cmd.format(**locals()), "Varscan", None, None)
+                for orig_fname, fname in [(tx_snp_in, tx_snp), (tx_indel_in, tx_indel)]:
+                    cmd = "vcfuniqalleles {orig_fname}.vcf | {fix_ambig} > {fname}"
+                    do.run(cmd.format(**locals()), "Varscan paired fix")
 
         # VarScan files need to be corrected to match the VCF specification
         # We do this before combining them otherwise merging may fail
         # if there are invalid records
-
         to_combine = []
         if do.file_exists(snp_file):
             to_combine.append(snp_file)
@@ -175,8 +181,7 @@ def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
                 with open(tx_out_file, "w") as out_handle:
 
                     for line in in_handle:
-                        line = _clean_varscan_line(_fix_varscan_output(line, normal_name,
-                                                                       tumor_name))
+                        line = _fix_varscan_output(line, normal_name, tumor_name)
                         if not line:
                             continue
                         out_handle.write(line)
@@ -358,10 +363,11 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     else:
         with utils.curdir_tmpdir(items[0]) as tmp_dir:
             jvm_opts = _get_varscan_opts(config, tmp_dir)
+            fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("cat {mpfile} "
                    "| java {jvm_opts} -jar {varscan_jar} mpileup2cns --min-coverage 5 --p-value 0.98 "
                    "  --vcf-sample-list {sample_list} --output-vcf --variants "
-                   "> {out_file}")
+                   "| {fix_ambig} | vcfuniqalleles > {out_file}")
             do.run(cmd.format(**locals()), "Varscan", None,
                    [do.file_exists(out_file)])
     os.remove(sample_list)

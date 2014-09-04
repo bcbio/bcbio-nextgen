@@ -1,10 +1,8 @@
 """Centralize running of external commands, providing logging and tracking.
 """
 import collections
-import contextlib
 import os
 import subprocess
-import time
 
 from bcbio import utils
 from bcbio.log import logger, logger_cl, logger_stdout
@@ -27,32 +25,6 @@ def run(cmd, descr, data=None, checks=None, region=None, log_error=True,
         raise
     finally:
         diagnostics.end_cmd(cmd_id)
-
-def run_memory_retry(cmd, descr, data=None, check=None, region=None):
-    """Run command, retrying when detecting fail due to memory errors.
-
-    This is useful for high throughput Java jobs which fail
-    intermittently due to an inability to get system resources.
-    """
-    max_runs = 5
-    num_runs = 0
-    while 1:
-        try:
-            run(cmd, descr, data, check, region=region, log_error=False)
-            break
-        except subprocess.CalledProcessError, msg:
-            if num_runs < max_runs and ("insufficient memory" in str(msg) or
-                                        "did not provide enough memory" in str(msg) or
-                                        "A fatal error has been detected" in str(msg) or
-                                        "java.lang.OutOfMemoryError" in str(msg) or
-                                        "Resource temporarily unavailable" in str(msg)):
-                logger.info("Retrying job. Memory or resource issue with run: %s"
-                            % _descr_str(descr, data, region))
-                time.sleep(30)
-                num_runs += 1
-            else:
-                logger.exception()
-                raise
 
 def _descr_str(descr, data, region):
     """Add additional useful information from data to description string.
