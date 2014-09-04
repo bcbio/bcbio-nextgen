@@ -58,7 +58,10 @@ def upgrade_bcbio(args):
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         print("Upgrade of bcbio-nextgen development code complete.")
 
-    _set_matplotlib_default_backend()
+    try:
+        _set_matplotlib_default_backend()
+    except OSError:
+        pass
 
     if args.tooldir:
         with bcbio_tmpdir():
