@@ -1,5 +1,5 @@
-version: 3
+version: 4
 
 aliases:
-  ensembl: Saccharomyces_cerevisiae
+  ensembl: saccharomyces_cerevisiae
   snpeff: EF4.74
