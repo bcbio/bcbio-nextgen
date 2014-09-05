@@ -3,7 +3,7 @@
 # genome inputs and Genome in a Bottle reference calls.
 # Compares SNAP and bwa aligners
 # Compares 3 variant callers: FreeBayes, GATKHaplotype, Platypus
-# Compares 2 calling method: batched concurrently and separate with joint recalling
+# Compares 3 calling method: batched concurrently, separate with joint recalling and single sample
 #
 # See the bcbio-nextgen documentation for full instructions to
 # run this analysis:
@@ -214,3 +214,37 @@ details:
       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
       quality_format: Standard
       coverage_interval: genome
+  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
+    description: NA12878-5
+    metadata:
+      sex: female
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      variantcaller: [freebayes, gatk-haplotype, platypus]
+      quality_format: Standard
+      coverage_interval: genome
+      remove_lcr: true
+      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
+  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
+    description: NA12878-6
+    metadata:
+      sex: female
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: snap
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      variantcaller: [freebayes, gatk-haplotype, platypus]
+      quality_format: Standard
+      coverage_interval: genome
+      remove_lcr: true
+      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
