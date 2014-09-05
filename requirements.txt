@@ -25,6 +25,6 @@ pybedtools>=0.6.2
 PyVCF>=0.6.7
 sh>=1.07
 arvados-python-client>=0.1.1405019228.4a7ca04
-chanjo>=1.1.1
+chanjo>=2.0.2
 msgpack-python>=0.4.0
 bcbio-nextgen==0.8.1
