@@ -111,8 +111,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-        _rename_allelic_fraction_field(out_file_mutect,config)
-        disable_SID = True # SID isn't great, so use Scalpel instead
+        _rename_allelic_fraction_field(out_file_mutect, config)
+        disable_SID = True  # SID isn't great, so use Scalpel instead
         if "appistry" not in broad_runner.get_mutect_version() or disable_SID:
             # Scalpel InDels
             is_paired = "-I:normal" in params
@@ -121,6 +121,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             if scalpel.is_installed(items[0]["config"]):
                 with file_transaction(out_file_indels) as tx_out_file2:
                     if not is_paired:
+                        vcfutils.check_paired_problems(items)
                         scalpel._run_scalpel_caller(align_bams, items, ref_file, assoc_files,
                                                     region=region, out_file=tx_out_file2)
                     else:

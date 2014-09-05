@@ -30,6 +30,7 @@ def run_varscan(align_bams, items, ref_file, assoc_files,
                                                 align_bams, ref_file, items,
                                                 assoc_files, region, out_file)
     else:
+        vcfutils.check_paired_problems(items)
         call_file = samtools.shared_variantcall(_varscan_work, "varscan",
                                                 align_bams, ref_file,
                                                 items, assoc_files,

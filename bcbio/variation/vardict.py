@@ -11,7 +11,6 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, bamprep, vcfutils
 
-
 def _vardict_options_from_config(items, config, out_file, region=None):
     opts = ["-z", "-F", "-c 1", "-S 2", "-E 3", "-g 4"]
     #["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
@@ -25,7 +24,7 @@ def _vardict_options_from_config(items, config, out_file, region=None):
     target = subset_variant_regions(variant_regions, region, out_file)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
-            opts += [target] # this must be the last option
+            opts += [target]  # this must be the last option
         else:
             # one-based, end-inclusive coordinates as for Gatk
             opts += ["-R", bamprep.region_to_gatk(target)]
@@ -37,10 +36,11 @@ def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
     """
     if vcfutils.is_paired_analysis(align_bams, items):
         call_file = _run_vardict_paired(align_bams, items, ref_file,
-                                          assoc_files, region, out_file)
+                                        assoc_files, region, out_file)
     else:
+        vcfutils.check_paired_problems(items)
         call_file = _run_vardict_caller(align_bams, items, ref_file,
-                                          assoc_files, region, out_file)
+                                        assoc_files, region, out_file)
     return call_file
 
 def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
@@ -54,9 +54,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
         with file_transaction(out_file) as tx_out_file:
             for align_bam in align_bams:
                 bam.index(align_bam, config)
-            
             num_bams = len(align_bams)
-            sample_vcf_names = [] # for individual sample names, given batch calling may be required
+            sample_vcf_names = []  # for individual sample names, given batch calling may be required
             for bamfile, item in itertools.izip(align_bams, items):
                 # prepare commands
                 vardict = config_utils.get_program("vardict", config)
@@ -68,7 +67,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
-                var2vcf_opts = " -v 50 " if coverage_interval == "regional" else "" # for deep targeted panels, require 50 worth of coverage
+                # for deep targeted panels, require 50 worth of coverage
+                var2vcf_opts = " -v 50 " if coverage_interval == "regional" else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 sample = item["name"][1]
                 cmd = ("{vardict} -G {ref_file} -f {freq} "
@@ -77,7 +77,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
                        "| {fix_ambig} | {vcfallelicprimitives} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
-                    temp_file_prefix = out_file.replace(".gz","").replace(".vcf","") + item["name"][1]
+                    temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
                     tmp_out += ".gz" if out_file.endswith("gz") else ""
                     sample_vcf_names.append(tmp_out)
@@ -90,8 +90,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
             if num_bams > 1:
                 # N.B. merge_variant_files wants region in 1-based end-inclusive
                 # coordinates. Thus use bamprep.region_to_gatk
-                vcfutils.merge_variant_files(orig_files=sample_vcf_names, 
-                                             out_file=tx_out_file, ref_file=ref_file, 
+                vcfutils.merge_variant_files(orig_files=sample_vcf_names,
+                                             out_file=tx_out_file, ref_file=ref_file,
                                              config=config, region=bamprep.region_to_gatk(region))
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"),
@@ -124,7 +124,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
             opts = " ".join(_vardict_options_from_config(items, config, out_file, region))
             coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
-            var2vcf_opts = " -v 50 " if coverage_interval == "regional" else "" # for deep targeted panels, require 50 worth of coverage
+            # for deep targeted panels, require 50 worth of coverage
+            var2vcf_opts = " -v 50 " if coverage_interval == "regional" else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("{vardict} -G {ref_file} -f {freq} "
                    "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "

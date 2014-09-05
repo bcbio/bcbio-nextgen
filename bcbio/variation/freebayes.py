@@ -16,7 +16,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation, bedutils, ploidy
+from bcbio.variation import annotation, bedutils, ploidy, vcfutils
 from bcbio.variation.vcfutils import (get_paired_bams, is_paired_analysis,
                                       bgzip_and_index, move_vcf)
 
@@ -57,6 +57,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
         call_file = _run_freebayes_paired(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
     else:
+        vcfutils.check_paired_problems(items)
         call_file = _run_freebayes_caller(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
 

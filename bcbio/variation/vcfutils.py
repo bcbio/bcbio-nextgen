@@ -8,7 +8,6 @@ import itertools
 import os
 import shutil
 import subprocess
-import vcf
 
 import toolz as tz
 
@@ -18,6 +17,7 @@ from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared, tools
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bamprep
 
@@ -51,6 +51,15 @@ def get_paired_bams(align_bams, items):
     if tumor_bam:
         return PairedData(tumor_bam, tumor_name, normal_bam,
                           normal_name, normal_panel, tumor_config)
+
+def check_paired_problems(items):
+    """Check for incorrectly paired tumor/normal samples
+    """
+    if any(tz.get_in(["metadata", "phenotype"], data, "").lower() == "normal"
+           for data in items):
+        raise ValueError("Found normal sample without tumor in batch %s: %s" %
+                         (tz.get_in(["metadata", "batch"], items[0]),
+                          [dd.get_sample_name(data) for data in items]))
 
 def get_paired_phenotype(data):
     """Retrieve the phenotype for a paired tumor/normal analysis.
