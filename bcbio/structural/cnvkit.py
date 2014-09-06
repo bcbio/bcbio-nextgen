@@ -18,7 +18,7 @@ import numpy
 import toolz as tz
 
 from bcbio import utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do
@@ -82,7 +82,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
     out_base = os.path.splitext(os.path.basename(test_bams[0]))[0]
     background_cnn = "%s_background.cnn" % (background_name if background_name else "flat")
     if not utils.file_exists(os.path.join(raw_work_dir, "%s.cnr" % out_base)):
-        with utils.curdir_tmpdir(data, work_dir) as tx_work_dir:
+        with tx_tmpdir(data, work_dir) as tx_work_dir:
             target_bed = tz.get_in(["config", "algorithm", "variant_regions"], data)
             cmd = ["batch"] + test_bams + ["-n"] + background_bams + ["-f", ref_file] + \
                   ["--targets", target_bed, "--access", access_file,

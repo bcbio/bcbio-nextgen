@@ -10,7 +10,7 @@ import os
 import shutil
 
 from bcbio import broad, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
 from bcbio.utils import file_exists, append_stem
@@ -111,7 +111,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         cleanup_files.append(indel_file)
         cleanup_files.append(snp_file)
         with file_transaction(indel_file, snp_file) as (tx_indel, tx_snp):
-            with utils.curdir_tmpdir(items[0]) as tmp_dir:
+            with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 tx_snp_in = "%s-orig" % os.path.splitext(tx_snp)[0]
@@ -362,7 +362,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     if os.path.getsize(mpfile) == 0:
         write_empty_vcf(out_file)
     else:
-        with utils.curdir_tmpdir(items[0]) as tmp_dir:
+        with tx_tmpdir(items[0]) as tmp_dir:
             jvm_opts = _get_varscan_opts(config, tmp_dir)
             fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("cat {mpfile} "

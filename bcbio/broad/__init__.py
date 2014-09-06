@@ -11,9 +11,9 @@ import subprocess
 
 from bcbio import utils
 from bcbio.broad import picardrun
+from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
-from bcbio.utils import curdir_tmpdir
 
 def get_default_jvm_opts(tmp_dir=None):
     """Retrieve default JVM tuning options
@@ -263,7 +263,7 @@ class BroadRunner:
 
     def run_gatk(self, params, tmp_dir=None, log_error=True,
                  data=None, region=None, memscale=None):
-        with curdir_tmpdir({"config": self._config}) as local_tmp_dir:
+        with tx_tmpdir(self._config) as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
             cl = self.cl_gatk(params, tmp_dir, memscale=memscale)
@@ -274,7 +274,7 @@ class BroadRunner:
                    log_error=log_error)
 
     def run_mutect(self, params, tmp_dir=None):
-        with curdir_tmpdir({"config": self._config}) as local_tmp_dir:
+        with tx_tmpdir(self._config) as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
             cl = self.cl_mutect(params, tmp_dir)

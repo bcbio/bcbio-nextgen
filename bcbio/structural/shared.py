@@ -13,7 +13,7 @@ import pysam
 import toolz as tz
 
 from bcbio import bam, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.bam import callable
 from bcbio.ngsalign import postalign
 from bcbio.pipeline import shared, config_utils
@@ -110,7 +110,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
     mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                      3, "decrease").upper()
     if not utils.file_exists(sr_file) or not utils.file_exists(disc_file) or utils.file_exists(dedup_file):
-        with utils.curdir_tmpdir(data) as tmpdir:
+        with tx_tmpdir(data) as tmpdir:
             with file_transaction(sr_file) as tx_sr_file:
                 with file_transaction(disc_file) as tx_disc_file:
                     with file_transaction(dedup_file) as tx_dedup_file:

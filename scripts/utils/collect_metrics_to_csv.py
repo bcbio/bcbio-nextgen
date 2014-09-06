@@ -16,6 +16,7 @@ import pysam
 
 from bcbio.broad.metrics import PicardMetricsParser, PicardMetrics
 from bcbio import utils, broad
+from bcbio.distributed.transaction import tx_tmpdir
 
 WANT_METRICS = [
 "AL_TOTAL_READS",
@@ -144,7 +145,7 @@ def _generate_metrics(bam_fname, config_file, ref_file,
     out_dir = os.path.join(path, "metrics")
     utils.safe_makedir(out_dir)
     with utils.chdir(out_dir):
-        with utils.curdir_tmpdir() as tmp_dir:
+        with tx_tmpdir() as tmp_dir:
             cur_bam = os.path.basename(bam_fname)
             if not os.path.exists(cur_bam):
                 os.symlink(bam_fname, cur_bam)

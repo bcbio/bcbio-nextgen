@@ -5,13 +5,54 @@ locations during processing and copied to the final location when finished.
 This ensures output files will be complete independent of method of
 interruption.
 """
+import contextlib
 import os
+import uuid
 import shutil
 import tempfile
 
-import contextlib
+import toolz as tz
 
 from bcbio import utils
+
+@contextlib.contextmanager
+def tx_tmpdir(data=None, base_dir=None, remove=True):
+    """Context manager to create and remove a transactional temporary directory.
+
+    Handles creating a transactional directory for running commands in. Will
+    use either the current directory or a configured temporary directory.
+
+    Creates an intermediary location and time specific directory for global
+    temporary directories to prevent collisions.
+
+    data can be the full world information object being process or a
+    configuration dictionary.
+    """
+    if data and "config" in data:
+        config_tmpdir = tz.get_in(("config", "resources", "tmp", "dir"), data)
+    elif data:
+        config_tmpdir = tz.get_in(("resources", "tmp", "dir"), data)
+    else:
+        config_tmpdir = None
+    if config_tmpdir:
+        tmp_dir_base = os.path.join(config_tmpdir, "bcbiotx", str(uuid.uuid1()))
+    elif base_dir is not None:
+        tmp_dir_base = os.path.join(base_dir, "tx")
+    else:
+        tmp_dir_base = os.path.join(os.getcwd(), "tx")
+    utils.safe_makedir(tmp_dir_base)
+    tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
+    utils.safe_makedir(tmp_dir)
+    try:
+        yield tmp_dir
+    finally:
+        if remove:
+            try:
+                shutil.rmtree(tmp_dir)
+                if config_tmpdir:
+                    shutil.rmtree(tmp_dir_base)
+            except:
+                pass
 
 @contextlib.contextmanager
 def file_transaction(*rollback_files):

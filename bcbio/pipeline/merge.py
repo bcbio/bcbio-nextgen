@@ -7,7 +7,7 @@ import os
 import shutil
 
 from bcbio import bam, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, system
 
@@ -59,7 +59,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
             if len(bam_files) > batch_size:
                 bam_files = [merge_bam_files(xs, work_dir, config, out_file, i)
                              for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
-            with utils.curdir_tmpdir({"config": config}) as tmpdir:
+            with tx_tmpdir(config) as tmpdir:
                 with utils.chdir(tmpdir):
                     with file_transaction(out_file) as tx_out_file:
                         with file_transaction("%s.list" % os.path.splitext(out_file)[0]) as tx_bam_file_list:

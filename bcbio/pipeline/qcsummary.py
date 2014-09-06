@@ -22,7 +22,7 @@ import pysam
 import toolz as tz
 
 from bcbio import bam, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
 from bcbio.install import _get_data_dir
@@ -311,7 +311,7 @@ def _run_kraken(data, ratio):
         if files[0].endswith("bam"):
             logger.info("kraken: need fasta files as input")
             return {"kraken_report": "null"}
-        with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
+        with tx_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 out = os.path.join(tx_tmp_dir, "kraken_out")
                 out_stats = os.path.join(tx_tmp_dir, "kraken_stats")
@@ -370,7 +370,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
         bam_file = ds_bam if ds_bam else bam_file
         fastqc_name = os.path.splitext(os.path.basename(bam_file))[0]
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
-        with utils.curdir_tmpdir(data, work_dir) as tx_tmp_dir:
+        with tx_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 cl = [config_utils.get_program("fastqc", data["config"]),
                       "-t", str(num_cores), "--extract", "-o", tx_tmp_dir, "-f", "bam", bam_file]

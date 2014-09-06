@@ -12,6 +12,7 @@ import tempfile
 
 from bcbio import log, structural, utils, upload
 from bcbio.distributed import prun
+from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.illumina import flowcell
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
@@ -73,7 +74,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     samples = run_info.organize(dirs, config, run_info_yaml)
     pipelines = _pair_samples_with_pipelines(samples)
     final = []
-    with utils.curdir_tmpdir({"config": config}) as tmpdir:
+    with tx_tmpdir(config) as tmpdir:
         tempfile.tempdir = tmpdir
         for pipeline, pipeline_items in pipelines.items():
             pipeline_items = _add_provenance(pipeline_items, dirs, parallel, config)

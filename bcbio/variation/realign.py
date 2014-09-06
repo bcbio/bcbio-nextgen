@@ -9,8 +9,8 @@ import pysam
 from bcbio import bam, broad
 from bcbio.bam import ref
 from bcbio.log import logger
-from bcbio.utils import curdir_tmpdir, file_exists
-from bcbio.distributed.transaction import file_transaction
+from bcbio.utils import file_exists
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline.shared import subset_bam_by_region, subset_variant_regions
 from bcbio.provenance import do
 
@@ -74,7 +74,7 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
     if out_file is None:
         out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
     if not file_exists(out_file):
-        with curdir_tmpdir({"config": config}) as tmp_dir:
+        with tx_tmpdir(config) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 logger.info("GATK IndelRealigner: %s %s" %
                             (os.path.basename(align_bam), region))

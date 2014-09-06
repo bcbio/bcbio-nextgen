@@ -5,7 +5,7 @@ import subprocess
 
 from bcbio.pipeline import config_utils
 from bcbio import bam, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.ngsalign import alignprep, novoalign, postalign
 from bcbio.provenance import do
 
@@ -33,7 +33,7 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                                          3, "decrease").upper()
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
-        with utils.curdir_tmpdir(data) as work_dir:
+        with tx_tmpdir(data) as work_dir:
             with postalign.tobam_cl(data, out_file, bam.is_paired(in_bam)) as (tobam_cl, tx_out_file):
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
@@ -109,7 +109,7 @@ def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
     """
     bwa = config_utils.get_program("bwa", data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
-    with utils.curdir_tmpdir(data) as work_dir:
+    with tx_tmpdir(data) as work_dir:
         with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
             cmd = ("{bwa} mem -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} "
                    "{fastq_file} {pair_file} | ")

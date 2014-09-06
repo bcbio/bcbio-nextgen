@@ -12,7 +12,7 @@ import sys
 import toolz as tz
 
 from bcbio import utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
@@ -33,7 +33,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
     sv_exclude_bed = sshared.prepare_exclude_file(items, out_file)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            with utils.curdir_tmpdir(items[0]) as tmpdir:
+            with tx_tmpdir(items[0]) as tmpdir:
                 out_base = tx_out_file.replace(".sv.bedpe", "")
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)

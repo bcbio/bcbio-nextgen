@@ -7,7 +7,7 @@ This provides a pipeline to prepare and resort an input.
 import os
 
 from bcbio import bam, broad, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -35,7 +35,7 @@ def _filter_bad_reads(in_bam, ref_file, data):
     bam.index(in_bam, data["config"])
     out_file = "%s-gatkfilter.bam" % os.path.splitext(in_bam)[0]
     if not utils.file_exists(out_file):
-        with utils.curdir_tmpdir(data) as tmp_dir:
+        with tx_tmpdir(data) as tmp_dir:
             with file_transaction(out_file) as tx_out_file:
                 params = ["-T", "PrintReads",
                           "-R", ref_file,

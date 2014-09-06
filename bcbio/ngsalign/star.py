@@ -1,8 +1,8 @@
 import os
 
 from bcbio.pipeline import config_utils
-from bcbio.distributed.transaction import file_transaction
-from bcbio.utils import (safe_makedir, file_exists, get_in, is_gzipped)
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.utils import (safe_makedir, file_exists, is_gzipped)
 from bcbio.provenance import do
 from bcbio import bam, utils
 
@@ -30,14 +30,14 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
            "--outSAMunmapped Within --outSAMattributes %s" % " ".join(ALIGN_TAGS))
     cmd = cmd + " --readFilesCommand zcat " if is_gzipped(fastq_file) else cmd
     cmd += _read_group_option(names)
-    fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
+    fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
     if fusion_mode:
         cmd += " --chimSegmentMin 15 --chimJunctionOverhangMin 15"
-    strandedness = get_in(data, ("config", "algorithm", "strandedness"),
-                          "unstranded").lower()
+    strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
+                                "unstranded").lower()
     if strandedness == "unstranded":
         cmd += " --outSAMstrandField intronMotif "
-    with utils.curdir_tmpdir(data) as tmp_dir:
+    with tx_tmpdir(data) as tmp_dir:
         sam_to_bam = bam.sam_to_bam_stream_cmd(config)
         sort = bam.sort_cmd(config, tmp_dir)
         cmd += "| {sam_to_bam} | {sort} -o {tx_final_out} "

@@ -11,7 +11,7 @@ import contextlib
 import os
 
 from bcbio import bam, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -25,7 +25,7 @@ def tobam_cl(data, out_file, is_paired=False):
     - If unpaired, use biobambam's bammarkduplicates
     """
     do_dedup = _check_dedup(data)
-    with utils.curdir_tmpdir(data) as tmpdir:
+    with tx_tmpdir(data) as tmpdir:
         with file_transaction(out_file) as tx_out_file:
             if not do_dedup:
                 yield (_sam_to_sortbam_cl(data, tmpdir, tx_out_file), tx_out_file)
@@ -111,7 +111,7 @@ def dedup_bam(in_bam, data):
     if _check_dedup(data):
         out_file = "%s-dedup%s" % utils.splitext_plus(in_bam)
         if not utils.file_exists(out_file):
-            with utils.curdir_tmpdir(data) as tmpdir:
+            with tx_tmpdir(data) as tmpdir:
                 with file_transaction(out_file) as tx_out_file:
                     bammarkduplicates = config_utils.get_program("bammarkduplicates", data["config"])
                     base_tmp = os.path.join(tmpdir, os.path.splitext(os.path.basename(tx_out_file))[0])

@@ -14,7 +14,7 @@ import pysam
 from bcbio import bam, broad, utils
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.provenance import do
 
 # ## Split/Combine helpers
@@ -152,7 +152,7 @@ def remove_lcr_regions(orig_bed, items):
 
 @contextmanager
 def bedtools_tmpdir(data):
-    with utils.curdir_tmpdir(data) as tmpdir:
+    with tx_tmpdir(data) as tmpdir:
         orig_tmpdir = tempfile.gettempdir()
         pybedtools.set_tempdir(tmpdir)
         yield

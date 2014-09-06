@@ -175,31 +175,6 @@ def safe_makedir(dname):
     return dname
 
 @contextlib.contextmanager
-def curdir_tmpdir(data=None, base_dir=None, remove=True):
-    """Context manager to create and remove a temporary directory.
-
-    This can also handle a configured temporary directory to use.
-    """
-    config_tmpdir = get_in(data, ("config", "resources", "tmp", "dir")) if data else None
-    if config_tmpdir:
-        tmp_dir_base = os.path.join(config_tmpdir, "bcbiotmp")
-    elif base_dir is not None:
-        tmp_dir_base = os.path.join(base_dir, "bcbiotmp")
-    else:
-        tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-    safe_makedir(tmp_dir_base)
-    tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
-    safe_makedir(tmp_dir)
-    try:
-        yield tmp_dir
-    finally:
-        if remove:
-            try:
-                shutil.rmtree(tmp_dir)
-            except:
-                pass
-
-@contextlib.contextmanager
 def chdir(new_dir):
     """Context manager to temporarily change to a new directory.
 
@@ -397,7 +372,7 @@ def merge_config_files(fnames):
     for fname in fnames[1:]:
         cur = _load_yaml(fname)
         for k, v in cur.iteritems():
-            if out.has_key(k) and isinstance(out[k], dict):
+            if k in out and isinstance(out[k], dict):
                 out[k].update(v)
             else:
                 out[k] = v
