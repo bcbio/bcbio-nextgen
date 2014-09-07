@@ -31,7 +31,7 @@ def _filter_nonref(in_file, data):
     """
     out_file = "%s-gatkclean%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cmd = "gunzip -c {in_file} | grep -v NON_REF | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "Remove stray NON_REF gVCF information from VCF output", data)
         vcfutils.bgzip_and_index(out_file, data["config"])
@@ -46,7 +46,7 @@ def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
     out_file = "{base}-{filter}filter{ext}".format(base=base, ext=ext,
                                                    filter=filter_type)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             params = ["-T", "ApplyRecalibration",
                       "-R", ref_file,
                       "--input", in_file,
@@ -103,7 +103,7 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
     recal_file = "%s.recal" % base
     tranches_file = "%s.tranches" % base
     if not utils.file_exists(recal_file):
-        with file_transaction(recal_file, tranches_file) as (tx_recal, tx_tranches):
+        with file_transaction(data, recal_file, tranches_file) as (tx_recal, tx_tranches):
             params = ["-T", "VariantRecalibrator",
                       "-R", ref_file,
                       "--input", in_file,

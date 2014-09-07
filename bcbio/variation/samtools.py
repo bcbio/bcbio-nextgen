@@ -35,7 +35,7 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
               and not os.path.isfile(target_regions)):
             vcfutils.write_empty_vcf(out_file, config)
         else:
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 call_fn(align_bams, ref_file, items, target_regions,
                         tx_out_file)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files.get("dbsnp"),

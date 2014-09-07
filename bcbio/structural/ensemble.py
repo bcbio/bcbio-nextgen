@@ -56,12 +56,12 @@ CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "delly": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed}
 
-def _create_bed(call, base_file):
+def _create_bed(call, base_file, data):
     """Create a simplified BED file from caller specific input.
     """
     out_file = "%s-%s.bed" % (utils.splitext_plus(base_file)[0], call["variantcaller"])
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             convert_fn = CALLER_TO_BED.get(call["variantcaller"])
             if convert_fn:
                 convert_fn(call["vrn_file"], call["variantcaller"], tx_out_file)
@@ -79,10 +79,10 @@ def summarize(calls, data):
                                                sample, "ensemble"))
     out_file = os.path.join(work_dir, "%s-ensemble.bed" % sample)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             with shared.bedtools_tmpdir(data):
                 input_beds = filter(lambda x: x is not None,
-                                    [_create_bed(c, out_file) for c in calls])
+                                    [_create_bed(c, out_file, data) for c in calls])
                 if len(input_beds) > 0:
                     all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
                     with open(all_file, "w") as out_handle:

@@ -70,7 +70,7 @@ def write_nochr_reads(in_file, out_file, config):
     that split processing by chromosome.
     """
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
             cmd = "{samtools} view -b -f 4 {in_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Select unmapped reads")
@@ -87,7 +87,7 @@ def write_noanalysis_reads(in_file, region_file, out_file, config):
     length issues.
     """
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             bedtools = config_utils.get_program("bedtools", config)
             sambamba = config_utils.get_program("sambamba", config)
             cl = ("{sambamba} view -f bam -L {region_file} {in_file} | "
@@ -96,7 +96,7 @@ def write_noanalysis_reads(in_file, region_file, out_file, config):
             do.run(cl.format(**locals()), "Select unanalyzed reads")
     return out_file
 
-def subset_bam_by_region(in_file, region, out_file_base=None):
+def subset_bam_by_region(in_file, region, config, out_file_base=None):
     """Subset BAM files based on specified chromosome region.
     """
     if out_file_base is not None:
@@ -110,7 +110,7 @@ def subset_bam_by_region(in_file, region, out_file_base=None):
             assert region is not None, \
                    "Did not find reference region %s in %s" % \
                    (region, in_file)
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 with closing(pysam.Samfile(tx_out_file, "wb", template=in_bam)) as out_bam:
                     for read in in_bam:
                         if read.tid == target_tid:
@@ -143,7 +143,7 @@ def remove_lcr_regions(orig_bed, items):
     lcr_bed = get_lcr_bed(items)
     if lcr_bed:
         nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
-        with file_transaction(nolcr_bed) as tx_nolcr_bed:
+        with file_transaction(items[0], nolcr_bed) as tx_nolcr_bed:
             pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed)).saveas(tx_nolcr_bed)
         # If we have a non-empty file, convert to the LCR subtracted for downstream analysis
         if utils.file_exists(nolcr_bed):
@@ -188,7 +188,7 @@ def subset_variant_regions(variant_regions, region, out_file, items=None):
     else:
         subset_file = "{0}-regions.bed".format(utils.splitext_plus(out_file)[0])
         if not os.path.exists(subset_file):
-            with file_transaction(subset_file) as tx_subset_file:
+            with file_transaction(items[0] if items else None, subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
                     _subset_bed_by_region(variant_regions, tx_subset_file, region)
                 else:

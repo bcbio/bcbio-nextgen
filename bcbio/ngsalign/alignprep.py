@@ -180,16 +180,16 @@ def _bgzip_from_cram(cram_file, dirs, data):
                              for fext in ["s1", "p1", "p2"]]
     if (not utils.file_exists(out_s) and
           (not utils.file_exists(out_p1) or not utils.file_exists(out_p2))):
-        cram.index(cram_file)
+        cram.index(cram_file, data["config"])
         fastqs, part_dir = _cram_to_fastq_regions(regions, cram_file, dirs, data)
         if len(fastqs[0]) == 1:
-            with file_transaction(out_s) as tx_out_file:
+            with file_transaction(data, out_s) as tx_out_file:
                 _merge_and_bgzip([xs[0] for xs in fastqs], tx_out_file, out_s)
         else:
             for i, out_file in enumerate([out_p1, out_p2]):
                 if not utils.file_exists(out_file):
                     ext = "/%s" % (i + 1)
-                    with file_transaction(out_file) as tx_out_file:
+                    with file_transaction(data, out_file) as tx_out_file:
                         _merge_and_bgzip([xs[i] for xs in fastqs], tx_out_file, out_file, ext)
         shutil.rmtree(part_dir)
     if utils.file_exists(out_p1):
@@ -253,7 +253,7 @@ def _cram_to_fastq_region(cram_file, work_dir, base_name, region, data):
                                           (base_name, rext, fext))
                              for fext in ["s1", "p1", "p2"]]
     if not utils.file_exists(out_p1):
-        with file_transaction(out_s, out_p1, out_p2) as (tx_out_s, tx_out_p1, tx_out_p2):
+        with file_transaction(data, out_s, out_p1, out_p2) as (tx_out_s, tx_out_p1, tx_out_p2):
             cram_file = utils.remote_cl_input(cram_file)
             sortprefix = "%s-sort" % utils.splitext_plus(tx_out_s)[0]
             cmd = ("bamtofastq filename={cram_file} inputformat=cram T={sortprefix} "
@@ -288,7 +288,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
         out_file_2 = None
     needs_retry = False
     if is_retry or not utils.file_exists(out_file_1):
-        with file_transaction(out_file_1) as tx_out_file:
+        with file_transaction(config, out_file_1) as tx_out_file:
             for f in [tx_out_file, out_file_1, out_file_2]:
                 if f and os.path.exists(f):
                     os.remove(f)
@@ -366,7 +366,7 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
     out_file = os.path.join(work_dir, os.path.basename(in_file) +
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             assert needs_bgzip
             bgzip = tools.get_bgzip_cmd(config)
             in_file = utils.remote_cl_input(in_file)

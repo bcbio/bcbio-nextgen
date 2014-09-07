@@ -40,7 +40,7 @@ def index(in_bam, config):
         sambamba = _get_sambamba(config)
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
-        with file_transaction(index_file) as tx_index_file:
+        with file_transaction(config, index_file) as tx_index_file:
             samtools_cmd = "{samtools} index {in_bam} {tx_index_file}"
             if sambamba:
                 cmd = "{sambamba} index -t {num_cores} {in_bam} {tx_index_file}"
@@ -101,7 +101,7 @@ def downsample(in_bam, data, target_counts, read_filter="", always_run=False,
         if work_dir:
             out_file = os.path.join(work_dir, os.path.basename(out_file))
         if not utils.file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(data, out_file) as tx_out_file:
                 sambamba = config_utils.get_program("sambamba", data["config"])
                 num_cores = data["config"]["algorithm"].get("num_cores", 1)
                 cmd = ("{sambamba} view -t {num_cores} {read_filter} -f bam -o {tx_out_file} "
@@ -190,7 +190,7 @@ def mapped(in_bam, config):
     if utils.file_exists(out_file):
         return out_file
     sambamba = _get_sambamba(config)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(config, out_file) as tx_out_file:
         if sambamba:
             cmd = ("{sambamba} view --format=bam -F 'not (unmapped or mate_is_unmapped)' "
                    "{in_bam} -o {tx_out_file}")
@@ -229,7 +229,7 @@ def sam_to_bam(in_sam, config):
 
     samtools = config_utils.get_program("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(config, out_file) as tx_out_file:
         cmd = "{samtools} view -@ {num_cores} -h -S -b {in_sam} -o {tx_out_file}"
         do.run(cmd.format(**locals()),
                ("Convert SAM to BAM (%s cores): %s to %s"
@@ -255,7 +255,7 @@ def bam_to_sam(in_file, config):
 
     samtools = config_utils.get_program("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(config, out_file) as tx_out_file:
         cmd = "{samtools} view -@ {num_cores} -h {in_file} -o {tx_out_file}"
         do.run(cmd.format(**locals()),
                ("Convert BAM to SAM (%s cores): %s to %s"
@@ -283,7 +283,7 @@ def merge(bamfiles, out_bam, config):
     sambamba = None
     samtools = config_utils.get_program("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    with file_transaction(out_bam) as tx_out_bam:
+    with file_transaction(config, out_bam) as tx_out_bam:
         if sambamba:
             cmd = "{sambamba} merge -t {num_cores} {tx_out_bam} " + " ".join(bamfiles)
         else:
@@ -307,7 +307,7 @@ def sort(in_bam, config, order="coordinate"):
         sambamba = None
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
-        with file_transaction(sort_file) as tx_sort_file:
+        with file_transaction(config, sort_file) as tx_sort_file:
             tx_sort_stem = os.path.splitext(tx_sort_file)[0]
             tx_dir = utils.safe_makedir(os.path.dirname(tx_sort_file))
             order_flag = "-n" if order is "queryname" else ""

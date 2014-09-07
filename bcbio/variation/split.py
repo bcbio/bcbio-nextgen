@@ -29,7 +29,7 @@ def subset_vcf(in_file, region, out_file, config):
     """
     work_file = vcfutils.bgzip_and_index(in_file, config)
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             bcftools = config_utils.get_program("bcftools", config)
             region_str = bamprep.region_to_gatk(region)
             cmd = "{bcftools} view -r {region_str} {work_file} > {tx_out_file}"

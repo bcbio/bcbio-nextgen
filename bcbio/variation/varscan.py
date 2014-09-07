@@ -85,7 +85,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         for fname, mpext in [(paired.normal_bam, "normal"), (paired.tumor_bam, "tumor")]:
             mpfile = "%s-%s.mpileup" % (base, mpext)
             cleanup_files.append(mpfile)
-            with file_transaction(mpfile) as mpfile_tx:
+            with file_transaction(config, mpfile) as mpfile_tx:
                 mpileup = samtools.prep_mpileup([fname], ref_file,
                                                 max_read_depth, config,
                                                 target_regions=target_regions,
@@ -110,7 +110,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         snp_file = base + ".snp.vcf"
         cleanup_files.append(indel_file)
         cleanup_files.append(snp_file)
-        with file_transaction(indel_file, snp_file) as (tx_indel, tx_snp):
+        with file_transaction(config, indel_file, snp_file) as (tx_indel, tx_snp):
             with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
                 fix_ambig = vcfutils.fix_ambiguous_cl()
@@ -137,11 +137,11 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         to_combine = []
         if do.file_exists(snp_file):
             to_combine.append(snp_file)
-            _fix_varscan_vcf(snp_file, paired.normal_name, paired.tumor_name)
+            _fix_varscan_vcf(snp_file, paired.normal_name, paired.tumor_name, config)
 
         if do.file_exists(indel_file):
             to_combine.append(indel_file)
-            _fix_varscan_vcf(indel_file, paired.normal_name, paired.tumor_name)
+            _fix_varscan_vcf(indel_file, paired.normal_name, paired.tumor_name, config)
 
         if not to_combine:
             write_empty_vcf(orig_out_file, config)
@@ -166,7 +166,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
         _add_reject_flag(out_file, config)
 
-def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
+def _fix_varscan_vcf(orig_file, normal_name, tumor_name, config):
     """Fixes issues with the standard VarScan VCF output.
 
     - Remap sample names back to those defined in the input BAM file.
@@ -177,7 +177,7 @@ def _fix_varscan_vcf(orig_file, normal_name, tumor_name):
     if not file_exists(tmp_file):
         shutil.move(orig_file, tmp_file)
 
-        with file_transaction(orig_file) as tx_out_file:
+        with file_transaction(config, orig_file) as tx_out_file:
             with open(tmp_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
 
@@ -204,7 +204,7 @@ def _add_reject_flag(in_file, config):
         reader = vcf.VCFReader(filename=in_file)
         # Add info to the header of the reader
         reader.filters["REJECT"] = reject_filter
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             with open(tx_out_file, "wb") as handle:
                 writer = vcf.VCFWriter(handle, template=reader)
                 for record in reader:
@@ -356,7 +356,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     remove_zerocoverage = "grep -v -P '\t0\t\t$'"
     # write a temporary mpileup file so we can check if empty
     mpfile = "%s.mpileup" % os.path.splitext(out_file)[0]
-    with file_transaction(mpfile) as mpfile_tx:
+    with file_transaction(config, mpfile) as mpfile_tx:
         cmd = ("{mpileup} | {remove_zerocoverage} > {mpfile_tx}")
         do.run(cmd.format(**locals()), "mpileup for Varscan")
     if os.path.getsize(mpfile) == 0:
@@ -378,7 +378,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     if os.path.getsize(out_file) == 0:
         write_empty_vcf(out_file)
     else:
-        freebayes.clean_vcf_output(out_file, _clean_varscan_line)
+        freebayes.clean_vcf_output(out_file, _clean_varscan_line, config)
 
     if orig_out_file.endswith(".gz"):
         vcfutils.bgzip_and_index(out_file, config)

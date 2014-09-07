@@ -29,7 +29,7 @@ def prep_gemini_db(fnames, call_info, samples):
     if not utils.file_exists(gemini_db) and use_gemini_quick:
         use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
         if use_gemini:
-            with file_transaction(gemini_db) as tx_gemini_db:
+            with file_transaction(data, gemini_db) as tx_gemini_db:
                 gemini = config_utils.get_program("gemini", data["config"])
                 if "program_versions" in data["config"].get("resources", {}):
                     gemini_ver = programs.get_version("gemini", config=data["config"])

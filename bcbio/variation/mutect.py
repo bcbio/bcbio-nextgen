@@ -107,7 +107,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
               not all(has_aligned_reads(x, region) for x in align_bams)):
                 vcfutils.write_empty_vcf(out_file)
                 return
-        with file_transaction(out_file_mutect) as tx_out_file:
+        with file_transaction(config, out_file_mutect) as tx_out_file:
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
@@ -119,7 +119,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
             if scalpel.is_installed(items[0]["config"]):
-                with file_transaction(out_file_indels) as tx_out_file2:
+                with file_transaction(config, out_file_indels) as tx_out_file2:
                     if not is_paired:
                         vcfutils.check_paired_problems(items)
                         scalpel._run_scalpel_caller(align_bams, items, ref_file, assoc_files,
@@ -140,7 +140,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
             params_indels = _SID_call_prep(align_bams, items, ref_file, assoc_files,
                                            region, out_file_indels)
-            with file_transaction(out_file_indels) as tx_out_file:
+            with file_transaction(config, out_file_indels) as tx_out_file:
                 params_indels += ["-o", tx_out_file]
                 broad_runner.run_mutect(params_indels)
             out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
@@ -183,27 +183,23 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
                    "INTERSECTION"]
     return params
 
-
-def _rename_allelic_fraction_field(orig_file,config):
+def _rename_allelic_fraction_field(orig_file, config):
     """Rename allelic fraction field in mutect output
        from FA to FREQ to standarize with other tools
     """
-    tmp_file = orig_file.replace(".vcf.gz","-fix.vcf")
-    with file_transaction(tmp_file) as tx_in_file:       
-        with open(tx_in_file,'w') as out_handle:
+    tmp_file = orig_file.replace(".vcf.gz", "-fix.vcf")
+    with file_transaction(config, tmp_file) as tx_in_file:
+        with open(tx_in_file, 'w') as out_handle:
             with open_gzipsafe(orig_file) as handle:
                 for line in handle:
                     if line.startswith("##FORMAT=<ID=FA"):
-                        line = line.replace("=FA","=FREQ")
+                        line = line.replace("=FA", "=FREQ")
                     if not line.startswith("#"):
-                        line = line.replace("FA","FREQ")
+                        line = line.replace("FA", "FREQ")
                     out_handle.write(line)
-    out_file = orig_file.replace(".gz","")
+    out_file = orig_file.replace(".gz", "")
     remove_safe(orig_file)
-    shutil.move(tmp_file, out_file )
+    shutil.move(tmp_file, out_file)
     with open(tmp_file, "w") as out_handle:
         out_handle.write("Moved to {0}".format(out_file))
     out_file = bgzip_and_index(out_file, config)
-
-
-

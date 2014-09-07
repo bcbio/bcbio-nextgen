@@ -36,7 +36,7 @@ def summary(samples, run_parallel):
 
         output = os.path.join(output_dir, sample_name, '{0}-coverage.bed'.format(sample_name))
         if not utils.file_exists(output):
-            with file_transaction(output) as tx_out_file:
+            with file_transaction(data, output) as tx_out_file:
                 with codecs.open(bed_file, encoding='utf-8') as bed_stream:
                     with codecs.open(output, "w", encoding='utf-8') as coverage_stream:
                         for line in chanjo.annotate_bed_stream(bed_stream, bam):

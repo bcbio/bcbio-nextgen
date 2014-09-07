@@ -72,7 +72,7 @@ def prepare_exclude_file(items, base_file, chrom=None):
         if sv_exclude_bed and len(want_bedtool) > 0:
             want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
         if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(items[0], out_file) as tx_out_file:
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
                 if len(want_bedtool) > 0:
@@ -111,9 +111,9 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
                                      3, "decrease").upper()
     if not utils.file_exists(sr_file) or not utils.file_exists(disc_file) or utils.file_exists(dedup_file):
         with tx_tmpdir(data) as tmpdir:
-            with file_transaction(sr_file) as tx_sr_file:
-                with file_transaction(disc_file) as tx_disc_file:
-                    with file_transaction(dedup_file) as tx_dedup_file:
+            with file_transaction(data, sr_file) as tx_sr_file:
+                with file_transaction(data, disc_file) as tx_disc_file:
+                    with file_transaction(data, dedup_file) as tx_dedup_file:
                         samblaster_cl = postalign.samblaster_dedup_sort(data, tmpdir, tx_dedup_file,
                                                                         tx_sr_file, tx_disc_file)
                         out_base = os.path.join(tmpdir, "%s-namesort" % os.path.splitext(in_bam)[0])

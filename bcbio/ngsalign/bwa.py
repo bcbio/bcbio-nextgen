@@ -127,10 +127,10 @@ def _align_backtrack(fastq_file, pair_file, ref_file, out_file, names, rg_info, 
     sai1_file = "%s_1.sai" % os.path.splitext(out_file)[0]
     sai2_file = "%s_2.sai" % os.path.splitext(out_file)[0] if pair_file else ""
     if not utils.file_exists(sai1_file):
-        with file_transaction(sai1_file) as tx_sai1_file:
+        with file_transaction(data, sai1_file) as tx_sai1_file:
             _run_bwa_align(fastq_file, ref_file, tx_sai1_file, config)
     if sai2_file and not utils.file_exists(sai2_file):
-        with file_transaction(sai2_file) as tx_sai2_file:
+        with file_transaction(data, sai2_file) as tx_sai2_file:
             _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
     with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
         align_type = "sampe" if sai2_file else "samse"

@@ -53,7 +53,7 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
             _shared_gatk_call_prep(align_bams, items,
                                    ref_file, assoc_files.get("dbsnp"),
                                    region, out_file)
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             params += ["-T", "UnifiedGenotyper",
                        "-o", tx_out_file,
                        "-ploidy", (str(ploidy.get_ploidy(items, region))
@@ -87,7 +87,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                                    region, out_file)
         assert broad_runner.gatk_type() == "restricted", \
             "Require full version of GATK 2.4+ for haplotype calling"
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             params += ["-T", "HaplotypeCaller",
                        "-o", tx_out_file,
                        "--annotation", "ClippingRankSumTest",

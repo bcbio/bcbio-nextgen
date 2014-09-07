@@ -37,7 +37,7 @@ def run(items, background=None):
 def _cnvkit_by_type(items, background, work_dir):
     """Dispatch to specific CNVkit functionality based on input type.
     """
-    access_file = _create_access_file(dd.get_ref_file(items[0]), work_dir)
+    access_file = _create_access_file(dd.get_ref_file(items[0]), work_dir, items[0])
     if len(items + background) == 1:
         ckout = _run_cnvkit_single(items[0], access_file, work_dir)
     elif vcfutils.get_paired_phenotype(items[0]):
@@ -104,7 +104,7 @@ def _add_seg_to_output(out, items):
     """
     out_file = "%s.seg" % os.path.splitext(out["cns"])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             cmd = ["export", "seg", "-o", tx_out_file, out["cns"]]
             args = cnvlib_cmd.parse_args(cmd)
             args.func(args)
@@ -132,14 +132,14 @@ def _get_antitarget_size(access_file, target_bed):
     else:
         return None, None
 
-def _create_access_file(ref_file, out_dir):
+def _create_access_file(ref_file, out_dir, data):
     """Create genome access file for CNVlib to define available genomic regions.
 
     XXX Can move to installation/upgrade process if too slow here.
     """
     out_file = os.path.join(out_dir, "%s-access.bed" % os.path.splitext(os.path.basename(ref_file))[0])
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "genome2access.py"),
                    ref_file, "-s", "10000", "-o", tx_out_file]
             do.run(cmd, "Create CNVkit access file")

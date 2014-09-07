@@ -71,7 +71,7 @@ def run(items, config):
     base_name = os.path.join(out_dir, os.path.splitext(os.path.basename(work_bam_a))[0])
     summary_file = "%s_summary.txt" % base_name
     if not utils.file_exists(summary_file):
-        with file_transaction(out_dir) as tx_out_dir:
+        with file_transaction(items[0], out_dir) as tx_out_dir:
             Args = collections.namedtuple("Args", "A B output_dir intermediate_dir "
                                           "no_sort prefix aligner")
             args = Args(work_bam_a, work_bam_b, tx_out_dir, tx_out_dir,
@@ -104,7 +104,7 @@ def run_cplusplus(items, config):
     base_name = os.path.join(out_dir, os.path.splitext(os.path.basename(work_bam_a))[0])
     summary_file = "%s_summary.txt" % base_name
     if not utils.file_exists(summary_file):
-        with file_transaction(out_dir) as tx_out_dir:
+        with file_transaction(items[0], out_dir) as tx_out_dir:
             raise NotImplementedError("Still need to test and support C++ version")
             cmd = ""
             do.run(cmd.format(**locals()), "Disambiguation", data_a)

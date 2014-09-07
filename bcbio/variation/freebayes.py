@@ -75,7 +75,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             for align_bam in align_bams:
                 bam.index(align_bam, config)
             freebayes = config_utils.get_program("freebayes", config)
@@ -107,7 +107,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             paired = get_paired_bams(align_bams, items)
             if not paired.normal_bam:
                 return _run_freebayes_caller(align_bams, items, ref_file,
@@ -176,7 +176,7 @@ def _clean_freebayes_output(line):
             return line
     return None
 
-def clean_vcf_output(orig_file, clean_fn, name="clean"):
+def clean_vcf_output(orig_file, clean_fn, config, name="clean"):
     """Provide framework to clean a file in-place, with the specified clean
     function.
     """
@@ -184,7 +184,7 @@ def clean_vcf_output(orig_file, clean_fn, name="clean"):
     out_file = "{0}-{1}{2}".format(base, name, ext)
     if not utils.file_exists(out_file):
         with open(orig_file) as in_handle:
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
                         update_line = clean_fn(line)
@@ -220,7 +220,7 @@ def fix_somatic_calls(in_file, config):
         for ext in [".gz", ".gz.tbi"]:
             if os.path.exists(out_file + ext):
                 os.remove(out_file + ext)
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             with open(tx_out_file, "wb") as handle:
                 writer = vcf.VCFWriter(handle, template=reader)
                 for record in reader:

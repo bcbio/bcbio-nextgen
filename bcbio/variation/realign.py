@@ -16,7 +16,7 @@ from bcbio.provenance import do
 
 # ## GATK realignment
 
-def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
+def gatk_realigner_targets(runner, align_bam, ref_file, config, dbsnp=None,
                            region=None, out_file=None, deep_coverage=False,
                            variant_regions=None):
     """Generate a list of interval regions for realignment around indels.
@@ -28,7 +28,7 @@ def gatk_realigner_targets(runner, align_bam, ref_file, dbsnp=None,
     # check only for file existence; interval files can be empty after running
     # on small chromosomes, so don't rerun in those cases
     if not os.path.exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             logger.debug("GATK RealignerTargetCreator: %s %s" %
                          (os.path.basename(align_bam), region))
             params = ["-T", "RealignerTargetCreator",
@@ -75,7 +75,7 @@ def gatk_indel_realignment(runner, align_bam, ref_file, intervals,
         out_file = "%s-realign.bam" % os.path.splitext(align_bam)[0]
     if not file_exists(out_file):
         with tx_tmpdir(config) as tmp_dir:
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 logger.info("GATK IndelRealigner: %s %s" %
                             (os.path.basename(align_bam), region))
                 cl = gatk_indel_realignment_cl(runner, align_bam, ref_file, intervals,
@@ -93,12 +93,12 @@ def gatk_realigner(align_bam, ref_file, config, dbsnp=None, region=None,
     runner.run_fn("picard_index_ref", ref_file)
     ref.fasta_idx(ref_file)
     if region:
-        align_bam = subset_bam_by_region(align_bam, region, out_file)
+        align_bam = subset_bam_by_region(align_bam, region, config, out_file)
         bam.index(align_bam, config)
     if has_aligned_reads(align_bam, region):
         variant_regions = config["algorithm"].get("variant_regions", None)
         realign_target_file = gatk_realigner_targets(runner, align_bam,
-                                                     ref_file, dbsnp, region,
+                                                     ref_file, config, dbsnp, region,
                                                      out_file, deep_coverage,
                                                      variant_regions)
         realign_bam = gatk_indel_realignment(runner, align_bam, ref_file,

@@ -18,7 +18,7 @@ def clean_file(in_file, data, prefix=""):
         bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file)))
         if not utils.file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(data, out_file) as tx_out_file:
                 cmd = "grep -v ^track {in_file} | grep -v ^browser | sort -k1,1 -k2,2n > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
         vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
@@ -39,7 +39,7 @@ def merge_overlaps(in_file, data):
             bedprep_dir = os.path.dirname(in_file)
         out_file = os.path.join(bedprep_dir, "%s-merged.bed" % (utils.splitext_plus(os.path.basename(in_file))[0]))
         if not utils.file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(data, out_file) as tx_out_file:
                 cmd = "{bedtools} merge -i {in_file} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prepare merged BED file", data)
         vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
@@ -59,7 +59,7 @@ def combine(in_files, out_file, config):
     """Combine multiple BED files into a single output.
     """
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 for in_file in in_files:
                     with open(in_file) as in_handle:

@@ -101,7 +101,7 @@ def split_snps_indels(orig_file, ref_file, config):
     for out_file, select_arg in [(snp_file, "--types snps"),
                                  (indel_file, "--exclude-types snps")]:
         if not utils.file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 bcftools = config_utils.get_program("bcftools", config)
                 output_type = "z" if out_file.endswith(".gz") else "v"
                 cmd = "{bcftools} view -O {output_type} {orig_file} {select_arg} > {tx_out_file}"
@@ -140,7 +140,7 @@ def exclude_samples(in_file, out_file, to_exclude, ref_file, config, filters=Non
     if len(exclude) == 0:
         out_file = in_file
     elif not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
             include_str = ",".join(include)
@@ -153,7 +153,7 @@ def select_sample(in_file, sample, out_file, config, filters=None):
     """Select a single sample from the supplied multisample VCF file.
     """
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             if in_file.endswith(".gz"):
                 bgzip_and_index(in_file, config)
             bcftools = config_utils.get_program("bcftools", config)
@@ -197,7 +197,7 @@ def _do_merge(orig_files, out_file, config, region):
     """Do the actual work of merging with bcftools merge.
     """
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             _check_samples_nodups(orig_files)
             prep_files = run_multicore(p_bgzip_and_index, [[x, config] for x in orig_files], config)
             input_vcf_file = "%s-files.txt" % utils.splitext_plus(out_file)[0]
@@ -260,7 +260,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             for fname in ready_files:
                 out_handle.write(fname + "\n")
         failed = False
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             params = ["org.broadinstitute.gatk.tools.CatVariants",
                       "-R", ref_file,
                       "-V", input_file_list,
@@ -287,7 +287,7 @@ def concat_variant_files_bcftools(in_list, out_file, ref_file, config):
     """Concatenate variant files using bcftools concat.
     """
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
             cmd = "{bcftools} concat --allow-overlaps -O {output_type} --file-list {in_list} -o {tx_out_file}"
@@ -309,7 +309,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
         in_pipeline = True
         orig_files = orig_files[file_key]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             exist_files = [x for x in orig_files if os.path.exists(x)]
             ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
             params = ["-T", "CombineVariants",
@@ -393,7 +393,7 @@ def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd=""):
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
     if not utils.file_exists(out_file) or not os.path.lexists(out_file):
         assert not in_file == out_file, "Input file is bgzipped but not found: %s" % in_file
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             bgzip = tools.get_bgzip_cmd(config)
             if prep_cmd:
                 cmd = "cat {in_file} | {prep_cmd} | {bgzip} -c > {tx_out_file}"
@@ -441,7 +441,7 @@ def tabix_index(in_file, config, preset=None):
             os.remove(out_file)
         except OSError:
             pass
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             tabix = tools.get_tabix_cmd(config)
             tx_in_file = os.path.splitext(tx_out_file)[0]
             utils.symlink_plus(in_file, tx_in_file)

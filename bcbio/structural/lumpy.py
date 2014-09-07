@@ -32,7 +32,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                             % (os.path.splitext(os.path.basename(items[0]["align_bam"]))[0], ext))
     sv_exclude_bed = sshared.prepare_exclude_file(items, out_file)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             with tx_tmpdir(items[0]) as tmpdir:
                 out_base = tx_out_file.replace(".sv.bedpe", "")
                 full_bams = ",".join(full_bams)
@@ -64,7 +64,7 @@ def _subset_to_sample(orig_file, index, data):
     """
     out_file = utils.append_stem(orig_file, "-" + data["rgnames"]["sample"])
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             with open(orig_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for parts in (l.rstrip().split("\t") for l in in_handle):
@@ -73,7 +73,7 @@ def _subset_to_sample(orig_file, index, data):
                             out_handle.write("\t".join(parts) + "\n")
     return out_file
 
-def _filter_by_support(orig_file, index):
+def _filter_by_support(orig_file, index, data):
     """Filter call file based on supporting evidence, adding pass/filter annotations to BEDPE.
 
     Filters based on the following criteria:
@@ -84,7 +84,7 @@ def _filter_by_support(orig_file, index):
     min_read_count = 4
     out_file = utils.append_stem(orig_file, "-filter")
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             with open(orig_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for parts in (l.rstrip().split("\t") for l in in_handle):
@@ -106,7 +106,7 @@ def _write_samples_to_ids(base_file, items):
     """
     out_file = "%s-samples.bed" % utils.splitext_plus(base_file)[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 for i, data in enumerate(items):
                     sample = tz.get_in(["rgnames", "sample"], data)
@@ -125,7 +125,7 @@ def _bedpe_to_vcf(bedpe_file, sconfig_file, items):
         raw_file = "%s-raw.vcf" % utils.splitext_plus(bedpe_file)[0]
         if not utils.file_exists(out_file):
             if not utils.file_exists(raw_file):
-                with file_transaction(raw_file) as tx_raw_file:
+                with file_transaction(items[0], raw_file) as tx_raw_file:
                     cmd = [sys.executable, tovcf_script, "-c", sconfig_file, "-f", dd.get_ref_file(items[0]),
                            "-t", "LUMPY", "-b", bedpe_file, "-o", tx_raw_file]
                     do.run(cmd, "Convert lumpy bedpe output to VCF")
@@ -149,7 +149,7 @@ def _filter_by_bedpe(vcf_file, bedpe_file, data):
                 cur_filter = parts[-1].strip()
                 if cur_filter != "PASS":
                     filters[name] = cur_filter
-        with file_transaction(nogzip_out_file) as tx_out_file:
+        with file_transaction(data, nogzip_out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 with utils.open_gzipsafe(vcf_file) as in_handle:
                     for line in in_handle:
@@ -186,7 +186,7 @@ def run(items):
         if "sv" not in data:
             data["sv"] = []
         sample = tz.get_in(["rgnames", "sample"], data)
-        sample_bedpe = _filter_by_support(_subset_to_sample(pebed_file, i, data), i)
+        sample_bedpe = _filter_by_support(_subset_to_sample(pebed_file, i, data), i, data)
         if lumpy_vcf:
             sample_vcf = utils.append_stem(lumpy_vcf, "-%s" % sample)
             sample_vcf = _filter_by_bedpe(vcfutils.select_sample(lumpy_vcf, sample, sample_vcf, data["config"]),

@@ -124,7 +124,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     unmapped = os.path.join(out_dir, "unmapped.bam")
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
-        with file_transaction(out_dir) as tx_out_dir:
+        with file_transaction(config, out_dir) as tx_out_dir:
             safe_makedir(tx_out_dir)
             if pair_file and not options.get("mate-inner-dist", None):
                 d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file,
@@ -147,7 +147,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             tophat_ready = tophat_runner.bake(**ready_options)
             cmd = str(tophat_ready.bake(*files))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
-        _fix_empty_readnames(out_file)
+        _fix_empty_readnames(out_file, data)
     if pair_file and _has_alignments(out_file):
         fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.sam" % out_base),
                            ref_file, config)
@@ -181,13 +181,13 @@ def _has_alignments(sam_file):
                 return True
     return False
 
-def _fix_empty_readnames(orig_file):
+def _fix_empty_readnames(orig_file, data):
     """ Fix SAMfile reads with empty read names
 
     Tophat 2.0.9 sometimes outputs empty read names, making the
     FLAG field be the read name. This throws those reads away.
     """
-    with file_transaction(orig_file) as tx_out_file:
+    with file_transaction(data, orig_file) as tx_out_file:
         logger.info("Removing reads with empty read names from Tophat output.")
         with open(orig_file) as orig, open(tx_out_file, "w") as out:
             for line in orig:
@@ -207,7 +207,7 @@ def _fix_mates(orig_file, out_file, ref_file, config):
     reads as well.
     """
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
             cmd = "{samtools} view -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
@@ -227,7 +227,7 @@ def _fix_unmapped(unmapped_file, config, names):
     rg_fixed = picard.run_fn("picard_fix_rgs", unmapped_file, names)
     fixed = bam.sort(rg_fixed, config, "queryname")
     with closing(pysam.Samfile(fixed)) as work_sam:
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             tx_out = pysam.Samfile(tx_out_file, "wb", template=work_sam)
             for read1 in work_sam:
                 if not read1.is_paired:

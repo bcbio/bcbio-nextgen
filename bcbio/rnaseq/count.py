@@ -14,7 +14,7 @@ try:
 except ImportError:
     HTSeq, pd, gffutils = None, None, None
 
-from bcbio.utils import (file_exists, get_in)
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import bam
@@ -70,13 +70,12 @@ def htseq_count(data):
     id_attribute = "gene_id"
     minaqual = 0
 
-
     if file_exists(out_file):
         return out_file
 
     logger.info("Counting reads mapping to exons in %s using %s as the "
-                    "annotation and strandedness as %s." % (os.path.basename(sam_filename),
-                    os.path.basename(gff_filename), _get_strandedness(data["config"])))
+                "annotation and strandedness as %s." %
+                (os.path.basename(sam_filename), os.path.basename(gff_filename), dd.get_strandedness(data)))
 
     features = HTSeq.GenomicArrayOfSets("auto", stranded != "no")
     counts = {}
@@ -229,7 +228,7 @@ def htseq_count(data):
 
             if i % 100000 == 0:
                 sys.stderr.write("%d sam %s processed.\n" %
-                                 ( i, "lines " if not pe_mode else "line pairs"))
+                                 (i, "lines " if not pe_mode else "line pairs"))
 
     except:
         if not pe_mode:
@@ -237,20 +236,20 @@ def htseq_count(data):
                              % read_seq.get_line_number_string())
         else:
             sys.stderr.write("Error occured in %s.\n"
-                             % read_seq_pe_file.get_line_number_string() )
+                             % read_seq_pe_file.get_line_number_string())
         raise
 
     sys.stderr.write("%d sam %s processed.\n" %
                      (i, "lines " if not pe_mode else "line pairs"))
 
-    with file_transaction(out_file) as tmp_out_file:
+    with file_transaction(data, out_file) as tmp_out_file:
         with open(tmp_out_file, "w") as out_handle:
             on_feature = 0
             for fn in sorted(counts.keys()):
                 on_feature += counts[fn]
                 out_handle.write("%s\t%d\n" % (fn, counts[fn]))
 
-    with file_transaction(stats_file) as tmp_stats_file:
+    with file_transaction(data, stats_file) as tmp_stats_file:
         with open(tmp_stats_file, "w") as out_handle:
             out_handle.write("on_feature\t%d\n" % on_feature)
             out_handle.write("no_feature\t%d\n" % empty)

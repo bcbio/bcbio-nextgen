@@ -61,8 +61,8 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                              for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
             with tx_tmpdir(config) as tmpdir:
                 with utils.chdir(tmpdir):
-                    with file_transaction(out_file) as tx_out_file:
-                        with file_transaction("%s.list" % os.path.splitext(out_file)[0]) as tx_bam_file_list:
+                    with file_transaction(config, out_file) as tx_out_file:
+                        with file_transaction(config, "%s.list" % os.path.splitext(out_file)[0]) as tx_bam_file_list:
                             with open(tx_bam_file_list, "w") as out_handle:
                                 for f in sorted(bam_files):
                                     out_handle.write("%s\n" % f)

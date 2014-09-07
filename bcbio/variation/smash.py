@@ -16,11 +16,12 @@ from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
 def compare(ref_file, truth_vcf, eval_vcf, *bed_files):
+    config = {}
     out_dir = utils.safe_makedir(os.path.join(os.getcwd(), "validate"))
-    region_bed = _final_bed_region(bed_files, eval_vcf, out_dir)
+    region_bed = _final_bed_region(bed_files, eval_vcf, out_dir, config)
     if region_bed:
-        truth_vcf = _subset_vcf(truth_vcf, region_bed, out_dir)
-        eval_vcf = _subset_vcf(eval_vcf, region_bed, out_dir)
+        truth_vcf = _subset_vcf(truth_vcf, region_bed, out_dir, config)
+        eval_vcf = _subset_vcf(eval_vcf, region_bed, out_dir, config)
     _do_smash_calldiff(truth_vcf, eval_vcf, ref_file, out_dir)
 
 def _do_smash_calldiff(truth_vcf, eval_vcf, ref_file, out_dir):
@@ -29,13 +30,13 @@ def _do_smash_calldiff(truth_vcf, eval_vcf, ref_file, out_dir):
            "--reference_fasta", ref_file, "--presorted"]
     do.run(cmd, "Compare files with SMaSH calldiff")
 
-def _subset_vcf(vcf_file, bed_file, out_dir):
+def _subset_vcf(vcf_file, bed_file, out_dir, config):
     """Restrict VCF to only regions defined in the initial input BED file.
     """
     #out_file = os.path.join(out_dir, "%s-cmp.vcf.gz" % utils.splitext_plus(os.path.basename(vcf_file))[0])
     out_file = os.path.join(out_dir, "%s-cmp.vcf" % utils.splitext_plus(os.path.basename(vcf_file))[0])
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             #cmd = ("bedtools intersect -a {vcf_file} -b {bed_file} -wa -header | "
             #       "bgzip -c > {tx_out_file}")
             cmd = ("bedtools intersect -a {vcf_file} -b {bed_file} -wa -header > {tx_out_file}")
@@ -43,7 +44,7 @@ def _subset_vcf(vcf_file, bed_file, out_dir):
     #return vcfutils.bgzip_and_index(out_file, {})
     return out_file
 
-def _final_bed_region(bed_files, eval_vcf, out_dir):
+def _final_bed_region(bed_files, eval_vcf, out_dir, config):
     """Prepare final BED region: combined intersection of all input BEDs.
     """
     if len(bed_files) == 0:
@@ -54,7 +55,7 @@ def _final_bed_region(bed_files, eval_vcf, out_dir):
         out_file = os.path.join(out_dir,
                                 "%s-regions.bed.gz" % utils.splitext_plus(os.path.basename(eval_vcf))[0])
         if not utils.file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 if len(bed_files) == 2:
                     cmd = ("bedtools intersect -a {bed_files[0]} -b {bed_files[1]} | "
                            "sort -k1,1 -k2,2n | bgzip -c > {tx_out_file}")

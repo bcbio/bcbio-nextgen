@@ -22,7 +22,7 @@ def run_region(data, region, vrn_files, out_file):
 def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
     if not utils.file_exists(out_file):
         broad_runner = broad.runner_from_config(data["config"])
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             params = ["-T", "GenotypeGVCFs",
                       "-R", ref_file, "-o", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
@@ -60,7 +60,7 @@ def _batch_gvcfs(data, region, vrn_files, ref_file, out_file=None):
 def _run_combine_gvcfs(vrn_files, region, ref_file, out_file, data):
     if not utils.file_exists(out_file):
         broad_runner = broad.runner_from_config(data["config"])
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             params = ["-T", "CombineGVCFs", "-R", ref_file, "-o", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:

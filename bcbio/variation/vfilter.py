@@ -25,7 +25,7 @@ def hard_w_expression(vcf_file, expression, data, name="+", filterext="",
     base, ext = utils.splitext_plus(vcf_file)
     out_file = "{base}-filter{filterext}{ext}".format(**locals())
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             if vcfutils.vcf_has_variants(vcf_file):
                 bcftools = config_utils.get_program("bcftools", data["config"])
                 bgzip_cmd = "| bgzip -c" if out_file.endswith(".gz") else ""
@@ -49,7 +49,7 @@ def genotype_filter(vcf_file, expression, data, name, filterext=""):
     base, ext = utils.splitext_plus(vcf_file)
     out_file = "{base}-filter{filterext}{ext}".format(**locals())
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             params = ["-T", "VariantFiltration",
                       "-R", tz.get_in(["reference", "fasta", "base"], data),
                       "--variant", vcf_file,
@@ -72,7 +72,7 @@ def genotype_filter_toref(vcf_file, expression, data, filterext=""):
     base, ext = utils.splitext_plus(vcf_file)
     out_file = "{base}-filter{filterext}{ext}".format(**locals())
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             if vcfutils.vcf_has_variants(vcf_file):
                 bcftools = config_utils.get_program("bcftools", data["config"])
                 output_type = "z" if tx_out_file.endswith(".gz") else "v"

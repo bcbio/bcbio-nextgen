@@ -31,7 +31,7 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
     else:
         out_file = "%s-gatkann%s" % utils.splitext_plus(orig_file)
         if not utils.file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 # Avoid issues with incorrectly created empty GATK index files.
                 # Occurs when GATK cannot lock shared dbSNP database on previous run
                 idx_file = orig_file + ".idx"

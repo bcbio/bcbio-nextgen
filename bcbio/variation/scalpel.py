@@ -30,7 +30,7 @@ def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
             target_bed = target
         else:
             target_bed = os.path.join(tmp_path, "tmp.bed")
-            with file_transaction(target_bed) as tx_tmp_bed:
+            with file_transaction(config, target_bed) as tx_tmp_bed:
                 if not isinstance(region, (list, tuple)):
                     message = ("Region must be a tuple - something odd just happened")
                     raise ValueError(message)
@@ -83,7 +83,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             for align_bam in align_bams:
                 bam.index(align_bam, config)
             scalpel = config_utils.get_program("scalpel", config)
@@ -124,7 +124,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             paired = get_paired_bams(align_bams, items)
             if not paired.normal_bam:
                 ann_file = _run_scalpel_caller(align_bams, items, ref_file,

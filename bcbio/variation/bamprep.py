@@ -58,12 +58,12 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
     broad_runner = broad.runner_from_config(data["config"])
     pa_bam = "%s-prealign%s" % os.path.splitext(out_base_file)
     if not utils.file_exists(pa_bam):
-        with file_transaction(pa_bam) as tx_out_file:
+        with file_transaction(data, pa_bam) as tx_out_file:
             cmd = "{cl} -o {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
     bam.index(pa_bam, data["config"])
     dbsnp_vcf = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
-    recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
+    recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"], data["config"],
                                                 dbsnp=dbsnp_vcf, region=region_to_gatk(region))
     recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],
                                                  recal_file, tmp_dir, region=region_to_gatk(region))
@@ -89,7 +89,7 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
                                                prep_params)
     else:
         raise NotImplementedError("Realignment method: %s" % prep_params["realign"])
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         out_flag = ("-o" if (prep_params["realign"] == "gatk"
                              or not prep_params["realign"])
                     else ">")

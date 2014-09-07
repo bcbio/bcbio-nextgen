@@ -38,7 +38,7 @@ def run(items, background=None):
         out_files = run_multicore(_run_on_chrom, [(chrom, work_bams, names, work_dir, items)
                                                   for chrom in chroms],
                                   data["config"], parallel)
-    out_file = _combine_out_files(out_files, work_dir)
+    out_file = _combine_out_files(out_files, work_dir, data)
     out = []
     for data in items:
         if "sv" not in data:
@@ -48,12 +48,12 @@ def run(items, background=None):
         out.append(data)
     return out
 
-def _combine_out_files(chr_files, work_dir):
+def _combine_out_files(chr_files, work_dir, data):
     """Concatenate all CNV calls into a single file.
     """
     out_file = "%s.bed" % sshared.outname_from_inputs(chr_files)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 for chr_file in chr_files:
                     with open(chr_file) as in_handle:
@@ -82,7 +82,7 @@ def _prep_sample_cnvs(cnv_file, data):
         return feat
     sample_file = os.path.join(os.path.dirname(cnv_file), "%s-cnv.bed" % sample_name)
     if not utils.file_exists(sample_file):
-        with file_transaction(sample_file) as tx_out_file:
+        with file_transaction(data, sample_file) as tx_out_file:
             with shared.bedtools_tmpdir(data):
                 pybedtools.BedTool(cnv_file).filter(matches_sample_name).each(update_sample_name).saveas(tx_out_file)
     return sample_file
@@ -99,7 +99,7 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
     out_file = os.path.join(work_dir, "%s%s-%s.bed" % (os.path.splitext(os.path.basename(work_bams[0]))[0],
                                                        ext, chrom if chrom else "all"))
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             rcode = "%s-run.R" % os.path.splitext(out_file)[0]
             with open(rcode, "w") as out_handle:
                 out_handle.write(_script.format(prep_str=_prep_load_script(work_bams, names, chrom, items),

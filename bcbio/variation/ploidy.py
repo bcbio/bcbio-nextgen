@@ -101,7 +101,7 @@ def filter_vcf_by_sex(vcf_file, data):
     if not utils.file_exists(out_file):
         orig_out_file = out_file
         out_file = orig_out_file.replace(".vcf.gz", ".vcf")
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 with utils.open_gzipsafe(vcf_file) as in_handle:
                     for line in in_handle:

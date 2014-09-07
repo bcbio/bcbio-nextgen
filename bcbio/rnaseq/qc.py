@@ -66,7 +66,7 @@ def sample_summary(bam_file, data, out_dir):
     """
     metrics_file = os.path.join(out_dir, "metrics.tsv")
     if not file_exists(metrics_file):
-        with file_transaction(out_dir) as tx_out_dir:
+        with file_transaction(data, out_dir) as tx_out_dir:
             config = data["config"]
             ref_file = data["sam_ref"]
             genome_dir = os.path.dirname(os.path.dirname(ref_file))

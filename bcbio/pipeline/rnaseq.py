@@ -69,7 +69,7 @@ def cufflinks_assemble(data):
     ref_file = data["sam_ref"]
     out_dir = os.path.join(dirs["work"], "assembly")
     num_cores = config["algorithm"].get("num_cores", 1)
-    assembled_gtf = cufflinks.assemble(bam_file, ref_file, num_cores, out_dir)
+    assembled_gtf = cufflinks.assemble(bam_file, ref_file, num_cores, out_dir, data)
     data["assembled_gtf"] = assembled_gtf
     return [[data]]
 
@@ -84,7 +84,7 @@ def cufflinks_merge(*samples):
     num_cores = config["algorithm"].get("num_cores", 1)
     to_merge = [data[0]["assembled_gtf"] for data in samples if
                 "assembled_gtf" in data[0]]
-    merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores)
+    merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores, samples[0][0])
     for data in samples:
         data[0]['assembled_gtf'] = merged_gtf
     return samples

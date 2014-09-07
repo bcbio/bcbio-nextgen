@@ -62,7 +62,7 @@ def calc_callable_loci(data, region=None, out_file=None):
     depth = {"max": max_depth * 7 if max_depth > 0 else sys.maxint - 1,
              "min": utils.get_in(data, ("config", "algorithm", "coverage_depth_min"), 4)}
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             ref_file = tz.get_in(["reference", "fasta", "base"], data)
             region_file, calc_callable = _regions_for_coverage(data, region, ref_file, tx_out_file)
             if calc_callable:
@@ -99,7 +99,7 @@ def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, 
     """
     out_file = "%s-genomecov.bed" % utils.splitext_plus(base_file)[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             bam.index(in_bam, data["config"])
             fai_file = ref.fasta_idx(ref_file, data["config"])
             sambamba = config_utils.get_program("sambamba", data["config"])
@@ -111,7 +111,7 @@ def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, 
             do.run(cmd.format(**locals()), "bedtools genomecov: %s" % (str(region)), data)
     # Empty output file, no coverage for the whole contig
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 for feat in get_ref_bedtool(ref_file, data["config"], region):
                     out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, 0))
@@ -144,7 +144,7 @@ def _regions_for_coverage(data, region, ref_file, out_file):
         pybedtools.BedTool("%s\t%s\t%s\n" % (c, s, e), from_string=True).saveas(custom_file)
         return custom_file, True
     else:
-        with file_transaction(custom_file) as tx_out_file:
+        with file_transaction(data, custom_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 for feat in get_ref_bedtool(ref_file, data["config"], region):
                     out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, "NO_COVERAGE"))
@@ -158,7 +158,7 @@ def sample_callable_bed(bam_file, ref_file, config):
         callable_bed = parallel_callable_loci(bam_file, ref_file, config)
         input_regions_bed = config["algorithm"].get("variant_regions", None)
         if not utils.file_uptodate(out_file, callable_bed):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 callable_regions = pybedtools.BedTool(callable_bed)
                 filter_regions = callable_regions.filter(lambda x: x.name == "CALLABLE")
                 if input_regions_bed:

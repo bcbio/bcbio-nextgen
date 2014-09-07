@@ -89,7 +89,7 @@ def run_vep(data):
     out_file = utils.append_stem(data["vrn_file"], "-vepeffects")
     assert data["vrn_file"].endswith(".gz") and out_file.endswith(".gz")
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             vep_dir, ensembl_name = prep_vep_cache(data["genome_build"],
                                                    tz.get_in(["reference", "fasta", "base"], data))
             if vep_dir:
@@ -227,7 +227,7 @@ def _run_snpeff(snp_in, out_format, data):
             bgzip_cmd = "| %s -c" % tools.get_bgzip_cmd(data["config"])
         else:
             bgzip_cmd = ""
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cmd = ("{snpeff_cmd} {config_args} -noLog -1 -i vcf -o {out_format} "
                    "{snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)

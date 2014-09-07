@@ -26,14 +26,14 @@ def tobam_cl(data, out_file, is_paired=False):
     """
     do_dedup = _check_dedup(data)
     with tx_tmpdir(data) as tmpdir:
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             if not do_dedup:
                 yield (_sam_to_sortbam_cl(data, tmpdir, tx_out_file), tx_out_file)
             elif is_paired:
                 sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
                 disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
-                with file_transaction(sr_file) as tx_sr_file:
-                    with file_transaction(disc_file) as tx_disc_file:
+                with file_transaction(data, sr_file) as tx_sr_file:
+                    with file_transaction(data, disc_file) as tx_disc_file:
                         yield (samblaster_dedup_sort(data, tmpdir, tx_out_file, tx_sr_file, tx_disc_file),
                                tx_out_file)
             else:
@@ -112,7 +112,7 @@ def dedup_bam(in_bam, data):
         out_file = "%s-dedup%s" % utils.splitext_plus(in_bam)
         if not utils.file_exists(out_file):
             with tx_tmpdir(data) as tmpdir:
-                with file_transaction(out_file) as tx_out_file:
+                with file_transaction(data, out_file) as tx_out_file:
                     bammarkduplicates = config_utils.get_program("bammarkduplicates", data["config"])
                     base_tmp = os.path.join(tmpdir, os.path.splitext(os.path.basename(tx_out_file))[0])
                     cores, mem = _get_cores_memory(data, downscale=3)

@@ -282,7 +282,7 @@ def _run_gene_coverage(bam_file, data, out_dir):
     count_file = data["count_file"]
     if utils.file_exists(out_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         plot_gene_coverage(bam_file, ref_file, count_file, tx_out_file)
     return {"gene_coverage": out_file}
 
@@ -340,15 +340,15 @@ def _parse_kraken_output(out_dir, db, data):
     with open(stat_file, 'r') as handle:
         for line in handle:
             if line.find(" classified") > -1:
-                classify = line[line.find("(")+1:line.find(")")]
+                classify = line[line.find("(") + 1:line.find(")")]
             if line.find(" unclassified") > -1:
-                unclassify = line[line.find("(")+1:line.find(")")]
-    if os.path.getsize(in_file)>0:
-        with file_transaction(out_file) as tx_out_file:
+                unclassify = line[line.find("(") + 1:line.find(")")]
+    if os.path.getsize(in_file) > 0:
+        with file_transaction(data, out_file) as tx_out_file:
             cl = (" ").join([config_utils.get_program("kraken-report", data["config"]),
-                          "--db", db, in_file, ">", tx_out_file])
+                             "--db", db, in_file, ">", tx_out_file])
             do.run(cl, "kraken report: %s" % data["name"][-1])
-    return {"kraken_report" : out_file, "kraken_clas": classify, "kraken_unclas": unclassify}
+    return {"kraken_report": out_file, "kraken_clas": classify, "kraken_unclas": unclassify}
 
 
 def _run_fastqc(bam_file, data, fastqc_out):
@@ -407,7 +407,7 @@ def _run_complexity(bam_file, data, out_dir):
     out_file = os.path.join(out_dir, base + ".pdf")
     df = bcbio.rnaseq.qc.starts_by_depth(bam_file, data["config"], SAMPLE_SIZE)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tmp_out_file:
+        with file_transaction(data, out_file) as tmp_out_file:
             df.plot(x='reads', y='starts', title=bam_file + " complexity")
             fig = plt.gcf()
             fig.savefig(tmp_out_file)
@@ -549,7 +549,7 @@ def _run_bamtools_stats(bam_file, data, out_dir):
     if not utils.file_exists(stats_file):
         utils.safe_makedir(out_dir)
         bamtools = config_utils.get_program("bamtools", data["config"])
-        with file_transaction(stats_file) as tx_out_file:
+        with file_transaction(data, stats_file) as tx_out_file:
             cmd = "{bamtools} stats -in {bam_file}"
             if bam.is_paired(bam_file):
                 cmd += " -insert"
@@ -637,7 +637,7 @@ def _run_qsignature_generator(bam_file, data, out_dir):
             file_qsign_out = "{0}.qsig.vcf".format(down_file)
             do.run(base_cmd.format(**locals()), "qsignature vcf generation: %s" % data["name"][-1])
             if os.path.exists(file_qsign_out):
-                with file_transaction(out_file) as file_txt_out:
+                with file_transaction(data, out_file) as file_txt_out:
                     shutil.move(file_qsign_out, file_txt_out)
             else:
                 raise IOError("File doesn't exist %s" % file_qsign_out)
@@ -680,13 +680,14 @@ def qsignature_summary(*samples):
         out_warn_file = os.path.join(qc_out_dir, "qsignature.warnings")
         log = os.path.join(work_dir, "qsignature", "qsig-summary.log")
         if not os.path.exists(out_file):
-            with file_transaction(out_file) as file_txt_out:
+            with file_transaction(samples[0][0], out_file) as file_txt_out:
                 base_cmd = ("{qsig} {jvm_opts} "
                             "org.qcmg.sig.SignatureCompareRelatedSimple "
                             "-log {log} -dir {out_dir} "
                             "-o {file_txt_out} ")
                 do.run(base_cmd.format(**locals()), "qsignature score calculation")
-        warnings, similar = _parse_qsignature_output(out_file, out_ma_file, out_warn_file)
+        warnings, similar = _parse_qsignature_output(out_file, out_ma_file, out_warn_file,
+                                                     samples[0][0])
         return [{'total samples': count,
                  'similar samples': len(similar),
                  'warnings samples': list(warnings),
@@ -695,7 +696,7 @@ def qsignature_summary(*samples):
         return []
 
 
-def _parse_qsignature_output(in_file, out_file, warning_file):
+def _parse_qsignature_output(in_file, out_file, warning_file, data):
     """ Parse xml file produced by qsignature
 
     :param in_file: (str) with the path to the xml file
@@ -709,8 +710,8 @@ def _parse_qsignature_output(in_file, out_file, warning_file):
     warnings = set()
     similar = set()
     with open(in_file, 'r') as in_handle:
-        with file_transaction(out_file) as out_tx_file:
-            with file_transaction(warning_file) as warn_tx_file:
+        with file_transaction(data, out_file) as out_tx_file:
+            with file_transaction(data, warning_file) as warn_tx_file:
                 with open(out_tx_file, 'w') as out_handle:
                     with open(warn_tx_file, 'w') as warn_handle:
                         ET = lxml.etree.parse(in_handle)
@@ -748,7 +749,7 @@ def _slice_chr22(in_bam, data):
         chromosome = "22"
         if "chr22" in bam_contigs:
             chromosome = "chr22"
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cmd = ("{sambamba} slice -o {tx_out_file} {in_bam} {chromosome}").format(**locals())
             out = subprocess.check_output(cmd, shell=True)
     return out_file

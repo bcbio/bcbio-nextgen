@@ -1,5 +1,9 @@
 ## 0.8.2 (in progress)
 
+- Unify approach to creating temporary directories. Allows specification of a
+  global temporary directory in `resources: tmp:` used for all
+  transactions. This enables full use of local temporary space during
+  processing, with results transferred to the shared filesystem on completion.
 - Fix issues with concatenating files that fail to work with GATK's
   CatVariants. Fall back to bcftools concat which correctly handles problem
   headers and overlapping segments.

@@ -48,14 +48,14 @@ def count(data):
 
     message = ("Count reads in {tx_count_file} mapping to {gtf_file} using "
                "featureCounts")
-    with file_transaction(count_file) as tx_count_file:
+    with file_transaction(data, count_file) as tx_count_file:
         do.run(cmd.format(**locals()), message.format(**locals()))
-    fixed_count_file = _format_count_file(count_file)
+    fixed_count_file = _format_count_file(count_file, data)
     os.rename(fixed_count_file, count_file)
 
     return count_file
 
-def _format_count_file(count_file):
+def _format_count_file(count_file, data):
     """
     this cuts the count file produced from featureCounts down to
     a two column file of gene ids and number of reads mapping to
@@ -68,7 +68,7 @@ def _format_count_file(count_file):
 
     df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=1)
     df_sub = df.ix[:, COUNT_COLUMN]
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         df_sub.to_csv(tx_out_file, sep="\t", index_label="id", header=False)
     return out_file
 
@@ -80,8 +80,7 @@ def _strand_flag(config):
     strand_flag = {"unstranded": "0",
                    "firststrand": "2",
                    "secondstrand": "1"}
-    stranded =  get_in(config, ("algorithm", "strandedness"),
-                       "unstranded").lower()
+    stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
 
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
                                      "Valid values are 'firststrand', 'secondstrand', "
@@ -93,6 +92,3 @@ def _paired_flag(bam_file):
         return "-p -B -C"
     else:
         return ""
-
-
-

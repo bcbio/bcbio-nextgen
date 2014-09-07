@@ -23,7 +23,7 @@ def run(align_file, ref_file, data):
     tracking_file_isoform = os.path.join(out_dir, "isoforms.fpkm_tracking")
     fpkm_file_isoform = os.path.join(out_dir, data['rgnames']['sample']) + ".isoform.fpkm"
     if not file_exists(fpkm_file):
-        with file_transaction(out_dir) as tmp_out_dir:
+        with file_transaction(data, out_dir) as tmp_out_dir:
             cmd.extend(["--output-dir", tmp_out_dir])
             cmd.extend([align_file])
             cmd = map(str, cmd)
@@ -89,12 +89,12 @@ def _get_output_dir(align_file, data, sample_dir=True):
     name = data["rgnames"]["sample"] if sample_dir else ""
     return os.path.join(get_in(data, ("dirs", "work")), "cufflinks", name)
 
-def assemble(bam_file, ref_file, num_cores, out_dir):
+def assemble(bam_file, ref_file, num_cores, out_dir, data):
     safe_makedir(out_dir)
     out_file = os.path.join(out_dir, "assembly", "transcripts.gtf")
     if file_exists(out_file):
         return out_file
-    with file_transaction(out_dir) as tmp_out_dir:
+    with file_transaction(data, out_dir) as tmp_out_dir:
         cmd = ("cufflinks --output-dir {tmp_out_dir} --num-threads {num_cores} "
                "--frag-bias-correct {ref_file} "
                "--multi-read-correct --upper-quartile-norm {bam_file}")
@@ -154,7 +154,7 @@ def is_novel_single_exon(db, transcript):
         return True
     return False
 
-def fix_cufflinks_attributes(ref_gtf, merged_gtf, out_file=None):
+def fix_cufflinks_attributes(ref_gtf, merged_gtf, data, out_file=None):
     """
     replace the cufflinks gene_id and transcript_id with the
     gene_id and transcript_id from ref_gtf, where available
@@ -189,7 +189,7 @@ def fix_cufflinks_attributes(ref_gtf, merged_gtf, out_file=None):
         if cgid and gid:
             cgid_to_gid[cgid] = gid
 
-    with file_transaction(fixed) as tmp_fixed_file:
+    with file_transaction(data, fixed) as tmp_fixed_file:
         with open(tmp_fixed_file, "w") as out_handle:
             for gene in merged_db.features_of_type('gene'):
                 for transcript in merged_db.children(gene, level=1):
@@ -211,7 +211,7 @@ def fix_cufflinks_attributes(ref_gtf, merged_gtf, out_file=None):
                         out_handle.write(str(feature) + "\n")
     return fixed
 
-def merge(assembled_gtfs, ref_file, gtf_file, num_cores):
+def merge(assembled_gtfs, ref_file, gtf_file, num_cores, data):
     """
     run cuffmerge on a set of assembled GTF files
     """
@@ -224,14 +224,14 @@ def merge(assembled_gtfs, ref_file, gtf_file, num_cores):
     out_file = os.path.join(out_dir, "assembled.gtf")
     if file_exists(out_file):
         return out_file
-    with file_transaction(out_dir) as tmp_out_dir:
+    with file_transaction(data, out_dir) as tmp_out_dir:
         cmd = ("cuffmerge -o {tmp_out_dir} --ref-gtf {gtf_file} "
                "--num-threads {num_cores} --ref-sequence {ref_file} "
                "{assembled_file}")
         cmd = cmd.format(**locals())
         do.run(cmd, "Merging transcript assemblies with reference.")
     clean, _ = clean_assembly(merged_file)
-    fixed = fix_cufflinks_attributes(gtf_file, clean)
+    fixed = fix_cufflinks_attributes(gtf_file, clean, data)
     classified = annotate_gtf.annotate_novel_coding(fixed, gtf_file, ref_file)
     filtered = annotate_gtf.cleanup_transcripts(classified, gtf_file, ref_file)
     os.rename(filtered, out_file)

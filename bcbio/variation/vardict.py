@@ -51,7 +51,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             for align_bam in align_bams:
                 bam.index(align_bam, config)
             num_bams = len(align_bams)
@@ -81,7 +81,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                     tmp_out = temp_file_prefix + ".temp.vcf"
                     tmp_out += ".gz" if out_file.endswith("gz") else ""
                     sample_vcf_names.append(tmp_out)
-                    with file_transaction(tmp_out) as tx_tmp_file:
+                    with file_transaction(item, tmp_out) as tx_tmp_file:
                         cmd += " > {tx_tmp_file}"
                         do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
                 else:
@@ -108,7 +108,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             paired = vcfutils.get_paired_bams(align_bams, items)
             if not paired.normal_bam:
                 ann_file = _run_vardict_caller(align_bams, items, ref_file,

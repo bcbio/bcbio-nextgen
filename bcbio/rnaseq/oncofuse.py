@@ -6,8 +6,6 @@ Supported:
 """
 from __future__ import print_function
 import os
-import csv
-import glob
 import pysam
 
 from bcbio.utils import file_exists
@@ -22,33 +20,28 @@ def run(data):
     config = data["config"]
     genome_build = data.get("genome_build", "")
     input_type, input_dir, input_file = _get_input_para(data)
-    if genome_build == "GRCh37": #assume genome_build is hg19 otherwise
+    if genome_build == "GRCh37":  # assume genome_build is hg19 otherwise
         if config["algorithm"].get("aligner") in ["star"]:
             input_file = _fix_star_junction_output(input_file)
         if config["algorithm"].get("aligner") in ["tophat", "tophat2"]:
             input_file = _fix_tophat_junction_output(input_file)
     elif "hg19" not in genome_build:
         return None
-    
     #handle cases when fusion file doesn't exist
     if not file_exists(input_file):
         return None
-    
     out_file = os.path.join(input_dir, "oncofuse_out.txt")
-    
     if file_exists(out_file):
         return out_file
-    
     oncofuse_jar = config_utils.get_jar("Oncofuse",
-                                      config_utils.get_program("oncofuse",
-                                                               config, "dir"))
+                                        config_utils.get_program("oncofuse", config, "dir"))
 
     tissue_type = _oncofuse_tissue_arg_from_config(data)
     resources = config_utils.get_resources("oncofuse", config)
     if not file_exists(out_file):
         cl = ["java"]
-        cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])        
-        with file_transaction(out_file) as tx_out_file: #with open(out_file, "w") as out_handle:
+        cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
+        with file_transaction(data, out_file) as tx_out_file:
             cl += ["-jar", oncofuse_jar, input_file, input_type, tissue_type, tx_out_file]
             cmd = " ".join(cl)
             try:
@@ -58,15 +51,14 @@ def run(data):
                 #return out_file
     return out_file
 
-def is_non_zero_file(fpath):  
+def is_non_zero_file(fpath):
     return True if os.path.isfile(fpath) and os.path.getsize(fpath) > 0 else False
 
 def _get_input_para(data):
     TOPHAT_FUSION_OUTFILE = "fusions.out"
     STAR_FUSION_OUTFILE = "Chimeric.out.junction"
     config = data["config"]
-    is_disambiguate = len(config["algorithm"].get("disambiguate",[])) > 0
-    
+    is_disambiguate = len(config["algorithm"].get("disambiguate", [])) > 0
     aligner = config["algorithm"].get("aligner")
     if aligner == "tophat2":
         aligner = "tophat"
@@ -88,7 +80,8 @@ def _get_input_para(data):
             if file_exists(disambig_out_file):
                 star_junction_file = disambig_out_file
             elif file_exists(star_junction_file) and file_exists(contamination_bam):
-                star_junction_file = _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, disambig_out_file)
+                star_junction_file = _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam,
+                                                                         disambig_out_file, data)
         return "rnastar-%d-%d" % (N,M), align_dir_parts, star_junction_file
     return None
 
@@ -144,7 +137,7 @@ def _oncofuse_tissue_arg_from_config(data):
     else:
         return "AVG"
 
-def _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, disambig_out_file):
+def _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, disambig_out_file, data):
     """ Disambiguate detected fusions based on alignments to another species.
     """
     out_file = disambig_out_file
@@ -154,14 +147,15 @@ def _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, d
         if len(my_line_split) < 10:
             continue
         fusiondict[my_line_split[9]] = my_line.strip("\n")
-    samfile = pysam.Samfile( contamination_bam , "rb" )
+    samfile = pysam.Samfile(contamination_bam, "rb")
     for my_read in samfile:
-        if 0x4&my_read.flag or my_read.is_secondary: # flag 0x4 means unaligned
+        if 0x4 & my_read.flag or my_read.is_secondary:  # flag 0x4 means unaligned
             continue
         if my_read.qname in fusiondict:
             fusiondict.pop(my_read.qname)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         myhandle = open(tx_out_file, 'w')
         for my_key in fusiondict:
-            print(fusiondict[my_key], file = myhandle)
+            print(fusiondict[my_key], file=myhandle)
+
     return out_file

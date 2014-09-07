@@ -26,7 +26,7 @@ def _convert_fastq(fastq_file, pair_file, rg_name, out_file, config):
     """
     out_file = "{0}-fq.mkb".format(os.path.splitext(out_file)[0])
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             cl = [config_utils.get_program("mosaik", config,
                                            default="MosaikAligner").replace("Aligner", "Build")]
             cl += ["-q", fastq_file,
@@ -61,7 +61,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
     rg_name = names.get("rg", None) if names else None
     out_file = os.path.join(align_dir, "%s-align.bam" % names["lane"])
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             built_fastq = _convert_fastq(fastq_file, pair_file, rg_name,
                                          out_file, config)
             cl = [config_utils.get_program("mosaik", config, default="MosaikAligner")]

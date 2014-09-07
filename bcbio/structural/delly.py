@@ -28,7 +28,7 @@ def _delly_exclude_file(items, base_file, chrom):
     """
     base_exclude = sshared.prepare_exclude_file(items, base_file, chrom)
     out_file = "%s-delly%s" % utils.splitext_plus(base_exclude)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(items[0], out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
             with open(base_exclude) as in_handle:
                 for line in in_handle:
@@ -51,7 +51,7 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
     cores = min(utils.get_in(items[0], ("config", "algorithm", "num_cores"), 1),
                 len(bam_files))
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             names = [tz.get_in(["rgnames", "sample"], x) for x in items]
             if not sshared.has_variant_regions(items, out_file, chrom):
                 vcfutils.write_empty_vcf(tx_out_file, samples=names)
@@ -80,7 +80,7 @@ def _clean_delly_output(in_file, items):
     pat = re.compile(r"\.,\.,\.")
     out_file = "%s-clean.vcf" % utils.splitext_plus(in_file)[0]
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             with open(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
@@ -140,7 +140,7 @@ def _delly_count_evidence_filter(in_file, data):
     out_file = "%s-filter%s" % utils.splitext_plus(in_file)
     cur_out_file = out_file.replace(".vcf.gz", ".vcf")
     if not utils.file_exists(out_file):
-        with file_transaction(cur_out_file) as tx_out_file:
+        with file_transaction(data, cur_out_file) as tx_out_file:
             with utils.open_gzipsafe(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     inp = vcf.Reader(in_handle, in_file)
