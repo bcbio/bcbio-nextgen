@@ -38,6 +38,8 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
             with file_transaction(config, out_file) as tx_out_file:
                 call_fn(align_bams, ref_file, items, target_regions,
                         tx_out_file)
+    if out_file.endswith(".gz"):
+        out_file = vcfutils.bgzip_and_index(out_file, config)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files.get("dbsnp"),
                                                ref_file, config)
     return ann_file
@@ -65,7 +67,7 @@ def prep_mpileup(align_bams, ref_file, max_read_depth, config,
     cl += align_bams
     return " ".join(cl)
 
-def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_file):
+def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_file):
     """Call variants with samtools in target_regions.
 
     Works around a GATK VCF 4.2 compatibility issue in samtools 1.0
@@ -81,12 +83,11 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_fil
     if LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
         raise ValueError("samtools calling not supported with pre-1.0 samtools")
     bcftools_opts = "call -v -m"
-    compress_cmd = "| bgzip -c" if out_file.endswith(".gz") else ""
-    with file_transaction(config, out_file) as tx_out_file:
-        cmd = ("{mpileup} "
-               "| {bcftools} {bcftools_opts} - "
-               "| sed 's/,Version=3>/>/'"
-               "| sed 's/Number=R/Number=./'"
-               "{compress_cmd} > {tx_out_file}")
-        logger.info(cmd.format(**locals()))
-        do.run(cmd.format(**locals()), "Variant calling with samtools", {})
+    compress_cmd = "| bgzip -c" if tx_out_file.endswith(".gz") else ""
+    cmd = ("{mpileup} "
+           "| {bcftools} {bcftools_opts} - "
+           "| {bcftools} norm -f {ref_file} -m '-both' -"
+           "| sed 's/,Version=3>/>/'"
+           "| sed 's/Number=R/Number=./'"
+           "{compress_cmd} > {tx_out_file}")
+    do.run(cmd.format(**locals()), "Variant calling with samtools", items[0])
