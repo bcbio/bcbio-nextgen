@@ -24,6 +24,8 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
         return vfilter.freebayes(call_file, ref_file, vrn_files, data)
     elif caller in ["platypus"]:
         return vfilter.platypus(call_file, data)
+    elif caller in ["samtools"]:
+        return vfilter.samtools(call_file, data)
     elif caller in ["gatk", "gatk-haplotype"]:
         return gatkfilter.run(call_file, ref_file, vrn_files, data)
     # no additional filtration for callers that filter as part of call process

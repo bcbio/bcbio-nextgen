@@ -1,6 +1,6 @@
-"""Variant calling using samtools mpileup and bcftools.
+"""Variant calling using samtools 1.0 mpileup and bcftools.
 
-http://samtools.sourceforge.net/mpileup.shtml
+http://www.htslib.org/workflow/#mapping_to_variant
 """
 import os
 from distutils.version import LooseVersion
@@ -12,7 +12,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do, programs
-from bcbio.variation import annotation, bamprep, realign, vcfutils
+from bcbio.variation import annotation, bamprep, vcfutils
 
 def shared_variantcall(call_fn, name, align_bams, ref_file, items,
                        assoc_files, region=None, out_file=None):
@@ -55,7 +55,7 @@ def prep_mpileup(align_bams, ref_file, max_read_depth, config,
           "-f", ref_file, "-d", str(max_read_depth), "-L", str(max_read_depth),
           "-m", "3", "-F", "0.0002"]
     if want_bcf:
-        cl += ["-D", "-S", "-u"]
+        cl += ["-t", "DP", "-t", "SP", "-u", "-g"]
     if target_regions:
         str_regions = bamprep.region_to_gatk(target_regions)
         if os.path.isfile(str_regions):
@@ -68,34 +68,25 @@ def prep_mpileup(align_bams, ref_file, max_read_depth, config,
 def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_file):
     """Call variants with samtools in target_regions.
 
-    Works around a GATK VCF compatibility issue in samtools 0.20 by removing extra
-    Version information from VCF header lines.
+    Works around a GATK VCF 4.2 compatibility issue in samtools 1.0
+    by removing addition 4.2-only isms from VCF header lines.
     """
     config = items[0]["config"]
-
     max_read_depth = "1000"
     mpileup = prep_mpileup(align_bams, ref_file, max_read_depth, config,
-                           target_regions=target_regions)
+                           target_regions=target_regions, want_bcf=True)
     bcftools = config_utils.get_program("bcftools", config)
     bcftools_version = programs.get_version("bcftools", config=config)
     samtools_version = programs.get_version("samtools", config=config)
-    if LooseVersion(bcftools_version) > LooseVersion("0.1.19"):
-        if LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
-            raise ValueError("samtools calling not supported with 0.1.19 samtools and 0.20 bcftools")
-        bcftools_opts = "call -v -c"
-    else:
-        bcftools_opts = "view -v -c -g"
-    compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-    vcfutils = config_utils.get_program("vcfutils.pl", config)
-    # XXX Check if we need this when supporting samtools 0.2.0 calling.
-    # 0.1.9 fails on regions without reads.
-    if not any(realign.has_aligned_reads(x, target_regions) for x in align_bams):
-        vcfutils.write_empty_vcf(out_file, config)
-    else:
+    if LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
+        raise ValueError("samtools calling not supported with pre-1.0 samtools")
+    bcftools_opts = "call -v -m"
+    compress_cmd = "| bgzip -c" if out_file.endswith(".gz") else ""
+    with file_transaction(config, out_file) as tx_out_file:
         cmd = ("{mpileup} "
                "| {bcftools} {bcftools_opts} - "
-               "| {vcfutils} varFilter -D {max_read_depth} "
                "| sed 's/,Version=3>/>/'"
-               "{compress_cmd} > {out_file}")
+               "| sed 's/Number=R/Number=./'"
+               "{compress_cmd} > {tx_out_file}")
         logger.info(cmd.format(**locals()))
         do.run(cmd.format(**locals()), "Variant calling with samtools", {})

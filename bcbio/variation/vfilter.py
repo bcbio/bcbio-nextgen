@@ -188,6 +188,14 @@ def platypus(in_file, data):
     return hard_w_expression(in_file, filters, data, name="PlatQualDepth",
                              extra_cmd="| sed 's/\\tQ20\\t/\\tPASS\\t/'")
 
+def samtools(in_file, data):
+    """Filter samtools calls based on depth and quality, using similar approaches to FreeBayes.
+    """
+    filters = ('((AC[0] / AN) <= 0.5 && DP < 4 && %QUAL < 20) || '
+               '(DP < 13 && %QUAL < 10) || '
+               '((AC[0] / AN) > 0.5 && DP < 4 && %QUAL < 50)')
+    return hard_w_expression(in_file, filters, data, name="stQualDepth")
+
 def gatk_snp_hard(in_file, data):
     """Perform hard filtering on GATK SNPs using best-practice recommendations.
     """
