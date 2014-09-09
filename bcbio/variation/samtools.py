@@ -86,7 +86,7 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_
     compress_cmd = "| bgzip -c" if tx_out_file.endswith(".gz") else ""
     cmd = ("{mpileup} "
            "| {bcftools} {bcftools_opts} - "
-           "| {bcftools} norm -f {ref_file} -m '-both' -"
+           "| {bcftools} norm -f {ref_file} -m '-both' - "
            "| sed 's/,Version=3>/>/'"
            "| sed 's/Number=R/Number=./'"
            "{compress_cmd} > {tx_out_file}")
