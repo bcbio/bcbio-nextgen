@@ -23,11 +23,15 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
     if not utils.file_exists(out_file):
         broad_runner = broad.runner_from_config(data["config"])
         with file_transaction(data, out_file) as tx_out_file:
+            assoc_files = tz.get_in(("genome_resources", "variation"), data, {})
+            if not assoc_files: assoc_files = {}
             params = ["-T", "GenotypeGVCFs",
                       "-R", ref_file, "-o", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
                 params += ["--variant", vrn_file]
+            if assoc_files.get("dbsnp"):
+                params += ["--dbsnp", assoc_files["dbsnp"]]
             broad_runner.new_resources("gatk-haplotype")
             cores = dd.get_cores(data)
             if cores > 1:

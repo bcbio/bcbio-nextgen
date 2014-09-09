@@ -83,12 +83,19 @@ def _get_vqsr_training(filter_type, vrn_files):
 
 def _get_vqsr_annotations(filter_type):
     """Retrieve appropriate annotations to use for VQSR based on filter type.
+
+    Issues reported with MQ and bwa-mem quality distribution, results in intermittent
+    failures to use VQSR:
+    http://gatkforums.broadinstitute.org/discussion/4425/variant-recalibration-failing
+    http://gatkforums.broadinstitute.org/discussion/4248/variantrecalibrator-removing-all-snps-from-the-training-set
     """
     if filter_type == "SNP":
-        return ["DP", "QD", "FS", "MQRankSum", "ReadPosRankSum"]
+        # MQ, MQRankSum
+        return ["DP", "QD", "FS", "ReadPosRankSum"]
     else:
         assert filter_type == "INDEL"
-        return ["DP", "FS", "MQRankSum", "ReadPosRankSum"]
+        # MQRankSum
+        return ["DP", "QD", "FS", "ReadPosRankSum"]
 
 def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, data):
     """Run variant quality score recalibration.
