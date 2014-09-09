@@ -261,7 +261,7 @@ def _get_files_project(sample, upload_config):
                         "variantcaller": x["variantcaller"]})
     for x in sample.get("variants", []):
         if "population" in x:
-            pop_db = x["population"].get("db")
+            pop_db = tz.get_in(["population", "db"], x)
             if pop_db:
                 out.append({"path": pop_db,
                             "type": "sqlite",
