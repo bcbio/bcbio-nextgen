@@ -65,6 +65,7 @@ def _slurm_info(queue):
     num_cpus, mem = subprocess.check_output(shlex.split(cl)).split()
     # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
     mem = mem.replace('+', '')
+    num_cpus = int(num_cpus.replace('+', ''))
     return [{"cores": int(num_cpus), "memory": float(mem) / 1024.0, "name": "slurm_machine"}]
 
 def _torque_info(queue):
