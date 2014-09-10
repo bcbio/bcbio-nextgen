@@ -87,7 +87,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             cleanup_files.append(mpfile)
             with file_transaction(config, mpfile) as mpfile_tx:
                 mpileup = samtools.prep_mpileup([fname], ref_file,
-                                                max_read_depth, config,
+                                                config, max_read_depth,
                                                 target_regions=target_regions,
                                                 want_bcf=False)
                 cmd = "{mpileup} > {mpfile_tx}"
@@ -348,7 +348,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     varscan_jar = config_utils.get_jar("VarScan",
                                        config_utils.get_program("varscan", config, "dir"))
     sample_list = _create_sample_list(align_bams, out_file)
-    mpileup = samtools.prep_mpileup(align_bams, ref_file, max_read_depth, config,
+    mpileup = samtools.prep_mpileup(align_bams, ref_file, config, max_read_depth,
                                     target_regions=target_regions, want_bcf=False)
     # VarScan fails to generate a header on files that start with
     # zerocoverage calls; strip these with grep, we're not going to

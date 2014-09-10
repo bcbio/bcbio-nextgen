@@ -5,6 +5,8 @@ http://www.htslib.org/workflow/#mapping_to_variant
 import os
 from distutils.version import LooseVersion
 
+import toolz as tz
+
 from bcbio import bam
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -12,7 +14,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do, programs
-from bcbio.variation import annotation, bamprep, vcfutils
+from bcbio.variation import annotation, bamprep, bedutils, vcfutils
 
 def shared_variantcall(call_fn, name, align_bams, ref_file, items,
                        assoc_files, region=None, out_file=None):
@@ -29,7 +31,8 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
               name=name, region=region, fname=os.path.basename(align_bams[0])))
         for x in align_bams:
             bam.index(x, config)
-        variant_regions = config["algorithm"].get("variant_regions", None)
+        variant_regions = bedutils.merge_overlaps(tz.get_in(["config", "algorithm", "variant_regions"], items[0]),
+                                                  items[0])
         target_regions = subset_variant_regions(variant_regions, region, out_file)
         if (variant_regions is not None and isinstance(target_regions, basestring)
               and not os.path.isfile(target_regions)):
@@ -51,13 +54,13 @@ def run_samtools(align_bams, items, ref_file, assoc_files, region=None,
     return shared_variantcall(_call_variants_samtools, "samtools", align_bams, ref_file,
                               items, assoc_files, region, out_file)
 
-def prep_mpileup(align_bams, ref_file, max_read_depth, config,
+def prep_mpileup(align_bams, ref_file, config, max_read_depth=None,
                  target_regions=None, want_bcf=True):
-    cl = [config_utils.get_program("samtools", config), "mpileup",
-          "-f", ref_file, "-d", str(max_read_depth), "-L", str(max_read_depth),
-          "-m", "3", "-F", "0.0002"]
+    cl = [config_utils.get_program("samtools", config), "mpileup", "-f", ref_file]
+    if max_read_depth:
+        cl += ["-d", str(max_read_depth), "-L", str(max_read_depth)]
     if want_bcf:
-        cl += ["-t", "DP", "-t", "SP", "-u", "-g"]
+        cl += ["-t", "DP", "-u", "-g"]
     if target_regions:
         str_regions = bamprep.region_to_gatk(target_regions)
         if os.path.isfile(str_regions):
@@ -74,8 +77,7 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_
     by removing addition 4.2-only isms from VCF header lines.
     """
     config = items[0]["config"]
-    max_read_depth = "1000"
-    mpileup = prep_mpileup(align_bams, ref_file, max_read_depth, config,
+    mpileup = prep_mpileup(align_bams, ref_file, config,
                            target_regions=target_regions, want_bcf=True)
     bcftools = config_utils.get_program("bcftools", config)
     bcftools_version = programs.get_version("bcftools", config=config)
