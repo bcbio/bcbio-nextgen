@@ -20,8 +20,10 @@ import pysam
 import toolz as tz
 
 from bcbio import broad, utils
+from bcbio.bam import ref
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import config_utils, region
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bamprep, gatkjoint, genotype, multi
 
@@ -39,7 +41,8 @@ def _get_callable_regions(data):
                 regions = [(chrom, 0, length) for (chrom, length) in zip(pysam_bam.references,
                                                                          pysam_bam.lengths)]
         else:
-            raise NotImplementedError("No variant regions or BAM files to calculate chromosomes")
+            regions = [(r.name, 0, r.size) for r in
+                       ref.file_contigs(dd.get_ref_file(data), data["config"])]
     return regions
 
 def _split_by_callable_region(data):
@@ -112,7 +115,9 @@ def square_batch_region(data, region, bam_files, vrn_files, out_file):
     if not utils.file_exists(out_file):
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         if jointcaller in ["freebayes-joint", "platypus-joint"]:
-            _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file)
+            _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file, "square")
+        elif jointcaller in ["freebayes-merge", "platypus-merge"]:
+            _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file, "merge")
         elif jointcaller == "gatk-haplotype-joint":
             gatkjoint.run_region(data, region, vrn_files, out_file)
         else:
@@ -136,8 +141,9 @@ def _fix_orig_vcf_refs(data):
             data["group_orig"][i] = sub
     return data
 
-def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file):
-    """Run squaring analysis using bcbio.variation.recall.
+def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file,
+                                  todo="square"):
+    """Run squaring or merging analysis using bcbio.variation.recall.
     """
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
@@ -150,10 +156,14 @@ def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file):
     # Write unique VCFs and BAMs to input file
     input_file = "%s-inputs.txt" % os.path.splitext(out_file)[0]
     with open(input_file, "w") as out_handle:
-        out_handle.write("\n".join(sorted(list(set(vrn_files))) + sorted(list(set(bam_files)))))
+        out_handle.write("\n".join(sorted(list(set(vrn_files)))) + "\n")
+        if todo == "square":
+            out_handle.write("\n".join(sorted(list(set(bam_files)))) + "\n")
     variantcaller = tz.get_in(("config", "algorithm", "jointcaller"), data).replace("-joint", "")
-    cmd = ["bcbio-variation-recall", "square"] + jvm_opts + broad.get_default_jvm_opts() + \
-          ["-c", cores, "-r", bamprep.region_to_gatk(region), "--caller", variantcaller] + \
-          [out_file, ref_file, input_file]
-    do.run(cmd, "Squaring off in region: %s" % bamprep.region_to_gatk(region))
+    cmd = ["bcbio-variation-recall", todo] + jvm_opts + broad.get_default_jvm_opts() + \
+          ["-c", cores, "-r", bamprep.region_to_gatk(region)]
+    if todo == "square":
+        cmd += ["--caller", variantcaller]
+    cmd += [out_file, ref_file, input_file]
+    do.run(cmd, "%s in region: %s" % (cmd, bamprep.region_to_gatk(region)))
     return out_file
