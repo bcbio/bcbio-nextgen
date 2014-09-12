@@ -230,13 +230,21 @@ RNAseq example
 This example aligns and creates count files for use with downstream analyses
 using a subset of the SEQC data from the FDA's Sequencing Quality Control project. 
 
-Get the setup script and run it, this will download six samples from the SEQC project, 
-three from the HBRR panel and three from the UHRR panel. It will also set up a configuration
-file for the run, using the templating system::
+Get the setup script and run it, this will download six samples from
+the SEQC project, three from the HBRR panel and three from the UHRR
+panel. This will require about 100GB of disk space for these input
+files.  It will also set up a configuration file for the run, using
+the templating system::
 
   wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
   bash rnaseq-seqc-data.sh
-  
+
+By default, GRCh37 is downloaded. This example uses hg19. To download it, 
+
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+  python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
+     --genomes hg19 --aligners bwa --aligners bowtie2
+
 Now go into the work directory and run the analysis::
 
    cd seqc/work
