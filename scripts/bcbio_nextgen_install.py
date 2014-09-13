@@ -234,7 +234,7 @@ if __name__ == "__main__":
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[],
                         choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix", "sacCer3",
-                                 "xenTro3", "TAIR10", "WBcel235"])
+                                 "xenTro3", "TAIR10", "WBcel235", "pseudomonas_aeruginosa_ucbpp_pa14"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "snap", "star", "ucsc"])
