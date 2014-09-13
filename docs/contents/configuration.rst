@@ -317,14 +317,17 @@ Variant calling
       supported by freebayes, varscan, mutect (see disclaimer below),
       scalpel (indels only) and vardict. See ``phenotype`` below for how to pair tumor
       and normal samples.
-    - Selecting mutect (SNP caller) will implicitly also call indels using scalpel and
+    - Selecting mutect (SNP caller) can also be combined by indels from scalpel or sid and
       combine the output. Mutect operates in both tumor-normal and tumor-only modes.
       In tumor-only mode the indels from scalpel will reflect all indels in the sample,
       as there is currently no way of separating the germline from somatic indels in
       tumor-only mode.
-- ``jointcaller`` Joint calling algorithm, combining variants called with the
-  specified ``variantcaller``. Can be a list of multiple options but needs to
-  match with appropriate ``variantcaller``
+-  ``indelcaller`` For SNP only variant callers it is possible to combine the calling
+   with indelcallers such as scalpel, pind and somatic indel detector (for Appistry MuTect
+   users only). Omit to ignore. [scalpel, sid]
+-  ``jointcaller`` Joint calling algorithm, combining variants called with the
+   specified ``variantcaller``. Can be a list of multiple options but needs to
+   match with appropriate ``variantcaller``
      - ``gatk-haplotype-joint`` `GATK incremental joint discovery
        <http://www.broadinstitute.org/gatk/guide/article?id=3893>`_ with
        HaplotypeCaller. Takes individual gVCFs called by ``gatk-haploype`` and

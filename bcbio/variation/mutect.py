@@ -112,8 +112,12 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
         _rename_allelic_fraction_field(out_file_mutect, config)
-        disable_SID = True  # SID isn't great, so use Scalpel instead
-        if "appistry" not in broad_runner.get_mutect_version() or disable_SID:
+        indelcaller = base_config["algorithm"].get("indelcaller", "")
+        if isinstance(indelcaller, (list, tuple)):
+            indelcaller = indelcaller[0] if (len(indelcaller) > 0) else ""
+        elif indelcaller is None:
+            indelcaller = ""
+        if "scalpel" in indelcaller.lower():
             # Scalpel InDels
             is_paired = "-I:normal" in params
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
@@ -134,8 +138,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                                                           region=region)
             else:
                 utils.symlink_plus(out_file_mutect, out_file)
-        else:
-            # SomaticIndelDetector modifications
+        elif ("somaticindeldetector" in indelcaller.lower() or "sid" in indelcaller.lower()) and "appistry" in broad_runner.get_mutect_version():
+            # SomaticIndelDetector InDels
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
             params_indels = _SID_call_prep(align_bams, items, ref_file, assoc_files,
@@ -148,6 +152,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                                                       ref_file=items[0]["sam_ref"],
                                                       config=items[0]["config"],
                                                       region=region)
+        else:
+            utils.symlink_plus(out_file_mutect, out_file)
     return out_file
 
 def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
