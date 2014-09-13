@@ -99,4 +99,6 @@ def _is_unique(read):
 
 
 ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
+            "variant2": {"params": ["-X", 2000]},
+            "Standard": {"params": ["-X", 2000]},
             "RNA-seq": {"params": ["--sensitive", "-X", 2000]}}

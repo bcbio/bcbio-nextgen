@@ -31,6 +31,9 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
     # adjust memory for samtools since used for input and output
     max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                          3, "decrease").upper()
+    bwa_resources = config_utils.get_resources("bwa", data["config"])
+    bwa_params = (" ".join([str(x) for x in bwa_resources.get("options", [])])
+                  if "options" in bwa_resources else "")
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file):
         with tx_tmpdir(data) as work_dir:
@@ -40,7 +43,7 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                 in_bam = utils.remote_cl_input(in_bam)
                 cmd = ("{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
                        "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
-                       "| {bwa} mem -p -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} - | ")
+                       "| {bwa} mem -p -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 {ref_file} - | ")
                 cmd = cmd.format(**locals()) + tobam_cl
                 do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
@@ -109,9 +112,12 @@ def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
     """
     bwa = config_utils.get_program("bwa", data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
+    bwa_resources = config_utils.get_resources("bwa", data["config"])
+    bwa_params = (" ".join([str(x) for x in bwa_resources.get("options", [])])
+                  if "options" in bwa_resources else "")
     with tx_tmpdir(data) as work_dir:
         with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
-            cmd = ("{bwa} mem -M -t {num_cores} -R '{rg_info}' -v 1 {ref_file} "
+            cmd = ("{bwa} mem -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 {ref_file} "
                    "{fastq_file} {pair_file} | ")
             cmd = cmd.format(**locals()) + tobam_cl
             do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,

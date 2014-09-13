@@ -1,5 +1,8 @@
 ## 0.8.2 (in progress)
 
+- Fix bug in creating shared regions for analysis when using a single sample in
+  multiple batches: for instance, when using a single normal sample for multiple
+  tumors. Thanks to Miika Ahdesmaki.
 - Unify approach to creating temporary directories. Allows specification of a
   global temporary directory in `resources: tmp:` used for all
   transactions. This enables full use of local temporary space during

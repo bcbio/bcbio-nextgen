@@ -15,6 +15,7 @@ details:
       mark_duplicates: true
       variantcaller: [gatk-haplotype, freebayes]
       jointcaller: [gatk-haplotype-joint, freebayes-joint]
+      coverage_interval: genome
       #aligner: false
       #mark_duplicates: false
       #variantcaller: false
@@ -33,6 +34,7 @@ details:
       variantcaller: [gatk-haplotype, freebayes]
       jointcaller: [gatk-haplotype-joint, freebayes-joint]
       effects: vep
+      coverage_interval: genome
       quality_format: Standard
       nomap_split_size: 50
       nomap_split_targets: 100

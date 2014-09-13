@@ -1,6 +1,10 @@
 Presentations
 =============
 
+- University of Georgia `Institute of Bioinformatics
+  <http://iob.uga.edu/event/bioinformatics-seminar-12/>`_ (12 September 2014):
+  `slides <https://github.com/chapmanb/bcbb/raw/master/talks/uga2014_bcbio_open/chapman_bcbio.pdf>`_
+
 - Intel Life Sciences discussion (7 August 2014): `slides <https://github.com/chapmanb/bcbb/raw/master/talks/intel2014_bcbio/chapman_bcbio.pdf>`_
 
 - Bioinformatics Open Source Conference (BOSC) 2014: `slides

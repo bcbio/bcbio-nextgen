@@ -359,15 +359,16 @@ def _needs_region_update(out_file, samples):
             return True
     return False
 
-def _combine_excessive_coverage(samples, ref_regions, min_n_size):
+def _combine_excessive_coverage(samples, ref_regions, min_n_size, tmp_outfile):
     """Provide a global set of regions with excessive coverage to avoid.
     """
     flag = "EXCESSIVE_COVERAGE"
     ecs = (pybedtools.BedTool(x["regions"]["callable"]).filter(lambda x: x.name == flag)
            for x in samples if "regions" in x)
-    merge_ecs = _combine_regions(ecs, ref_regions).saveas()
+    merge_ecs = _combine_regions(ecs, ref_regions).saveas("%s-ecmergeorig%s" % utils.splitext_plus(tmp_outfile))
     if len(merge_ecs) > 0:
-        return merge_ecs.merge(d=min_n_size).filter(lambda x: x.stop - x.start > min_n_size).saveas()
+        return merge_ecs.merge(d=min_n_size).filter(lambda x: x.stop - x.start > min_n_size).saveas(
+            "%s-ecmerge%s" % utils.splitext_plus(tmp_outfile))
     else:
         return merge_ecs
 
@@ -377,6 +378,7 @@ def combine_sample_regions(*samples):
     Intersects all non-callable (nblock) regions from all samples in a batch,
     producing a global set of callable regions.
     """
+    samples = [x[0] for x in samples]
     # back compatibility -- global file for entire sample set
     global_analysis_file = os.path.join(samples[0]["dirs"]["work"], "analysis_blocks.bed")
     if utils.file_exists(global_analysis_file) and not _needs_region_update(global_analysis_file, samples):
@@ -423,16 +425,20 @@ def _combine_sample_regions_batch(batch, items):
         if len(bed_regions) == 0:
             analysis_file, no_analysis_file = None, None
         else:
-            nblock_regions = reduce(operator.add, bed_regions)
-            ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
-            ref_regions = get_ref_bedtool(ref_file, config)
-            min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
-            ec_regions = _combine_excessive_coverage(items, ref_regions, min_n_size)
-            if len(ec_regions) > 0:
-                nblock_regions = nblock_regions.cat(ec_regions, d=min_n_size)
-            block_filter = NBlockRegionPicker(ref_regions, config)
-            final_nblock_regions = nblock_regions.filter(
-                block_filter.include_block).each(block_filter.expand_block).saveas()
-            final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
-            _write_bed_regions(items[0], final_regions, analysis_file, no_analysis_file)
+            with file_transaction(items[0], analysis_file, no_analysis_file) as (tx_afile, tx_noafile):
+                nblock_regions = reduce(operator.add, bed_regions).saveas(
+                    "%s-nblock%s" % utils.splitext_plus(tx_afile))
+                ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
+                ref_regions = get_ref_bedtool(ref_file, config)
+                min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
+                ec_regions = _combine_excessive_coverage(items, ref_regions, min_n_size,
+                                                         tx_afile)
+                if len(ec_regions) > 0:
+                    nblock_regions = nblock_regions.cat(ec_regions, d=min_n_size)
+                block_filter = NBlockRegionPicker(ref_regions, config)
+                final_nblock_regions = nblock_regions.filter(
+                    block_filter.include_block).each(block_filter.expand_block).saveas(
+                        "%s-nblockfinal%s" % utils.splitext_plus(tx_afile))
+                final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
+                _write_bed_regions(items[0], final_regions, tx_afile, tx_noafile)
     return analysis_file, no_analysis_file

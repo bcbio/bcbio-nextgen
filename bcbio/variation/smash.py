@@ -10,8 +10,9 @@ Testing Usage:
 import os
 import sys
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
@@ -22,11 +23,13 @@ def compare(ref_file, truth_vcf, eval_vcf, *bed_files):
     if region_bed:
         truth_vcf = _subset_vcf(truth_vcf, region_bed, out_dir, config)
         eval_vcf = _subset_vcf(eval_vcf, region_bed, out_dir, config)
-    _do_smash_calldiff(truth_vcf, eval_vcf, ref_file, out_dir)
+    _do_smash_calldiff(truth_vcf, eval_vcf, ref_file, out_dir, config)
 
-def _do_smash_calldiff(truth_vcf, eval_vcf, ref_file, out_dir):
-    cmd = ["java", "-jar", "calldiff-jar-with-dependencies.jar",
-           "--lhs_vcf", truth_vcf, "--rhs_vcf", eval_vcf,
+def _do_smash_calldiff(truth_vcf, eval_vcf, ref_file, out_dir, config):
+    resources = config_utils.get_resources("smash", config)
+    jvm_opts = resources.get("jvm_opts", ["-Xms250m", "-Xmx2g"])
+    cmd = ["smash"] + jvm_opts + broad.get_default_jvm_opts() + \
+          ["--lhs_vcf", truth_vcf, "--rhs_vcf", eval_vcf,
            "--reference_fasta", ref_file, "--presorted"]
     do.run(cmd, "Compare files with SMaSH calldiff")
 
