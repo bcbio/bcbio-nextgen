@@ -16,6 +16,7 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [vardict, mutect, freebayes, varscan]
+      indelcaller: scalpel
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]
@@ -35,6 +36,7 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [vardict, mutect, freebayes, varscan]
+      indelcaller: scalpel
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]
