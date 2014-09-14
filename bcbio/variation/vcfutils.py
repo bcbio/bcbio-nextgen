@@ -78,6 +78,17 @@ def fix_ambiguous_cl():
     """
     return r"""awk -F$'\t' -v OFS='\t' '{if ($0 !~ /^#/) gsub(/[KMRYSWBVHDX]/, "N", $4) } {print}'"""
 
+def get_indelcaller(d_or_c):
+    """Retrieve string for indelcaller to use, or empty string if not specified.
+    """
+    config = d_or_c if isinstance(d_or_c, dict) and "config" in d_or_c else d_or_c
+    indelcaller = config["algorithm"].get("indelcaller", "")
+    if not indelcaller:
+        indelcaller = ""
+    if isinstance(indelcaller, (list, tuple)):
+        indelcaller = indelcaller[0] if (len(indelcaller) > 0) else ""
+    return indelcaller
+
 def write_empty_vcf(out_file, config=None, samples=None):
     needs_bgzip = False
     if out_file.endswith(".vcf.gz"):

@@ -10,6 +10,8 @@
 - Fix issues with concatenating files that fail to work with GATK's
   CatVariants. Fall back to bcftools concat which correctly handles problem
   headers and overlapping segments.
+- Enable flexible specification of `indelcaller` for `variantcaller` targets
+  that do not have integrated indel methods. Thanks to Miika Ahdesmaki.
 - Move to samtools 1.0 release. Update samtools variant calling to support new
   multiallelic approach.
 - Improve Platypus integration: correctly pass multiple BAM files, make use of

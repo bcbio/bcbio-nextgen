@@ -112,11 +112,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
         _rename_allelic_fraction_field(out_file_mutect, config)
-        indelcaller = base_config["algorithm"].get("indelcaller", "")
-        if isinstance(indelcaller, (list, tuple)):
-            indelcaller = indelcaller[0] if (len(indelcaller) > 0) else ""
-        elif indelcaller is None:
-            indelcaller = ""
+        indelcaller = vcfutils.get_indelcaller(base_config)
         if "scalpel" in indelcaller.lower():
             # Scalpel InDels
             is_paired = "-I:normal" in params
@@ -138,7 +134,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                                                           region=region)
             else:
                 utils.symlink_plus(out_file_mutect, out_file)
-        elif ("somaticindeldetector" in indelcaller.lower() or "sid" in indelcaller.lower()) and "appistry" in broad_runner.get_mutect_version():
+        elif (("somaticindeldetector" in indelcaller.lower() or "sid" in indelcaller.lower())
+              and "appistry" in broad_runner.get_mutect_version()):
             # SomaticIndelDetector InDels
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
