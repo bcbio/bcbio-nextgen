@@ -18,7 +18,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
-from bcbio.variation import vcfutils
+from bcbio.variation import bedutils, vcfutils
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using cn.mops.
@@ -135,10 +135,11 @@ def _prep_load_script(work_bams, names, chrom, items):
 def _get_regional_bed_file(data):
     """If we are running a non-genome analysis, pull the regional file for analysis.
     """
-    bed_file = data["config"]["algorithm"].get("variant_regions", None)
+    variant_regions = bedutils.merge_overlaps(tz.get_in(["config", "algorithm", "variant_regions"], data),
+                                              data)
     is_genome = data["config"]["algorithm"].get("coverage_interval", "exome").lower() in ["genome"]
-    if bed_file and utils.file_exists(bed_file) and not is_genome:
-        return bed_file
+    if variant_regions and utils.file_exists(variant_regions) and not is_genome:
+        return variant_regions
 
 def _population_load_script(work_bams, names, chrom, pairmode, items):
     """Prepare BAMs for assessing CNVs in a population.
