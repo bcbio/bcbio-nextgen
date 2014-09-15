@@ -733,7 +733,7 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
                                     (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
                                 similar.add(name[i.attrib['file1']])
                                 similar.add(name[i.attrib['file2']])
-    return warnings, similar 
+    return warnings, similar
 
 def _slice_chr22(in_bam, data):
     """
