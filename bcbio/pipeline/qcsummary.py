@@ -668,7 +668,7 @@ def qsignature_summary(*samples):
         vcf = tz.get_in(["summary", "metrics", "qsig_vcf"], data)
         if vcf:
             count += 1
-            vcf_name = os.path.basename(vcf)
+            vcf_name = data["name"][-1] + ".qsig.vcf"
             out_dir = utils.safe_makedir(os.path.join(work_dir, "qsignature"))
             if not os.path.lexists(os.path.join(out_dir, vcf_name)):
                 os.symlink(vcf, os.path.join(out_dir, vcf_name))
@@ -715,7 +715,7 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
                     with open(warn_tx_file, 'w') as warn_handle:
                         ET = lxml.etree.parse(in_handle)
                         for i in list(ET.iter('file')):
-                            name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".bam.qsig.vcf", "")
+                            name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".qsig.vcf", "")
                         for i in list(ET.iter('comparison')):
                             out_handle.write("%s\t%s\t%s\n" %
                             (name[i.attrib['file1']], name[i.attrib['file2']], i.attrib['score']))
