@@ -23,26 +23,26 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """
     assert out_file.endswith(".vcf.gz")
     if not utils.file_exists(out_file):
-        p_out_file = out_file.replace(".vcf.gz", ".vcf")
-        with file_transaction(items[0], p_out_file) as tx_out_file:
+        with file_transaction(items[0], out_file) as tx_out_file:
             for align_bam in align_bams:
                 bam.index(align_bam, items[0]["config"])
             cmd = ["platypus", "callVariants", "--regions=%s" % _bed_to_platypusin(region, out_file, items),
                    "--bamFiles=%s" % ",".join(align_bams),
-                   "--refFile=%s" % dd.get_ref_file(items[0]), "--output=%s" % tx_out_file,
+                   "--refFile=%s" % dd.get_ref_file(items[0]), "--output=-",
                    "--logFileName", "/dev/null", "--verbosity=1"]
             cmd += ["--assemble=1"]
-            cmd += ["--hapScoreThreshold", "10", "--scThreshold", "0.99", "--filteredReadsFrac", "0.9"]
+            # Adjust default filter thresholds to achieve similar sensitivity/specificity to other callers
+            cmd += ["--hapScoreThreshold", "10", "--scThreshold", "0.99", "--filteredReadsFrac", "0.9",
+                    "--rmsmqThreshold", "20", "--qdThreshold", "2", "--abThreshold", "0.0001",
+                    "--minVarFreq", "0.01"]
             # Avoid filtering duplicates on high depth targeted regions where we don't mark duplicates
             if any(not tz.get_in(["config", "algorithm", "mark_duplicates"], data, True)
                    for data in items):
                 cmd += ["--filterDuplicates=0"]
-            do.run(cmd, "platypus variant calling")
-        if p_out_file != out_file:
-            post_process_cmd = "%s | vcfallelicprimitives | vcfstreamsort" % vcfutils.fix_ambiguous_cl()
-            b_out_file = vcfutils.bgzip_and_index(p_out_file, items[0]["config"],
-                                                  prep_cmd=post_process_cmd)
-            assert b_out_file == out_file
+            post_process_cmd = " | %s | vcfallelicprimitives | vcfstreamsort | bgzip -c > %s" % (
+                vcfutils.fix_ambiguous_cl(), tx_out_file)
+            do.run(" ".join(cmd) + post_process_cmd, "platypus variant calling")
+        out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
     return out_file
 
 def _bed_to_platypusin(region, base_file, items):
