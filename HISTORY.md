@@ -1,4 +1,4 @@
-## 0.8.2 (in progress)
+## 0.8.2 (September 17, 2014)
 
 - Fix bug in creating shared regions for analysis when using a single sample in
   multiple batches: for instance, when using a single normal sample for multiple
