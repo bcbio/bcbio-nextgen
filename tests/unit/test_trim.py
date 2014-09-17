@@ -1,4 +1,4 @@
-from bcbio.bam.trim import trim_read_through
+from bcbio.bam.trim import trim_adapters
 from bcbio.utils import append_stem
 import yaml
 import unittest
@@ -37,7 +37,7 @@ class TestTrimReadThrough(unittest.TestCase):
     @attr("unit-broken")
     def test_pairedend(self):
         paired = self.config["input_paired"]
-        out_files = trim_read_through(paired, self.config["dir"], self.config)
+        out_files = trim_adapters(paired, self.config["dir"], self.config)
         correct_files = map(self._trim_paired_correct, out_files)
         self.assertTrue(all(map(filecmp.cmp, correct_files, out_files)))
         shutil.rmtree(self.root_work)
@@ -45,7 +45,7 @@ class TestTrimReadThrough(unittest.TestCase):
     @attr("unit-broken")
     def test_single(self):
         single = self.config["input_single"]
-        out_file = trim_read_through(single, self.config["dir"], self.config)
+        out_file = trim_adapters(single, self.config["dir"], self.config)
         correct_file = self._trim_single_correct(out_file)
         self.assertTrue(filecmp.cmp(correct_file, out_file))
         shutil.rmtree(self.root_work)

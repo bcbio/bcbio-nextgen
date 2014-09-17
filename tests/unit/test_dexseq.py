@@ -20,7 +20,7 @@ class TestDEXSeqCount(unittest.TestCase):
         bam_file = test_data.BAM_FILE
         dexseq_gff = test_data.DEXSEQ_GFF
         stranded = "unstranded"
-        out_file = dexseq.run_count(bam_file, dexseq_gff, stranded, out_file)
+        out_file = dexseq.run_count(bam_file, dexseq_gff, stranded, out_file, {})
         self.assertTrue(file_exists(out_file))
 
     def test_dexseq_combine(self):
