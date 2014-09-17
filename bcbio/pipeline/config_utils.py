@@ -382,7 +382,14 @@ def use_snpeff(algs):
 def use_bcbio_variation_recall(algs):
     """Processing uses bcbio-variation-recall. Avoids core requirement if not used.
     """
-    return any(alg.get("jointcaller") == "bcbio-variation-recall" for alg in algs)
+    for alg in algs:
+        jointcaller = alg.get("jointcaller", [])
+        if isinstance(jointcaller, basestring):
+            jointcaller = [jointcaller]
+        for caller in jointcaller:
+            if caller not in set(["gatk-haplotype-joint", None, False]):
+                return True
+    return False
 
 ## functions for navigating through the standard galaxy directory of files
 

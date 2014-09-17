@@ -112,11 +112,12 @@ def _combine_to_jointcaller(processed):
 def square_batch_region(data, region, bam_files, vrn_files, out_file):
     """Perform squaring of a batch in a supplied region, with input BAMs
     """
+    supported = ["freebayes", "platypus", "samtools"]
     if not utils.file_exists(out_file):
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
-        if jointcaller in ["freebayes-joint", "platypus-joint"]:
+        if jointcaller in ["%s-joint" % x for x in supported]:
             _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file, "square")
-        elif jointcaller in ["freebayes-merge", "platypus-merge"]:
+        elif jointcaller in ["%s-merge" % x for x in supported]:
             _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file, "merge")
         elif jointcaller == "gatk-haplotype-joint":
             gatkjoint.run_region(data, region, vrn_files, out_file)
