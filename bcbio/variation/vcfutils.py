@@ -448,10 +448,6 @@ def tabix_index(in_file, config, preset=None):
     in_file = os.path.abspath(in_file)
     out_file = in_file + ".tbi"
     if not utils.file_exists(out_file) or not utils.file_uptodate(out_file, in_file):
-        try:
-            os.remove(out_file)
-        except OSError:
-            pass
         with file_transaction(config, out_file) as tx_out_file:
             tabix = tools.get_tabix_cmd(config)
             tx_in_file = os.path.splitext(tx_out_file)[0]

@@ -211,13 +211,19 @@ def file_exists_or_remote(fname):
 def file_exists(fname):
     """Check if a file exists and is non-empty.
     """
-    return fname and os.path.exists(fname) and os.path.getsize(fname) > 0
+    try:
+        return fname and os.path.exists(fname) and os.path.getsize(fname) > 0
+    except OSError:
+        return False
 
 def file_uptodate(fname, cmp_fname):
     """Check if a file exists, is non-empty and is more recent than cmp_fname.
     """
-    return (file_exists(fname) and file_exists(cmp_fname) and
-            os.path.getmtime(fname) >= os.path.getmtime(cmp_fname))
+    try:
+        return (file_exists(fname) and file_exists(cmp_fname) and
+                os.path.getmtime(fname) >= os.path.getmtime(cmp_fname))
+    except OSError:
+        return False
 
 def create_dirs(config, names=None):
     if names is None:
