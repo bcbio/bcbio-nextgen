@@ -33,8 +33,8 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
             cmd += ["--assemble=1"]
             # Adjust default filter thresholds to achieve similar sensitivity/specificity to other callers
             cmd += ["--hapScoreThreshold", "10", "--scThreshold", "0.99", "--filteredReadsFrac", "0.9",
-                    "--rmsmqThreshold", "20", "--qdThreshold", "2", "--abThreshold", "0.0001",
-                    "--minVarFreq", "0.01"]
+                    "--rmsmqThreshold", "20", "--qdThreshold", "0", "--abThreshold", "0.0",
+                    "--minVarFreq", "0.0"]
             # Avoid filtering duplicates on high depth targeted regions where we don't mark duplicates
             if any(not tz.get_in(["config", "algorithm", "mark_duplicates"], data, True)
                    for data in items):
