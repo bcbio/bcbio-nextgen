@@ -179,6 +179,7 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = alignprep.merge_split_alignments(samples, run_parallel)
                 samples = disambiguate.resolve(samples, run_parallel)
             with profile.report("callable regions", dirs):
+                samples = run_parallel("prep_samples", [samples])
                 samples = run_parallel("postprocess_alignment", samples)
                 samples = run_parallel("combine_sample_regions", [samples])
                 samples = region.clean_sample_data(samples)
@@ -255,6 +256,7 @@ class StandardPipeline(AbstractPipeline):
             with profile.report("alignment", dirs):
                 samples = run_parallel("process_alignment", samples)
             with profile.report("callable regions", dirs):
+                samples = run_parallel("prep_samples", [samples])
                 samples = run_parallel("postprocess_alignment", samples)
                 samples = run_parallel("combine_sample_regions", [samples])
                 samples = region.clean_sample_data(samples)

@@ -1,3 +1,9 @@
+## 0.8.3 (in progress)
+
+- Avoid race conditions during `bedprep` work on samples with shared input BED
+  files. These are now processed sequentially on a single machine to avoid
+  conflicts. Thanks to Justin Johnson.
+
 ## 0.8.2 (September 17, 2014)
 
 - Fix bug in creating shared regions for analysis when using a single sample in

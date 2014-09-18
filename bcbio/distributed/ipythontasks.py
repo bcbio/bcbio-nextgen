@@ -91,6 +91,12 @@ def postprocess_alignment(*args):
         return ipython.zip_args(apply(sample.postprocess_alignment, *args))
 
 @require(sample)
+def prep_samples(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(sample.prep_samples, *args))
+
+@require(sample)
 def merge_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:

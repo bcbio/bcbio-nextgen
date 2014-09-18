@@ -31,6 +31,10 @@ def postprocess_alignment(*args):
     return sample.postprocess_alignment(*args)
 
 @utils.map_wrap
+def prep_samples(*args):
+    return sample.prep_samples(*args)
+
+@utils.map_wrap
 def prep_align_inputs(*args):
     return alignprep.create_inputs(*args)
 
