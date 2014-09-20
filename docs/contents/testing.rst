@@ -237,7 +237,7 @@ files.  It will also set up a configuration file for the run, using
 the templating system::
 
   wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
-  bash rnaseq-seqc-data.sh
+  bash rnaseq-seqc-getdata.sh
 
 By default, GRCh37 is downloaded. This example uses hg19. To download it, 
 
