@@ -77,6 +77,7 @@ def file_transaction(*data_and_files):
         else:  # worked -- move the temporary files to permanent location
             for safe, orig in zip(safe_names, orig_names):
                 if os.path.exists(safe):
+                    utils.safe_makedir(os.path.dirname(orig))
                     shutil.move(safe, orig)
                     for check_ext, check_idx in exts.iteritems():
                         if safe.endswith(check_ext):
