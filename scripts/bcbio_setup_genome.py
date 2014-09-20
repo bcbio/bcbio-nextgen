@@ -5,14 +5,16 @@ Script to set up a custom genome for bcbio-nextgen
 import argparse
 from argparse import ArgumentParser
 import os
-from cloudbio.biodata import genomes
-from cloudbio import fabutils
 from bcbio.utils import safe_makedir
+from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
+                           _get_data_dir)
 from fabric.api import *
 import subprocess
 import sys
 import shutil
+import yaml
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
@@ -28,8 +30,6 @@ def _index_w_command(dir_name, command, ref_file, ext=None):
     subprocess.check_call(command.format(ref_file=ref_file,
                                          index_name=index_path), shell=True)
     return index_path
-
-genomes._index_w_command = _index_w_command
 
 def setup_base_directories(genome_dir, name, build, gtf=None):
     name_dir = os.path.join(genome_dir, name)
@@ -57,11 +57,10 @@ def install_gtf_file(build_dir, gtf, build):
 
 if __name__ == "__main__":
     description = ("Set up a custom genome for bcbio-nextgen. This will "
-                   "stick the genome under name/build in the genomes "
+                   "place the genome under name/build in the genomes "
                    "directory in your bcbio-nextgen installation.")
 
-    parser = ArgumentParser(description=("Set up a custom genome for "
-                                         "bcbio-nextgen."))
+    parser = ArgumentParser(description=description)
     parser.add_argument("-f", "--fasta", required=True,
                         help="FASTA file of the genome.")
     parser.add_argument("-g", "--gtf", default=None,
@@ -70,33 +69,38 @@ if __name__ == "__main__":
                         help="Name of organism, for example Hsapiens.")
     parser.add_argument("-b", "--build", required=True,
                         help="Build of genome, for example hg19.")
-    parser.add_argument("-d", "--genome-dir", required=True,
-                        help="Path to bcbio-nextgen genomes directory.")
-    parser.add_argument("-i", "--indexes", choices=genomes.INDEX_FNS.keys(),
-                        nargs="*", required=True,
-                        help="List of indexes to make")
-    parser.add_argument("-p", "--picard-dir", default=None,
-                        help="Path to Picard installation")
-    parser.add_argument("--prepare-tx", default=None,
-                        help="Path to prepare_tx_gff.py (in utils/cloudbiolinux)")
+    parser.add_argument("-i", "--indexes", choices=SUPPORTED_INDEXES, nargs="*",
+                        default=["seq"], help="Space separated list of indexes to make")
 
     args = parser.parse_args()
     env.hosts = ["localhost"]
+    cbl = get_cloudbiolinux(REMOTES)
+    sys.path.insert(0, cbl["dir"])
+    genomemod = __import__("cloudbio.biodata", fromlist=["genomes"])
+    # monkey patch cloudbiolinux to use this indexing command instead
+    genomes = getattr(genomemod, 'genomes')
+    genomes._index_w_command = _index_w_command
+    fabmod = __import__("cloudbio", fromlist=["fabutils"])
+    fabutils = getattr(fabmod, 'fabutils')
     fabutils.configure_runsudo(env)
-    args.genome_dir = os.path.abspath(args.genome_dir)
+
+    genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
+
     args.fasta = os.path.abspath(args.fasta)
     args.gtf = os.path.abspath(args.gtf) if args.gtf else None
-    env.system_install = args.genome_dir
+    env.system_install = genome_dir
+    prepare_tx = os.path.join(cbl["dir"], "utils", "prepare_tx_gff.py")
 
-    print "Creating directories using %s as the base." % (args.genome_dir)
-    build_dir = setup_base_directories(args.genome_dir, args.name,
-                                       args.build, args.gtf)
+    print "Creating directories using %s as the base." % (genome_dir)
+    build_dir = setup_base_directories(genome_dir, args.name, args.build, args.gtf)
     os.chdir(build_dir)
     print "Genomes will be installed into %s." % (build_dir)
 
     fasta_file = install_fasta_file(build_dir, args.fasta, args.build)
     print "Installed genome as %s." % (fasta_file)
     if args.gtf:
+        if "bowtie2" not in args.indexes:
+            args.indexes.append("bowtie2")
         gtf_file = install_gtf_file(build_dir, args.gtf, args.build)
         print "Installed GTF as %s." % (gtf_file)
 
@@ -107,14 +111,14 @@ if __name__ == "__main__":
             print "Do not know how to make the index %s, skipping." % (index)
         index_fn(fasta_file)
 
-    if args.gtf:
-        if not args.picard_dir or not args.prepare_tx:
-            print ("picard-dir and prepare-tx must be set when preparing a "
-                   "transcriptome.")
-            sys.exit(1)
 
+    if args.gtf:
+        system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+        with open(system_config) as in_handle:
+            config = yaml.load(in_handle)
+        picard_dir = config_utils.get_program("picard", config, ptype="dir")
         "Preparing transcriptome."
         os.chdir(os.path.join(build_dir, os.pardir))
-        cmd = ("{sys.executable} {args.prepare_tx} --gtf {gtf_file} {args.picard_dir} "
+        cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {picard_dir} "
                "{args.build}")
         subprocess.check_call(cmd.format(**locals()), shell=True)
