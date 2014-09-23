@@ -8,12 +8,6 @@ import os
 import time
 import itertools
 import shutil
-
-try:
-    import vcf
-except ImportError:
-    vcf = None
-
 from bcbio import bam, utils, broad
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils
@@ -56,12 +50,8 @@ def is_installed(config):
     :returns: (boolean) if pindel is installed
     """
     try:
-        config_utils.get_program("pindel", config)
-        return True
-    except config_utils.CmdNotFound:
-        return False
-    try:
         config_utils.get_program("pindel2vcf", config)
+        config_utils.get_program("pindel", config)
         return True
     except config_utils.CmdNotFound:
         return False
