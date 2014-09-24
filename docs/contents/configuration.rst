@@ -238,7 +238,7 @@ Alignment
 
 - ``platform`` Sequencing platform used. Corresponds to the ``PL``
   parameter in BAM read groups. Default 'Illumina'.
--  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign, snap, star,
+-  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, novoalign, snap, star,
    false]
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
    handles adding read groups, sorting to a reference genome and
@@ -342,7 +342,7 @@ Variant calling
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [true, false]
    If true, will perform streaming duplicate marking with `samblaster`_ for
-   paired reads and `biobambam's bammarkduplicates` for single end reads.
+   paired reads and `biobambam's bammarkduplicates`_ for single end reads.
 -  ``recalibrate`` Perform base quality score recalibration on the
    aligned BAM file. Defaults to no recalibration. [false, gatk]
 -  ``realign`` Perform realignment around indels on the aligned BAM
