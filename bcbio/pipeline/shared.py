@@ -125,10 +125,13 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
                     out_handle.write(line)
 
 
-def _subset_bed_by_region(in_file, out_file, region):
+def _subset_bed_by_region(in_file, out_file, region, do_merge=True):
     orig_bed = pybedtools.BedTool(in_file)
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
-    orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).saveas(out_file)
+    if do_merge:
+        orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).merge().saveas(out_file)
+    else:
+        orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).saveas(out_file)
 
 def get_lcr_bed(items):
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
@@ -165,15 +168,15 @@ def subtract_low_complexity(f):
     """Remove low complexity regions from callable regions if available.
     """
     @functools.wraps(f)
-    def wrapper(variant_regions, region, out_file, items=None):
-        region_bed = f(variant_regions, region, out_file, items)
+    def wrapper(variant_regions, region, out_file, items=None, do_merge=True):
+        region_bed = f(variant_regions, region, out_file, items, do_merge)
         if region_bed and isinstance(region_bed, basestring) and os.path.exists(region_bed) and items:
             region_bed = remove_lcr_regions(region_bed, items)
         return region_bed
     return wrapper
 
 @subtract_low_complexity
-def subset_variant_regions(variant_regions, region, out_file, items=None):
+def subset_variant_regions(variant_regions, region, out_file, items=None, do_merge=True):
     """Return BED file subset by a specified chromosome region.
 
     variant_regions is a BED file, region is a chromosome name or tuple
@@ -186,11 +189,13 @@ def subset_variant_regions(variant_regions, region, out_file, items=None):
     elif not isinstance(region, (list, tuple)) and region.find(":") > 0:
         raise ValueError("Partial chromosome regions not supported")
     else:
-        subset_file = "{0}-regions.bed".format(utils.splitext_plus(out_file)[0])
+        merge_text = "-unmerged" if not do_merge else ""
+        subset_file = "{0}".format(utils.splitext_plus(out_file)[0])
+        subset_file += "%s-regions.bed" % (merge_text)
         if not os.path.exists(subset_file):
             with file_transaction(items[0] if items else None, subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
-                    _subset_bed_by_region(variant_regions, tx_subset_file, region)
+                    _subset_bed_by_region(variant_regions, tx_subset_file, region, do_merge = do_merge)
                 else:
                     _rewrite_bed_with_chrom(variant_regions, tx_subset_file, region)
         if os.path.getsize(subset_file) == 0:
