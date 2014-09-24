@@ -383,6 +383,8 @@ def fix_insert_size(in_bam, config):
     bam_handle= bam.open_samfile(in_bam)
     header = bam_handle.header.copy()
     rg_dict = header['RG'][0]
+    if 'PI' not in rg_dict:
+        return in_bam
     PI = int(rg_dict.get('PI'))
     PI = PI + 2*read_length
     rg_dict['PI'] = PI
