@@ -128,7 +128,7 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
 def _subset_bed_by_region(in_file, out_file, region):
     orig_bed = pybedtools.BedTool(in_file)
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
-    orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).merge().saveas(out_file)
+    orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).saveas(out_file)
 
 def get_lcr_bed(items):
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
