@@ -685,7 +685,7 @@ def qsignature_summary(*samples):
                             "-log {log} -dir {out_dir} "
                             "-o {file_txt_out} ")
                 do.run(base_cmd.format(**locals()), "qsignature score calculation")
-       error, warnings, similar = _parse_qsignature_output(out_file, out_ma_file,
+        error, warnings, similar = _parse_qsignature_output(out_file, out_ma_file,
                                                             out_warn_file, samples[0][0])
         return [{'total samples': count,
                  'similar samples pairs': len(similar),
@@ -707,8 +707,11 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
 
     """
     name = {}
-    warnings = set()
-    similar = set()
+    error, warnings, similar = set(), set(), set()
+    same, replicate, related = 0, 0.1, 0.18
+    mixup_check = dd.get_mixup_check(data)
+    if mixup_check == "qsignature_full":
+        same, replicate, related = 0, 0.01, 0.061
     with open(in_file, 'r') as in_handle:
         with file_transaction(data, out_file) as out_tx_file:
             with file_transaction(data, warning_file) as warn_tx_file:
