@@ -66,7 +66,7 @@ def _galaxy_library_upload(finfo, sample_info, config):
         gi = GalaxyInstance(galaxy_url, config["galaxy_api_key"])
     else:
         raise ValueError("Galaxy upload requires `galaxy_url` and `galaxy_api_key` in config")
-    if storage_file and sample_info and not finfo.get("index", False):
+    if storage_file and sample_info and not finfo.get("index", False) and not finfo.get("plus", False):
         _to_datalibrary_safe(storage_file, gi, folder_name, sample_info, config)
 
 def _to_datalibrary_safe(fname, gi, folder_name, sample_info, config):
