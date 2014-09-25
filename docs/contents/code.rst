@@ -85,11 +85,14 @@ project.
 
 The automated bcbio-nextgen installer creates an isolated Python
 environment using `Anaconda`_. This will be a subdirectory of your
-installation root, like ``/usr/local/share/bcbio_nextgen/anaconda``.
+installation root, like ``/usr/local/share/bcbio-nextgen/anaconda``.
 You can manually use the ``bin/python`` within this subdirectory, or
 setup a Python virtual environment management system like
 `virtualenv-burrito`_ or `Python Env Wrapper`_ to switch in and out of
-this environment.
+this environment. Typically we alias this and then use ``bcbio_python`` to run
+``setup.py`` when installing a local development version::
+
+    alias bcbio_python='/usr/local/share/bcbio-nextgen/anaconda/bin/python'
 
 You generally will want to make changes to your local copy of the
 bcbio-nextgen code and then install these into the code directory
