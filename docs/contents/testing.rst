@@ -83,10 +83,10 @@ less disk and computational requirements.
 
 .. _CEPH NA12878 family: http://blog.goldenhelix.com/wp-content/uploads/2013/03/Utah-Pedigree-1463-with-NA12878.png
 
-We also have a more extensive evaluation that includes the Platypus variant
-caller and 3 different methods of calling variants: single sample, pooled, and
-incremental joint calling. This uses the same input data as above but a
-different input configuration file::
+We also have a more extensive evaluation that includes 2 additional variant
+callers, Platypus and samtools, and 3 different methods of calling variants:
+single sample, pooled, and incremental joint calling. This uses the same input
+data as above but a different input configuration file::
   
   mkdir -p NA12878-trio-eval/work_joint
   cd NA12878-trio-eval/config

@@ -1,9 +1,10 @@
 # Configuration comparing alignment methods and variant callers
 # for a CEPH NA12878 whole genome trio, using Illumina platinum
 # genome inputs and Genome in a Bottle reference calls.
-# Compares SNAP and bwa aligners
-# Compares 3 variant callers: FreeBayes, GATKHaplotype, Platypus
+# 
+# Compares 4 variant callers: FreeBayes, GATKHaplotype, Platypus, samtools
 # Compares 3 calling method: batched concurrently, separate with joint recalling and single sample
+# Compares SNAP and bwa aligners
 #
 # See the bcbio-nextgen documentation for full instructions to
 # run this analysis:
@@ -25,7 +26,7 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
+      variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       quality_format: Standard
       coverage_interval: genome
       remove_lcr: true
@@ -43,7 +44,7 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
+      variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       quality_format: Standard
       coverage_interval: genome
   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
@@ -58,56 +59,7 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      quality_format: Standard
-      coverage_interval: genome
-  # snap, batch calling
-  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
-    description: NA12878-2
-    metadata:
-      batch: ceph-snap
-      sex: female
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: snap
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      quality_format: Standard
-      coverage_interval: genome
-      remove_lcr: true
-      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
-      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
-  - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
-    description: NA12891-2
-    metadata:
-      batch: ceph-snap
-      sex: male
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: snap
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      quality_format: Standard
-      coverage_interval: genome
-  - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
-    description: NA12892-2
-    metadata:
-      batch: ceph-snap
-      sex: female
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: snap
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
+      variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       quality_format: Standard
       coverage_interval: genome
   # bwa, joint calling
@@ -123,8 +75,8 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
+      variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
+      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint, samtools-joint]
       quality_format: Standard
       coverage_interval: genome
       remove_lcr: true
@@ -142,8 +94,8 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
+      variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
+      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint, samtools-joint]
       quality_format: Standard
       coverage_interval: genome
   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
@@ -158,62 +110,11 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
+      variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
+      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint, samtools-joint]
       quality_format: Standard
       coverage_interval: genome
-  # snap, joint calling
-  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
-    description: NA12878-4
-    metadata:
-      batch: ceph-snap-j
-      sex: female
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: snap
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
-      quality_format: Standard
-      coverage_interval: genome
-      remove_lcr: true
-      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
-      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
-  - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
-    description: NA12891-4
-    metadata:
-      batch: ceph-snap-j
-      sex: male
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: snap
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
-      quality_format: Standard
-      coverage_interval: genome
-  - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
-    description: NA12892-4
-    metadata:
-      batch: ceph-snap-j
-      sex: female
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: snap
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
-      quality_format: Standard
-      coverage_interval: genome
+  # bwa, single sample calling
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-5
     metadata:
@@ -225,26 +126,128 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
+      variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       quality_format: Standard
       coverage_interval: genome
       remove_lcr: true
       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
-  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
-    description: NA12878-6
-    metadata:
-      sex: female
-    analysis: variant2
-    genome_build: GRCh37
-    algorithm:
-      aligner: snap
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [freebayes, gatk-haplotype, platypus]
-      quality_format: Standard
-      coverage_interval: genome
-      remove_lcr: true
-      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
-      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
+#  # snap, batch calling
+#  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
+#    description: NA12878-2
+#    metadata:
+#      batch: ceph-snap
+#      sex: female
+#    analysis: variant2
+#    genome_build: GRCh37
+#    algorithm:
+#      aligner: snap
+#      mark_duplicates: true
+#      recalibrate: false
+#      realign: false
+#      variantcaller: [freebayes, gatk-haplotype, platypus]
+#      quality_format: Standard
+#      coverage_interval: genome
+#      remove_lcr: true
+#      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+#      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
+#  - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
+#    description: NA12891-2
+#    metadata:
+#      batch: ceph-snap
+#      sex: male
+#    analysis: variant2
+#    genome_build: GRCh37
+#    algorithm:
+#      aligner: snap
+#      mark_duplicates: true
+#      recalibrate: false
+#      realign: false
+#      variantcaller: [freebayes, gatk-haplotype, platypus]
+#      quality_format: Standard
+#      coverage_interval: genome
+#  - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
+#    description: NA12892-2
+#    metadata:
+#      batch: ceph-snap
+#      sex: female
+#    analysis: variant2
+#    genome_build: GRCh37
+#    algorithm:
+#      aligner: snap
+#      mark_duplicates: true
+#      recalibrate: false
+#      realign: false
+#      variantcaller: [freebayes, gatk-haplotype, platypus]
+#      quality_format: Standard
+#      coverage_interval: genome
+#   # snap, joint calling
+#   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
+#     description: NA12878-4
+#     metadata:
+#       batch: ceph-snap-j
+#       sex: female
+#     analysis: variant2
+#     genome_build: GRCh37
+#     algorithm:
+#       aligner: snap
+#       mark_duplicates: true
+#       recalibrate: false
+#       realign: false
+#       variantcaller: [freebayes, gatk-haplotype, platypus]
+#       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
+#       quality_format: Standard
+#       coverage_interval: genome
+#       remove_lcr: true
+#       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+#       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
+#   - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
+#     description: NA12891-4
+#     metadata:
+#       batch: ceph-snap-j
+#       sex: male
+#     analysis: variant2
+#     genome_build: GRCh37
+#     algorithm:
+#       aligner: snap
+#       mark_duplicates: true
+#       recalibrate: false
+#       realign: false
+#       variantcaller: [freebayes, gatk-haplotype, platypus]
+#       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
+#       quality_format: Standard
+#       coverage_interval: genome
+#   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
+#     description: NA12892-4
+#     metadata:
+#       batch: ceph-snap-j
+#       sex: female
+#     analysis: variant2
+#     genome_build: GRCh37
+#     algorithm:
+#       aligner: snap
+#       mark_duplicates: true
+#       recalibrate: false
+#       realign: false
+#       variantcaller: [freebayes, gatk-haplotype, platypus]
+#       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
+#       quality_format: Standard
+#       coverage_interval: genome
+#  # snap, single sample calling
+#  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
+#    description: NA12878-6
+#    metadata:
+#      sex: female
+#    analysis: variant2
+#    genome_build: GRCh37
+#    algorithm:
+#      aligner: snap
+#      mark_duplicates: true
+#      recalibrate: false
+#      realign: false
+#      variantcaller: [freebayes, gatk-haplotype, platypus]
+#      quality_format: Standard
+#      coverage_interval: genome
+#      remove_lcr: true
+#      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+#      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
