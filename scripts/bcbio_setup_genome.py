@@ -5,16 +5,19 @@ Script to set up a custom genome for bcbio-nextgen
 import argparse
 from argparse import ArgumentParser
 import os
+import toolz as tz
 from bcbio.utils import safe_makedir
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
                            _get_data_dir)
+from bcbio.galaxy import loc
 from fabric.api import *
 import subprocess
 import sys
 import shutil
 import yaml
+
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
@@ -85,7 +88,6 @@ if __name__ == "__main__":
     fabutils.configure_runsudo(env)
 
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
-
     args.fasta = os.path.abspath(args.fasta)
     args.gtf = os.path.abspath(args.gtf) if args.gtf else None
     env.system_install = genome_dir
@@ -104,12 +106,15 @@ if __name__ == "__main__":
         gtf_file = install_gtf_file(build_dir, args.gtf, args.build)
         print "Installed GTF as %s." % (gtf_file)
 
+    indexed = {}
     for index in args.indexes:
         print "Creating the %s index." % (index)
         index_fn = genomes.get_index_fn(index)
         if not index_fn:
             print "Do not know how to make the index %s, skipping." % (index)
-        index_fn(fasta_file)
+            continue
+        indexed[index] = index_fn(fasta_file)
+    indexed["samtools"] = fasta_file
 
 
     if args.gtf:
@@ -119,6 +124,40 @@ if __name__ == "__main__":
         picard_dir = config_utils.get_program("picard", config, ptype="dir")
         "Preparing transcriptome."
         os.chdir(os.path.join(build_dir, os.pardir))
-        cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {picard_dir} "
+        cmd = ("{sys.executable} {prepare_tx} --gtf {args.gtf} {picard_dir} "
                "{args.build}")
         subprocess.check_call(cmd.format(**locals()), shell=True)
+
+    base_dir = os.path.normpath(os.path.dirname(fasta_file))
+    resource_file = os.path.join(base_dir, "%s-resources.yaml" % args.build)
+
+    print "Dumping genome resources to %s." % resource_file
+    resource_dict = {"version": 1}
+    if args.gtf:
+        transcripts = ["rnaseq", "transcripts"]
+        mask = ["rnaseq", "transcripts_mask"]
+        index = ["rnaseq", "transcriptome_index", "tophat"]
+        dexseq = ["rnaseq", "dexseq"]
+        refflat = ["rnaseq", "refflat"]
+        rRNA_fa = ["rnaseq", "rRNA_fa"]
+        resource_dict = tz.update_in(resource_dict, transcripts,
+                                     lambda x: "../rnaseq/ref-transcripts.gtf")
+        resource_dict = tz.update_in(resource_dict, mask,
+                                     lambda x: "../rnaseq/ref-transcripts-mask.gtf")
+        resource_dict = tz.update_in(resource_dict, index,
+                                     lambda x: "../rnaseq/tophat/%s_transcriptome.ver" % args.build)
+        resource_dict = tz.update_in(resource_dict, refflat,
+                                     lambda x: "../rnaseq/ref-transcripts.refFlat")
+        resource_dict = tz.update_in(resource_dict, dexseq,
+                                     lambda x: "../rnaseq/ref-transcripts.dexseq.gff3")
+        resource_dict = tz.update_in(resource_dict, rRNA_fa,
+                                     lambda x: "../rnaseq/rRNA.fa")
+    # write out resource dictionary
+    with file_transaction(resource_file) as tx_resource_file:
+        with open(tx_resource_file, "w") as out_handle:
+            out_handle.write(yaml.dump(resource_dict, default_flow_style=False))
+
+    print "Updating Galaxy .loc files."
+    galaxy_base = os.path.join(_get_data_dir(), "galaxy")
+    for index, index_file in indexed.items():
+        loc.update_loc_file(galaxy_base, index, args.build, index_file)
