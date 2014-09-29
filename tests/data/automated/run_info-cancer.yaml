@@ -16,12 +16,12 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [vardict, mutect, freebayes, varscan]
-      indelcaller: scalpel
+      indelcaller: pindel
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
-        trusted_pct: 0.65
+        trusted_pct: 0.5
       #svcaller: [cn.mops, cnvkit]
   - analysis: variant2
     description: c-tumor
@@ -36,12 +36,12 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [vardict, mutect, freebayes, varscan]
-      indelcaller: scalpel
+      indelcaller: pindel
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
-        trusted_pct: 0.65
+        trusted_pct: 0.5
       min_allele_fraction: 10
       #svcaller: [cn.mops, cnvkit]
   - analysis: variant2
@@ -57,10 +57,11 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [vardict, mutect, freebayes, varscan]
+      indelcaller: pindel
       ensemble:
         classifiers:
           balance: [AD, FS, Entropy]
           calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
-        trusted_pct: 0.65
+        trusted_pct: 0.5
       min_allele_fraction: 5.0
       #svcaller: [cn.mops, cnvkit]

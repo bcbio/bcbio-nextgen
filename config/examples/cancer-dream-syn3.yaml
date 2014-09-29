@@ -13,7 +13,11 @@ details:
     platform: illumina
     quality_format: standard
     variantcaller: [mutect, varscan, freebayes, vardict]
-    svcaller: [cn.mops, lumpy, delly]
+    indelcaller: pindel
+    ensemble:
+      numpass: 2
+    variant_regions: ../input/refseq-merged.bed
+    #svcaller: [cn.mops, lumpy, delly]
   analysis: variant2
   description: syn3-normal
   files: ../input/synthetic.challenge.set3.normal.bam
@@ -31,14 +35,18 @@ details:
     platform: illumina
     quality_format: standard
     variantcaller: [mutect, varscan, freebayes, vardict]
-    svcaller: [cn.mops, lumpy, delly]
+    indelcaller: pindel
+    ensemble:
+      numpass: 2
+    variant_regions: ../input/refseq-merged.bed
     validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
     validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
-    svvalidate:
-      DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
-      DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
-      INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
-      INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
+  #   svcaller: [cn.mops, lumpy, delly]
+  #   svvalidate:
+  #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
+  #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
+  #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
+  #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
   analysis: variant2
   description: syn3-tumor
   files: ../input/synthetic.challenge.set3.tumor.bam
