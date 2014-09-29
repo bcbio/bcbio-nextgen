@@ -685,11 +685,12 @@ def qsignature_summary(*samples):
                             "-log {log} -dir {out_dir} "
                             "-o {file_txt_out} ")
                 do.run(base_cmd.format(**locals()), "qsignature score calculation")
-        warnings, similar = _parse_qsignature_output(out_file, out_ma_file, out_warn_file,
-                                                     samples[0][0])
+       error, warnings, similar = _parse_qsignature_output(out_file, out_ma_file,
+                                                            out_warn_file, samples[0][0])
         return [{'total samples': count,
-                 'similar samples': len(similar),
-                 'warnings samples': list(warnings),
+                 'similar samples pairs': len(similar),
+                 'warnings samples pairs': len(warnings),
+                 'error samples': list(error),
                  'out_dir': qc_out_dir}]
     else:
         return []
@@ -713,27 +714,28 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
             with file_transaction(data, warning_file) as warn_tx_file:
                 with open(out_tx_file, 'w') as out_handle:
                     with open(warn_tx_file, 'w') as warn_handle:
-                        ET = lxml.etree.parse(in_handle)
-                        for i in list(ET.iter('file')):
+                        et = lxml.etree.parse(in_handle)
+                        for i in list(et.iter('file')):
                             name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".qsig.vcf", "")
-                        for i in list(ET.iter('comparison')):
+                        for i in list(et.iter('comparison')):
+                            msg = None
+                            pair = "-".join([name[i.attrib['file1']], name[i.attrib['file2']]])
                             out_handle.write("%s\t%s\t%s\n" %
-                            (name[i.attrib['file1']], name[i.attrib['file2']], i.attrib['score']))
-                            if float(i.attrib['score']) < 0.1:
-                                logger.info('qsignature WARNING: risk of duplicated samples:%s' %
-                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
-                                warn_handle.write('qsignature WARNING: risk of duplicated samples:%s\n' %
-                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
-                                warnings.add(name[i.attrib['file1']])
-                                warnings.add(name[i.attrib['file2']])
-                            elif float(i.attrib['score']) < 0.18:
-                                logger.info('qsignature: read similar samples:%s' %
-                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
-                                warn_handle.write('qsignature NOTE: similar samples:%s\n' %
-                                    (' '.join([name[i.attrib['file1']], name[i.attrib['file2']]])))
-                                similar.add(name[i.attrib['file1']])
-                                similar.add(name[i.attrib['file2']])
-    return warnings, similar
+                                             (name[i.attrib['file1']], name[i.attrib['file2']], i.attrib['score']))
+                            if float(i.attrib['score']) == same:
+                                msg = 'qsignature ERROR: read same samples:%s\n'
+                                error.add(pair)
+                            elif float(i.attrib['score']) < replicate:
+                                msg = 'qsignature WARNING: read similar/replicate samples:%s\n'
+                                warnings.add(pair)
+                            elif float(i.attrib['score']) < related:
+                                msg = 'qsignature NOTE: read relative samples:%s\n'
+                                similar.add(pair)
+                            if msg:
+                                logger.info(msg % pair)
+                                warn_handle.write(msg % pair)
+    return error, warnings, similar
+
 
 def _slice_chr22(in_bam, data):
     """
