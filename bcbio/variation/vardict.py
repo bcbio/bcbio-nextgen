@@ -21,7 +21,7 @@ def _vardict_options_from_config(items, config, out_file, region=None):
         opts += resources["options"]
 
     variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
-    target = subset_variant_regions(variant_regions, region, out_file)
+    target = subset_variant_regions(variant_regions, region, out_file, do_merge=False)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
             opts += [target]  # this must be the last option
