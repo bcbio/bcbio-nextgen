@@ -6,7 +6,7 @@ import argparse
 from argparse import ArgumentParser
 import os
 import toolz as tz
-from bcbio.utils import safe_makedir
+from bcbio.utils import safe_makedir, file_exists
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
@@ -17,10 +17,43 @@ import subprocess
 import sys
 import shutil
 import yaml
+import gffutils
+from gffutils.iterators import DataIterator
 
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
+
+def gff3_to_gtf(gff3_file):
+
+    dialect = {'field separator': '; ',
+               'fmt': 'gtf',
+               'keyval separator': ' ',
+               'leading semicolon': False,
+               'multival separator': ',',
+               'quoted GFF2 values': True,
+               'order': ['gene_id', 'transcript_id'],
+               'repeated keys': False,
+               'trailing semicolon': True}
+
+    out_file = os.path.splitext(gff3_file)[0] + ".gtf"
+    if file_exists(out_file):
+        return out_file
+
+    print "Converting %s to %s." %(gff3_file, out_file)
+
+    db = gffutils.create_db(gff3_file, ":memory:")
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            for feature in DataIterator(db.features_of_type("exon"), dialect=dialect):
+                transcript_id = feature["Parent"][0]
+                gene_id = db[transcript_id]["Parent"][0]
+                attr = {"transcript_id": transcript_id, "gene_id": gene_id}
+                attributes = gffutils.attributes.Attributes(attr)
+                feature.attributes = attributes
+                print >> out_handle, feature
+    return out_file
+
 
 def _index_w_command(dir_name, command, ref_file, ext=None):
     index_name = os.path.splitext(os.path.basename(ref_file))[0]
@@ -66,6 +99,8 @@ if __name__ == "__main__":
     parser = ArgumentParser(description=description)
     parser.add_argument("-f", "--fasta", required=True,
                         help="FASTA file of the genome.")
+    parser.add_argument("--gff3", default=False, action='store_true',
+                        help="File is a GFF3 file.")
     parser.add_argument("-g", "--gtf", default=None,
                         help="GTF file of the transcriptome")
     parser.add_argument("-n", "--name", required=True,
@@ -90,6 +125,9 @@ if __name__ == "__main__":
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
     args.gtf = os.path.abspath(args.gtf) if args.gtf else None
+    if args.gff3:
+        args.gtf = gff3_to_gtf(args.gtf)
+
     env.system_install = genome_dir
     prepare_tx = os.path.join(cbl["dir"], "utils", "prepare_tx_gff.py")
 
