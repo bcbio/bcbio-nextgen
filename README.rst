@@ -1,14 +1,13 @@
 bcbio-nextgen
 -------------
 
-A python toolkit providing best-practice pipelines for fully automated
-high throughput sequencing analysis. You write a high level
-configuration file specifying your inputs and analysis parameters.
-This input drives a parallel run that handles distributed
-execution, idempotent processing restarts and safe transactional
-steps. The goal is to provide a shared community resource that handles
-the data processing component of sequencing analysis, providing
-researchers with more time to focus on the downstream biology.
+Validated, scalable, community developed variant calling and RNA-seq analysis.
+You write a high level configuration file specifying your inputs and analysis
+parameters.  This input drives a parallel run that handles distributed
+execution, idempotent processing restarts and safe transactional steps.
+bcbio-nextgen provides a shared community resource that handles the data processing
+component of sequencing analysis, providing researchers with more time to focus
+on the downstream biology.
 
 Features
 --------
@@ -97,6 +96,7 @@ Contributors
 - `Nick Carriero <http://www.simonsfoundation.org/about-us/staff/staff-bios/#nick-carriero-ph-d>`_, Simons Foundation
 - `Brad Chapman`_, Harvard School of Public Health
 - `Peter Cock`_, The James Hutton Institute
+- `Matt Edwards`_, MIT
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Karl Gutwin <https://twitter.com/kgutwin>`_, Biogen
 - `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
@@ -109,7 +109,6 @@ Contributors
 - `Paul Tang`_, UCSF
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
-- `Matt Edwards`_
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
