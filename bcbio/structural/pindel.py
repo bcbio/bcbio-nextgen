@@ -59,7 +59,8 @@ def is_installed(config):
 
 def _run_tumor_pindel_caller(align_bams, items, ref_file, assoc_files,
                              region=None, out_file=None):
-    """Detect indels with pindel in tumor/[normal] analysis
+    """Detect indels with pindel in tumor/[normal] analysis.
+    Only attempts to detect small insertion/deletions and not larger structural events.
     :param align_bam: (list) bam files
     :param items: (dict) information from yaml
     :param ref_file: (str) genome in fasta format
@@ -86,7 +87,10 @@ def _run_tumor_pindel_caller(align_bams, items, ref_file, assoc_files,
             opts = _pindel_options(items, config, out_file, region, tmp_path)
             tmp_input = _create_tmp_input(paired_bam, paired_name, tmp_path, config)
             cmd = ("{pindel} -f {ref_file} -i {tmp_input} -o {root_pindel} " +
-                   "{opts} -r false -l false -k false -t false -I false")
+                   "{opts} --report_inversions false --report_duplications false "
+                   "--report_long_insertions false --report_breakpoints false "
+                   "--report_interchromosomal_events false "
+                   "--max_range_index 2")
             do.run(cmd.format(**locals()), "Genotyping with pindel", {})
             out_file = _create_vcf(root_pindel, out_file, ref_file,
                                    items, paired)
@@ -127,7 +131,8 @@ def _create_vcf(root_file, out_file, reference, items, paired=None):
         pindel2vcf = config_utils.get_program("pindel2vcf", config)
         vcf_file = out_file.replace(".gz", "")
         with file_transaction(items[0], vcf_file) as tx_out_file:
-            cmd = ("{pindel2vcf} --gatk_compatible -P {root_file} -r {reference} -R {name_ref} -d {date} -v {tx_out_file} --compact_output_limit 15")
+            cmd = ("{pindel2vcf} --gatk_compatible -P {root_file} -r {reference} -R {name_ref} "
+                   "-d {date} -v {tx_out_file} --compact_output_limit 15")
             do.run(cmd.format(**locals()), "Converting to vcf", {})
             if paired.normal_name:
                 _filter_paired(paired.tumor_name, paired.normal_name,

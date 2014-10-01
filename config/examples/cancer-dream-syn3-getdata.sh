@@ -12,5 +12,6 @@ ln -s 8fe6fc33-2daf-4393-929f-7c3493d04bef/*.bam
 ln -s 8fe6fc33-2daf-4393-929f-7c3493d04bef/*.bam.bai
 wget https://s3.amazonaws.com/bcbio_nextgen/dream/synthetic_challenge_set3_tumor_20pctmasked_truth.tar.gz
 tar -xzvpf synthetic_challenge_set3_tumor_20pctmasked_truth.tar.gz
-wget https://s3.amazonaws.com/bcbio_nextgen/dream/refseq-merged.bed.gz
-gunzip refseq-merged.bed
+wget -O refseq-merged.bed.gz https://s3.amazonaws.com/bcbio_nextgen/dream/refseq-merged.bed.gz
+wget -O NGv3.bed.gz https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
+gunzip *.bed.gz
