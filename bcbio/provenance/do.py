@@ -6,6 +6,7 @@ import subprocess
 
 from bcbio import utils
 from bcbio.log import logger, logger_cl, logger_stdout
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics
 
 def run(cmd, descr, data=None, checks=None, region=None, log_error=True,
@@ -30,8 +31,9 @@ def _descr_str(descr, data, region):
     """Add additional useful information from data to description string.
     """
     if data:
-        if "name" in data:
-            descr = "{0} : {1}".format(descr, data["name"][-1])
+        name = dd.get_sample_name(data)
+        if name:
+            descr = "{0} : {1}".format(descr, name)
         elif "work_bam" in data:
             descr = "{0} : {1}".format(descr, os.path.basename(data["work_bam"]))
     if region:
