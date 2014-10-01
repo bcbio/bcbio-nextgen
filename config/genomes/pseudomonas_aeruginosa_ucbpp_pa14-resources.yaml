@@ -1,4 +1,4 @@
-version: 0
+version: 1
 
-aliases:
-  ensembl: pseudomonas_aeruginosa_ucbpp_pa14
+#aliases:
+#  ensembl: pseudomonas_aeruginosa_ucbpp_pa14

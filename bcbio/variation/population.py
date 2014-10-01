@@ -48,10 +48,11 @@ def prep_gemini_db(fnames, call_info, samples):
                 # Skip CADD or gerp-bp if neither are loaded
                 if gemini_ver and LooseVersion(gemini_ver) >= LooseVersion("0.7.0"):
                     gemini_dir = install.get_gemini_dir()
-                    for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz"),
-                                                 ("--skip-gerp-bp", "hg19.gerp.bw")]:
+                    for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz")]:
                         if not os.path.exists(os.path.join(gemini_dir, check_file)):
                             load_opts += " %s" % skip_cmd
+                # skip gerp-bp which slows down loading
+                load_opts += " --skip-gerp-bp "
                 num_cores = data["config"]["algorithm"].get("num_cores", 1)
                 eanns = ("snpEff" if tz.get_in(("config", "algorithm", "effects"), data, "snpeff") == "snpeff"
                          else "VEP")

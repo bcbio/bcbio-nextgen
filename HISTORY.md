@@ -3,6 +3,8 @@
 - Avoid race conditions during `bedprep` work on samples with shared input BED
   files. These are now processed sequentially on a single machine to avoid
   conflicts. Thanks to Justin Johnson.
+- Add data checks and improved flexibility when specifying
+  joint callers. Thanks to Luca Beltrame.
 
 ## 0.8.2 (September 17, 2014)
 

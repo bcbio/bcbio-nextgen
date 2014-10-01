@@ -152,7 +152,7 @@ def evaluate(data, sv_calls):
         val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, exclude_file)
         summary_plot = _plot_evaluation(df_csv)
         ensemble_i, ensemble = ensemble_callsets[0]
-        ensemble["validate"] = {"csv": "val_summary", "plot": summary_plot}
+        ensemble["validate"] = {"csv": val_summary, "plot": summary_plot}
         sv_calls[ensemble_i] = ensemble
     return sv_calls
 

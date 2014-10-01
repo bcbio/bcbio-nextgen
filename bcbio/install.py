@@ -30,6 +30,10 @@ REMOTES = {
     "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
     "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
                       "snpEff_v{snpeff_ver}_{genome}.zip")}
+SUPPORTED_GENOMES = ["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3",
+                     "Zv9", "phix", "sacCer3", "xenTro3", "TAIR10", "WBcel235",
+                     "pseudomonas_aeruginosa_ucbpp_pa14"]
+SUPPORTED_INDEXES = ["bowtie", "bowtie2", "bwa", "novoalign", "snap", "star", "ucsc", "seq"]
 
 Tool = collections.namedtuple("Tool", ["name", "fname"])
 
@@ -567,12 +571,10 @@ def add_subparser(subparsers):
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=[],
-                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix", "sacCer3",
-                                 "xenTro3", "TAIR10", "WBcel235", "pseudomonas_aeruginosa_ucbpp_pa14"])
+                        action="append", default=[], choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
-                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "snap", "star", "ucsc"])
+                        choices = SUPPORTED_INDEXES)
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
     parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",

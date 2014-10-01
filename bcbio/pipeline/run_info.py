@@ -16,7 +16,7 @@ from bcbio import utils
 from bcbio.log import logger
 from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
-from bcbio.variation import effects, genotype, population
+from bcbio.variation import effects, genotype, population, joint
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
@@ -87,6 +87,18 @@ def _clean_metadata(data):
         else:
             batches = str(batches)
         data["metadata"]["batch"] = batches
+    return data
+
+def _clean_algorithm(data):
+    """Clean algorithm keys, handling items that can be specified as lists or single items.
+    """
+    # convert single items to lists
+    for key in ["variantcaller", "jointcaller"]:
+        val = tz.get_in(["algorithm", key], data)
+        if val:
+            if not isinstance(val, (list, tuple)) and isinstance(val, basestring):
+                val = [val]
+            data["algorithm"][key] = val
     return data
 
 def _clean_characters(x):
@@ -288,6 +300,18 @@ def _check_variantcaller(item):
         raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
                          "Supported options: %s\n" % (problem, sorted(list(allowed))))
 
+def _check_jointcaller(data):
+    """Ensure specified jointcaller is valid.
+    """
+    allowed = set(joint.get_callers() + [None, False])
+    cs = data["algorithm"].get("jointcaller", [])
+    if not isinstance(cs, (tuple, list)):
+        cs = [cs]
+    problem = [x for x in cs if x not in allowed]
+    if len(problem) > 0:
+        raise ValueError("Unexpected algorithm 'jointcaller' parameter: %s\n"
+                         "Supported options: %s\n" % (problem, sorted(list(allowed))))
+
 def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
@@ -304,7 +328,7 @@ def _check_sample_config(items, in_file):
     [_check_algorithm_keys(x) for x in items]
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
-
+    [_check_jointcaller(x) for x in items]
 
 # ## Read bcbio_sample.yaml files
 
@@ -411,6 +435,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
         item = _clean_metadata(item)
+        item = _clean_algorithm(item)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details

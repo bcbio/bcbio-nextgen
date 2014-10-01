@@ -6,6 +6,7 @@ aliases:
 
 variation:
   dbsnp: ../variation/mm10-dbSNP-2013-09-12.vcf.gz
+  lcr: ../variation/LCR.bed.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

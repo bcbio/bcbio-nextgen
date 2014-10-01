@@ -88,8 +88,9 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
             opts += " --min-repeat-entropy 1 --experimental-gls"
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+            fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
-                   "{vcffilter} -f 'QUAL > 5' -s | {vcfallelicprimitives} | {vcfstreamsort} "
+                   "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | {vcfallelicprimitives} | {vcfstreamsort} "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -137,10 +138,11 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             # reads in the germline to call somatic) is not used as it is
             # too stringent
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+            fix_ambig = vcfutils.fix_ambiguous_cl()
             cl = ("{freebayes} -f {ref_file} {opts} "
                   "{paired.tumor_bam} {paired.normal_bam} "
                   "| {vcffilter} -f 'QUAL > 5' -s "
-                  "| {vcfallelicprimitives} | {vcfstreamsort} "
+                  "| {fix_ambig} | {vcfallelicprimitives} | {vcfstreamsort} "
                   "| {vcfsamplediff} VT {paired.normal_name} {paired.tumor_name} - "
                   "{compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)

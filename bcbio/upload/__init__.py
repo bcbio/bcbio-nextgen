@@ -183,9 +183,9 @@ def _maybe_add_summary(algorithm, sample, out):
 
 def _maybe_add_alignment(algorithm, sample, out):
     if _has_alignment_file(algorithm, sample):
-        for (fname, ext) in [(sample.get("work_bam"), "ready"),
-                             (utils.get_in(sample, ("work_bam-plus", "disc")), "disc"),
-                             (utils.get_in(sample, ("work_bam-plus", "sr")), "sr")]:
+        for (fname, ext, isplus) in [(sample.get("work_bam"), "ready", False),
+                                     (utils.get_in(sample, ("work_bam-plus", "disc")), "disc", True),
+                                     (utils.get_in(sample, ("work_bam-plus", "sr")), "sr", True)]:
             if fname and os.path.exists(fname):
                 if fname.endswith("bam"):
                     ftype, fext = "bam", ".bai"
@@ -195,10 +195,12 @@ def _maybe_add_alignment(algorithm, sample, out):
                     raise ValueError("Unexpected alignment file type %s" % fname)
                 out.append({"path": fname,
                             "type": ftype,
+                            "plus": isplus,
                             "ext": ext})
                 if utils.file_exists(fname + fext):
                     out.append({"path": fname + fext,
                                 "type": ftype + fext,
+                                "plus": isplus,
                                 "index": True,
                                 "ext": ext})
     return out

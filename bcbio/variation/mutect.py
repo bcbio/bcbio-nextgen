@@ -12,6 +12,7 @@ from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils, scalpel
 from bcbio.variation.vcfutils import bgzip_and_index
+from bcbio.structural import pindel
 from bcbio.log import logger
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
@@ -113,9 +114,9 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             broad_runner.run_mutect(params)
         _rename_allelic_fraction_field(out_file_mutect, config)
         indelcaller = vcfutils.get_indelcaller(base_config)
+        is_paired = "-I:normal" in params
         if "scalpel" in indelcaller.lower():
             # Scalpel InDels
-            is_paired = "-I:normal" in params
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
             if scalpel.is_installed(items[0]["config"]):
@@ -130,6 +131,19 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                 out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
                                                           out_file=out_file,
                                                           ref_file=items[0]["sam_ref"],
+                                                          config=items[0]["config"],
+                                                          region=region)
+            else:
+                utils.symlink_plus(out_file_mutect, out_file)
+        elif "pindel" in indelcaller.lower():
+            out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
+                               if "vcf" in out_file else out_file + "-somaticIndels.vcf")
+            if pindel.is_installed(items[0]["config"]):
+                pindel._run_tumor_pindel_caller(align_bams, items, ref_file, assoc_files, region=region,
+                                          out_file=out_file_indels)
+                out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
+                                                          out_file=out_file,
+                                                          ref_file=ref_file,
                                                           config=items[0]["config"],
                                                           region=region)
             else:

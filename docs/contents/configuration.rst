@@ -238,7 +238,7 @@ Alignment
 
 - ``platform`` Sequencing platform used. Corresponds to the ``PL``
   parameter in BAM read groups. Default 'Illumina'.
--  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, mosaik, novoalign, snap, star,
+-  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, novoalign, snap, star,
    false]
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
    handles adding read groups, sorting to a reference genome and
@@ -332,17 +332,20 @@ Variant calling
        <http://www.broadinstitute.org/gatk/guide/article?id=3893>`_ with
        HaplotypeCaller. Takes individual gVCFs called by ``gatk-haploype`` and
        perform combined genotyping.
-     - ``freebayes-joint`` Combine freebayes calls using `bcbio.variation.recall
-       <https://github.com/chapmanb/bcbio.variation.recall`_ with recalling at
+     - ``freebayes-joint`` Combine freebayes calls using
+       `bcbio.variation.recall`_ with recalling at
        all positions found in each individual sample. Requires ``freebayes``
        variant calling.
      - ``platypus-joint`` Combine platypus calls using bcbio.variation.recall
        with squaring off at all positions found in each individual
        sample. Requires ``platypus`` variant calling.
+     - ``samtools-joint`` Combine platypus calls using bcbio.variation.recall
+       with squaring off at all positions found in each individual
+       sample. Requires ``samtools`` variant calling.
 -  ``variant_regions`` BED file of regions to call variants in.
 -  ``mark_duplicates`` Identify and remove variants [true, false]
    If true, will perform streaming duplicate marking with `samblaster`_ for
-   paired reads and `biobambam's bammarkduplicates` for single end reads.
+   paired reads and `biobambam's bammarkduplicates`_ for single end reads.
 -  ``recalibrate`` Perform base quality score recalibration on the
    aligned BAM file. Defaults to no recalibration. [false, gatk]
 -  ``realign`` Perform realignment around indels on the aligned BAM
@@ -484,6 +487,18 @@ the multiple methods:
   approaches (4 or more callers) pass without being requiring SVM
   filtering.
 
+We also have a new in-progress approach to do ensemble calling that builds a
+final callset based on the intersection of calls. It selects variants
+represented in at least a specified number of callers::
+
+    variantcaller: [mutect, varscan, freebayes, vardict]
+    ensemble:
+      numpass: 2
+
+This selects variants present in 2 out of the 4 callers.
+`bcbio.variation.recall`_ implements this approach, which handles speed and file
+sorting limitations in the `bcbio.variation`_ approach.
+
 .. _config-resources:
 
 Resources
@@ -563,6 +578,7 @@ novoalign, write a sample resource specification like::
           dir: tmp/sampletmpdir
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
+.. _bcbio.variation.recall: https://github.com/chapmanb/bcbio.variation.recall
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
 .. _YAML format: https://en.wikipedia.org/wiki/YAML#Examples
 .. _GATK: http://www.broadinstitute.org/gatk/
