@@ -29,19 +29,19 @@ current implementation:
   tuned `GATK's Variant Quality Score Recalibrator`_ (VQSR) and compared it with
   hard filtering. VQSR requires a large number of variants and we use
   it in bcbio with GATK HaplotypeCaller when your :ref:`algorithm-config`
-  contains high depth samples (``coverage_depth`` is not low), and
-  whole genome calls (``coverage_interval`` is genome).
+  contains high depth samples (``coverage_depth`` is not low) and you are
+  calling on the whole genome (``coverage_interval`` is genome).
 
 - `Validation of structural variant detection`_ using multiple calling
   methods. This implements a pipeline that works in tandem with SNP and indel
   calling to detect larger structural variations like deletions, duplications,
   inversions and copy number variants (CNVs).
 
-bcbio automated post-variant calling annotation and to make
+bcbio automates post-variant calling annotation to make
 the outputs easier to feed directly into your biological analysis. We annotate
 variant effects using `snpEff`_ or `Variant Effect Predictor`_ (VEP), and
-prepare a `GEMINI database`_ with multiple external annotations in a SQL-based
-interface for easy queries.
+prepare a `GEMINI database`_ that associates variants with multiple
+external annotations in a SQL-based query interface.
 
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
 .. _variant evaluation framework: https://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
@@ -72,12 +72,12 @@ the :ref:`automated-sample-config` with one of the default templates:
 
 - `GATK HaplotypeCaller template
   <https://github.com/chapmanb/bcbio-nextgen/blob/master/config/templates/gatk-variant.yaml>`_ --
-  Run GATK best practices, including base quality score recalibration,
+  Run GATK best practices, including Base Quality Score Recalibration,
   realignment and HaplotypeCaller variant calling. This requires a license from
-  Broad for commercial use, and manually installing GATK after downloading from
-  the Broad website or Appistry (see :ref:`extra-install`).
+  Broad for commercial use. You need to manually install GATK along with bcbio
+  using downloads from the GATK Broad site or Appistry (see :ref:`extra-install`).
 
-Another good source of inspiration are the inputs from the
+Another good source of inspiration are the configuration files from the
 :ref:`example-pipelines`, which may help identify other configuration variables
 of interest.
 
@@ -100,12 +100,12 @@ all merged sample calls. bcbio has two methods to call samples together:
 
 - Batch or pooled calling -- This calls all samples simultaneously by feeding
   them to the variant caller. This works for smaller batch sizes (< 50 samples)
-  as memory requirements becoming limiting in larger pools. This is the default
+  as memory requirements become limiting in larger pools. This is the default
   approach taken when you specify a ``variantcaller`` in the
   :ref:`variant-config` configuration.
 
 - Joint calling -- This calls samples independently, then combines them together
-  into a single callset by integrated the individual calls. This scales to
+  into a single callset by integrating the individual calls. This scales to
   larger population sizes by avoiding the computational bottlenecks of pooled
   calling. Specifying a ``jointcaller`` along with the appropriate
   ``variantcaller`` in the :ref:`variant-config` configuration enables this::
