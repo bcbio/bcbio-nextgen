@@ -11,7 +11,7 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, bamprep, vcfutils
 
-def _vardict_options_from_config(items, config, out_file, region=None):
+def _vardict_options_from_config(items, config, out_file, region=None, do_merge=False):
     opts = ["-z", "-F", "-c 1", "-S 2", "-E 3", "-g 4"]
     #["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
     # "-k", "3", "-r", "4", "-m", "8"]
@@ -21,7 +21,7 @@ def _vardict_options_from_config(items, config, out_file, region=None):
         opts += resources["options"]
 
     variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
-    target = subset_variant_regions(variant_regions, region, out_file, do_merge=False)
+    target = subset_variant_regions(variant_regions, region, out_file, do_merge=do_merge)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
             opts += [target]  # this must be the last option
@@ -122,7 +122,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             var2vcf = "var2vcf_somatic.pl"
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
-            opts = " ".join(_vardict_options_from_config(items, config, out_file, region))
+            opts = " ".join(_vardict_options_from_config(items, config, out_file, region, do_merge=True)) # merge bed file regions as amplicon VarDict is only supported in single sample mode
             coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
             # for deep targeted panels, require 50 worth of coverage
             var2vcf_opts = " -v 50 " if coverage_interval == "regional" else ""
