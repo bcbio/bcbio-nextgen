@@ -142,14 +142,24 @@ def _freebayes_hard(in_file, data):
             out_file = vcfutils.bgzip_and_index(out_file, data["config"])
         return out_file
 
-    stats = _calc_vcf_stats(in_file)
-    depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
-    qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter
+    if _do_high_depth_filter(data):
+        stats = _calc_vcf_stats(in_file)
+        depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
+        qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter
+    else:
+        depth_thresh = None
     filters = ('(AF[0] <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
-               '(AF[0] > 0.5 && (DP < 4 && %QUAL < 50)) || '
-               '(%QUAL < {qual_thresh} && DP > {depth_thresh} && AF[0] <= 0.5)'
-               .format(**locals()))
+               '(AF[0] > 0.5 && (DP < 4 && %QUAL < 50))')
+    if depth_thresh:
+        filters += ' || (%QUAL < {qual_thresh} && DP > {depth_thresh} && AF[0] <= 0.5)'.format(**locals())
     return hard_w_expression(in_file, filters, data, name="FBQualDepth")
+
+def _do_high_depth_filter(data):
+    """Check if we should do high depth filtering -- only on germline non-regional calls.
+    """
+    is_genome = tz.get_in(["config", "algorithm", "coverage_interval"], data, "").lower() == "genome"
+    is_paired = vcfutils.get_paired_phenotype(data)
+    return is_genome and not is_paired
 
 def _calc_vcf_stats(in_file):
     """Calculate statistics on VCF for filtering, saving to a file for quick re-runs.

@@ -102,7 +102,11 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
     """Detect SNPs and indels with FreeBayes.
 
-    This is used for paired tumor / normal samples.
+    This is used for paired tumor / normal samples. Sources of options for FreeBayes:
+    mailing list: https://groups.google.com/d/msg/freebayes/dTWBtLyM4Vs/HAK_ZhJHguMJ
+    mailing list: https://groups.google.com/forum/#!msg/freebayes/LLH7ZfZlVNs/63FdD31rrfEJ
+    speedseq: https://github.com/cc2qe/speedseq/blob/e6729aa2589eca4e3a946f398c1a2bdc15a7300d/bin/speedseq#L916
+    sga/freebayes: https://github.com/jts/sga-extra/blob/7e28caf71e8107b697f9be7162050e4fa259694b/sga_generate_varcall_makefile.pl#L299
     """
     config = items[0]["config"]
     if out_file is None:
@@ -130,8 +134,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 opts += " --min-alternate-fraction %s" % min_af
             opts += " --min-repeat-entropy 1 --experimental-gls"
             # Recommended settings for cancer calling
-            # https://groups.google.com/d/msg/freebayes/dTWBtLyM4Vs/HAK_ZhJHguMJ
-            opts += " --pooled-discrete --genotype-qualities --report-genotype-likelihood-max"
+            opts += (" --pooled-discrete --pooled-continuous --genotype-qualities "
+                     "--report-genotype-likelihood-max --allele-balance-priors-off")
             # NOTE: The first sample name in the vcfsamplediff call is
             # the one supposed to be the *germline* one
             # NOTE: -s in vcfsamplediff (strict checking: i.e., require no
