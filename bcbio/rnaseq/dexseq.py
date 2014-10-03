@@ -1,6 +1,7 @@
 """
 perform exon-level counting using DEXSeq
 """
+import sys
 import os
 from bcbio.utils import R_package_path, file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
@@ -41,10 +42,11 @@ def run_count(bam_file, dexseq_gff, stranded, out_file, data):
     sort_flag = "name" if sort_order == "queryname" else "pos"
     is_paired = bam.is_paired(bam_file)
     paired_flag = "yes" if is_paired else "no"
+    bcbio_python = sys.executable
 
     if file_exists(out_file):
         return out_file
-    cmd = ("python {dexseq_count} -f bam -r {sort_flag} -p {paired_flag} "
+    cmd = ("{bcbio_python} {dexseq_count} -f bam -r {sort_flag} -p {paired_flag} "
            "-s {strand_flag} {dexseq_gff} {bam_file} {tx_out_file}")
     message = "Counting exon-level counts with %s and %s." % (bam_file, dexseq_gff)
     with file_transaction(data, out_file) as tx_out_file:
