@@ -5,11 +5,7 @@ https://github.com/ekg/freebayes
 
 from collections import namedtuple
 import os
-
-try:
-    import vcf
-except ImportError:
-    vcf = None
+import sys
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
@@ -119,10 +115,6 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                                              assoc_files, region, out_file)
                 #raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
 
-            vcfsamplediff = config_utils.get_program("vcfsamplediff", config)
-            vcffilter = config_utils.get_program("vcffilter", config)
-            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
-            vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             if "--min-alternate-fraction" not in opts and "-F" not in opts:
@@ -136,28 +128,74 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             # Recommended settings for cancer calling
             opts += (" --pooled-discrete --pooled-continuous --genotype-qualities "
                      "--report-genotype-likelihood-max --allele-balance-priors-off")
-            # NOTE: The first sample name in the vcfsamplediff call is
-            # the one supposed to be the *germline* one
-            # NOTE: -s in vcfsamplediff (strict checking: i.e., require no
-            # reads in the germline to call somatic) is not used as it is
-            # too stringent
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
+            py_cl = os.path.join(os.path.dirname(sys.executable), "py")
             cl = ("{freebayes} -f {ref_file} {opts} "
                   "{paired.tumor_bam} {paired.normal_bam} "
-                  "| {vcffilter} -f 'QUAL > 5' -s "
-                  "| {fix_ambig} | {vcfallelicprimitives} | {vcfstreamsort} "
-                  "| {vcfsamplediff} VT {paired.normal_name} {paired.tumor_name} - "
+                  "| vcffilter -f 'QUAL > 5' -s "
+                  "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
+                  "| {fix_ambig} | vcfallelicprimitives --keep-info --keep-geno "
+                  "| vt normalize -q -r {ref_file} - "
                   "{compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
-    fix_somatic_calls(out_file, config)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"), ref_file,
                                                config)
     return ann_file
 
+def call_somatic(line):
+    """Call SOMATIC variants from tumor/normal calls, adding REJECT filters and SOMATIC flag.
+
+    Assumes tumor/normal called with tumor first and normal second, as done in bcbio
+    implementation.
+
+    Uses MuTect like somatic filter based on implementation in speedseq:
+    https://github.com/cc2qe/speedseq/blob/e6729aa2589eca4e3a946f398c1a2bdc15a7300d/bin/speedseq#L62
+
+    Extracts the genotype likelihoods (GLs) from FreeBayes, which are like phred scores
+    except not multiplied by 10.0 (https://en.wikipedia.org/wiki/Phred_quality_score).
+    For tumors, we retrieve the best likelihood to not be reference (the first GL) and
+    for normal, the best likelhood to be reference.
+
+    After calculating the likelihoods, we compare these to thresholds to pass variants
+    at tuned sensitivity/precision.
+    """
+    # Thresholds are like phred scores, so 7.0 = phred70
+    tumor_thresh, normal_thresh = 7.0, 7.0
+    if line.startswith("#CHROM"):
+        headers = ['##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic event">',
+                   '##FILTER=<ID=REJECT,Description="Rejected as non-SOMATIC or by quality">']
+        return "\n".join(headers) + "\n" + line
+    elif line.startswith("#"):
+        return line
+    else:
+        parts = line.split("\t")
+        try:
+            gl_index = parts[8].split(":").index("GL")
+        except ValueError:
+            return line
+        try:
+            tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",")]
+            tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
+        # No GL information, no tumor call (so fail it)
+        except IndexError:
+            tumor_lod = -1.0
+        try:
+            normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",")]
+            normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
+        # No GL inofmration, no normal call (so pass it)
+        except IndexError:
+            normal_lod = normal_thresh
+        if normal_lod >= normal_thresh and tumor_lod >= tumor_thresh:
+            parts[6] = "PASS"
+            parts[7] = parts[7] + ";SOMATIC"
+        else:
+            parts[6] = "REJECT"
+        line = "\t".join(parts)
+        return line
 
 def _clean_freebayes_output(line):
     """Clean FreeBayes output to make post-processing with GATK happy.
@@ -200,51 +238,3 @@ def clean_vcf_output(orig_file, clean_fn, config, name="clean"):
         move_vcf(out_file, orig_file)
         with open(out_file, "w") as out_handle:
             out_handle.write("Moved to {0}".format(orig_file))
-
-
-def fix_somatic_calls(in_file, config):
-    """Fix somatic variant output, standardize it to the SOMATIC flag.
-    """
-    if vcf is None:
-        raise ImportError("Require PyVCF for manipulating cancer VCFs")
-
-    # HACK: Needed to replicate the structure used by PyVCF
-    Info = namedtuple('Info', ['id', 'num', 'type', 'desc'])
-    somatic_info = Info(id='SOMATIC', num=0, type='Flag', desc='Somatic event')
-    Filter = namedtuple('Filter', ['id', 'desc'])
-    reject_filter = Filter(id='REJECT', desc='Rejected as non-SOMATIC or by quality')
-    # NOTE: PyVCF will write an uncompressed VCF
-    base, ext = utils.splitext_plus(in_file)
-    name = "somaticfix"
-    out_file = "{0}-{1}{2}".format(base, name, ".vcf")
-
-    if utils.file_exists(in_file):
-        reader = vcf.VCFReader(filename=in_file)
-        # Add info to the header of the reader
-        reader.infos["SOMATIC"] = somatic_info
-        reader.filters["REJECT"] = reject_filter
-        for ext in [".gz", ".gz.tbi"]:
-            if os.path.exists(out_file + ext):
-                os.remove(out_file + ext)
-        with file_transaction(config, out_file) as tx_out_file:
-            with open(tx_out_file, "wb") as handle:
-                writer = vcf.VCFWriter(handle, template=reader)
-                for record in reader:
-                    # Handle FreeBayes
-                    is_somatic = False
-                    if "VT" in record.INFO:
-                        if record.INFO["VT"] == "somatic":
-                            record.add_info("SOMATIC", True)
-                            is_somatic = True
-                        # Discard old record
-                        del record.INFO["VT"]
-                    if not is_somatic:
-                        record.add_filter("REJECT")
-                    writer.write_record(record)
-
-        # Re-compress the file
-        out_file = bgzip_and_index(out_file, config)
-        move_vcf(in_file, "{0}.orig".format(in_file))
-        move_vcf(out_file, in_file)
-        with open(out_file, "w") as out_handle:
-            out_handle.write("Moved to {0}".format(in_file))
