@@ -207,8 +207,8 @@ def call_somatic(line):
     We also check that the frequency of the tumor exceeds the frequency of the normal by
     a threshold to avoid calls that are low frequency in both tumor and normal.
     """
-    # Thresholds are like phred scores, so 4.0 = phred40
-    tumor_thresh, normal_thresh = 4.8, 4.0
+    # Thresholds are like phred scores, so 3.5 = phred35
+    tumor_thresh, normal_thresh = 3.5, 3.5
     if line.startswith("#CHROM"):
         headers = ['##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic event">',
                    '##FILTER=<ID=REJECT,Description="Not SOMATIC by likelihoods; tumor: phred%s, normal phred%s.">'
