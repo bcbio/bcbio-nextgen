@@ -3,7 +3,6 @@
 https://github.com/ekg/freebayes
 """
 
-from collections import namedtuple
 import os
 import sys
 
@@ -14,7 +13,7 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils, ploidy, vcfutils
 from bcbio.variation.vcfutils import (get_paired_bams, is_paired_analysis,
-                                      bgzip_and_index, move_vcf)
+                                      move_vcf)
 
 def region_to_freebayes(region):
     if isinstance(region, (list, tuple)):
@@ -102,7 +101,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     mailing list: https://groups.google.com/d/msg/freebayes/dTWBtLyM4Vs/HAK_ZhJHguMJ
     mailing list: https://groups.google.com/forum/#!msg/freebayes/LLH7ZfZlVNs/63FdD31rrfEJ
     speedseq: https://github.com/cc2qe/speedseq/blob/e6729aa2589eca4e3a946f398c1a2bdc15a7300d/bin/speedseq#L916
-    sga/freebayes: https://github.com/jts/sga-extra/blob/7e28caf71e8107b697f9be7162050e4fa259694b/sga_generate_varcall_makefile.pl#L299
+    sga/freebayes: https://github.com/jts/sga-extra/blob/7e28caf71e8107b697f9be7162050e4fa259694b/
+                   sga_generate_varcall_makefile.pl#L299
     """
     config = items[0]["config"]
     if out_file is None:
@@ -146,6 +146,47 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                                                config)
     return ann_file
 
+def _check_lods(parts, tumor_thresh, normal_thresh):
+    """Ensure likelihoods for tumor and normal pass thresholds.
+    """
+    try:
+        gl_index = parts[8].split(":").index("GL")
+    except ValueError:
+        return True
+    try:
+        tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",")]
+        tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
+    # No GL information, no tumor call (so fail it)
+    except IndexError:
+        tumor_lod = -1.0
+    try:
+        normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",")]
+        normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
+    # No GL inofmration, no normal call (so pass it)
+    except IndexError:
+        normal_lod = normal_thresh
+    return normal_lod >= normal_thresh and tumor_lod >= tumor_thresh
+
+def _check_freqs(parts):
+    """Ensure frequency of tumor to normal passes a reasonable threshold.
+
+    Avoids calling low frequency tumors also present at low frequency in normals,
+    which indicates a contamination or persistent error.
+    """
+    thresh_ratio = 2.7
+    ao_index = parts[8].split(":").index("AO")
+    ro_index = parts[8].split(":").index("RO")
+    def _calc_freq(item):
+        try:
+            ao = sum([int(x) for x in item.split(":")[ao_index].split(",")])
+            ro = int(parts[9].split(":")[ro_index])
+            freq = ao / float(ao + ro)
+        except (IndexError, ValueError):
+            freq = 0.0
+        return freq
+    tumor_freq, normal_freq = _calc_freq(parts[9]), _calc_freq(parts[10])
+    return normal_freq <= 0.001 or normal_freq < tumor_freq / thresh_ratio
+
 def call_somatic(line):
     """Call SOMATIC variants from tumor/normal calls, adding REJECT filters and SOMATIC flag.
 
@@ -161,35 +202,23 @@ def call_somatic(line):
     for normal, the best likelhood to be reference.
 
     After calculating the likelihoods, we compare these to thresholds to pass variants
-    at tuned sensitivity/precision.
+    at tuned sensitivity/precision. Tuning done on DREAM synthetic 3 dataset evaluations.
+
+    We also check that the frequency of the tumor exceeds the frequency of the normal by
+    a threshold to avoid calls that are low frequency in both tumor and normal.
     """
-    # Thresholds are like phred scores, so 7.0 = phred70
-    tumor_thresh, normal_thresh = 7.0, 7.0
+    # Thresholds are like phred scores, so 4.0 = phred40
+    tumor_thresh, normal_thresh = 4.8, 4.0
     if line.startswith("#CHROM"):
         headers = ['##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic event">',
-                   '##FILTER=<ID=REJECT,Description="Rejected as non-SOMATIC or by quality">']
+                   '##FILTER=<ID=REJECT,Description="Not SOMATIC by likelihoods; tumor: phred%s, normal phred%s.">'
+                   % (int(tumor_thresh * 10), int(normal_thresh * 10))]
         return "\n".join(headers) + "\n" + line
     elif line.startswith("#"):
         return line
     else:
         parts = line.split("\t")
-        try:
-            gl_index = parts[8].split(":").index("GL")
-        except ValueError:
-            return line
-        try:
-            tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",")]
-            tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
-        # No GL information, no tumor call (so fail it)
-        except IndexError:
-            tumor_lod = -1.0
-        try:
-            normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",")]
-            normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
-        # No GL inofmration, no normal call (so pass it)
-        except IndexError:
-            normal_lod = normal_thresh
-        if normal_lod >= normal_thresh and tumor_lod >= tumor_thresh:
+        if _check_lods(parts, tumor_thresh, normal_thresh) and _check_freqs(parts):
             parts[6] = "PASS"
             parts[7] = parts[7] + ";SOMATIC"
         else:
