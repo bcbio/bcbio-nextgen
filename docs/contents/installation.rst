@@ -159,6 +159,7 @@ under 25Gb of storage::
     4.4G  vep
     23.5G total
 
+.. _extra-install:
 
 Extra software and data
 =======================

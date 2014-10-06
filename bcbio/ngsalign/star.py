@@ -1,10 +1,12 @@
 import os
+import sys
 
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.utils import (safe_makedir, file_exists, is_gzipped)
 from bcbio.provenance import do
 from bcbio import bam, utils
+from bcbio.log import logger
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
@@ -14,6 +16,13 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     out_prefix = os.path.join(align_dir, names["lane"])
     out_file = out_prefix + "Aligned.out.sam"
     out_dir = os.path.join(align_dir, "%s_star" % names["lane"])
+
+    if not ref_file:
+        logger.error("STAR index not found. We don't provide the STAR indexes "
+                     "by default because they are very large. You can install "
+                     "the index for your genome with: bcbio_nextgen.py upgrade "
+                     "--aligners star --genomes genome-build-name --data")
+        sys.exit(1)
 
     final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):

@@ -56,14 +56,21 @@ multiple samples using the template workflow command::
   information is present.  The remaining columns can contain:
 
    - ``description`` Changes the sample description, originally
-     supplied by the file name or BAM read group, to this value.
+     supplied by the file name or BAM read group, to this value. You can also
+     set the ``lane``, although this is less often done as the default
+     sequential numbering works here. See the documentation for
+     :ref:`sample-configuration` on how these map to BAM read groups.
 
    - Algorithm parameters specific for this sample. If the column name matches
      an available :ref:`algorithm-config`, then this value substitutes
      into the sample ``algorithm``, replacing the defaults from the template.
+     You can also change other information in the BAM read group through the
+     ``algorithm`` parameters. See :ref:`alignment-config` configuration
+     documentation for details on how these map to read group information.
 
    -  :ref:`sample-configuration` metadata key/value pairs. Any columns not
       falling into the above cases will go into the metadata section.
+
 
   Individual column items can contain booleans (true or false), integers, or
   lists (separated by semi-colons). These get converted into the expected time
@@ -114,9 +121,9 @@ The sample configuration file defines ``details`` of each sample to process::
 
 - ``analysis`` Analysis method to use [variant2, RNA-seq]
 - ``lane`` A unique number within the project. Corresponds to the
-  ``ID`` parameter in the BAM read group. Required.
+  ``ID`` parameter in the BAM read group.
 - ``description`` Unique name for this sample, corresponding to the
-  ``SM`` parameter in the BAM read group.
+  ``SM`` parameter in the BAM read group. Required.
 - ``files`` A list of files to process. This currently supports either a single
   end or two paired end fastq files, or a single BAM file. It does not yet
   handle merging BAM files or more complicated inputs.
@@ -207,8 +214,6 @@ S3 parameters:
 - ``reduced_redundancy`` Flag to determine if we should store S3 data
   with reduced redundancy: cheaper but less reliable [false, true]
 
-.. _algorithm-config:
-
 Globals
 ~~~~~~~
 You can define files used multiple times in the ``algorithm`` section of your
@@ -226,12 +231,16 @@ configuration if inputs change::
       algorithm:
         variant_regions: my_custom_locations
 
+.. _algorithm-config:
+
 Algorithm parameters
 ~~~~~~~~~~~~~~~~~~~~
 
 The YAML configuration file provides a number of hooks to customize
 analysis in the sample configuration file. Place these under the
 ``algorithm`` keyword.
+
+.. _alignment-config:
 
 Alignment
 =========
@@ -313,6 +322,7 @@ Variant calling
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
    multiple options [gatk, freebayes, gatk-haplotype, platypus,
    mutect, scalpel, vardict, varscan, samtools]
+
     - Paired (typically somatic, tumor-normal) variant calling is currently
       supported by freebayes, varscan, mutect (see disclaimer below),
       scalpel (indels only) and vardict. See ``phenotype`` below for how to pair tumor
@@ -328,6 +338,7 @@ Variant calling
 -  ``jointcaller`` Joint calling algorithm, combining variants called with the
    specified ``variantcaller``. Can be a list of multiple options but needs to
    match with appropriate ``variantcaller``
+
      - ``gatk-haplotype-joint`` `GATK incremental joint discovery
        <http://www.broadinstitute.org/gatk/guide/article?id=3893>`_ with
        HaplotypeCaller. Takes individual gVCFs called by ``gatk-haploype`` and
@@ -394,7 +405,7 @@ Structural variant calling
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, delly,
   cn.mops]. LUMPY and DELLY require paired end reads. cn.mops works on whole
   genome data as well as targeted experiments; our usage requires
-  multiple samples grouped into a batch within the :ref:`_sample-configuration`.
+  multiple samples grouped into a batch within the :ref:`sample-configuration`.
 - ``svvalidate`` -- Dictionary of call types and pointer to BED file of known
   regions. For example: ``DEL: known_deletions.bed`` does deletion based
   validation of outputs against the BED file.

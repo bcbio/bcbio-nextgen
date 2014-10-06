@@ -93,10 +93,14 @@ def _fix_tophat_junction_output(chimeric_out_junction_file):
             for line in in_handle:
                 parts = line.split("\t")
                 left, right = parts[0].split("-")
+                leftchr = _h37tohg19(left)
+                rightchr = _h37tohg19(right)
+                if not leftchr or not rightchr:
+                    continue
                 parts[0] = "%s-%s" % (_h37tohg19(left), _h37tohg19(right))
                 out_handle.write("\t".join(parts))
-    return out_file    
-    
+    return out_file
+
 def _fix_star_junction_output(chimeric_out_junction_file):
     #for Chimeric.out.junction
     out_file = chimeric_out_junction_file + ".hg19"
@@ -106,6 +110,8 @@ def _fix_star_junction_output(chimeric_out_junction_file):
                 parts = line.split("\t")
                 parts[0] = _h37tohg19(parts[0])
                 parts[3] = _h37tohg19(parts[3])
+                if not parts[0] or not parts[3]:
+                    continue
                 out_handle.write("\t".join(parts))
     return out_file
 
@@ -115,8 +121,9 @@ def _h37tohg19(chromosome):
         new_chrom = "chr%s" % chromosome
     elif chromosome == "MT":
         new_chrom = "chrM"
+    # not a supported chromosome
     else:
-        raise NotImplementedError(chromosome)
+        return None
     return new_chrom
 
 

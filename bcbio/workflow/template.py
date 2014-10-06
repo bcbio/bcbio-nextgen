@@ -245,7 +245,7 @@ def _add_metadata(item, metadata):
     """
     item_md = metadata.get(item["description"],
                            metadata.get(os.path.basename(item["files"][0]), {}))
-    TOP_LEVEL = set(["description", "genome_build"])
+    TOP_LEVEL = set(["description", "genome_build", "lane"])
     if len(item_md) > 0:
         if "metadata" not in item:
             item["metadata"] = {}

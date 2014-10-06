@@ -12,8 +12,8 @@ details:
     remove_lcr: true
     platform: illumina
     quality_format: standard
-    variantcaller: [mutect, varscan, freebayes, vardict]
-    indelcaller: pindel
+    variantcaller: [mutect, freebayes, vardict, varscan]
+    indelcaller: scalpel
     ensemble:
       numpass: 2
     variant_regions: ../input/NGv3.bed
@@ -34,8 +34,8 @@ details:
     remove_lcr: true
     platform: illumina
     quality_format: standard
-    variantcaller: [mutect, varscan, freebayes, vardict]
-    indelcaller: pindel
+    variantcaller: [mutect, freebayes, vardict, varscan]
+    indelcaller: scalpel
     ensemble:
       numpass: 2
     variant_regions: ../input/NGv3.bed
