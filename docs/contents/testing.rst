@@ -239,7 +239,7 @@ the templating system::
   wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
   bash rnaseq-seqc-getdata.sh
 
-By default, GRCh37 is downloaded. This example uses hg19. To download it, 
+By default, GRCh37 is downloaded. This example uses hg19. To download it::
 
   wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
   python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local --genomes hg19 --aligners bwa --aligners bowtie2
