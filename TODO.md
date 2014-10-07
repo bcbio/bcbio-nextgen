@@ -35,13 +35,6 @@ These are roughly ordered by current priority and we welcome contributors.
 [112]: https://github.com/chapmanb/bcbio-nextgen/issues/112
 [fb-somatic]: https://groups.google.com/d/msg/freebayes/beLYRuHMkQE/RwFMniDmBYoJ
 
-- Improve analysis of coverage, especially in targeted sequencing
-  experiments. Plan to integrate with [chanjo]. See [#249][249] for more
-  discussion.
-
-[chanjo]: https://github.com/robinandeer/chanjo
-[249]: https://github.com/chapmanb/bcbio-nextgen/issues/249
-
 - Support [gVCF and incremental join discovery][gatk3-ijd] approach for calling
   variants. Switches batch approaches to calling independently, then combining
   in a final step. Also integrate [bcbio.variation.recall] for performing in
