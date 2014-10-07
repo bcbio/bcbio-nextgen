@@ -6,6 +6,7 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    nomap_split_targets: 100
     mark_duplicates: true
     recalibrate: true
     realign: true
@@ -13,14 +14,17 @@ details:
     platform: illumina
     quality_format: standard
     variantcaller: [mutect, freebayes, vardict, varscan]
-    indelcaller: scalpel
+    indelcaller: false
     ensemble:
       numpass: 2
     variant_regions: ../input/NGv3.bed
     #svcaller: [cn.mops, lumpy, delly]
   analysis: variant2
   description: syn3-normal
-  files: ../input/synthetic.challenge.set3.normal.bam
+  #files: ../input/synthetic.challenge.set3.normal.bam
+  files:
+    - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
+    - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
   genome_build: GRCh37
   metadata:
     batch: syn3
@@ -28,6 +32,7 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    nomap_split_targets: 100
     mark_duplicates: true
     recalibrate: true
     realign: true
@@ -35,7 +40,7 @@ details:
     platform: illumina
     quality_format: standard
     variantcaller: [mutect, freebayes, vardict, varscan]
-    indelcaller: scalpel
+    indelcaller: false
     ensemble:
       numpass: 2
     variant_regions: ../input/NGv3.bed
@@ -49,7 +54,10 @@ details:
   #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
   analysis: variant2
   description: syn3-tumor
-  files: ../input/synthetic.challenge.set3.tumor.bam
+  #files: ../input/synthetic.challenge.set3.tumor.bam
+  files:
+    - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
+    - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
   genome_build: GRCh37
   metadata:
     batch: syn3

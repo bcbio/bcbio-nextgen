@@ -242,8 +242,7 @@ the templating system::
 By default, GRCh37 is downloaded. This example uses hg19. To download it, 
 
   wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-  python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
-     --genomes hg19 --aligners bwa --aligners bowtie2
+  python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local --genomes hg19 --aligners bwa --aligners bowtie2
 
 Now go into the work directory and run the analysis::
 
