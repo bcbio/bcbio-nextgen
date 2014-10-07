@@ -2,7 +2,7 @@
 ---
 details:
   - analysis: RNA-seq
-    genome_build: hg19
+    genome_build: GRCh37
     algorithm:
       aligner: tophat2
       quality_format: Standard
