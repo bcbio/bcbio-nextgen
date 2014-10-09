@@ -1,10 +1,15 @@
 ## 0.8.3 (in progress)
 
+- Improve tumor/normal calling with FreeBayes, MuTect, VarDict and VarScan by
+  validating against DREAM synthetic 3 data.
+- Validate ensemble based calling for somatic analysis using multiple callers.
 - Avoid race conditions during `bedprep` work on samples with shared input BED
   files. These are now processed sequentially on a single machine to avoid
   conflicts. Thanks to Justin Johnson.
 - Add data checks and improved flexibility when specifying
   joint callers. Thanks to Luca Beltrame.
+- Bump pybedtools version to avoid potential open file handle issues. Thanks to
+  Ryan Dale.
 
 ## 0.8.2 (September 17, 2014)
 
