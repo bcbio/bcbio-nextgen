@@ -67,6 +67,10 @@ These are roughly ordered by current priority and we welcome contributors.
 [ensemble]: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 [bcbio.variation.recall]: https://github.com/chapmanb/bcbio.variation.recall
 
+- Add in methylation analysis approaches. See
+  [[#618][https://github.com/chapmanb/bcbio-nextgen/issues/618]]
+  for discussion.
+
 - Handle split inputs across multiple sequencing lanes, handling merging of
   multiple fastq/BAM inputs and correctly maintaining lane information in BAM
   read group headers.

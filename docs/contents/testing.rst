@@ -198,37 +198,38 @@ to the NIST reference materials, enabling rapid comparisons of methods.
 Cancer tumor normal
 ~~~~~~~~~~~~~~~~~~~
 
-This example calls variants in a paired cancer sample with tumor/normal
-sequencing data using raw data from `Han et al in PLoS One
-<http://www.plosone.org/article/info:doi/10.1371/journal.pone.0064271>`_. This
-is a work in progress and we welcome contributions. The goal is to use a full
-evaluation dataset to compare calling methods:
+This example calls variants using multiple approaches in a paired tumor/normal
+cancer sample from the `ICGC-TCGA DREAM challenge
+<https://www.synapse.org/#!Synapse:syn312572>`_. It uses `synthetic dataset 3
+<https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_ which has multiple
+subclones, enabling detection of lower frequency variants. Since the dataset is
+freely available and has a truth set, this allows us to do a full evaluation of
+variant callers.
 
-Get the input configuration file::
+To get the data::
 
-    mkdir config && cd config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
-     examples/cancer-paired.yaml
+    mkdir cancer-dream-syn3/config cancer-dream-syn3/input cancer-dream-syn3/work
+    cd cancer-dream-syn3/config
+    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-dream-syn3.yaml
+    cd ../input
+    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-dream-syn3-getdata.sh
+    bash cancer-dream-syn3-getdata.sh
 
-Get fastq reads and analysis regions::
+Run with::
 
-    cd .. && mkdir input && cd input
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_1.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_2.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_1.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_2.fastq.gz
-    wget https://gist.github.com/chapmanb/8322238/raw/131a5710ac17039e8e2d350e00a88898e030a958/ERP002442-targeted.bed
+    cd ../work
+    bcbio_nextgen.py ../config/cancer-dream-syn3.yaml -n 8
 
-Run::
-
-    cd .. & mkdir work && cd work
-    bcbio_nextgen.py ../config/cancer-paired.yaml -n 8
+The configuration and data file has downloads for exome only and whole genome
+analyses. It enables exome by default, but you can use the larger whole genome
+evaluation by uncommenting the relevant parts of the configuration and retrieval
+script.
 
 RNAseq example
 ~~~~~~~~~~~~~~
 
 This example aligns and creates count files for use with downstream analyses
-using a subset of the SEQC data from the FDA's Sequencing Quality Control project. 
+using a subset of the SEQC data from the FDA's Sequencing Quality Control project.
 
 Get the setup script and run it, this will download six samples from
 the SEQC project, three from the HBRR panel and three from the UHRR
@@ -248,7 +249,7 @@ This will run a full scale RNAseq experiment using Tophat2 as the
 aligner and will take a long time to finish on a single machine. At
 the end it will output counts, Cufflinks quantitation and a set of QC
 results about each lane. If you have a cluster you can `parallelize it`_
-to speed it up considerably. 
+to speed it up considerably.
 
 A nice looking standalone `report`_ of the bcbio-nextgen run can be generated using
 `bcbio.rnaseq`_. Check that repository for details.
