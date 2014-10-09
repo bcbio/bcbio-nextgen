@@ -1,4 +1,4 @@
-version: 13
+version: 14
 
 aliases:
   human: true
@@ -22,3 +22,6 @@ rnaseq:
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
     tophat: ../rnaseq/tophat/hg19_transcriptome.ver
+  dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
+  refflat: ../rnaseq/ref-transcripts.refFlat
+  rRNA_fa: ../rnaseq/rRNA.fa
