@@ -37,6 +37,11 @@ current implementation:
   calling to detect larger structural variations like deletions, duplications,
   inversions and copy number variants (CNVs).
 
+- An `evaluation of joint calling`_ with GATK HaplotypeCaller, FreeBayes,
+  Platypus and samtools. This validates the joint calling implementation,
+  allowing scaling of large population germline experiments. It also
+  demonstrates improved performance of new callers: samtools 1.0 and Platypus.
+
 bcbio automates post-variant calling annotation to make
 the outputs easier to feed directly into your biological analysis. We annotate
 variant effects using `snpEff`_ or `Variant Effect Predictor`_ (VEP), and
@@ -58,6 +63,7 @@ external annotations in a SQL-based query interface.
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _GEMINI database: http://gemini.readthedocs.org/en/latest/
 .. _Variant Effect Predictor: http://www.ensembl.org/info/docs/tools/vep/index.html
+.. _evaluation of joint calling: http://bcbio.wordpress.com/2014/10/07/joint-calling/
 
 Basic germline calling
 ======================
