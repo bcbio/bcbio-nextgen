@@ -10,6 +10,8 @@
   joint callers. Thanks to Luca Beltrame.
 - Bump pybedtools version to avoid potential open file handle issues. Thanks to
   Ryan Dale.
+- Move to bgzipped and indexes human_ancestor.fa for LOFTEE to support access
+  with new samtools that no longer uses razip.
 
 ## 0.8.2 (September 17, 2014)
 

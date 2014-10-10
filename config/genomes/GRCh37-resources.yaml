@@ -1,4 +1,4 @@
-version: 15
+version: 16
 
 aliases:
   human: true
@@ -15,7 +15,7 @@ variation:
   lcr: ../variation/LCR.bed.gz
   sv_repeat: ../variation/sv_repeat_telomere_centromere.bed
   dbnsfp: ../variation/dbNSFP_v2.6.gz
-  ancestral: ../variation/human_ancestor.fa.rz
+  ancestral: ../variation/human_ancestor.fa.gz
   qsignature: ../variation/qsignature.vcf
 
 rnaseq:
