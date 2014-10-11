@@ -460,7 +460,7 @@ parallelization
 - ``nomap_split_targets`` Number of target intervals to attempt to
   split processing into. This picks unmapped regions evenly spaced
   across the genome to process concurrently. Limiting targets prevents
-  a large number of small targets. (default: 2000)
+  a large number of small targets. (default: 200)
 
 Ensemble variant calling
 ========================

@@ -93,7 +93,7 @@ def process_alignment(data):
     if "files" not in data:
         fastq1, fastq2 = None, None
     elif len(data["files"]) == 2:
-        fastq1, fastq2 = data["files"]
+        fastq0, fastq2 = data["files"]
     else:
         assert len(data["files"]) == 1, data["files"]
         fastq1, fastq2 = data["files"][0], None

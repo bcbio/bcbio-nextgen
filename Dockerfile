@@ -3,6 +3,7 @@ MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
 # Setup a base system 
 RUN apt-get update && apt-get install -y build-essential zlib1g-dev wget curl python-setuptools git
+RUN apt-get install -y openjdk-7-jdk openjdk-7-jre ruby libncurses5-dev libcurl4-openssl-dev libbz2-dev unzip
 
 # Fake a fuse install; openjdk pulls this in 
 # https://github.com/dotcloud/docker/issues/514
