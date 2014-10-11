@@ -674,3 +674,17 @@ key names used (like ``GRCh37`` and ``mm10``) should match those used in the
 ``genome_build`` of your sample input configuration file.
 
 .. _Galaxy .loc files: http://wiki.galaxyproject.org/Admin/NGS%20Local%20Setup
+
+Adding custom genomes
+~~~~~~~~~~~~~~~~~~~~~~
+``bcbio_setup_genome.py`` will help you to install a custom genome and apply all changes needed 
+to the configuration files. It needs the genome in FASTA format, and the annotation file
+in GTF or GFF3 format. It can create index for all aligners used by bcbio. Moreover, it will create 
+the folder `rnaseq` to allow you run the RNAseq pipeline without further configuration.
+
+::
+    bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135
+
+To use that genome just need to configure your YAML files as::
+
+    genome_build: WBcel135
