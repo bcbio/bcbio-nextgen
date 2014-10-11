@@ -277,9 +277,16 @@ Alignment
    and polyA tails. Valid items are [truseq, illumina, nextera, polya]
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
--  ``align_split_size``: Split FASTQ files into specified number of
-   records per file. Allows parallelization at the cost of increased
-   temporary disk space usage.
+- ``align_split_size``: Increase parallelization of alignment. This defines the
+   number of records to feed into each independent parallel step (for example,
+   5000000 = 5 million reads per chunk). It converts the original inputs into
+   bgzip grabix indexed FASTQ files, and then retrieves chunks for parallel
+   alignment. Following alignment, it combines all chunks back into the final
+   merged alignment file. This allows parallelization at the cost of additional
+   work of preparing inputs and combining split outputs. The tradeoff makes
+   sense when you have large files and lots of distributed compute. When you
+   have fewer large multicore machines this parameter may not help speed up
+   processing.
 -  ``quality_bin``: Perform binning of quality scores with CRAM to
    reduce file sizes. Uses the Illumina 8-bin approach. Supply a list
    of times to perform binning: [prealignment, postrecal]
