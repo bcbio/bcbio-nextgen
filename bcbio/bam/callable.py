@@ -359,19 +359,6 @@ def _needs_region_update(out_file, samples):
             return True
     return False
 
-def _combine_excessive_coverage(samples, ref_regions, min_n_size, tmp_outfile):
-    """Provide a global set of regions with excessive coverage to avoid.
-    """
-    flag = "EXCESSIVE_COVERAGE"
-    ecs = (pybedtools.BedTool(x["regions"]["callable"]).filter(lambda x: x.name == flag)
-           for x in samples if "regions" in x)
-    merge_ecs = _combine_regions(ecs, ref_regions).saveas("%s-ecmergeorig%s" % utils.splitext_plus(tmp_outfile))
-    if len(merge_ecs) > 0:
-        return merge_ecs.merge(d=min_n_size).filter(lambda x: x.stop - x.start > min_n_size).saveas(
-            "%s-ecmerge%s" % utils.splitext_plus(tmp_outfile))
-    else:
-        return merge_ecs
-
 def combine_sample_regions(*samples):
     """Create batch-level sets of callable regions for multi-sample calling.
 
@@ -431,10 +418,6 @@ def _combine_sample_regions_batch(batch, items):
                 ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
                 ref_regions = get_ref_bedtool(ref_file, config)
                 min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
-                ec_regions = _combine_excessive_coverage(items, ref_regions, min_n_size,
-                                                         tx_afile)
-                if len(ec_regions) > 0:
-                    nblock_regions = nblock_regions.cat(ec_regions, d=min_n_size)
                 block_filter = NBlockRegionPicker(ref_regions, config)
                 final_nblock_regions = nblock_regions.filter(
                     block_filter.include_block).each(block_filter.expand_block).saveas(
