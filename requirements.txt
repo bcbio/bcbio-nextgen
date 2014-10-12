@@ -12,20 +12,21 @@ PyYAML>=3.10
 toolz>=0.6.0
 tornado>=3.1.0
 # soft dependencies -- not required for bcbio-nextgen-vm
+arrow>=0.4.4
+arvados-python-client>=0.1.1405019228.4a7ca04
 bioblend>=0.4.3
+chanjo>=2.0.2
 cutadapt==1.4.2
 fabric>=1.7.0
 gffutils>=0.8.1
 HTSeq >= 0.5.4p5
 joblib>=0.7.0d
+msgpack-python>=0.4.0
 openpyxl>=1.6.1,<2.0.0
 prettyplotlib>=0.1.7
 psutil>=1.2.0
 pybedtools>=0.6.8
+pythonpy>=0.3.6
 PyVCF>=0.6.7
 sh>=1.07
-pythonpy>=0.3.6
-arvados-python-client>=0.1.1405019228.4a7ca04
-chanjo>=2.0.2
-msgpack-python>=0.4.0
 bcbio-nextgen==0.8.2
