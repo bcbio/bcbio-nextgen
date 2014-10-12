@@ -14,6 +14,10 @@ def get_fastq_files(item):
     """
     assert "files" in item, "Did not find `files` in input; nothing to process"
     ready_files = []
+    should_gzip = True
+    # Bowtie does not accept gzipped fastq
+    if 'bowtie' in item['reference'].keys():
+        should_gzip = False
     for fname in item["files"]:
         if fname.endswith(".bam"):
             if _pipeline_needs_fastq(item["config"], item):
@@ -26,7 +30,8 @@ def get_fastq_files(item):
         else:
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]
-    ready_files = [_gzip_fastq(x) for x in ready_files]
+    if should_gzip:
+        ready_files = [_gzip_fastq(x) for x in ready_files]
     for in_file in ready_files:
         assert os.path.exists(in_file), "%s does not exist." % in_file
     return ((ready_files[0] if len(ready_files) > 0 else None),
