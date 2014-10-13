@@ -12,13 +12,15 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.variation import bedutils
 
 def summary(items):
     cutoff = 4  # coverage for completeness
 
     out_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "coverage"))
-    bed_file = _uniquify_bed_names(tz.get_in(["config", "algorithm", "coverage"], items[0], None),
-                                   out_dir, items[0])
+    clean_bed = bedutils.clean_file(tz.get_in(["config", "algorithm", "coverage"], items[0]),
+                                    items[0])
+    bed_file = _uniquify_bed_names(clean_bed, out_dir, items[0])
     batch = _get_group_batch(items)
 
     out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
