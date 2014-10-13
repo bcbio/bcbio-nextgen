@@ -1,12 +1,12 @@
 """Loads configurations from .yaml files and expands environment variables.
 """
 import copy
+import collections
 import glob
 import math
 import os
 import sys
 import yaml
-
 
 class CmdNotFound(Exception):
     pass
@@ -359,18 +359,23 @@ def adjust_opts(in_opts, config):
 def use_vqsr(algs):
     """Processing uses GATK's Variant Quality Score Recalibration.
     """
+    vqsr_callers = set(["gatk", "gatk-haplotype"])
+    vqsr_sample_thresh = 50
+    vqsr_supported = collections.defaultdict(int)
+    coverage_intervals = set([])
     for alg in algs:
         callers = alg.get("variantcaller", "gatk")
         if isinstance(callers, basestring):
             callers = [callers]
         elif not callers:  # no variant calling, no VQSR
             continue
-        vqsr_supported_caller = False
         for c in callers:
-            if c in ["gatk", "gatk-haplotype"]:
-                vqsr_supported_caller = True
-                break
-        if alg.get("coverage_interval", "exome").lower() not in ["regional", "exome"] and vqsr_supported_caller:
+            if c in vqsr_callers:
+                vqsr_supported[c] += 1
+                coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
+    if len(vqsr_supported) > 0:
+        num_samples = max(vqsr_supported.values())
+        if "genome" in coverage_intervals or num_samples >= vqsr_sample_thresh:
             return True
     return False
 

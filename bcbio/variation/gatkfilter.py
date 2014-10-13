@@ -140,10 +140,14 @@ def _already_hard_filtered(in_file, filter_type):
 def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
                         hard_filter_fn):
     """Filter SNP and indel variant calls using GATK best practice recommendations.
+
+    Hard filter if configuration indicates too little data or already finished a
+    hard filtering, otherwise try VQSR.
     """
-    # hard filter if configuration indicates too little data or already finished a hard filtering
     human = tz.get_in(["genome_resources", "aliases", "human"], data)
-    if (not config_utils.use_vqsr([data["config"]["algorithm"]]) or
+    # Algorithms multiplied by number of input files to check for large enough sample sizes
+    algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
+    if (not config_utils.use_vqsr(algs) or
           _already_hard_filtered(in_file, filter_type) or not human):
         return hard_filter_fn(in_file, data)
     else:

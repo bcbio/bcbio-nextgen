@@ -9,7 +9,10 @@
 - Add data checks and improved flexibility when specifying
   joint callers. Thanks to Luca Beltrame.
 - Default to a reduced number of split regions (`nomap_split_targets` defaults
-  to 200 instead of 2000) to avoid controller memory issues with large sample sizes.
+  to 200 instead of 2000) to avoid controller memory issues with large sample
+  sizes.
+- Enable VQSR for large batches of exome samples (50 or more together) to
+  coincide with joint calling availability for large populations.
 - Bump pybedtools version to avoid potential open file handle issues. Thanks to
   Ryan Dale.
 - Move to bgzipped and indexes human_ancestor.fa for LOFTEE to support access

@@ -171,7 +171,7 @@ def _bgzip_from_cram(cram_file, dirs, data):
                    if tz.get_in(["config", "algorithm", "coverage_interval"], data) in ["regional", "exome"]
                    else None)
     if region_file:
-        regions = ["%s:%s-%s" % tuple(r) for r in pybedtools.BedTool(region_file)]
+        regions = ["%s:%s-%s" % tuple(r[:3]) for r in pybedtools.BedTool(region_file)]
     else:
         regions = [None]
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))

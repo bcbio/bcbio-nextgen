@@ -30,7 +30,8 @@ current implementation:
   hard filtering. VQSR requires a large number of variants and we use
   it in bcbio with GATK HaplotypeCaller when your :ref:`algorithm-config`
   contains high depth samples (``coverage_depth`` is not low) and you are
-  calling on the whole genome (``coverage_interval`` is genome).
+  calling on the whole genome (``coverage_interval`` is genome) or have more
+  than 50 regional or exome samples called concurrently.
 
 - `Validation of structural variant detection`_ using multiple calling
   methods. This implements a pipeline that works in tandem with SNP and indel
