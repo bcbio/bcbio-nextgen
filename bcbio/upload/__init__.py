@@ -273,6 +273,10 @@ def _get_files_project(sample, upload_config):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})
             break
+    if "coverage" in sample:
+        cov_db = tz.get_in(["coverage", "summary"], sample)
+        if cov_db:
+            out.append({"path": cov_db, "type": "sqlite", "ext": "coverage"})
 
     if "combined_counts" in sample:
         out.append({"path": sample["combined_counts"]})

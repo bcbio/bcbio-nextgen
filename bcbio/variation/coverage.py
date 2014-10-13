@@ -42,11 +42,11 @@ def summary(items):
 def _uniquify_bed_names(bed_file, out_dir, data):
     """Chanjo required unique names in the BED file to map to intervals.
     """
-    out_file = os.path.join(out_dir, "%s-unames%s" % utils.splitext_plus(bed_file))
-    if not utils.file_exists(out_file):
+    out_file = os.path.join(out_dir, "%s-unames%s" % utils.splitext_plus(os.path.basename(bed_file)))
+    if not utils.file_exists(out_file) or not utils.file_uptodate(out_file, bed_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(bed_file) as in_handle:
-                with open(out_file, "w") as out_handle:
+                with open(tx_out_file, "w") as out_handle:
                     namecounts = collections.defaultdict(int)
                     for line in in_handle:
                         parts = line.rstrip("\r\n").split("\t")
