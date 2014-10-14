@@ -48,6 +48,12 @@ your own research.
   alignment and sample-specific analysis, with results directly
   uploaded into a local `Galaxy`_ instance.
 
+- `Science for Life Laboratory`_: The genomics core platform in
+  the Swedish National Infrastructure (`NGI`_) for genomics, has crunched
+  over 16TBp (terabasepairs) and processed almost 7000+ samples
+  from the beggining of 2013 until the end of July. `UPPMAX`_, our
+  cluster located in Uppsala runs the pipeline in production since 2010.
+
 .. _Massachusetts General Hospital: http://molbio.mgh.harvard.edu/
 .. _Galaxy: http://galaxyproject.org/
 
