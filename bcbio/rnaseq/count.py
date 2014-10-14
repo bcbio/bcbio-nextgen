@@ -14,33 +14,23 @@ try:
 except ImportError:
     HTSeq, pd, gffutils = None, None, None
 
-from bcbio.utils import (file_exists, get_in)
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import bam
+import bcbio.pipeline.datadict as dd
 
 
 def _get_files(data):
     mapped = bam.mapped(data["work_bam"], data["config"])
     in_file = bam.sort(mapped, data["config"], order="queryname")
-    gtf_file = data["genome_resources"]["rnaseq"]["transcripts"]
-    work_dir = data["dirs"].get("work", "work")
+    gtf_file = dd.get_gtf_file(data)
+    work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "htseq-count")
-    out_file = os.path.join(out_dir, data['rgnames']['sample']) + ".counts"
-    stats_file = os.path.join(out_dir, data['rgnames']['sample']) + ".stats"
+    sample_name = dd.get_sample_name(data)
+    out_file = os.path.join(out_dir, sample_name + ".counts")
+    stats_file = os.path.join(out_dir, sample_name + ".stats")
     return in_file, gtf_file, out_file, stats_file
-
-
-def is_countfile(in_file):
-    with open(in_file) as in_handle:
-        firstline = in_handle.next().split("\t")
-    if len(firstline) != 2:
-        return False
-    try:
-        int(firstline[1])
-    except ValueError:
-        return False
-    return True
 
 
 def invert_strand(iv):
@@ -57,18 +47,15 @@ def invert_strand(iv):
 class UnknownChrom(Exception):
     pass
 
-def _get_stranded_flag(config):
+def _get_stranded_flag(data):
     strand_flag = {"unstranded": "no",
                    "firststrand": "reverse",
                    "secondstrand": "yes"}
-    stranded = _get_strandedness(config)
+    stranded = dd.get_strandedness(data, "unstranded").lower()
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
                                      "Valid values are 'firststrand', 'secondstrand', "
                                      "and 'unstranded")
     return strand_flag[stranded]
-
-def _get_strandedness(config):
-    return get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
 
 
 def htseq_count(data):
@@ -83,13 +70,12 @@ def htseq_count(data):
     id_attribute = "gene_id"
     minaqual = 0
 
-
     if file_exists(out_file):
         return out_file
 
     logger.info("Counting reads mapping to exons in %s using %s as the "
-                    "annotation and strandedness as %s." % (os.path.basename(sam_filename),
-                    os.path.basename(gff_filename), _get_strandedness(data["config"])))
+                "annotation and strandedness as %s." %
+                (os.path.basename(sam_filename), os.path.basename(gff_filename), dd.get_strandedness(data)))
 
     features = HTSeq.GenomicArrayOfSets("auto", stranded != "no")
     counts = {}
@@ -242,7 +228,7 @@ def htseq_count(data):
 
             if i % 100000 == 0:
                 sys.stderr.write("%d sam %s processed.\n" %
-                                 ( i, "lines " if not pe_mode else "line pairs"))
+                                 (i, "lines " if not pe_mode else "line pairs"))
 
     except:
         if not pe_mode:
@@ -250,20 +236,20 @@ def htseq_count(data):
                              % read_seq.get_line_number_string())
         else:
             sys.stderr.write("Error occured in %s.\n"
-                             % read_seq_pe_file.get_line_number_string() )
+                             % read_seq_pe_file.get_line_number_string())
         raise
 
     sys.stderr.write("%d sam %s processed.\n" %
                      (i, "lines " if not pe_mode else "line pairs"))
 
-    with file_transaction(out_file) as tmp_out_file:
+    with file_transaction(data, out_file) as tmp_out_file:
         with open(tmp_out_file, "w") as out_handle:
             on_feature = 0
             for fn in sorted(counts.keys()):
                 on_feature += counts[fn]
                 out_handle.write("%s\t%d\n" % (fn, counts[fn]))
 
-    with file_transaction(stats_file) as tmp_stats_file:
+    with file_transaction(data, stats_file) as tmp_stats_file:
         with open(tmp_stats_file, "w") as out_handle:
             out_handle.write("on_feature\t%d\n" % on_feature)
             out_handle.write("no_feature\t%d\n" % empty)
@@ -274,14 +260,15 @@ def htseq_count(data):
 
     return out_file
 
-def combine_count_files(files, out_file=None):
+def combine_count_files(files, out_file=None, ext=".fpkm"):
     """
     combine a set of count files into a single combined file
     """
+    assert all([file_exists(x) for x in files]), \
+        "Some count files in %s do not exist." % files
     for f in files:
-        assert file_exists(f), "%s does not exist or is empty."
-        assert is_countfile(f), "%s does not seem to be a count file."
-    col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
+        assert file_exists(f), "%s does not exist or is empty." % f
+    col_names = [os.path.basename(x.split(ext)[0]) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
         out_file = os.path.join(out_dir, "combined.counts")
@@ -326,7 +313,7 @@ def annotate_combined_count_file(count_file, gtf_file, out_file=None):
 
     df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=0)
 
-    df['symbol'] = df.apply(lambda x: symbol_lookup[x.name], axis=1)
+    df['symbol'] = df.apply(lambda x: symbol_lookup.get(x.name, ""), axis=1)
     df.to_csv(out_file, sep="\t", index_label="id")
     return out_file
 

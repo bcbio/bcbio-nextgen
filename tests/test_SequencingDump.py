@@ -6,7 +6,7 @@ import unittest
 from nose.plugins.attrib import attr
 import yaml
 
-from bcbio.solexa import samplesheet
+from bcbio.illumina import samplesheet
 
 class SampleSheetTest(unittest.TestCase):
     """Deal with Illumina SampleSheets and convert to YAML input.

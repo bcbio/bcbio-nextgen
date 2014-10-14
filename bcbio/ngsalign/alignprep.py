@@ -3,9 +3,17 @@
 import collections
 import copy
 import os
+import shutil
 import subprocess
 
+import toolz as tz
+try:
+    import pybedtools
+except ImportError:
+    pybedtools = None
+
 from bcbio import bam, utils
+from bcbio.bam import cram
 from bcbio.log import logger
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
@@ -18,16 +26,22 @@ def create_inputs(data):
     Allows parallelization of alignment beyond processors available on a single
     machine. Uses gbzip and grabix to prepare an indexed fastq file.
     """
-    # skip indexing on samples without input files or not doing alignment
-    if ("files" not in data or data["files"][0] is None or
-          data["config"]["algorithm"].get("align_split_size") is None
-          or not data["config"]["algorithm"].get("aligner")):
-        return [[data]]
-    ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data["config"])
+    aligner = tz.get_in(("config", "algorithm", "aligner"), data)
+    # CRAM files must be converted to bgzipped fastq, unless not aligning
+    if not ("files" in data and _is_cram_input(data["files"]) and aligner):
+        # skip indexing on samples without input files or not doing alignment
+        if ("files" not in data or data["files"][0] is None or
+              data["config"]["algorithm"].get("align_split_size") is None
+              or not aligner):
+            return [[data]]
+    ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data)
     data["files"] = ready_files
     # bgzip preparation takes care of converting illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
-    splits = _find_read_splits(ready_files[0], data["config"]["algorithm"]["align_split_size"])
+    if tz.get_in(["config", "algorithm", "align_split_size"], data):
+        splits = _find_read_splits(ready_files[0], data["config"]["algorithm"]["align_split_size"])
+    else:
+        splits = [None]
     if len(splits) == 1:
         return [[data]]
     else:
@@ -51,6 +65,7 @@ def fastq_convert_pipe_cl(in_file, data):
     Uses seqtk: https://github.com/lh3/seqt
     """
     seqtk = config_utils.get_program("seqtk", data["config"])
+    in_file = utils.remote_cl_input(in_file)
     return "<({seqtk} seq -Q64 -V {in_file})".format(**locals())
 
 # ## configuration
@@ -85,7 +100,10 @@ def merge_split_alignments(samples, run_parallel):
     to_merge = collections.defaultdict(list)
     for data in (xs[0] for xs in samples):
         if data.get("combine"):
-            to_merge[data["combine"][file_key]["out"]].append(data)
+            out_key = tz.get_in(["combine", file_key, "out"], data)
+            if not out_key:
+                out_key = data["rgnames"]["lane"]
+            to_merge[out_key].append(data)
         else:
             ready.append([data])
     ready_merge = []
@@ -124,16 +142,133 @@ def _find_read_splits(in_file, split_size):
 
 # ## bgzip and grabix
 
-def _prep_grabix_indexes(in_files, dirs, config):
-    if in_files[0].endswith(".bam") and len(in_files) == 1 or in_files[1] is None:
-        out = _bgzip_from_bam(in_files[0], dirs, config)
+def _is_bam_input(in_files):
+    return in_files[0].endswith(".bam") and (len(in_files) == 1 or in_files[1] is None)
+
+def _is_cram_input(in_files):
+    return in_files[0].endswith(".cram") and (len(in_files) == 1 or in_files[1] is None)
+
+def _prep_grabix_indexes(in_files, dirs, data):
+    if _is_bam_input(in_files):
+        out = _bgzip_from_bam(in_files[0], dirs, data["config"])
+    elif _is_cram_input(in_files):
+        out = _bgzip_from_cram(in_files[0], dirs, data)
     else:
         out = run_multicore(_bgzip_from_fastq,
-                            [[{"in_file": x, "dirs": dirs, "config": config}] for x in in_files if x],
-                            config)
-    items = [[{"bgzip_file": x, "config": copy.deepcopy(config)}] for x in out if x]
-    run_multicore(_grabix_index, items, config)
+                            [[{"in_file": x, "dirs": dirs, "config": data["config"]}] for x in in_files if x],
+                            data["config"])
+    items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in out if x]
+    run_multicore(_grabix_index, items, data["config"])
     return out
+
+def _bgzip_from_cram(cram_file, dirs, data):
+    """Create bgzipped fastq files from an input CRAM file in regions of interest.
+
+    Returns a list with a single file, for single end CRAM files, or two
+    files for paired end input.
+    """
+    region_file = (tz.get_in(["config", "algorithm", "variant_regions"], data)
+                   if tz.get_in(["config", "algorithm", "coverage_interval"], data) in ["regional", "exome"]
+                   else None)
+    if region_file:
+        regions = ["%s:%s-%s" % tuple(r[:3]) for r in pybedtools.BedTool(region_file)]
+    else:
+        regions = [None]
+    work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
+    out_s, out_p1, out_p2 = [os.path.join(work_dir, "%s-%s.fq.gz" %
+                                          (utils.splitext_plus(os.path.basename(cram_file))[0], fext))
+                             for fext in ["s1", "p1", "p2"]]
+    if (not utils.file_exists(out_s) and
+          (not utils.file_exists(out_p1) or not utils.file_exists(out_p2))):
+        cram.index(cram_file, data["config"])
+        fastqs, part_dir = _cram_to_fastq_regions(regions, cram_file, dirs, data)
+        if len(fastqs[0]) == 1:
+            with file_transaction(data, out_s) as tx_out_file:
+                _merge_and_bgzip([xs[0] for xs in fastqs], tx_out_file, out_s)
+        else:
+            for i, out_file in enumerate([out_p1, out_p2]):
+                if not utils.file_exists(out_file):
+                    ext = "/%s" % (i + 1)
+                    with file_transaction(data, out_file) as tx_out_file:
+                        _merge_and_bgzip([xs[i] for xs in fastqs], tx_out_file, out_file, ext)
+        shutil.rmtree(part_dir)
+    if utils.file_exists(out_p1):
+        return [out_p1, out_p2]
+    else:
+        assert utils.file_exists(out_s)
+        return [out_s]
+
+def _merge_and_bgzip(orig_files, out_file, base_file, ext=""):
+    """Merge a group of gzipped input files into a final bgzipped output.
+
+    Also handles providing unique names for each input file to avoid
+    collisions on multi-region output. Handles renaming with awk magic from:
+    https://www.biostars.org/p/68477/
+    """
+    assert out_file.endswith(".gz")
+    full_file = out_file.replace(".gz", "")
+    run_file = "%s-merge.bash" % utils.splitext_plus(base_file)[0]
+
+    cmds = ["set -e\n"]
+    for i, fname in enumerate(orig_files):
+        cmd = ("""zcat %s | awk '{print (NR%%4 == 1) ? "@%s_" ++i "%s" : $0}' >> %s\n"""
+               % (fname, i, ext, full_file))
+        cmds.append(cmd)
+    cmds.append("bgzip -f %s\n" % full_file)
+
+    with open(run_file, "w") as out_handle:
+        out_handle.write("".join("".join(cmds)))
+    do.run([do.find_bash(), run_file], "Rename, merge and bgzip CRAM fastq output")
+    assert os.path.exists(out_file) and not _is_gzip_empty(out_file)
+
+def _cram_to_fastq_regions(regions, cram_file, dirs, data):
+    """Convert CRAM files to fastq, potentially within sub regions.
+
+    Returns multiple fastq files that can be merged back together.
+    """
+    base_name = utils.splitext_plus(os.path.basename(cram_file))[0]
+    work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep",
+                                               "%s-parts" % base_name))
+    fnames = run_multicore(_cram_to_fastq_region,
+                           [(cram_file, work_dir, base_name, region, data) for region in regions],
+                           data["config"])
+    # check if we have paired or single end data
+    if any(not _is_gzip_empty(p1) for p1, p2, s in fnames):
+        out = [[p1, p2] for p1, p2, s in fnames]
+    else:
+        out = [[s] for p1, p2, s in fnames]
+    return out, work_dir
+
+@utils.map_wrap
+@zeromq_aware_logging
+def _cram_to_fastq_region(cram_file, work_dir, base_name, region, data):
+    """Convert CRAM to fastq in a specified region.
+    """
+    ref_file = tz.get_in(["reference", "fasta", "base"], data)
+    resources = config_utils.get_resources("bamtofastq", data["config"])
+    cores = tz.get_in(["config", "algorithm", "num_cores"], data, 1)
+    max_mem = int(resources.get("memory", "1073741824")) * cores  # 1Gb/core default
+    rext = "-%s" % region.replace(":", "_").replace("-", "_") if region else "full"
+    out_s, out_p1, out_p2 = [os.path.join(work_dir, "%s%s-%s.fq.gz" %
+                                          (base_name, rext, fext))
+                             for fext in ["s1", "p1", "p2"]]
+    if not utils.file_exists(out_p1):
+        with file_transaction(data, out_s, out_p1, out_p2) as (tx_out_s, tx_out_p1, tx_out_p2):
+            cram_file = utils.remote_cl_input(cram_file)
+            sortprefix = "%s-sort" % utils.splitext_plus(tx_out_s)[0]
+            cmd = ("bamtofastq filename={cram_file} inputformat=cram T={sortprefix} "
+                   "gz=1 collate=1 colsbs={max_mem} "
+                   "F={tx_out_p1} F2={tx_out_p2} S={tx_out_s} O=/dev/null O2=/dev/null "
+                   "reference={ref_file}")
+            if region:
+                cmd += " ranges='{region}'"
+            do.run(cmd.format(**locals()), "CRAM to fastq %s" % region if region else "")
+    return [[out_p1, out_p2, out_s]]
+
+def _is_gzip_empty(fname):
+    count = subprocess.check_output("zcat %s | head -1 | wc -l" % fname, shell=True,
+                                    stderr=open("/dev/null", "w"))
+    return int(count) < 1
 
 def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
     """Create bgzipped fastq files from an input BAM file.
@@ -153,7 +288,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
         out_file_2 = None
     needs_retry = False
     if is_retry or not utils.file_exists(out_file_1):
-        with file_transaction(out_file_1) as tx_out_file:
+        with file_transaction(config, out_file_1) as tx_out_file:
             for f in [tx_out_file, out_file_1, out_file_2]:
                 if f and os.path.exists(f):
                     os.remove(f)
@@ -165,6 +300,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
                            "O2=/dev/null collate=1 colsbs={max_mem}")
             else:
                 out_str = "S=>({fq1_bgzip_cmd})"
+            bam_file = utils.remote_cl_input(bam_file)
             cmd = "{bamtofastq} filename={bam_file} T={sortprefix} " + out_str
             try:
                 do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
@@ -192,7 +328,7 @@ def _grabix_index(data):
     gbi_file = in_file + ".gbi"
     if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
         do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
-    return gbi_file
+    return [gbi_file]
 
 def _is_partial_index(gbi_file):
     """Check for truncated output since grabix doesn't write to a transactional directory.
@@ -230,9 +366,10 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
     out_file = os.path.join(work_dir, os.path.basename(in_file) +
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             assert needs_bgzip
             bgzip = tools.get_bgzip_cmd(config)
+            in_file = utils.remote_cl_input(in_file)
             if needs_convert:
                 in_file = fastq_convert_pipe_cl(in_file, {"config": config})
             if needs_gunzip:

@@ -2,16 +2,144 @@
 
 Supported:
   snpEff: http://sourceforge.net/projects/snpeff/
+  VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
 """
 import os
-import csv
 import glob
+import shutil
+import subprocess
+
+import toolz as tz
+import yaml
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+
+# ## Ensembl VEP
+
+def vep_version(config):
+    try:
+        vep = config_utils.get_program("variant_effect_predictor.pl", config)
+        help_str = subprocess.check_output([vep, "--help"])
+        for line in help_str.split("\n"):
+            if line.startswith("version"):
+                return line.split()[-1].strip()
+        return None
+    except config_utils.CmdNotFound:
+        return None
+        return False
+
+def _special_dbkey_maps(dbkey, ref_file):
+    """Avoid duplicate VEP information for databases with chromosome differences like hg19/GRCh37.
+    """
+    remaps = {"hg19": "GRCh37"}
+    if dbkey in remaps:
+        base_dir = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir))
+        vep_dir = os.path.normpath(os.path.join(base_dir, "vep"))
+        other_dir = os.path.relpath(os.path.normpath(os.path.join(base_dir, os.pardir, remaps[dbkey], "vep")),
+                                    base_dir)
+        if not os.path.lexists(vep_dir):
+            os.symlink(other_dir, vep_dir)
+        return vep_dir
+    else:
+        return None
+
+def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
+    """Ensure correct installation of VEP cache file.
+    """
+    if config is None: config = {}
+    resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
+    if tooldir:
+        os.environ["PERL5LIB"] = "{t}/lib/perl5:{t}/lib/perl5/site_perl:{l}".format(
+            t=tooldir, l=os.environ.get("PERL5LIB", ""))
+    vepv = vep_version(config)
+    if os.path.exists(resource_file) and vepv:
+        with open(resource_file) as in_handle:
+            resources = yaml.load(in_handle)
+        ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
+        ensembl_version = tz.get_in(["aliases", "ensembl_version"], resources)
+        symlink_dir = _special_dbkey_maps(dbkey, ref_file)
+        if symlink_dir:
+            return symlink_dir, ensembl_name
+        elif ensembl_name:
+            vep_dir = utils.safe_makedir(os.path.normpath(os.path.join(
+                os.path.dirname(os.path.dirname(ref_file)), "vep")))
+            out_dir = os.path.join(vep_dir, ensembl_name, vepv)
+            if not os.path.exists(out_dir):
+                cmd = ["vep_install.pl", "-a", "c", "-s", ensembl_name,
+                       "-c", vep_dir]
+                if ensembl_version:
+                    cmd += ["-v", ensembl_version]
+                do.run(cmd, "Prepare VEP directory for %s" % ensembl_name)
+                cmd = ["vep_convert_cache.pl", "-species", ensembl_name, "-version", vepv,
+                       "-d", vep_dir]
+                do.run(cmd, "Convert VEP cache to tabix %s" % ensembl_name)
+            tmp_dir = os.path.join(vep_dir, "tmp")
+            if os.path.exists(tmp_dir):
+                shutil.rmtree(tmp_dir)
+            return vep_dir, ensembl_name
+    return None, None
+
+def run_vep(data):
+    """Annotate input VCF file with Ensembl variant effect predictor.
+    """
+    out_file = utils.append_stem(data["vrn_file"], "-vepeffects")
+    assert data["vrn_file"].endswith(".gz") and out_file.endswith(".gz")
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            vep_dir, ensembl_name = prep_vep_cache(data["genome_build"],
+                                                   tz.get_in(["reference", "fasta", "base"], data))
+            if vep_dir:
+                cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
+                fork_args = ["--fork", str(cores)] if cores > 1 else []
+                vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
+                dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
+                loftee_args, loftee_fields = _get_loftee(data)
+                std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
+                              "EXON", "PolyPhen", "SIFT", "Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
+                resources = config_utils.get_resources("vep", data["config"])
+                extra_args = [str(x) for x in resources.get("options", [])]
+                cmd = [vep, "--vcf", "-o", "stdout"] + fork_args + extra_args + \
+                      ["--species", ensembl_name,
+                       "--no_stats",
+                       "--cache", "--offline", "--dir", vep_dir,
+                       "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",
+                       "--canonical", "--ccds",
+                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + dbnsfp_args + loftee_args
+                cmd = "gunzip -c %s | %s | bgzip -c > %s" % (data["vrn_file"], " ".join(cmd), tx_out_file)
+                do.run(cmd, "Ensembl variant effect predictor", data)
+    if utils.file_exists(out_file):
+        vcfutils.bgzip_and_index(out_file, data["config"])
+        return out_file
+
+def _get_dbnsfp(data):
+    """Retrieve dbNSFP file options for VEP if downloaded and available.
+
+    Uses high level combined annotations from this GEMINI discussion as a
+    starting point:
+    https://groups.google.com/d/msg/gemini-variation/WeZ6C2YvfUA/mII9uum_pGoJ
+    """
+    dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
+    if dbnsfp_file and os.path.exists(dbnsfp_file):
+        annotations = ["RadialSVM_score", "RadialSVM_pred", "LR_score", "LR_pred",
+                       "CADD_raw", "CADD_phred", "Reliability_index"]
+        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
+    else:
+        return [], []
+
+def _get_loftee(data):
+    """Retrieve loss of function plugin parameters for LOFTEE.
+    https://github.com/konradjk/loftee
+    """
+    ancestral_file = tz.get_in(("genome_resources", "variation", "ancestral"), data)
+    if not ancestral_file or not os.path.exists(ancestral_file):
+        ancestral_file = "false"
+    annotations = ["LoF", "LoF_filter", "LoF_flags"]
+    args = ["--plugin", "LoF,human_ancestor_fa=%s" % ancestral_file]
+    return args, annotations
 
 # ## snpEff variant effects
 
@@ -33,8 +161,10 @@ def _snpeff_args_from_config(data):
     if resources.get("options"):
         args += [str(x) for x in resources.get("options", [])]
     # cancer specific calling arguments
-    if vcfutils.get_paired_phenotype(data):
-        args += ["-cancer"]
+    # XXX not used properly right now and interferes with snpEff shell script parsing
+    # in homebrew (`-c` flags picked up from start of `-cancer` by regexp)
+    #if vcfutils.get_paired_phenotype(data):
+    #    args += ["-cancer"]
     # Provide options tuned to reporting variants in clinical environments
     if config["algorithm"].get("clinical_reporting"):
         args += ["-canon", "-hgvs"]
@@ -73,7 +203,7 @@ def get_cmd(cmd_name, datadir, config):
     resources = config_utils.get_resources("snpeff", config)
     memory = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"]))
     try:
-        snpeff = config_utils.get_program("snpeff", config)
+        snpeff = config_utils.get_program("snpEff", config)
         cmd = "{snpeff} {memory} {cmd_name} -dataDir {datadir}"
     except config_utils.CmdNotFound:
         snpeff_jar = config_utils.get_jar("snpEff",
@@ -97,7 +227,7 @@ def _run_snpeff(snp_in, out_format, data):
             bgzip_cmd = "| %s -c" % tools.get_bgzip_cmd(data["config"])
         else:
             bgzip_cmd = ""
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cmd = ("{snpeff_cmd} {config_args} -noLog -1 -i vcf -o {out_format} "
                    "{snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)

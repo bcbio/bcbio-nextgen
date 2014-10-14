@@ -1,40 +1,41 @@
 Presentations
 =============
 
-Bioinformatics Open Source Conference 2013
-------------------------------------------
+- University of Georgia `Institute of Bioinformatics
+  <http://iob.uga.edu/event/bioinformatics-seminar-12/>`_ (12 September 2014):
+  `slides <https://github.com/chapmanb/bcbb/raw/master/talks/uga2014_bcbio_open/chapman_bcbio.pdf>`_
 
--  `BOSC 2013 Slides`_
--  `BOSC 2013 Video`_
--  `BOSC 2013 Conference website`_
+- Intel Life Sciences discussion (7 August 2014): `slides <https://github.com/chapmanb/bcbb/raw/master/talks/intel2014_bcbio/chapman_bcbio.pdf>`_
 
-Arvados Summit 2013
--------------------
+- Bioinformatics Open Source Conference (BOSC) 2014: `slides
+  <https://github.com/chapmanb/bcbb/raw/master/talks/bosc2014_bcbio/chapman_bcbio.pdf>`_,
+  `conference website <http://www.open-bio.org/wiki/BOSC_2014>`_
 
--  `Arvados Summit Slides`_
--  `Arvados Summit website`_
+- Galaxy Community Conference 2014: `slides
+  <https://github.com/chapmanb/bcbb/raw/master/talks/gcc2014_bcbio/chapman_bcbio.pdf>`_,
+  `conference website <https://wiki.galaxyproject.org/Events/GCC2014>`_
 
-Scientific Python 2013
-----------------------
+- `bcbio hackathon at Biogen`_ (3 June 2014)
 
--  `SciPy 2013 Video`_
--  `SciPy 2013 Conference website`_
+- `Harvard ABCD group slides`_ (17 April 2014)
 
-Genome Informatics 2013
------------------------
-
--  `GI 2013 Presentation slides`_
-
-Mt Sinai: Strategies for accelerating the genomic sequencing pipeline
----------------------------------------------------------------------
-
-- `Mt Sinai workshop slides`_
-- `Mt Sinai workshop website`_
-
-Non-conference talks
---------------------
+- `BIG meeting`_ (February 2014)
 
 - `Novartis slides`_ (21 January 2014)
+
+- Mt Sinai: Strategies for accelerating the genomic sequencing pipeline: `Mt Sinai workshop slides`_,
+  `Mt Sinai workshop website`_
+
+- Genome Informatics 2013 `GI 2013 Presentation slides`_
+
+- Bioinformatics Open Source Conference 2013: `BOSC 2013 Slides`_, `BOSC 2013
+  Video`_, `BOSC 2013 Conference website`_
+
+- Arvados Summit 2013: `Arvados Summit Slides`_, `Arvados Summit website`_
+
+- Scientific Python 2013: `SciPy 2013 Video`_, `SciPy 2013 Conference website`_
+
+Feel free to reuse any images or text from these talks. The `slides are on GitHub`_.
 
 Abstract
 ~~~~~~~~
@@ -131,3 +132,7 @@ Links from the presentation
 .. _Mt Sinai workshop website: http://www.hpcwire.com/event/strategies-accelerating-genomic-sequencing-pipeline/
 .. _Mt Sinai workshop slides: https://github.com/chapmanb/bcbb/raw/master/talks/mtsinai2013_bcbio_nextgen/chapman_mtsinai_bcbio.pdf
 .. _Novartis slides: https://github.com/chapmanb/bcbb/raw/master/talks/novartis2014_bcbio_nextgen/chapman_bcbio.pdf
+.. _BIG meeting: https://github.com/roryk/spliced-blog/blob/master/talks/BIG-meeting-feb-2014.pdf
+.. _Harvard ABCD group slides: https://github.com/chapmanb/bcbb/raw/master/talks/abcd2014_bcbio_nextgen/chapman_bcbio.pdf
+.. _bcbio hackathon at Biogen: https://github.com/chapmanb/bcbb/raw/master/talks/biogen2014_bcbio_nextgen/chapman_bcbio.pdf
+.. _slides are on GitHub: https://github.com/chapmanb/bcbb/tree/master/talks

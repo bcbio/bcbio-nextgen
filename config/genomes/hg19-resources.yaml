@@ -1,19 +1,27 @@
-version: 5
+version: 15
 
 aliases:
   human: true
   snpeff: hg19
-  ensembl: human
+  ensembl: homo_sapiens
 
 variation:
-  dbsnp: ../variation/dbsnp_138.vcf
-  train_hapmap: ../variation/hapmap_3.3.vcf
-  train_1000g_omni: ../variation/1000G_omni2.5.vcf
-  train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf
-  cosmic: ../variation/cosmic-v67_20131024-hg19.vcf
+  dbsnp: ../variation/dbsnp_138.vcf.gz
+  train_hapmap: ../variation/hapmap_3.3.vcf.gz
+  train_omni: ../variation/1000G_omni2.5.vcf.gz
+  train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
+  train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
+  cosmic: ../variation/cosmic-v68-hg19.vcf.gz
+  lcr: ../variation/LCR.bed.gz
+  sv_repeat: ../variation/sv_repeat_telomere_centromere.bed
+  dbnsfp: ../variation/dbNSFP_v2.6.gz
+  ancestral: ../variation/human_ancestor.fa.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
     tophat: ../rnaseq/tophat/hg19_transcriptome.ver
+  dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
+  refflat: ../rnaseq/ref-transcripts.refFlat
+  rRNA_fa: ../rnaseq/rRNA.fa

@@ -7,7 +7,7 @@ import os
 import shutil
 
 from bcbio import bam, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, system
 
@@ -49,46 +49,33 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
             base, ext = os.path.splitext(out_file)
             out_file = "%s-b%s%s" % (base, batch, ext)
         if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".bai"):
-            bamtools = config_utils.get_program("bamtools", config)
-            samtools = config_utils.get_program("samtools", config)
+            sambamba = config_utils.get_program("sambamba", config)
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
-            max_mem = resources.get("memory", "1G")
-            batch_size = system.open_file_limit() - 100
+            max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
+                                                 2, "decrease").upper()
+            # sambamba opens 4 handles per file, so try to guess a reasonable batch size
+            batch_size = (system.open_file_limit() // 4) - 100
             if len(bam_files) > batch_size:
                 bam_files = [merge_bam_files(xs, work_dir, config, out_file, i)
                              for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
-            with utils.curdir_tmpdir() as tmpdir:
+            with tx_tmpdir(config) as tmpdir:
                 with utils.chdir(tmpdir):
-                    merge_cl = _bamtools_merge(bam_files)
-                    with file_transaction(out_file) as tx_out_file:
-                        tx_out_prefix = os.path.splitext(tx_out_file)[0]
-                        with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
-                            bam_file_list = "%s.list" % os.path.splitext(out_file)[0]
-                            with open(bam_file_list, "w") as out_handle:
+                    with file_transaction(config, out_file) as tx_out_file:
+                        with file_transaction(config, "%s.list" % os.path.splitext(out_file)[0]) as tx_bam_file_list:
+                            with open(tx_bam_file_list, "w") as out_handle:
                                 for f in sorted(bam_files):
                                     out_handle.write("%s\n" % f)
-                            cmd = (merge_cl + " | "
-                                   "{samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
-                            do.run(cmd.format(**locals()), "Merge bam files", None)
+                            cmd = _sambamba_merge(bam_files)
+                            do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
+                                   None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         bam.index(out_file, config)
         return out_file
 
-def _samtools_cat(bam_files, tmpdir):
-    """Concatenate multiple BAM files together with samtools.
-    Creates short paths to shorten the commandline.
-    """
-    short_bams = []
-    for i, bam_file in enumerate(bam_files):
-        short_bam = os.path.join(tmpdir, "%s.bam" % i)
-        utils.symlink_plus(bam_file, short_bam)
-        short_bams.append(short_bam)
-    return "{samtools} cat " + " ".join(os.path.relpath(b) for b in short_bams)
-
-def _bamtools_merge(bam_files):
-    """Use bamtools to merge multiple BAM files, requires a list from disk.
+def _sambamba_merge(bam_files):
+    """Merge multiple BAM files with sambamba.
     """
     if len(bam_files) > system.open_file_limit():
         raise IOError("More files to merge (%s) than available open file descriptors (%s)\n"
@@ -96,4 +83,4 @@ def _bamtools_merge(bam_files):
                       "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
                       "parallel.html#tuning-systems-for-scale"
                       % (len(bam_files), system.open_file_limit()))
-    return "{bamtools} merge -list {bam_file_list}"
+    return "{sambamba} merge {tx_out_file} -t {num_cores} `cat {tx_bam_file_list}`"

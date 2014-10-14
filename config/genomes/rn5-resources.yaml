@@ -1,11 +1,14 @@
-version: 3
+version: 5
 
 aliases:
-  ensembl: rat
-  snpeff: Rnor_5.0.74
+  ensembl: rattus_norvegicus
+  snpeff: Rnor_5.0.75
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
     tophat: ../rnaseq/tophat/rn5_transcriptome.ver
+  dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
+  refflat: ../rnaseq/ref-transcripts.refFlat
+  rRNA_fa: ../rnaseq/rRNA.fa

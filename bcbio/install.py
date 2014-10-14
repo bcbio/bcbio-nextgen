@@ -3,8 +3,10 @@
 Enables automated installation tool and in-place updates to install additional
 data and software.
 """
+import argparse
 import collections
 import contextlib
+import datetime
 from distutils.version import LooseVersion
 import os
 import shutil
@@ -15,10 +17,11 @@ import sys
 import requests
 import yaml
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.pipeline import genome
 from bcbio.variation import effects
 from bcbio.provenance import programs
+from bcbio.distributed.transaction import file_transaction
 
 REMOTES = {
     "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
@@ -27,6 +30,12 @@ REMOTES = {
     "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
     "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
                       "snpEff_v{snpeff_ver}_{genome}.zip")}
+SUPPORTED_GENOMES = ["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3",
+                     "Zv9", "phix", "sacCer3", "xenTro3", "TAIR10", "WBcel235",
+                     "pseudomonas_aeruginosa_ucbpp_pa14"]
+SUPPORTED_INDEXES = ["bowtie", "bowtie2", "bwa", "novoalign", "snap", "star", "ucsc", "seq"]
+
+Tool = collections.namedtuple("Tool", ["name", "fname"])
 
 def upgrade_bcbio(args):
     """Perform upgrade of bcbio to latest release, or from GitHub development version.
@@ -42,28 +51,86 @@ def upgrade_bcbio(args):
         print("Upgrading bcbio-nextgen to latest stable version")
         sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
+        print("Upgrade of bcbio-nextgen code complete.")
+    elif args.upgrade in ["deps"]:
+        _update_conda_packages()
     else:
         _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
         subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
+        print("Upgrade of bcbio-nextgen development code complete.")
+
+    try:
+        _set_matplotlib_default_backend()
+    except OSError:
+        pass
 
     if args.tooldir:
         with bcbio_tmpdir():
             print("Upgrading third party tools to latest versions")
+            _symlink_bcbio(args)
             upgrade_thirdparty_tools(args, REMOTES)
+            print("Third party tools upgrade complete.")
     if args.install_data:
-        with bcbio_tmpdir():
-            print("Upgrading bcbio-nextgen data files")
-            upgrade_bcbio_data(args, REMOTES)
+        if len(args.genomes) == 0:
+            print("Data not installed, no genomes provided with `--genomes` flag")
+        elif len(args.aligners) == 0:
+            print("Data not installed, no aligners provided with `--aligners` flag")
+        else:
+            with bcbio_tmpdir():
+                print("Upgrading bcbio-nextgen data files")
+                upgrade_bcbio_data(args, REMOTES)
+                print("bcbio-nextgen data upgrade complete.")
     if args.isolate and args.tooldir:
         print("Installation directory not added to current PATH")
-        print("  Add {t}/bin to PATH and {t}/lib to LD_LIBRARY_PATH".format(t=args.tooldir))
+        print(" Add:\n  {t}/bin to PATH\n  {t}/lib to LD_LIBRARY_PATH\n"
+              "  {t}/lib/perl5:{t}/lib/perl5/site_perl to PERL5LIB".format(t=args.tooldir))
     save_install_defaults(args)
     args.datadir = _get_data_dir()
     _install_container_bcbio_system(args.datadir)
+    print("Upgrade completed successfully.")
     return args
+
+
+def _set_matplotlib_default_backend():
+    """
+    matplotlib will try to print to a display if it is available, but don't want
+    to run it in interactive mode. we tried setting the backend to 'Agg'' before
+    importing, but it was still resulting in issues. we replace the existing
+    backend with 'agg' in the default matplotlibrc. This is a hack until we can
+    find a better solution
+    """
+    if _matplotlib_installed():
+        import matplotlib
+        matplotlib.use('Agg', force=True)
+        config = matplotlib.matplotlib_fname()
+        with file_transaction(config) as tx_out_file:
+            with open(config) as in_file, open(tx_out_file, "w") as out_file:
+                for line in in_file:
+                    if line.split(":")[0].strip() == "backend":
+                        out_file.write("backend: agg\n")
+                    else:
+                        out_file.write(line)
+
+def _matplotlib_installed():
+    try:
+        import matplotlib
+    except importError:
+        return False
+    return True
+
+def _symlink_bcbio(args):
+    """Ensure bcbio_nextgen.py symlink in final tool directory.
+    """
+    bcbio_anaconda = os.path.join(os.path.dirname(sys.executable), "bcbio_nextgen.py")
+    bcbio_final = os.path.join(args.tooldir, "bin", "bcbio_nextgen.py")
+    sudo_cmd = ["sudo"] if args.sudo else []
+    if not os.path.exists(bcbio_final):
+        if os.path.lexists(bcbio_final):
+            subprocess.check_call(sudo_cmd + ["rm", "-f", bcbio_final])
+        subprocess.check_call(sudo_cmd + ["ln", "-s", bcbio_anaconda, bcbio_final])
 
 def _install_container_bcbio_system(datadir):
     """Install limited bcbio_system.yaml file for setting core and memory usage.
@@ -91,19 +158,17 @@ def _install_container_bcbio_system(datadir):
         if len(expose_vals) > 0 and pname not in expose_config["resources"]:
             expose_config["resources"][pname] = expose_vals
     with open(expose_file, "w") as out_handle:
-        yaml.dump(expose_config, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump(expose_config, out_handle, default_flow_style=False, allow_unicode=False)
     return expose_file
 
 def _default_deploy_args(args):
-    flavors = {"minimal": "ngs_pipeline_minimal",
-               "full": "ngs_pipeline"}
-    toolplus = {"protected": {"bio_nextgen": ["gatk-protected"]},
-                "data": {"bio_nextgen": []}}
+    toolplus = {"data": {"bio_nextgen": []}}
     custom_add = collections.defaultdict(list)
     for x in args.toolplus:
-        for k, vs in toolplus[x].iteritems():
-            custom_add[k].extend(vs)
-    return {"flavor": flavors[args.tooldist],
+        if not x.fname:
+            for k, vs in toolplus.get(x.name, {}).iteritems():
+                custom_add[k].extend(vs)
+    return {"flavor": "ngs_pipeline_minimal",
             "custom_add": dict(custom_add),
             "vm_provider": "novm",
             "hostname": "localhost",
@@ -117,10 +182,11 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
-    pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
-            "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
-            "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
-    channels = ["-c", "https://conda.binstar.org/faircloth-lab"]
+    pkgs = ["biopython", "boto", "cpat", "cython", "ipython", "lxml",
+            "matplotlib", "msgpack-python", "nose", "numpy", "pandas", "patsy", "pycrypto",
+            "pip", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests", "scipy",
+            "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
+    channels = ["-c", "https://conda.binstar.org/bcbio"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
         subprocess.check_call([conda_bin, "install", "--yes"] + channels + pkgs)
@@ -133,12 +199,22 @@ def _get_data_dir():
                          "located in the same directory as `galaxy` `genomes` and `gemini_data` directories.")
     return os.path.dirname(base_dir)
 
+def get_gemini_dir():
+    try:
+        data_dir = _get_data_dir()
+        return os.path.join(data_dir, "gemini_data")
+    except ValueError:
+        return None
+
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
     """
     data_dir = _get_data_dir()
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
+    tooldir = args.tooldir or get_defaults().get("tooldir")
+    if tooldir:
+        s["fabricrc_overrides"]["system_install"] = tooldir
     s["fabricrc_overrides"]["data_files"] = data_dir
     s["fabricrc_overrides"]["galaxy_home"] = os.path.join(data_dir, "galaxy")
     cbl = get_cloudbiolinux(remotes)
@@ -149,9 +225,14 @@ def upgrade_bcbio_data(args, remotes):
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
-    if 'data' in args.toolplus:
+    _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
+    toolplus = set([x.name for x in args.toolplus])
+    if 'data' in toolplus:
         gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
-        subprocess.check_call([gemini, "update", "--dataonly"])
+        extras = []
+        if "cadd" in toolplus:
+            extras.extend(["--extra", "cadd_score"])
+        subprocess.check_call([gemini, "update", "--dataonly"] + extras)
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -176,43 +257,62 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
                 with open(local_file, "w") as out_handle:
                     out_handle.write(r.text)
 
+def _upgrade_vep_data(galaxy_dir, tooldir):
+    for dbkey, ref_file in genome.get_builds(galaxy_dir):
+        effects.prep_vep_cache(dbkey, ref_file, tooldir)
+
 def _upgrade_snpeff_data(galaxy_dir, args, remotes):
     """Install or upgrade snpEff databases, localized to reference directory.
     """
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
         resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
-        with open(resource_file) as in_handle:
-            resources = yaml.load(in_handle)
-        snpeff_db, snpeff_base_dir = effects.get_db({"resources": resources,
-                                                     "reference": {"fasta": {"base": ref_file}}})
-        if snpeff_db:
-            snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
-            if not os.path.exists(snpeff_db_dir):
-                print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
-                tooldir = args.tooldir or get_defaults()["tooldir"]
-                config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
-                                                   "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
-                raw_version = programs.java_versioner("snpeff", "snpEff",
-                                                      stdout_flag="snpEff version SnpEff")(config)
-                snpeff_version = "".join([x for x in raw_version
-                                          if x in set(string.digits + ".")]).replace(".", "_")
-                dl_url = remotes["snpeff_dl_url"].format(snpeff_ver=snpeff_version, genome=snpeff_db)
-                dl_file = os.path.basename(dl_url)
-                with utils.chdir(snpeff_base_dir):
-                    subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
-                    subprocess.check_call(["unzip", dl_file])
-                    os.remove(dl_file)
-                dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
-                os.rename(dl_dir, snpeff_db_dir)
-                os.rmdir(os.path.join(snpeff_base_dir, "data"))
+        if os.path.exists(resource_file):
+            with open(resource_file) as in_handle:
+                resources = yaml.load(in_handle)
+            snpeff_db, snpeff_base_dir = effects.get_db({"genome_resources": resources,
+                                                         "reference": {"fasta": {"base": ref_file}}})
+            if snpeff_db:
+                snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
+                if not os.path.exists(snpeff_db_dir):
+                    print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
+                    dl_url = remotes["snpeff_dl_url"].format(snpeff_ver=_get_snpeff_version(args), genome=snpeff_db)
+                    dl_file = os.path.basename(dl_url)
+                    with utils.chdir(snpeff_base_dir):
+                        subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
+                        subprocess.check_call(["unzip", dl_file])
+                        os.remove(dl_file)
+                    dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
+                    os.rename(dl_dir, snpeff_db_dir)
+                    os.rmdir(os.path.join(snpeff_base_dir, "data"))
+
+def _get_snpeff_version(args):
+    tooldir = args.tooldir or get_defaults()["tooldir"]
+    raw_version = programs.get_version_manifest("snpeff")
+    if not raw_version:
+        config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
+                                           "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
+        raw_version = programs.java_versioner("snpeff", "snpEff",
+                                              stdout_flag="snpEff version SnpEff")(config)
+    snpeff_version = "".join([x for x in raw_version
+                              if x in set(string.digits + ".")]).replace(".", "_")
+    assert snpeff_version, "Did not find snpEff version information"
+    return snpeff_version
 
 def _get_biodata(base_file, args):
     with open(base_file) as in_handle:
         config = yaml.load(in_handle)
     config["install_liftover"] = False
     config["genome_indexes"] = args.aligners
-    config["genomes"] = [g for g in config["genomes"] if g["dbkey"] in args.genomes]
+    config["genomes"] = [_add_biodata_flags(g, args) for g in config["genomes"] if g["dbkey"] in args.genomes]
     return config
+
+def _add_biodata_flags(g, args):
+    toolplus = set([x.name for x in args.toolplus])
+    if g["dbkey"] in ["hg19", "GRCh37"]:
+        for flag in ["dbnsfp"]:
+            if flag in toolplus:
+                g[flag] = True
+    return g
 
 def upgrade_thirdparty_tools(args, remotes):
     """Install and update third party tools used in the pipeline.
@@ -228,19 +328,85 @@ def upgrade_thirdparty_tools(args, remotes):
     s["actions"] = ["install_biolinux"]
     s["fabricrc_overrides"]["system_install"] = args.tooldir
     s["fabricrc_overrides"]["local_install"] = os.path.join(args.tooldir, "local_install")
-    if "data" in args.toolplus:
-        _install_gemini(args.tooldir, _get_data_dir(), args)
     cbl = get_cloudbiolinux(remotes)
     sys.path.insert(0, cbl["dir"])
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
-    cbl_manifest = __import__("cloudbio.manifest", fromlist=["manifest"])
     manifest_dir = os.path.join(_get_data_dir(), "manifest")
     print("Creating manifest of installed packages in %s" % manifest_dir)
+    cbl_manifest = __import__("cloudbio.manifest", fromlist=["manifest"])
     if os.path.exists(manifest_dir):
         for fname in os.listdir(manifest_dir):
-            os.remove(os.path.join(manifest_dir, fname))
+            if not fname.startswith("toolplus"):
+                os.remove(os.path.join(manifest_dir, fname))
     cbl_manifest.create(manifest_dir, args.tooldir)
+    print("Installing additional tools")
+    _install_toolplus(args, manifest_dir)
+
+def _install_toolplus(args, manifest_dir):
+    """Install additional tools we cannot distribute, updating local manifest.
+    """
+    toolplus_manifest = os.path.join(manifest_dir, "toolplus-packages.yaml")
+    system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+    toolplus_dir = os.path.join(_get_data_dir(), "toolplus")
+    for tool in args.toolplus:
+        if tool.name == "data":
+            _install_gemini(args.tooldir, _get_data_dir(), args)
+        elif tool.name == "kraken":
+            _install_kraken_db(_get_data_dir(), args)
+        elif tool.name in set(["gatk", "mutect"]):
+            _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
+        elif tool.name in set(["protected"]):  # back compatibility
+            pass
+        elif tool.name in set(["cadd", "dbnsfp"]):  # larger data targets
+            pass
+        else:
+            raise ValueError("Unexpected toolplus argument: %s %s" (tool.name, tool.fname))
+
+def _install_gatk_jar(name, fname, manifest, system_config, toolplus_dir):
+    """Install a jar for GATK or associated tools like MuTect.
+    """
+    if not fname.endswith(".jar"):
+        raise ValueError("--toolplus argument for %s expects a jar file: %s" % (name, fname))
+    if name == "gatk":
+        version = broad.get_gatk_version(fname)
+    elif name == "mutect":
+        version = broad.get_mutect_version(fname)
+    else:
+        raise ValueError("Unexpected GATK input: %s" % name)
+    store_dir = utils.safe_makedir(os.path.join(toolplus_dir, name, version))
+    shutil.copyfile(fname, os.path.join(store_dir, os.path.basename(fname)))
+    _update_system_file(system_config, name, {"dir": store_dir})
+    _update_manifest(manifest, name, version)
+
+def _update_manifest(manifest_file, name, version):
+    """Update the toolplus manifest file with updated name and version
+    """
+    if os.path.exists(manifest_file):
+        with open(manifest_file) as in_handle:
+            manifest = yaml.load(in_handle)
+    else:
+        manifest = {}
+    manifest[name] = {"name": name, "version": version}
+    with open(manifest_file, "w") as out_handle:
+        yaml.safe_dump(manifest, out_handle, default_flow_style=False, allow_unicode=False)
+
+def _update_system_file(system_file, name, new_kvs):
+    """Update the bcbio_system.yaml file with new resource information.
+    """
+    bak_file = system_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    shutil.copyfile(system_file, bak_file)
+    with open(system_file) as in_handle:
+        config = yaml.load(in_handle)
+    new_rs = {}
+    for rname, r_kvs in config.get("resources", {}).iteritems():
+        if rname == name:
+            for k, v in new_kvs.iteritems():
+                r_kvs[k] = v
+        new_rs[rname] = r_kvs
+    config["resources"] = new_rs
+    with open(system_file, "w") as out_handle:
+        yaml.safe_dump(config, out_handle, default_flow_style=False, allow_unicode=False)
 
 def _install_gemini(tooldir, datadir, args):
     """Install gemini layered on top of bcbio-nextgen, sharing anaconda framework.
@@ -260,12 +426,35 @@ def _install_gemini(tooldir, datadir, args):
     else:
         url = "https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py"
         script = os.path.basename(url)
-        subprocess.check_call(["wget", "-O", script, url])
+        subprocess.check_call(["wget", "-O", script, url, "--no-check-certificate"])
         cmd = [sys.executable, "-E", script, tooldir, datadir, "--notools", "--nodata", "--sharedpy"]
         if not args.sudo:
             cmd.append("--nosudo")
         subprocess.check_call(cmd)
         os.remove(script)
+
+def _install_kraken_db(datadir, args):
+    """Install kraken minimal DB in genome folder.
+    """
+    kraken = os.path.join(datadir, "genomes/kraken")
+    url = "https://ccb.jhu.edu/software/kraken/dl/minikraken.tgz"
+    compress = os.path.join(kraken, os.path.basename(url))
+    base, ext = utils.splitext_plus(os.path.basename(url))
+    db = os.path.join(kraken, base)
+    tooldir = args.tooldir or get_defaults()["tooldir"]
+    if os.path.exists(os.path.join(tooldir, "bin", "kraken")):
+        if not os.path.exists(kraken):
+            utils.safe_makedir(kraken)
+        if not os.path.exists(db):
+            if not os.path.exists(compress):
+                subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
+            cmd = ["tar", "-xzvf", compress, "-C", kraken]
+            subprocess.check_call(cmd)
+            shutil.move(os.path.join(kraken, "minikraken_20140330"), os.path.join(kraken, "minikraken"))
+            utils.remove_safe(compress)
+    else:
+        raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
+                                         os.path.join(tooldir, "bin", "kraken"))
 
 # ## Store a local configuration file with upgrade details
 
@@ -290,31 +479,41 @@ def save_install_defaults(args):
             cur_config = yaml.load(in_handle)
     else:
         cur_config = {}
-    if args.tooldist not in "minimal":
-        cur_config["tooldist"] = args.tooldist
     if args.tooldir:
         cur_config["tooldir"] = args.tooldir
     cur_config["sudo"] = args.sudo
     cur_config["isolate"] = args.isolate
-    for attr in ["genomes", "aligners", "toolplus"]:
+    for attr in ["genomes", "aligners"]:
         if not cur_config.get(attr):
             cur_config[attr] = []
         for x in getattr(args, attr):
             if x not in cur_config[attr]:
                 cur_config[attr].append(x)
+    # toolplus -- save non-filename inputs
+    attr = "toolplus"
+    if not cur_config.get(attr):
+        cur_config[attr] = []
+    for x in getattr(args, attr):
+        if not x.fname:
+            if x.name not in cur_config[attr]:
+                cur_config[attr].append(x.name)
     with open(install_config, "w") as out_handle:
-        yaml.dump(cur_config, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump(cur_config, out_handle, default_flow_style=False, allow_unicode=False)
 
 def add_install_defaults(args):
     """Add any saved installation defaults to the upgrade.
     """
+    # Ensure we install data if we've specified any secondary installation targets
+    if len(args.genomes) > 0 or len(args.aligners) > 0 or len(args.toolplus) > 0:
+        args.install_data = True
     install_config = _get_install_config()
     if install_config is None or not utils.file_exists(install_config):
         return args
     with open(install_config) as in_handle:
         default_args = yaml.load(in_handle)
-    if default_args.get("tooldist") and args.tooldist == "minimal":
-        args.tooldist = str(default_args["tooldist"])
+    # if we are upgrading to development, also upgrade the tools
+    if args.upgrade in ["development"]:
+        args.tools = True
     if args.tools and args.tooldir is None:
         if "tooldir" in default_args:
             args.tooldir = str(default_args["tooldir"])
@@ -325,9 +524,10 @@ def add_install_defaults(args):
                              "work for future upgrades.")
     for attr in ["genomes", "aligners", "toolplus"]:
         for x in default_args.get(attr, []):
+            x = Tool(x, None) if attr == "toolplus" else str(x)
             new_val = getattr(args, attr)
             if x not in getattr(args, attr):
-                new_val.append(str(x))
+                new_val.append(x)
             setattr(args, attr, new_val)
     if "sudo" in default_args and not args.sudo is False:
         args.sudo = default_args["sudo"]
@@ -342,6 +542,22 @@ def get_defaults():
     with open(install_config) as in_handle:
         return yaml.load(in_handle)
 
+def _check_toolplus(x):
+    """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
+    """
+    std_choices = set(["data", "cadd", "dbnsfp", "kraken"])
+    if x in std_choices:
+        return Tool(x, None)
+    elif "=" in x and len(x.split("=")) == 2:
+        name, fname = x.split("=")
+        fname = os.path.normpath(os.path.realpath(fname))
+        if not os.path.exists(fname):
+            raise argparse.ArgumentTypeError("Unexpected --toolplus argument for %s. File does not exist: %s"
+                                             % (name, fname))
+        return Tool(name, fname)
+    else:
+        raise argparse.ArgumentTypeError("Unexpected --toolplus argument. Expect toolname=filename.")
+
 def add_subparser(subparsers):
     parser = subparsers.add_parser("upgrade", help="Install or upgrade bcbio-nextgen")
     parser.add_argument("--tooldir",
@@ -351,25 +567,20 @@ def add_subparser(subparsers):
                         help="Boolean argument specifying upgrade of tools. Uses previously saved install directory",
                         action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
-                        choices=["stable", "development", "system", "skip"], default="skip")
+                        choices=["stable", "development", "system", "deps", "skip"], default="skip")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
-                        action="append", default=[], choices=["protected", "data"])
+                        action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"],
-                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
+                        action="append", default=[], choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa", "bowtie2"],
-                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+                        action="append", default=[],
+                        choices = SUPPORTED_INDEXES)
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",
+                        dest="sudo", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
-    parser.add_argument("--tooldist",
-                        help="Type of tool distribution to install. Defaults to a minimum install.",
-                        default="minimal",
-                        choices=["minimal", "full"])
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])

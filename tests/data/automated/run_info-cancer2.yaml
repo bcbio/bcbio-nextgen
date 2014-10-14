@@ -11,15 +11,15 @@ globals:
 details:
   - analysis: variant2
     description: c-tumor
-    files: [../data/tcga_benchmark/HCC1143-tumor.bam]
+    files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
     genome_build: hg19
     metadata:
       batch: PairedBatch
       phenotype: tumor
     algorithm:
-      aligner: false
-      mark_duplicates: false
+      aligner: bwa
+      mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: mutect
+      variantcaller: [mutect, freebayes]
       background: normal_panel1

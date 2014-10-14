@@ -68,7 +68,7 @@ def setup(args):
                     "coverage_interval": "genome" if ss_params["data_type"] == "data_wgs" else "exome",
                     }}]}
     with open(out_config_file, "w") as out_handle:
-        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
     return workdir, {"config_file": args.bcbio_config_file,
                      "run_info_yaml": out_config_file}

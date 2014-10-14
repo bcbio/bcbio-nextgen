@@ -3,8 +3,12 @@
 import datetime
 import os
 
+import toolz as tz
+
+from bcbio import log, utils
 from bcbio.upload import shared, filesystem, galaxy, s3
-from bcbio.utils import file_exists
+from bcbio.pipeline import run_info
+import bcbio.pipeline.datadict as dd
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -30,14 +34,23 @@ def _get_files(sample):
     metadata about the file and pipeline versions.
     """
     analysis = sample.get("analysis")
-    if analysis in ["variant", "SNP calling", "variant2"]:
+    if analysis.lower() in ["variant", "snp calling", "variant2", "standard"]:
         return _get_files_variantcall(sample)
     elif analysis in ["RNA-seq"]:
         return _get_files_rnaseq(sample)
     elif analysis.lower() in ["chip-seq"]:
         return _get_files_chipseq(sample)
+    elif analysis.lower() in ["sailfish"]:
+        return _get_files_sailfish(sample)
     else:
         return []
+
+def _get_files_sailfish(sample):
+    out = []
+    out.append({"path": sample["sailfish_dir"],
+                "type": "directory",
+                "ext": "sailfish"})
+    return _add_meta(out, sample)
 
 def _get_files_rnaseq(sample):
     out = []
@@ -46,6 +59,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
+    out = _maybe_add_oncofuse(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_chipseq(sample):
@@ -59,8 +73,13 @@ def _add_meta(xs, sample=None, config=None):
     out = []
     for x in xs:
         x["mtime"] = shared.get_file_timestamp(x["path"])
-        if sample:
-            x["sample"] = sample["name"][-1]
+        if sample and "sample" not in x:
+            if isinstance(sample["name"], (tuple, list)):
+                name = sample["name"][-1]
+            else:
+                name = "%s-%s" % (sample["name"],
+                                  run_info.clean_name(sample["description"]))
+            x["sample"] = name
         if config:
             if "fc_name" in config and "fc_date" in config:
                 x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
@@ -77,15 +96,21 @@ def _get_files_variantcall(sample):
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
+    out = _maybe_add_sv(algorithm, sample, out)
+    out = _maybe_add_validate(algorithm, sample, out)
     return _add_meta(out, sample)
 
+def _maybe_add_validate(algorith, sample, out):
+    for i, plot in enumerate(tz.get_in(("validate", "grading_plots"), sample, [])):
+        out.append({"path": plot,
+                    "type": "pdf",
+                    "ext": "validate%s" % ("" if i == 0 else "-%s" % (i + 1))})
+    return out
+
 def _maybe_add_variant_file(algorithm, sample, out):
-    if sample["work_bam"] is not None and sample.get("vrn_file"):
+    if sample.get("align_bam") is not None and sample.get("vrn_file"):
         for x in sample["variants"]:
-            out.append({"path": x["vrn_file"],
-                        "type": "vcf",
-                        "ext": x["variantcaller"],
-                        "variantcaller": x["variantcaller"]})
+            out.extend(_get_variant_file(x, ("vrn_file",)))
             if x.get("bed_file"):
                 out.append({"path": x["bed_file"],
                             "type": "bed",
@@ -93,6 +118,50 @@ def _maybe_add_variant_file(algorithm, sample, out):
                             "variantcaller": x["variantcaller"]})
     return out
 
+def _maybe_add_sv(algorithm, sample, out):
+    if sample.get("align_bam") is not None and sample.get("sv"):
+        for svcall in sample["sv"]:
+            out.extend(_get_variant_file(svcall, ("vrn_file",)))
+            out.extend(_get_variant_file(svcall, ("bedpe_file",)))
+            if "sample_bed" in svcall:
+                out.append({"path": svcall["sample_bed"],
+                            "type": "bed",
+                            "ext": "%s-sample" % svcall["variantcaller"],
+                            "variantcaller": svcall["variantcaller"]})
+            if "validate" in svcall:
+                for vkey, vext in [("csv", "csv"), ("plot", "pdf")]:
+                    vfile = tz.get_in(["validate", vkey], svcall)
+                    if vfile:
+                        out.append({"path": vfile,
+                                    "type": vext,
+                                    "ext": "%s-validate" % svcall["variantcaller"],
+                                    "variantcaller": svcall["variantcaller"]})
+    return out
+
+def _get_variant_file(x, key):
+    """Retrieve VCF file with the given key if it exists, handling bgzipped.
+    """
+    out = []
+    fname = utils.get_in(x, key)
+    if fname:
+        if fname.endswith(".vcf.gz"):
+            out.append({"path": fname,
+                        "type": "vcf.gz",
+                        "ext": x["variantcaller"],
+                        "variantcaller": x["variantcaller"]})
+            if utils.file_exists(fname + ".tbi"):
+                out.append({"path": fname + ".tbi",
+                            "type": "vcf.gz.tbi",
+                            "index": True,
+                            "ext": x["variantcaller"],
+                            "variantcaller": x["variantcaller"]})
+        elif fname.endswith((".vcf", ".bed", ".bedpe")):
+            ftype = utils.splitext_plus(fname)[-1][1:]
+            out.append({"path": fname,
+                        "type": ftype,
+                        "ext": x["variantcaller"],
+                        "variantcaller": x["variantcaller"]})
+    return out
 
 def _maybe_add_summary(algorithm, sample, out):
     out = []
@@ -105,17 +174,35 @@ def _maybe_add_summary(algorithm, sample, out):
             out.append({"path": sample["summary"]["qc"],
                         "type": "directory",
                         "ext": "qc"})
+        if utils.get_in(sample, ("summary", "researcher")):
+            out.append({"path": sample["summary"]["researcher"],
+                        "type": "tsv",
+                        "sample": run_info.clean_name(utils.get_in(sample, ("upload", "researcher"))),
+                        "ext": "summary"})
     return out
 
 def _maybe_add_alignment(algorithm, sample, out):
     if _has_alignment_file(algorithm, sample):
-        out.append({"path": sample["work_bam"],
-                    "type": "bam",
-                    "ext": "ready"})
-        if file_exists(sample["work_bam"] + ".bai"):
-            out.append({"path": sample["work_bam"] + ".bai",
-                        "type": "bam.bai",
-                        "ext": "ready"})
+        for (fname, ext, isplus) in [(sample.get("work_bam"), "ready", False),
+                                     (utils.get_in(sample, ("work_bam-plus", "disc")), "disc", True),
+                                     (utils.get_in(sample, ("work_bam-plus", "sr")), "sr", True)]:
+            if fname and os.path.exists(fname):
+                if fname.endswith("bam"):
+                    ftype, fext = "bam", ".bai"
+                elif fname.endswith("cram"):
+                    ftype, fext = "cram", ".crai"
+                else:
+                    raise ValueError("Unexpected alignment file type %s" % fname)
+                out.append({"path": fname,
+                            "type": ftype,
+                            "plus": isplus,
+                            "ext": ext})
+                if utils.file_exists(fname + fext):
+                    out.append({"path": fname + fext,
+                                "type": ftype + fext,
+                                "plus": isplus,
+                                "index": True,
+                                "ext": ext})
     return out
 
 def _maybe_add_counts(algorithm, sample, out):
@@ -123,9 +210,16 @@ def _maybe_add_counts(algorithm, sample, out):
                 "type": "counts",
                 "ext": "ready"})
     stats_file = os.path.splitext(sample["count_file"])[0] + ".stats"
-    if file_exists(stats_file):
+    if utils.file_exists(stats_file):
         out.append({"path": stats_file,
                     "type": "count_stats",
+                    "ext": "ready"})
+    return out
+
+def _maybe_add_oncofuse(algorithm, sample, out):
+    if sample.get("oncofuse_file", None) is not None:
+        out.append({"path": sample["oncofuse_file"],
+                    "type": "oncofuse_outfile",
                     "ext": "ready"})
     return out
 
@@ -138,9 +232,10 @@ def _maybe_add_cufflinks(algorithm, sample, out):
 
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
-              or algorithm.get("recalibrate")) and
+              or algorithm.get("recalibrate") or algorithm.get("bam_clean")
+              or algorithm.get("mark_duplicates")) and
               algorithm.get("merge_bamprep", True)) and
-              sample["work_bam"] is not None)
+              sample.get("work_bam") is not None)
 
 # ## File information from full project
 
@@ -148,8 +243,18 @@ def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
     out = [{"path": sample["provenance"]["programs"]}]
+    for fname in ["bcbio-nextgen.log", "bcbio-nextgen-commands.log"]:
+        if os.path.exists(os.path.join(log.get_log_dir(sample["config"]), fname)):
+            out.append({"path": os.path.join(log.get_log_dir(sample["config"]), fname),
+                        "type": "external_command_log",
+                        "ext": ""})
+
     if "summary" in sample and sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
+    mixup_check = tz.get_in(["summary", "mixup_check"], sample)
+    if mixup_check:
+        out.append({"path": sample["summary"]["mixup_check"],
+                    "type": "directory", "ext": "mixup_check"})
 
     for x in sample.get("variants", []):
         if "pop_db" in x:
@@ -158,25 +263,32 @@ def _get_files_project(sample, upload_config):
                         "variantcaller": x["variantcaller"]})
     for x in sample.get("variants", []):
         if "population" in x:
-            pop_db = x["population"].get("db")
+            pop_db = tz.get_in(["population", "db"], x)
             if pop_db:
                 out.append({"path": pop_db,
                             "type": "sqlite",
                             "variantcaller": x["variantcaller"]})
-            pop_vcf = x["population"].get("vcf")
-            if pop_vcf:
-
-                out.append({"path": pop_vcf,
-                            "type": "vcf",
-                            "variantcaller": x["variantcaller"]})
+            out.extend(_get_variant_file(x, ("population", "vcf")))
     for x in sample.get("variants", []):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})
             break
+    if "coverage" in sample:
+        cov_db = tz.get_in(["coverage", "summary"], sample)
+        if cov_db:
+            out.append({"path": cov_db, "type": "sqlite", "ext": "coverage"})
 
     if "combined_counts" in sample:
         out.append({"path": sample["combined_counts"]})
     if "annotated_combined_counts" in sample:
         out.append({"path": sample["annotated_combined_counts"]})
+    if "combined_fpkm" in sample:
+        out.append({"path": sample["combined_fpkm"]})
+    if "combined_fpkm_isoform" in sample:
+        out.append({"path": sample["combined_fpkm_isoform"]})
+    if "assembled_gtf" in sample:
+        out.append({"path": sample["assembled_gtf"]})
+    if dd.get_dexseq_counts(sample):
+        out.append({"path": dd.get_dexseq_counts(sample)})
 
     return _add_meta(out, config=upload_config)

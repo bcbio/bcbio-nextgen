@@ -8,7 +8,6 @@ import os
 import sys
 import yaml
 
-
 class CmdNotFound(Exception):
     pass
 
@@ -50,6 +49,8 @@ def load_system_config(config_file, work_dir=None):
     installs (galaxy/bcbio_system.yaml) and docker installs (config/bcbio_system.yaml).
     """
     docker_config = _get_docker_config()
+    if config_file is None:
+        config_file = "bcbio_system.yaml"
     if not os.path.exists(config_file):
         base_dir = get_base_installdir()
         test_config = os.path.join(base_dir, "galaxy", config_file)
@@ -96,7 +97,7 @@ def _merge_system_configs(host_config, container_config, out_file=None):
                                                              "universe_wsgi.ini"))
     if out_file:
         with open(out_file, "w") as out_handle:
-            yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+            yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out
 
 def _get_docker_config():
@@ -236,14 +237,6 @@ def get_jar(base_name, dname):
 
 # ## Retrieval and update to configuration from arguments
 
-def _dictdissoc(orig, k):
-    """Imitates immutability: create a new dictionary with the key dropped.
-    """
-    v = orig.pop(k, None)
-    new = copy.deepcopy(orig)
-    orig[k] = v
-    return new
-
 def is_std_config_arg(x):
     return isinstance(x, dict) and "algorithm" in x and "resources" in x and not "files" in x
 
@@ -258,8 +251,22 @@ def get_algorithm_config(xs):
             return x["algorithm"]
         elif is_nested_config_arg(x):
             return x["config"]["algorithm"]
+        elif isinstance(x, (list, tuple)) and is_nested_config_arg(x[0]):
+            return x[0]["config"]["algorithm"]
     raise ValueError("Did not find algorithm configuration in items: {0}"
                      .format(xs))
+
+def get_dataarg(args):
+    """Retrieve the world 'data' argument from a set of input parameters.
+    """
+    for i, arg in enumerate(args):
+        if is_nested_config_arg(arg):
+            return i, arg
+        elif is_std_config_arg(arg):
+            return i, {"config": arg}
+        elif isinstance(arg, (list, tuple)) and is_nested_config_arg(arg[0]):
+            return i, arg[0]
+    raise ValueError("Did not find configuration or data object in arguments: %s" % args)
 
 def add_cores_to_config(args, cores_per_job, parallel=None):
     """Add information about available cores for a job to configuration.
@@ -268,7 +275,8 @@ def add_cores_to_config(args, cores_per_job, parallel=None):
     def _update_cores(config):
         config["algorithm"]["num_cores"] = int(cores_per_job)
         if parallel:
-            config["parallel"] = _dictdissoc(parallel, "view")
+            parallel.pop("view", None)
+            config["parallel"] = parallel
         return config
     return _update_config(args, _update_cores)
 
@@ -277,24 +285,29 @@ def _update_config(args, update_fn):
     """
     new_i = None
     for i, arg in enumerate(args):
-        if is_std_config_arg(arg) or is_nested_config_arg(arg):
+        if (is_std_config_arg(arg) or is_nested_config_arg(arg) or
+              (isinstance(arg, (list, tuple)) and is_nested_config_arg(arg[0]))):
             new_i = i
             break
     if new_i is None:
-        raise ValueError("Could not find configuration in args: %s" % args)
+        raise ValueError("Could not find configuration in args: %s" % str(args))
 
-    new_arg = copy.deepcopy(args[new_i])
+    new_arg = args[new_i]
     if is_nested_config_arg(new_arg):
-        new_arg["config"] = update_fn(new_arg["config"])
+        new_arg["config"] = update_fn(copy.deepcopy(new_arg["config"]))
     elif is_std_config_arg(new_arg):
-        new_arg = update_fn(new_arg)
+        new_arg = update_fn(copy.deepcopy(new_arg))
+    elif isinstance(arg, (list, tuple)) and is_nested_config_arg(new_arg[0]):
+        new_arg_first = new_arg[0]
+        new_arg_first["config"] = update_fn(copy.deepcopy(new_arg_first["config"]))
+        new_arg = [new_arg_first] + new_arg[1:]
     else:
         raise ValueError("Unexpected configuration dictionary: %s" % new_arg)
     args = list(args)[:]
     args[new_i] = new_arg
     return args
 
-def adjust_memory(val, magnitude, direction="increase"):
+def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     """Adjust memory based on number of cores utilized.
     """
     modifier = val[-1:]
@@ -308,13 +321,19 @@ def adjust_memory(val, magnitude, direction="increase"):
                 modifier = "M" + modifier[1:]
             else:
                 raise ValueError("Unexpected decrease in memory: %s by %s" % (val, magnitude))
-        amount = new_amount
+        amount = int(new_amount)
     elif direction == "increase":
         # for increases with multiple cores, leave small percentage of
         # memory for system to maintain process running resource and
         # avoid OOM killers
         adjuster = 0.91
         amount = int(math.ceil(amount * (adjuster * magnitude)))
+    if out_modifier.upper().startswith("G") and modifier.upper().startswith("M"):
+        modifier = out_modifier
+        amount = int(math.floor(amount / 1024.0))
+    if out_modifier.upper().startswith("M") and modifier.upper().startswith("G"):
+        modifier = out_modifier
+        modifier = int(amount * 1024)
     return "{amount}{modifier}".format(amount=amount, modifier=modifier)
 
 def adjust_opts(in_opts, config):
@@ -326,7 +345,7 @@ def adjust_opts(in_opts, config):
     memory_adjust = config["algorithm"].get("memory_adjust", {})
     out_opts = []
     for opt in in_opts:
-        if opt.startswith(("-Xmx", "-Xms")):
+        if opt.startswith("-Xmx") or (opt.startswith("-Xms") and memory_adjust.get("direction") == "decrease"):
             arg = opt[:4]
             opt = "{arg}{val}".format(arg=arg,
                                       val=adjust_memory(opt[4:],
@@ -337,40 +356,50 @@ def adjust_opts(in_opts, config):
 
 # specific program usage
 
-def _get_coverage_params(alg):
-    Cov = collections.namedtuple("Cov", ["interval", "depth"])
-    return Cov(alg.get("coverage_interval", "exome").lower(),
-               alg.get("coverage_depth", "high").lower())
-
 def use_vqsr(algs):
     """Processing uses GATK's Variant Quality Score Recalibration.
     """
+    vqsr_callers = set(["gatk", "gatk-haplotype"])
+    vqsr_sample_thresh = 50
+    vqsr_supported = collections.defaultdict(int)
+    coverage_intervals = set([])
     for alg in algs:
-        cov = _get_coverage_params(alg)
         callers = alg.get("variantcaller", "gatk")
         if isinstance(callers, basestring):
             callers = [callers]
         elif not callers:  # no variant calling, no VQSR
             continue
-        vqsr_supported_caller = False
         for c in callers:
-            if c in ["gatk", "gatk-haplotype"]:
-                vqsr_supported_caller = True
-                break
-        if (cov.interval not in ["regional", "exome"] and cov.depth != "low"
-              and vqsr_supported_caller):
+            if c in vqsr_callers:
+                vqsr_supported[c] += 1
+                coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
+    if len(vqsr_supported) > 0:
+        num_samples = max(vqsr_supported.values())
+        if "genome" in coverage_intervals or num_samples >= vqsr_sample_thresh:
             return True
     return False
 
+def use_snpeff(algs):
+    """Processing uses snpEff. Avoids memory requirements if not used.
+    """
+    return any(alg.get("effects", "snpeff") == "snpeff" and alg.get("variantcaller") for alg in algs)
+
+def use_bcbio_variation_recall(algs):
+    """Processing uses bcbio-variation-recall. Avoids core requirement if not used.
+    """
+    for alg in algs:
+        jointcaller = alg.get("jointcaller", [])
+        if not isinstance(jointcaller, (tuple, list)):
+            jointcaller = [jointcaller]
+        for caller in jointcaller:
+            if caller not in set(["gatk-haplotype-joint", None, False]):
+                return True
+    return False
 
 ## functions for navigating through the standard galaxy directory of files
 
-def get_transcript_gtf(genome_dir):
-    out_file = os.path.join(genome_dir, "rnaseq", "ref-transcripts.gtf")
-    return out_file
-
 def get_rRNA_interval(genome_dir):
-    return os.path.join(genome_dir, "rnaseq", "rRNA.interval")
+    return os.path.join(genome_dir, "rnaseq", "rRNA.interval_list")
 
 def get_transcript_refflat(genome_dir):
     return os.path.join(genome_dir, "rnaseq", "ref-transcripts.refFlat")

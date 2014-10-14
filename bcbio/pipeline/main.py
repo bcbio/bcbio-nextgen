@@ -7,25 +7,20 @@ from collections import defaultdict
 import copy
 import os
 import sys
-import argparse
 import resource
 import tempfile
 
-from bcbio import install, log, structural, utils, upload
-from bcbio.bam import callable
-from bcbio.distributed import clargs, prun, runfn
+from bcbio import log, structural, utils, upload
+from bcbio.distributed import prun
+from bcbio.distributed.transaction import tx_tmpdir
+from bcbio.illumina import flowcell
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (disambiguate, region, run_info, qcsummary,
-                            version, rnaseq)
+from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
+                            rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
-from bcbio.provenance import programs, system, versioncheck
-from bcbio.server import main as server_main
-from bcbio.solexa.flowcell import get_fastq_dir
-from bcbio.variation.genotype import combine_multiple_callers
-from bcbio.variation import coverage, ensemble, population, validate
-from bcbio.rnaseq.count import (combine_count_files,
-                                annotate_combined_count_file)
+from bcbio.provenance import diagnostics, programs, profile, system, versioncheck
+from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -35,13 +30,16 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     config, config_file = load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(workdir, "log")
-    if parallel["type"] in ["local"]:
+    if parallel["type"] in ["local", "clusterk"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
     elif parallel["type"] == "ipython":
-        assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
         assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
+        if parallel["scheduler"] != "sge":
+            assert parallel["queue"] is not None, "IPython parallel requires a specified queue (-q)"
+        elif not parallel["queue"]:
+            parallel["queue"] = ""
         _run_toplevel(config, config_file, workdir, parallel,
                       fc_dir, run_info_yaml)
     else:
@@ -53,12 +51,12 @@ def _setup_resources():
     This allows us to avoid out of file handle limits where we can
     move beyond the soft limit up to the hard limit.
     """
-    target_procs = 50000
+    target_procs = 10240
     cur_proc, max_proc = resource.getrlimit(resource.RLIMIT_NPROC)
-    target_proc = min(max_proc, target_procs)
+    target_proc = min(max_proc, target_procs) if max_proc > 0 else target_procs
     resource.setrlimit(resource.RLIMIT_NPROC, (max(cur_proc, target_proc), max_proc))
     cur_hdls, max_hdls = resource.getrlimit(resource.RLIMIT_NOFILE)
-    target_hdls = min(max_hdls, target_procs)
+    target_hdls = min(max_hdls, target_procs) if max_hdls > 0 else target_procs
     resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
 
 def _run_toplevel(config, config_file, work_dir, parallel,
@@ -71,16 +69,12 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
-    fastq_dir, galaxy_dir, config_dir = _get_full_paths(get_fastq_dir(fc_dir)
-                                                        if fc_dir else None,
-                                                        config, config_file)
-    config_file = os.path.join(config_dir, os.path.basename(config_file))
-    dirs = {"fastq": fastq_dir, "galaxy": galaxy_dir,
-            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+    dirs = setup_directories(work_dir, fc_dir, config, config_file)
+    config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     samples = run_info.organize(dirs, config, run_info_yaml)
-    pipelines = _pair_lanes_with_pipelines(samples)
+    pipelines = _pair_samples_with_pipelines(samples)
     final = []
-    with utils.curdir_tmpdir() as tmpdir:
+    with tx_tmpdir(config) as tmpdir:
         tempfile.tempdir = tmpdir
         for pipeline, pipeline_items in pipelines.items():
             pipeline_items = _add_provenance(pipeline_items, dirs, parallel, config)
@@ -90,149 +84,28 @@ def _run_toplevel(config, config_file, work_dir, parallel,
                     upload.from_sample(xs[0])
                     final.append(xs[0])
 
+def setup_directories(work_dir, fc_dir, config, config_file):
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
+                                                        if fc_dir else None,
+                                                        config, config_file)
+    return {"fastq": fastq_dir, "galaxy": galaxy_dir,
+            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+
 def _add_provenance(items, dirs, parallel, config):
     p = programs.write_versions(dirs, config, is_wrapper=parallel.get("wrapper") is not None)
+    p_db = diagnostics.initialize(dirs)
     system.write_info(dirs, parallel, config)
     out = []
     for item in items:
-        if item.get("upload") and item["upload"].get("fc_name"):
-            entity_id = "%s.%s.%s" % (item["upload"]["fc_date"],
-                                      item["upload"]["fc_name"],
-                                      item["description"])
-        else:
-            entity_id = item["description"]
+        entity_id = diagnostics.store_entity(item)
         item["config"]["resources"]["program_versions"] = p
-        item["provenance"] = {"programs": p, "entity": entity_id}
+        item["provenance"] = {"programs": p, "entity": entity_id,
+                              "db": p_db}
         out.append([item])
     return out
 
 # ## Utility functions
 
-def _sanity_check_args(args):
-    """Ensure dependent arguments are correctly specified
-    """
-    if "scheduler" in args and "queue" in args:
-        if args.scheduler and not args.queue:
-            return "IPython parallel scheduler (-s) specified. This also requires a queue (-q)."
-        elif args.queue and not args.scheduler:
-            return "IPython parallel queue (-q) supplied. This also requires a scheduler (-s)."
-        elif args.paralleltype == "ipython" and (not args.queue or not args.scheduler):
-            return "IPython parallel requires queue (-q) and scheduler (-s) arguments."
-
-def parse_cl_args(in_args):
-    """Parse input commandline arguments, handling multiple cases.
-
-    Returns the main config file and set of kwargs.
-    """
-    sub_cmds = {"upgrade": install.add_subparser,
-                "server": server_main.add_subparser,
-                "runfn": runfn.add_subparser,
-                "version": programs.add_subparser}
-    parser = argparse.ArgumentParser(
-        description="Best-practice pipelines for fully automated high throughput sequencing analysis.")
-    sub_cmd = None
-    if len(in_args) > 0 and in_args[0] in sub_cmds:
-        subparsers = parser.add_subparsers(help="bcbio-nextgen supplemental commands")
-        sub_cmds[in_args[0]](subparsers)
-        sub_cmd = in_args[0]
-    else:
-        parser.add_argument("global_config", help="Global YAML configuration file specifying details "
-                            "about the system (optional, defaults to installed bcbio_system.yaml)",
-                            nargs="?")
-        parser.add_argument("fc_dir", help="A directory of Illumina output or fastq files to process (optional)",
-                            nargs="?")
-        parser.add_argument("run_config", help="YAML file with details about samples to process "
-                            "(required, unless using Galaxy LIMS as input)",
-                            nargs="*")
-        parser.add_argument("-n", "--numcores", help="Total cores to use for processing",
-                            type=int, default=1)
-        parser.add_argument("-t", "--paralleltype", help="Approach to parallelization",
-                            choices=["local", "ipython"], default="local")
-        parser.add_argument("-s", "--scheduler", help="Scheduler to use for ipython parallel",
-                            choices=["lsf", "sge", "torque", "slurm"])
-        parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on, for ipython parallel")
-        parser.add_argument("-r", "--resources",
-                            help=("Cluster specific resources specifications. Can be specified multiple times.\n"
-                                  "Supports SGE, Torque, LSF and SLURM parameters."),
-                            default=[], action="append")
-        parser.add_argument("--timeout", help="Number of minutes before cluster startup times out. Defaults to 15",
-                            default=15, type=int)
-        parser.add_argument("--retries",
-                            help=("Number of retries of failed tasks during distributed processing. "
-                                  "Default 0 (no retries)"),
-                            default=0, type=int)
-        parser.add_argument("-p", "--tag", help="Tag name to label jobs on the cluster",
-                            default="")
-        parser.add_argument("-w", "--workflow", help="Run a workflow with the given commandline arguments")
-        parser.add_argument("--workdir", help="Directory to process in. Defaults to current working directory",
-                            default=os.getcwd())
-        parser.add_argument("-v", "--version", help="Print current version",
-                            action="store_true")
-    args = parser.parse_args(in_args)
-    if hasattr(args, "global_config"):
-        error_msg = _sanity_check_args(args)
-        if error_msg:
-            parser.error(error_msg)
-        kwargs = {"parallel": clargs.to_parallel(args),
-                  "workflow": args.workflow,
-                  "workdir": args.workdir}
-        kwargs = _add_inputs_to_kwargs(args, kwargs, parser)
-    else:
-        assert sub_cmd is not None
-        kwargs = {"args": args,
-                  "config_file": None,
-                  sub_cmd: True}
-    return kwargs
-
-def _add_inputs_to_kwargs(args, kwargs, parser):
-    """Convert input system config, flow cell directory and sample yaml to kwargs.
-
-    Handles back compatibility with previous commandlines while allowing flexible
-    specification of input parameters.
-    """
-    inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
-              if x is not None]
-    global_config = "bcbio_system.yaml"  # default configuration if not specified
-    if len(inputs) == 1:
-        if os.path.isfile(inputs[0]):
-            fc_dir = None
-            run_info_yaml = inputs[0]
-        else:
-            fc_dir = inputs[0]
-            run_info_yaml = None
-    elif len(inputs) == 2:
-        if os.path.isfile(inputs[0]):
-            global_config = inputs[0]
-            if os.path.isfile(inputs[1]):
-                fc_dir = None
-                run_info_yaml = inputs[1]
-            else:
-                fc_dir = inputs[1]
-                run_info_yaml = None
-        else:
-            fc_dir, run_info_yaml = inputs
-    elif len(inputs) == 3:
-        global_config, fc_dir, run_info_yaml = inputs
-    elif kwargs.get("workflow", "") == "template":
-        kwargs["inputs"] = inputs
-        return kwargs
-    elif args.version:
-        print version.__version__
-        sys.exit()
-    else:
-        print "Incorrect input arguments", inputs
-        parser.print_help()
-        sys.exit()
-    if fc_dir:
-        fc_dir = os.path.abspath(fc_dir)
-    if run_info_yaml:
-        run_info_yaml = os.path.abspath(run_info_yaml)
-    if kwargs.get("workflow"):
-        kwargs["inputs"] = inputs
-    kwargs["config_file"] = global_config
-    kwargs["fc_dir"] = fc_dir
-    kwargs["run_info_yaml"] = run_info_yaml
-    return kwargs
 
 def _get_full_paths(fastq_dir, config, config_file):
     """Retrieve full paths for directories in the case of relative locations.
@@ -281,7 +154,7 @@ class AbstractPipeline:
         return
 
     @abc.abstractmethod
-    def run(self, config, config_file, parallel, dirs, lanes):
+    def run(self, config, config_file, parallel, dirs, samples):
         return
 
 class Variant2Pipeline(AbstractPipeline):
@@ -294,57 +167,72 @@ class Variant2Pipeline(AbstractPipeline):
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with prun.start(_wres(parallel, ["aligner", "gatk"],
+        with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"],
                               (["reference", "fasta"], ["reference", "aligner"], ["files"])),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            logger.info("Timing: alignment")
-            samples = run_parallel("prep_align_inputs", samples)
-            samples = disambiguate.split(samples)
-            samples = run_parallel("process_alignment", samples)
-            samples = alignprep.merge_split_alignments(samples, run_parallel)
-            samples = disambiguate.resolve(samples, run_parallel)
-            samples = run_parallel("postprocess_alignment", samples)
-            regions = callable.combine_sample_regions(samples)
-            samples = region.add_region_info(samples, regions)
-            samples = region.clean_sample_data(samples)
-            logger.info("Timing: coverage")
-            samples = coverage.summarize_samples(samples, run_parallel)
+            with profile.report("alignment preparation", dirs):
+                samples = run_parallel("prep_align_inputs", samples)
+                samples = disambiguate.split(samples)
+            with profile.report("alignment", dirs):
+                samples = run_parallel("process_alignment", samples)
+                samples = alignprep.merge_split_alignments(samples, run_parallel)
+                samples = disambiguate.resolve(samples, run_parallel)
+            with profile.report("callable regions", dirs):
+                samples = run_parallel("prep_samples", [samples])
+                samples = run_parallel("postprocess_alignment", samples)
+                samples = run_parallel("combine_sample_regions", [samples])
+                samples = region.clean_sample_data(samples)
+            with profile.report("coverage", dirs):
+                samples = coverage.summarize_samples(samples, run_parallel)
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
                         samples, config, dirs, "full",
-                        multiplier=len(regions["analysis"]), max_multicore=1) as run_parallel:
-            logger.info("Timing: alignment post-processing")
-            samples = region.parallel_prep_region(samples, regions, run_parallel)
-            logger.info("Timing: variant calling")
-            samples = region.parallel_variantcall_region(samples, run_parallel)
+                        multiplier=region.get_max_counts(samples), max_multicore=1) as run_parallel:
+            with profile.report("alignment post-processing", dirs):
+                samples = region.parallel_prep_region(samples, run_parallel)
+            with profile.report("variant calling", dirs):
+                samples = genotype.parallel_variantcall_region(samples, run_parallel)
 
-        ## Finalize variants (per-sample cluster)
-        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation"]),
-                        samples, config, dirs, "persample") as run_parallel:
-            logger.info("Timing: variant post-processing")
-            samples = run_parallel("postprocess_variants", samples)
-            logger.info("Timing: validation")
-            samples = run_parallel("compare_to_rm", samples)
-            samples = combine_multiple_callers(samples)
-        ## Finalizing BAMs and population databases, handle multicore computation
-        with prun.start(_wres(parallel, ["gemini", "samtools", "fastqc", "bamtools", "bcbio_variation",
-                                         "bcbio-variation-recall"]),
+        ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
+        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
+                                         "gemini", "samtools", "fastqc", "bamtools",
+                                         "bcbio-variation-recall", "qsignature"]),
                         samples, config, dirs, "multicore2") as run_parallel:
-            logger.info("Timing: prepped BAM merging")
-            samples = region.delayed_bamprep_merge(samples, run_parallel)
-            logger.info("Timing: ensemble calling")
-            samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            samples = validate.summarize_grading(samples)
-            logger.info("Timing: structural variation")
-            samples = structural.run(samples, run_parallel)
-            logger.info("Timing: population database")
-            samples = population.prep_db_parallel(samples, run_parallel)
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("joint squaring off/backfilling", dirs):
+                samples = joint.square_off(samples, run_parallel)
+            with profile.report("variant post-processing", dirs):
+                samples = run_parallel("postprocess_variants", samples)
+                samples = run_parallel("split_variants_by_sample", samples)
+            with profile.report("prepped BAM merging", dirs):
+                samples = region.delayed_bamprep_merge(samples, run_parallel)
+            with profile.report("validation", dirs):
+                samples = run_parallel("compare_to_rm", samples)
+                samples = genotype.combine_multiple_callers(samples)
+            with profile.report("ensemble calling", dirs):
+                samples = ensemble.combine_calls_parallel(samples, run_parallel)
+            with profile.report("validation summary", dirs):
+                samples = validate.summarize_grading(samples)
+            with profile.report("structural variation", dirs):
+                samples = structural.run(samples, run_parallel)
+            with profile.report("population database", dirs):
+                samples = population.prep_db_parallel(samples, run_parallel)
+            with profile.report("quality control", dirs):
+                samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("archive", dirs):
+                samples = archive.compress(samples, run_parallel)
         logger.info("Timing: finished")
         return samples
+
+def _debug_samples(i, samples):
+    print "---", i, len(samples)
+    for sample in (x[0] for x in samples):
+        print "  ", sample["description"], sample.get("region"), \
+            utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
+            utils.get_in(sample, ("config", "algorithm", "jointcaller")), \
+            [x.get("variantcaller") for x in sample.get("variants", [])], \
+            sample.get("work_bam")
 
 class SNPCallingPipeline(Variant2Pipeline):
     """Back compatible: old name for variant analysis.
@@ -361,57 +249,74 @@ class StandardPipeline(AbstractPipeline):
     """
     name = "Standard"
     @classmethod
-    def run(self, config, config_file, parallel, dirs, lane_items):
+    def run(self, config, config_file, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with prun.start(_wres(parallel, ["aligner"]),
-                        lane_items, config, dirs, "multicore") as run_parallel:
-            logger.info("Timing: alignment")
-            samples = run_parallel("process_alignment", lane_items)
-        ## Finalize (per-sample cluster)
-        with prun.start(_wres(parallel, ["fastqc", "bamtools"]),
-                        samples, config, dirs, "persample") as run_parallel:
-            logger.info("Timing: quality control")
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+                        samples, config, dirs, "multicore") as run_parallel:
+            with profile.report("alignment", dirs):
+                samples = run_parallel("process_alignment", samples)
+            with profile.report("callable regions", dirs):
+                samples = run_parallel("prep_samples", [samples])
+                samples = run_parallel("postprocess_alignment", samples)
+                samples = run_parallel("combine_sample_regions", [samples])
+                samples = region.clean_sample_data(samples)
+        ## Quality control
+        with prun.start(_wres(parallel, ["fastqc", "bamtools", "samtools", "qsignature", "kraken"]),
+                        samples, config, dirs, "multicore2") as run_parallel:
+            with profile.report("quality control", dirs):
+                samples = qcsummary.generate_parallel(samples, run_parallel)
         logger.info("Timing: finished")
         return samples
 
 class MinimalPipeline(StandardPipeline):
     name = "Minimal"
 
+class SailfishPipeline(AbstractPipeline):
+    name = "sailfish"
+
+    @classmethod
+    def run(self, config, config_file, parallel, dirs, samples):
+        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
+                        samples, config, dirs, "trimming") as run_parallel:
+            with profile.report("adapter trimming", dirs):
+                samples = run_parallel("prepare_sample", samples)
+                samples = run_parallel("trim_sample", samples)
+            with prun.start(_wres(parallel, ["sailfish"]), samples, config, dirs,
+                            "sailfish") as run_parallel:
+                with profile.report("sailfish", dirs):
+                    samples = run_parallel("run_sailfish", samples)
+        return samples
+
 class RnaseqPipeline(AbstractPipeline):
     name = "RNA-seq"
 
     @classmethod
     def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["picard"]),
+        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
                         samples, config, dirs, "trimming") as run_parallel:
-            samples = run_parallel("process_lane", samples)
-            samples = run_parallel("trim_lane", samples)
-        with prun.start(_wres(parallel, ["aligner"],
-                              ensure_mem={"tophat": 8, "tophat2": 8, "star": 30}),
-                        samples, config, dirs, "multicore",
+            with profile.report("adapter trimming", dirs):
+                samples = run_parallel("prepare_sample", samples)
+                samples = run_parallel("trim_sample", samples)
+        with prun.start(_wres(parallel, ["aligner", "picard"],
+                              ensure_mem={"tophat": 8, "tophat2": 8, "star": 40}),
+                        samples, config, dirs, "alignment",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            samples = disambiguate.split(samples)
-            samples = run_parallel("process_alignment", samples)
-            samples = disambiguate.resolve(samples, run_parallel)
-
+            with profile.report("alignment", dirs):
+                samples = disambiguate.split(samples)
+                samples = run_parallel("process_alignment", samples)
         with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
-            samples = rnaseq.estimate_expression(samples, run_parallel)
-            #samples = rnaseq.detect_fusion(samples, run_parallel)
-
-        combined = combine_count_files([x[0].get("count_file") for x in samples])
-        gtf_file = utils.get_in(samples[0][0], ('genome_resources', 'rnaseq',
-                                                'transcripts'), None)
-        annotated = annotate_combined_count_file(combined, gtf_file)
-        for x in samples:
-            x[0]["combined_counts"] = combined
-            if annotated:
-                x[0]["annotated_combined_counts"] = annotated
-
-        with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc"]),
-                        samples, config, dirs, "persample") as run_parallel:
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("disambiguation", dirs):
+                samples = disambiguate.resolve(samples, run_parallel)
+            with profile.report("transcript assembly", dirs):
+                samples = rnaseq.assemble_transcripts(run_parallel, samples)
+            with profile.report("estimate expression", dirs):
+                samples = rnaseq.estimate_expression(samples, run_parallel)
+        with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc", "kraken"]),
+                        samples, config, dirs, "qc") as run_parallel:
+            with profile.report("quality control", dirs):
+                samples = qcsummary.generate_parallel(samples, run_parallel)
+        logger.info("Timing: finished")
         return samples
 
 class ChipseqPipeline(AbstractPipeline):
@@ -422,8 +327,8 @@ class ChipseqPipeline(AbstractPipeline):
         with prun.start(_wres(parallel, ["aligner", "picard"]),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            samples = run_parallel("process_lane", samples)
-            samples = run_parallel("trim_lane", samples)
+            samples = run_parallel("prepare_sample", samples)
+            samples = run_parallel("trim_sample", samples)
             samples = disambiguate.split(samples)
             samples = run_parallel("process_alignment", samples)
         with prun.start(_wres(parallel, ["picard", "fastqc"]),
@@ -444,8 +349,8 @@ def _get_pipeline(item):
     else:
         return SUPPORTED_PIPELINES[analysis_type]
 
-def _pair_lanes_with_pipelines(lane_items):
-    paired = [(x, _get_pipeline(x)) for x in lane_items]
+def _pair_samples_with_pipelines(samples):
+    paired = [(x, _get_pipeline(x)) for x in samples]
     d = defaultdict(list)
     for x in paired:
         d[x[1]].append(x[0])

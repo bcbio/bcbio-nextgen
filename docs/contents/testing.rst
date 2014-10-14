@@ -51,11 +51,73 @@ There are 3 logging files in the ``log`` directory within your working folder:
 Example pipelines
 =================
 
-We supply example input configuration files for comparison purposes
+We supply example input configuration files for validation
 and to help in understanding the pipeline.
 
-Whole genome
-~~~~~~~~~~~~
+Whole genome trio (50x)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+This input configuration runs whole genome variant calling using bwa, GATK
+HaplotypeCaller and FreeBayes. It uses a father/mother/child
+trio from the `CEPH NA12878 family`_: NA12891, NA12892, NA12878.
+Illumina's `Platinum genomes project`_ has 50X whole genome sequencing of the
+three members. The analysis compares results against a reference
+NA12878 callset from NIST's `Genome in a Bottle`_ initiative.
+
+To run the analysis do::
+
+  mkdir -p NA12878-trio-eval/config NA12878-trio-eval/input NA12878-trio-eval/work
+  cd NA12878-trio-eval/config
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
+  cd ../input
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
+  bash NA12878-trio-wgs-validate-getdata.sh
+  cd ../work
+  bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
+
+This is a large whole genome analysis and meant to test both pipeline scaling
+and validation across the entire genome. It can take multiple days to run
+depending on available cores. It requires 300Gb for the input files and 1.3Tb
+for the work directory. Smaller examples below exercise the pipeline with
+less disk and computational requirements.
+
+.. _CEPH NA12878 family: http://blog.goldenhelix.com/wp-content/uploads/2013/03/Utah-Pedigree-1463-with-NA12878.png
+
+We also have a more extensive evaluation that includes 2 additional variant
+callers, Platypus and samtools, and 3 different methods of calling variants:
+single sample, pooled, and incremental joint calling. This uses the same input
+data as above but a different input configuration file::
+  
+  mkdir -p NA12878-trio-eval/work_joint
+  cd NA12878-trio-eval/config
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-joint.yaml
+  cd ../work_joint
+  bcbio_nextgen.py ../config/NA12878-trio-wgs-joint.yaml -n 16
+
+Structural variant calling -- whole genome trio (50x)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example runs structural variant calling with multiple callers (Lumpy, Delly
+and cn.mops), providing a combined output summary file and validation metrics
+against NA12878 deletions. It uses the same NA12878 family starting material as
+the whole genome trio example.
+
+To run the analysis do::
+
+  mkdir -p NA12878-sv-eval/config NA12878-sv-eval/input NA12878-sv-eval/work
+  cd NA12878-sv-eval/config
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv.yaml
+  cd ../input
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv-getdata.sh
+  bash NA12878-trio-sv-getdata.sh
+  cd ../work
+  bcbio_nextgen.py ../config/NA12878-trio-sv.yaml -n 16
+
+This is large whole genome analysis and the timing and disk space requirements
+for the NA12878 trio analysis above apply here as well.
+
+Whole genome (10x)
+~~~~~~~~~~~~~~~~~~
 An input configuration for running whole gnome variant calling with
 bwa and GATK, using Illumina's `Platinum genomes project`_
 (`NA12878-illumina.yaml`_). See this
@@ -112,29 +174,18 @@ variant calling approaches into a `combined ensemble callset`_.
 This is a large full exome example with multiple variant callers, so
 can take more than 24 hours on machines using multiple cores.
 
-First get the input configuration file::
+First get the input configuration file, fastq reads, reference materials and analysis regions::
 
-    mkdir config && cd config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
-     examples/NA12878-exome-methodcmp.yaml
-
-Then the fastq reads, reference materials and analysis regions::
-
-    cd .. && mkdir input && cd input
-    wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
-     CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_1.fastq.gz
-    wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
-     CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_2.fastq.gz
-    wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed.gz
-    gunzip *.vcf.gz *.bed.gz
+    mkdir NA12878-exome-eval/config NA12878-exome-eval/input NA12878-exome-eval/work
+    cd NA12878-exome-eval/config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
+    cd ../input
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
+    bash NA12878-exome-methodcmp-getdata.sh
 
 Finally run the analysis, distributed on 8 local cores, with::
 
-    cd .. & mkdir work && cd work
+    cd ../work
     bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
@@ -147,31 +198,66 @@ to the NIST reference materials, enabling rapid comparisons of methods.
 Cancer tumor normal
 ~~~~~~~~~~~~~~~~~~~
 
-This example calls variants in a paired cancer sample with tumor/normal
-sequencing data. using raw data from `Han et al in PLoS One
-<http://www.plosone.org/article/info:doi/10.1371/journal.pone.0064271>`_. This
-is a work in progress and we welcome contributions. The goal is to use a full
-evaluation dataset to compare calling methods:
+This example calls variants using multiple approaches in a paired tumor/normal
+cancer sample from the `ICGC-TCGA DREAM challenge
+<https://www.synapse.org/#!Synapse:syn312572>`_. It uses `synthetic dataset 3
+<https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_ which has multiple
+subclones, enabling detection of lower frequency variants. Since the dataset is
+freely available and has a truth set, this allows us to do a full evaluation of
+variant callers.
 
-Get the input configuration file::
+To get the data::
 
-    mkdir config && cd config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
-     examples/cancer-paired.yaml
+    mkdir cancer-dream-syn3/config cancer-dream-syn3/input cancer-dream-syn3/work
+    cd cancer-dream-syn3/config
+    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-dream-syn3.yaml
+    cd ../input
+    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-dream-syn3-getdata.sh
+    bash cancer-dream-syn3-getdata.sh
 
-Get fastq reads and analysis regions::
+Run with::
 
-    cd .. && mkdir input && cd input
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_1.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_2.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_1.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_2.fastq.gz
-    wget https://gist.github.com/chapmanb/8322238/raw/131a5710ac17039e8e2d350e00a88898e030a958/ERP002442-targeted.bed
+    cd ../work
+    bcbio_nextgen.py ../config/cancer-dream-syn3.yaml -n 8
 
-Run::
+The configuration and data file has downloads for exome only and whole genome
+analyses. It enables exome by default, but you can use the larger whole genome
+evaluation by uncommenting the relevant parts of the configuration and retrieval
+script.
 
-    cd .. & mkdir work && cd work
-    bcbio_nextgen.py ../config/cancer-paired.yaml -n 8
+RNAseq example
+~~~~~~~~~~~~~~
+
+This example aligns and creates count files for use with downstream analyses
+using a subset of the SEQC data from the FDA's Sequencing Quality Control project.
+
+Get the setup script and run it, this will download six samples from
+the SEQC project, three from the HBRR panel and three from the UHRR
+panel. This will require about 100GB of disk space for these input
+files.  It will also set up a configuration file for the run, using
+the templating system::
+
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
+  bash rnaseq-seqc-getdata.sh
+
+Now go into the work directory and run the analysis::
+
+   cd seqc/work
+   bcbio_nextgen.py ../config/seqc.yaml -n 8
+   
+This will run a full scale RNAseq experiment using Tophat2 as the
+aligner and will take a long time to finish on a single machine. At
+the end it will output counts, Cufflinks quantitation and a set of QC
+results about each lane. If you have a cluster you can `parallelize it`_
+to speed it up considerably.
+
+A nice looking standalone `report`_ of the bcbio-nextgen run can be generated using
+`bcbio.rnaseq`_. Check that repository for details.
+
+.. _templating system: https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
+.. _parallelize it: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
+.. _bcbio.rnaseq: https://github.com/roryk/bcbio.rnaseq
+.. _report: https://rawgit.com/roryk/bcbio.rnaseq/master/docs/qc-summary.html
 
 Test suite
 ==========

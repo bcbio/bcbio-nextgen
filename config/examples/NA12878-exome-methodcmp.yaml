@@ -20,9 +20,11 @@ details:
       variantcaller: [gatk, freebayes, gatk-haplotype]
       quality_format: Standard
       coverage_interval: regional
+      recalibrate: gatk
+      realign: gatk
       merge_bamprep: true
-      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
-      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
+      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
       variant_regions: ../input/NGv3.bed
       ensemble:
         format-filters: [DP < 4]
@@ -41,15 +43,15 @@ details:
     algorithm:
       aligner: bwa
       align_split_size: 5000000
-      mark_duplicates: samtools                                                                                    
-      recalibrate: false                                                                                             
-      realign: false 
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
       variantcaller: [gatk, freebayes, gatk-haplotype]
       quality_format: Standard
       coverage_interval: regional
       merge_bamprep: false
-      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
-      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
+      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
+      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
       variant_regions: ../input/NGv3.bed
       ensemble:
         format-filters: [DP < 4]

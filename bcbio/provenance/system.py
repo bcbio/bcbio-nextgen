@@ -31,7 +31,7 @@ def write_info(dirs, parallel, config):
             sys_config = copy.deepcopy(config)
             minfos = _get_machine_info(parallel, sys_config, dirs, config)
             with open(out_file, "w") as out_handle:
-                yaml.dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
+                yaml.safe_dump(minfos, out_handle, default_flow_style=False, allow_unicode=False)
 
 def _get_machine_info(parallel, sys_config, dirs, config):
     """Get machine resource information from the job scheduler via either the command line or the queue.
@@ -43,16 +43,17 @@ def _get_machine_info(parallel, sys_config, dirs, config):
                             "torque": _torque_info,
                             "sge": _sge_info
                           }
-        try:
-            return sched_info_dict[parallel["scheduler"].lower()](parallel["queue"])
-        except KeyError:
+        if parallel["scheduler"].lower() in sched_info_dict:
+            try:
+                return sched_info_dict[parallel["scheduler"].lower()](parallel.get("queue", ""))
+            except:
+                # If something goes wrong, just hit the queue
+                logger.exception("Couldn't get machine information from resource query function for queue "
+                                 "'{0}' on scheduler \"{1}\"; "
+                                 "submitting job to queue".format(parallel.get("queue", ""), parallel["scheduler"]))
+        else:
             logger.info("Resource query function not implemented for scheduler \"{0}\"; "
                          "submitting job to queue".format(parallel["scheduler"]))
-        except:
-            # If something goes wrong, just hit the queue
-            logger.warn("Couldn't get machine information from resource query function for queue "
-                        "'{0}' on scheduler \"{1}\"; "
-                         "submitting job to queue".format(parallel["queue"], parallel["scheduler"]))
     from bcbio.distributed import prun
     with prun.start(parallel, [[sys_config]], config, dirs) as run_parallel:
         return run_parallel("machine_info", [[sys_config]])
@@ -64,6 +65,7 @@ def _slurm_info(queue):
     num_cpus, mem = subprocess.check_output(shlex.split(cl)).split()
     # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
     mem = mem.replace('+', '')
+    num_cpus = int(num_cpus.replace('+', ''))
     return [{"cores": int(num_cpus), "memory": float(mem) / 1024.0, "name": "slurm_machine"}]
 
 def _torque_info(queue):
@@ -110,18 +112,26 @@ def _torque_queue_nodes(queue):
                 hosts.extend(line.strip().split(","))
     return tuple([h.split(".")[0].strip() for h in hosts if h.strip()])
 
+def median_left(x):
+    if len(x) < 1:
+        return None
+    sortedval = sorted(x)
+    centre = int((len(sortedval)-1)/2)
+    return sortedval[centre]
+
 def _sge_info(queue):
     """Returns machine information for an sge job scheduler.
     """
     qhost_out = subprocess.check_output(["qhost", "-q", "-xml"])
-    qstat_out = subprocess.check_output(["qstat", "-f", "-xml", "-q", queue])
+    qstat_queue = ["-q", queue] if queue and "," not in queue else []
+    qstat_out = subprocess.check_output(["qstat", "-f", "-xml"] + qstat_queue)
     slot_info = _sge_get_slots(qstat_out)
     mem_info = _sge_get_mem(qhost_out, queue)
     machine_keys = slot_info.keys()
     #num_cpus_vec = [slot_info[x]["slots_total"] for x in machine_keys]
     #mem_vec = [mem_info[x]["mem_total"] for x in machine_keys]
     mem_per_slot = [mem_info[x]["mem_total"] / float(slot_info[x]["slots_total"]) for x in machine_keys]
-    min_ratio_index = mem_per_slot.index(min(mem_per_slot))
+    min_ratio_index = mem_per_slot.index(median_left(mem_per_slot))
     mem_info[machine_keys[min_ratio_index]]["mem_total"]
     return [{"cores": slot_info[machine_keys[min_ratio_index]]["slots_total"],
              "memory": mem_info[machine_keys[min_ratio_index]]["mem_total"],
@@ -147,14 +157,14 @@ def _sge_get_mem(xmlstring, queue_name):
     my_machine_dict = {}
     # on some machines rootxml.tag looks like "{...}qhost" where the "{...}" gets prepended to all attributes
     rootTag = rootxml.tag.rstrip("qhost")
-    for hosts in rootxml.findall(rootTag + 'host'):
+    for host in rootxml.findall(rootTag + 'host'):
         # find all hosts supporting queues
-        for queues in hosts.findall(rootTag + 'queue'):
+        for queues in host.findall(rootTag + 'queue'):
             # if the user specified queue matches that in the xml:
-            if(queue_name in queues.attrib['name']):
-                my_machine_dict[hosts.attrib['name']] = {}
+            if not queue_name or any(q in queues.attrib['name'] for q in queue_name.split(",")):
+                my_machine_dict[host.attrib['name']] = {}
                 # values from xml for number of processors and mem_total on each machine
-                for hostvalues in hosts.findall(rootTag + 'hostvalue'):
+                for hostvalues in host.findall(rootTag + 'hostvalue'):
                     if('mem_total' == hostvalues.attrib['name']):
                         if hostvalues.text.lower().endswith('g'):
                             multip = 1
@@ -164,8 +174,9 @@ def _sge_get_mem(xmlstring, queue_name):
                             multip = 1024
                         else:
                             raise Exception("Unrecognized suffix in mem_tot from SGE")
-                        my_machine_dict[hosts.attrib['name']]['mem_total'] = \
+                        my_machine_dict[host.attrib['name']]['mem_total'] = \
                                 float(hostvalues.text[:-1]) * float(multip)
+                break
     return my_machine_dict
 
 def _combine_machine_info(xs):
@@ -192,9 +203,9 @@ def machine_info():
     """Retrieve core and memory information for the current machine.
     """
     import psutil
-    BYTES_IN_GIG = 1073741824
-    free_bytes = psutil.virtual_memory().available
-    return [{"memory": float(free_bytes / BYTES_IN_GIG), "cores": multiprocessing.cpu_count(),
+    BYTES_IN_GIG = 1073741824.0
+    free_bytes = psutil.virtual_memory().total
+    return [{"memory": float("%.1f" % (free_bytes / BYTES_IN_GIG)), "cores": multiprocessing.cpu_count(),
              "name": socket.gethostname()}]
 
 def open_file_limit():

@@ -85,11 +85,14 @@ project.
 
 The automated bcbio-nextgen installer creates an isolated Python
 environment using `Anaconda`_. This will be a subdirectory of your
-installation root, like ``/usr/local/share/bcbio_nextgen/anaconda``.
+installation root, like ``/usr/local/share/bcbio-nextgen/anaconda``.
 You can manually use the ``bin/python`` within this subdirectory, or
 setup a Python virtual environment management system like
 `virtualenv-burrito`_ or `Python Env Wrapper`_ to switch in and out of
-this environment.
+this environment. Typically we alias this and then use ``bcbio_python`` to run
+``setup.py`` when installing a local development version::
+
+    alias bcbio_python='/usr/local/share/bcbio-nextgen/anaconda/bin/python'
 
 You generally will want to make changes to your local copy of the
 bcbio-nextgen code and then install these into the code directory
@@ -188,6 +191,60 @@ Once implemented, add the variant caller into the pipeline by updating
 .. _bcbio/variation/genotype.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/variation/genotype.py#L548
 .. _bcbio/pipeline/shared.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/shared.py#L176
 
+Adding new organisms
+====================
+
+While bcbio-nextgen and supporting tools receive the most testing and
+development on human or human-like diploid organisms, the algorithms are generic
+and we strive to support the wide diversity of organisms used in your
+research. We welcome contributors interested in setting up and maintaining
+support for their particular research organism, and this section defines the
+steps in integrating a new genome. We also welcome suggestions and
+implementations that improve this process.
+
+Setup CloudBioLinux to automatically download and prepare the genome:
+
+- Add the genome database key and organism name to list of supported organisms in
+  the CloudBioLinux configuration (`config/biodata.yaml`_).
+- Add download details to specify where to get the fasta genome files
+  (`cloudbio/biodata/genomes.py`_). CloudBioLinux supports common genome
+  providers like UCSC and Ensembl directly.
+
+Add the organism to the supported installs within bcbio:
+
+- This happens in two places: for the initial installer
+  (`scripts/bcbio_nextgen_install.py`_) and the updater (`bcbio/install.py`_).
+
+Test installation of genomes by pointing to your local cloudbiolinux edits
+during a data installation::
+
+  mkdir -p tmpbcbio-install
+  ln -s ~/bio/cloudbiolinux tmpbcbio-install
+  bcbio_nextgen.py upgrade --data --genomes DBKEY
+
+Add configuration information to bcbio-nextgen by creating a
+``config/genomes/DBKEY-resources.yaml`` file. Copy an existing minimal
+template like ``canFam3`` and edit with pointers to snpEff and other genome
+resources.
+
+Finally, send pull requests for CloudBioLinux and bcbio-nextgen and we'll
+happily integrate the new genome.
+
+This will provide basic integration with bcbio and allow running a minimal
+pipeline with alignment and quality control. We also have utility scripts in
+CloudBioLinux to help with preparing dbSNP (`utils/prepare_dbsnp.py`_)
+and RNA-seq (`utils/prepare_tx_gff.py`_) resources. We are still working on ways
+to best include these as part of the standard build and install since they
+either require additional tools to run locally, or require preparing copies in
+S3 buckets.
+
+.. _config/biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
+.. _cloudbio/biodata/genomes.py: https://github.com/chapmanb/cloudbiolinux/blob/7a2161a415d3dcd76f41095cd8f16bec84d4b1f3/cloudbio/biodata/genomes.py#L267
+.. _scripts/bcbio_nextgen_install.py: https://github.com/chapmanb/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/scripts/bcbio_nextgen_install.py#L236
+.. _bcbio/install.py: https://github.com/chapmanb/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/bcbio/install.py#L523
+.. _utils/prepare_dbsnp.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_dbsnp.py
+.. _utils/prepare_tx_gff.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_tx_gff.py
+
 Standard function arguments
 ===========================
 
@@ -243,7 +300,6 @@ reference genome file throughout. Here's an example of these inputs::
                               'coverage_depth': 'low',
                               'coverage_interval': 'regional',
                               'mark_duplicates': 'samtools',
-                              'max_errors': 2,
                               'nomap_split_size': 50,
                               'nomap_split_targets': 20,
                               'num_cores': 1,
@@ -275,7 +331,6 @@ reference genome file throughout. Here's an example of these inputs::
                                          'jvm_opts': ['-Xms750m', '-Xmx3g']},
                               'stampy': {'dir': '~/install/stampy-1.0.18'},
                               'tophat': {'cores': None},
-                              'ucsc_bigwig': {'memory': '36g'},
                               'varscan': {'dir': '/usr/share/java/varscan'},
                               'vcftools': {'dir': '~/install/vcftools_0.1.9'}}},
     'genome_resources': {'aliases': {'ensembl': 'human',

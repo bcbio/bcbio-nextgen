@@ -1,0 +1,5 @@
+version: 2
+
+aliases:
+  ensembl: danio_rerio
+  snpeff: Zv9.75

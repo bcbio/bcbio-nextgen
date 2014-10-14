@@ -11,10 +11,9 @@ details:
       mark_duplicates: picard
       recalibrate: gatk
       realign: gatk
-      variantcaller: gatk
+      variantcaller: gatk-haplotype
       platform: illumina
       quality_format: Standard
       coverage_interval: genome
-      coverage_depth: high
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

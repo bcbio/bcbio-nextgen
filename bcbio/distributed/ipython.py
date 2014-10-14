@@ -9,6 +9,12 @@ Cluster implementation from ipython-cluster-helper:
 https://github.com/roryk/ipython-cluster-helper
 """
 import os
+import time
+
+try:
+    import msgpack
+except ImportError:
+    msgpack = None
 
 from bcbio import utils
 from bcbio.log import logger, get_log_dir
@@ -32,11 +38,34 @@ def create(parallel, dirs, config):
                                                       "run_local": parallel.get("run_local")},
                                         retries=parallel.get("retries"))
 
+def stop(view):
+    try:
+        ipython_cluster.stop_from_view(view)
+        time.sleep(10)
+    except:
+        logger.exception("Did not stop IPython cluster correctly")
+
 def _get_ipython_fn(fn_name, parallel):
     import_fn_name = parallel.get("wrapper", fn_name)
     return getattr(__import__("{base}.ipythontasks".format(base=parallel["module"]),
                               fromlist=["ipythontasks"]),
                    import_fn_name)
+
+def zip_args(args, config=None):
+    """Compress arguments using msgpack.
+    """
+    if msgpack:
+        return [msgpack.packb(x, use_single_float=True, use_bin_type=True) for x in args]
+    else:
+        return args
+
+def unzip_args(args):
+    """Uncompress arguments using msgpack.
+    """
+    if msgpack:
+        return [msgpack.unpackb(x) for x in args]
+    else:
+        return args
 
 def runner(view, parallel, dirs, config):
     """Run a task on an ipython parallel cluster, allowing alternative queue types.
@@ -54,8 +83,9 @@ def runner(view, parallel, dirs, config):
             if "wrapper" in parallel:
                 wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources"])}
                 items = [[fn_name] + parallel.get("wrapper_args", []) + [wrap_parallel] + list(x) for x in items]
+            items = zip_args([args for args in items])
             for data in view.map_sync(fn, items, track=False):
                 if data:
-                    out.extend(data)
+                    out.extend(unzip_args(data))
         return out
     return run

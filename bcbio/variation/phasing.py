@@ -24,7 +24,7 @@ def read_backed_phasing(vcf_file, bam_files, genome_file, region, config):
         broad_runner = broad.runner_from_config(config)
         out_file = "%s-phased%s" % os.path.splitext(vcf_file)
         if not file_exists(out_file):
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 params = ["-T", "ReadBackedPhasing",
                           "-R", genome_file,
                           "--variant", vcf_file,

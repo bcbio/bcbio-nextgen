@@ -5,7 +5,7 @@ import sys
 import os
 from setuptools import setup, find_packages
 
-version = "0.7.7"
+version = "0.8.3a"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',
@@ -22,7 +22,7 @@ def write_version_py():
                                     '__git_revision__ = "%s"' % githash]))
 
 with open("requirements.txt", "r") as f:
-    install_requires = [x.strip() for x in f.readlines() if not x.startswith("bcbio-nextgen")]
+    install_requires = [x.strip() for x in f.readlines() if not x.startswith(("bcbio-nextgen", "#"))]
 
 # library-only install: enable skipping of scripts and requirements for conda builds
 if "--record=/dev/null" in sys.argv:
@@ -31,12 +31,7 @@ if "--record=/dev/null" in sys.argv:
     zip_safe = True
 else:
     zip_safe = False
-    scripts = ['scripts/bcbio_nextgen.py',
-               'scripts/bam_to_wiggle.py',
-               'scripts/barcode_sort_trim.py',
-               'scripts/illumina_finished_msg.py',
-               'scripts/nextgen_analysis_server.py',
-               'scripts/solexa_qseq_to_fastq.py']
+    scripts = ['scripts/bcbio_nextgen.py', 'scripts/bcbio_setup_genome.py']
 
 write_version_py()
 setup(name="bcbio-nextgen",
@@ -44,9 +39,9 @@ setup(name="bcbio-nextgen",
       author="Brad Chapman and bcbio-nextgen contributors",
       author_email="chapmanb@50mail.com",
       description="Best-practice pipelines for fully automated high throughput sequencing analysis",
+      long_description=(open('README.rst').read()),
       license="MIT",
       url="https://github.com/chapmanb/bcbio-nextgen",
-      namespace_packages=["bcbio"],
       packages=find_packages(),
       zip_safe=zip_safe,
       scripts=scripts,

@@ -7,7 +7,7 @@ from bcbio import utils
 from bcbio.log import logger
 from bcbio.upload import shared
 
-def copy_finfo(finfo, storage_dir):
+def copy_finfo(finfo, storage_dir, pass_uptodate=False):
     """Copy a file into the output storage directory.
     """
     if "sample" in finfo:
@@ -20,6 +20,8 @@ def copy_finfo(finfo, storage_dir):
         logger.info("Storing in local filesystem: %s" % out_file)
         shutil.copy(finfo["path"], out_file)
         return out_file
+    if pass_uptodate:
+        return out_file
 
 def copy_finfo_directory(finfo, storage_dir):
     """Copy a directory into the final output directory.
@@ -30,6 +32,9 @@ def copy_finfo_directory(finfo, storage_dir):
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
         shutil.copytree(finfo["path"], out_dir)
+        for tmpdir in ["tx", "tmp"]:
+            if os.path.exists(os.path.join(out_dir, tmpdir)):
+                shutil.rmtree(os.path.join(out_dir, tmpdir))
         os.utime(out_dir, None)
     return out_dir
 

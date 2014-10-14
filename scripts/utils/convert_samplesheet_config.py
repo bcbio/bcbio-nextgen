@@ -9,7 +9,7 @@ Usage:
 """
 import sys
 
-from bcbio.solexa import samplesheet
+from bcbio.illumina import samplesheet
 
 if __name__ == "__main__":
     samplesheet.csv2yaml(sys.argv[1])

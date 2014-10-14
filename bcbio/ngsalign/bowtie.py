@@ -31,12 +31,12 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
     config = data['config']
     out_file = os.path.join(align_dir, "%s.sam" % names["lane"])
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cl = [config_utils.get_program("bowtie", config)]
             cl += _bowtie_args_from_config(config)
             cl += extra_args if extra_args is not None else []
             cl += ["-q",
-                   "-v", config["algorithm"]["max_errors"],
+                   "-v", 2,
                    "-k", 1,
                    "-X", 2000, # default is too selective for most data
                    "--best",

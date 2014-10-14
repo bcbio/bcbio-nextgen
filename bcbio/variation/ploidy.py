@@ -3,8 +3,9 @@
 Handles configured ploidy, with custom handling for sex chromosomes and pooled
 haploid mitochondrial DNA.
 """
-import os
 import re
+
+import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
@@ -21,10 +22,10 @@ def chromosome_special_cases(chrom):
         return chrom
 
 def _configured_ploidy_sex(items):
-    ploidies = set([data["config"]["algorithm"].get("ploidy", 2) for data in items])
+    ploidies = set([tz.get_in(["config", "algorithm", "ploidy"], data, 2) for data in items])
     assert len(ploidies) == 1, "Multiple ploidies set for group calling: %s" % ploidies
     ploidy = ploidies.pop()
-    sexes = set([data.get("metadata", {}).get("sex", "").lower() for data in items])
+    sexes = set([tz.get_in(["metadata", "sex"], data, "").lower() for data in items])
     return ploidy, sexes
 
 def get_ploidy(items, region):
@@ -57,13 +58,14 @@ def _to_haploid(parts):
     """
     finfo = dict(zip(parts[-2].split(":"), parts[-1].strip().split(":")))
     pat = re.compile(r"\||/")
-    calls = set(pat.split(finfo["GT"]))
-    if len(calls) == 1:
-        gt_index = parts[-2].split(":").index("GT")
-        call_parts = parts[-1].strip().split(":")
-        call_parts[gt_index] = calls.pop()
-        parts[-1] = ":".join(call_parts) + "\n"
-        return "\t".join(parts)
+    if "GT" in finfo:
+        calls = set(pat.split(finfo["GT"]))
+        if len(calls) == 1:
+            gt_index = parts[-2].split(":").index("GT")
+            call_parts = parts[-1].strip().split(":")
+            call_parts[gt_index] = calls.pop()
+            parts[-1] = ":".join(call_parts) + "\n"
+            return "\t".join(parts)
 
 def _fix_line_ploidy(line, sex):
     """Check variant calls to be sure if conforms to expected ploidy for sex/custom chromosomes.
@@ -89,18 +91,19 @@ def filter_vcf_by_sex(vcf_file, data):
     Handles sex chromosomes and mitochondrial. Does not try to resolve called
     hets into potential homozygotes when converting diploid to haploid.
 
-    Skips filtering on cancer samples. Since these will be pooled, need special
-    functionality to handle them
+    Skips filtering on pooled samples, we still need to implement.
     """
-    if vcfutils.get_paired_phenotype(data):
+    if len(vcfutils.get_samples(vcf_file)) > 1:
         return vcf_file
     _, sexes = _configured_ploidy_sex([data])
     sex = sexes.pop()
-    out_file = "%s-ploidyfix%s" % os.path.splitext(vcf_file)
+    out_file = "%s-ploidyfix%s" % utils.splitext_plus(vcf_file)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        orig_out_file = out_file
+        out_file = orig_out_file.replace(".vcf.gz", ".vcf")
+        with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                with open(vcf_file) as in_handle:
+                with utils.open_gzipsafe(vcf_file) as in_handle:
                     for line in in_handle:
                         if line.startswith("#"):
                             out_handle.write(line)
@@ -108,4 +111,6 @@ def filter_vcf_by_sex(vcf_file, data):
                             line = _fix_line_ploidy(line, sex)
                             if line:
                                 out_handle.write(line)
+        if orig_out_file.endswith(".gz"):
+            out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file

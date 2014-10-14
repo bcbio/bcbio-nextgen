@@ -21,6 +21,7 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "bedtools", "args": "--version", "stdout_flag": "bedtools"},
              {"cmd": "bowtie2", "args": "--version", "stdout_flag": "bowtie2-align version"},
              {"cmd": "bwa", "stdout_flag": "Version:"},
+             {"cmd": "chanjo"},
              {"cmd": "cufflinks", "stdout_flag": "cufflinks"},
              {"cmd": "cutadapt", "args": "--version"},
              {"cmd": "fastqc", "args": "--version", "stdout_flag": "FastQC"},
@@ -32,16 +33,26 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "sambamba", "stdout_flag": "sambamba"},
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
              {"cmd": "tophat", "args": "--version", "stdout_flag": "TopHat"},
-             {"cmd": "vcflib", "has_cl_version": False}]
+             {"cmd": "vcflib", "has_cl_version": False},
+             {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
 
 def _broad_versioner(type):
     def get_version(config):
         from bcbio import broad
-        runner = broad.runner_from_config(config)
+        try:
+            runner = broad.runner_from_config(config)
+        except ValueError:
+            return ""
         if type == "gatk":
             return runner.get_gatk_version()
         elif type == "picard":
             return runner.get_picard_version("ViewSam")
+        elif type == "mutect":
+            try:
+                runner = broad.runner_from_config(config, "mutect")
+            except ValueError:
+                return ""
+            return runner.get_mutect_version()
         else:
             raise NotImplementedError(type)
     return get_version
@@ -82,7 +93,7 @@ _alt_progs = [{"name": "bcbio_variation",
                "version_fn": jar_versioner("bcbio_variation", "bcbio.variation")},
               {"name": "gatk", "version_fn": _broad_versioner("gatk")},
               {"name": "mutect",
-               "version_fn": jar_versioner("mutect", "muTect")},
+               "version_fn": _broad_versioner("mutect")},
               {"name": "picard", "version_fn": _broad_versioner("picard")},
               {"name": "rnaseqc",
                "version_fn": jar_versioner("rnaseqc", "RNA-SeQC")},
@@ -91,7 +102,10 @@ _alt_progs = [{"name": "bcbio_variation",
               {"name": "varscan",
                "version_fn": jar_versioner("varscan", "VarScan")},
               {"name": "oncofuse",
-               "version_fn": jar_versioner("Oncofuse", "Oncofuse")}]
+               "version_fn": jar_versioner("Oncofuse", "Oncofuse")},
+              {"name": "alientrimmer",
+               "version_fn": jar_versioner("AlienTrimmer", "AlienTrimmer")}
+]
 
 def _parse_from_stdoutflag(stdout, x):
     for line in stdout:
@@ -131,7 +145,8 @@ def _get_cl_version(p, config):
         elif p.get("paren_flag"):
             v = _parse_from_parenflag(stdout, p["paren_flag"])
         else:
-            v = stdout.read().strip()
+            lines = [l.strip() for l in stdout.read().split("\n") if l.strip()]
+            v = lines[-1]
     if v.endswith("."):
         v = v[:-1]
     return v
@@ -189,12 +204,12 @@ def _get_versions(config=None):
 def _get_versions_manifest():
     """Retrieve versions from a pre-existing manifest of installed software.
     """
-    all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant"] + \
+    all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant", "gatk-framework"] + \
                [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
     manifest_dir = os.path.join(config_utils.get_base_installdir(), "manifest")
     if os.path.exists(manifest_dir):
         out = []
-        for plist in ["brew", "python", "r", "debian", "custom"]:
+        for plist in ["toolplus", "brew", "python", "r", "debian", "custom"]:
             pkg_file = os.path.join(manifest_dir, "%s-packages.yaml" % plist)
             if os.path.exists(pkg_file):
                 with open(pkg_file) as in_handle:
@@ -230,6 +245,15 @@ def write_versions(dirs, config=None, is_wrapper=False):
             for p in _get_versions(config):
                 out_handle.write("{program},{version}\n".format(**p))
     return out_file
+
+def get_version_manifest(name):
+    """Retrieve a version from the currently installed manifest.
+    """
+    manifest_vs = _get_versions_manifest()
+    for x in manifest_vs:
+        if x["program"] == name:
+            return x.get("version", "")
+    return ""
 
 def add_subparser(subparsers):
     """Add command line option for exporting version information.

@@ -1,8 +1,8 @@
-version: 4
+version: 5
 
 aliases:
   snpeff: NCBIM37.66
-  ensembl: mouse
+  ensembl: mus_musculus
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

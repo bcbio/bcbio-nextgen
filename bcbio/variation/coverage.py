@@ -1,105 +1,91 @@
-"""Examine sequencing coverage, identifying transcripts lacking sufficient coverage for variant calling.
+"""Chanjo provides a better way to handle sequence coverage data in clinical sequencing.
 
-Handles identification of low coverage regions in defined genes of interest or the entire transcript.
+https://github.com/robinandeer/chanjo
 """
 import collections
-import copy
 import os
+import sys
 
-import yaml
+import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.variation import bedutils
 
-def _prep_coverage_file(species, covdir, config):
-    """Ensure input coverage file is correct, handling special keywords for whole exome.
-    Returns the input coverage file and keyword for special cases.
-    """
-    cov_file = config["algorithm"]["coverage"]
-    cov_kw = None
-    if cov_file == "exons":
-        cov_kw = cov_file
-        cov_file = os.path.join(covdir, "%s-%s.txt" % (species, cov_kw))
-    else:
-        cov_file = os.path.normpath(os.path.join(os.path.split(covdir)[0], cov_file))
-        assert os.path.exists(cov_file), \
-            "Did not find input file for coverage: %s" % cov_file
-    return cov_file, cov_kw
+def summary(items):
+    cutoff = 4  # coverage for completeness
 
-def _prep_coverage_config(samples, config):
-    """Create input YAML configuration and directories for running coverage assessment.
-    """
-    covdir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], "coverage"))
-    name = samples[0]["name"][-1].replace(" ", "_")
-    cur_covdir = utils.safe_makedir(os.path.join(covdir, name))
-    out_file = os.path.join(cur_covdir, "coverage_summary.csv")
-    config_file = os.path.join(cur_covdir, "coverage-in.yaml")
-    species = samples[0]["genome_resources"]["aliases"]["ensembl"]
-    cov_file, cov_kw = _prep_coverage_file(species, covdir, config)
-    out = {"params": {"species": species,
-                      "build": samples[0]["genome_build"],
-                      "coverage": 13,
-                      "transcripts": "canonical",
-                      "block": {"min": 100, "distance": 10}},
-           "regions": cov_file,
-           "ref-file": os.path.abspath(samples[0]["sam_ref"]),
-           "experiments": []
-           }
-    if cov_kw:
-        out["params"]["regions"] = cov_kw
-    for data in samples:
-        out["experiments"].append({"name": data["name"][-1],
-                                   "samples": [{"coverage": str(data["work_bam"])}]})
-    with open(config_file, "w") as out_handle:
-        yaml.dump(out, out_handle, allow_unicode=False, default_flow_style=False)
-    return config_file, out_file
+    out_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "coverage"))
+    clean_bed = bedutils.clean_file(tz.get_in(["config", "algorithm", "coverage"], items[0]),
+                                    items[0])
+    bed_file = _uniquify_bed_names(clean_bed, out_dir, items[0])
+    batch = _get_group_batch(items)
 
-def summary(samples, config):
-    """Provide summary information on a single sample across regions of interest.
-    """
-    try:
-        bc_jar = config_utils.get_jar("bcbio.coverage", config_utils.get_program("bcbio_coverage", config, "dir"))
-    except ValueError:
-        logger.warning("No coverage calculations: Did not find bcbio.coverage jar from system config")
-        return [[x] for x in samples]
-    config_file, out_file = _prep_coverage_config(samples, config)
-    tmp_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
-    resources = config_utils.get_resources("bcbio_coverage", config)
-    config = copy.deepcopy(config)
-    config["algorithm"]["memory_adjust"] = {"direction": "increase",
-                                            "magnitude": config["algorithm"].get("num_cores", 1)}
-    jvm_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]), config)
+    out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
     if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            java_args = ["-Djava.io.tmpdir=%s" % tmp_dir, "-Djava.awt.headless=true"]
-            cmd = ["java"] + jvm_opts + java_args + ["-jar", bc_jar, "multicompare", config_file,
-                                                     tx_out_file, "-c", str(config["algorithm"].get("num_cores", 1))]
-            do.run(cmd, "Summarizing coverage with bcbio.coverage", samples[0])
+        with file_transaction(items[0], out_file) as tx_out_file:
+            chanjo = os.path.join(os.path.dirname(sys.executable), "chanjo")
+            cmd = ("{chanjo} --db {tx_out_file} build {bed_file}")
+            do.run(cmd.format(**locals()), "Prep chanjo database")
+            for data in items:
+                sample = dd.get_sample_name(data)
+                bam_file = data["work_bam"]
+                cmd = ("{chanjo} annotate -s {sample} -g {batch} -c {cutoff} {bam_file} {bed_file} | "
+                       "{chanjo} --db {tx_out_file} import")
+                do.run(cmd.format(**locals()), "Chanjo coverage", data)
     out = []
-    for x in samples:
-        x["coverage"] = {"summary": out_file}
-        out.append([x])
+    for data in items:
+        data["coverage"] = {"summary": out_file}
+        out.append([data])
     return out
 
-def summarize_samples(samples, run_parallel):
-    """Provide summary information for sample coverage across regions of interest.
+def _uniquify_bed_names(bed_file, out_dir, data):
+    """Chanjo required unique names in the BED file to map to intervals.
     """
-    to_run = collections.defaultdict(list)
+    out_file = os.path.join(out_dir, "%s-unames%s" % utils.splitext_plus(os.path.basename(bed_file)))
+    if not utils.file_exists(out_file) or not utils.file_uptodate(out_file, bed_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(bed_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    namecounts = collections.defaultdict(int)
+                    for line in in_handle:
+                        parts = line.rstrip("\r\n").split("\t")
+                        name = parts[3]
+                        namecount = namecounts.get(name, 0)
+                        namecounts[name] += 1
+                        if namecount > 0:
+                            name = "%s-%s" % (name, namecount)
+                        parts[3] = name
+                        out_handle.write("\t".join(parts) + "\n")
+    return out_file
+
+def _get_group_batch(items):
+    out = None
+    for data in items:
+        batches = tz.get_in(("metadata", "batch"), items[0], [dd.get_sample_name(data)])
+        if not isinstance(batches, (list, tuple)):
+            batches = [batches]
+        if not out:
+            out = set(batches)
+        else:
+            out = out.intersection(set(batches))
+    return list(out)[0]
+
+def summarize_samples(samples, run_parallel):
+    """Back compatibility for existing pipelines. Should be replaced with summary when ready.
+    """
     extras = []
+    to_run = collections.defaultdict(list)
     for data in [x[0] for x in samples]:
-        if ("coverage" in data["config"]["algorithm"] and
-              data["genome_resources"].get("aliases", {}).get("ensembl")):
-            to_run[(data["genome_build"], data["config"]["algorithm"]["coverage"])].append(data)
+        if tz.get_in(["config", "algorithm", "coverage"], data):
+            batches = tz.get_in(("metadata", "batch"), data, [dd.get_sample_name(data)])
+            if not isinstance(batches, (tuple, list)):
+                batches = [batches]
+            for batch in batches:
+                to_run[batch].append(data)
         else:
             extras.append([data])
-    out = []
-    if len(to_run) > 0:
-        args = []
-        for sample_group in to_run.itervalues():
-            config = sample_group[0]["config"]
-            args.append((sample_group, config))
-        out.extend(run_parallel("coverage_summary", args))
+    out = run_parallel("coverage_summary", [[xs] for xs in to_run.values()]) if len(to_run) > 0 else []
     return out + extras

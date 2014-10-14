@@ -1,0 +1,68 @@
+# Cancer tumor/normal calling evaluation using synthetic dataset 3
+# from the ICGC-TCGA DREAM challenge:
+# https://www.synapse.org/#!Synapse:syn312572/wiki/62018
+---
+details:
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    nomap_split_targets: 100
+    mark_duplicates: true
+    recalibrate: true
+    realign: true
+    remove_lcr: true
+    platform: illumina
+    quality_format: standard
+    variantcaller: [mutect, freebayes, vardict, varscan]
+    indelcaller: false
+    ensemble:
+      numpass: 2
+    variant_regions: ../input/NGv3.bed
+    #svcaller: [cn.mops, lumpy, delly]
+  analysis: variant2
+  description: syn3-normal
+  #files: ../input/synthetic.challenge.set3.normal.bam
+  files:
+    - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
+    - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: syn3
+    phenotype: normal
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    nomap_split_targets: 100
+    mark_duplicates: true
+    recalibrate: true
+    realign: true
+    remove_lcr: true
+    platform: illumina
+    quality_format: standard
+    variantcaller: [mutect, freebayes, vardict, varscan]
+    indelcaller: false
+    ensemble:
+      numpass: 2
+    variant_regions: ../input/NGv3.bed
+    validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
+    validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
+  #   svcaller: [cn.mops, lumpy, delly]
+  #   svvalidate:
+  #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
+  #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
+  #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
+  #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
+  analysis: variant2
+  description: syn3-tumor
+  #files: ../input/synthetic.challenge.set3.tumor.bam
+  files:
+    - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
+    - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: syn3
+    phenotype: tumor
+fc_date: '2014-08-13'
+fc_name: dream-syn3
+upload:
+  dir: ../final

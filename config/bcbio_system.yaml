@@ -16,6 +16,8 @@
 resources:
   log:
     dir: log
+  tmp:
+    dir: null
   ucsc_bigwig:
     memory: 36g
   bwa:
@@ -30,19 +32,28 @@ resources:
   novoalign:
     cores: 16
     memory: 2G
+  snap:
+    cores: 16
+    memory: 4G
   gemini:
     cores: 16
+  kraken:
+    cores: 6
+    memory: 4g
+  qsignature: 
+    cores: 1
+    memory: 2g
   freebayes:
     memory: 2g
   gatk:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    jvm_opts: ["-Xms500m", "-Xmx3500m"]
     dir: /usr/local/share/java/gatk
   gatk-haplotype:
-    jvm_opts: ["-Xms2g", "-Xmx5500m"]
+    jvm_opts: ["-Xms500m", "-Xmx3500m"]
   gatk-vqsr:
-    jvm_opts: ["-Xms2g", "-Xmx4000m"]
+    jvm_opts: ["-Xms500m", "-Xmx3500m"]
   picard:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    jvm_opts: ["-Xms750m", "-Xmx3500m"]
     dir: /usr/local/share/java/picard
   snpeff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
@@ -97,7 +108,3 @@ galaxy_config: universe_wsgi.ini
 #   store_dir: /store4/solexadata
 #   base_dir: /array0/projects/Sequencing
 #   worker_program: nextgen_analysis_server.py
-
-# ## Back compatible algorithm section, to be removed in 0.7.7 release
-algorithm:
-  platform: illumina

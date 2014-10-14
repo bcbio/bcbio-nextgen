@@ -1,9 +1,10 @@
 upload:
   dir: upload
-#  method: galaxy
-#  galaxy_url: http://localhost:8080
-#  galaxy_api_key: a9a33e4ad35c8f7f79d8cf87822bac1c
-#  galaxy_library: test
+  # method: galaxy
+  # researcher: Test Jones
+  # galaxy_url: http://localhost:8080
+  # galaxy_api_key: 3de311fb973eeabaafc9aebc667b5643
+  # galaxy_library: test
 details:
   - description: VarOnly
     analysis: variant2
@@ -17,33 +18,37 @@ details:
       #aligner: false
       #bam_clean: picard
       #bam_sort: coordinate
-      #mark_duplicates: biobambam
-      #recalibrate: false
-      #realign: false
-      #align_split_size: 9000
       #quality_bin: [prealignment, postrecal]
-      #aligner: novoalign
+      #archive: cram
       align_split_size: 15000
       aligner: bwa
-      #mark_duplicates: samtools
-      #realign: gkno
-      realign: gatk
-      recalibrate: gatk
-      svcaller: lumpy
+      #mark_duplicates: false
+      recalibrate: false
+      realign: false
+      #realign: gatk
+      #recalibrate: gatk
       variantcaller: freebayes
-      coverage_interval: regional
-      #variantcaller: gatk-haplotype
-      #coverage_depth: high
-      #coverage_interval: genome
-      quality_format: Standard
+      #effects: vep
+      #svcaller: [delly, lumpy, cn.mops]
+      #svcaller: cnvkit
+      #remove_lcr: true
+      tools_off: [gemini]
+      mixup_check: qsignature
+      #variantcaller: [gatk, gatk-haplotype]
+      quality_format: standard
       nomap_split_size: 50
       nomap_split_targets: 100
+      coverage_interval: regional
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     resources:
+      vep:
+        options: [--pick]
       novoalign:
         options: [-o, FullNW]
+      tmp:
+        dir: tmptest
       #gatk:
       #  dir: /usr/share/java/gatk-1.6-13-g91f02df
     metadata:
@@ -52,19 +57,26 @@ details:
     description: Test1
     genome_build: hg19
     lane: 7
-    #files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
-    files: 7_100326_FC6107FAAXX.bam
+    #files: ['s3://bcbio_nextgen/testing/7_100326_FC6107FAAXX_1_fastq.txt.gz', 's3://bcbio_nextgen/testing/7_100326_FC6107FAAXX_2_fastq.txt.gz']
+    #files: s3://bcbio_test_run1/align/Test1/Test1-sort.bam
+    #files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
+    files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
+    #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
   # - algorithm:
-  #     aligner: novoalign
-  #     variantcaller: [gatk, freebayes]
+  #     aligner: bwa
+  #     variantcaller: freebayes
+  #     realign: false
+  #     recalibrate: false
+  #     mark_duplicates: samtools
   #     quality_format: Standard
   #     coverage_interval: regional
   #     variant_regions: ../data/automated/variant_regions-bam.bed
   #     nomap_split_size: 500
+  #     # svcaller: [delly, lumpy, cn.mops]
   #   metadata:
   #     batch: TestBatch1
   #   analysis: variant2
   #   description: Test2
   #   genome_build: hg19
   #   lane: 8
-  #   files: [7_100326_FC6107FAAXX.bam]
+  #   files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam]

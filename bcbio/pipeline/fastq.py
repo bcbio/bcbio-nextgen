@@ -1,13 +1,13 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
-import subprocess
 
-from bcbio import bam, broad
+from bcbio import bam, broad, utils
+from bcbio.bam import fastq
 from bcbio.bam import cram
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
-from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance import do
 
 def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
@@ -15,29 +15,35 @@ def get_fastq_files(item):
     assert "files" in item, "Did not find `files` in input; nothing to process"
     ready_files = []
     for fname in item["files"]:
-        if fname.endswith(".gz") and _pipeline_needs_fastq(item["config"], item):
-            fastq_dir = os.path.join(item["dirs"]["work"], "fastq")
-            safe_makedir(fastq_dir)
-            out_file = os.path.join(fastq_dir,
-                                    os.path.basename(os.path.splitext(fname)[0]))
-            if not os.path.exists(out_file):
-                with file_transaction(out_file) as tx_out_file:
-                    cmd = "gunzip -c {fname} > {tx_out_file}".format(**locals())
-                    with open(tx_out_file, "w") as out_handle:
-                        subprocess.check_call(cmd, shell=True)
-            ready_files.append(out_file)
-        elif fname.endswith(".bam"):
+        if fname.endswith(".bam"):
             if _pipeline_needs_fastq(item["config"], item):
                 ready_files = _convert_bam_to_fastq(fname, item["dirs"]["work"],
                                                     item, item["dirs"], item["config"])
             else:
                 ready_files = [fname]
+        elif fname.startswith(utils.SUPPORTED_REMOTES):
+            ready_files.append(fname)
         else:
-            assert os.path.exists(fname), fname
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]
+    ready_files = [_gzip_fastq(x) for x in ready_files]
+    for in_file in ready_files:
+        assert os.path.exists(in_file), "%s does not exist." % in_file
     return ((ready_files[0] if len(ready_files) > 0 else None),
             (ready_files[1] if len(ready_files) > 1 else None))
+
+def _gzip_fastq(in_file):
+    """
+    gzip a fastq file if it is not already gzipped
+    """
+    if fastq.is_fastq(in_file) and not utils.is_gzipped(in_file):
+        gzipped_file = in_file + ".gz"
+        if file_exists(gzipped_file):
+            return gzipped_file
+        message = "gzipping {in_file}.".format(in_file=in_file)
+        do.run("gzip -c {in_file} > {gzipped_file}".format(**locals()), message)
+        return gzipped_file
+    return in_file
 
 def _pipeline_needs_fastq(config, item):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
@@ -68,6 +74,6 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     if not file_exists(out1):
         broad_runner = broad.runner_from_config(config)
         broad_runner.run_fn("picard_bam_to_fastq", in_file, out1, out2)
-    if os.path.getsize(out2) == 0:
+    if out2 and os.path.getsize(out2) == 0:
         out2 = None
     return [out1, out2]

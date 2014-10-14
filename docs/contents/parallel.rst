@@ -4,7 +4,7 @@ Parallel execution
 The pipeline runs in parallel in two different ways:
 
 -  multiple cores -- Analyses will run in parallel using multiple cores
-   on a single machine. This requires only the ``mulitprocessing``
+   on a single machine. This requires only the ``multiprocessing``
    Python library, included by default with most Python installations.
 
 -  parallel messaging -- This allows scaling beyond the cores
@@ -76,13 +76,25 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 instance. SLURM and Torque support specification of an account parameter with
 ``-r account=your_name``, which IPython transfers into ``-A``.
 
-Specify the `SGE parallel environment`_ to use for submitting multicore jobs
-with ``-r pename=your_pe``. Since this setup
-is system specific it is hard to write general code for find a
-suitable environment. Specifically, when there are multiple usable
-parallel environments, it will select the first one which may not be
-correct. Manually specifying it with a ``pename=`` flag to resources
-will ensure correct selection of the right environment.
+SGE supports special parameters passed using resources to help handle the
+heterogeneity of possible setups. Specify the `SGE parallel environment`_ to use
+for submitting multicore jobs with ``-r pename=your_pe``. Since this setup is
+system specific it is hard to write general code for find a suitable
+environment. Specifically, when there are multiple usable parallel environments,
+it will select the first one which may not be correct. Manually specifying it
+with a ``pename=`` flag to resources will ensure correct selection of the right
+environment. To specify an advanced reservation with the ``-ar`` flag, use
+``-r ar=ar_id``. To specify an alternative memory management model instead of
+``mem_free`` use ``-r memtype=approach``. It is further recommended to configure
+``mem_free`` (or any other chosen memory management model) as a consumable, requestable
+resource in SGE to prevent overfilling hosts that do not have sufficient memory per slot. 
+This can be done in two steps. First, launch ``qmon`` as an admin,
+select ``Complex Configuration`` in qmon, click on ``mem_free`, 
+under the ``Consumable`` dialog select ``JOB`` (instead of ``YES`` or ``NO``) and
+finally click ``Modify`` for the changes to take effect. Secondly, for each host in
+the queue, configure ``mem_free`` as a complex value. If a host called ``myngshost`` 
+has 128GB of RAM, the corresponding command would be 
+``qconf -mattr exechost complex_values mem_free=128G myngshost``
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
@@ -170,10 +182,24 @@ with ``ulimit -a | grep open``. Setting open file handle limits is
 open system and cluster specific and below are tips for specific
 setups.
 
+In addition to open file handle limits (``ulimit -n``) large processes may also
+run into issues with available max user processes (``ulimit -u``). Some systems
+set a low soft limit (``ulimit -Su``) like 1024 but a higher hard limit
+(``ulimit -Hu``), allowing adjustment without root privileges. The IPython
+controllers and engines do this automatically, but the main ``bcbio_nextgen.py``
+driver process cannot. If this scheduler puts this process on the same node as
+worker processes, you may run into open file handle limits due to work happening
+on the workers. To fix this, manually set ``ulimit -u a_high_number`` as part of
+the submission process for the main process.
+
 For a Ubuntu system, edit ``/etc/security/limits.conf`` to set the
 soft and hard ``nofile`` descriptors, and edit
 ``/etc/pam.d/common-session`` to add ``pam_limits.so``. See
 `this blog post`_ for more details.
+
+For CentOS/RedHat systems, edit ``/etc/security/limits.conf`` and
+``/etc/security/limits.d/90-nproc.conf`` to `increase maximum open files and
+user limits <http://ithubinfo.blogspot.com/2013/07/how-to-increase-ulimit-open-file-and.html>`_.
 
 SGE needs configuration at the qmaster level. Invoke ``qconf -mconf``
 from a host with admin privileges, and edit ``execd_params``::

@@ -3,7 +3,7 @@ upload:
 details:
   - analysis: RNA-seq
     algorithm:
-      aligner: tophat2
+      aligner: star
       quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]

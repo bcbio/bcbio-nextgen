@@ -23,6 +23,7 @@ from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio import bam
 from bcbio import broad
+import bcbio.pipeline.datadict as dd
 
 
 _out_fnames = ["accepted_hits.sam", "junctions.bed",
@@ -46,7 +47,7 @@ def _set_transcriptome_option(options, data, ref_file):
         options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
         return options
 
-    gtf_file = data["genome_resources"]["rnaseq"].get("transcripts")
+    gtf_file = dd.get_gtf_file(data)
     if gtf_file:
         options["GTF"] = gtf_file
         return options
@@ -115,7 +116,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
         options["bowtie1"] = True
 
     out_dir = os.path.join(align_dir, "%s_tophat" % out_base)
-    final_out = os.path.join(out_dir, "%s.sam" % out_base)
+    final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):
         return final_out
 
@@ -123,7 +124,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     unmapped = os.path.join(out_dir, "unmapped.bam")
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
-        with file_transaction(out_dir) as tx_out_dir:
+        with file_transaction(config, out_dir) as tx_out_dir:
             safe_makedir(tx_out_dir)
             if pair_file and not options.get("mate-inner-dist", None):
                 d, d_stdev = _estimate_paired_innerdist(fastq_file, pair_file,
@@ -146,7 +147,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             tophat_ready = tophat_runner.bake(**ready_options)
             cmd = str(tophat_ready.bake(*files))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
-        _fix_empty_readnames(out_file)
+        _fix_empty_readnames(out_file, data)
     if pair_file and _has_alignments(out_file):
         fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.sam" % out_base),
                            ref_file, config)
@@ -155,7 +156,11 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     fixed = merge_unmapped(fixed, unmapped, config)
     fixed = _fix_unmapped(fixed, config, names)
     fixed = bam.sort(fixed, config)
-    fixed = bam.bam_to_sam(fixed, config)
+    picard = broad.runner_from_config(config)
+    # set the contig order to match the reference file so GATK works
+    fixed = picard.run_fn("picard_reorder", out_file, data["sam_ref"],
+                          os.path.splitext(out_file)[0] + ".picard.bam")
+    fixed = fix_insert_size(fixed, config)
     if not file_exists(final_out):
         symlink_plus(fixed, final_out)
     return final_out
@@ -176,13 +181,13 @@ def _has_alignments(sam_file):
                 return True
     return False
 
-def _fix_empty_readnames(orig_file):
+def _fix_empty_readnames(orig_file, data):
     """ Fix SAMfile reads with empty read names
 
     Tophat 2.0.9 sometimes outputs empty read names, making the
     FLAG field be the read name. This throws those reads away.
     """
-    with file_transaction(orig_file) as tx_out_file:
+    with file_transaction(data, orig_file) as tx_out_file:
         logger.info("Removing reads with empty read names from Tophat output.")
         with open(orig_file) as orig, open(tx_out_file, "w") as out:
             for line in orig:
@@ -202,7 +207,7 @@ def _fix_mates(orig_file, out_file, ref_file, config):
     reads as well.
     """
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
             cmd = "{samtools} view -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
@@ -222,9 +227,14 @@ def _fix_unmapped(unmapped_file, config, names):
     rg_fixed = picard.run_fn("picard_fix_rgs", unmapped_file, names)
     fixed = bam.sort(rg_fixed, config, "queryname")
     with closing(pysam.Samfile(fixed)) as work_sam:
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             tx_out = pysam.Samfile(tx_out_file, "wb", template=work_sam)
             for read1 in work_sam:
+                if not read1.is_paired:
+                    if read1.is_unmapped:
+                        read1.mapq = 0
+                    tx_out.write(read1)
+                    continue
                 read2 = work_sam.next()
                 if read1.qname != read2.qname:
                     continue
@@ -358,3 +368,30 @@ def _ref_version(ref_file):
     raise ValueError("Cannot detect which reference version %s is. "
                      "Should end in either .ebwt (bowtie) or .bt2 "
                      "(bowtie2)." % (ref_file))
+
+def fix_insert_size(in_bam, config):
+    """
+    Tophat sets PI in the RG to be the inner distance size, but the SAM spec
+    states should be the insert size. This fixes the RG in the alignment
+    file generated by Tophat header to match the spec
+    """
+    fixed_file = os.path.splitext(in_bam)[0] + ".pi_fixed.bam"
+    if file_exists(fixed_file):
+        return fixed_file
+    header_file = os.path.splitext(in_bam)[0] + ".header.sam"
+    read_length = bam.estimate_read_length(in_bam)
+    bam_handle= bam.open_samfile(in_bam)
+    header = bam_handle.header.copy()
+    rg_dict = header['RG'][0]
+    if 'PI' not in rg_dict:
+        return in_bam
+    PI = int(rg_dict.get('PI'))
+    PI = PI + 2*read_length
+    rg_dict['PI'] = PI
+    header['RG'][0] = rg_dict
+    with pysam.Samfile(header_file, "wb", header=header) as out_handle:
+        with bam.open_samfile(in_bam) as in_handle:
+            for record in in_handle:
+                out_handle.write(record)
+    shutil.move(header_file, fixed_file)
+    return fixed_file

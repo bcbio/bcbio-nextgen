@@ -1,25 +1,64 @@
-galaxy_config: universe_wsgi.ini
+# -- LIMS integration
+# nglims integration requires a Galaxy server containing
+# information about samples on each flowcell.
+galaxy_url: http://nglims.you.org/galaxy
+galaxy_apikey: apikey_from_Galaxy
+
+# -- Machine directories
+# Directoryies where Illumina puts finished flowcells
 dump_directories:
-  - /array10
-  - /array11
-  - /array12
-log_dir: /home/chapman/transfer/log
-# Notifications from the logging system via email
-#email: ngs_admin@example.com
-# Optional directory to do post-processing analysis. 
-# Needed if doing processing on the same machine as output.
-postprocess_dir: 
-# Optional directories to look for Illumina samplesheets.
-# Needed if using these samplesheets for specifying run contents.
-samplesheet_directories:
-  - /path/to/csv/samplesheets/dir
+  - /array1
+  - /array2
 # Pointer to a plain text file which will be used to keep track of 
 # directories that have already been transferred.
-msg_db: /home/chapman/transfer/transferred.db
-program:
-  olb: /home/chapman/install/OLB-1.8/OLB-1.8.0
-  olb_make: make
+msg_db: /opt/transfer/transferred.db
+# Logging output for preparation and transfer steps
+log_dir: /opt/transfer/log
+
+# -- Post-processing
+# Cores to use for processing bcl to bgzipped fastq files
 algorithm:
   num_cores: 8
-distributed:
-  rabbitmq_vhost: bionextgen
+# General options for post-processing:
+#    dir -- directory for processing/transfer
+#    storedir -- Base directory for long term storage. Needs to connect with Galaxy
+#                data libraries.
+#
+# Two approaches for running post-processing:
+# = 1. Occur on non-shared filesystem remote multicore processing machine.
+#   Specify the locaton of processing machine. Files will be rsync'ed using the
+#   provided username which assumes correct setup of passwordless ssh-keys.
+#   Starts a remote bcbio server for kicking off analysis.
+process:
+  host: workserver.you.org
+  username: bcbio_user
+  dir: /array1/bcbio
+  storedir: /galaxydata/upload/storage
+  server: http://workserver.you.org/bcbio
+# = 2. Process directly on the same machine, potentially submitting to a cluster.
+#   Supply batch script templates for running bcl2fastq and submitting bcbio jobs.
+process:
+  dir: /array1/bcbio
+  storedir: /galaxydata/upload/storage
+  submit_cmd: "qsub {batch_script}"
+  bcl2fastq_batch: |
+    #!/bin/bash -e
+    # PBS -q queue_name
+    # PBS -j oe
+    # PBS -N bcl2fastq
+    # PBS -l nodes=1;ppn={cores}
+    cd $PBS_O_WORKDIR
+    function checkpoint_err () {
+      touch {batch_script}.failed
+    }
+    trap checkpoint_err ERR
+    {bcl2fastq_cmd}
+    trap - ERR
+    touch {batch_script}.finished
+  bcbio_batch: |
+    #!/bin/bash -e
+    # PBS -q queue_name
+    # PBS -j oe
+    # PBS -N bcl2fastq
+    cd $PBS_O_WORKDIR
+    bcbio_nextgen.py {fcdir} {run_config} -t ipython -s torque -q queue_name -n 48

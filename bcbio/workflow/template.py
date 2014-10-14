@@ -39,7 +39,8 @@ def _prep_bam_input(f, i, base):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
     cur["files"] = [os.path.abspath(f)]
-    cur["description"] = sample_name(f) or os.path.splitext(os.path.basename(f))[0]
+    cur["description"] = ((sample_name(f) if f.endswith(".bam") else None)
+                          or os.path.splitext(os.path.basename(f))[0])
     return cur
 
 def _prep_fastq_input(fs, base):
@@ -56,7 +57,7 @@ def _prep_items_from_base(base, in_files):
     """Prepare a set of configuration items for input files.
     """
     details = []
-    known_exts = {".bam": "bam", ".fq": "fastq",
+    known_exts = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
                   ".fastq": "fastq", ".txt": "fastq",
                   ".fastq.gz": "fastq", ".fq.gz": "fastq",
                   ".txt.gz": "fastq", ".gz": "fastq"}
@@ -101,7 +102,7 @@ def _expand_wildcards(in_files):
 
 # ## Read and write configuration files
 
-def _read_template(template):
+def name_to_config(template):
     """Read template file into a dictionary to use as base for all samples.
 
     Handles well-known template names, pulled from GitHub repository and local
@@ -149,7 +150,7 @@ def _write_config_file(items, global_vars, template, project_name, out_dir):
         shutil.move(out_config_file,
                     out_config_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     with open(out_config_file, "w") as out_handle:
-        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_config_file
 
 def _safe_name(x):
@@ -244,7 +245,7 @@ def _add_metadata(item, metadata):
     """
     item_md = metadata.get(item["description"],
                            metadata.get(os.path.basename(item["files"][0]), {}))
-    TOP_LEVEL = set(["description"])
+    TOP_LEVEL = set(["description", "genome_build", "lane"])
     if len(item_md) > 0:
         if "metadata" not in item:
             item["metadata"] = {}
@@ -263,7 +264,7 @@ def _add_metadata(item, metadata):
     return item
 
 def setup(args):
-    template, template_txt = _read_template(args.template)
+    template, template_txt = name_to_config(args.template)
     base_item = template["details"][0]
     project_name, metadata, global_vars = _pname_and_metadata(args.metadata)
     items = [_add_metadata(item, metadata)

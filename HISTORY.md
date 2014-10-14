@@ -1,3 +1,209 @@
+## 0.8.3 (in progress)
+
+- Improve tumor/normal calling with FreeBayes, MuTect, VarDict and VarScan by
+  validating against DREAM synthetic 3 data.
+- Validate ensemble based calling for somatic analysis using multiple callers.
+- Avoid race conditions during `bedprep` work on samples with shared input BED
+  files. These are now processed sequentially on a single machine to avoid
+  conflicts. Thanks to Justin Johnson.
+- Add data checks and improved flexibility when specifying
+  joint callers. Thanks to Luca Beltrame.
+- Default to a reduced number of split regions (`nomap_split_targets` defaults
+  to 200 instead of 2000) to avoid controller memory issues with large sample
+  sizes.
+- Enable VQSR for large batches of exome samples (50 or more together) to
+  coincide with joint calling availability for large populations.
+- Bump pybedtools version to avoid potential open file handle issues. Thanks to
+  Ryan Dale.
+- Move to bgzipped and indexes human_ancestor.fa for LOFTEE to support access
+  with new samtools that no longer uses razip.
+
+## 0.8.2 (September 17, 2014)
+
+- Fix bug in creating shared regions for analysis when using a single sample in
+  multiple batches: for instance, when using a single normal sample for multiple
+  tumors. Thanks to Miika Ahdesmaki.
+- Unify approach to creating temporary directories. Allows specification of a
+  global temporary directory in `resources: tmp:` used for all
+  transactions. This enables full use of local temporary space during
+  processing, with results transferred to the shared filesystem on completion.
+- Fix issues with concatenating files that fail to work with GATK's
+  CatVariants. Fall back to bcftools concat which correctly handles problem
+  headers and overlapping segments.
+- Enable flexible specification of `indelcaller` for `variantcaller` targets
+  that do not have integrated indel methods. Thanks to Miika Ahdesmaki.
+- Move to samtools 1.0 release. Update samtools variant calling to support new
+  multiallelic approach.
+- Improve Platypus integration: correctly pass multiple BAM files, make use of
+  assembler, split MNPs, and correctly restrict to variant regions.
+- Be more aggressive with system memory usage to try and make better use of
+  available resources. The hope is to take advantage of Java memory fixes that
+  previously forced us to be conservative.
+
+## 0.8.1 (August 29, 2014)
+- Support joint recalling with GATK HapolotypeCaller, FreeBayes and Platypus. The
+  `jointcaller` configuration variable enables calling concurrently in large
+  populations by independently calling on samples them combining into a final
+  combined callset with no-call/reference calls at any position called
+  independently.
+- Add qsignature tool to standard and variant analyses, which helps identify
+  sample swaps. Add `mixup_check` configuration variant to enable.
+- Fix issue with merging GATK produced VCF files with vcfcat by swapping to
+  GATK's CatVariants. Thanks to Matt De Both.
+- Initial support for ensemble calling on cancer tumor/normal calling. Now
+  available for initial validation work. Thanks to Miika Ahdesmaki.
+- Enable structural variant analyses on shared batches (two tumors with same
+  normal). Thanks to Miika Ahdesmaki.
+- Avoid Java out of memory errors for large numbers of running processes by
+  avoiding Parallel GC collction. Thanks to Justin Johnson and Miika Ahdesmaki.
+- Enable streaming S3 input to RNA-seq and variant processing. BAM and fastq
+  inputs can stream directly into alignment and trimming steps.
+- Speed improvements for re-running samples with large numbers of samples or
+  regions.
+- Improved cluster cleanup by providing better error handling and removal of
+  controllers and engines in additional failure cases.
+- Support variant calling for organisms without dbSNP files. Thanks to Mark Rose.
+- Support the SNAP aligner, which provides improved speed on systems with
+  larger amount of memory (64Gb for human genome alignment).
+- Support the Platypus haplotype based variant caller for germline samples with
+  both batched and joint calling.
+- Fix GATK version detection when `_JAVA_OPTIONS` specified. Thanks to Miika
+  Ahdesmaki.
+- Use msgpack for ipython serialization to reduce message sizes and IPython
+  controller memory instead of homemade json/zlib approach.
+
+## 0.8.0 (July 28, 2014)
+
+- Change defaults for installation: do not use sudo default and require
+  `--sudo` flag for installing system packages. No longer includes default
+  genomes or aligners to enable more minimal installations. Users install
+  genomes by specifically enumerating them on the command line.
+- Add support for Ensembl variant effects predictor (VEP). Enables annotation
+  of variants with dbNSFP and LOFTEE. Thanks to Daniel MacArthur for VEP
+  suggestion.
+- Support CADD annotations through new GEMINI database creation support.
+- Rework parallelization during variant calling to enable additional multicore
+  parallelization for effects prediction with VEP and backfilling/squaring off
+  with bcbio-variation-recall.
+- Rework calculation of callable regions to use bedtools/pybedtools thanks to
+  groupby tricks from Aaron Quinlan. Improves speed and memory usage for
+  coverage calculations. Use local temporary directories for
+  pybedtools to avoid filling global temporary space.
+- Improve parallel region generation to avoid large numbers of segments on
+  organisms with many chromosomes.
+- Initial support for tumor normal calling with VarDict. Thanks to
+  Miika Ahdesmaki and Zhongwu Lai.
+- Provide optional support for compressing messages on large IPython jobs to
+  reduce memory usage. Enable by adding `compress_msg` to `alogrithm` section of
+  `bcbio_system.yaml`. There will be additional testing in future releases
+  before making the default, and this may be replaced by new methods like
+  transit (https://github.com/cognitect/transit-python).
+- Add de-duplication support back for pre-aligned input files. Thanks to
+  Severine Catreux.
+- Generalize SGE support to handle additional system setups. Thanks to Karl Gutwin.
+- Add reference guided transcriptome assembly with Cufflinks along with functions
+  to classify novel transcripts as protein coding or not as well as generally clean
+  the Cufflinks assembly of low quality transcripts.
+- Developer: provide datadict.py with encapsulation functions for looking up and
+  setting items in the data dictionary.
+- Unit tests fixed. Unit test data moved to external repository:
+  https://github.com/roryk/bcbio-nextgen-test-data
+- Add exon-level counting with DEXseq.
+- Bugfix: Fix for Tophat setting the PI flag as inner-distance-size and not insert size.
+- Added kraken support for contamination detection (@lpatano):
+  http://ccb.jhu.edu/software/kraken/
+- Isoform-level FPKM combined output file generated (@klrl262)
+- Use shared conda repository for tricky to install Python packages:
+  https://github.com/chapmanb/bcbio-conda
+- Added initial chanjo integration for coverage calculation (@kern3020):
+  https://github.com/robinandeer/chanjo
+- Initial support for automated evaluation of structural variant calling.
+- Bugfix: set library-type properly for Cufflinks runs.
+- Added `genome_setup.py` a script to prepare your own genome and rnaseq files.
+
+## 0.7.9 (May 19, 2014)
+
+- Redo Illumina sequencer integration to be up to date with current
+  code base. Uses external bcl2fastq demultiplexing and new bcbio integrated
+  analysis server. Provide documentation on setting up automated infrastructure.
+- Perform de-duplication of BAM files as part of streaming alignment process
+  using samblaster or biobambam's bammarkduplicates. Removes need for secondary
+  split of files and BAM preparation unless recalibration and realignment
+  needed. Enables pre-processing of input files for structural variant detection.
+- Rework batched regional analysis in variant calling to remove custom cases and
+  simplify structure. Filtering now happens explicitly on the combined batch
+  file. This is functionally equivalent to previous filters but now the workflow
+  is clearer. Avoids special cases for tumor/normal inputs.
+- Perform regional splitting of samples grouped by batch instead of globally,
+  enabling multiple organisms and experiments within a single input sample YAML.
+- Add temporary directory usage to enable use of local high speed scratch disk
+  on setups with large enough global temporary storage.
+- Update FreeBayes to latest version and provide improved filtering for high
+  depth artifacts.
+- Update VQSR support for GATK to be up to date with latest best
+  practices. Re-organize GATK and filtering to be more modular to help with
+  transition to GATK 3.x gVCF approaches.
+- Support CRAM files as input to pipeline, including retrieval of reads from
+  defined sequence regions.
+- Support export of alignment data as CRAM instead of BAM for space storage
+  and long term archiving.
+- Provide configuration option, `remove_lcr`, to filter out variants in low
+  complexity regions.
+- Improve Galaxy upload for LIMS supports: enable upload of FastQC as PDF
+  reports with wkhtmltopdf installed. Provide tabular summaries of mapped reads.
+- Improve checks for pre-aligned BAMs: ensure correct sample names and
+  provide more context on errors around mismatching reference genomes.
+- GATK HaplotypeCaller: ensure genotype depth annotation with DepthPerSampleHC
+  annotation. Enable GATK 3.1 hardware specific optimizations.
+- Use bgzipped VCFs for dbSNP, Cosmic and other resources to save disk
+  space. Upgrade to Cosmic v68.
+- Avoid VCF concatenation errors when first input file is empty. Thanks to
+  Jiantao Shi.
+- Added preliminary support for oncofuse for calling gene fusion events. Thanks
+  to @tanglingfung.
+
+## 0.7.8 (March 21, 2014)
+
+- Add a check for mis-specified FASTQ format in the sample YAML file. Thanks
+  to Alla Bushoy.
+- Updated RNA-seq integration tests to have more specific tags (singleend, Tophat,
+  STAR, explant).
+- Fix contig ordering after Tophat alignment which was preventing GATK-based
+  tools from running.
+- Allow calculation of RPKM on more deeply sampled genes by setting
+  `--max-bundle-frags` to 2,000,000. Thanks to Miika Ahdesmaki.
+- Provide cleaner installation process for non-distributable tools like
+  GATK. The `--tooplus` argument now handles jars from the GATK site or Appistry
+  and correctly updates manifest version information.
+- Use bgzipped/tabix indexed variant files throughout pipeline instead of raw
+  uncompressed VCFs. Reduces space requirements and enables parallelization on
+  non-shared filesystems or temporary space by avoiding transferring
+  uncompressed outputs.
+- Reduce memory usage during post-alignment BAM preparation steps (PrintReads
+  downsampling, deduplication and realignment prep) to avoid reaching memory cap
+  on limited systems like SLURM. Do not include for IndelRealigner which needs
+  memory in high depth regions.
+- Provide explicit targets for coverage depth (`coverage_depth_max` and
+  `coverage_depth_min`) instead of `coverage_depth` enumeration. Provide
+  downsampling of reads to max depth during post-alignment preparation to avoid
+  repetitive centromere regions with high depth.
+- Ensure read group information correctly supplied with bwa aln. Thanks to Miika
+  Ahdesmaki.
+- Fix bug in retrieval of snpEff databases on install. Thanks to Matan Hofree.
+- Fix bug in normal BAM preparation for tumor/normal variant calling. Thanks to
+  Miika Ahdesmaki.
+- General removal of GATK for variant manipulation functionality to help focus
+  on support for upcoming GATK 3.0. Use bcftools for splitting of variants into
+  SNPs and indels instead of GATK. Use vcflib's vcfintersection to combine SNPs
+  and indels instead of GATK. Use bcftools for sample selection from
+  multi-sample VCFs. Use pysam for calculation of sample coverage.
+- Use GATK 3.0 MIT licensed framework for remaining BAM and variant manipulation
+  code (PrintReads, CombineVariants) to provide one consistent up to date set of
+  functionality for GATK variant manipulation.
+- Normalize input variant_regions BED files to avoid overlapping
+  segments. Avoids out of order errors with FreeBayes caller which will call in
+  each region without flattening the input BED.
+
 ## 0.7.7 (February 27, 2014)
 
 - For cancer tumor/normal calling, attach final call information of both to

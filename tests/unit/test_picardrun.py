@@ -1,24 +1,25 @@
-import yaml
 import unittest
-from bcbio.broad.picardrun import bed2interval
-from bcbio.utils import replace_suffix
+import shutil
 import os
-from tempfile import NamedTemporaryFile
-import filecmp
+from bcbio.broad.picardrun import bed2interval
+from bcbio.utils import safe_makedir, file_exists
+import test_data
 
+from nose.plugins.attrib import attr
 
 class TestBed2interval(unittest.TestCase):
 
     def setUp(self):
-        self.config_file = "data/bed2interval/test_bed2interval.yaml"
-        with open(self.config_file) as in_handle:
-            self.config = yaml.load(in_handle)
-        self.in_file = self.config["input"]
-        self.bed = self.config["annotation"]["bed"]
-        self.correct_file = self.config["correct"]
+        self.out_dir = "test_picard"
+        safe_makedir(self.out_dir)
 
+    @attr("unit")
     def test_bed2interval(self):
-        tmpfile = NamedTemporaryFile()
-        out_file = bed2interval(self.in_file, self.bed,
-                                out_file=tmpfile.name)
-        self.assertTrue(filecmp.cmp(self.correct_file, out_file))
+        test_file = os.path.join(self.out_dir, "test.interval")
+        bam_file = test_data.BAM_FILE
+        bed_file = test_data.BED_FILE
+        out_file = bed2interval(bam_file, bed_file, out_file=test_file)
+        self.assertTrue(file_exists(out_file))
+
+    def tearDown(self):
+        shutil.rmtree(self.out_dir)

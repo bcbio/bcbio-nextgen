@@ -7,6 +7,7 @@ for human variant calling.
 
 Requires: git, Python 2.7 or argparse for earlier versions.
 """
+import collections
 import contextlib
 import datetime
 import os
@@ -22,7 +23,7 @@ remotes = {"requirements":
            "system_config":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
            "anaconda":
-           "http://repo.continuum.io/miniconda/Miniconda-3.0.0-%s-x86_64.sh"}
+           "http://repo.continuum.io/miniconda/Miniconda-3.5.5-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_dependencies()
@@ -34,9 +35,10 @@ def main(args, sys_argv):
         install_conda_pkgs(anaconda)
         bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
     print("Installing data and third party dependencies")
-    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args, bcbio))
     system_config = write_system_config(remotes["system_config"], args.datadir,
                                         args.tooldir)
+    setup_manifest(args.datadir)
+    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args, bcbio))
     print("Finished: bcbio-nextgen, tools and data installed")
     print(" Genome data installed in:\n  %s" % args.datadir)
     if args.tooldir:
@@ -84,10 +86,11 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["biopython", "boto", "cython", "ipython", "lxml", "matplotlib",
-            "nose", "numpy", "pandas", "patsy", "pycrypto", "pip", "pysam",
-            "pyyaml", "pyzmq", "requests", "scipy", "tornado", "statsmodels"]
-    channels = ["-c", "https://conda.binstar.org/faircloth-lab"]
+    pkgs = ["biopython", "boto", "cpat", "cython", "ipython", "lxml",
+            "matplotlib", "msgpack-python", "nose", "numpy", "pandas", "patsy", "pycrypto",
+            "pip", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests", "scipy",
+            "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
+    channels = ["-c", "https://conda.binstar.org/bcbio"]
     subprocess.check_call([anaconda["conda"], "install", "--yes", "numpy"])
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels + pkgs)
 
@@ -119,6 +122,13 @@ def install_anaconda_python(args, remotes):
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}
 
+def setup_manifest(datadir):
+    """Create barebones manifest to be filled in during update
+    """
+    manifest_dir = os.path.join(datadir, "manifest")
+    if not os.path.exists(manifest_dir):
+        os.makedirs(manifest_dir)
+
 def write_system_config(base_url, datadir, tooldir):
     """Write a bcbio_system.yaml configuration file with tool information.
     """
@@ -146,7 +156,8 @@ def write_system_config(base_url, datadir, tooldir):
                 elif (in_resources and line[:2] == "  " and line[2] != " "
                       and not line.strip().startswith(rewrite_ignore)):
                     in_prog = line.split(":")[0].strip()
-                elif line.strip().startswith("dir:") and in_prog:
+                # Update java directories to point to install directory, avoid special cases
+                elif line.strip().startswith("dir:") and in_prog and in_prog not in ["log", "tmp"]:
                     final_dir = os.path.basename(line.split()[-1])
                     if tooldir:
                         line = "%s: %s\n" % (line.split(":")[0],
@@ -186,6 +197,24 @@ def check_dependencies():
     except OSError:
         raise OSError("bcbio-nextgen installer requires Git (http://git-scm.com/)")
 
+def _check_toolplus(x):
+    """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
+    """
+    import argparse
+    Tool = collections.namedtuple("Tool", ["name", "fname"])
+    std_choices = set(["data", "cadd", "dbnsfp"])
+    if x in std_choices:
+        return Tool(x, None)
+    elif "=" in x and len(x.split("=")) == 2:
+        name, fname = x.split("=")
+        fname = os.path.normpath(os.path.realpath(fname))
+        if not os.path.exists(fname):
+            raise argparse.ArgumentTypeError("Unexpected --toolplus argument for %s. File does not exist: %s"
+                                             % (name, fname))
+        return Tool(name, fname)
+    else:
+        raise argparse.ArgumentTypeError("Unexpected --toolplus argument. Expect toolname=filename.")
+
 if __name__ == "__main__":
     try:
         import argparse
@@ -201,25 +230,22 @@ if __name__ == "__main__":
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
-                        action="append", default=[], choices=["protected", "data"])
+                        action="append", default=[], type=_check_toolplus)
     parser.add_argument("--genomes", help="Genomes to download",
-                        action="append", default=["GRCh37"],
-                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
+                        action="append", default=[],
+                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix", "sacCer3",
+                                 "xenTro3", "TAIR10", "WBcel235", "pseudomonas_aeruginosa_ucbpp_pa14"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
-                        action="append", default=["bwa"],
-                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+                        action="append", default=[],
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "snap", "star", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
-    parser.add_argument("--nosudo", help="Specify we cannot use sudo for commands",
-                        dest="sudo", action="store_false", default=True)
+    parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",
+                        dest="sudo", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to install",
                         choices=["stable", "development"], default="stable")
-    parser.add_argument("--tooldist",
-                        help="Type of tool distribution to install. Defaults to a minimum install.",
-                        default="minimal",
-                        choices=["minimal", "full"])
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])

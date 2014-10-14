@@ -3,17 +3,14 @@
 http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 """
 import os
-from itertools import ifilter, imap
+from itertools import ifilter
 import pysam
-import sys
 
 from bcbio.pipeline import config_utils
-from bcbio.utils import file_exists, compose
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio import bam
-
-
 
 def _bowtie2_args_from_config(config):
     """Configurable high level options for bowtie2.
@@ -36,7 +33,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
     assert analysis_config, "Analysis %s is not supported by bowtie2" % (data["analysis"])
     out_file = os.path.join(align_dir, "%s.sam" % names["lane"])
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cl = [config_utils.get_program("bowtie2", config)]
             cl += _bowtie2_args_from_config(config)
             cl += extra_args if extra_args is not None else []
@@ -48,6 +45,11 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
             else:
                 cl += ["-U", fastq_file]
             cl += ["-S", tx_out_file]
+            if names and "rg" in names:
+                cl += ["--rg-id", names["rg"]]
+                for key, tag in [("sample", "SM"), ("pl", "PL"), ("pu", "PU")]:
+                    if key in names:
+                        cl += ["--rg", "%s:%s" % (tag, names[key])]
             cl = [str(i) for i in cl]
             do.run(cl, "Aligning %s and %s with Bowtie2." % (fastq_file, pair_file),
                    None)
@@ -97,4 +99,6 @@ def _is_unique(read):
 
 
 ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
+            "variant2": {"params": ["-X", 2000]},
+            "Standard": {"params": ["-X", 2000]},
             "RNA-seq": {"params": ["--sensitive", "-X", 2000]}}

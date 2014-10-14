@@ -2,27 +2,37 @@
 """
 from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
+from bcbio.rnaseq import sailfish
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (disambiguate, lane, qcsummary, sample, shared, variation,
-                            rnaseq)
-from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
-                             recalibrate, validate, vcfutils)
+from bcbio.pipeline import (archive, disambiguate, qcsummary, sample,
+                            shared, variation, rnaseq)
+from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble,
+                             joint, multi, population, recalibrate, validate,
+                             vcfutils)
 
 @utils.map_wrap
-def process_lane(*args):
-    return lane.process_lane(*args)
+def run_sailfish(*args):
+    return sailfish.run_sailfish(*args)
 
 @utils.map_wrap
-def trim_lane(*args):
-    return lane.trim_lane(*args)
+def prepare_sample(*args):
+    return sample.prepare_sample(*args)
+
+@utils.map_wrap
+def trim_sample(*args):
+    return sample.trim_sample(*args)
 
 @utils.map_wrap
 def process_alignment(*args):
-    return lane.process_alignment(*args)
+    return sample.process_alignment(*args)
 
 @utils.map_wrap
 def postprocess_alignment(*args):
-    return lane.postprocess_alignment(*args)
+    return sample.postprocess_alignment(*args)
+
+@utils.map_wrap
+def prep_samples(*args):
+    return sample.prep_samples(*args)
 
 @utils.map_wrap
 def prep_align_inputs(*args):
@@ -45,14 +55,6 @@ def prep_recal(*args):
     return recalibrate.prep_recal(*args)
 
 @utils.map_wrap
-def write_recal_bam(*args):
-    return recalibrate.write_recal_bam(*args)
-
-@utils.map_wrap
-def realign_sample(*args):
-    return realign.realign_sample(*args)
-
-@utils.map_wrap
 def split_variants_by_sample(*args):
     return multi.split_variants_by_sample(*args)
 
@@ -65,16 +67,16 @@ def pipeline_summary(*args):
     return qcsummary.pipeline_summary(*args)
 
 @utils.map_wrap
+def qsignature_summary(*args):
+    return qcsummary.qsignature_summary(*args)
+
+@utils.map_wrap
 def generate_transcript_counts(*args):
     return rnaseq.generate_transcript_counts(*args)
 
 @utils.map_wrap
 def run_cufflinks(*args):
     return rnaseq.run_cufflinks(*args)
-
-@utils.map_wrap
-def generate_bigwig(*args):
-    return sample.generate_bigwig(*args)
 
 @utils.map_wrap
 def combine_bam(*args):
@@ -110,11 +112,15 @@ def prep_gemini_db(*args):
 
 @utils.map_wrap
 def combine_bed(*args):
-    return callable.combine_bed(*args)
+    return bedutils.combine(*args)
 
 @utils.map_wrap
 def calc_callable_loci(*args):
     return callable.calc_callable_loci(*args)
+
+@utils.map_wrap
+def combine_sample_regions(*args):
+    return callable.combine_sample_regions(*args)
 
 @utils.map_wrap
 def compare_to_rm(*args):
@@ -131,3 +137,19 @@ def run_disambiguate(*args):
 @utils.map_wrap
 def clean_chipseq_alignment(*args):
     return chipseq.clean_chipseq_alignment(*args)
+
+@utils.map_wrap
+def archive_to_cram(*args):
+    return archive.to_cram(*args)
+
+@utils.map_wrap
+def square_batch_region(*args):
+    return joint.square_batch_region(*args)
+
+@utils.map_wrap
+def cufflinks_assemble(*args):
+    return rnaseq.cufflinks_assemble(*args)
+
+@utils.map_wrap
+def cufflinks_merge(*args):
+    return rnaseq.cufflinks_merge(*args)

@@ -5,44 +5,63 @@ fc_name: tcancer
 details:
   - analysis: variant2
     description: c-normal
-    files: [HCC1143-normal.bam]
+    files: [../data/tcga_benchmark/icgc_syn3_normal.fq.gz]
     genome_build: hg19
     metadata:
       batch: [PairedBatch, PairedBatch2]
       phenotype: normal
     algorithm:
-      aligner: false
+      aligner: bwa
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [mutect, varscan, freebayes]
-      svcaller: [cn.mops]
+      variantcaller: [vardict, mutect, freebayes, varscan]
+      indelcaller: pindel
+      ensemble:
+        classifiers:
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        trusted_pct: 0.5
+      #svcaller: [cn.mops, cnvkit]
   - analysis: variant2
     description: c-tumor
-    files: [HCC1143-tumor.bam]
+    files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
     genome_build: hg19
     metadata:
       batch: PairedBatch
       phenotype: tumor
     algorithm:
-      aligner: false
+      aligner: bwa
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [mutect, varscan, freebayes]
-      svcaller: [cn.mops]
+      variantcaller: [vardict, mutect, freebayes, varscan]
+      indelcaller: pindel
+      ensemble:
+        classifiers:
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        trusted_pct: 0.5
+      min_allele_fraction: 10
+      #svcaller: [cn.mops, cnvkit]
   - analysis: variant2
     description: c-tumor2
-    files: [HCC1143-tumor.bam]
+    files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
     genome_build: hg19
     metadata:
       batch: PairedBatch2
       phenotype: tumor
     algorithm:
-      aligner: false
-      bam_clean: picard
-      mark_duplicates: false
+      aligner: bwa
+      mark_duplicates: True
       recalibrate: false
       realign: false
-      variantcaller: [mutect, varscan, freebayes]
-      svcaller: [cn.mops]
+      variantcaller: [vardict, mutect, freebayes, varscan]
+      indelcaller: pindel
+      ensemble:
+        classifiers:
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        trusted_pct: 0.5
+      min_allele_fraction: 5.0
+      #svcaller: [cn.mops, cnvkit]

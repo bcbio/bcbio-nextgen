@@ -7,9 +7,20 @@ import errno
 import json
 import socket
 
-import zmq
 import logbook.queues
 from logbook.base import LogRecord
+import zmq
+from zmq.utils.garbage import gc
+
+MAX_SOCKETS = 32000
+
+def _increase_gc_sockets():
+    """Increase default sockets for zmq gc. Avoids scaling issues.
+    https://github.com/zeromq/pyzmq/issues/471
+    """
+    ctx = zmq.Context()
+    ctx.max_sockets = MAX_SOCKETS
+    gc.context = ctx
 
 class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
 
@@ -44,6 +55,8 @@ class ZeroMQPushHandler(logbook.queues.ZeroMQHandler):
             self._context = context
         else:
             self._context = None
+        self._context.max_sockets = MAX_SOCKETS
+        _increase_gc_sockets()
         self.socket = context.socket(zmq.PUSH)
         if addr is not None:
             self.socket.connect(addr)
@@ -76,6 +89,8 @@ class ZeroMQPullSubscriber(logbook.queues.ZeroMQSubscriber):
     def __init__(self, addr=None, context=None):
         self._zmq = zmq
         self.context = context or zmq.Context.instance()
+        self.context.max_sockets = MAX_SOCKETS
+        _increase_gc_sockets()
         self.socket = self.context.socket(zmq.PULL)
         if addr is not None:
             self.socket.bind(addr)

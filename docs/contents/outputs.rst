@@ -48,8 +48,24 @@ Project directory
   calls with a wide variety of third party annotations. This provides
   a queryable framework for assessing variant quality statistics.
 
-.. _GEMINI database: https://github.com/arq5x/gemini 
+.. _GEMINI database: https://github.com/arq5x/gemini
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
 - ``SAMPLE-caller.vcf`` -- Variants calls for an individual sample.
+
+Downstream analysis
+===================
+
+This section collects useful scripts and tools to do downstream analysis of
+bcbio-nextgen outputs. If you have pointers to useful tools, please add them to
+the documentation.
+
+- `Calculate and plot coverage`_ with matplolib, from Luca Beltrame.
+- `Another way`_ to visualize coverage for targeted NGS (exome) experiments with bedtools and R, from Stephen Turner
+- assess the efficiency of targeted enrichment sequencing with `ngscat`_
+
+.. _ngscat: http://www.bioinfomgp.org/ngscat
+.. _Calculate and plot coverage:  https://github.com/chapmanb/bcbio-nextgen/issues/195#issuecomment-39071048
+.. _Another way: http://gettinggeneticsdone.blogspot.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html
+

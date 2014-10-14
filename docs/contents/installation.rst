@@ -4,25 +4,27 @@ Installation
 Automated
 =========
 
-We provide an automated script that installs 3rd party analysis tools,
-required genome data, python library dependencies bundled into a
-virtual environment, and produces a ready to use system configuration
-file::
+We provide an automated script that installs third party analysis tools,
+required genome data and python library dependencies for running human variant
+and RNA-seq analysis, bundled into an isolated directory or virtual environment::
 
      wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local
+     python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
+       --genomes GRCh37 --aligners bwa --aligners bowtie2
 
-This installs bcbio-nextgen along with third party tools and
-biological data for running human variant and RNA-seq analysis.
 It places genomes, indexes and associated data files in
-``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``.
+``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``. You should edit
+the pre-created system configuration file in
+``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml``
+to match your local system or cluster configuration.
+
 The installation is highly customizable, and you can install
 additional software and data later using ``bcbio_nextgen.py upgrade``.
 Run ``python bcbio_nextgen_install.py`` with no arguments to see options
 for configuring the installation process. Some useful arguments are:
 
-- ``--nosudo`` For running in environments where you lack administrator
-  privileges.
+- ``--sudo`` Enable installation in privileged directories and allow the
+  installer to update system packages.
 - ``--isolate`` Avoid updating the user's ``~/.bashrc`` if installing in a
   non-standard PATH. This facilitates creation of isolated modules
   without disrupting the user's environmental setup.
@@ -33,28 +35,30 @@ requirements:
 
 - Python 2.6 or 2.7, with the development libraries
   installed (the python-dev or python-devel packages).
-- Compilers: gcc and g++.
+- Compilers: Recent versions of gcc and g++. gcc 4.8.x is well tested,
+  although other versions should work fine.
 - The git version control system (http://git-scm.com/).
+- wget for file retrieval (https://www.gnu.org/software/wget/)
+- unzip
+- zlib (with development libraries)
 
-If you're using the ``--nosudo`` option, please see :ref:`isolated-install`
-for additional system requirements needed to bootstrap the full system.
-
-Some steps retrieve third party tools from GitHub, which can run into
-issues if you're behind a proxy or block git ports. To instruct git to
-use ``https://`` globally instead of ``git://``::
-
-    $ git config --global url.https://github.com/.insteadOf git://github.com/
+If you're not using the ``--sudo`` option, please see :ref:`isolated-install`
+for additional system requirements needed to bootstrap the full system on
+minimal machines. The
+`bcbio-nextgen Dockerfile <https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_
+contains bootstrap package information to install on bare Ubuntu systems.
 
 The automated installer creates a fully integrated environment that
 allows simultaneous updates of the framework, third party tools and
-biological data. This offer the advantage over manual installation of
+biological data. This offers the advantage over manual installation of
 being able to manage and evolve a consistent analysis environment as
 algorithms continue to evolve and improve. The installer is flexible
 enough to handle both system integrations into standard directories
 like /usr/local, as well as custom isolated installations in non-root
 directories. The :ref:`upgrade-install` section has additional
-documentation on including additional genome data and software tools like the
-latest commercially-restricted GATK versions and GEMINI.
+documentation on including additional genome data, and the section on
+:ref:`toolplus-install` describes how to add commercially restricted software
+like GATK.
 
 .. _isolated-install:
 
@@ -63,7 +67,8 @@ Isolated installations
 
 To install bcbio-nextgen in an isolated non-root environment::
 
-    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --nosudo --isolate
+    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --isolate \
+       --genomes GRCh37 --aligners bwa --aligners bowtie2
 
 This requires the following additional system requirements to be in place:
 
@@ -71,9 +76,8 @@ This requires the following additional system requirements to be in place:
 - Ruby
 - R with Rscript (currently optional, but increasingly used in the pipeline)
 - bzip2 (with development libraries)
-- zlib (with development libraries)
 - curl (with development libraries)
-- cmake (temporary requirement, for eventual removal)
+- curses (with development libraries)
 
 Installing this way is as isolated and self-contained as possible
 without virtual machines or lightweight system containers. To ensure
@@ -110,36 +114,130 @@ Tune the upgrade with these options:
   gets the most recent released version and ``development``
   retrieves the latest code from GitHub.
 
-- ``--toolplus`` Specify additional categories of tools to include.
-  These may require manual intervention or be data intensive. You can
-  specify the argument multiple times to include multiple extra
-  classes of tools. Available choices are:
-
-  - ``protected`` Install software that requires licensing for
-    commercial use. This includes the latest versions of GATK, which
-    need a manual download from the GATK website. The installer
-    provides full directions.
-  - ``data`` Data rich supplemental tools. A good example is
-    GEMINI, which provides rich annotation of variant calls
-    but requires download of external data sources.
+- ``--toolplus`` Specify additional tools to include. See the section on
+  :ref:`toolplus-install` for more details.
 
 - ``--genomes`` and ``--aligners`` options add additional aligner
-  indexes to download and prepare. By default we prepare a minimal
-  human genome setup. If you want to install multiple genomes or
+  indexes to download and prepare. ``bcbio_nextgen.py upgrade -h`` lists
+  available genomes and aligners. If you want to install multiple genomes or
   aligners at once, specify ``--genomes`` or ``--aligners``
   multiple times, like this:
-  ``--genomes GRCh38 --genomes GRCh37 --aligners bwa --aligners bowtie2``
+  ``--genomes GRCh37 --genomes mm10 --aligners bwa --aligners bowtie2``
 
-- Leave out the ``--tools`` option if you don't want to upgrade third
-  party tools. If using ``--tools``, it will use the same installation
-  directory as specified during installation. If you're using an older
-  version that has not yet went through a successful upgrade or
-  installation and saved the tool directory, you should manually
-  specify ``--tooldir`` for the first upgrade. You can also pass
+- Leave out the ``--tools`` option if you don't want to upgrade third party
+  tools. If using ``--tools``, it will use the same directory as specified
+  during installation. If you're using an older version that has not yet went
+  through a successful upgrade or installation and saved the tool directory, you
+  should manually specify ``--tooldir`` for the first upgrade. You can also pass
   ``--tooldir`` to install to a different directory.
 
 - Leave out the ``--data`` option if you don't want to get any upgrades
   of associated genome data.
+
+.. _toolplus-install:
+
+System requirements
+===================
+
+bcbio-nextgen provides a wrapper around external tools and data, so the actual
+tools used drive the system requirements. For small projects, it should install
+on workstations or laptops with a couple Gb of memory, and then scale as needed
+on clusters or multicore machines.
+
+Disk space requirements for the tools, including all system packages are under
+4Gb. Biological data requirements will depend on the genomes and aligner indices
+used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses
+under 25Gb of storage::
+
+    $ du -shc genomes/Hsapiens/GRCh37/*
+    3.8G  bowtie2
+    5.1G  bwa
+    3.0G  rnaseq-2014-05-02
+    3.0G  seq
+    340M  snpeff
+    4.2G  variation
+    4.4G  vep
+    23.5G total
+
+.. _extra-install:
+
+Extra software and data
+=======================
+
+We're not able to automatically install some useful tools due to licensing
+restrictions, so provide a mechanism to manually download and add these to
+bcbio-nextgen during an upgrade with the ``--toolplus`` command line. This also
+includes mechanisms to add in large annotation files not included by default.
+
+GATK and muTect
+~~~~~~~~~~~~~~~
+
+Calling variants with GATK's HaplotypeCaller or UnifiedGenotyper requires manual
+installation of the latest GATK release. This is freely available for academic
+users, but requires a manual download from the `GATK download`_ site.  Appistry
+provides `a distribution of GATK for commercial users`_.  We distribute the last
+freely available GATK-lite release (2.3.9) as part of the automated install but
+don't recommend using this for calling. If you don't want to use the restricted
+GATK version, freely available callers like FreeBayes provide a better
+alternative than older GATK versions. See the `FreeBayes and GATK comparison`_
+for a full evaluation.
+
+To install GATK, download and unzip the latest version from the GATK or Appistry
+distributions. Then make this jar available to bcbio-nextgen with::
+
+    bcbio_nextgen.py upgrade --tools --toolplus gatk=/path/to/gatk/GenomeAnalysisTK.jar
+
+This will copy the jar and update your bcbio_system.yaml and manifest files to
+reflect the new version.
+
+For muTect, we provide the latest 1.1.5 jar, but commercial users need to obtain
+the Appistry muTect distribution. To make this jar available to bcbio-nextgen::
+
+    bcbio_nextgen.py upgrade --tools --toolplus mutect=/path/to/appistry/muTect-1.1.5.jar
+
+Note that muTect does not provide an easy way to query for the current version,
+so your input jar needs to include the version in the name.
+
+GEMINI
+~~~~~~
+
+``-- toolplus`` is also used to install data rich supplemental software which is
+not installed by default such as GEMINI. We're making changes to automatically
+include these tools in the default install, but for now include  GEMINI with::
+
+    bcbio_nextgen.py upgrade --tools --toolplus data
+
+dbNSFP and CADD
+~~~~~~~~~~~~~~~
+
+Two useful databases for evaluating the potential impact of variations are
+`CADD`_ and `dbNSFP`_. They provide integrated and generalized metrics from
+multiple sources to help with prioritizing variations for follow up. The files
+are large: dbNSFP is 10Gb, expanding to 100Gb during preparation; and CADD is
+30Gb. As a result they are not included in an install by default. You can add them,
+either together or individually, using ``--toolplus``::
+
+    bcbio_nextgen.py upgrade --tools --toolplus cadd --toolplus dbnsfp --data
+
+When installed, GEMINI will automatically include `CADD`_ annotations as part of
+the created SQLite database. Setting `VEP`_ in the :ref:`variant-config`
+configuration will include annotation of VCFs with `dbNSFP`_.
+
+Both tools are freely available for non-commercial research, but require licensing
+for commercial usage.
+
+.. _CADD: http://cadd.gs.washington.edu/home
+.. _dbNSFP: https://sites.google.com/site/jpopgen/dbNSFP
+.. _VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
+.. _GATK download: http://www.broadinstitute.org/gatk/download
+.. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
+.. _FreeBayes and GATK comparison: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+
+Troubleshooting
+===============
+
+Old bcbio version support
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The upgrade approach changed slightly as of 0.7.5 to be more
 consistent.  In earlier versions, to get a full upgrade leave out the
@@ -148,6 +246,32 @@ you find the arguments are out of date is to do a ``bcbio_nextgen.py
 upgrade -u stable`` to get the latest version, then proceed
 again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
 ``bcbio_nextgen.py -u stable`` to get up to date.
+
+Proxy or firewall problems
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some steps retrieve third party tools from GitHub, which can run into
+issues if you're behind a proxy or block git ports. To instruct git to
+use ``https://`` globally instead of ``git://``::
+
+    $ git config --global url.https://github.com/.insteadOf git://github.com/
+
+
+ImportError: No module named conda.cli
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Having a PYTHONHOME or PYTHONPATH set can cause installation troubles,
+if you are seeing an error like the above, unsetting these two environment
+variables will help. Fix that with::
+
+    $ unset PYTHONHOME
+    $ unset PYTHONPATH
+
+Other import errors
+~~~~~~~~~~~~~~~~~~~
+Having a .pydistutils.cfg file in your home directory can mess with
+where the libraries get installed. If you have this file in your
+home directory, temporarily renaming it to something else may fix
+your installation issue.
 
 On a Virtual Machine
 ====================
@@ -160,16 +284,15 @@ OSX
 ~~~
 - Download and install `VirtualBox`_
 - Download and install `Vagrant for OSX`_
-- Get installer script::
+- Ensure your system has wget installed.
+- Get and run the installer script::
 
-    curl -O https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
-
-- Run the installer and follow the instructions::
-
+    mkdir bcbio && cd bcbio
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
     sh vagrant_osx.sh
 
-.. _Vagrant for OSX: http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/Vagrant-1.2.7.dmg
-.. _VirtualBox: http://download.virtualbox.org/virtualbox/4.2.16/VirtualBox-4.2.16-86992-OSX.dmg
+.. _Vagrant for OSX: http://www.vagrantup.com/downloads.html
+.. _VirtualBox: https://www.virtualbox.org/wiki/Downloads
 .. _Vagrant: http://www.vagrantup.com/
 
 Manual process

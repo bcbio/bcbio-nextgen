@@ -4,6 +4,7 @@ details:
   - analysis: chip-seq
     files: ['Hsapiens_Mmusculus_1.fq']
     algorithm:
+      aligner: bowtie2
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq]

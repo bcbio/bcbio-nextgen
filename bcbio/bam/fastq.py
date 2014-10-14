@@ -4,12 +4,14 @@
 from itertools import izip, product
 import os
 import random
+import gzip
 
 from Bio import SeqIO
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import utils
+from bcbio.utils import open_possible_gzip
 
 
 @utils.memoize_outfile(stem=".groom")
@@ -121,14 +123,16 @@ def combine_pairs(input_files):
                 continue
             a = rstrip_extra(utils.splitext_plus(os.path.basename(in_file))[0])
             b = rstrip_extra(utils.splitext_plus(os.path.basename(comp_file))[0])
+            if len(a) != len(b):
+                continue
             s = dif(a,b)
             if len(s) > 1:
                 continue #there is only 1 difference
             if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
                   b[s[0]] in PAIR_FILE_IDENTIFIERS):
- 
-                if b[s[0]- 1] in ("R", "_", "-"):
-                  
+
+                if b[s[0]- 1] in ("R", "_", "-", "."):
+
                             used.add(in_file)
                             used.add(comp_file)
                             if b[s[0]] == "2":
@@ -148,7 +152,7 @@ def dif(a, b):
 
 
 def is_fastq(in_file):
-    fastq_ends = [".fq", ".fastq"]
+    fastq_ends = [".txt", ".fq", ".fastq"]
     zip_ends = [".gzip", ".gz"]
     base, first_ext = os.path.splitext(in_file)
     second_ext = os.path.splitext(base)[1]
@@ -173,8 +177,8 @@ def downsample(f1, f2, data, N, quick=False):
         N = records if N > records else N
         rand_records = random.sample(xrange(records), N)
 
-    fh1 = open(f1)
-    fh2 = open(f2) if f2 else None
+    fh1 = open_possible_gzip(f1)
+    fh2 = open_possible_gzip(f2) if f2 else None
     outf1 = os.path.splitext(f1)[0] + ".subset" + os.path.splitext(f1)[1]
     outf2 = os.path.splitext(f2)[0] + ".subset" + os.path.splitext(f2)[1] if f2 else None
 
@@ -191,8 +195,8 @@ def downsample(f1, f2, data, N, quick=False):
             tx_out_f1 = tx_out_files
         else:
             tx_out_f1, tx_out_f2 = tx_out_files
-        sub1 = open(tx_out_f1, "w")
-        sub2 = open(tx_out_f2, "w") if outf2 else None
+        sub1 = open_possible_gzip(tx_out_f1, "w")
+        sub2 = open_possible_gzip(tx_out_f2, "w") if outf2 else None
         rec_no = - 1
         for rr in rand_records:
             while rec_no < rr:
@@ -228,3 +232,12 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
             break
     in_handle.close()
     return average
+
+def open_fastq(in_file):
+    """ open a fastq file, using gzip if it is gzipped
+    """
+    _, ext = os.path.splitext(in_file)
+    if ext == ".gz":
+        return gzip.open(in_file, 'rb')
+    if ext in [".fastq", ".fq"]:
+        return open(in_file, 'r')

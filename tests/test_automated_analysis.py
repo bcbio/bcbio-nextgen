@@ -85,10 +85,10 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-                         DlInfo("genomes_automated_test.tar.gz", "genomes", 13),
+                         DlInfo("genomes_automated_test.tar.gz", "genomes", 19),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
-                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 5),
-                         DlInfo("tcga_benchmark.tar.gz", None, 2)]
+                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 8),
+                         DlInfo("tcga_benchmark.tar.gz", None, 3)]
         for dl in download_data:
             url = "http://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
             dirname = os.path.join(data_dir, os.pardir,
@@ -143,6 +143,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(stranded=True)
+    @attr(rnaseq=True)
     def test_2_stranded(self):
         """Run an RNA-seq analysis with TopHat and generate gene-level counts.
         """
@@ -167,7 +168,20 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-rnaseq.yaml")]
             subprocess.check_call(cl)
 
-    @expected_failure
+    @attr(rnaseq=True)
+    @attr(sailfish=True)
+    @unittest.skip('sailfish support is in progress, skipping the unit test.')
+    def test_2_sailfish(self):
+        """Run an RNA-seq analysis with Sailfish
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
+                  os.path.join(self.data_dir, "run_info-sailfish.yaml")]
+            subprocess.check_call(cl)
+
     @attr(fusion=True)
     def test_2_fusion(self):
         """Run an RNA-seq analysis and test fusion genes
@@ -175,8 +189,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
-                  "/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml",
-                  # get_post_process_yaml(self.data_dir, workdir),
+                  get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "test_fusion"),
                   os.path.join(self.data_dir, "run_info-fusion.yaml")]
             subprocess.check_call(cl)
@@ -195,6 +208,8 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(explant=True)
+    @attr(singleend=True)
+    @attr(rnaseq=True)
     def test_explant(self):
         """
         Run an explant RNA-seq analysis with TopHat and generate gene-level counts.
@@ -242,7 +257,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
                   get_post_process_yaml(self.data_dir, workdir),
-                  os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]
             subprocess.check_call(cl)
 
@@ -260,6 +274,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
 
     @attr(speed=2)
     @attr(cancer=True)
+    @attr(cancermulti=True)
     def test_7_cancer(self):
         """Test paired tumor-normal calling using multiple calling approaches: MuTect, VarScan, FreeBayes.
         """
@@ -267,14 +282,13 @@ class AutomatedAnalysisTest(unittest.TestCase):
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
                   get_post_process_yaml(self.data_dir, workdir),
-                  os.path.join(self.data_dir, os.pardir, "tcga_benchmark"),
                   os.path.join(self.data_dir, "run_info-cancer.yaml")]
             subprocess.check_call(cl)
 
     @attr(cancer=True)
+    @attr(cancerpanel=True)
     def test_7_cancer_nonormal(self):
         """Test cancer calling without normal samples or with normal VCF panels.
-        XXX Not yet working
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
@@ -296,6 +310,17 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_1_fastq.txt"),
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_2_fastq.txt"),
                   os.path.join(fc_dir, "8_100326_FC6107FAAXX.bam")]
+            subprocess.check_call(cl)
+
+    @attr(joint=True)
+    def test_9_joint(self):
+        """Perform joint calling/backfilling/squaring off following variant calling.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, "run_info-joint.yaml")]
             subprocess.check_call(cl)
 
     @attr(docker=True)

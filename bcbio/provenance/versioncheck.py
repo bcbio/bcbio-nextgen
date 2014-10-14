@@ -19,6 +19,11 @@ def samtools(config, items):
                 "Please upgrade to the latest version "
                 "from http://samtools.sourceforge.net/")
 
+def _has_pipeline(items):
+    """Only perform version checks when we're running an analysis pipeline.
+    """
+    return any(item.get("analysis", "") != "" for item in items)
+
 def _is_variant(items):
     return any(item.get("analysis", "").lower().startswith("variant") for item in items)
 
@@ -30,7 +35,8 @@ def java(config, items):
         java = config_utils.get_program("java", config)
     except config_utils.CmdNotFound:
         return ("java not found on PATH. Java %s or better required." % want_version)
-    p = subprocess.Popen([java, "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen([java, "-Xms250m", "-Xmx250m", "-version"],
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
     p.stdout.close()
     version = ""
@@ -50,10 +56,11 @@ def testall(items):
     items = [x[0] for x in items]
     config = items[0]["config"]
     msgs = []
-    for fn in [samtools, java]:
-        out = fn(config, items)
-        if out:
-            msgs.append(out)
+    if _has_pipeline(items):
+        for fn in [samtools, java]:
+            out = fn(config, items)
+            if out:
+                msgs.append(out)
     if msgs:
         raise OSError("Program problems found. You can upgrade dependencies with:\n" +
                       "bcbio_nextgen.py upgrade -u skip --tooldir=/usr/local\n\n" +

@@ -2,11 +2,17 @@
 """
 import collections
 import copy
+import operator
 
-from bcbio.structural import cn_mops, lumpy
+import toolz as tz
 
-_CALLERS = {"lumpy": lumpy.run}
-_BATCH_CALLERS = {"cn.mops": cn_mops.run}
+from bcbio.structural import cn_mops, cnvkit, delly, ensemble, lumpy, validate
+from bcbio.variation import vcfutils
+
+_CALLERS = {}
+_BATCH_CALLERS = {"cn.mops": cn_mops.run, "cnvkit": cnvkit.run,
+                  "delly": delly.run, "lumpy": lumpy.run}
+_NEEDS_BACKGROUND = set(["cn.mops", "cnvkit"])
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
@@ -30,17 +36,22 @@ def _handle_multiple_svcallers(data):
 def _combine_multiple_svcallers(samples):
     """
     """
-    by_bam = collections.defaultdict(list)
+    by_bam = collections.OrderedDict()
     for x in samples:
-        by_bam[x[0]["work_bam"]].append(x[0])
+        try:
+            by_bam[x[0]["align_bam"]].append(x[0])
+        except KeyError:
+            by_bam[x[0]["align_bam"]] = [x[0]]
     out = []
-    for grouped_calls in by_bam.itervalues():
+    for grouped_calls in by_bam.values():
         def orig_svcaller_order(x):
             return _get_svcallers(x).index(x["config"]["algorithm"]["svcaller_active"])
         sorted_svcalls = sorted([x for x in grouped_calls if "sv" in x],
                                 key=orig_svcaller_order)
-        final_calls = [x["sv"] for x in sorted_svcalls]
+        final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
         final = grouped_calls[0]
+        final_calls = ensemble.summarize(final_calls, final)
+        final_calls = validate.evaluate(final, final_calls)
         final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]
         out.append([final])
@@ -49,26 +60,31 @@ def _combine_multiple_svcallers(samples):
 def run(samples, run_parallel):
     """Run structural variation detection using configured methods.
     """
-    to_process = collections.defaultdict(list)
+    to_process = collections.OrderedDict()
     extras = []
+    background = []
     for data in (xs[0] for xs in samples):
         ready_data = _handle_multiple_svcallers(data)
         if len(ready_data) > 0:
+            background.append(data)
             for x in ready_data:
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
                 batch = x.get("metadata", {}).get("batch")
                 if svcaller in _BATCH_CALLERS and batch:
                     batches = batch if isinstance(batch, (list, tuple)) else [batch]
                     for b in batches:
-                        to_process[b].append(x)
+                        try:
+                            to_process[(svcaller, b)].append(x)
+                        except KeyError:
+                            to_process[(svcaller, b)] = [x]
                 else:
-                    to_process[x["name"][-1]] = [x]
+                    to_process[tz.get_in(["rgnames", "sample"], x)] = [x]
         else:
             extras.append([data])
-    processed = run_parallel("detect_sv", ([xs, xs[0]["config"]] for xs in to_process.itervalues()))
+    processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"]] for xs in to_process.values()))
     return extras + _combine_multiple_svcallers(processed)
 
-def detect_sv(items, config):
+def detect_sv(items, all_items, config):
     """Top level parallel target for examining structural variation.
     """
     svcaller = config["algorithm"].get("svcaller_active")
@@ -80,8 +96,15 @@ def detect_sv(items, config):
             data["sv"] = _CALLERS[svcaller](data)
             out.append([data])
         elif svcaller in _BATCH_CALLERS:
-            for svdata in _BATCH_CALLERS[svcaller](items):
-                out.append([svdata])
+            if (svcaller in _NEEDS_BACKGROUND and
+                  not vcfutils.is_paired_analysis([x.get("align_bam") for x in items], items)):
+                names = set([tz.get_in(["rgnames", "sample"], x) for x in items])
+                background = [x for x in all_items if tz.get_in(["rgnames", "sample"], x) not in names]
+                for svdata in _BATCH_CALLERS[svcaller](items, background):
+                    out.append([svdata])
+            else:
+                for svdata in _BATCH_CALLERS[svcaller](items):
+                    out.append([svdata])
         else:
             raise ValueError("Unexpected structural variant caller: %s" % svcaller)
     else:

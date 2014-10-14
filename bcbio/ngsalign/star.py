@@ -1,20 +1,32 @@
-from os import path
-import tempfile
+import os
+import sys
 
 from bcbio.pipeline import config_utils
-from bcbio.utils import safe_makedir, file_exists, get_in
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.utils import (safe_makedir, file_exists, is_gzipped)
 from bcbio.provenance import do
-from bcbio import broad
-from bcbio import bam
+from bcbio import bam, utils
+from bcbio.log import logger
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
+ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
-    out_prefix = path.join(align_dir, names["lane"])
+    out_prefix = os.path.join(align_dir, names["lane"])
     out_file = out_prefix + "Aligned.out.sam"
-    if file_exists(out_file):
-        return out_file
+    out_dir = os.path.join(align_dir, "%s_star" % names["lane"])
+
+    if not ref_file:
+        logger.error("STAR index not found. We don't provide the STAR indexes "
+                     "by default because they are very large. You can install "
+                     "the index for your genome with: bcbio_nextgen.py upgrade "
+                     "--aligners star --genomes genome-build-name --data")
+        sys.exit(1)
+
+    final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
+    if file_exists(final_out):
+        return final_out
     star_path = config_utils.get_program("STAR", config)
     fastq = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = config["algorithm"].get("num_cores", 1)
@@ -23,45 +35,25 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq} "
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
            "--outReadsUnmapped Fastx --outFilterMultimapNmax 10 "
-           "--outSAMunmapped Within")
+           "--outStd SAM "
+           "--outSAMunmapped Within --outSAMattributes %s" % " ".join(ALIGN_TAGS))
+    cmd = cmd + " --readFilesCommand zcat " if is_gzipped(fastq_file) else cmd
     cmd += _read_group_option(names)
-    fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
+    fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
     if fusion_mode:
         cmd += " --chimSegmentMin 15 --chimJunctionOverhangMin 15"
-    strandedness = get_in(data, ("config", "algorithm", "strandedness"),
-                          "unstranded").lower()
+    strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
+                                "unstranded").lower()
     if strandedness == "unstranded":
-        cmd += " --outSAMstrandField intronMotif"
-    run_message = "Running STAR aligner on %s and %s." % (pair_file, ref_file)
-    do.run(cmd.format(**locals()), run_message, None)
-    picard = broad.runner_from_config(config)
-    out_file = bam.sam_to_bam(out_file, config)
-    out_file = _fix_sam_header(out_file, config)
-    return out_file
-
-def _fix_sam_header(in_file, config):
-    """
-    STAR outputs a duplicate cl: line in the header which breaks some downstream
-    tools like FastQC
-    https://groups.google.com/d/msg/rna-star/xxE4cUnafJQ/EUsgYId-dB8J
-    This can be safely removed whenever that bug gets fixed.
-    """
-    with bam.open_samfile(in_file) as in_handle:
-        header = in_handle.header
-    with tempfile.NamedTemporaryFile(delete=False) as header_handle:
-        for key, line in header.items():
-            line_key = "@" + str(key)
-            for line_item in line:
-                out_line = [line_key]
-                out_line += [":".join([str(k), str(v)])
-                             for k, v in line_item.items()
-                             if k != "cl"]
-                header_handle.write("\t".join(out_line) + "\n")
-    header_name = header_handle.name
-    header_handle.close()
-
-    return bam.reheader(header_name, in_file, config)
-
+        cmd += " --outSAMstrandField intronMotif "
+    with tx_tmpdir(data) as tmp_dir:
+        sam_to_bam = bam.sam_to_bam_stream_cmd(config)
+        sort = bam.sort_cmd(config, tmp_dir)
+        cmd += "| {sam_to_bam} | {sort} -o {tx_final_out} "
+        run_message = "Running STAR aligner on %s and %s." % (fastq_file, ref_file)
+        with file_transaction(data, final_out) as tx_final_out:
+            do.run(cmd.format(**locals()), run_message, None)
+    return final_out
 
 def _read_group_option(names):
     rg_id = names["rg"]
@@ -84,4 +76,4 @@ def _get_quality_format(config):
 def remap_index_fn(ref_file):
     """Map sequence references to equivalent star indexes
     """
-    return path.join(path.dirname(path.dirname(ref_file)), "star")
+    return os.path.join(os.path.dirname(os.path.dirname(ref_file)), "star")

@@ -4,11 +4,13 @@ runs of this step.
 """
 import os
 
+import toolz as tz
+
 from bcbio import bam, broad, utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
-from bcbio.variation import realign, recalibrate
+from bcbio.variation import realign
 
 # ## GATK/Picard preparation
 
@@ -22,17 +24,20 @@ def region_to_gatk(region):
 def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
     """Use GATK to extract reads from full BAM file, recalibrating if configured.
     """
-    broad_runner = broad.runner_from_config(data["config"])
     args = ["-T", "PrintReads",
             "-L", region_to_gatk(region),
             "-R", data["sam_ref"],
             "-I", data["work_bam"]]
+    if prep_params.get("max_depth"):
+        args += ["--downsample_to_coverage", str(prep_params["max_depth"])]
     if prep_params["recal"] == "gatk":
         if _recal_has_reads(data["prep_recal"]):
             args += ["-BQSR", data["prep_recal"]]
     elif prep_params["recal"]:
         raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
-    return broad_runner.cl_gatk(args, tmp_dir)
+    jvm_opts = broad.get_gatk_framework_opts(data["config"],
+                                             memscale={"direction": "decrease", "magnitude": 3})
+    return [config_utils.get_program("gatk-framework", data["config"])] + jvm_opts + args
 
 def _recal_has_reads(in_file):
     with open(in_file) as in_handle:
@@ -40,30 +45,9 @@ def _recal_has_reads(in_file):
 
 def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
     """Retrieve the commandline for streaming input into preparation step.
-    If marking duplicates, this requires writing an intermediate file since
-    MarkDuplicates uses multiple passed on an input.
     """
-    broad_runner = broad.runner_from_config(data["config"])
     cl = _gatk_extract_reads_cl(data, region, prep_params, tmp_dir)
-    if prep_params["dup"] == "picard":
-        sel_file = "%s-select%s" % os.path.splitext(out_base_file)
-        if not utils.file_exists(sel_file):
-            with file_transaction(sel_file) as tx_out_file:
-                cl += ["-o", tx_out_file]
-                do.run_memory_retry(cl, "GATK: PrintReads", data, region=region)
-        dup_metrics = "%s-dup.dup_metrics" % os.path.splitext(out_base_file)[0]
-        compression = "5" if prep_params["realign"] == "gatk" else "0"
-        cl = broad_runner.cl_picard("MarkDuplicates",
-                                    [("INPUT", sel_file),
-                                     ("OUTPUT", "/dev/stdout"),
-                                     ("METRICS_FILE", dup_metrics),
-                                     ("PROGRAM_RECORD_ID", "null"),
-                                     ("COMPRESSION_LEVEL", compression),
-                                     ("TMP_DIR", tmp_dir)])
-    elif not prep_params["dup"]:
-        sel_file = data["work_bam"]
-    else:
-        raise ValueError("Duplication approach not supported with GATK: %s" % prep_params["dup"])
+    sel_file = data["work_bam"]
     bam.index(sel_file, data["config"])
     return sel_file, " ".join(cl)
 
@@ -74,13 +58,12 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
     broad_runner = broad.runner_from_config(data["config"])
     pa_bam = "%s-prealign%s" % os.path.splitext(out_base_file)
     if not utils.file_exists(pa_bam):
-        with file_transaction(pa_bam) as tx_out_file:
-            pipe = ">" if prep_params["dup"] else "-o"
-            cmd = "{cl} {pipe} {tx_out_file}".format(**locals())
+        with file_transaction(data, pa_bam) as tx_out_file:
+            cmd = "{cl} -o {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
     bam.index(pa_bam, data["config"])
-    dbsnp_vcf = data["genome_resources"]["variation"]["dbsnp"]
-    recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
+    dbsnp_vcf = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
+    recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"], data["config"],
                                                 dbsnp=dbsnp_vcf, region=region_to_gatk(region))
     recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],
                                                  recal_file, tmp_dir, region=region_to_gatk(region))
@@ -106,82 +89,13 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
                                                prep_params)
     else:
         raise NotImplementedError("Realignment method: %s" % prep_params["realign"])
-    with file_transaction(out_file) as tx_out_file:
-        out_flag = ("-o" if prep_params["realign"] == "gatk"
-                    or (not prep_params["realign"] and not prep_params["dup"])
+    with file_transaction(data, out_file) as tx_out_file:
+        out_flag = ("-o" if (prep_params["realign"] == "gatk"
+                             or not prep_params["realign"])
                     else ">")
         cmd = "{cl} {out_flag} {tx_out_file}".format(**locals())
         do.run(cmd, "GATK: realign {0}".format(region), data)
         _cleanup_tempfiles(data, [cur_bam, prerecal_bam])
-
-# ## Full-piped approaches
-
-def _piped_dedup_recal_cmd(data, prep_params, tmp_dir, out_file):
-    """Generate de-duplication and recalibration commandline.
-    """
-    if prep_params["dup"] == "bamutil":
-        assert prep_params["recal"] in ["bamutil", False], \
-            "Cannot handle recalibration approach %s with bamutil dedup" % prep_params["recal"]
-        out_stream = "-.ubam" if prep_params["realign"] else "-.bam"
-        return "| " + recalibrate.bamutil_dedup_recal_cl("-.ubam", out_stream, data,
-                                                         prep_params["recal"] == "bamutil")
-    elif prep_params["dup"] == "samtools":
-        samtools = config_utils.get_program("samtools", data["config"])
-        return "| " + "{samtools} rmdup - -".format(**locals())
-    elif prep_params["dup"] == "biobambam":
-        biobambam_md = config_utils.get_program("bammarkduplicates2", data["config"])
-        num_cores = 1
-        compression_level = 1 if prep_params.get("realign") else 9
-        tmpfile = os.path.join(tmp_dir, "%s-md" % os.path.splitext(os.path.basename(out_file))[0])
-        metrics_file = "%s-dupmetrics.txt" % (os.path.splitext(out_file)[0])
-        return ("| {biobambam_md} level={compression_level} markthreads={num_cores} verbose=0 "
-                "M={metrics_file} tmpfile={tmpfile}".format(**locals()))
-    elif prep_params["dup"]:
-        raise ValueError("Unexpected deduplication approach: %s" % prep_params["dup"])
-    else:
-        return ""
-
-def _piped_realign_cmd(data, prep_params, tmp_dir):
-    """Generate piped realignment commandline.
-    """
-    if prep_params["realign"] == "gkno":
-        return "| " + realign.gkno_realigner_cl(data["sam_ref"], data["config"])
-    elif prep_params["realign"]:
-        raise ValueError("Unexpected realignment approach: %s" % prep_params["realign"])
-    else:
-        return ""
-
-def _piped_extract_recal_cmd(data, region, prep_params, tmp_dir):
-    """Extract region to process, potentially performing recalibration.
-    Combines extraction and recalibration supported by GATK.
-    """
-    config = data["config"]
-    samtools = config_utils.get_program("samtools", config)
-    out_type = "-u" if prep_params["dup"] or prep_params["realign"] else "-b"
-    if not prep_params.get("recal"):
-        prep_region = region_to_gatk(region)
-        in_file = data["work_bam"]
-        cmd = "{samtools} view {out_type} {in_file} {prep_region}"
-        return cmd.format(**locals())
-    elif prep_params["recal"] == "gatk":
-        cl = _gatk_extract_reads_cl(data, region, prep_params, tmp_dir)
-        cl += ["--logging_level", "ERROR"]
-        cmd = "{samtools} view -S {out_type} -"
-        return " ".join(cl) + " | " + cmd.format(**locals())
-    else:
-        raise ValueError("Unexpected recalibration approach: %s" % prep_params["recal"])
-
-def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir):
-    """Perform fully piped BAM preparation using non-GATK/Picard tools.
-    """
-    with file_transaction(out_file) as tx_out_file:
-        extract_recal_cmd = _piped_extract_recal_cmd(data, region, prep_params, tmp_dir)
-        dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir, out_file)
-        realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
-        cmd = "{extract_recal_cmd} {dedup_cmd} {realign_cmd}  > {tx_out_file}"
-        cmd = cmd.format(**locals())
-        do.run_memory_retry(cmd, "Piped post-alignment bamprep {0}".format(region), data,
-                            region=region)
 
 # ## Shared functionality
 
@@ -189,42 +103,47 @@ def _get_prep_params(data):
     """Retrieve configuration parameters with defaults for preparing BAM files.
     """
     algorithm = data["config"]["algorithm"]
-    dup_param = algorithm.get("mark_duplicates", True)
-    dup_param = "picard" if dup_param is True else dup_param
     recal_param = algorithm.get("recalibrate", True)
     recal_param = "gatk" if recal_param is True else recal_param
     realign_param = algorithm.get("realign", True)
     realign_param = "gatk" if realign_param is True else realign_param
-    all_params = set([dup_param, realign_param])
-    return {"dup": dup_param, "recal": recal_param, "realign": realign_param,
-            "all_pipe": "gatk" not in all_params and "picard" not in all_params}
+    max_depth = algorithm.get("coverage_depth_max", 10000)
+    return {"recal": recal_param, "realign": realign_param,
+            "max_depth": max_depth}
+
+def _need_prep(data):
+    prep_params = _get_prep_params(data)
+    return prep_params["recal"] or prep_params["realign"]
 
 def _piped_bamprep_region(data, region, out_file, tmp_dir):
     """Do work of preparing BAM input file on the selected region.
     """
-    prep_params = _get_prep_params(data)
-    if prep_params["all_pipe"]:
-        _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
-    else:
+    if _need_prep(data):
+        prep_params = _get_prep_params(data)
         _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir)
+    else:
+        raise ValueError("No recalibration or realignment specified")
 
 def piped_bamprep(data, region=None, out_file=None):
     """Perform full BAM preparation using pipes to avoid intermediate disk IO.
 
-    Handles de-duplication, recalibration and realignment of original BAMs.
+    Handles recalibration and realignment of original BAMs.
     """
-    utils.safe_makedir(os.path.dirname(out_file))
-    if region[0] == "nochrom":
-        prep_bam = shared.write_nochr_reads(data["work_bam"], out_file, data["config"])
-    elif region[0] == "noanalysis":
-        prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file,
-                                                 data["config"])
-    else:
-        if not utils.file_exists(out_file):
-            with utils.curdir_tmpdir() as tmp_dir:
-                _piped_bamprep_region(data, region, out_file, tmp_dir)
-        prep_bam = out_file
-    bam.index(prep_bam, data["config"])
-    data["work_bam"] = prep_bam
     data["region"] = region
-    return [data]
+    if not _need_prep(data):
+        return [data]
+    else:
+        utils.safe_makedir(os.path.dirname(out_file))
+        if region[0] == "nochrom":
+            prep_bam = shared.write_nochr_reads(data["work_bam"], out_file, data["config"])
+        elif region[0] == "noanalysis":
+            prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file,
+                                                     data["config"])
+        else:
+            if not utils.file_exists(out_file):
+                with tx_tmpdir(data) as tmp_dir:
+                    _piped_bamprep_region(data, region, out_file, tmp_dir)
+            prep_bam = out_file
+        bam.index(prep_bam, data["config"])
+        data["work_bam"] = prep_bam
+        return [data]

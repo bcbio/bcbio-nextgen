@@ -1,7 +1,9 @@
 """Pipeline functionality shared amongst multiple analysis types.
 """
 import os
-from contextlib import closing
+from contextlib import closing, contextmanager
+import functools
+import tempfile
 
 try:
     import pybedtools
@@ -9,10 +11,10 @@ except ImportError:
     pybedtools = None
 import pysam
 
-from bcbio import bam, broad
+from bcbio import bam, broad, utils
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.provenance import do
 
 # ## Split/Combine helpers
@@ -68,7 +70,7 @@ def write_nochr_reads(in_file, out_file, config):
     that split processing by chromosome.
     """
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
             cmd = "{samtools} view -b -f 4 {in_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Select unmapped reads")
@@ -81,19 +83,20 @@ def write_noanalysis_reads(in_file, region_file, out_file, config):
     the BAM index to perform well on large files. The tricky part is avoiding
     command line limits. There is a nice discussion on SeqAnswers:
     http://seqanswers.com/forums/showthread.php?t=29538
+    sambamba supports intersection via an input BED file so avoids command line
+    length issues.
     """
     if not file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(config, out_file) as tx_out_file:
             bedtools = config_utils.get_program("bedtools", config)
-            samtools = config_utils.get_program("samtools", config)
-            region_str = " ".join("%s:%s-%s" % tuple(r) for r in pybedtools.BedTool(region_file))
-            cl = ("{samtools} view -b {in_file} {region_str} | "
+            sambamba = config_utils.get_program("sambamba", config)
+            cl = ("{sambamba} view -f bam -L {region_file} {in_file} | "
                   "{bedtools} intersect -abam - -b {region_file} -f 1.0 "
                   "> {tx_out_file}")
             do.run(cl.format(**locals()), "Select unanalyzed reads")
     return out_file
 
-def subset_bam_by_region(in_file, region, out_file_base=None):
+def subset_bam_by_region(in_file, region, config, out_file_base=None):
     """Subset BAM files based on specified chromosome region.
     """
     if out_file_base is not None:
@@ -107,7 +110,7 @@ def subset_bam_by_region(in_file, region, out_file_base=None):
             assert region is not None, \
                    "Did not find reference region %s in %s" % \
                    (region, in_file)
-            with file_transaction(out_file) as tx_out_file:
+            with file_transaction(config, out_file) as tx_out_file:
                 with closing(pysam.Samfile(tx_out_file, "wb", template=in_bam)) as out_bam:
                     for read in in_bam:
                         if read.tid == target_tid:
@@ -122,19 +125,58 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
                     out_handle.write(line)
 
 
-def _subset_bed_by_region(in_file, out_file, region):
+def _subset_bed_by_region(in_file, out_file, region, do_merge=True):
     orig_bed = pybedtools.BedTool(in_file)
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
-    def _ensure_minsize(x):
-        while len(x) < 1:
-            if x.start > 0:
-                x.start -= 1
-            else:
-                x.end += 1
-        return x
-    orig_bed.intersect(region_bed).each(_ensure_minsize).merge().saveas(out_file)
+    if do_merge:
+        orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).merge().saveas(out_file)
+    else:
+        orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).saveas(out_file)
 
-def subset_variant_regions(variant_regions, region, out_file):
+def get_lcr_bed(items):
+    lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
+    do_lcr = any([utils.get_in(data, ("config", "algorithm", "remove_lcr"), False)
+                  for data in items])
+    if do_lcr and lcr_bed and os.path.exists(lcr_bed):
+        return lcr_bed
+
+def remove_lcr_regions(orig_bed, items):
+    """If configured and available, update a BED file to remove low complexity regions.
+    """
+    lcr_bed = get_lcr_bed(items)
+    if lcr_bed:
+        nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
+        with file_transaction(items[0], nolcr_bed) as tx_nolcr_bed:
+            pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed)).saveas(tx_nolcr_bed)
+        # If we have a non-empty file, convert to the LCR subtracted for downstream analysis
+        if utils.file_exists(nolcr_bed):
+            orig_bed = nolcr_bed
+    return orig_bed
+
+@contextmanager
+def bedtools_tmpdir(data):
+    with tx_tmpdir(data) as tmpdir:
+        orig_tmpdir = tempfile.gettempdir()
+        pybedtools.set_tempdir(tmpdir)
+        yield
+        if orig_tmpdir and os.path.exists(orig_tmpdir):
+            pybedtools.set_tempdir(orig_tmpdir)
+        else:
+            tempfile.tempdir = None
+
+def subtract_low_complexity(f):
+    """Remove low complexity regions from callable regions if available.
+    """
+    @functools.wraps(f)
+    def wrapper(variant_regions, region, out_file, items=None, do_merge=True):
+        region_bed = f(variant_regions, region, out_file, items, do_merge)
+        if region_bed and isinstance(region_bed, basestring) and os.path.exists(region_bed) and items:
+            region_bed = remove_lcr_regions(region_bed, items)
+        return region_bed
+    return wrapper
+
+@subtract_low_complexity
+def subset_variant_regions(variant_regions, region, out_file, items=None, do_merge=True):
     """Return BED file subset by a specified chromosome region.
 
     variant_regions is a BED file, region is a chromosome name or tuple
@@ -147,13 +189,13 @@ def subset_variant_regions(variant_regions, region, out_file):
     elif not isinstance(region, (list, tuple)) and region.find(":") > 0:
         raise ValueError("Partial chromosome regions not supported")
     else:
-        subset_file = "{0}-regions.bed".format(os.path.splitext(out_file)[0])
+        merge_text = "-unmerged" if not do_merge else ""
+        subset_file = "{0}".format(utils.splitext_plus(out_file)[0])
+        subset_file += "%s-regions.bed" % (merge_text)
         if not os.path.exists(subset_file):
-            with file_transaction(subset_file) as tx_subset_file:
+            with file_transaction(items[0] if items else None, subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
-                    c, s, e = region
-                    safe_region = [c, s, e - 2]
-                    _subset_bed_by_region(variant_regions, tx_subset_file, safe_region)
+                    _subset_bed_by_region(variant_regions, tx_subset_file, region, do_merge = do_merge)
                 else:
                     _rewrite_bed_with_chrom(variant_regions, tx_subset_file, region)
         if os.path.getsize(subset_file) == 0:
