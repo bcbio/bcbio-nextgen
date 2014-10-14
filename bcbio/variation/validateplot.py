@@ -69,22 +69,23 @@ def plot_prep_methods(df, prep, prepi, out_file_base, outtype, title=None,
 def _prettyplot(df, prep, prepi, out_file, title=None, size=None):
     """Plot using prettyplot wrapper around matplotlib.
     """
-    cats = ["concordant", "discordant-missing-total",
-            "discordant-extra-total", "discordant-shared-total"]
     vtypes = df["variant.type"].unique()
-    fig, axs = ppl.subplots(len(vtypes), len(cats))
     callers = sorted(df["caller"].unique())
+    cats = _check_cats(["concordant", "discordant-missing-total",
+                        "discordant-extra-total", "discordant-shared-total"],
+                       vtypes, df, prep, callers)
+    fig, axs = ppl.subplots(len(vtypes), len(cats))
     width = 0.8
     for i, vtype in enumerate(vtypes):
         ax_row = axs[i] if len(vtypes) > 1 else axs
         for j, cat in enumerate(cats):
+            vals, labels, maxval = _get_chart_info(df, vtype, cat, prep, callers)
             ax = ax_row[j]
             if i == 0:
                 ax.set_title(cat_labels[cat], size=14)
             ax.get_yaxis().set_ticks([])
             if j == 0:
                 ax.set_ylabel(vtype_labels[vtype], size=14)
-            vals, labels, maxval = _get_chart_info(df, vtype, cat, prep, callers)
             ppl.bar(ax, np.arange(len(callers)), vals,
                     color=ppl.colors.set2[prepi], width=width)
             ax.set_ylim(0, maxval)
@@ -101,6 +102,19 @@ def _prettyplot(df, prep, prepi, out_file, title=None, size=None):
     x, y = (10, 5) if size is None else size
     fig.set_size_inches(x, y)
     fig.savefig(out_file)
+
+def _check_cats(cats, vtypes, df, prep, callers):
+    """Only include categories in the final output if they have values.
+    """
+    out = []
+    for cat in cats:
+        all_vals = []
+        for vtype in vtypes:
+            vals, labels, maxval = _get_chart_info(df, vtype, cat, prep, callers)
+            all_vals.extend(vals)
+        if sum(all_vals) / float(len(all_vals)) > 2:
+            out.append(cat)
+    return out
 
 def _get_chart_info(df, vtype, cat, prep, callers):
     """Retrieve values for a specific variant type, category and prep method.
