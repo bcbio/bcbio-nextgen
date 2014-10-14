@@ -4,19 +4,17 @@ This handles two methods of getting processing information: from a Galaxy
 next gen LIMS system or an on-file YAML configuration.
 """
 import copy
-import datetime
 import itertools
 import os
-import string
-import time
 
 import yaml
 
+from bcbio import utils
 from bcbio.log import logger
 from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.solexa.flowcell import get_flowcell_info, get_fastq_dir
-from bcbio.variation import genotype
+from bcbio.variation import effects, genotype, population
 from bcbio.variation.cortex import get_sample_name
 
 def organize(dirs, config, run_info_yaml):
@@ -39,24 +37,37 @@ def organize(dirs, config, run_info_yaml):
             run_details.append(item)
     out = []
     for item in run_details:
+        # add algorithm details to configuration, avoid double specification
         item["config"] = config_utils.update_w_custom(config, item)
+        item.pop("algorithm", None)
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
-        item = _add_reference_resources(item)
+        item = add_reference_resources(item)
         out.append(item)
     return out
 
 # ## Genome reference information
 
-def _add_reference_resources(data):
+def add_reference_resources(data):
     """Add genome reference information to the item to process.
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
-    align_ref, sam_ref = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
-    data["align_ref"] = align_ref
-    data["sam_ref"] = sam_ref
-    data["genome_resources"] = genome.get_resources(data["genome_build"], sam_ref)
+    data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
+    # back compatible `sam_ref` target
+    data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
+    ref_loc = utils.get_in(data, ("config", "resources", "species", "dir"),
+                           utils.get_in(data, ("reference", "fasta", "base")))
+    data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc)
+    data["reference"]["snpeff"] = effects.get_snpeff_files(data)
+    alt_genome = utils.get_in(data, ("config", "algorithm", "validate_genome_build"))
+    if alt_genome:
+        data["reference"]["alt"] = {alt_genome:
+                                    genome.get_refs(alt_genome, None, data["dirs"]["galaxy"])["fasta"]}
+    # Re-enable when we have ability to re-define gemini configuration directory
+    if False:
+        if population.do_db_build([data], check_gemini=False, need_bam=False):
+            data["reference"]["gemini"] = population.get_gemini_files(data)
     return data
 
 # ## Sample and BAM read group naming
@@ -64,7 +75,7 @@ def _add_reference_resources(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
-    for problem in [" "]:
+    for problem in [" ", "."]:
         x = x.replace(problem, "_")
     return x
 
@@ -79,7 +90,7 @@ def prep_rg_names(item, config, fc_name, fc_date):
             "sample": item["description"],
             "lane": lane_name,
             "pl": item.get("algorithm", {}).get("platform",
-                    config.get("algorithm", {}).get("platform", "illumina")).lower(),
+                                                config.get("algorithm", {}).get("platform", "illumina")).lower(),
             "pu": lane_name}
 
 # ## Configuration file validation
@@ -104,12 +115,6 @@ def _check_for_duplicates(xs, attr, check_fn=None):
                          "Required to be unique for a project: %s\n"
                          "Problem found in these samples: %s" % (attr, dups, descrs))
 
-def _okay_with_multiplex(xs):
-    for x in xs:
-        if "multiplex" not in x and "barcode" not in x:
-            return False
-    return True
-
 def _check_for_misplaced(xs, subkey, other_keys):
     """Ensure configuration keys are not incorrectly nested under other keys.
     """
@@ -125,6 +130,20 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                     "----------------+-----------------+----------------"] +
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
+ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
+                      "trim_reads", "adapters", "custom_trim",
+                      "align_split_size", "quality_bin",
+                      "quality_format", "write_summary",
+                      "merge_bamprep", "coverage", "coverage_bigwig",
+                      "coverage_depth", "coverage_interval", "ploidy",
+                      "variantcaller", "variant_regions",
+                      "mark_duplicates", "svcaller", "recalibrate",
+                      "realign", "phasing", "validate",
+                      "validate_regions", "validate_genome_build",
+                      "clinical_reporting", "nomap_split_size",
+                      "nomap_split_targets", "ensemble", "background",
+                      "disambiguate", "strandedness", "fusion_mode", "min_read_length"])
+
 def _check_algorithm_keys(item):
     """Check for unexpected keys in the algorithm section.
 
@@ -132,18 +151,7 @@ def _check_algorithm_keys(item):
     with typos in key names.
     """
     url = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
-    supported = set(["platform", "aligner", "bam_clean", "bam_sort", "trim_reads", "adapters",
-                     "custom_trim", "align_split_size", "quality_bin", "quality_format",
-                     "write_summary", "merge_bamprep", "coverage", "coverage_bigwig",
-                     "coverage_depth", "coverage_interval", "hybrid_target", "hybrid_bait",
-                     "ploidy",
-                     "variantcaller", "variant_regions", "mark_duplicates",
-                     "recalibrate", "realign",
-                     "phasing", "validate", "validate_regions", "validate_genome_build",
-                     "clinical_reporting",
-                     "nomap_split_size", "nomap_split_targets",
-                     "ensemble"])
-    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in supported]
+    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in ALGORITHM_KEYS]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
                          "See configuration documentation for supported options:\n%s\n"
@@ -174,8 +182,8 @@ def _check_sample_config(items, in_file):
     """Identify common problems in input sample configuration files.
     """
     logger.info("Checking sample YAML configuration: %s" % in_file)
-    _check_for_duplicates(items, "lane", _okay_with_multiplex)
-    _check_for_duplicates(items, "description", _okay_with_multiplex)
+    _check_for_duplicates(items, "lane")
+    _check_for_duplicates(items, "description")
     _check_for_misplaced(items, "algorithm",
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
@@ -199,8 +207,26 @@ def _normalize_files(item, fc_dir):
             fastq_dir = os.getcwd()
         files = [x if os.path.isabs(x) else os.path.normpath(os.path.join(fastq_dir, x))
                  for x in files]
+        _sanity_check_files(item, files)
         item["files"] = files
     return item
+
+def _sanity_check_files(item, files):
+    """Ensure input files correspond with supported
+    """
+    msg = None
+    file_types = set([("bam" if x.endswith(".bam") else "fastq") for x in files if x])
+    if len(file_types) > 1:
+        msg = "Found multiple file types (BAM and fastq)"
+    file_type = file_types.pop()
+    if file_type == "bam":
+        if len(files) != 1:
+            msg = "Expect a single BAM file input as input"
+    elif file_type == "fastq":
+        if len(files) not in [1, 2]:
+            msg = "Expect either 1 (single end) or 2 (paired end) fastq inputs"
+    if msg:
+        raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
 def _run_info_from_yaml(fc_dir, run_info_yaml, config):
     """Read run information from a passed YAML file.
@@ -214,51 +240,61 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         except ValueError:
             pass
     global_config = {}
+    global_vars = {}
     if isinstance(loaded, dict):
         global_config = copy.deepcopy(loaded)
         del global_config["details"]
-        if loaded.has_key("fc_name") and loaded.has_key("fc_date"):
+        if "fc_name" in loaded and "fc_date" in loaded:
             fc_name = loaded["fc_name"].replace(" ", "_")
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
+        global_vars = global_config.pop("globals", {})
         loaded = loaded["details"]
     run_details = []
     for i, item in enumerate(loaded):
         item = _normalize_files(item, fc_dir)
-        if not item.has_key("lane"):
-            item["lane"] = str(i+1)
+        if "lane" not in item:
+            item["lane"] = str(i + 1)
         item["lane"] = _clean_characters(str(item["lane"]))
-        if not item.has_key("description"):
+        if "description" not in item:
             if len(item.get("files", [])) == 1 and item["files"][0].endswith(".bam"):
                 item["description"] = get_sample_name(item["files"][0])
             else:
-                raise ValueError("No `description` sample name provided for input #%s" % (i+1))
+                raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
         item["description"] = _clean_characters(str(item["description"]))
         upload = global_config.get("upload", {})
+        # Handle specifying a local directory directly in upload
+        if isinstance(upload, basestring):
+            upload = {"dir": upload}
         if fc_name and fc_date:
             upload["fc_name"] = fc_name
             upload["fc_date"] = fc_date
         upload["run_id"] = ""
         item["upload"] = upload
+        item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
-                                                  ignore_keys=["variantcaller"])
+                                                  ignore_keys=["variantcaller", "realign", "recalibrate",
+                                                               "phasing", "svcaller"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
+        item["test_run"] = global_config.get("test_run", False)
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml)
     return run_details
 
-def _unique_flowcell_info():
-    """Generate data and unique identifier for non-barcoded flowcell.
+def _replace_global_vars(xs, global_vars):
+    """Replace globally shared names from input header with value.
 
-    String encoding from:
-    http://stackoverflow.com/questions/561486/
-    how-to-convert-an-integer-to-the-shortest-url-safe-string-in-python
+    The value of the `algorithm` item may be a pointer to a real
+    file specified in the `global` section. If found, replace with
+    the full value.
     """
-    alphabet = string.ascii_uppercase + string.digits
-    fc_date = datetime.datetime.now().strftime("%y%m%d")
-    n = int(time.time())
-    s = []
-    while True:
-        n, r = divmod(n, len(alphabet))
-        s.append(alphabet[r])
-        if n == 0: break
-    return ''.join(reversed(s)), fc_date
+    if isinstance(xs, (list, tuple)):
+        return [_replace_global_vars(x) for x in xs]
+    elif isinstance(xs, dict):
+        final = {}
+        for k, v in xs.iteritems():
+            if isinstance(v, basestring) and v in global_vars:
+                v = global_vars[v]
+            final[k] = v
+        return final
+    else:
+        return xs

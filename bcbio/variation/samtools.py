@@ -3,14 +3,15 @@
 http://samtools.sourceforge.net/mpileup.shtml
 """
 import os
+from distutils.version import LooseVersion
 
-from bcbio import broad
+from bcbio import bam
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 from bcbio.variation import annotation, bamprep, realign, vcfutils
 
 
@@ -18,21 +19,17 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
                        assoc_files, region=None, out_file=None):
     """Provide base functionality for prepping and indexing for variant calling.
     """
-
     config = items[0]["config"]
-
-    broad_runner = broad.runner_from_config(config)
-    for x in align_bams:
-        broad_runner.run_fn("picard_index", x)
     if out_file is None:
-
-        if vcfutils.is_sample_pair(align_bams, items):
+        if vcfutils.is_paired_analysis(align_bams, items):
             out_file = "%s-paired-variants.vcf" % config["metdata"]["batch"]
         else:
             out_file = "%s-variants.vcf" % os.path.splitext(align_bams[0])[0]
     if not file_exists(out_file):
-        logger.info("Genotyping with {name}: {region} {fname}".format(name=name,
-            region=region, fname=os.path.basename(align_bams[0])))
+        logger.info("Genotyping with {name}: {region} {fname}".format(
+            name=name, region=region, fname=os.path.basename(align_bams[0])))
+        for x in align_bams:
+            bam.index(x, config)
         variant_regions = config["algorithm"].get("variant_regions", None)
         target_regions = subset_variant_regions(variant_regions, region, out_file)
         if ((variant_regions is not None and isinstance(target_regions, basestring)
@@ -73,18 +70,29 @@ def prep_mpileup(align_bams, ref_file, max_read_depth, config,
 
 def _call_variants_samtools(align_bams, ref_file, items, target_regions, out_file):
     """Call variants with samtools in target_regions.
-    """
 
+    Works around a GATK VCF compatibility issue in samtools 0.20 by removing extra
+    Version information from VCF header lines.
+    """
     config = items[0]["config"]
 
     max_read_depth = "1000"
     mpileup = prep_mpileup(align_bams, ref_file, max_read_depth, config,
                            target_regions=target_regions)
     bcftools = config_utils.get_program("bcftools", config)
+    bcftools_version = programs.get_version("bcftools", config=config)
+    samtools_version = programs.get_version("samtools", config=config)
+    if LooseVersion(bcftools_version) > LooseVersion("0.1.19"):
+        if LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
+            raise ValueError("samtools calling not supported with 0.1.19 samtools and 0.20 bcftools")
+        bcftools_opts = "call -v -c"
+    else:
+        bcftools_opts = "view -v -c -g"
     vcfutils = config_utils.get_program("vcfutils.pl", config)
     cmd = ("{mpileup} "
-           "| {bcftools} view -v -c -g - "
+           "| {bcftools} {bcftools_opts} - "
            "| {vcfutils} varFilter -D {max_read_depth} "
+           "| sed 's/,Version=3>/>/'"
            "> {out_file}")
     logger.info(cmd.format(**locals()))
     do.run(cmd.format(**locals()), "Variant calling with samtools", {})

@@ -11,9 +11,7 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline.merge import (combine_fastq_files, merge_bam_files)
-from bcbio.rnaseq.cufflinks import assemble_transcripts
 from bcbio.pipeline import config_utils
-from bcbio.rnaseq import count
 
 # ## Merging
 
@@ -45,7 +43,7 @@ def delayed_bam_merge(data):
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
         file_key = data["combine"].keys()[0]
-        in_files = list(set([data[file_key]] + data["combine"][file_key].get("extras", [])))
+        in_files = sorted(list(set([data[file_key]] + data["combine"][file_key].get("extras", []))))
         out_file = data["combine"][file_key]["out"]
         logger.debug("Combining BAM files to %s" % out_file)
         config = copy.deepcopy(data["config"])
@@ -54,23 +52,11 @@ def delayed_bam_merge(data):
                                       out_file=out_file)
         if data.has_key("region"):
             del data["region"]
+        del data["combine"]
         data[file_key] = merged_file
     return [[data]]
 
 # ## General processing
-
-def parallel_transcript_assemble(data):
-    """Finalize processing for a sample, potentially multiplexed.
-    """
-    if data["config"]["algorithm"].get("transcript_assemble", False):
-        data["tx_file"] = assemble_transcripts(data["work_bam"], data["sam_ref"],
-                                               data["config"], data)
-    return [[data]]
-
-def generate_transcript_counts(data):
-    """Generate counts per transcript from an alignment"""
-    data["count_file"] = count.htseq_count(data)
-    return [[data]]
 
 def generate_bigwig(data):
     """Provide a BigWig coverage file of the sorted alignments.

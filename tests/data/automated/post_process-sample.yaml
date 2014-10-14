@@ -38,8 +38,14 @@ resources:
     cores:
   tophat:
     cores:
+  star:
+    mem: 3g
+    cores: 4
   bwa:
     cores: 4
+  AlienTrimmer:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/AlienTrimmer
   samtools:
     cores: 4
     memory: 1G
@@ -74,3 +80,6 @@ resources:
     dir: ~/install/CORTEX_release_v1.0.5.14
   vcftools:
     dir: ~/install/vcftools_0.1.9
+  oncofuse:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/oncofuse

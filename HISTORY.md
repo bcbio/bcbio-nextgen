@@ -1,3 +1,156 @@
+## 0.7.7 (February 27, 2014)
+
+- For cancer tumor/normal calling, attach final call information of both to
+  the tumor sample. This provides a single downstream file for processing and
+  analysis.
+- Enable batch specification in metadata to be a list, allowing a single normal
+  BAM file to serve as a control for multiple tumor files.
+- Re-organization of parallel framework code to enable alternative approaches.
+  Document plugging in new parallel frameworks. Does not expose changes to users
+  but makes the code cleaner for developers.
+- Default to 1Gb/core memory usage when not specified in any programs. Do not
+  use default baseline if supplied in input file. Thanks to James Porter.
+- Integrate plotting of variant evaluation results using prettyplotlib.
+- Add `globals` option to configuration to avoid needing to specify the same
+  shared file multiple times in a samples configuration.
+- Remove deprecated Celery distributed messaging, replaced in favor of IPython.
+- Remove algorithm/custom_algorithm from bcbio_system.yaml, preferring to set
+  these directly in the sample YAML files.
+- Remove outdated and unused custom B-run trimming.
+- Remove ability to guess fastq files from directories with no specification in
+  sample YAML. Prefer using generalized template functionality with explicit
+  specification of files in sample YAML file.
+- Remove deprecated multiplex support, which is outdated and not
+  maintained. Prefer approaches in external tools upstream of bcbio-nextgen.
+- Add `--tag` argument which labels job names on a cluster to help distinguish
+  when multiple bcbio jobs run concurrently. Thanks to Jason Corneveaux.
+- Connect min_read_length parameter with read_through trimming in
+  RNA-seq. Thanks to James Porter.
+- Map `variant` calling specification to `variant2` since original approach
+  no longer supported.
+- Fix issues with trying to upload directories to Galaxy. Thanks to Jim Peden.
+- Made inner distance calculation for Tophat more accurate.
+- Added gffutils GFF database to the RNA-seq indices.
+- Add gene name annotation from the GFF file instead of from mygene.
+
+## 0.7.6 (January 15, 2014)
+
+- Expand template functionality to provide additional ability to add metadata
+  to samples with input CSV. Includes customization of algorithm section and
+  better matching of samples using input file names. Improve ability to
+  distinguish fastq pairs.
+- Generalize snpEff database preparation to use individual databases located
+  with each genome. Enables better multi-organism support.
+- Enable tumor/normal paired called with FreeBayes. Contributed by Luca Beltrame.
+- Provide additional parallelization of bgzip preparation, performing grabix indexing
+  in parallel for paired ends.
+- Fix downsampling with GATK-lite 2.3.9 releases by moving to sambamba based downsampling.
+  Thanks to Przemek Lyszkiewicz.
+- Handle Illumina format input files for bwa-mem alignment, and cleanly convert
+  these when preparing bgzipped inputs for parallel alignment. Thanks to Miika
+  Ahdesmaki.
+- Provide better algorithm for distinguishing bwa-mem and bwa-aln usage. Now
+  does random sampling of first 2 million reads instead of taking the first set
+  of reads which may be non-generalizable. Also lowers requirement to use
+  bwa-mem to 75% of reads being smaller than 70bp. Thanks to Paul Tang.
+- Enable specification of a GATK key file in the bcbio_system resources
+  `keyfile` parameter. Disables callbacks to GATK tracking. Thanks to Severine
+  Catreux for keyfile to debug with.
+- Correctly handle preparation of pre-aligned BAM files when sorting and
+  coordinate specification needed. Thanks to Severine Catreux.
+- Fix incorrect quality flag being passed to Tophat. Thanks to Miika Ahdesmaki.
+- Fix Tophat not respecting the existing --transcriptome-index. Thanks to Miika Ahdesmaki.
+- Keep original gzipped fastq files. Thanks again to Miika Ahdesmaki.
+- Fixed incompatibility with complexity calculation and IPython.
+- Added strand-specific RNA-seq support via the strandedness option.
+- Added Cufflinks support.
+- Set stranded flag properly in htseq-count. Thanks to Miika Ahdesmaki.
+- Fix to ensure Tophat receives a minimum of 8 gb of memory, regardless of number of cores.
+- Remove `hybrid_bait` and `hybrid_target` which were no longer used with new
+  lightweight QC framework. Prefer better coverage framework moving forward.
+- Added extra summary information to the project-summary.yaml file so downstream tools can
+  locate what genome resources were used.
+- Added ``test_run`` option to the sample configuration file. Set it to True to run a small
+subset of your data through the pipeline to make sure everything is working okay.
+- Fusion support added by setting ``fusion_mode: True`` in the algorithim section.
+Not officially documented for now until we can come up with best practices for it.
+- STAR support re-enabled.
+- Fixed issue with the complexity calculation throwing an exception when there
+were not enough reads.
+- Add disambiguation stats to final project-summary.yaml file. Thanks to Miika Ahdesmaki.
+- Remove `Estimated Library Size` and `Complexity` from RNA-seq QC
+summary information as they were confusing and unnecessarily alarming,
+respectively. Thanks to Miika Ahdesmaki and Sara Dempster.
+- Several memory allocation errors resulting in jobs getting killed in
+cluster environments for overusing their memory limit fixed.
+- Added JVM options by default to Picard to allocate enough memory
+for large BAM->FastQ conversion.
+
+## 0.7.5 (November 29, 2013)
+
+- Update overall project metrics summary to move to a flexible YAML format that
+  handles multiple analysis types. Re-include target, duplication and variant
+  metrics.
+- Support disambiguation of mixed samples for RNA-seq pipelines. Handles alignment
+  to two genomes, running disambiguation and continuation of disambiguated samples
+  through the pipeline. Contributed by Miika Ahdesmaki and AstraZenenca.
+- Handle specification of sex in metadata and correctly call X,Y and
+  mitochondrial chromosomes.
+- Fix issues with open file handles for large population runs. Ensure ZeroMQ contexts
+  are closed and enable extension of ulimit soft file and user process limits within
+  user available hard limits.
+- Avoid calling in regions with excessively deep coverage. Reduces variant calling
+  bottlenecks in repetitive regions with 25,000 or more reads.
+- Improve `bcbio_nextgen.py upgrade` function to be more consistent on handling of
+  code, tools and data. Now each require an implicit specification, while other
+  options are remembered. Thanks to Jakub Nowacki.
+- Generalize retrieval of RNA-seq resources (GTF files, transcriptome indexes) to use
+  genome-resources.yaml. Updates all genome resources files. Contributed by James Porter.
+- Use sambamba for indexing, which allows multicore indexing to speed up index
+  creation on large BAM processing. Falls back to samtools index if not available.
+- Remove custom Picard metrics runs and pdf generation. Eliminates dependencies on
+  pdflatex and R for QC metrics.
+- Improve memory handling by providing fallbacks during common memory intensive steps.
+  Better handle memory on SLURM by explicitly allowing system memory in addition
+  to that required for processing.
+- Update fastqc runs to use a BAM files downsampled to 10 million reads to avoid
+  excessive run times. Part of general speed up of QC step.
+- Add Qualimap to generate plots and metrics for BAM alignments. Off by default
+  due to speed issues.
+- Improve handling of GATK version detection, including support for Appistry versions.
+- Allow interruption of read_through trimming with Ctrl-C.
+- Improve test suite: use system configuration instead of requiring test specific setup.
+  Install and use a local version of nose using the installer provided Python.
+- Fix for crash with single-end reads in read_through trimming.
+- Added a library complexity calculation for RNA-seq libraries as a QC metric
+- Added sorting via sambamba. Internally bcbio-nextgen now inspects the headers
+  of SAM/BAM files to find their sorting status, so make sure tools set it correctly.
+
+## 0.7.4 (October 20, 2013)
+
+- Framework for indexing input reads using parallel bgzip and grabix, to handle
+  distributed alignment. Enables further distribution of alignment step beyond
+  multicore nodes.
+- Rework of ensemble calling approach to generalize to population level ensemble
+  calls. Provide improved defaults for handle 3 caller consolidation.
+- Support for Mouse (mm10) variant calling and RNA-seq.
+- For recent versions of Gemini (0.6.3+) do not load filtered variants into
+  database, only including passed variants.
+- Improve specification of resource parameters, using multiple `-r` flags
+  instead of single semi-colon separated input. Allow specification of pename
+  resource parameter for selecting correct SGE environment when not
+  automatically found.
+- Support biobambam's bammarkduplicates2 for duplicate removal.
+- Clean up logging handling code to be more resilient to interrupt messages.
+- Speed improvements for selecting unanalyzed and unmapped reads to address
+  bottlenecks during BAM prep phase.
+- Bug fix for algorithm options incorrectly expanded to paths on re-runs. Thanks
+  to Brent Pedersen for report.
+- Fix for Tophat 2.0.9 support: remove reads with empty read names.
+- Save installation and upgrade details to enable cleaner upgrades without
+  needing to respecify genomes, tool directory and other options from
+  installation.
+
 ## 0.7.3 (September 22, 2013)
 
 - Move specification of supporting genome files for variation (dbSNP, training

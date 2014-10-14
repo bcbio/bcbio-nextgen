@@ -4,7 +4,7 @@ runs of this step.
 """
 import os
 
-from bcbio import broad, utils
+from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
@@ -50,7 +50,7 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
         if not utils.file_exists(sel_file):
             with file_transaction(sel_file) as tx_out_file:
                 cl += ["-o", tx_out_file]
-                do.run(cl, "GATK: PrintReads {0}".format(region), data)
+                do.run_memory_retry(cl, "GATK: PrintReads", data, region=region)
         dup_metrics = "%s-dup.dup_metrics" % os.path.splitext(out_base_file)[0]
         compression = "5" if prep_params["realign"] == "gatk" else "0"
         cl = broad_runner.cl_picard("MarkDuplicates",
@@ -64,7 +64,7 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
         sel_file = data["work_bam"]
     else:
         raise ValueError("Duplication approach not supported with GATK: %s" % prep_params["dup"])
-    broad_runner.run_fn("picard_index", sel_file)
+    bam.index(sel_file, data["config"])
     return sel_file, " ".join(cl)
 
 def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
@@ -78,7 +78,7 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
             pipe = ">" if prep_params["dup"] else "-o"
             cmd = "{cl} {pipe} {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
-    broad_runner.run_fn("picard_index", pa_bam)
+    bam.index(pa_bam, data["config"])
     dbsnp_vcf = data["genome_resources"]["variation"]["dbsnp"]
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"],
                                                 dbsnp=dbsnp_vcf, region=region_to_gatk(region))
@@ -116,7 +116,7 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
 
 # ## Full-piped approaches
 
-def _piped_dedup_recal_cmd(data, prep_params, tmp_dir):
+def _piped_dedup_recal_cmd(data, prep_params, tmp_dir, out_file):
     """Generate de-duplication and recalibration commandline.
     """
     if prep_params["dup"] == "bamutil":
@@ -128,6 +128,14 @@ def _piped_dedup_recal_cmd(data, prep_params, tmp_dir):
     elif prep_params["dup"] == "samtools":
         samtools = config_utils.get_program("samtools", data["config"])
         return "| " + "{samtools} rmdup - -".format(**locals())
+    elif prep_params["dup"] == "biobambam":
+        biobambam_md = config_utils.get_program("bammarkduplicates2", data["config"])
+        num_cores = 1
+        compression_level = 1 if prep_params.get("realign") else 9
+        tmpfile = os.path.join(tmp_dir, "%s-md" % os.path.splitext(os.path.basename(out_file))[0])
+        metrics_file = "%s-dupmetrics.txt" % (os.path.splitext(out_file)[0])
+        return ("| {biobambam_md} level={compression_level} markthreads={num_cores} verbose=0 "
+                "M={metrics_file} tmpfile={tmpfile}".format(**locals()))
     elif prep_params["dup"]:
         raise ValueError("Unexpected deduplication approach: %s" % prep_params["dup"])
     else:
@@ -168,11 +176,12 @@ def _piped_bamprep_region_fullpipe(data, region, prep_params, out_file, tmp_dir)
     """
     with file_transaction(out_file) as tx_out_file:
         extract_recal_cmd = _piped_extract_recal_cmd(data, region, prep_params, tmp_dir)
-        dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir)
+        dedup_cmd = _piped_dedup_recal_cmd(data, prep_params, tmp_dir, out_file)
         realign_cmd = _piped_realign_cmd(data, prep_params, tmp_dir)
         cmd = "{extract_recal_cmd} {dedup_cmd} {realign_cmd}  > {tx_out_file}"
         cmd = cmd.format(**locals())
-        do.run(cmd, "Piped post-alignment bamprep {0}".format(region), data)
+        do.run_memory_retry(cmd, "Piped post-alignment bamprep {0}".format(region), data,
+                            region=region)
 
 # ## Shared functionality
 
@@ -206,7 +215,7 @@ def piped_bamprep(data, region=None, out_file=None):
     """
     utils.safe_makedir(os.path.dirname(out_file))
     if region[0] == "nochrom":
-        prep_bam = shared.write_nochr_reads(data["work_bam"], out_file)
+        prep_bam = shared.write_nochr_reads(data["work_bam"], out_file, data["config"])
     elif region[0] == "noanalysis":
         prep_bam = shared.write_noanalysis_reads(data["work_bam"], region[1], out_file,
                                                  data["config"])
@@ -215,8 +224,7 @@ def piped_bamprep(data, region=None, out_file=None):
             with utils.curdir_tmpdir() as tmp_dir:
                 _piped_bamprep_region(data, region, out_file, tmp_dir)
         prep_bam = out_file
-    broad_runner = broad.runner_from_config(data["config"])
-    broad_runner.run_fn("picard_index", prep_bam)
+    bam.index(prep_bam, data["config"])
     data["work_bam"] = prep_bam
     data["region"] = region
     return [data]

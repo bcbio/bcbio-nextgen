@@ -7,21 +7,49 @@
 ---
 upload:
   dir: ../final
-fc_date: '2013-09-03'
-fc_name: methodcmp
 details:
   - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-1
+    metadata:
+      sex: female
     analysis: variant2
     genome_build: GRCh37
     algorithm:
       aligner: bwa
+      align_split_size: 5000000
       variantcaller: [gatk, freebayes, gatk-haplotype]
       quality_format: Standard
       coverage_interval: regional
       merge_bamprep: true
-      validate: ../input/NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf
-      validate_regions: ../input/union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed
+      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
+      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
+      variant_regions: ../input/NGv3.bed
+      ensemble:
+        format-filters: [DP < 4]
+        classifiers: 
+          balance: [AD, FS, Entropy]
+          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
+        classifier-params:
+          type: svm
+        trusted-pct: 0.65
+  - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
+    description: NA12878-2
+    metadata:
+      sex: female
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      align_split_size: 5000000
+      mark_duplicates: samtools                                                                                    
+      recalibrate: false                                                                                             
+      realign: false 
+      variantcaller: [gatk, freebayes, gatk-haplotype]
+      quality_format: Standard
+      coverage_interval: regional
+      merge_bamprep: false
+      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
+      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
       variant_regions: ../input/NGv3.bed
       ensemble:
         format-filters: [DP < 4]

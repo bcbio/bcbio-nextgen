@@ -3,12 +3,13 @@ details:
     algorithm:
       #aligner: bwa
       aligner: novoalign
-      variantcaller: [gatk, samtools, freebayes]
+      variantcaller: [gatk, freebayes]
       #variantcaller: gatk-haplotype
       #variantcaller: freebayes
       #variantcaller: cortex
       #sv_detection: hydra
       ensemble:
+        #caller: platypus
         format-filters: [DP < 4]
         classifiers: [DP, QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, Entropy, HRun, MFE, NBQ, MQ]
         trusted_pct: 0.65
@@ -17,8 +18,10 @@ details:
       trim_reads: true
       align_split_size: 9000
       variant_regions: ../data/automated/variant_regions-variantcall.bed
+      validate: ../reference_material/7_100326_FC6107FAAXX-grade.vcf
     description: Test1
     metadata:
       batch: TestBatch1
     genome_build: hg19
+    files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
     lane: 7

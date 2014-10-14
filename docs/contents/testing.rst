@@ -74,8 +74,11 @@ information about the pipeline. To run the analysis:
     cd input
     wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
     wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
-    wget https://s3.amazonaws.com/bcbio_nextgen/NA12878-illumina-example.vcf.gz
-    gunzip NA12878-illumina-example.vcf.gz
+    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+     NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
+    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+     union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed.gz
+    gunzip *.vcf.gz *.bed.gz
 
 - Retrieve configuration input file::
 
@@ -85,7 +88,7 @@ information about the pipeline. To run the analysis:
 - Run analysis on 16 core machine::
 
     cd work
-    bcbio_nextgen.py ../input ../config/NA12878-illumina.yaml -n 16
+    bcbio_nextgen.py ../config/NA12878-illumina.yaml -n 16
 
 - Examine summary of concordance and discordance to comparison calls
   from the ``grading-summary.csv`` file in the work directory.
@@ -111,29 +114,28 @@ can take more than 24 hours on machines using multiple cores.
 
 First get the input configuration file::
 
-    $ mkdir config && cd config
-    $ wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
-       examples/NA12878-exome-methodcmp.yaml
+    mkdir config && cd config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
+     examples/NA12878-exome-methodcmp.yaml
 
 Then the fastq reads, reference materials and analysis regions::
 
-    $ cd .. && mkdir input && cd input
-    $ wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
-       CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_1.fastq.gz
-    $ wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
-       CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_2.fastq.gz
-    $ wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
-    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-       NIST_IntegratedCalls_12datasets_130517_HetHomVarPASS_VQSRv2.15.vcf.gz
-    $ wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-       union12callableMQonlymerged_addcert_nouncert_excludesegdups_excludedecoy_noCNVs_v2.15b.bed.gz
-    $ gunzip *.vcf.gz
-    $ gunzip *.bed.gz
+    cd .. && mkdir input && cd input
+    wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
+     CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_1.fastq.gz
+    wget https://dm.genomespace.org/datamanager/file/Home/EdgeBio/\
+     CLIA_Examples/NA12878-NGv3-LAB1360-A/NA12878-NGv3-LAB1360-A_2.fastq.gz
+    wget https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
+    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+     NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
+    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+     union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed.gz
+    gunzip *.vcf.gz *.bed.gz
 
 Finally run the analysis, distributed on 8 local cores, with::
 
-    $ mkdir work && cd work
-    $ bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
+    cd .. & mkdir work && cd work
+    bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
 to the NIST reference materials, enabling rapid comparisons of methods.
@@ -142,33 +144,61 @@ to the NIST reference materials, enabling rapid comparisons of methods.
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
 .. _EdgeBio's: http://www.edgebio.com/
 
+Cancer tumor normal
+~~~~~~~~~~~~~~~~~~~
+
+This example calls variants in a paired cancer sample with tumor/normal
+sequencing data. using raw data from `Han et al in PLoS One
+<http://www.plosone.org/article/info:doi/10.1371/journal.pone.0064271>`_. This
+is a work in progress and we welcome contributions. The goal is to use a full
+evaluation dataset to compare calling methods:
+
+Get the input configuration file::
+
+    mkdir config && cd config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/\
+     examples/cancer-paired.yaml
+
+Get fastq reads and analysis regions::
+
+    cd .. && mkdir input && cd input
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256785/ERR256785_2.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR256/ERR256786/ERR256786_2.fastq.gz
+    wget https://gist.github.com/chapmanb/8322238/raw/131a5710ac17039e8e2d350e00a88898e030a958/ERP002442-targeted.bed
+
+Run::
+
+    cd .. & mkdir work && cd work
+    bcbio_nextgen.py ../config/cancer-paired.yaml -n 8
+
 Test suite
 ==========
 
-The test suite exercises the scripts driving the analysis, so are a good
-starting point to ensure correct installation. Run tests from the main
-code directory using `nose`_. To test the main variant calling
-pipeline::
+The test suite exercises the scripts driving the analysis, so are a
+good starting point to ensure correct installation. Tests use the
+`nose`_ test runner pre-installed as part of the pipeline. Grab the latest
+source code::
 
-     $ cd tests
-     $ nosetests -v -s -a speed=1
+     $ git clone https://github.com/chapmanb/bcbio-nextgen.git
 
-To run the full test suite::
+To run the standard tests::
 
-     $ nosetest -v -s
+     $ cd bcbio-nextgen/tests
+     $ ./run_tests.sh
 
-``tests/test_automated_analysis.py`` exercises the full framework using
-an automatically downloaded test dataset. It runs through barcode
-deconvolution, alignment and full SNP analysis. Tweak the configuration
-for the tests for your environment:
+To run specific subsets of the tests::
 
--  ``tests/data/automated/post_process.yaml`` -- May need adjustment to
-   point to installed software in non-standard locations. Change the
-   num\_cores parameter to test multiple processor and parallel
-   execution.
--  ``tests/data/automated/run_info.yaml`` -- Change the ``analysis``
-   variable can to 'Standard' if variant calling is not required in your
-   environment. This will run a smaller pipeline of alignment and
-   analysis.
+     $ ./run_tests.sh rnaseq
+     $ ./run_tests.sh speed=2
+     $ ./run_tests.sh devel
+
+By default the test suite will use your installed system configuration
+for running tests, substituting the test genome information instead of
+using full genomes. If you need a specific testing environment, copy
+``tests/data/automated/post_process-sample.yaml`` to
+``tests/data/automated/post_process.yaml`` to provide a test-only
+configuration.
 
 .. _nose: http://somethingaboutorange.com/mrl/projects/nose/

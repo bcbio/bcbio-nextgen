@@ -4,9 +4,12 @@ import contextlib
 
 from IPython.parallel import require
 
-from bcbio.distributed import ipython
-from bcbio.pipeline import sample, lane, qcsummary, shared, variation
+from bcbio.ngsalign import alignprep
+from bcbio.pipeline import (config_utils, disambiguate, sample, lane, qcsummary, shared,
+                            variation, rnaseq)
 from bcbio.provenance import system
+from bcbio import structural
+from bcbio import chipseq
 from bcbio.variation import (bamprep, coverage, realign, genotype, ensemble, multi, population,
                              recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
@@ -17,10 +20,10 @@ def _setup_logging(args):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         args = args[0]
     for arg in args:
-        if ipython.is_nested_config_arg(arg):
+        if config_utils.is_nested_config_arg(arg):
             config = arg["config"]
             break
-        elif ipython.is_std_config_arg(arg):
+        elif config_utils.is_std_config_arg(arg):
             config = arg
             break
     if config is None:
@@ -28,11 +31,12 @@ def _setup_logging(args):
     handler = setup_local_logging(config, config.get("parallel", {}))
     try:
         yield None
-        if hasattr(handler, "close"):
-            handler.close()
     except:
         logger.exception("Unexpected error")
         raise
+    finally:
+        if hasattr(handler, "close"):
+            handler.close()
 
 @require(lane)
 def process_lane(*args):
@@ -48,13 +52,16 @@ def trim_lane(*args):
 def process_alignment(*args):
     with _setup_logging(args):
         return apply(lane.process_alignment, *args)
-process_alignment.metadata = {"resources": ["novoalign", "bwa", "bowtie", "tophat"]}
+
+@require(alignprep)
+def prep_align_inputs(*args):
+    with _setup_logging(args):
+        return apply(alignprep.create_inputs, *args)
 
 @require(lane)
-def align_prep_full(*args):
+def postprocess_alignment(*args):
     with _setup_logging(args):
-        return apply(lane.align_prep_full, *args)
-align_prep_full.metadata = {"resources": ["novoalign", "bwa", "gatk"]}
+        return apply(lane.postprocess_alignment, *args)
 
 @require(sample)
 def merge_sample(*args):
@@ -65,7 +72,6 @@ def merge_sample(*args):
 def delayed_bam_merge(*args):
     with _setup_logging(args):
         return apply(sample.delayed_bam_merge, *args)
-delayed_bam_merge.metadata = {"resources": ["samtools"]}
 
 @require(sample)
 def recalibrate_sample(*args):
@@ -76,7 +82,6 @@ def recalibrate_sample(*args):
 def prep_recal(*args):
     with _setup_logging(args):
         return apply(recalibrate.prep_recal, *args)
-prep_recal.metadata = {"resources": ["gatk"]}
 
 @require(recalibrate)
 def write_recal_bam(*args):
@@ -102,17 +107,21 @@ def piped_bamprep(*args):
 def postprocess_variants(*args):
     with _setup_logging(args):
         return apply(variation.postprocess_variants, *args)
-postprocess_variants.metadata = {"resources": ["gatk-vqsr", "gatk", "snpEff"]}
 
 @require(qcsummary)
 def pipeline_summary(*args):
     with _setup_logging(args):
         return apply(qcsummary.pipeline_summary, *args)
 
-@require(sample)
+@require(rnaseq)
 def generate_transcript_counts(*args):
     with _setup_logging(args):
-        return apply(sample.generate_transcript_counts, *args)
+        return apply(rnaseq.generate_transcript_counts, *args)
+
+@require(rnaseq)
+def run_cufflinks(*args):
+    with _setup_logging(args):
+        return apply(rnaseq.run_cufflinks, *args)
 
 @require(sample)
 def generate_bigwig(*args):
@@ -128,7 +137,6 @@ def combine_bam(*args):
 def variantcall_sample(*args):
     with _setup_logging(args):
         return apply(genotype.variantcall_sample, *args)
-variantcall_sample.metadata = {"resources": ["gatk", "freebayes", "gatk-haplotype"]}
 
 @require(vcfutils)
 def combine_variant_files(*args):
@@ -140,16 +148,20 @@ def concat_variant_files(*args):
     with _setup_logging(args):
         return apply(vcfutils.concat_variant_files, *args)
 
+@require(vcfutils)
+def merge_variant_files(*args):
+    with _setup_logging(args):
+        return apply(vcfutils.merge_variant_files, *args)
+
 @require(population)
 def prep_gemini_db(*args):
     with _setup_logging(args):
         return apply(population.prep_gemini_db, *args)
-prep_gemini_db.metadata = {"resources": ["gemini"]}
 
-@require(variation)
+@require(structural)
 def detect_sv(*args):
     with _setup_logging(args):
-        return apply(variation.detect_sv, *args)
+        return apply(structural.detect_sv, *args)
 
 @require(ensemble)
 def combine_calls(*args):
@@ -165,8 +177,16 @@ def compare_to_rm(*args):
 def coverage_summary(*args):
     with _setup_logging(args):
         return apply(coverage.summary, *args)
-coverage_summary.metadata = {"resources": ["bcbio_coverage"]}
+
+@require(disambiguate)
+def run_disambiguate(*args):
+    with _setup_logging(args):
+        return apply(disambiguate.run, *args)
 
 @require(system)
 def machine_info(*args):
     return system.machine_info()
+
+@require(chipseq)
+def clean_chipseq_alignment(*args):
+    return chipseq.machine_info()

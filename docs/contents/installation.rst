@@ -23,6 +23,9 @@ for configuring the installation process. Some useful arguments are:
 
 - ``--nosudo`` For running in environments where you lack administrator
   privileges.
+- ``--isolate`` Avoid updating the user's ``~/.bashrc`` if installing in a
+  non-standard PATH. This facilitates creation of isolated modules
+  without disrupting the user's environmental setup.
 - ``--nodata`` Do not install genome data.
 
 To bootstrap installation, the machine will need to have some basic
@@ -30,8 +33,11 @@ requirements:
 
 - Python 2.6 or 2.7, with the development libraries
   installed (the python-dev or python-devel packages).
-- A compiler: gcc and g++.
+- Compilers: gcc and g++.
 - The git version control system (http://git-scm.com/).
+
+If you're using the ``--nosudo`` option, please see :ref:`isolated-install`
+for additional system requirements needed to bootstrap the full system.
 
 Some steps retrieve third party tools from GitHub, which can run into
 issues if you're behind a proxy or block git ports. To instruct git to
@@ -39,25 +45,70 @@ use ``https://`` globally instead of ``git://``::
 
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
-If you'd prefer more control over installation, follow the manual
-steps for installing each component detailed below.
+The automated installer creates a fully integrated environment that
+allows simultaneous updates of the framework, third party tools and
+biological data. This offer the advantage over manual installation of
+being able to manage and evolve a consistent analysis environment as
+algorithms continue to evolve and improve. The installer is flexible
+enough to handle both system integrations into standard directories
+like /usr/local, as well as custom isolated installations in non-root
+directories. The :ref:`upgrade-install` section has additional
+documentation on including additional genome data and software tools like the
+latest commercially-restricted GATK versions and GEMINI.
+
+.. _isolated-install:
+
+Isolated installations
+======================
+
+To install bcbio-nextgen in an isolated non-root environment::
+
+    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --nosudo --isolate
+
+This requires the following additional system requirements to be in place:
+
+- Java 1.7
+- Ruby
+- R with Rscript (currently optional, but increasingly used in the pipeline)
+- bzip2 (with development libraries)
+- zlib (with development libraries)
+- curl (with development libraries)
+- cmake (temporary requirement, for eventual removal)
+
+Installing this way is as isolated and self-contained as possible
+without virtual machines or lightweight system containers. To ensure
+access to the executables, system libraries and Perl libraries update
+your `~/.bashrc` with::
+
+    export PATH=/path_to_bcbio/bin:$PATH
+    export LD_LIBRARY_PATH=/path_to_bcbio/lib:$LD_LIBRARY_PATH
+    export PERL5LIB=/path_to_bcbio/lib/perl5:/path_to_bcbio/perl5/site_perl:${PERL5LIB}
+
+This installation process is not easily re-locatable due to absolute
+filesystem pointers within the installation directory. We plan to move
+towards utilizing `Docker`_ containers to provide a fully isolated software
+installation.
+
+.. _Docker: http://www.docker.io/
+
+.. _upgrade-install:
 
 Upgrade
 =======
 
 We use the same automated installation process for performing upgrades
-of tools, software and data in place. With a recent version of
-bcbio-nextgen (0.7.0+), update with::
+of tools, software and data in place. Since there are multiple targets
+and we want to avoid upgrading anything unexpectedly, we have specific
+arguments for each. Generally, you'd want to upgrade the code, tools
+and data together with::
 
-  bcbio_nextgen.py upgrade --tooldir=/usr/local
+  bcbio_nextgen.py upgrade -u stable --tools --data
 
-In addition to the installation options mentioned above, tune the
-upgrade with these options:
+Tune the upgrade with these options:
 
-- ``-u`` Type of upgrade to do for bcbio-nextgen code. The default is
-  ``stable`` but you can also specify ``development`` to get the
-  latest code from GitHub and ``skip`` to only upgrade tools and data
-  without the library.
+- ``-u`` Type of upgrade to do for bcbio-nextgen code. ``stable``
+  gets the most recent released version and ``development``
+  retrieves the latest code from GitHub.
 
 - ``--toolplus`` Specify additional categories of tools to include.
   These may require manual intervention or be data intensive. You can
@@ -65,7 +116,7 @@ upgrade with these options:
   classes of tools. Available choices are:
 
   - ``protected`` Install software that requires licensing for
-    commerical use. This includes the latest versions of GATK, which
+    commercial use. This includes the latest versions of GATK, which
     need a manual download from the GATK website. The installer
     provides full directions.
   - ``data`` Data rich supplemental tools. A good example is
@@ -74,14 +125,29 @@ upgrade with these options:
 
 - ``--genomes`` and ``--aligners`` options add additional aligner
   indexes to download and prepare. By default we prepare a minimal
-  human genome setup.
+  human genome setup. If you want to install multiple genomes or
+  aligners at once, specify ``--genomes`` or ``--aligners``
+  multiple times, like this:
+  ``--genomes GRCh38 --genomes GRCh37 --aligners bwa --aligners bowtie2``
 
-- Leave out the ``--tooldir`` option if you don't want to upgrade
-  third party tools.
+- Leave out the ``--tools`` option if you don't want to upgrade third
+  party tools. If using ``--tools``, it will use the same installation
+  directory as specified during installation. If you're using an older
+  version that has not yet went through a successful upgrade or
+  installation and saved the tool directory, you should manually
+  specify ``--tooldir`` for the first upgrade. You can also pass
+  ``--tooldir`` to install to a different directory.
 
-To upgrade older bcbio-nextgen versions to be able to use this
-feature, do ``bcbio_nextgen.py -u stable`` to get the latest release
-code.
+- Leave out the ``--data`` option if you don't want to get any upgrades
+  of associated genome data.
+
+The upgrade approach changed slightly as of 0.7.5 to be more
+consistent.  In earlier versions, to get a full upgrade leave out the
+``--data`` argument since that was the default. The best approach if
+you find the arguments are out of date is to do a ``bcbio_nextgen.py
+upgrade -u stable`` to get the latest version, then proceed
+again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
+``bcbio_nextgen.py -u stable`` to get up to date.
 
 On a Virtual Machine
 ====================
@@ -109,9 +175,11 @@ OSX
 Manual process
 ==============
 
-The manual process does not allow the in-place updates that the
-automated installer makes possible, but is useful for customized
-environments.
+The manual process does not allow the in-place updates and management
+of third party tools that the automated installer make possible. It's
+a more error-prone and labor intensive process. If you find you can't
+use the installer we'd love to hear why to make it more amenable to
+your system.
 
 Python code
 ~~~~~~~~~~~
@@ -125,11 +193,13 @@ Or the latest development version from GitHub::
       git clone https://github.com/chapmanb/bcbio-nextgen.git
       cd bcbio-nextgen && python setup.py build && sudo python setup.py install
 
-This requires either Python 2.6 or 2.7. The setup script installs
+This requires Python 2.7. The setup script installs
 required Python library dependencies. If you'd like to install the
 programs and libraries locally instead of globally, `virtualenv`_
 creates an isolated, local Python installation that does not require
 system install privileges.
+
+.. _virtualenv: http://www.virtualenv.org/en/latest/
 
 Tool Requirements
 ~~~~~~~~~~~~~~~~~
@@ -139,50 +209,21 @@ that you need to install on any machines involved in the processing. The
 `CloudBioLinux`_ toolkit provides automated scripts to help with installation
 for both software and associated data files::
 
-    fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline
+    fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline_minimal
 
 You can also install them manually, adjusting locations in the
 ``resources`` section of your ``bcbio_system.yaml`` configuration file
-as needed.
+as needed.  The CloudBioLinux infrastructure provides a full list of third party
+software installed with bcbio-nextgen:
 
--  An aligner: we support multiple aligners, including `bwa`_,
-   `novoalign`_ and `bowtie2`_
--  `Picard`_ -- BAM manipulation and processing
--  `FastQC`_ -- Generation of sequencing quality reports
--  `GATK`_ -- Variant calling and BAM preparation
--  `snpEff`_ -- Identify functional consequences of variants.
--  LaTeX and pdflatex for report generation
+- `packages-homebrew.yaml`_ -- All third party tools installed through the
+  Homebrew/Linuxbrew package manager.
+- `custom.yaml`_ -- All third party tools installed via CloudBioLinux's custom
+  installation procedure.
 
-The code uses a number of Python modules, installed with the code:
-
--  `biopython`_
--  `pysam`_
--  `ipython`_
--  `sh`_
--  `mako`_
--  `PyYAML`_
--  `logbook`_
--  `celery`_
-
-.. _bwa: http://bio-bwa.sourceforge.net/
-.. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
-.. _novoalign: http://www.novocraft.com
-.. _Picard: http://picard.sourceforge.net/
-.. _FastQC: http://www.bioinformatics.bbsrc.ac.uk/projects/fastqc/
-.. _GATK: http://www.broadinstitute.org/gatk/
-.. _snpEff: http://sourceforge.net/projects/snpeff/
-.. _biopython: http://biopython.org
-.. _pysam: http://code.google.com/p/pysam/
-.. _mako: http://www.makotemplates.org/
-.. _PyYAML: http://pyyaml.org/
-.. _logbook: http://packages.python.org/Logbook
-.. _celery: http://celeryproject.org/
-.. _numpy: http://www.numpy.org/
 .. _CloudBioLinux: http://cloudbiolinux.org
-.. _virtualenv: http://www.virtualenv.org/en/latest/
-.. _ipython: http://ipython.org/
-.. _sh: http://amoffat.github.com/sh/
-
+.. _packages-homebrew.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/contrib/flavor/ngs_pipeline_minimal/packages-homebrew.yaml
+.. _custom.yaml : https://github.com/chapmanb/cloudbiolinux/blob/master/contrib/flavor/ngs_pipeline_minimal/custom.yaml
 
 .. _data-requirements:
 
@@ -259,4 +300,3 @@ automatically::
 
 .. _fabricrc.txt: https://github.com/chapmanb/cloudbiolinux/blob/master/config/fabricrc.txt
 .. _biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
-

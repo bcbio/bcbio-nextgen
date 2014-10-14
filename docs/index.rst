@@ -26,8 +26,10 @@ Contents:
    contents/configuration
    contents/parallel
    contents/pipelines
+   contents/outputs
    contents/code
    contents/internals
+   contents/presentations
    contents/deprecated
 
 

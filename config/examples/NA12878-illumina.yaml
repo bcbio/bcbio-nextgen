@@ -17,9 +17,12 @@ details:
       quality_format: Standard
       coverage_interval: genome
       coverage_depth: low
-      validate: NA12878-illumina-example.vcf
+      validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
+      validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
     analysis: variant2
     description: NA12878
     genome_build: GRCh37
+    metadata:
+      sex: female
     lane: 1
-    files: [ERR091571_1.fastq.gz, ERR091571_2.fastq.gz]
+    files: [../input/ERR091571_1.fastq.gz, ../input/ERR091571_2.fastq.gz]

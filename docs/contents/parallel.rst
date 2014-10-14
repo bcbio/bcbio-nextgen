@@ -68,11 +68,21 @@ resubmitting jobs that may have failed for reproducible reasons.
 
 Finally, the ``-r resources`` flag specifies resource options to pass along
 to the underlying queue scheduler. This currently supports SGE's
-``-l`` parameter and SLURM native flags. This allows specification
+``-l`` parameter, Torque's ``-l`` parameter, LSF and SLURM native flags. This allows specification
 or resources to the scheduler (see the `qsub man page`_). You may specify multiple
-resources separated with a ``;``, so a ``-r mem=4g;ct=01:40:00``
-translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or 
-``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for instance.
+resources, so ``-r mem=4g -r ct=01:40:00``
+translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
+``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for
+instance. SLURM and Torque support specification of an account parameter with
+``-r account=your_name``, which IPython transfers into ``-A``.
+
+Specify the `SGE parallel environment`_ to use for submitting multicore jobs
+with ``-r pename=your_pe``. Since this setup
+is system specific it is hard to write general code for find a
+suitable environment. Specifically, when there are multiple usable
+parallel environments, it will select the first one which may not be
+correct. Manually specifying it with a ``pename=`` flag to resources
+will ensure correct selection of the right environment.
 
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
@@ -81,6 +91,28 @@ translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
 .. _Gluster: http://www.gluster.org/
 .. _Lustre: http://wiki.lustre.org/index.php/Main_Page
 .. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
+.. _SGE parallel environment: https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment
+
+Troubleshooting
+===============
+Networking problems on clusters can prevent the IPython parallelization
+framework from working properly. Be sure that the compute nodes on your
+cluster are aware of IP addresses that they can use to communicate
+with each other (usually these will be local IP addresses). Running::
+
+    python -c 'import socket; print socket.gethostbyname(socket.gethostname())'
+    
+Should return such an IP address (as opposed to localhost). This can be
+fixed by adding an entry to the hosts file.
+
+The line::
+
+    host-ip hostname
+    
+where ``host-ip`` is replaced by the actual IP address of the machine
+and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
+on each compute node. This will probably involve contacting your local
+cluster administrator.
 
 .. _memory-management:
 
@@ -89,15 +121,15 @@ Memory management
 
 The memory information specified in the system configuration
 :ref:`config-resources` enables scheduling of memory intensive
-processes. bcbio-nextgen handle memory scheduling by:
+processes. bcbio-nextgen handles memory scheduling by:
 
 - Determining available cores and memory per machine. It uses the
   local machine for multicore runs. For parallel runs, it spawns a job
   on the schedule queue and extracts the system information from that
-  machine. This requires a homogeneous set of machines within a
+  machine. This expects a homogeneous set of machines within a
   cluster queue.
 
-- Calculating the memory and core usage for a subset of the process runs.
+- Calculating the memory and core usage.
   The system configuration :ref:`config-resources` contains the
   expected core and memory usage of external programs.
 
@@ -113,8 +145,10 @@ processes. bcbio-nextgen handle memory scheduling by:
 
 As a result of these calculations, the cores used during processing
 will not always correspond to the maximum cores provided in the input
-`-n` parameter. The goal is rather to intelligently maximize cores
-and memory while staying within system resources.
+`-n` parameter. The goal is rather to intelligently maximize cores and
+memory while staying within system resources. Note that memory
+specifications are for a single core, and the pipeline takes care of
+adjusting this to actual cores used during processing.
 
 Tuning systems for scale
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -147,6 +181,28 @@ from a host with admin privileges, and edit ``execd_params``::
     execd_params                 S_DESCRIPTORS=20000
 
 .. _this blog post: https://viewsby.wordpress.com/2013/01/29/ubuntu-increase-number-of-open-files/
+
+IO and Network File Systems
+===========================
+
+bcbio-nextgen makes use of distributed network file systems to manage
+sharing large files between compute nodes. While we strive to minimize
+disk-based processing by making use of pipes, the pipeline still has a
+major IO component. To help manage IO and network bottlenecks, this
+section contains pointers on deployments and benchmarking. Please
+contribute your tips and thoughts.
+
+- Harvard and Dell: See the 'Distributed File Systems` section of our
+  `post on scaling bcbio-nextgen`_ for details about the setup within
+  `Harvard FAS Research Computing`_ and thoughts on scaling and
+  hardware. We also collaborate with Dell to
+  test the pipeline on `Dell's Active Infrastructure for Life Sciences`_.
+  We found the biggest initial factor limiting scaling was network
+  bandwidth between compute and storage nodes.
+
+.. _post on scaling bcbio-nextgen: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _Harvard FAS Research Computing: http://rc.fas.harvard.edu/
+.. _Dell's Active Infrastructure for Life Sciences: http://dell.com/ai-hpc-lifesciences
 
 Cloud support
 ~~~~~~~~~~~~~

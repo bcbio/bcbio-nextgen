@@ -1,76 +1,37 @@
-"""Utilities to manipulate VCF files.
+"""Utilities for manipulating VCF files.
 """
 import os
 
+from bcbio.bam import ref
 from bcbio.utils import file_exists, replace_suffix, append_stem
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
+from bcbio.provenance import do
+from bcbio.variation import bamprep, vcfutils
 
-import sh
-
-def split_vcf(in_file, config, out_dir=None):
-    """
-    split a VCF file into separate files by chromosome
-    requires tabix to be installed
-
+def split_vcf(in_file, ref_file, config, out_dir=None):
+    """Split a VCF file into separate files by chromosome.
     """
     if out_dir is None:
         out_dir = os.path.join(os.path.dirname(in_file), "split")
-
-    fasta_file = config["ref"]["fasta"]
-    fasta_index = fasta_file + ".fai"
-    samtools_path = config["program"].get("samtools", "samtools")
-    tabix_path = config["program"].get("tabix", "tabix")
-
-    if not file_exists(fasta_index):
-        samtools = sh.Command(samtools_path)
-        samtools.faidx(fasta_file)
-
-    # if in_file is not compressed, compress it
-    (_, ext) = os.path.splitext(in_file)
-    if ext is not ".gz":
-        gzip_file = in_file + ".gz"
-        if not file_exists(gzip_file):
-            sh.bgzip("-c", in_file, _out=gzip_file)
-        in_file = gzip_file
-
-    # create tabix index
-    tabix_index(in_file)
-
-    # find the chromosome names from the fasta index file
-    chroms = str(sh.cut("-f1", fasta_index)).split()
-
-    # make outfile from chromosome name
-    def chr_out(chrom):
-        out_file = replace_suffix(append_stem(in_file, chrom), ".vcf")
-        return os.path.join(out_dir, os.path.basename(out_file))
-
-    # run tabix to break up the vcf file
-    def run_tabix(chrom):
-        tabix = sh.Command(tabix_path)
-        out_file = chr_out(chrom)
-        if file_exists(out_file):
-            return out_file
-        with file_transaction(out_file) as tmp_out_file:
-            tabix("-h", in_file, chrom, _out=tmp_out_file)
-        return out_file
-
-    out_files = map(run_tabix, chroms)
+    out_files = []
+    with open(ref.fasta_idx(ref_file, config)) as in_handle:
+        for line in in_handle:
+            chrom, size = line.split()[:2]
+            out_file = os.path.join(out_dir,
+                                    os.path.basename(replace_suffix(append_stem(in_file, "-%s" % chrom), ".vcf")))
+            subset_vcf(in_file, (chrom, 0, size), out_file, config)
+            out_files.append(out_file)
     return out_files
 
-
-def tabix_index(in_file, preset="vcf", config=None):
+def subset_vcf(in_file, region, out_file, config):
+    """Subset VCF in the given region, handling bgzip and indexing of input.
     """
-    index a file using tabix
-
-    """
-    if config:
-        tabix_path = config["program"].get("tabix", "tabix")
-    else:
-        tabix_path = sh.which("tabix")
-    tabix = sh.Command(tabix_path)
-    out_file = in_file + ".tbi"
-    if file_exists(out_file):
-        return out_file
-    tabix("-p", preset, in_file)
-
+    work_file = vcfutils.bgzip_and_index(in_file, config)
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            bcftools = config_utils.get_program("bcftools", config)
+            region_str = bamprep.region_to_gatk(region)
+            cmd = "{bcftools} view -r {region_str} {work_file} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "subset %s: %s" % (os.path.basename(work_file), region_str))
     return out_file

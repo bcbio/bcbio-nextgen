@@ -24,6 +24,9 @@ resources:
   samtools:
     memory: 2G
     cores: 16
+  star:
+    memory: 2g
+    cores: 16
   novoalign:
     cores: 16
     memory: 2G
@@ -33,66 +36,55 @@ resources:
     memory: 2g
   gatk:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
-    dir: /usr/share/java/gatk
+    dir: /usr/local/share/java/gatk
   gatk-haplotype:
     jvm_opts: ["-Xms2g", "-Xmx5500m"]
   gatk-vqsr:
     jvm_opts: ["-Xms2g", "-Xmx4000m"]
   picard:
-    dir: /usr/share/java/picard
-  snpEff:
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    dir: /usr/local/share/java/picard
+  snpeff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
-    dir: /usr/share/java/snpeff
+    dir: /usr/local/share/java/snpeff
   bcbio_variation:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
-    dir: /usr/share/java/bcbio_variation
+    dir: /usr/local/share/java/bcbio_variation
   rnaseqc:
-    dir: /usr/share/java/RNA-SeQC
+    dir: /usr/local/share/java/RNA-SeQC
+    jvm_opts: ["-Xms750m", "-Xmx20g"]
+  mutect:
+    jvm_opts: ["-Xms750m", "-Xmx2500m"]
+    dir: /usr/local/share/java/mutect
+  varscan:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/varscan
+  oncofuse:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/oncofuse
+  AlienTrimmer:
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    dir: /usr/local/share/java/AlienTrimmer
+  bowtie2:
+    cores: 16
+  tophat2:
+    cores: 16
+  cufflinks:
+    cores: 16
+  bowtie:
+    cores: 16
+  tophat:
+    cores: 16
 
-# -- Default algorithm setup
-
-# Define default algorithmic details for processing. These are generally
-# adjusted per sample in the sample.yaml input files. The defaults here
-# apply if not overridden for a specific sample
-
-# General attributes that apply across multiple pipelines.
-algorithm:
-  aligner: bowtie
-  max_errors: 2
-  platform: illumina
-  recalibrate: false
-  upload_fastq: false
-  save_diskspace: true
-
-# Configuration algorithm changes for specific pipelines.
-custom_algorithms:
-  variant2:
-    aligner: bwa
-    recalibrate: "gatk"
-    variantcaller: "gatk"
-    coverage_depth: "high" # other options: low
-    coverage_interval: "exome" # other options: genome, regional
-  'RNA-seq':
-    aligner: tophat
-    transcript_assemble: true
-  'Minimal':
-    aligner: ""
+# Location of galaxy configuration file, which has pointers to reference data
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#reference-genome-files
+galaxy_config: universe_wsgi.ini
     
 # -- Additional options for specific integration, not required for standalone usage.
 
-# Galaxy integration. Required for upload/download from a Galaxy instance.
-galaxy_url: http://your/galaxy/url
-galaxy_api_key: your_galaxy_api_key
-galaxy_config: universe_wsgi.ini
-
-# Distribution details for RabbitMQ/celery distribution on a cluster.
-# Only required if using this method, which is deprecated in favor of IPython clusters.
-# distributed:
-#   cluster_platform: lsf
-#   platform_args: '-q your_queue_name'
-#   cores_per_host: 1 # 0 uses all cores, otherwise can configure for architecture
-#   # num_workers: 2 # only required if cores_per_host is 0, otherwise use all needed
-#   rabbitmq_vhost: bionextgen
+# Galaxy integration. Required for retrieving information from Galaxy LIMS.
+#galaxy_url: http://your/galaxy/url
+#galaxy_api_key: your_galaxy_api_key
 
 # Details for hooking automated processing to a sequencer machine.
 # Not required if running standalone pipelines.
@@ -105,3 +97,7 @@ galaxy_config: universe_wsgi.ini
 #   store_dir: /store4/solexadata
 #   base_dir: /array0/projects/Sequencing
 #   worker_program: nextgen_analysis_server.py
+
+# ## Back compatible algorithm section, to be removed in 0.7.7 release
+algorithm:
+  platform: illumina

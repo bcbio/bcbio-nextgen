@@ -2,7 +2,7 @@
 # build a GATK jar without embedded dependencies from current git
 mkdir -p ~/tmp/gatkbuild
 cd ~/tmp/gatkbuild
-git clone https://github.com/broadgsa/gatk.git
+git clone https://github.com/chapmanb/gatk.git
 cd gatk
 ant
 cd dist

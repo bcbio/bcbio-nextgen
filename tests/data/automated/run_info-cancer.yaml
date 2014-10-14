@@ -8,14 +8,15 @@ details:
     files: [HCC1143-normal.bam]
     genome_build: hg19
     metadata:
-      batch: PairedBatch
+      batch: [PairedBatch, PairedBatch2]
       phenotype: normal
     algorithm:
       aligner: false
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [mutect, varscan]
+      variantcaller: [mutect, varscan, freebayes]
+      svcaller: [cn.mops]
   - analysis: variant2
     description: c-tumor
     files: [HCC1143-tumor.bam]
@@ -28,4 +29,20 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [mutect, varscan]
+      variantcaller: [mutect, varscan, freebayes]
+      svcaller: [cn.mops]
+  - analysis: variant2
+    description: c-tumor2
+    files: [HCC1143-tumor.bam]
+    genome_build: hg19
+    metadata:
+      batch: PairedBatch2
+      phenotype: tumor
+    algorithm:
+      aligner: false
+      bam_clean: picard
+      mark_duplicates: false
+      recalibrate: false
+      realign: false
+      variantcaller: [mutect, varscan, freebayes]
+      svcaller: [cn.mops]

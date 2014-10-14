@@ -2,171 +2,162 @@
 
 This handles merging calls produced by multiple calling methods or
 technologies into a single consolidated callset. Uses the bcbio.variation
-toolkit: https://github.com/chapmanb/bcbio.variation
+toolkit: https://github.com/chapmanb/bcbio.variation and bcbio.variation.recall:
+https://github.com/chapmanb/bcbio.variation.recall
 """
-import os
-import glob
+import collections
 import copy
+import glob
+import os
 
 import yaml
 
 from bcbio import utils
-from bcbio.bam import callable
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
+from bcbio.variation import effects, population, validate
 
-def _has_ensemble(data):
-    return len(data["variants"]) > 1 and data["config"]["algorithm"].has_key("ensemble")
-
-def combine_calls(data):
+def combine_calls(batch_id, samples, data):
     """Combine multiple callsets into a final set of merged calls.
     """
-    from bcbio.variation import effects, validate
-    if _has_ensemble(data):
-        logger.info("Ensemble consensus calls for {0}: {1}".format(
-            ",".join(x["variantcaller"] for x in data["variants"]), data["work_bam"]))
-        edata = copy.deepcopy(data)
-        edata["config"]["algorithm"]["variantcaller"] = "ensemble"
-        sample = edata["name"][-1].replace(" ", "_")
-        base_dir = utils.safe_makedir(os.path.join(edata["dirs"]["work"], "ensemble"))
-        config_file = _write_config_file(edata, sample, base_dir, "ensemble")
-        callinfo = _run_bcbio_variation(config_file, base_dir, sample, edata)
-        edata["vrn_file"] = callinfo["vrn_file"]
-        edata["ensemble_bed"] = callinfo["bed_file"]
-        callinfo["validate"] = validate.compare_to_rm(edata)[0][0].get("validate")
-        ann_vrn_file = effects.snpeff_effects(edata)
-        if ann_vrn_file:
-            callinfo["vrn_file"] = ann_vrn_file
-        data["variants"].insert(0, callinfo)
-        _write_config_file(data, sample, base_dir, "compare")
-    return [[data]]
+    logger.info("Ensemble consensus calls for {0}: {1}".format(
+        batch_id, ",".join(x["variantcaller"] for x in samples[0]["variants"])))
+    edata = copy.deepcopy(data)
+    base_dir = utils.safe_makedir(os.path.join(edata["dirs"]["work"], "ensemble", batch_id))
+    caller_names, vrn_files, bam_files = _organize_variants(samples, batch_id)
+    if "caller" in edata["config"]["algorithm"]["ensemble"]:
+        callinfo = _run_ensemble_w_caller(batch_id, vrn_files, bam_files, base_dir, edata)
+    else:
+        config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
+        callinfo = _run_ensemble(batch_id, vrn_files, config_file, base_dir,
+                                 edata["sam_ref"], edata["config"])
+    edata["config"]["algorithm"]["variantcaller"] = "ensemble"
+    edata["vrn_file"] = callinfo["vrn_file"]
+    edata["ensemble_bed"] = callinfo["bed_file"]
+    callinfo["validate"] = validate.compare_to_rm(edata)[0][0].get("validate")
+    return [[batch_id, callinfo]]
 
 def combine_calls_parallel(samples, run_parallel):
-    """Combine calls using Ensemble approach, skipping cluster creation if nothing to do.
+    """Combine calls using batched Ensemble approach.
     """
-    need_combine = False
-    for data in samples:
-        if _has_ensemble(data[0]):
-            need_combine = True
-            break
-    if need_combine:
-        return run_parallel("combine_calls", samples)
-    else:
-        return samples
+    batch_groups, extras = _group_by_batches(samples, _has_ensemble)
+    out = []
+    if batch_groups:
+        processed = run_parallel("combine_calls", ((b, xs, xs[0]) for b, xs in batch_groups.iteritems()))
+        for batch_id, callinfo in processed:
+            for data in batch_groups[batch_id]:
+                data["variants"].insert(0, callinfo)
+                out.append([data])
+    return out + extras
 
-def bcbio_variation_comparison(config_file, base_dir, data):
+def _has_ensemble(data):
+    return len(data["variants"]) > 1 and "ensemble" in data["config"]["algorithm"]
+
+def _group_by_batches(samples, check_fn):
+    """Group calls by batches, processing families together during ensemble calling.
+    """
+    batch_groups = collections.defaultdict(list)
+    extras = []
+    for data in [x[0] for x in samples]:
+        if check_fn(data):
+            batch = data.get("metadata", {}).get("batch")
+            if batch:
+                batch_groups[batch].append(data)
+            else:
+                assert data["name"][-1] not in batch_groups
+                batch_groups[data["name"][-1]] = [data]
+        else:
+            extras.append([data])
+    return batch_groups, extras
+
+def _organize_variants(samples, batch_id):
+    """Retrieve variant calls for all samples, merging batched samples into single VCF.
+    """
+    bam_files = set([])
+    caller_names = [x["variantcaller"] for x in samples[0]["variants"]]
+    calls = collections.defaultdict(list)
+    for data in samples:
+        if "work_bam" in data:
+            bam_files.add(data["work_bam"])
+        for vrn in data["variants"]:
+            calls[vrn["variantcaller"]].append(vrn["vrn_file"])
+    data = samples[0]
+    vrn_files = []
+    for caller in caller_names:
+        fnames = calls[caller]
+        if len(fnames) == 1:
+            vrn_files.append(fnames[0])
+        else:
+            vrn_files.append(population.get_multisample_vcf(fnames, batch_id, caller, data))
+    return caller_names, vrn_files, list(bam_files)
+
+def _bcbio_variation_ensemble(vrn_files, out_file, ref_file, config_file, base_dir, config):
     """Run a variant comparison using the bcbio.variation toolkit, given an input configuration.
     """
     tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))
     bv_jar = config_utils.get_jar("bcbio.variation",
-                                  config_utils.get_program("bcbio_variation",
-                                                           data["config"], "dir"))
-    resources = config_utils.get_resources("bcbio_variation", data["config"])
+                                  config_utils.get_program("bcbio_variation", config, "dir"))
+    resources = config_utils.get_resources("bcbio_variation", config)
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
     java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
-    cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-compare", config_file]
-    do.run(cmd, "Comparing variant calls using bcbio.variation", data)
+    cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-ensemble", config_file,
+                                             ref_file, out_file] + vrn_files
+    with utils.chdir(base_dir):
+        do.run(cmd, "Ensemble calling: %s" % os.path.basename(base_dir))
 
-def _run_bcbio_variation(config_file, base_dir, sample, data):
-    out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(sample))
-    out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(sample))
+def _run_ensemble(batch_id, vrn_files, config_file, base_dir, ref_file, config):
+    """Run an ensemble call using merging and SVM-based approach in bcbio.variation
+    """
+    out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(batch_id))
+    out_bed_file = os.path.join(base_dir, "{0}-callregions.bed".format(batch_id))
+    work_dir = "%s-work" % os.path.splitext(out_vcf_file)[0]
     if not utils.file_exists(out_vcf_file):
-        bcbio_variation_comparison(config_file, base_dir, data)
-        base_vcf = glob.glob(os.path.join(base_dir, sample, "work", "prep",
-                                          "*-cfilter.vcf"))[0]
-        os.symlink(base_vcf, out_vcf_file)
-        multi_beds = glob.glob(os.path.join(base_dir, sample, "work", "prep",
-                                            "*-multicombine.bed"))
+        _bcbio_variation_ensemble(vrn_files, out_vcf_file, ref_file, config_file,
+                                  base_dir, config)
+        if not utils.file_exists(out_vcf_file):
+            base_vcf = glob.glob(os.path.join(work_dir, "prep", "*-cfilter.vcf"))[0]
+            utils.symlink_plus(base_vcf, out_vcf_file)
+    if not utils.file_exists(out_bed_file):
+        multi_beds = glob.glob(os.path.join(work_dir, "prep", "*-multicombine.bed"))
         if len(multi_beds) > 0:
-            os.symlink(multi_beds[0], out_bed_file)
-
-    return {"variantcaller": data["config"]["algorithm"]["variantcaller"],
+            utils.symlink_plus(multi_beds[0], out_bed_file)
+    return {"variantcaller": "ensemble",
             "vrn_file": out_vcf_file,
             "bed_file": out_bed_file if os.path.exists(out_bed_file) else None}
 
-def get_analysis_intervals(data):
-    """Retrieve analysis regions for the current variant calling pipeline.
-    """
-    if data.get("ensemble_bed"):
-        return data["ensemble_bed"]
-    elif data.get("callable_bam"):
-        return callable.sample_callable_bed(data["callable_bam"], data["sam_ref"], data["config"])
-    else:
-        for key in ["callable_regions", "variant_regions"]:
-            intervals = data["config"]["algorithm"].get(key)
-            if intervals:
-                return intervals
-
-def _write_config_file(data, sample, base_dir, config_name):
+def _write_config_file(batch_id, caller_names, base_dir, data):
     """Write YAML configuration to generate an ensemble set of combined calls.
     """
-    sample_dir = os.path.join(base_dir, sample)
-    config_dir = utils.safe_makedir(os.path.join(sample_dir, "config"))
-    config_file = os.path.join(config_dir, "{0}.yaml".format(config_name))
-    prep_fns = {"ensemble": _prep_config_ensemble, "compare": _prep_config_compare}
-
-    econfig = prep_fns[config_name](sample, data["variants"],
-                                    data.get("callable_bam", data["work_bam"]),
-                                    data["sam_ref"], sample_dir,
-                                    get_analysis_intervals(data),
-                                    data["config"]["algorithm"])
+    config_dir = utils.safe_makedir(os.path.join(base_dir, "config"))
+    config_file = os.path.join(config_dir, "{0}-ensemble.yaml".format(batch_id))
+    algorithm = data["config"]["algorithm"]
+    econfig = {"ensemble": algorithm["ensemble"],
+               "names": caller_names,
+               "prep-inputs": False}
+    intervals = validate.get_analysis_intervals(data)
+    if intervals:
+        econfig["intervals"] = os.path.abspath(intervals)
     with open(config_file, "w") as out_handle:
         yaml.dump(econfig, out_handle, allow_unicode=False, default_flow_style=False)
     return config_file
 
-def _prep_config_compare(sample, variants, align_bam, ref_file, base_dir,
-                         intervals, algorithm):
-    """Write YAML bcbio.variation configuration input for results comparison.
+def _run_ensemble_w_caller(batch_id, vrn_files, bam_files, base_dir, edata):
+    """Run ensemble method using a variant caller to handle re-calling the inputs.
 
-    Preps a config file making it easy to compare finalized combined calls
-    to individual inputs.
+    Uses bcbio.variation.recall method plus an external variantcaller.
     """
-    return _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
-                               intervals, algorithm, "compare", False)
-
-def _prep_config_ensemble(sample, variants, align_bam, ref_file, base_dir,
-                          intervals, algorithm):
-    """Prepare a YAML configuration file describing the sample inputs.
-    """
-    return _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
-                               intervals, algorithm, "work", True)
-
-def _prep_config_shared(sample, variants, align_bam, ref_file, base_dir,
-                          intervals, algorithm, work_dir, do_combo):
-    combo_name = "combo"
-    exp = {"sample": sample, "ref": ref_file, "align": align_bam, "calls": []}
-    if do_combo:
-        cparams = algorithm["ensemble"].get("classifier-params", {})
-        exp["finalize"] = \
-          [{"method": "multiple",
-            "target": combo_name},
-            {"method": "recal-filter",
-             "target": [combo_name, variants[0]["variantcaller"]],
-             "params": {"support": combo_name,
-                        "classifiers": algorithm["ensemble"]["classifiers"],
-                        "classifier-type": cparams.get("type", "svm"),
-                        "normalize": cparams.get("normalize", "default"),
-                        "log-attrs": cparams.get("log-attrs", []),
-                        "xspecific": True,
-                        "trusted":
-                        {"total": algorithm["ensemble"].get("trusted-pct", 0.65)}}}]
-    if intervals:
-        exp["intervals"] = os.path.abspath(intervals)
-    for i, v in enumerate(variants):
-        cur = {"name": v["variantcaller"], "file": v["vrn_file"],
-               "remove-refcalls": True}
-        if algorithm.get("ploidy", 2) == 1:
-            cur["make-haploid"] = True
-        # add a recall variant for the first sample which will combine all calls
-        if i == 0 and do_combo:
-            recall = copy.deepcopy(cur)
-            recall["name"] = combo_name
-            recall["recall"] = True
-            recall["annotate"] = True
-            if algorithm["ensemble"].get("format-filters"):
-                recall["format-filters"] = algorithm["ensemble"]["format-filters"]
-            exp["calls"].append(recall)
-        exp["calls"].append(cur)
-    return {"dir": {"base": base_dir, "out": work_dir, "prep": os.path.join(work_dir, "prep")},
-            "experiments": [exp]}
+    out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(batch_id))
+    if not utils.file_exists(out_vcf_file):
+        caller = edata["config"]["algorithm"]["ensemble"]["caller"]
+        cmd = [config_utils.get_program("bcbio-variation-recall", edata["config"]),
+               "ensemble", "--cores=%s" % edata["config"]["algorithm"].get("num_cores", 1),
+               "--caller=%s" % caller,
+               out_vcf_file, edata["sam_ref"]] + vrn_files + bam_files
+        do.run(cmd, "Ensemble calling with %s: %s" % (caller, batch_id))
+    in_data = copy.deepcopy(edata)
+    in_data["vrn_file"] = out_vcf_file
+    effects_vcf = effects.snpeff_effects(in_data)
+    return {"variantcaller": "ensemble",
+            "vrn_file": effects_vcf,
+            "bed_file": None}

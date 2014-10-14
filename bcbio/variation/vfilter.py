@@ -3,53 +3,62 @@
 from distutils.version import LooseVersion
 import os
 
-from bcbio import broad, utils
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
+from bcbio.variation import vcfutils
 
 # ## General functionality
 
-def jexl_hard(broad_runner, snp_file, ref_file, filter_type,
-                                expressions):
-    """Perform hard filtering with GATK using JEXL expressions.
-
-    Variant quality score recalibration will not work on some regions; it
-    requires enough positions to train the model. This provides a general wrapper
-    around GATK to do cutoff based filtering.
+def hard_w_expression(vcf_file, expression, data, filterext=""):
+    """Perform hard filtering using bcftools expressions like %QUAL < 20 || DP < 4.
     """
-    base, ext = os.path.splitext(snp_file)
-    out_file = "{base}-filter{ftype}{ext}".format(base=base, ext=ext,
-                                                  ftype=filter_type)
+    base, ext = utils.splitext_plus(vcf_file)
+    out_file = "{base}-filter{filterext}{ext}".format(**locals())
     if not utils.file_exists(out_file):
-        logger.debug("Hard filtering %s with %s" % (snp_file, expressions))
         with file_transaction(out_file) as tx_out_file:
-            params = ["-T", "VariantFiltration",
-                      "-R", ref_file,
-                      "-l", "ERROR",
-                      "--out", tx_out_file,
-                      "--variant", snp_file]
-            for exp in expressions:
-                params.extend(["--filterName", "GATKStandard{e}".format(e=exp.split()[0]),
-                               "--filterExpression", exp])
-            broad_runner.run_gatk(params)
+            bcftools = config_utils.get_program("bcftools", data["config"])
+            output_type = "z" if out_file.endswith(".gz") else "v"
+            variant_regions = clean_variant_regions(data)
+            intervals = "-t %s" % variant_regions if variant_regions else ""
+            cmd = ("{bcftools} filter -O {output_type} {intervals} --soft-filter '+' "
+                   "-e '{expression}' -m '+' {vcf_file} > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
     return out_file
+
+def clean_variant_regions(data):
+    """Prepare a clean input BED file without headers or overlapping segments.
+    """
+    bedtools = config_utils.get_program("bedtools", data["config"])
+    variant_regions = data["config"]["algorithm"].get("variant_regions", None)
+    if variant_regions:
+        bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
+        out_file = os.path.join(bedprep_dir, os.path.basename(variant_regions))
+        if not utils.file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                cmd = "sort -k1,1 -k2,2n {variant_regions} | {bedtools} merge -i > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
+        return vcfutils.bgzip_and_index(out_file, data["config"])
 
 # ## Caller specific
 
-def freebayes(in_file, ref_file, vrn_files, config):
+def freebayes(in_file, ref_file, vrn_files, data):
     """FreeBayes filters: trying custom filter approach before falling back on hard filtering.
     """
-    out_file = _freebayes_custom(in_file, ref_file, config)
-    if out_file is None:
-        out_file = _freebayes_hard(in_file, ref_file, config)
+    out_file = _freebayes_hard(in_file, data)
+    #out_file = _freebayes_custom(in_file, ref_file, data)
     return out_file
 
-def _freebayes_custom(in_file, ref_file, config):
+def _freebayes_custom(in_file, ref_file, data):
     """Custom FreeBayes filtering using bcbio.variation, tuned to human NA12878 results.
+
+    Experimental: for testing new methods.
     """
-    bv_ver = programs.get_version("bcbio.variation", config=config)
+    if vcfutils.get_paired_phenotype(data):
+        return None
+    config = data["config"]
+    bv_ver = programs.get_version("bcbio_variation", config=config)
     if LooseVersion(bv_ver) < LooseVersion("0.1.1"):
         return None
     out_file = "%s-filter%s" % os.path.splitext(in_file)
@@ -65,10 +74,16 @@ def _freebayes_custom(in_file, ref_file, config):
         do.run(cmd, "Custom FreeBayes filtering using bcbio.variation")
     return out_file
 
-def _freebayes_hard(in_file, ref_file, config):
-    """Perform basic sanity filtering of FreeBayes results, removing low confidence calls.
-    """
-    broad_runner = broad.runner_from_config(config)
-    filters = ["QUAL < 20.0", "DP < 5"]
-    return jexl_hard(broad_runner, in_file, ref_file, "", filters)
+def _freebayes_hard(in_file, data):
+    """Perform filtering of FreeBayes results, removing low confidence calls.
 
+    Filters using cutoffs on depth based on Meynert et al's work modeling sensitivity
+    of homozygote and heterozygote calling on depth:
+
+    http://www.ncbi.nlm.nih.gov/pubmed/23773188
+
+    Tuned based on NA12878 call comparisons to Genome in a Bottle reference genome.
+    """
+    filters = ("(AF <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || "
+               "(AF > 0.5 && (DP < 4 && %QUAL < 50))")
+    return hard_w_expression(in_file, filters, data)

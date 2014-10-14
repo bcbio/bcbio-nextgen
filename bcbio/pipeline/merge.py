@@ -6,7 +6,7 @@ items to combine within a group.
 import os
 import shutil
 
-from bcbio import broad, utils
+from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, system
@@ -34,30 +34,33 @@ def combine_fastq_files(in_files, work_dir, config):
                 utils.save_diskspace(f2, "fastq merged to %s" % out2, config)
         return out1, out2
 
-def merge_bam_files(bam_files, work_dir, config, out_file=None):
+def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
     """Merge multiple BAM files from a sample into a single BAM for processing.
 
-    Uses samtools or bamtools for merging, both of which have some cavaets.
-    samtools can run into file system limits on command line length, while
-    bamtools runs into open file handle issues.
+    Checks system open file limit and merges in batches if necessary to avoid
+    file handle limits.
     """
     if len(bam_files) == 1:
         return bam_files[0]
     else:
         if out_file is None:
             out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
+        if batch is not None:
+            base, ext = os.path.splitext(out_file)
+            out_file = "%s-b%s%s" % (base, batch, ext)
         if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".bai"):
             bamtools = config_utils.get_program("bamtools", config)
             samtools = config_utils.get_program("samtools", config)
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = resources.get("memory", "1G")
+            batch_size = system.open_file_limit() - 100
+            if len(bam_files) > batch_size:
+                bam_files = [merge_bam_files(xs, work_dir, config, out_file, i)
+                             for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
             with utils.curdir_tmpdir() as tmpdir:
                 with utils.chdir(tmpdir):
-                    if len(bam_files) < 4096:
-                        merge_cl = _samtools_cat(bam_files, tmpdir)
-                    else:
-                        merge_cl = _bamtools_merge(bam_files)
+                    merge_cl = _bamtools_merge(bam_files)
                     with file_transaction(out_file) as tx_out_file:
                         tx_out_prefix = os.path.splitext(tx_out_file)[0]
                         with utils.tmpfile(dir=work_dir, prefix="bammergelist") as bam_file_list:
@@ -70,8 +73,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None):
                             do.run(cmd.format(**locals()), "Merge bam files", None)
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
-        picard = broad.runner_from_config(config)
-        picard.run_fn("picard_index", out_file)
+        bam.index(out_file, config)
         return out_file
 
 def _samtools_cat(bam_files, tmpdir):
@@ -81,7 +83,7 @@ def _samtools_cat(bam_files, tmpdir):
     short_bams = []
     for i, bam_file in enumerate(bam_files):
         short_bam = os.path.join(tmpdir, "%s.bam" % i)
-        os.symlink(bam_file, short_bam)
+        utils.symlink_plus(bam_file, short_bam)
         short_bams.append(short_bam)
     return "{samtools} cat " + " ".join(os.path.relpath(b) for b in short_bams)
 
@@ -89,7 +91,7 @@ def _bamtools_merge(bam_files):
     """Use bamtools to merge multiple BAM files, requires a list from disk.
     """
     if len(bam_files) > system.open_file_limit():
-        raise IOError("More files to merge (%s) then available open file descriptors (%s)\n"
+        raise IOError("More files to merge (%s) than available open file descriptors (%s)\n"
                       "See documentation on tips for changing file limits:\n"
                       "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
                       "parallel.html#tuning-systems-for-scale"

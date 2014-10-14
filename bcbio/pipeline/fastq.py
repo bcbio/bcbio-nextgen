@@ -1,52 +1,35 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
-import glob
 import subprocess
-import contextlib
 
-import pysam
-
-from bcbio import broad
+from bcbio import bam, broad
 from bcbio.bam import cram
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
-
-def needs_fastq_conversion(item, config):
-    """Check if an item needs conversion to fastq files.
-    """
-    for f in item.get("files", []):
-        if f.endswith(".bam") and _pipeline_needs_fastq(config, item):
-            return True
-    return False
+from bcbio.distributed.transaction import file_transaction
 
 def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    if "files" in item:
-        files = item["files"]
-    elif "vrn_file" in item:
-        files = []
-    else:
-        assert item["upload"].get("fc_name") is not None
-        fastq_dir = item["dirs"]["fastq"]
-        lane = item["lane"]
-        glob_str = "%s_*%s*_fastq.txt" % (lane, item["upload"]["fc_name"])
-        files = glob.glob(os.path.join(fastq_dir, glob_str))
-        files.sort()
-        if len(files) > 2 or len(files) == 0:
-            raise ValueError("Did not find correct files for %s %s %s %s" %
-                             (fastq_dir, lane, item["upload"]["fc_name"], files))
+    assert "files" in item, "Did not find `files` in input; nothing to process"
     ready_files = []
-    for fname in files:
+    for fname in item["files"]:
         if fname.endswith(".gz") and _pipeline_needs_fastq(item["config"], item):
-            cl = ["gunzip", fname]
-            subprocess.check_call(cl)
-            ready_files.append(os.path.splitext(fname)[0])
+            fastq_dir = os.path.join(item["dirs"]["work"], "fastq")
+            safe_makedir(fastq_dir)
+            out_file = os.path.join(fastq_dir,
+                                    os.path.basename(os.path.splitext(fname)[0]))
+            if not os.path.exists(out_file):
+                with file_transaction(out_file) as tx_out_file:
+                    cmd = "gunzip -c {fname} > {tx_out_file}".format(**locals())
+                    with open(tx_out_file, "w") as out_handle:
+                        subprocess.check_call(cmd, shell=True)
+            ready_files.append(out_file)
         elif fname.endswith(".bam"):
             if _pipeline_needs_fastq(item["config"], item):
                 ready_files = _convert_bam_to_fastq(fname, item["dirs"]["work"],
-                                                   item, item["dirs"], item["config"])
+                                                    item, item["dirs"], item["config"])
             else:
                 ready_files = [fname]
         else:
@@ -60,11 +43,8 @@ def _pipeline_needs_fastq(config, item):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
     """
     aligner = config["algorithm"].get("aligner")
-    has_multiplex = item.get("multiplex") is not None
-    do_split = config["algorithm"].get("align_split_size") is not None
     support_bam = aligner in alignment.metadata.get("support_bam", [])
-    return (has_multiplex or
-            (aligner and not do_split and not support_bam))
+    return aligner and not support_bam
 
 def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     """Convert BAM input file into FASTQ files.
@@ -80,7 +60,7 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
                  os.path.splitext(os.path.basename(in_file))[0], x))
                  for x in ["1", "2"]]
-    if _is_paired(in_file):
+    if bam.is_paired(in_file):
         out1, out2 = out_files
     else:
         out1 = out_files[0]
@@ -91,12 +71,3 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     if os.path.getsize(out2) == 0:
         out2 = None
     return [out1, out2]
-
-def _is_paired(bam_file):
-    # XXX need development version of pysam for this to work on
-    # fastq files without headers (ie. FastqToSam)
-    # Instead return true by default and then check after output
-    return True
-    with contextlib.closing(pysam.Samfile(bam_file, "rb")) as work_bam:
-        for read in work_bam:
-            return read.is_paired

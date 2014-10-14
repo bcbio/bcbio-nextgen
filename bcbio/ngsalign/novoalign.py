@@ -10,6 +10,7 @@ import subprocess
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.utils import (memoize_outfile, file_exists, curdir_tmpdir)
@@ -50,30 +51,32 @@ def align_bam(in_bam, ref_file, names, align_dir, config):
                        "  -o {tx_out_file} /dev/stdin")
                 cmd = cmd.format(**locals())
                 do.run(cmd, "Novoalign: %s" % names["sample"], None,
-                       [do.file_nonempty(tx_out_file)])
+                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
     return out_file
 
 # ## Fastq to BAM alignment
 
-def can_pipe(fastq_file):
-    """Novoalign support piping for all read lengths.
-    """
-    return True
-
-
-def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
+def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
     """
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
-    samtools = config_utils.get_program("samtools", config)
-    novoalign = config_utils.get_program("novoalign", config)
-    resources = config_utils.get_resources("novoalign", config)
-    num_cores = config["algorithm"].get("num_cores", 1)
+    if data.get("align_split"):
+        final_file = out_file
+        out_file, data = alignprep.setup_combine(final_file, data)
+        fastq_file = alignprep.split_namedpipe_cl(fastq_file, data)
+        if pair_file:
+            pair_file = alignprep.split_namedpipe_cl(pair_file, data)
+    else:
+        final_file = None
+    samtools = config_utils.get_program("samtools", data["config"])
+    novoalign = config_utils.get_program("novoalign", data["config"])
+    resources = config_utils.get_resources("novoalign", data["config"])
+    num_cores = data["config"]["algorithm"].get("num_cores", 1)
     max_mem = resources.get("memory", "1G")
-    extra_novo_args = " ".join(_novoalign_args_from_config(config, False))
+    extra_novo_args = " ".join(_novoalign_args_from_config(data["config"]))
     rg_info = get_rg_info(names)
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         with utils.curdir_tmpdir() as work_dir:
             with file_transaction(out_file) as tx_out_file:
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
@@ -83,8 +86,9 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, config):
                        "| {samtools} sort -@ {num_cores} -m {max_mem} - {tx_out_prefix}")
                 cmd = cmd.format(**locals())
                 do.run(cmd, "Novoalign: %s" % names["sample"], None,
-                       [do.file_nonempty(tx_out_file)])
-    return out_file
+                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
+    data["work_bam"] = out_file
+    return data
 
 def _novoalign_args_from_config(config, need_quality=True):
     """Select novoalign options based on configuration parameters.
@@ -115,10 +119,12 @@ def _novoalign_args_from_config(config, need_quality=True):
 # -k -t 200 -K quality calibration metrics
 # paired end sizes
 
-def align(fastq_file, pair_file, ref_file, out_base, align_dir, config,
+def align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
           extra_args=None, names=None):
     """Align with novoalign.
     """
+    raise NotImplementedError("Prefer align_pipe approach now.")
+    config = data["config"]
     rg_name = names.get("rg", None) if names else None
     out_file = os.path.join(align_dir, "{0}.sam".format(out_base))
     if not file_exists(out_file):

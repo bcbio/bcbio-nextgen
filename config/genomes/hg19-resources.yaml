@@ -1,4 +1,4 @@
-version: 1
+version: 5
 
 aliases:
   human: true
@@ -6,11 +6,14 @@ aliases:
   ensembl: human
 
 variation:
-  dbsnp: ../variation/dbsnp_137.vcf
+  dbsnp: ../variation/dbsnp_138.vcf
   train_hapmap: ../variation/hapmap_3.3.vcf
   train_1000g_omni: ../variation/1000G_omni2.5.vcf
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf
+  cosmic: ../variation/cosmic-v67_20131024-hg19.vcf
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
+  transcriptome_index:
+    tophat: ../rnaseq/tophat/hg19_transcriptome.ver
