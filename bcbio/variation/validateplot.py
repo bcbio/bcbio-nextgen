@@ -114,7 +114,10 @@ def _check_cats(cats, vtypes, df, prep, callers):
             all_vals.extend(vals)
         if sum(all_vals) / float(len(all_vals)) > 2:
             out.append(cat)
-    return out
+    if len(out) == 0:
+        return cats
+    else:
+        return out
 
 def _get_chart_info(df, vtype, cat, prep, callers):
     """Retrieve values for a specific variant type, category and prep method.

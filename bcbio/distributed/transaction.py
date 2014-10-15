@@ -10,6 +10,7 @@ import os
 import uuid
 import shutil
 import tempfile
+import time
 
 import toolz as tz
 
@@ -35,7 +36,14 @@ def tx_tmpdir(data=None, base_dir=None, remove=True):
     else:
         config_tmpdir = None
     if config_tmpdir:
-        tmp_dir_base = os.path.join(config_tmpdir, "bcbiotx", str(uuid.uuid1()))
+        tmp_dir_base = os.path.join(config_tmpdir, "bcbiotx", str(uuid.uuid4()))
+        unique_attempts = 0
+        while os.path.exists(tmp_dir_base):
+            if unique_attempts > 5:
+                break
+            tmp_dir_base = os.path.join(config_tmpdir, "bcbiotx", str(uuid.uuid4()))
+            time.sleep(1)
+            unique_attempts += 1
     elif base_dir is not None:
         tmp_dir_base = os.path.join(base_dir, "tx")
     else:
