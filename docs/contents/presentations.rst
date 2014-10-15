@@ -1,6 +1,9 @@
 Presentations
 =============
 
+- Boston area `Bioinformatics Interest Group <http://openwetware.org/wiki/BioMicroCenter:BIG_meeting>`_ (15 October 2014):
+  `slides <https://github.com/chapmanb/bcbb/raw/master/talks/big2014_bcbio_val/chapman_bcbio.pdf>`_
+
 - University of Georgia `Institute of Bioinformatics
   <http://iob.uga.edu/event/bioinformatics-seminar-12/>`_ (12 September 2014):
   `slides <https://github.com/chapmanb/bcbb/raw/master/talks/uga2014_bcbio_open/chapman_bcbio.pdf>`_
