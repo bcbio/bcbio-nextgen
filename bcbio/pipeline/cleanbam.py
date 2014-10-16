@@ -20,7 +20,7 @@ def picard_prep(in_bam, names, ref_file, dirs, data):
     - PrintReads to filters to remove problem records:
     - filterMBQ to remove reads with mismatching bases and base qualities
     """
-    runner = broad.runner_from_config(data["config"])
+    runner = broad.runner_from_config(data["config"], "picard")
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "bamclean", names["sample"]))
     runner.run_fn("picard_index_ref", ref_file)
     reorder_bam = os.path.join(work_dir, "%s-reorder.bam" %

@@ -172,7 +172,7 @@ def sample_callable_bed(bam_file, ref_file, config):
 def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
     """
-    broad_runner = broad.runner_from_config(config)
+    broad_runner = broad.runner_from_config(config, "picard")
     ref_dict = broad_runner.run_fn("picard_index_ref", ref_file)
     ref_lines = []
     with contextlib.closing(pysam.Samfile(ref_dict, "r")) as ref_sam:
