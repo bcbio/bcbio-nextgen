@@ -89,7 +89,9 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_
     cmd = ("{mpileup} "
            "| {bcftools} {bcftools_opts} - "
            "| vt normalize -q -r {ref_file} - "
-           "| sed 's/,Version=3>/>/'"
-           "| sed 's/Number=R/Number=./'"
+           "| sed 's/VCFv4.2/VCFv4.1/' "
+           "| sed 's/,Version=3>/>/' "
+           "| sed 's/,Version=\"3\">/>/' "
+           "| sed 's/Number=R/Number=./' "
            "{compress_cmd} > {tx_out_file}")
     do.run(cmd.format(**locals()), "Variant calling with samtools", items[0])
