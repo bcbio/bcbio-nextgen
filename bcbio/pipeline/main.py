@@ -23,7 +23,7 @@ from bcbio.provenance import diagnostics, programs, profile, system, versionchec
 from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
-             parallel=None, workflow=None):
+             parallel=None, workflow=None, dockerized=False):
     """Run variant analysis, handling command line options.
     """
     os.chdir(workdir)
@@ -33,7 +33,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     if parallel["type"] in ["local", "clusterk"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
-                      fc_dir, run_info_yaml)
+                      fc_dir, run_info_yaml, dockerized)
     elif parallel["type"] == "ipython":
         assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
         if parallel["scheduler"] != "sge":
@@ -41,7 +41,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
         elif not parallel["queue"]:
             parallel["queue"] = ""
         _run_toplevel(config, config_file, workdir, parallel,
-                      fc_dir, run_info_yaml)
+                      fc_dir, run_info_yaml, dockerized)
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
 
@@ -60,7 +60,7 @@ def _setup_resources():
     resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
 
 def _run_toplevel(config, config_file, work_dir, parallel,
-                  fc_dir=None, run_info_yaml=None):
+                  fc_dir=None, run_info_yaml=None, dockerized=False):
     """
     Run toplevel analysis, processing a set of input files.
     config_file -- Main YAML configuration file with system parameters
@@ -78,7 +78,8 @@ def _run_toplevel(config, config_file, work_dir, parallel,
         tempfile.tempdir = tmpdir
         for pipeline, pipeline_items in pipelines.items():
             pipeline_items = _add_provenance(pipeline_items, dirs, parallel, config)
-            versioncheck.testall(pipeline_items)
+            if not dockerized:
+                versioncheck.testall(pipeline_items)
             for xs in pipeline.run(config, config_file, parallel, dirs, pipeline_items):
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
