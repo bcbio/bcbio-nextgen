@@ -13,7 +13,6 @@ import tempfile
 from bcbio import log, structural, utils, upload
 from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
-from bcbio.illumina import flowcell
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
@@ -23,7 +22,7 @@ from bcbio.provenance import diagnostics, programs, profile, system, versionchec
 from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
-             parallel=None, workflow=None, dockerized=False):
+             parallel=None, workflow=None, samples=None):
     """Run variant analysis, handling command line options.
     """
     os.chdir(workdir)
@@ -33,7 +32,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     if parallel["type"] in ["local", "clusterk"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
-                      fc_dir, run_info_yaml, dockerized)
+                      fc_dir, run_info_yaml, samples)
     elif parallel["type"] == "ipython":
         assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
         if parallel["scheduler"] != "sge":
@@ -41,7 +40,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
         elif not parallel["queue"]:
             parallel["queue"] = ""
         _run_toplevel(config, config_file, workdir, parallel,
-                      fc_dir, run_info_yaml, dockerized)
+                      fc_dir, run_info_yaml, samples)
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
 
@@ -60,18 +59,23 @@ def _setup_resources():
     resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
 
 def _run_toplevel(config, config_file, work_dir, parallel,
-                  fc_dir=None, run_info_yaml=None, dockerized=False):
+                  fc_dir=None, run_info_yaml=None, samples=None):
     """
     Run toplevel analysis, processing a set of input files.
     config_file -- Main YAML configuration file with system parameters
     fc_dir -- Directory of fastq files to process
     run_info_yaml -- YAML configuration file specifying inputs to process
+    samples -- Pre-processed samples, useful if run inside of docker containers.
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
-    dirs = setup_directories(work_dir, fc_dir, config, config_file)
+    dirs = run_info.setup_directories(work_dir, fc_dir, config, config_file)
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
-    samples = run_info.organize(dirs, config, run_info_yaml)
+    if samples:
+        dockerized = True
+    else:
+        dockerized = False
+        samples = run_info.organize(dirs, config, run_info_yaml)
     pipelines = _pair_samples_with_pipelines(samples)
     final = []
     with tx_tmpdir(config) as tmpdir:
@@ -85,12 +89,6 @@ def _run_toplevel(config, config_file, work_dir, parallel,
                     upload.from_sample(xs[0])
                     final.append(xs[0])
 
-def setup_directories(work_dir, fc_dir, config, config_file):
-    fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
-                                                        if fc_dir else None,
-                                                        config, config_file)
-    return {"fastq": fastq_dir, "galaxy": galaxy_dir,
-            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
 
 def _add_provenance(items, dirs, parallel, config):
     p = programs.write_versions(dirs, config, is_wrapper=parallel.get("wrapper") is not None)
@@ -104,19 +102,6 @@ def _add_provenance(items, dirs, parallel, config):
                               "db": p_db}
         out.append([item])
     return out
-
-# ## Utility functions
-
-
-def _get_full_paths(fastq_dir, config, config_file):
-    """Retrieve full paths for directories in the case of relative locations.
-    """
-    if fastq_dir:
-        fastq_dir = utils.add_full_path(fastq_dir)
-    config_dir = utils.add_full_path(os.path.dirname(config_file))
-    galaxy_config_file = utils.add_full_path(config.get("galaxy_config", "universe_wsgi.ini"),
-                                             config_dir)
-    return fastq_dir, os.path.dirname(galaxy_config_file), config_dir
 
 # ## Generic pipeline framework
 

@@ -53,6 +53,32 @@ def organize(dirs, config, run_info_yaml):
         out.append(item)
     return out
 
+def organize_samples(run_info_yaml, bcbio_system, work_dir, fc_dir, config):
+    """Externally callable function to read and organize configurations for samples.
+    """
+    config, config_file = config_utils.load_system_config(bcbio_system, work_dir)
+    if config.get("log_dir", None) is None:
+        config["log_dir"] = os.path.join(work_dir, "log")
+    dirs = setup_directories(work_dir, fc_dir, config, config_file)
+    return organize(dirs, config, run_info_yaml)
+
+def setup_directories(work_dir, fc_dir, config, config_file):
+    fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
+                                                        if fc_dir else None,
+                                                        config, config_file)
+    return {"fastq": fastq_dir, "galaxy": galaxy_dir,
+            "work": work_dir, "flowcell": fc_dir, "config": config_dir}
+
+def _get_full_paths(fastq_dir, config, config_file):
+    """Retrieve full paths for directories in the case of relative locations.
+    """
+    if fastq_dir:
+        fastq_dir = utils.add_full_path(fastq_dir)
+    config_dir = utils.add_full_path(os.path.dirname(config_file))
+    galaxy_config_file = utils.add_full_path(config.get("galaxy_config", "universe_wsgi.ini"),
+                                             config_dir)
+    return fastq_dir, os.path.dirname(galaxy_config_file), config_dir
+
 # ## Genome reference information
 
 def add_reference_resources(data):

@@ -5,7 +5,7 @@ from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, sample,
-                            shared, variation, rnaseq)
+                            shared, variation, run_info, rnaseq)
 from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble,
                              joint, multi, population, recalibrate, validate,
                              vcfutils)
@@ -153,3 +153,7 @@ def cufflinks_assemble(*args):
 @utils.map_wrap
 def cufflinks_merge(*args):
     return rnaseq.cufflinks_merge(*args)
+
+@utils.map_wrap
+def organize_samples(*args):
+    return run_info.organize_samples(*args)
