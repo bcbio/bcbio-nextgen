@@ -90,8 +90,9 @@ def _get_output_dir(align_file, data, sample_dir=True):
     return os.path.join(get_in(data, ("dirs", "work")), "cufflinks", name)
 
 def assemble(bam_file, ref_file, num_cores, out_dir, data):
+    out_dir = os.path.join(out_dir, data["rgnames"]["sample"])
     safe_makedir(out_dir)
-    out_file = os.path.join(out_dir, "assembly", "transcripts.gtf")
+    out_file = os.path.join(out_dir, data["rgnames"]["sample"], "transcripts.gtf")
     if file_exists(out_file):
         return out_file
     with file_transaction(data, out_dir) as tmp_out_dir:
