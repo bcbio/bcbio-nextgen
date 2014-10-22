@@ -239,7 +239,12 @@ def split_variants_by_sample(data):
         return out
     # joint calling, do not split back up due to potentially large sample sizes
     elif tz.get_in(("config", "algorithm", "jointcaller"), data):
-        return [[data]]
+        out = []
+        for sub_data in get_orig_items(data):
+            sub_data["vrn_file_batch"] = data["vrn_file"]
+            sub_data["vrn_file"] = data["vrn_file"]
+            out.append([sub_data])
+        return out
     # population or single sample
     else:
         out = []
