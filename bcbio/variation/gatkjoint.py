@@ -69,6 +69,8 @@ def _run_combine_gvcfs(vrn_files, region, ref_file, out_file, data):
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
                 params += ["--variant", vrn_file]
+            cores = dd.get_cores(data)
+            memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.new_resources("gatk-haplotype")
-            broad_runner.run_gatk(params)
+            broad_runner.run_gatk(params, memscale=memscale)
     return out_file
