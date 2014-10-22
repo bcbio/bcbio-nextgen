@@ -22,6 +22,7 @@ details:
       #jointcaller: freebayes-joint
       nomap_split_size: 50
       nomap_split_targets: 100
+      #svcaller: cnvkit
       variant_regions: ../data/automated/variant_regions-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       effects: vep
@@ -38,6 +39,7 @@ details:
       quality_format: Standard
       nomap_split_size: 50
       nomap_split_targets: 100
+      #svcaller: cnvkit
       variant_regions: ../data/automated/variant_regions-bam.bed
     metadata:
       batch: TestBatch1

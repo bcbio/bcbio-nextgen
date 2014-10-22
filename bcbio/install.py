@@ -182,7 +182,7 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
-    pkgs = ["biopython", "boto", "cpat", "cython", "ipython", "lxml",
+    pkgs = ["biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "pandas", "patsy", "pycrypto",
             "pip", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests", "scipy",
             "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]

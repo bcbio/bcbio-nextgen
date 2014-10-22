@@ -29,21 +29,27 @@ def run(items, background=None):
     if not cnvlib_cmd:
         raise ImportError("cnvkit not installed")
     if not background: background = []
-    work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "structural",
-                                               tz.get_in(["rgnames", "sample"], items[0]),
-                                               "cnvkit"))
-    return _cnvkit_by_type(items, background, work_dir)
+    return _cnvkit_by_type(items, background)
 
-def _cnvkit_by_type(items, background, work_dir):
+def _sv_workdir(data):
+    return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
+                                           tz.get_in(["rgnames", "sample"], data),
+                                           "cnvkit"))
+
+def _cnvkit_by_type(items, background):
     """Dispatch to specific CNVkit functionality based on input type.
     """
-    access_file = _create_access_file(dd.get_ref_file(items[0]), work_dir, items[0])
+    access_file = _create_access_file(dd.get_ref_file(items[0]), _sv_workdir(items[0]), items[0])
     if len(items + background) == 1:
-        ckout = _run_cnvkit_single(items[0], access_file, work_dir)
+        return _run_cnvkit_single(items[0], access_file)
     elif vcfutils.get_paired_phenotype(items[0]):
-        ckout = _run_cnvkit_cancer(items, background, access_file, work_dir)
+        return _run_cnvkit_cancer(items, background, access_file)
     else:
-        ckout = _run_cnvkit_population(items, background, access_file, work_dir)
+        return _run_cnvkit_population(items, background, access_file)
+
+def _associate_cnvkit_out(ckout, items):
+    """Associate cnvkit output with individual items.
+    """
     ckout = _add_seg_to_output(ckout, items)
     ckout["variantcaller"] = "cnvkit"
     out = []
@@ -54,24 +60,31 @@ def _cnvkit_by_type(items, background, work_dir):
         out.append(data)
     return out
 
-def _run_cnvkit_single(data, access_file, work_dir):
+def _run_cnvkit_single(data, access_file):
     """Process a single input file with a uniform background.
     """
     test_bams = [data["align_bam"]]
     background_bams = []
-    return _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir)
+    work_dir = _sv_workdir(data)
+    ckout = _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir)
+    return _associate_cnvkit_out(ckout, [data])
 
-def _run_cnvkit_cancer(items, background, access_file, work_dir):
+def _run_cnvkit_cancer(items, background, access_file):
     """Run CNVkit on a tumor/normal pair.
     """
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
-    return _run_cnvkit_shared(items[0], [paired.tumor_bam], [paired.normal_bam],
-                              access_file, work_dir, background_name=paired.normal_name)
+    work_dir = _sv_workdir(items[0])
+    ckout = _run_cnvkit_shared(items[0], [paired.tumor_bam], [paired.normal_bam],
+                               access_file, work_dir, background_name=paired.normal_name)
+    return _associate_cnvkit_out(ckout, items)
 
-def _run_cnvkit_population(items, background, access_file, work_dir):
+def _run_cnvkit_population(items, background, access_file):
     """Run CNVkit on a population of samples.
+
+    Currently uses a flat background for each sample and calls independently. Could
+    be improved to use population information but this is a starting point.
     """
-    raise NotImplementedError
+    return [_run_cnvkit_single(data, access_file)[0] for data in items]
 
 def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                        background_name=None):
@@ -89,9 +102,10 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                    "-d", raw_work_dir, "--split",
                    "-p", str(tz.get_in(["config", "algorithm", "num_cores"], data, 1)),
                    "--output-reference", os.path.join(raw_work_dir, background_cnn)]
-            at_avg, at_min = _get_antitarget_size(access_file, target_bed)
+            at_avg, at_min, t_avg = _get_antitarget_size(access_file, target_bed)
             if at_avg:
-                cmd += ["--antitarget-avg-size", str(at_avg), "--antitarget-min-size", str(at_min)]
+                cmd += ["--antitarget-avg-size", str(at_avg), "--antitarget-min-size", str(at_min),
+                        "--target-avg-size", str(t_avg)]
             args = cnvlib_cmd.parse_args(cmd)
             args.func(args)
             shutil.move(tx_work_dir, raw_work_dir)
@@ -125,12 +139,10 @@ def _get_antitarget_size(access_file, target_bed):
             sizes.append(region.start - prev_end)
         prev = (region.chrom, region.end)
     avg_size = numpy.median(sizes) if len(sizes) > 0 else 0
-    if avg_size < 1:
-        return 2000, 200
-    elif avg_size < 10000.0:  # Default antitarget-min-size
-        return int(avg_size / 2.0), int(avg_size / 10.0)
+    if avg_size < 10000.0:  # Default antitarget-min-size
+        return 1000, 75, 1000
     else:
-        return None, None
+        return None, None, None
 
 def _create_access_file(ref_file, out_dir, data):
     """Create genome access file for CNVlib to define available genomic regions.
