@@ -44,13 +44,33 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
         opts += resources["options"]
     return opts
 
+def _add_somatic_opts(opts, paired):
+    """Add somatic options to current set. See _run_freebayes_paired for references.
+    """
+    if "--min-alternate-fraction" not in opts and "-F" not in opts:
+        # add minimum reportable allele frequency
+        # FreeBayes defaults to 20%, but use 10% by default for the
+        # tumor case
+        min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
+                                                          "min_allele_fraction"), 10)) / 100.0
+        opts += " --min-alternate-fraction %s" % min_af
+    # Recommended settings for cancer calling
+    opts += (" --pooled-discrete --pooled-continuous --genotype-qualities "
+             "--report-genotype-likelihood-max --allele-balance-priors-off")
+    return opts
+
 def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Run FreeBayes variant calling, either paired tumor/normal or germline calling.
     """
     if is_paired_analysis(align_bams, items):
-        call_file = _run_freebayes_paired(align_bams, items, ref_file,
-                                          assoc_files, region, out_file)
+        paired = get_paired_bams(align_bams, items)
+        if not paired.normal_bam:
+            call_file = _run_freebayes_caller(align_bams, items, ref_file,
+                                              assoc_files, region, out_file, somatic=paired)
+        else:
+            call_file = _run_freebayes_paired(align_bams, items, ref_file,
+                                              assoc_files, region, out_file)
     else:
         vcfutils.check_paired_problems(items)
         call_file = _run_freebayes_caller(align_bams, items, ref_file,
@@ -59,7 +79,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
     return call_file
 
 def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
-                          region=None, out_file=None):
+                          region=None, out_file=None, somatic=None):
     """Detect SNPs and indels with FreeBayes.
 
     Performs post-filtering to remove very low quality variants which
@@ -82,6 +102,8 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             # Recommended options from 1000 genomes low-complexity evaluation
             # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
             opts += " --min-repeat-entropy 1 --experimental-gls"
+            if somatic:
+                opts = _add_somatic_opts(opts, somatic)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
@@ -95,9 +117,9 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
 
 def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
-    """Detect SNPs and indels with FreeBayes.
+    """Detect SNPs and indels with FreeBayes for paired tumor/normal samples.
 
-    This is used for paired tumor / normal samples. Sources of options for FreeBayes:
+    Sources of options for FreeBayes:
     mailing list: https://groups.google.com/d/msg/freebayes/dTWBtLyM4Vs/HAK_ZhJHguMJ
     mailing list: https://groups.google.com/forum/#!msg/freebayes/LLH7ZfZlVNs/63FdD31rrfEJ
     speedseq: https://github.com/cc2qe/speedseq/blob/e6729aa2589eca4e3a946f398c1a2bdc15a7300d/bin/speedseq#L916
@@ -110,24 +132,12 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             paired = get_paired_bams(align_bams, items)
-            if not paired.normal_bam:
-                return _run_freebayes_caller(align_bams, items, ref_file,
-                                             assoc_files, region, out_file)
-                #raise ValueError("Require both tumor and normal BAM files for FreeBayes cancer calling")
+            assert paired.normal_bam, "Require normal BAM for FreeBayes paired calling and filtering"
 
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
-            if "--min-alternate-fraction" not in opts and "-F" not in opts:
-                # add minimum reportable allele frequency
-                # FreeBayes defaults to 20%, but use 10% by default for the
-                # tumor case
-                min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
-                                                                  "min_allele_fraction"), 10)) / 100.0
-                opts += " --min-alternate-fraction %s" % min_af
             opts += " --min-repeat-entropy 1 --experimental-gls"
-            # Recommended settings for cancer calling
-            opts += (" --pooled-discrete --pooled-continuous --genotype-qualities "
-                     "--report-genotype-likelihood-max --allele-balance-priors-off")
+            opts = _add_somatic_opts(opts, paired)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
             py_cl = os.path.join(os.path.dirname(sys.executable), "py")
@@ -145,6 +155,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                                                assoc_files.get("dbsnp"), ref_file,
                                                config)
     return ann_file
+
+# ## Filtering
 
 def _check_lods(parts, tumor_thresh, normal_thresh):
     """Ensure likelihoods for tumor and normal pass thresholds.
