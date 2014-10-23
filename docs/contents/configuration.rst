@@ -97,9 +97,57 @@ This pulls the current GATK best practice variant calling template
 into your project directory in
 ``project1/config/project1-template.yaml``. Manually edit this file to
 define your options, then run the full template creation for your
-samples, pointing to this custom configuration file.
+samples, pointing to this custom configuration file::
 
+
+    bcbio_nextgen -w template project1/config/project1-template.yaml project1.csv folder/*
+
+    
 .. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
+.. _multi-files-sample-configuration:
+
+Multiple files per sample
+~~~~~~~~~~~~~~~~~~
+
+In case you have multiple FASTQ or BAM files for each sample you can use ``scripts/utils/bcbio_prepare_samples.py``. 
+The main parameters are:
+
+- ``--out``: the folder where the merged files will be
+- ``--csv``: the CSV file that is exactly the same than described previously, 
+but having as many duplicate lines for each samples as files to be merged::
+
+
+        samplename,description,batch,phenotype,sex,coverage_interval
+        file1.fastq,sample1,batch1,normal,female,genome
+        file2.fastq,sample1,batch1,normal,female,genome
+        file1.fastq,sample2,batch1,tumor,,genome
+
+An example of usage is::
+
+
+    python $BCBIO_PATH/scripts/utils/bcbio_prepare_samples.py --out merged --csv project1.csv
+
+The script will create the ``sample1.fastq,sample2.fastq`` in the ``merged`` folder, and a new CSV file 
+in the same folder than the input CSV :``project1-merged.csv``. Later, it can be used for bcbio::
+
+    
+    bcbio_nextgen -w template project1/config/project1-template.yaml project1-merged.csv merged/*fastq
+
+The new CSV file will looks like::
+
+        samplename,description,batch,phenotype,sex,coverage_interval
+        sample1.fastq,sample1,batch1,normal,female,genome
+        sample2.fastq,sample2,batch1,tumor,,genome
+
+It supports parallelization the same way ``bcbio_nextgen.py`` does::
+
+
+    python $BCBIO_PATH/scripts/utils/bcbio_prepare_samples.py --out merged --csv project1.csv -t ipython -q queue_name -s lsf -n 1 
+
+See more examples at `parallelize pipeline`_.
+
+.. _parallelize pipeline: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
+
 .. _sample-configuration:
 
 Sample information

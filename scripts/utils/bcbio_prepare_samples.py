@@ -15,8 +15,7 @@ from bcbio.distributed.transaction import file_transaction
 
 def create_new_csv(prep, samples, args):
     """create csv file that can be use with bcbio -w template"""
-    ori = os.path.basename(args.csv)
-    out_fn = os.path.join(args.out, os.path.splitext(ori)[0] + "-merged.csv")
+    out_fn = os.path.splitext(args.csv)[0] + "-merged.csv"
     logger.info("Preparing new csv: %s" % out_fn)
     with file_transaction(out_fn) as tx_out:
         with open(tx_out, 'w') as handle:
