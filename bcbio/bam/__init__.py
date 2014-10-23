@@ -279,16 +279,24 @@ def merge(bamfiles, out_bam, config):
                                                    "exist: %s" % (bamfiles))
     if len(bamfiles) == 1:
         return bamfiles[0]
+    if os.path.exists(out_bam):
+        return out_bam
     sambamba = _get_sambamba(config)
     sambamba = None
     samtools = config_utils.get_program("samtools", config)
+    bamtools = config_utils.get_program("bamtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
     with file_transaction(config, out_bam) as tx_out_bam:
-        if sambamba:
-            cmd = "{sambamba} merge -t {num_cores} {tx_out_bam} " + " ".join(bamfiles)
-        else:
-            cmd = "{samtools} merge -@ {num_cores} {tx_out_bam} " + " ".join(bamfiles)
-        do.run(cmd.format(**locals()), "Merge %s into %s." % (bamfiles, out_bam))
+        try:
+            if sambamba:
+                cmd = "{sambamba} merge -t {num_cores} {tx_out_bam} " + " ".join(bamfiles)
+            else:
+                cmd = "{samtools} merge -@ {num_cores} {tx_out_bam} " + " ".join(bamfiles)
+            do.run(cmd.format(**locals()), "Merge %s into %s." % (bamfiles, out_bam))
+        except subprocess.CalledProcessError:
+            files = " -in ".join(bamfiles)
+            cmd = "{bamtools} merge -in {files} -out {tx_out_bam}"
+            do.run(cmd.format(**locals()), "Error with other tools. Merge %s into %s with bamtools" % (bamfiles, out_bam))
     index(out_bam, config)
     return out_bam
 
