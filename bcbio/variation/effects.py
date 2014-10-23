@@ -109,6 +109,21 @@ def run_vep(data):
                        "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",
                        "--canonical", "--ccds",
                        "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + dbnsfp_args + loftee_args
+
+                if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
+
+                    # In case of clinical reporting, we need one and only one
+                    # variant per gene
+                    # From the VEP docs:
+                    # "Pick once line of consequence data per variant,
+                    # including transcript-specific columns. Consequences are
+                    # chosen by the canonical, biotype status and length of the
+                    # transcript, along with the ranking of the consequence
+                    # type according to this table. This is the best method to
+                    # use if you are interested only in one consequence per
+                    #  variant.
+
+                    cmd += ["--pick"]
                 cmd = "gunzip -c %s | %s | bgzip -c > %s" % (data["vrn_file"], " ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
