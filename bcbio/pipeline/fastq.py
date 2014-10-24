@@ -8,6 +8,8 @@ from bcbio.bam import cram
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.provenance import do
+from bcbio.distributed.transaction import file_transaction
+
 
 def get_fastq_files(item):
     """Retrieve fastq files for the given lane, ready to process.
@@ -77,3 +79,25 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     if out2 and os.path.getsize(out2) == 0:
         out2 = None
     return [out1, out2]
+
+
+def merge(files, out_file, config):
+    """merge fastq files"""
+    if not all(map(fastq.is_fastq, files)):
+        raise ValueError("Not all of the files to merge are fastq files: %s " % (files))
+    assert all(map(utils.file_exists, files)), ("Not all of the files to merge "
+                                                "exist: %s" % (files))
+    if len(files) == 1:
+        return files[0]
+    fn = set()
+    for f in files:
+        fn.add(f)
+    if not os.path.exists(out_file):
+        new_files = [_gzip_fastq(f) for f in files]
+        with file_transaction(out_file) as file_txt_out:
+            file_txt_out = file_txt_out
+            files_str = " ".join(list(fn))
+            cmd = "cat {files_str} > {file_txt_out}".format(**locals())
+            do.run(cmd, "merge fastq files")
+    return out_file
+

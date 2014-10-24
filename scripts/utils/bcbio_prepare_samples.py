@@ -6,11 +6,12 @@ from argparse import ArgumentParser
 from cluster_helper import cluster as ipc
 from bcbio.log import logger
 from bcbio.install import _get_data_dir
-from bcbio.bam.fastq import merge as fq_merge
+from bcbio.pipeline.fastq import merge as fq_merge
 from bcbio.bam import merge as bam_merge
 from bcbio.bam import is_bam
 from bcbio.bam.fastq import is_fastq
 from bcbio.distributed.transaction import file_transaction
+from bcbio.utils import file_exists
 
 
 def create_new_csv(prep, samples, args):
@@ -46,7 +47,7 @@ def _get_samples_to_process(fn):
         elif is_bam(anno[0][0]):
             fn = bam_merge
             ext = ".bam"
-        files = [fn_file[0] for fn_file in anno]
+        files = [os.path.abspath(fn_file[0]) for fn_file in anno]
         samples[sample] = {'files': files, 'out_file': sample + ext, 'fn': fn, 'anno': anno[0][2:]}
     return samples
 
@@ -71,10 +72,10 @@ if __name__ == "__main__":
                         default=1, help="Number of cores to use.")
     parser.add_argument("-m", "--memory-per-job", default=2, help="Memory in GB to reserve per job.")
     parser.add_argument("--timeout", default=15, help="Time to wait before giving up starting.")
-    parser.add_argument("-s", "--scheduler", default=None, help="Type of scheduler to use.",
+    parser.add_argument("-s", "--scheduler", help="Type of scheduler to use.",
                         choices=["lsf", "slurm", "torque", "sge"])
-    parser.add_argument("-r", "--resources", default=None, help="Extra scheduler resource flags.")
-    parser.add_argument("-q", "--queue", default=None, help="Queue to submit jobs to.")
+    parser.add_argument("-r", "--resources", help="Extra scheduler resource flags.")
+    parser.add_argument("-q", "--queue", help="Queue to submit jobs to.")
     parser.add_argument("-t", "--paralleltype",
                         choices=["local", "ipython"],
                         default="local", help="Run with iptyhon")
