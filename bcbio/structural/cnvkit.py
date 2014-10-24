@@ -22,6 +22,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do
+from bcbio.structural import theta
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -76,6 +77,7 @@ def _run_cnvkit_cancer(items, background, access_file):
     work_dir = _sv_workdir(items[0])
     ckout = _run_cnvkit_shared(items[0], [paired.tumor_bam], [paired.normal_bam],
                                access_file, work_dir, background_name=paired.normal_name)
+    ckout = theta.run(ckout, paired)
     return _associate_cnvkit_out(ckout, items)
 
 def _run_cnvkit_population(items, background, access_file):

@@ -25,7 +25,7 @@ from bcbio.variation import bamprep
 
 PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_name",
                                        "normal_bam", "normal_name", "normal_panel",
-                                       "tumor_config"])
+                                       "tumor_config", "tumor_data"])
 
 def is_paired_analysis(align_bams, items):
     """Determine if BAMs are from a tumor/normal paired analysis.
@@ -46,11 +46,13 @@ def get_paired_bams(align_bams, items):
         elif phenotype == "tumor":
             tumor_bam = bamfile
             tumor_name = item["name"][1]
+            tumor_data = item
             tumor_config = item["config"]
             normal_panel = item["config"]["algorithm"].get("background")
     if tumor_bam:
         return PairedData(tumor_bam, tumor_name, normal_bam,
-                          normal_name, normal_panel, tumor_config)
+                          normal_name, normal_panel, tumor_config,
+                          tumor_data)
 
 def check_paired_problems(items):
     """Check for incorrectly paired tumor/normal samples
