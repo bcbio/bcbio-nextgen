@@ -40,15 +40,15 @@ def _get_samples_to_process(fn):
             if not l.startswith("samplename"):
                 cols = l.strip().split(",")
                 samples[cols[1]].append(cols)
-    for sample, anno in samples.iteritems():
-        if is_fastq(anno[0][0]):
+    for sample, items in samples.iteritems():
+        if is_fastq(items[0][0]):
             fn = fq_merge
             ext = ".fastq.gz"
-        elif is_bam(anno[0][0]):
+        elif is_bam(items[0][0]):
             fn = bam_merge
             ext = ".bam"
-        files = [os.path.abspath(fn_file[0]) for fn_file in anno]
-        samples[sample] = {'files': files, 'out_file': sample + ext, 'fn': fn, 'anno': anno[0][2:]}
+        files = [os.path.abspath(fn_file[0]) for fn_file in items]
+        samples[sample] = {'files': files, 'out_file': sample + ext, 'fn': fn, 'anno': items[0][2:]}
     return samples
 
 

@@ -1,6 +1,7 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
+import sys
 
 from bcbio import bam, broad, utils
 from bcbio.bam import fastq
@@ -88,16 +89,11 @@ def merge(files, out_file, config):
     assert all(map(utils.file_exists, files)), ("Not all of the files to merge "
                                                 "exist: %s" % (files))
     if len(files) == 1:
-        return files[0]
-    fn = set()
-    for f in files:
-        fn.add(f)
+        sys.symlink(files[0], out_file)
     if not os.path.exists(out_file):
-        new_files = [_gzip_fastq(f) for f in files]
+        gz_files = [_gzip_fastq(fn) for fn in files]
         with file_transaction(out_file) as file_txt_out:
-            file_txt_out = file_txt_out
-            files_str = " ".join(list(fn))
+            files_str = " ".join(list(gz_files))
             cmd = "cat {files_str} > {file_txt_out}".format(**locals())
             do.run(cmd, "merge fastq files")
     return out_file
-
