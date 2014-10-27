@@ -75,7 +75,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
-                       "| {fix_ambig} | {vcfallelicprimitives} | {vcfstreamsort} {compress_cmd}")
+                       "| {fix_ambig} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
