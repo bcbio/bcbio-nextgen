@@ -40,7 +40,10 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                 disc_bams = ",".join(disc_bams)
                 exclude = "-x %s" % sv_exclude_bed if sv_exclude_bed else ""
                 ref_file = dd.get_ref_file(items[0])
-                cmd = ("speedseq sv -v -B {full_bams} -S {sr_bams} -D {disc_bams} -R {ref_file} "
+                # use our bcbio python for runs within speedseq
+                curpython_dir = os.path.dirname(sys.executable)
+                cmd = ("export PATH={curpython_dir}:$PATH && "
+                       "speedseq sv -v -B {full_bams} -S {sr_bams} -D {disc_bams} -R {ref_file} "
                        "{exclude} -A false -T {tmpdir} -o {out_base}")
                 do.run(cmd.format(**locals()), "speedseq lumpy", items[0])
     return out_file, sv_exclude_bed
