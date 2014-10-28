@@ -133,7 +133,7 @@ in the same folder than the input CSV :``project1-merged.csv``. Later, it can be
     
     bcbio_nextgen -w template project1/config/project1-template.yaml project1-merged.csv merged/*fastq
 
-The new CSV file will looks like::
+The new CSV file will look like::
 
         samplename,description,batch,phenotype,sex,coverage_interval
         sample1.fastq,sample1,batch1,normal,female,genome
@@ -149,6 +149,22 @@ See more examples at `parallelize pipeline`_.
 .. _parallelize pipeline: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
 
 .. _sample-configuration:
+
+In case of paired reads, the CSV file should contain all files::
+
+        samplename,description,batch,phenotype,sex,coverage_interval
+        file1_R1.fastq,sample1,batch1,normal,female,genome
+        file2_R1.fastq,sample1,batch1,normal,female,genome
+        file1_R2.fastq,sample1,batch1,normal,femela,genome
+        file2_R2.fastq,sample1,batch1,normal,female,genome
+
+The script will try to guess the paired files the same way than ``bcbio_nextgen.py -w template`` does. It would detect paired files if the difference among two files is only _R1/_R2 or -1/-2 or _1/_2 or .1/.2
+
+The output CSV will look like and is compatible with bcbio::
+
+        samplename,description,batch,phenotype,sex,coverage_interval
+        sample1,sample1,batch1,normal,female,genome
+
 
 Sample information
 ~~~~~~~~~~~~~~~~~~
