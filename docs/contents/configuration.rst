@@ -257,10 +257,14 @@ Your Galaxy universe_wsgi.ini configuration needs to have
 S3 parameters:
 
 - ``bucket`` AWS bucket to upload to
-- ``access_key_id`` AWS access key ID from Amazon credentials page
-- ``secret_access_key`` AWS secret key ID from Amazon credentials page
 - ``reduced_redundancy`` Flag to determine if we should store S3 data
   with reduced redundancy: cheaper but less reliable [false, true]
+
+For S3 access credentials, set the standard environmental variables,
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, or use `IAM access roles
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_
+with an instance profile on EC2 to give your instances permission to create
+temporary S3 access.
 
 Globals
 ~~~~~~~
