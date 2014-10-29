@@ -297,6 +297,7 @@ def _run_kraken(data, ratio):
     kraken_out = os.path.join(qc_dir, "kraken")
     out = out_stats = None
     db = data['config']["algorithm"]["kraken"]
+    kraken_cmd = config_utils.get_program("kraken", data["config"])
     if db == "minikraken":
         db = os.path.join(_get_data_dir(), "genomes", "kraken", "minikraken")
     else:
@@ -307,20 +308,19 @@ def _run_kraken(data, ratio):
         work_dir = os.path.dirname(kraken_out)
         utils.safe_makedir(work_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
-        files = data["files"]
-        if files[0].endswith("bam"):
+        fn_file = data["files"][0]
+        if fn_file.endswith("bam"):
             logger.info("kraken: need fasta files as input")
             return {"kraken_report": "null"}
         with tx_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 out = os.path.join(tx_tmp_dir, "kraken_out")
                 out_stats = os.path.join(tx_tmp_dir, "kraken_stats")
-                cl = (" ").join(
-                    [config_utils.get_program("kraken", data["config"]),
-                        "--db", db, "--quick",
-                        "--preload", "--min-hits", "2",
-                        "--threads", str(num_cores),
-                        "--out", out, files[0], " 2>", out_stats])
+                cat = "zcat" if fn_file.endswith(".gz") else "cat"
+                cl = ("{cat} {fn_file} | {kraken_cmd} --db {db} --quick "
+                      "--preload --min-hits 2 "
+                      "--threads {num_cores} "
+                      "--out {out} --fastq-input /dev/stdin  2> {out_stats}").format(**locals())
                 do.run(cl, "kraken: %s" % data["name"][-1])
                 if os.path.exists(kraken_out):
                     shutil.rmtree(kraken_out)
@@ -336,6 +336,7 @@ def _parse_kraken_output(out_dir, db, data):
     in_file = os.path.join(out_dir, "kraken_out")
     stat_file = os.path.join(out_dir, "kraken_stats")
     out_file = os.path.join(out_dir, "kraken_summary")
+    kraken_cmd = config_utils.get_program("kraken-report", data["config"])
     classify = unclassify = None
     with open(stat_file, 'r') as handle:
         for line in handle:
@@ -343,12 +344,29 @@ def _parse_kraken_output(out_dir, db, data):
                 classify = line[line.find("(") + 1:line.find(")")]
             if line.find(" unclassified") > -1:
                 unclassify = line[line.find("(") + 1:line.find(")")]
-    if os.path.getsize(in_file) > 0:
+    if os.path.getsize(in_file) > 0 and not os.path.exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cl = (" ").join([config_utils.get_program("kraken-report", data["config"]),
-                             "--db", db, in_file, ">", tx_out_file])
+            cl = ("{kraken_cmd} --db {db} {in_file} > {tx_out_file}").format(**locals())
             do.run(cl, "kraken report: %s" % data["name"][-1])
-    return {"kraken_report": out_file, "kraken_clas": classify, "kraken_unclas": unclassify}
+    kraken = {"kraken_clas": classify, "kraken_unclas": unclassify}
+    kraken_sum = _summarize_kraken(out_file)
+    kraken.update(kraken_sum)
+    return kraken
+
+
+def _summarize_kraken(fn):
+    """get the value at species level"""
+    kraken = {}
+    list_sp, list_value = [], []
+    with open(fn) as handle:
+        for line in handle:
+            cols = line.strip().split("\t")
+            sp = cols[5].strip()
+            if len(sp.split(" ")) > 1 and not sp.startswith("cellular"):
+                list_sp.append(sp)
+                list_value.append(cols[0])
+    kraken = {"kraken_sp": list_sp, "kraken_value": list_value}
+    return kraken
 
 
 def _run_fastqc(bam_file, data, fastqc_out):
