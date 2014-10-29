@@ -88,7 +88,7 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
 
 
 def merge(files, out_file, config):
-    """merge samrtly fastq files. It recognizes paired fastq files."""
+    """merge smartly fastq files. It recognizes paired fastq files."""
     pair1 = [fastq_file[0] for fastq_file in files]
     if len(files[0]) > 1:
         path = splitext_plus(out_file)
@@ -103,7 +103,7 @@ def merge(files, out_file, config):
 
 
 def _merge_list_fastqs(files, out_file, config):
-    """merge list of fastq into one"""
+    """merge list of fastq files into one"""
     if not all(map(fastq.is_fastq, files)):
         raise ValueError("Not all of the files to merge are fastq files: %s " % (files))
     assert all(map(utils.file_exists, files)), ("Not all of the files to merge "
