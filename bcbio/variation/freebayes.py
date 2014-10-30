@@ -192,11 +192,11 @@ def _check_freqs(parts):
             ao = sum([int(x) for x in item.split(":")[ao_index].split(",")])
             ro = int(parts[9].split(":")[ro_index])
             freq = ao / float(ao + ro)
-        except (IndexError, ValueError):
+        except (IndexError, ValueError, ZeroDivisionError):
             freq = 0.0
         return freq
     tumor_freq, normal_freq = _calc_freq(parts[9]), _calc_freq(parts[10])
-    return normal_freq <= 0.001 or normal_freq < tumor_freq / thresh_ratio
+    return normal_freq <= 0.001 or normal_freq <= tumor_freq / thresh_ratio
 
 def call_somatic(line):
     """Call SOMATIC variants from tumor/normal calls, adding REJECT filters and SOMATIC flag.
