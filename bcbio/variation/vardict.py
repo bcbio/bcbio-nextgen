@@ -62,7 +62,6 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 strandbias = "teststrandbias.R"
                 var2vcf = "var2vcf_valid.pl"
                 opts = " ".join(_vardict_options_from_config(items, config, out_file, region))
-                vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
@@ -117,7 +116,6 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             vcffilter = config_utils.get_program("vcffilter", config)
             vardict = config_utils.get_program("vardict", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
             strandbias = "testsomatic.R"
             var2vcf = "var2vcf_somatic.pl"
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""

@@ -87,8 +87,6 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             for align_bam in align_bams:
                 bam.index(align_bam, config)
             scalpel = config_utils.get_program("scalpel", config)
-            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
-            vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             if len(align_bams) > 1:
                 message = ("Scalpel does not currently support batch calling!")
                 raise ValueError(message)
@@ -107,7 +105,8 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             sample_name_str = items[0]["name"][1]
             cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' | "
-                   "{vcfallelicprimitives} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
+                   "vcfallelicprimitives --keep-info --keep-geno | vcfstreamsort "
+                   "{compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"),

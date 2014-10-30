@@ -95,8 +95,6 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                 bam.index(align_bam, config)
             freebayes = config_utils.get_program("freebayes", config)
             vcffilter = config_utils.get_program("vcffilter", config)
-            vcfallelicprimitives = config_utils.get_program("vcfallelicprimitives", config)
-            vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             input_bams = " ".join("-b %s" % x for x in align_bams)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             # Recommended options from 1000 genomes low-complexity evaluation
@@ -107,7 +105,8 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
-                   "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | {vcfallelicprimitives} | {vcfstreamsort} "
+                   "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
+                   "vcfallelicprimitives --keep-info --keep-geno | vcfstreamsort "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
