@@ -9,9 +9,8 @@ from bcbio.install import _get_data_dir
 from bcbio.pipeline.fastq import merge as fq_merge
 from bcbio.bam import merge as bam_merge
 from bcbio.bam import is_bam
-from bcbio.bam.fastq import is_fastq
+from bcbio.bam.fastq import is_fastq, combine_pairs
 from bcbio.distributed.transaction import file_transaction
-from bcbio.utils import file_exists
 
 
 def create_new_csv(prep, samples, args):
@@ -22,7 +21,8 @@ def create_new_csv(prep, samples, args):
         with open(tx_out, 'w') as handle:
             handle.write(_header(args.csv))
             for p, s in tz.izip(prep, samples.keys()):
-                handle.write("%s,%s,%s\n" % (os.path.basename(p), s, ",".join(samples[s]['anno'])))
+                sample_name = sample if isinstance(p, list) else os.path.basename(p)
+                handle.write("%s,%s,%s\n" % (sample_name, s, ",".join(samples[s]['anno'])))
 
 
 def _header(fn):
@@ -48,8 +48,15 @@ def _get_samples_to_process(fn):
             fn = bam_merge
             ext = ".bam"
         files = [os.path.abspath(fn_file[0]) for fn_file in items]
-        samples[sample] = {'files': files, 'out_file': sample + ext, 'fn': fn, 'anno': items[0][2:]}
+        samples[sample] = {'files': _check_paired(files), 'out_file': sample + ext, 'fn': fn, 'anno': items[0][2:]}
     return samples
+
+
+def _check_paired(files):
+    """check if files are fastq(.gz) and paired"""
+    if files[0].endswith(".bam"):
+        return files
+    return combine_pairs(files)
 
 
 def get_cluster_view(args):
