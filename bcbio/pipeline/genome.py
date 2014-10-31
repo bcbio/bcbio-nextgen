@@ -45,13 +45,14 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
         base_dir = os.getcwd()
     orig_dir = os.getcwd()
     os.chdir(base_dir)
+    input_dir = os.path.join(base_dir, "inputs")
     out = {}
     for k, v in xs.iteritems():
         if k not in ignore_keys and v and isinstance(v, basestring):
             if v.lower() == "none":
                 out[k] = None
-            elif os.path.exists(v):
-                out[k] = os.path.normpath(os.path.join(base_dir, v))
+            elif os.path.exists(v) or v.startswith(utils.SUPPORTED_REMOTES):
+                out[k] = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(v, input_dir)))
             else:
                 out[k] = v
         else:
