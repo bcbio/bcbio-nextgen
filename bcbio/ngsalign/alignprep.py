@@ -134,10 +134,8 @@ def _find_read_splits(in_file, split_size):
     last = 1
     for chunki in range(num_lines // split_lines + min(1, num_lines % split_lines)):
         new = last + split_lines - 1
-        chunks.append((last, min(new, num_lines - 1)))
-        last = new
-        if chunki > 0:
-            last += 1
+        chunks.append((last, min(new, num_lines)))
+        last = new + 1
     return chunks
 
 # ## bgzip and grabix

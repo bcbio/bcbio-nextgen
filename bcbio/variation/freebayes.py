@@ -106,7 +106,8 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
                    "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
-                   "vcfallelicprimitives --keep-info --keep-geno | vcfstreamsort "
+                   "vcfallelicprimitives --keep-info --keep-geno | vcfstreamsort | "
+                   "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -144,8 +145,9 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                   "{paired.tumor_bam} {paired.normal_bam} "
                   "| vcffilter -f 'QUAL > 5' -s "
                   "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
-                  "| {fix_ambig} | vcfallelicprimitives --keep-info --keep-geno "
-                  "| vt normalize -q -r {ref_file} - "
+                  "| {fix_ambig} | "
+                  "vcfallelicprimitives --keep-info --keep-geno | vcfstreamsort | "
+                  "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                   "{compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
