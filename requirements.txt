@@ -19,7 +19,7 @@ arrow>=0.4.4
 arvados-python-client>=0.1.1405019228.4a7ca04
 bioblend>=0.4.3
 chanjo>=2.0.2
-cnvkit>=0.2.3
+cnvkit>=0.2.4
 cutadapt==1.4.2
 fabric>=1.7.0
 gffutils>=0.8.2
