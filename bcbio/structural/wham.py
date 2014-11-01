@@ -3,6 +3,8 @@
 https://github.com/jewmanchue/wham
 """
 import os
+import subprocess
+import sys
 
 import toolz as tz
 try:
@@ -30,7 +32,8 @@ def run(items, background=None):
         background_bams = [x["align_bam"] for x in background]
         background_names = [dd.get_sample_name(x) for x in background]
     orig_vcf_file = _run_wham(inputs, background_bams)
-    vcf_file = _fix_vcf(orig_vcf_file, inputs, background_names)
+    wclass_vcf_file = _add_wham_classification(orig_vcf_file, inputs)
+    vcf_file = _fix_vcf(wclass_vcf_file, inputs, background_names)
     out = []
     for data in items:
         if "sv" not in data:
@@ -58,6 +61,20 @@ def _run_wham(inputs, background_bams):
             cmd = ("WHAM-BAM -x {cores} -t {target_bams} {background} {target_str} "
                    "| sed 's/Numper/Number/' > {tx_out_file}")
             do.run(cmd.format(**locals()), "Run WHAM")
+    return out_file
+
+def _add_wham_classification(in_file, items):
+    """Run WHAM classifier to assign a structural variant type to each call.
+    """
+    wham_sharedir = os.path.normpath(os.path.join(os.path.dirname(subprocess.check_output(["which", "WHAM-BAM"])),
+                                                  os.pardir, "share", "wham"))
+    out_file = "%s-class%s" % utils.splitext_plus(in_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(items[0], out_file) as tx_out_file:
+            this_python = sys.executable
+            cmd = ("{this_python} {wham_sharedir}/classify_WHAM_vcf.py {in_file} "
+                   "{wham_sharedir}/WHAM_training_data.txt > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Classify WHAM calls")
     return out_file
 
 def _fix_vcf(orig_file, items, background_names):

@@ -32,4 +32,6 @@ pybedtools>=0.6.8
 pythonpy>=0.3.6
 PyVCF>=0.6.7
 sh>=1.07
+# To be added after 0.8.4 release
+# scikit-learn>=0.15.2
 bcbio-nextgen==0.8.2
