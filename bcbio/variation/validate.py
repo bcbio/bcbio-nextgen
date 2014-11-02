@@ -12,6 +12,7 @@ import toolz as tz
 
 from bcbio import broad, utils
 from bcbio.bam import callable
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
 from bcbio.variation import validateplot, multi
@@ -47,6 +48,19 @@ def normalize_input_path(x, data):
                     return cur_x
         raise IOError("Could not find validation file %s" % x)
 
+def _gunzip(f, data):
+    if f is None:
+        return None
+    elif f.endswith(".gz"):
+        out_file = f.replace(".gz", "")
+        if not utils.file_exists(out_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                cmd = "gunzip -c {f} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "gunzip input file")
+        return out_file
+    else:
+        return f
+
 def _get_caller(data):
     callers = [tz.get_in(["config", "algorithm", "jointcaller"], data),
                tz.get_in(["config", "algorithm", "variantcaller"], data),
@@ -63,8 +77,9 @@ def compare_to_rm(data):
         else:
             vrn_file = os.path.abspath(toval_data["vrn_file"])
         rm_file = normalize_input_path(toval_data["config"]["algorithm"]["validate"], toval_data)
-        rm_interval_file = normalize_input_path(toval_data["config"]["algorithm"].get("validate_regions"),
-                                                toval_data)
+        rm_interval_file = _gunzip(normalize_input_path(toval_data["config"]["algorithm"].get("validate_regions"),
+                                                        toval_data),
+                                   toval_data)
         rm_genome = toval_data["config"]["algorithm"].get("validate_genome_build")
         sample = toval_data["name"][-1].replace(" ", "_")
         caller = _get_caller(toval_data)

@@ -16,10 +16,12 @@ def clean_file(in_file, data, prefix=""):
     """
     if in_file:
         bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
-        out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file)))
+        out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file))).replace(".gz", "")
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
-                cmd = "grep -v ^track {in_file} | grep -v ^browser | sort -k1,1 -k2,2n > {tx_out_file}"
+                cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
+                cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
+                       "sort -k1,1 -k2,2n > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
         vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
         return out_file

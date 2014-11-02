@@ -346,7 +346,7 @@ def _bgzip_from_fastq(data):
     config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
-    if in_file.endswith(".gz"):
+    if in_file.endswith(".gz") and not in_file.startswith(utils.SUPPORTED_REMOTES):
         needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix, needs_convert)
     else:
         needs_bgzip, needs_gunzip = True, False
