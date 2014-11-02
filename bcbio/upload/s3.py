@@ -8,6 +8,7 @@ import boto
 
 from bcbio import utils
 from bcbio.provenance import do
+from bcbio.upload import filesystem
 
 def get_file(local_dir, bucket_name, fname, params):
     """Retrieve file from amazon S3 to a local directory for processing.
@@ -34,20 +35,34 @@ def update_file(finfo, sample_info, config):
     """Update the file to an Amazon S3 bucket, using server side encryption.
     """
     conn = boto.connect_s3()
-    s3dirname = finfo["sample"] if "sample" in finfo else finfo["run"]
-    keyname = os.path.join(s3dirname, os.path.basename(finfo["path"]))
+    ffinal = filesystem.update_file(finfo, sample_info, config, pass_uptodate=True)
+    if os.path.isdir(ffinal):
+        to_transfer = []
+        for path, dirs, files in os.walk(ffinal):
+            for f in files:
+                full_f = os.path.join(path, f)
+                k = full_f.replace(os.path.abspath(config["dir"]) + "/", "")
+                to_transfer.append((full_f, k))
+    else:
+        k = ffinal.replace(os.path.abspath(config["dir"]) + "/", "")
+        to_transfer = [(ffinal, k)]
 
     bucket = conn.lookup(config["bucket"])
-    key = bucket.get_key(keyname) if bucket else None
-    modified = datetime.datetime.fromtimestamp(email.utils.mktime_tz(
-        email.utils.parsedate_tz(key.last_modified))) if key else None
-    no_upload = key and modified >= finfo["mtime"]
-    if not no_upload:
-        metadata = ["-m", "x-amz-server-side-encryption:AES256"]
-        for name, val in finfo.iteritems():
-            val = _update_val(name, val)
-            if val:
-                metadata += ["-m", "-m x-amz-meta-%s:%s" % (key, val)]
-        cmd = ["gof3r", "put", "--no-md5", "-b", config["bucket"], "-k", keyname,
-               "-p", finfo["path"]] + metadata
-        do.run(cmd, "Upload to s3: %s %s" % (config["bucket"], keyname))
+    if not bucket:
+        bucket = conn.create_bucket(config["bucket"])
+
+    for fname, orig_keyname in to_transfer:
+        keyname = os.path.join(config.get("folder", ""), orig_keyname)
+        key = bucket.get_key(keyname) if bucket else None
+        modified = datetime.datetime.fromtimestamp(email.utils.mktime_tz(
+            email.utils.parsedate_tz(key.last_modified))) if key else None
+        no_upload = key and modified >= finfo["mtime"]
+        if not no_upload:
+            metadata = ["-m", "x-amz-server-side-encryption:AES256"]
+            for name, val in finfo.iteritems():
+                val = _update_val(name, val)
+                if val:
+                    metadata += ["-m", "x-amz-meta-%s:%s" % (name, val)]
+            cmd = ["gof3r", "put", "--no-md5", "-b", config["bucket"], "-k", keyname,
+                   "-p", fname] + metadata
+            do.run(cmd, "Upload to s3: %s %s" % (config["bucket"], keyname))

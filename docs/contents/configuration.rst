@@ -272,7 +272,8 @@ Your Galaxy universe_wsgi.ini configuration needs to have
 
 S3 parameters:
 
-- ``bucket`` AWS bucket to upload to
+- ``bucket`` AWS bucket to direct output.
+- ``folder`` A folder path within the AWS bucket to prefix the output.
 - ``reduced_redundancy`` Flag to determine if we should store S3 data
   with reduced redundancy: cheaper but less reliable [false, true]
 

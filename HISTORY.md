@@ -3,6 +3,8 @@
 - Improve tumor/normal calling with FreeBayes, MuTect, VarDict and VarScan by
   validating against DREAM synthetic 3 data.
 - Validate ensemble based calling for somatic analysis using multiple callers.
+- Improve ability to run on Amazon AWS, including up to date interaction with
+  files originally stored in S3 and transfer to S3 on completion with encryption.
 - Avoid race conditions during `bedprep` work on samples with shared input BED
   files. These are now processed sequentially on a single machine to avoid
   conflicts. Thanks to Justin Johnson.

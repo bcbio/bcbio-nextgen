@@ -38,7 +38,7 @@ def copy_finfo_directory(finfo, storage_dir):
         os.utime(out_dir, None)
     return out_dir
 
-def update_file(finfo, sample_info, config):
+def update_file(finfo, sample_info, config, pass_uptodate=False):
     """Update the file in local filesystem storage.
     """
     # skip if we have no directory to upload to
@@ -53,4 +53,4 @@ def update_file(finfo, sample_info, config):
     if finfo.get("type") == "directory":
         return copy_finfo_directory(finfo, storage_dir)
     else:
-        return copy_finfo(finfo, storage_dir)
+        return copy_finfo(finfo, storage_dir, pass_uptodate=pass_uptodate)
