@@ -29,13 +29,13 @@ except ImportError:
 
 SUPPORTED_REMOTES = ("s3://",)
 
-def _s3_bucket_key(fname):
+def s3_bucket_key(fname):
     return fname.split("//")[-1].split("/", 1)
 
 def dl_remotes(fname, input_dir):
     if fname.startswith("s3://"):
         from bcbio.distributed.transaction import file_transaction
-        bucket, key = _s3_bucket_key(fname)
+        bucket, key = s3_bucket_key(fname)
         dl_dir = safe_makedir(os.path.join(input_dir, bucket, os.path.dirname(key)))
         out_file = os.path.join(dl_dir, os.path.basename(key))
         if not file_exists(out_file):
@@ -52,7 +52,7 @@ def remote_cl_input(fname):
     if not fname:
         return fname
     elif fname.startswith("s3://"):
-        bucket, key = _s3_bucket_key(fname)
+        bucket, key = s3_bucket_key(fname)
         gunzip = "| gunzip -c" if fname.endswith(".gz") else ""
         return "<(gof3r get --no-md5 -k {key} -b {bucket} {gunzip})".format(**locals())
     else:
@@ -97,14 +97,20 @@ def s3_handle(fname):
                     chunk = dec.decompress(chunk)
                 if chunk:
                     yield chunk
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            self.close()
         def __iter__(self):
             return self
+        def read(self, size):
+            return self._key.read(size)
         def next(self):
             return self._iter.next()
         def close(self):
             self._key.close(fast=True)
 
-    bucket, key = _s3_bucket_key(fname)
+    bucket, key = s3_bucket_key(fname)
     s3 = boto.connect_s3()
     s3b = s3.get_bucket(bucket)
     s3key = s3b.get_key(key)
