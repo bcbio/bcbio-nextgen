@@ -27,14 +27,14 @@ def to_safestr(region):
 
 def _split_by_regions(dirname, out_ext, in_key):
     """Split a BAM file data analysis into chromosomal regions.
-
     """
-    import pybedtools
     def _do_work(data):
         # XXX Need to move retrieval of regions into preparation to avoid
-        # Need for files and pybedtools when running in non-shared filesystems
-        regions = [(r.chrom, int(r.start), int(r.stop))
-                   for r in pybedtools.BedTool(data["config"]["algorithm"]["callable_regions"])]
+        # need for files when running in non-shared filesystems
+        with open(data["config"]["algorithm"]["callable_regions"]) as in_handle:
+            regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
+                       (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
+                                                                       not xs[0].startswith(("track", "browser",)))]
         bam_file = data[in_key]
         if bam_file is None:
             return None, []
@@ -69,7 +69,7 @@ def _add_combine_info(output, combine_map, file_key):
             # If we didn't process, no need to add combine information
             if cur_file in combine_map:
                 out_file = combine_map[cur_file]
-                if not "combine" in data:
+                if "combine" not in data:
                     data["combine"] = {}
                 data["combine"][file_key] = {"out": out_file,
                                              "extras": files_per_output.get(out_file, [])}
