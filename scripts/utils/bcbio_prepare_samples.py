@@ -21,7 +21,7 @@ def create_new_csv(prep, samples, args):
         with open(tx_out, 'w') as handle:
             handle.write(_header(args.csv))
             for p, s in tz.izip(prep, samples.keys()):
-                sample_name = sample if isinstance(p, list) else os.path.basename(p)
+                sample_name = s if isinstance(p, list) else os.path.basename(p)
                 handle.write("%s,%s,%s\n" % (sample_name, s, ",".join(samples[s]['anno'])))
 
 
