@@ -10,6 +10,7 @@ from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils, vfilter
 
@@ -122,9 +123,11 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
             params += _get_vqsr_training(filter_type, vrn_files)
             for a in _get_vqsr_annotations(filter_type):
                 params += ["-an", a]
+            cores = dd.get_cores(data)
+            memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             try:
                 broad_runner.new_resources("gatk-vqsr")
-                broad_runner.run_gatk(params, log_error=False)
+                broad_runner.run_gatk(params, log_error=False, memscale=memscale)
             except:  # Can fail to run if not enough values are present to train.
                 return None, None
     return recal_file, tranches_file
