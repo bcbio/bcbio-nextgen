@@ -1,3 +1,4 @@
+#!/usr/bin/env python -E
 """
 Script to set up a custom genome for bcbio-nextgen
 """

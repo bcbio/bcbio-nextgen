@@ -70,7 +70,8 @@ def upgrade_bcbio(args):
     if args.tooldir:
         with bcbio_tmpdir():
             print("Upgrading third party tools to latest versions")
-            _symlink_bcbio(args)
+            _symlink_bcbio(args, script="bcbio_nextgen.py")
+            _symlink_bcbio(args, script="bcbio_setup_genome.py")
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
     if args.install_data:
@@ -121,11 +122,11 @@ def _matplotlib_installed():
         return False
     return True
 
-def _symlink_bcbio(args):
-    """Ensure bcbio_nextgen.py symlink in final tool directory.
+def _symlink_bcbio(args, script="bcbio_nextgen.py"):
+    """Ensure a bcbio-nextgen script symlink in final tool directory.
     """
-    bcbio_anaconda = os.path.join(os.path.dirname(sys.executable), "bcbio_nextgen.py")
-    bcbio_final = os.path.join(args.tooldir, "bin", "bcbio_nextgen.py")
+    bcbio_anaconda = os.path.join(os.path.dirname(sys.executable), script)
+    bcbio_final = os.path.join(args.tooldir, "bin", script)
     sudo_cmd = ["sudo"] if args.sudo else []
     if not os.path.exists(bcbio_final):
         if os.path.lexists(bcbio_final):
