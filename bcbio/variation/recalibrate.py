@@ -25,6 +25,9 @@ def prep_recal(data):
         ref_file = data["sam_ref"]
         config = data["config"]
         dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
+        if not dbsnp_file:
+            logger.info("Skipping GATK BaseRecalibrator because no VCF file of known variants was found.")
+            return [[data]]
         broad_runner = broad.runner_from_config(config)
         platform = config["algorithm"].get("platform", "illumina")
         broad_runner.run_fn("picard_index_ref", ref_file)
