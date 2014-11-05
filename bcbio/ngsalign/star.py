@@ -7,15 +7,16 @@ from bcbio.utils import (safe_makedir, file_exists, is_gzipped)
 from bcbio.provenance import do
 from bcbio import bam, utils
 from bcbio.log import logger
+from bcbio.pipeline import datadict as dd
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     config = data["config"]
-    out_prefix = os.path.join(align_dir, names["lane"])
+    out_prefix = os.path.join(align_dir, dd.get_lane(data))
     out_file = out_prefix + "Aligned.out.sam"
-    out_dir = os.path.join(align_dir, "%s_star" % names["lane"])
+    out_dir = os.path.join(align_dir, "%s_star" % dd.get_lane(data))
 
     if not ref_file:
         logger.error("STAR index not found. We don't provide the STAR indexes "
@@ -46,6 +47,10 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
                                 "unstranded").lower()
     if strandedness == "unstranded":
         cmd += " --outSAMstrandField intronMotif "
+
+    if dd.get_rsem(data):
+        cmd += " --quantMode TranscriptomeSAM "
+
     with tx_tmpdir(data) as tmp_dir:
         sam_to_bam = bam.sam_to_bam_stream_cmd(config)
         sort = bam.sort_cmd(config, tmp_dir)
