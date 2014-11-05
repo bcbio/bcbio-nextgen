@@ -32,10 +32,10 @@ def main(log_file):
                         else:
                             total_time = tdiff
                     if cur_process.lower().find("unexpected error") == -1:
-                        print cur_process, tdiff
+                        print cur_process, "  ", tdiff
                 cur_process = line.split(":")[-1].strip()
                 prev_time = cur_time
-    print "Total", total_time
+    print "Total  ", total_time
 
 if __name__ == "__main__":
     main(sys.argv[1])
