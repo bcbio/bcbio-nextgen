@@ -520,7 +520,8 @@ Post-processing
 - ``tools_off`` Specify third party tools to skip as part of analysis
   pipeline. Enables turning off specific components of pipelines if not
   needed. ``gemini`` provides a `GEMINI database`_ of variants for downstream
-  query during variant calling pipelines.
+  query during variant calling pipelines. ``vardict_somatic_filter`` runs
+  a post calling filter to remove variants found in normal samples.
   Default: [] -- all tools on.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit

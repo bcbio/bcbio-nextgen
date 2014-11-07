@@ -39,6 +39,7 @@ details:
         numpass: 2
       min_allele_fraction: 10
       svcaller: [cn.mops, cnvkit, wham]
+      tools_off: [vardict_somatic_filter]
       variant_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
     description: c-tumor2
