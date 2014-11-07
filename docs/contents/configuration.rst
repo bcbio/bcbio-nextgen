@@ -435,7 +435,7 @@ Variant calling
    If true, will perform streaming duplicate marking with `samblaster`_ for
    paired reads and `biobambam's bammarkduplicates`_ for single end reads.
 -  ``recalibrate`` Perform base quality score recalibration on the
-   aligned BAM file. Defaults to no recalibration. [false, gatk]
+   aligned BAM file. Defaults to gatk. [false, gatk]
 -  ``realign`` Perform realignment around indels on the aligned BAM
    file. Defaults to no realignment since realigning callers like FreeBayes and
    GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
