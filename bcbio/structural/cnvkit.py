@@ -17,7 +17,7 @@ except ImportError:
 import numpy
 import toolz as tz
 
-from bcbio import utils
+from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
@@ -108,6 +108,9 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
             if at_avg:
                 cmd += ["--antitarget-avg-size", str(at_avg), "--antitarget-min-size", str(at_min),
                         "--target-avg-size", str(t_avg)]
+            local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
+                                         "lib", "R", "site-library")
+            cmd += ["--rlibpath", local_sitelib]
             args = cnvlib_cmd.parse_args(cmd)
             args.func(args)
             shutil.move(tx_work_dir, raw_work_dir)
