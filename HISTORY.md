@@ -13,10 +13,15 @@
 - Default to a reduced number of split regions (`nomap_split_targets` defaults
   to 200 instead of 2000) to avoid controller memory issues with large sample
   sizes.
+- Avoid re-calculating depth metrics when running post variant calling
+  annotation with GATK to provide accurate metrics on high depth samples.
+  Thanks to Miika Ahdesmaki.
 - Consistently keep annotations and genotype information for split MNPs from
   vcfallelicprimitives. Thanks to Pär Larsson.
 - Enable VQSR for large batches of exome samples (50 or more together) to
   coincide with joint calling availability for large populations.
+- Support retrieval of GATK and MuTect jars from S3 to enable integration
+  with bcbio inside Docker.
 - Bump pybedtools version to avoid potential open file handle issues. Thanks to
   Ryan Dale.
 - Move to bgzipped and indexes human_ancestor.fa for LOFTEE to support access

@@ -8,17 +8,24 @@ from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation import vcfutils
 
-def get_gatk_annotations(config):
+def get_gatk_annotations(config, include_depth=True):
+    """Retrieve annotations to use for GATK VariantAnnotator.
+
+    If include_depth is false, we'll skip annotating DP. Since GATK downsamples
+    this will undercount on high depth sequencing and the standard outputs
+    from the original callers may be preferable.
+    """
     broad_runner = broad.runner_from_config(config)
     anns = ["BaseQualityRankSumTest", "FisherStrand",
             "GCContent", "HaplotypeScore", "HomopolymerRun",
             "MappingQualityRankSumTest", "MappingQualityZero",
-            "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality",
-            "DepthPerAlleleBySample"]
-    if broad_runner.gatk_type() == "restricted":
-        anns += ["Coverage"]
-    else:
-        anns += ["DepthOfCoverage"]
+            "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality"]
+    if include_depth:
+        anns += ["DepthPerAlleleBySample"]
+        if broad_runner.gatk_type() == "restricted":
+            anns += ["Coverage"]
+        else:
+            anns += ["DepthOfCoverage"]
     return anns
 
 def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
@@ -43,7 +50,7 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                 idx_file = orig_file + ".idx"
                 if os.path.exists(idx_file) and not utils.file_exists(idx_file):
                     os.remove(idx_file)
-                annotations = get_gatk_annotations(config)
+                annotations = get_gatk_annotations(config, include_depth=False)
                 params = ["-T", "VariantAnnotator",
                           "-R", ref_file,
                           "--variant", orig_file,
