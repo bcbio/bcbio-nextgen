@@ -32,11 +32,12 @@ SUPPORTED_REMOTES = ("s3://",)
 def s3_bucket_key(fname):
     return fname.split("//")[-1].split("/", 1)
 
-def dl_remotes(fname, input_dir):
+def dl_remotes(fname, input_dir, dl_dir=None):
     if fname.startswith("s3://"):
         from bcbio.distributed.transaction import file_transaction
         bucket, key = s3_bucket_key(fname)
-        dl_dir = safe_makedir(os.path.join(input_dir, bucket, os.path.dirname(key)))
+        if not dl_dir:
+            dl_dir = safe_makedir(os.path.join(input_dir, bucket, os.path.dirname(key)))
         out_file = os.path.join(dl_dir, os.path.basename(key))
         if not file_exists(out_file):
             with file_transaction({}, out_file) as tx_out_file:

@@ -364,17 +364,20 @@ def _install_toolplus(args, manifest_dir):
         else:
             raise ValueError("Unexpected toolplus argument: %s %s" (tool.name, tool.fname))
 
+def get_gatk_jar_version(name, fname):
+    if name == "gatk":
+        return broad.get_gatk_version(fname)
+    elif name == "mutect":
+        return broad.get_mutect_version(fname)
+    else:
+        raise ValueError("Unexpected GATK input: %s" % name)
+
 def _install_gatk_jar(name, fname, manifest, system_config, toolplus_dir):
     """Install a jar for GATK or associated tools like MuTect.
     """
     if not fname.endswith(".jar"):
         raise ValueError("--toolplus argument for %s expects a jar file: %s" % (name, fname))
-    if name == "gatk":
-        version = broad.get_gatk_version(fname)
-    elif name == "mutect":
-        version = broad.get_mutect_version(fname)
-    else:
-        raise ValueError("Unexpected GATK input: %s" % name)
+    version = get_gatk_jar_version(name, fname)
     store_dir = utils.safe_makedir(os.path.join(toolplus_dir, name, version))
     shutil.copyfile(fname, os.path.join(store_dir, os.path.basename(fname)))
     _update_system_file(system_config, name, {"dir": store_dir})

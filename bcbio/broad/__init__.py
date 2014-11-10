@@ -9,6 +9,8 @@ import re
 import os
 import subprocess
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.broad import picardrun
 from bcbio.distributed.transaction import tx_tmpdir
@@ -131,10 +133,12 @@ class BroadRunner:
         """
         out = []
         for name in ["gatk", "picard", "mutect"]:
-            try:
-                v = programs.get_version(name, config=config)
-            except KeyError:
-                v = None
+            v = tz.get_in(["resources", name, "version"], config)
+            if not v:
+                try:
+                    v = programs.get_version(name, config=config)
+                except KeyError:
+                    v = None
             out.append(v)
         self._gatk_version, self._picard_version, self._mutect_version = out
 
