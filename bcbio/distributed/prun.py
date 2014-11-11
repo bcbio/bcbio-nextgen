@@ -47,6 +47,7 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1,
             logger.info("run local -- checkpoint passed: %s" % name)
             parallel["cores_per_job"] = 1
             parallel["num_jobs"] = 1
+            parallel["checkpointed"] = True
             yield multi.runner(parallel, config)
         elif parallel["type"] == "ipython":
             with ipython.create(parallel, dirs, config) as view:

@@ -175,11 +175,9 @@ GATK and muTect
 Calling variants with GATK's HaplotypeCaller or UnifiedGenotyper requires manual
 installation of the latest GATK release. This is freely available for academic
 users, but requires a manual download from the `GATK download`_ site.  Appistry
-provides `a distribution of GATK for commercial users`_.  We distribute the last
-freely available GATK-lite release (2.3.9) as part of the automated install but
-don't recommend using this for calling. If you don't want to use the restricted
+provides `a distribution of GATK for commercial users`_. If you don't want to use the restricted
 GATK version, freely available callers like FreeBayes provide a better
-alternative than older GATK versions. See the `FreeBayes and GATK comparison`_
+alternative than using older GATK versions. See the `FreeBayes and GATK comparison`_
 for a full evaluation.
 
 To install GATK, download and unzip the latest version from the GATK or Appistry
