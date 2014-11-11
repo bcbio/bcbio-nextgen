@@ -5,10 +5,12 @@ import glob
 import os
 from xml.etree import ElementTree
 
+import toolz as tz
 import yaml
 
 from bcbio import utils
 from bcbio.pipeline import alignment
+from bcbio.provenance import do
 
 # ## bcbio-nextgen genome resource files
 
@@ -112,7 +114,7 @@ def _galaxy_loc_iter(loc_file, galaxy_dt, need_remap=False):
                 yield (dbkey, cur_ref)
 
 def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap,
-                             galaxy_config):
+                             galaxy_config, data):
     """Retrieve reference genome file from Galaxy *.loc file.
 
     Reads from tool_data_table_conf.xml information for the index if it
@@ -122,6 +124,7 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
             if dbkey == genome_build]
     if len(refs) == 0:
         raise IndexError("Genome %s not found in %s" % (genome_build, loc_file))
+        _download_prepped_genome(genome_build, data)
     # allow multiple references in a file and use the most recently added
     else:
         cur_ref = refs[-1]
@@ -158,7 +161,7 @@ def _get_galaxy_data_table(name, dt_config_file):
                 out["file"] = t.find("file").attrib.get("path", "")
     return out
 
-def get_refs(genome_build, aligner, galaxy_base):
+def get_refs(genome_build, aligner, galaxy_base, data):
     """Retrieve the reference genome file location from galaxy configuration.
     """
     out = {}
@@ -170,7 +173,7 @@ def get_refs(genome_build, aligner, galaxy_base):
             loc_file, need_remap = _get_galaxy_loc_file(name, galaxy_dt, galaxy_config["tool_data_path"],
                                                         galaxy_base)
             cur_ref = _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap,
-                                               galaxy_config)
+                                               galaxy_config, data)
             base = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
             if os.path.isdir(base):
                 indexes = glob.glob(os.path.join(base, "*"))
@@ -199,3 +202,20 @@ def get_builds(galaxy_base):
     for dbkey in sorted(fnames.keys()):
         out.append((dbkey, fnames[dbkey]))
     return out
+
+# ## Retrieve pre-prepared genomes
+
+def _download_prepped_genome(genome_build, data):
+    """Get a pre-prepared genome from S3, unpacking it locally.
+
+    Supports runs on AWS where we can retrieve the resources on demand.
+    """
+    out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
+                                              "inputs", "data", "genomes"))
+    bucket = "biodata"
+    key = "prepped/%s.tar.gz" % genome_build
+    if not os.path.exists(os.path.join(out_dir, genome_build)):
+        with utils.chdir(out_dir):
+            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | gunzip -c | tar -xvp")
+            do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
+    raise NotImplementedError("Need to finalize pre-prepared genome integration")

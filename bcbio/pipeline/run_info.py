@@ -110,7 +110,7 @@ def add_reference_resources(data):
     """Add genome reference information to the item to process.
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
-    data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"])
+    data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"], data)
     # back compatible `sam_ref` target
     data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
     ref_loc = utils.get_in(data, ("config", "resources", "species", "dir"),
@@ -120,7 +120,7 @@ def add_reference_resources(data):
     alt_genome = utils.get_in(data, ("config", "algorithm", "validate_genome_build"))
     if alt_genome:
         data["reference"]["alt"] = {alt_genome:
-                                    genome.get_refs(alt_genome, None, data["dirs"]["galaxy"])["fasta"]}
+                                    genome.get_refs(alt_genome, None, data["dirs"]["galaxy"], data)["fasta"]}
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
         if population.do_db_build([data], check_gemini=False, need_bam=False):
