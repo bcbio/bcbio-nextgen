@@ -58,11 +58,15 @@ def update_file(finfo, sample_info, config):
             email.utils.parsedate_tz(key.last_modified))) if key else None
         no_upload = key and modified >= finfo["mtime"]
         if not no_upload:
-            metadata = ["-m", "x-amz-server-side-encryption:AES256"]
-            for name, val in finfo.iteritems():
-                val = _update_val(name, val)
-                if val:
-                    metadata += ["-m", "x-amz-meta-%s:%s" % (name, val)]
-            cmd = ["gof3r", "put", "--no-md5", "-b", config["bucket"], "-k", keyname,
-                   "-p", fname] + metadata
-            do.run(cmd, "Upload to s3: %s %s" % (config["bucket"], keyname))
+            upload_file(fname, config["bucket"], keyname, finfo)
+
+def upload_file(fname, bucket, keyname, mditems=None):
+    metadata = ["-m", "x-amz-server-side-encryption:AES256"]
+    if mditems:
+        for name, val in mditems.iteritems():
+            val = _update_val(name, val)
+            if val:
+                metadata += ["-m", "x-amz-meta-%s:%s" % (name, val)]
+    cmd = ["gof3r", "put", "--no-md5", "-b", bucket, "-k", keyname,
+           "-p", fname] + metadata
+    do.run(cmd, "Upload to s3: %s %s" % (bucket, keyname))
