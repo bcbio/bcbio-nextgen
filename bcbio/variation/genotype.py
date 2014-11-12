@@ -9,7 +9,7 @@ import toolz as tz
 from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import region
-from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vfilter
+from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vfilter, qsnp
 
 # ## Variant filtration -- shared functionality
 
@@ -187,7 +187,8 @@ def get_variantcallers():
             "mutect": mutect.mutect_caller,
             "platypus": platypus.run,
             "scalpel": scalpel.run_scalpel,
-            "vardict": vardict.run_vardict}
+            "vardict": vardict.run_vardict,
+            "qsnp": qsnp.run_qsnp}
 
 def variantcall_sample(data, region=None, align_bams=None, out_file=None):
     """Parallel entry point for doing genotyping of a region of a sample.
