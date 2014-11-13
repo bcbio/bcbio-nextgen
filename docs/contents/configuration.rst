@@ -521,7 +521,9 @@ Post-processing
   pipeline. Enables turning off specific components of pipelines if not
   needed. ``gemini`` provides a `GEMINI database`_ of variants for downstream
   query during variant calling pipelines. ``vardict_somatic_filter`` runs
-  a post calling filter to remove variants found in normal samples.
+  a post calling filter to remove variants found in normal samples. ``bwa-mem``
+  forces use of original bwa aln alignment. Without this, we use bwa mem with
+  70bp or longer reads.
   Default: [] -- all tools on.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit

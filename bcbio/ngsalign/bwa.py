@@ -3,6 +3,8 @@
 import os
 import subprocess
 
+import toolz as tz
+
 from bcbio.pipeline import config_utils
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -98,7 +100,8 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         # If we cannot do piping, use older bwa aln approach
-        if not _can_use_mem(fastq_file, data):
+        if ("bwa-mem" in tz.get_in(["config", "algorithm", "tools_off"], data, [])
+              or not _can_use_mem(fastq_file, data)):
             out_file = _align_backtrack(fastq_file, pair_file, ref_file, out_file,
                                         names, rg_info, data)
         else:
