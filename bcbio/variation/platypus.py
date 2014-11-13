@@ -5,10 +5,6 @@ https://github.com/andyrimmer/Platypus
 """
 import os
 
-try:
-    import pybedtools
-except ImportError:
-    pybedtools = None
 import toolz as tz
 
 from bcbio import bam, utils
@@ -48,6 +44,7 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
 def _bed_to_platypusin(region, base_file, items):
     """Convert BED file regions into Platypus custom inputs.
     """
+    import pybedtools
     variant_regions = bedutils.merge_overlaps(tz.get_in(["config", "algorithm", "variant_regions"], items[0]),
                                               items[0])
     target = pshared.subset_variant_regions(variant_regions, region, base_file, items)

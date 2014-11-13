@@ -11,10 +11,6 @@ import os
 import toolz as tz
 import numpy as np
 try:
-    import pybedtools
-except ImportError:
-    pybedtools = None
-try:
     import pandas as pd
     import prettyplotlib as ppl
 except ImportError:
@@ -34,6 +30,7 @@ def _stat_str(x, n):
 def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
     """Compare a ensemble results for a caller against a specific caller and SV type.
     """
+    import pybedtools
     def cnv_matches(name):
         """Check for CNV matches -- XXX hardcoded for diploid comparisons.
         """

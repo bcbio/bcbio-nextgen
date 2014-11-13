@@ -6,10 +6,6 @@ the evidence from each input.
 import fileinput
 import os
 
-try:
-    import pybedtools
-except ImportError:
-    pybedtools = None
 import toolz as tz
 import vcf
 
@@ -45,7 +41,7 @@ def _get_svtype(rec):
 def _cnvbed_to_bed(in_file, caller, out_file):
     """Convert cn_mops CNV based bed files into flattened BED
     """
-
+    import pybedtools
     with open(out_file, "w") as out_handle:
         for feat in pybedtools.BedTool(in_file):
             out_handle.write("\t".join([feat.chrom, str(feat.start), str(feat.end),
@@ -74,6 +70,7 @@ def _create_bed(call, base_file, data):
 def summarize(calls, data):
     """Summarize results from multiple callers into a single flattened BED file.
     """
+    import pybedtools
     sample = tz.get_in(["rgnames", "sample"], data)
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                                sample, "ensemble"))

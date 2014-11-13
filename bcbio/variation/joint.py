@@ -12,10 +12,6 @@ import contextlib
 import math
 import os
 
-try:
-    import pybedtools
-except ImportError:
-    pybedtools = None
 import pysam
 import toolz as tz
 
@@ -33,6 +29,7 @@ SUPPORTED = {"general": ["freebayes", "platypus", "samtools"],
 def _get_callable_regions(data):
     """Retrieve regions to parallelize by from callable regions, variant regions or chromosomes
     """
+    import pybedtools
     callable_files = data.get("callable_regions") or data.get("variant_regions")
     if callable_files:
         assert len(callable_files) == 1
