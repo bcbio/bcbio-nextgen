@@ -163,8 +163,7 @@ def snpeff_effects(data):
     """
     vcf_in = data["vrn_file"]
     if vcfutils.vcf_has_variants(vcf_in):
-        vcf_file = _run_snpeff(vcf_in, "vcf", data)
-        return vcf_file
+        return _run_snpeff(vcf_in, "vcf", data)
 
 def _snpeff_args_from_config(data):
     """Retrieve snpEff arguments supplied through input configuration.
@@ -228,9 +227,12 @@ def get_cmd(cmd_name, datadir, config):
     return cmd.format(**locals())
 
 def _run_snpeff(snp_in, out_format, data):
+    """Run effects prediction with snpEff, skipping if snpEff database not present.
+    """
     snpeff_db, datadir = get_db(data)
-    assert datadir is not None, \
-        "Did not find snpEff resources in genome configuration: %s" % data["genome_resources"]
+    if not snpeff_db:
+        return None
+
     assert os.path.exists(os.path.join(datadir, snpeff_db)), \
         "Did not find %s snpEff genome data in %s" % (snpeff_db, datadir)
     snpeff_cmd = get_cmd("eff", datadir, data["config"])
