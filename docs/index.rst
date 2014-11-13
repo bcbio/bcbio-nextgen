@@ -25,6 +25,7 @@ Contents:
    contents/testing
    contents/configuration
    contents/parallel
+   contents/cloud
    contents/pipelines
    contents/outputs
    contents/code

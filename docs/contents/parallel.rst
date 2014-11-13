@@ -229,30 +229,3 @@ contribute your tips and thoughts.
 .. _post on scaling bcbio-nextgen: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 .. _Harvard FAS Research Computing: http://rc.fas.harvard.edu/
 .. _Dell's Active Infrastructure for Life Sciences: http://dell.com/ai-hpc-lifesciences
-
-Cloud support
-~~~~~~~~~~~~~
-
-`Amazon Web Services`_ provide a flexible cloud based environment for
-running analyses. Cloud approaches offer the ability to perform
-analyses at scale with no investment in local hardware. In addition to
-the potential advantages for traditional cluster users, shared images
-on top of this infrastructure can make these analysis pipelines
-available to anyone. `This tutorial`_ describes running the pipeline
-on Amazon with `CloudBioLinux`_ and `CloudMan`_.
-
-The scripts can also be tightly integrated with the `Galaxy`_ web-based
-analysis tool. Tracking of samples occurs via a web based LIMS system,
-and processed results are uploading into Galaxy Data Libraries for
-researcher access and additional analysis. See the `installation
-instructions for the front end`_ and a `detailed description of the full
-system`_.
-
-.. _Amazon Web Services: https://aws.amazon.com/
-.. _This tutorial: http://bcbio.wordpress.com/2011/08/19/distributed-exome-analysis-pipeline-with-cloudbiolinux-and-cloudman/
-.. _CloudBioLinux: http://cloudbiolinux.org
-.. _CloudMan: http://wiki.g2.bx.psu.edu/Admin/Cloud
-
-.. _Galaxy: http://galaxy.psu.edu/
-.. _installation instructions for the front end: https://bitbucket.org/galaxy/galaxy-central/wiki/LIMS/nglims
-.. _detailed description of the full system: http://bcbio.wordpress.com/2011/01/11/next-generation-sequencing-information-management-and-analysis-system-for-galaxy/
