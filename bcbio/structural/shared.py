@@ -5,10 +5,6 @@ Handles exclusion regions and preparing discordant regions.
 from contextlib import closing
 import os
 
-try:
-    import pybedtools
-except ImportError:
-    pybedtools = None
 import pysam
 import toolz as tz
 
@@ -54,6 +50,7 @@ def prepare_exclude_file(items, base_file, chrom=None):
     centromere regions, both of which contribute to long run times and
     false positive structural variant calls.
     """
+    import pybedtools
     out_file = "%s-exclude.bed" % utils.splitext_plus(base_file)[0]
     all_vrs = _get_variant_regions(items)
     ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
@@ -84,6 +81,7 @@ def prepare_exclude_file(items, base_file, chrom=None):
 def get_sv_chroms(items, exclude_file):
     """Retrieve chromosomes to process on, avoiding extra skipped chromosomes.
     """
+    import pybedtools
     exclude_regions = {}
     for region in pybedtools.BedTool(exclude_file):
         if int(region.start) == 0:

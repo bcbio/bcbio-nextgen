@@ -5,12 +5,6 @@ from contextlib import closing, contextmanager
 import functools
 import tempfile
 
-try:
-    import pybedtools
-except ImportError:
-    pybedtools = None
-import pysam
-
 from bcbio import bam, broad, utils
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
@@ -126,6 +120,7 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
 
 
 def _subset_bed_by_region(in_file, out_file, region, do_merge=True):
+    import pybedtools
     orig_bed = pybedtools.BedTool(in_file)
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
     if do_merge:
@@ -143,6 +138,7 @@ def get_lcr_bed(items):
 def remove_lcr_regions(orig_bed, items):
     """If configured and available, update a BED file to remove low complexity regions.
     """
+    import pybedtools
     lcr_bed = get_lcr_bed(items)
     if lcr_bed:
         nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
@@ -155,6 +151,7 @@ def remove_lcr_regions(orig_bed, items):
 
 @contextmanager
 def bedtools_tmpdir(data):
+    import pybedtools
     with tx_tmpdir(data) as tmpdir:
         orig_tmpdir = tempfile.gettempdir()
         pybedtools.set_tempdir(tmpdir)
