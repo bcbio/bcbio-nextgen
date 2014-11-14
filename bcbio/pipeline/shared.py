@@ -5,6 +5,8 @@ from contextlib import closing, contextmanager
 import functools
 import tempfile
 
+import pysam
+
 from bcbio import bam, broad, utils
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace

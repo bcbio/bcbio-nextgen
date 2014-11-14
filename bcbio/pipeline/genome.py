@@ -18,7 +18,7 @@ def get_resources(genome, ref_file):
     """Retrieve genome information from a genome-references.yaml file.
     """
     base_dir = os.path.normpath(os.path.dirname(ref_file))
-    resource_file = os.path.join(base_dir, "%s-resources.yaml" % genome)
+    resource_file = os.path.join(base_dir, "%s-resources.yaml" % genome.replace("-test", ""))
     if not os.path.exists(resource_file):
         raise IOError("Did not find resource file for %s: %s\n"
                       "To update bcbio_nextgen.py with genome resources for standard builds, run:\n"
@@ -123,8 +123,7 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
     refs = [ref for dbkey, ref in _galaxy_loc_iter(loc_file, galaxy_dt, need_remap)
             if dbkey == genome_build]
     if len(refs) == 0:
-        raise IndexError("Genome %s not found in %s" % (genome_build, loc_file))
-        _download_prepped_genome(genome_build, data)
+        cur_ref = _download_prepped_genome(genome_build, data, name, need_remap)
     # allow multiple references in a file and use the most recently added
     else:
         cur_ref = refs[-1]
@@ -205,11 +204,12 @@ def get_builds(galaxy_base):
 
 # ## Retrieve pre-prepared genomes
 
-def _download_prepped_genome(genome_build, data):
+def _download_prepped_genome(genome_build, data, name, need_remap):
     """Get a pre-prepared genome from S3, unpacking it locally.
 
     Supports runs on AWS where we can retrieve the resources on demand.
     """
+    remap_names = {"tophat2": "bowtie2"}
     out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
                                               "inputs", "data", "genomes"))
     bucket = "biodata"
@@ -218,4 +218,13 @@ def _download_prepped_genome(genome_build, data):
         with utils.chdir(out_dir):
             cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | gunzip -c | tar -xvp")
             do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
-    raise NotImplementedError("Need to finalize pre-prepared genome integration")
+    genome_dir = os.path.join(out_dir, genome_build)
+    genome_build = genome_build.replace("-test", "")
+    if need_remap or name == "samtools":
+        return os.path.join(genome_dir, "seq", "%s.fa" % genome_build)
+    else:
+        ref_dir = os.path.join(genome_dir, remap_names.get(name, name))
+        base_name = os.path.commonprefix(os.listdir(ref_dir))
+        while base_name.endswith("."):
+            base_name = base_name[:-1]
+        return os.path.join(ref_dir, base_name)
