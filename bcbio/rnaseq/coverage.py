@@ -2,10 +2,6 @@
 Functions to handle plotting coverage across genes
 """
 try:
-    from chanjo import bam
-except ImportError:
-    bam = None
-try:
     import gffutils
     import pandas as pd
     import matplotlib
@@ -60,6 +56,7 @@ def _gene_depth(dbfn, bamfn, gene):
     and returns a 5' -> 3' list of per-base read depths for the exons of
     the gene
     """
+    from chanjo import bam
     db = gffutils.FeatureDB(dbfn, keep_order=True)
     read_depths = []
     bam_handle = bam.CoverageAdapter(bamfn)
@@ -69,7 +66,7 @@ def _gene_depth(dbfn, bamfn, gene):
         read_depths += bam_handle.read(exon.seqid, min(coord), max(coord)).tolist()
     # return a list of depths going in the 5' -> 3' direction
     if strand == "-":
-       read_depths = read_depths[::-1]
+        read_depths = read_depths[::-1]
     return read_depths
 
 def plot_gene_coverage(bam_file, ref_file, count_file, out_file):
@@ -90,6 +87,7 @@ def plot_gene_coverage(bam_file, ref_file, count_file, out_file):
     return out_file
 
 def estimate_library_content(bam_file, ref_file):
+    from chanjo import bam
     ref_db = ref_file + ".db"
     library_content = defaultdict(Counter)
     db = gffutils.FeatureDB(ref_db, keep_order=True)
