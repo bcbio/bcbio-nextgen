@@ -19,7 +19,7 @@ bcbio uses `Elasticluster <https://github.com/gc3-uzh-ch/elasticluster>`_,
 to build a cluster on AWS with an optional Lustre shared filesystem.
 
 AWS support is still a work in progress and the current approach only supports
-GRCh37 analyses. We welcome feedback as we continue to improve the support.
+GRCh37 analyses. We welcome feedback and will continue to improve.
 
 Local setup
 ===========
@@ -110,20 +110,44 @@ The second configures a VPC to host bcbio::
 Running a cluster
 =================
 
-Following this setup, you're ready to run a bcbio cluster on AWS.  By default,
-the cluster uses the latest pre-built AMI (ami-106aef78, 2014-10-20) with bcbio,
-docker and human GRCh37 indices pre-installed.  It will start up one m3.large
-head node and two m3.large worker nodes. You can adjust the number of nodes and
-sizes by editing your ``~/.bcbio/elasticluster/config``.  To start a single
-non-cluster machine for processing locally, set ``compute_nodes`` to 0 in the
-configuration and choose a larger ``flavor`` for the frontend node.
+Following this setup, you're ready to run a bcbio cluster on AWS. We start
+from a standard Ubuntu AMI, installing all software for bcbio and the cluster as
+part of the boot process.
 
-Start the cluster with::
+The ``~/.bcbio/elasticluster/config`` file defines the number of compute nodes
+to start. If you set up your AWS configuration manually, the bcbio-vm GitHub
+repository has the `latest example configuration
+<https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
+
+To start a cluster with a SLURM manager front end node and 2 compute nodes::
+
+    [cluster/bcbio]
+    setup_provider=ansible-slurm
+    frontend_nodes=1
+    compute_nodes=2
+    flavor=m3.8xlarge
+
+    [cluster/bcbio/frontend]
+    flavor=m3.large
+
+To start a single machine without a cluster to compute directly on::
+
+    [cluster/bcbio]
+    setup_provider=ansible
+    frontend_nodes=1
+    compute_nodes=0
+    flavor=m3.large
+
+    [cluster/bcbio/frontend]
+    flavor=m3.2xlarge
+
+Adjust the number of nodes and machine size flavors as desired, then start the
+cluster with::
 
     bcbio_vm.py elasticluster start bcbio
 
 The cluster will take five to ten minutes to start. Once running,
-update the bcbio wrapper code, Dockerized tools and system configuration
+install the bcbio wrapper code, Dockerized tools and system configuration
 with::
 
     bcbio_vm.py aws bcbio bootstrap

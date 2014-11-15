@@ -27,6 +27,7 @@ gffutils>=0.8.2
 HTSeq >= 0.5.4p5
 joblib>=0.7.0d
 openpyxl>=1.6.1,<2.0.0
+path.py>=7.0
 prettyplotlib>=0.1.7
 psutil>=1.2.0
 pybedtools>=0.6.8

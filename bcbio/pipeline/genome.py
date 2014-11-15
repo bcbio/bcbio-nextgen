@@ -93,25 +93,26 @@ def _galaxy_loc_iter(loc_file, galaxy_dt, need_remap=False):
         path_i = galaxy_dt["column"].index("path")
     else:
         dbkey_i = None
-    with open(loc_file) as in_handle:
-        for line in in_handle:
-            if line.strip() and not line.startswith("#"):
-                parts = line.strip().split("\t")
-                # Detect and report spaces instead of tabs
-                if len(parts) == 1:
-                    parts = [x.strip() for x in line.strip().split(" ") if x.strip()]
-                    if len(parts) > 1:
-                        raise IOError("Galaxy location file uses spaces instead of "
-                                      "tabs to separate fields: %s" % loc_file)
-                if dbkey_i is not None and not need_remap:
-                    dbkey = parts[dbkey_i]
-                    cur_ref = parts[path_i]
-                else:
-                    if parts[0] == "index":
-                        parts = parts[1:]
-                    dbkey = parts[0]
-                    cur_ref = parts[-1]
-                yield (dbkey, cur_ref)
+    if os.path.exists(loc_file):
+        with open(loc_file) as in_handle:
+            for line in in_handle:
+                if line.strip() and not line.startswith("#"):
+                    parts = line.strip().split("\t")
+                    # Detect and report spaces instead of tabs
+                    if len(parts) == 1:
+                        parts = [x.strip() for x in line.strip().split(" ") if x.strip()]
+                        if len(parts) > 1:
+                            raise IOError("Galaxy location file uses spaces instead of "
+                                          "tabs to separate fields: %s" % loc_file)
+                    if dbkey_i is not None and not need_remap:
+                        dbkey = parts[dbkey_i]
+                        cur_ref = parts[path_i]
+                    else:
+                        if parts[0] == "index":
+                            parts = parts[1:]
+                        dbkey = parts[0]
+                        cur_ref = parts[-1]
+                    yield (dbkey, cur_ref)
 
 def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap,
                              galaxy_config, data):
@@ -122,15 +123,16 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
     """
     refs = [ref for dbkey, ref in _galaxy_loc_iter(loc_file, galaxy_dt, need_remap)
             if dbkey == genome_build]
+    remap_fn = alignment.TOOLS[name].remap_index_fn
+    need_remap = remap_fn is not None
     if len(refs) == 0:
         cur_ref = _download_prepped_genome(genome_build, data, name, need_remap)
     # allow multiple references in a file and use the most recently added
     else:
         cur_ref = refs[-1]
     if need_remap:
-        remap_fn = alignment.TOOLS[name].remap_index_fn
-        cur_ref = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
         assert remap_fn is not None, "%s requires remapping function from base location file" % name
+        cur_ref = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
         cur_ref = remap_fn(os.path.abspath(cur_ref))
     return cur_ref
 
@@ -216,7 +218,7 @@ def _download_prepped_genome(genome_build, data, name, need_remap):
     key = "prepped/%s.tar.gz" % genome_build
     if not os.path.exists(os.path.join(out_dir, genome_build)):
         with utils.chdir(out_dir):
-            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | gunzip -c | tar -xvp")
+            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
             do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     genome_dir = os.path.join(out_dir, genome_build)
     genome_build = genome_build.replace("-test", "")
