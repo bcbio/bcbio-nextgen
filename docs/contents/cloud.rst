@@ -125,10 +125,12 @@ To start a cluster with a SLURM manager front end node and 2 compute nodes::
     setup_provider=ansible-slurm
     frontend_nodes=1
     compute_nodes=2
-    flavor=m3.8xlarge
+    flavor=r3.8xlarge
 
     [cluster/bcbio/frontend]
     flavor=m3.large
+    root_volume_size=100
+    root_volume_type=gp2
 
 To start a single machine without a cluster to compute directly on::
 
@@ -140,9 +142,15 @@ To start a single machine without a cluster to compute directly on::
 
     [cluster/bcbio/frontend]
     flavor=m3.2xlarge
+    root_volume_size=100
+    root_volume_type=gp2
 
-Adjust the number of nodes and machine size flavors as desired, then start the
-cluster with::
+Adjust the number of nodes, machine size flavors and root volume size as
+desired. Elasticluster mounts the frontend root volume across all machines using
+NFS. At scale, you can replace this with a Lustre shared filesystem. See below
+for details on launching and attaching this to a cluster.
+
+Once customized, start the cluster with::
 
     bcbio_vm.py elasticluster start bcbio
 
@@ -155,7 +163,10 @@ with::
 Running Lustre
 ==============
 
-You can use `Intel Cloud Edition for Lustre (ICEL) <https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+Software>`_
+Elasticluster mounts the cluster frontend root volume ``/home`` directory as a
+NFS share available across all of the worker machines. You can use this as a
+processing directory for smaller runs but for larger runs will need a
+distributed file system. bcbio supports using `Intel Cloud Edition for Lustre (ICEL) <https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+Software>`_
 to set up a Lustre scratch filesystem on AWS.
 
 - Subscribe to `ICEL in the Amazon Marketplace
@@ -183,8 +194,7 @@ To run the analysis, connect to the head node with::
 
 If you started a single machine without a cluster run with::
 
-    sudo mkdir /mnt/your-project
-    sudo chown ubuntu !$
+    mkdir ~/run/your-project
     cd !$ && mkdir work && cd work
     bcbio_vm.py run -n 8 s3://your-project/name.yaml
 

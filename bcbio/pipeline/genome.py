@@ -206,26 +206,31 @@ def get_builds(galaxy_base):
 
 # ## Retrieve pre-prepared genomes
 
+REMAP_NAMES = {"tophat2": "bowtie2",
+               "samtools": "seq"}
+S3_INFO = {"bucket": "biodata",
+           "key": "prepped/{build}/{build}-{target}.tar.lz"}
+
 def _download_prepped_genome(genome_build, data, name, need_remap):
     """Get a pre-prepared genome from S3, unpacking it locally.
 
     Supports runs on AWS where we can retrieve the resources on demand.
     """
-    remap_names = {"tophat2": "bowtie2"}
     out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
                                               "inputs", "data", "genomes"))
-    bucket = "biodata"
-    key = "prepped/%s.tar.gz" % genome_build
-    if not os.path.exists(os.path.join(out_dir, genome_build)):
+    ref_dir = os.path.join(out_dir, genome_build, REMAP_NAMES.get(name, name))
+    if not os.path.exists(ref_dir):
         with utils.chdir(out_dir):
-            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
+            bucket = S3_INFO["bucket"]
+            key = S3_INFO["key"].format(build=genome_build, target=REMAP_NAMES.get(name, name))
+            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | plzip -d -c | tar -xvp")
             do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     genome_dir = os.path.join(out_dir, genome_build)
     genome_build = genome_build.replace("-test", "")
     if need_remap or name == "samtools":
         return os.path.join(genome_dir, "seq", "%s.fa" % genome_build)
     else:
-        ref_dir = os.path.join(genome_dir, remap_names.get(name, name))
+        ref_dir = os.path.join(genome_dir, REMAP_NAMES.get(name, name))
         base_name = os.path.commonprefix(os.listdir(ref_dir))
         while base_name.endswith("."):
             base_name = base_name[:-1]
