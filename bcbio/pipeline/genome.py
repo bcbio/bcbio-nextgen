@@ -209,7 +209,7 @@ def get_builds(galaxy_base):
 REMAP_NAMES = {"tophat2": "bowtie2",
                "samtools": "seq"}
 S3_INFO = {"bucket": "biodata",
-           "key": "prepped/{build}/{build}-{target}.tar.lz"}
+           "key": "prepped/{build}/{build}-{target}.tar.gz"}
 
 def _download_prepped_genome(genome_build, data, name, need_remap):
     """Get a pre-prepared genome from S3, unpacking it locally.
@@ -223,7 +223,7 @@ def _download_prepped_genome(genome_build, data, name, need_remap):
         with utils.chdir(out_dir):
             bucket = S3_INFO["bucket"]
             key = S3_INFO["key"].format(build=genome_build, target=REMAP_NAMES.get(name, name))
-            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | plzip -d -c | tar -xvp")
+            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
             do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     genome_dir = os.path.join(out_dir, genome_build)
     genome_build = genome_build.replace("-test", "")
