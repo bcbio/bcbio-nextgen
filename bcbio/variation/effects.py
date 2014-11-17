@@ -156,7 +156,7 @@ def _get_loftee(data):
     if not ancestral_file or not os.path.exists(ancestral_file):
         ancestral_file = "false"
     annotations = ["LoF", "LoF_filter", "LoF_flags"]
-    args = ["--plugin", "LoF,human_ancestor_fa=%s" % ancestral_file]
+    args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
     return args, annotations
 
 # ## snpEff variant effects
