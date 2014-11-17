@@ -22,6 +22,7 @@ LOOKUPS = {
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "dexseq_counts": {"keys": ['dexseq_counts']},
     "description": {"keys": ['description']},
+    "aligner": {"keys": ['config', 'algorithm', 'aligner']},
     "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],
                        "default": "standard"},
     "adapters": {"keys": ['config', 'algorithm', 'adapters'],

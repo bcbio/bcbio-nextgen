@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -58,7 +59,19 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
         with file_transaction(data, final_out) as tx_final_out:
             do.run(cmd.format(**locals()), run_message, None)
+
+    if dd.get_rsem(data):
+        transcriptome_file = _move_transcriptome_file(out_dir, names)
     return final_out
+
+def _move_transcriptome_file(out_dir, names):
+    out_file = os.path.join(out_dir, "{0}.transcriptome.bam".format(names["sample"]))
+    if not file_exists(out_file):
+        tmp_file = os.path.join(out_dir, os.pardir,
+                                "{0}Aligned.toTranscriptome.out.bam".format(names["lane"]))
+        shutil.move(tmp_file, out_file)
+    return out_file
+
 
 def _read_group_option(names):
     rg_id = names["rg"]
