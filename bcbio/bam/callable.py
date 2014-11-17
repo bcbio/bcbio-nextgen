@@ -11,6 +11,7 @@ small blocks.
 """
 import contextlib
 import copy
+from distutils.version import LooseVersion
 import operator
 import os
 import sys
@@ -26,7 +27,7 @@ from bcbio.distributed import multi, prun
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 from bcbio.variation import bedutils
 from bcbio.variation import multi as vmulti
 
@@ -83,9 +84,12 @@ def _group_by_ctype(bed_file, depth, region_file, out_file):
         return feat
     full_out_file = "%s-full%s" % utils.splitext_plus(out_file)
     with open(full_out_file, "w") as out_handle:
-        for line in open(pybedtools.BedTool(bed_file).each(assign_coverage)
-                                                     .groupby(g=[1, 4], c=[1, 2, 3, 4],
-                                                              ops=["first", "first", "max", "first"]).fn):
+        kwargs = {"g": [1, 4], "c": [1, 2, 3, 4], "ops": ["first", "first", "max", "first"]}
+        # back compatible precision https://github.com/chapmanb/bcbio-nextgen/issues/664
+        if LooseVersion(programs.get_version_manifest("bedtools")) >= LooseVersion("2.23.0"):
+            kwargs["prec"] = 21
+        for line in open(pybedtools.BedTool(bed_file).each(assign_coverage).saveas()
+                                                     .groupby(**kwargs).fn):
             out_handle.write("\t".join(line.split("\t")[2:]))
     pybedtools.BedTool(full_out_file).intersect(region_file).saveas(out_file)
 
