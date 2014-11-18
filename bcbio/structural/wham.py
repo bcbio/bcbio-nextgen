@@ -34,11 +34,13 @@ def run(items, background=None):
     orig_vcf_file = _run_wham(inputs, background_bams)
     wclass_vcf_file = _add_wham_classification(orig_vcf_file, inputs)
     vcf_file = _fix_vcf(wclass_vcf_file, inputs, background_names)
+    bed_file = _convert_to_bed(vcf_file, inputs)
     out = []
     for data in items:
         if "sv" not in data:
             data["sv"] = []
-        data["sv"].append({"variantcaller": "wham", "vrn_file": vcf_file})
+        data["sv"].append({"variantcaller": "wham", "vrn_file": vcf_file,
+                           "bed_file": bed_file})
         out.append(data)
     return out
 
@@ -61,6 +63,18 @@ def _run_wham(inputs, background_bams):
             cmd = ("WHAM-BAM -x {cores} -t {target_bams} {background} {target_str} "
                    "| sed 's/Numper/Number/' > {tx_out_file}")
             do.run(cmd.format(**locals()), "Run WHAM")
+    return out_file
+
+def _convert_to_bed(vcf_file, inputs):
+    """Convert WHAM output file into BED format for ensemble calling.
+    """
+    wham_sharedir = os.path.normpath(os.path.join(os.path.dirname(subprocess.check_output(["which", "WHAM-BAM"])),
+                                                  os.pardir, "share", "wham"))
+    out_file = "%s.bed" % utils.splitext_plus(vcf_file)[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(inputs[0], out_file) as tx_out_file:
+            cmd = ("perl {wham_sharedir}/whamToBed.pl --paired --append --file {vcf_file} > {tx_out_file}")
+            do.run(cmd.format(**locals()), "WHAM VCF to BED")
     return out_file
 
 def _add_wham_classification(in_file, items):
