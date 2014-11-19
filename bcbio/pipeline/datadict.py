@@ -31,7 +31,9 @@ LOOKUPS = {
                   "checker": file_exists},
     "mixup_check": {"keys": ["config", "algorithm", "mixup_check"],
                     "default": False},
-    "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False}}
+    "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
+    "transcriptome_bam": {"keys": ["transcriptome_bam"]}
+}
 
 def getter(keys, global_default=None):
     def lookup(config, default=None):

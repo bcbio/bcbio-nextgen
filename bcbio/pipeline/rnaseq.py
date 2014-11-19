@@ -50,6 +50,10 @@ def generate_transcript_counts(data):
             data["oncofuse_file"] = oncofuse.run(data)
     if dd.get_dexseq_gff(data, None):
         data = dd.set_dexseq_counts(data, dexseq.bcbio_run(data))
+    # if RSEM was run, stick the transcriptome BAM file into the datadict
+    if dd.get_aligner(data).lower() == "star" and dd.get_rsem(data):
+        base, ext = os.path.splitext(dd.get_work_bam(data))
+        data = dd.set_transcriptome_bam(data, base + ".transcriptome" + ext)
     return [[data]]
 
 def run_cufflinks(data):
