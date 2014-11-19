@@ -156,7 +156,7 @@ def cufflinks_merge(*args):
 
 @utils.map_wrap
 def organize_samples(*args):
-    return run_info.organize_samples(*args)
+    return run_info.organize(*args)
 
 @utils.map_wrap
 def run_main(*args):

@@ -1,3 +1,12 @@
+## 0.8.4 (in progress)
+
+- Enable generation of STAR indexes on demand to handle running STAR on AWS
+  instances.
+- Re-organize code to prepare samples and reference genomes so it runs inside
+  distributed processing components. This isolates process to Docker containers
+  on AWS and also enables complex operations like preparing reference genomes on
+  demand.
+
 ## 0.8.3 (19 November 2014)
 
 - Improve tumor/normal calling with FreeBayes, MuTect, VarDict and VarScan by

@@ -10,6 +10,8 @@ import sys
 import resource
 import tempfile
 
+import yaml
+
 from bcbio import log, structural, utils, upload
 from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
@@ -18,11 +20,11 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
                             rnaseq)
 from bcbio.pipeline.config_utils import load_system_config
-from bcbio.provenance import diagnostics, programs, profile, system, versioncheck
+from bcbio.provenance import profile, system
 from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
-             parallel=None, workflow=None, samples=None):
+             parallel=None, workflow=None):
     """Run variant analysis, handling command line options.
     """
     os.chdir(workdir)
@@ -32,7 +34,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     if parallel["type"] in ["local", "clusterk"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
-                      fc_dir, run_info_yaml, samples)
+                      fc_dir, run_info_yaml)
     elif parallel["type"] == "ipython":
         assert parallel["scheduler"] is not None, "IPython parallel requires a specified scheduler (-s)"
         if parallel["scheduler"] != "sge":
@@ -40,7 +42,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
         elif not parallel["queue"]:
             parallel["queue"] = ""
         _run_toplevel(config, config_file, workdir, parallel,
-                      fc_dir, run_info_yaml, samples)
+                      fc_dir, run_info_yaml)
     else:
         raise ValueError("Unexpected type of parallel run: %s" % parallel["type"])
 
@@ -59,49 +61,28 @@ def _setup_resources():
     resource.setrlimit(resource.RLIMIT_NOFILE, (max(cur_hdls, target_hdls), max_hdls))
 
 def _run_toplevel(config, config_file, work_dir, parallel,
-                  fc_dir=None, run_info_yaml=None, samples=None):
+                  fc_dir=None, run_info_yaml=None):
     """
     Run toplevel analysis, processing a set of input files.
     config_file -- Main YAML configuration file with system parameters
     fc_dir -- Directory of fastq files to process
     run_info_yaml -- YAML configuration file specifying inputs to process
-    samples -- Pre-processed samples, useful if run inside of docker containers.
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
     dirs = run_info.setup_directories(work_dir, fc_dir, config, config_file)
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
-    if samples:
-        dockerized = True
-    else:
-        dockerized = False
-        samples = run_info.organize(dirs, config, run_info_yaml)
-    pipelines = _pair_samples_with_pipelines(samples)
+    pipelines = _pair_samples_with_pipelines(run_info_yaml)
+    system.write_info(dirs, parallel, config)
     final = []
     with tx_tmpdir(config) as tmpdir:
         tempfile.tempdir = tmpdir
-        for pipeline, pipeline_items in pipelines.items():
-            pipeline_items = _add_provenance(pipeline_items, dirs, parallel, config)
-            if not dockerized:
-                versioncheck.testall(pipeline_items)
-            for xs in pipeline.run(config, config_file, parallel, dirs, pipeline_items):
+        for pipeline, samples in pipelines.items():
+            for xs in pipeline.run(config, run_info_yaml, parallel, dirs, samples):
                 if len(xs) == 1:
                     upload.from_sample(xs[0])
                     final.append(xs[0])
 
-
-def _add_provenance(items, dirs, parallel, config):
-    p = programs.write_versions(dirs, config, is_wrapper=parallel.get("wrapper") is not None)
-    p_db = diagnostics.initialize(dirs)
-    system.write_info(dirs, parallel, config)
-    out = []
-    for item in items:
-        entity_id = diagnostics.store_entity(item)
-        item["config"]["resources"]["program_versions"] = p
-        item["provenance"] = {"programs": p, "entity": entity_id,
-                              "db": p_db}
-        out.append([item])
-    return out
 
 # ## Generic pipeline framework
 
@@ -140,7 +121,7 @@ class AbstractPipeline:
         return
 
     @abc.abstractmethod
-    def run(self, config, config_file, parallel, dirs, samples):
+    def run(self, config, run_info_yaml, parallel, dirs, samples):
         return
 
 class Variant2Pipeline(AbstractPipeline):
@@ -151,12 +132,15 @@ class Variant2Pipeline(AbstractPipeline):
     name = "variant2"
 
     @classmethod
-    def run(self, config, config_file, parallel, dirs, samples):
+    def run(self, config, run_info_yaml, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"],
                               (["reference", "fasta"], ["reference", "aligner"], ["files"])),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+            with profile.report("prepare samples", dirs):
+                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                             [x[0]["description"] for x in samples]]])
             with profile.report("alignment preparation", dirs):
                 samples = run_parallel("prep_align_inputs", samples)
                 samples = disambiguate.split(samples)
@@ -235,10 +219,13 @@ class StandardPipeline(AbstractPipeline):
     """
     name = "Standard"
     @classmethod
-    def run(self, config, config_file, parallel, dirs, samples):
+    def run(self, config, run_info_yaml, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with prun.start(_wres(parallel, ["aligner"]),
                         samples, config, dirs, "multicore") as run_parallel:
+            with profile.report("prepare samples", dirs):
+                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                             [x[0]["description"] for x in samples]]])
             with profile.report("alignment", dirs):
                 samples = run_parallel("process_alignment", samples)
             with profile.report("callable regions", dirs):
@@ -261,9 +248,12 @@ class SailfishPipeline(AbstractPipeline):
     name = "sailfish"
 
     @classmethod
-    def run(self, config, config_file, parallel, dirs, samples):
+    def run(self, config, run_info_yaml, parallel, dirs, samples):
         with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
                         samples, config, dirs, "trimming") as run_parallel:
+            with profile.report("prepare samples", dirs):
+                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                             [x[0]["description"] for x in samples]]])
             with profile.report("adapter trimming", dirs):
                 samples = run_parallel("prepare_sample", samples)
                 samples = run_parallel("trim_sample", samples)
@@ -277,16 +267,17 @@ class RnaseqPipeline(AbstractPipeline):
     name = "RNA-seq"
 
     @classmethod
-    def run(self, config, config_file, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
-                        samples, config, dirs, "trimming") as run_parallel:
+    def run(self, config, run_info_yaml, parallel, dirs, samples):
+        with prun.start(_wres(parallel, ["aligner", "picard", "AlienTrimmer"],
+                              ensure_mem={"tophat": 8, "tophat2": 8, "star": 2}),
+                        samples, config, dirs, "alignment",
+                        multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+            with profile.report("prepare samples", dirs):
+                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                             [x[0]["description"] for x in samples]]])
             with profile.report("adapter trimming", dirs):
                 samples = run_parallel("prepare_sample", samples)
                 samples = run_parallel("trim_sample", samples)
-        with prun.start(_wres(parallel, ["aligner", "picard"],
-                              ensure_mem={"tophat": 8, "tophat2": 8, "star": 40}),
-                        samples, config, dirs, "alignment",
-                        multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             with profile.report("alignment", dirs):
                 samples = disambiguate.split(samples)
                 samples = run_parallel("process_alignment", samples)
@@ -309,10 +300,13 @@ class ChipseqPipeline(AbstractPipeline):
     name = "chip-seq"
 
     @classmethod
-    def run(self, config, config_file, parallel, dirs, samples):
+    def run(self, config, run_info_yaml, parallel, dirs, samples):
         with prun.start(_wres(parallel, ["aligner", "picard"]),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+            with profile.report("prepare samples", dirs):
+                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                             [x[0]["description"] for x in samples]]])
             samples = run_parallel("prepare_sample", samples)
             samples = run_parallel("trim_sample", samples)
             samples = disambiguate.split(samples)
@@ -335,9 +329,21 @@ def _get_pipeline(item):
     else:
         return SUPPORTED_PIPELINES[analysis_type]
 
-def _pair_samples_with_pipelines(samples):
-    paired = [(x, _get_pipeline(x)) for x in samples]
+def _pair_samples_with_pipelines(run_info_yaml):
+    """Map samples defined in input file to pipelines to run.
+    """
+    with open(run_info_yaml) as in_handle:
+        samples = yaml.safe_load(in_handle)
+        if isinstance(samples, dict):
+            samples = samples["details"]
+    ready_samples = []
+    for sample in samples:
+        if "files" in sample:
+            del sample["files"]
+        sample["resources"] = {}
+        ready_samples.append(sample)
+    paired = [(x, _get_pipeline(x)) for x in ready_samples]
     d = defaultdict(list)
     for x in paired:
-        d[x[1]].append(x[0])
+        d[x[1]].append([x[0]])
     return d

@@ -53,7 +53,6 @@ def java(config, items):
 
 def testall(items):
     logger.info("Testing minimum versions of installed programs")
-    items = [x[0] for x in items]
     config = items[0]["config"]
     msgs = []
     if _has_pipeline(items):

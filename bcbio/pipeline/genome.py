@@ -9,6 +9,7 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
+from bcbio.ngsalign import star
 from bcbio.pipeline import alignment
 from bcbio.provenance import do
 
@@ -169,7 +170,7 @@ def get_refs(genome_build, aligner, galaxy_base, data):
     name_remap = {"samtools": "fasta"}
     if genome_build:
         galaxy_config = _get_galaxy_tool_info(galaxy_base)
-        for name in [x for x in (aligner, "samtools") if x]:
+        for name in [x for x in ("samtools", aligner) if x]:
             galaxy_dt = _get_galaxy_data_table(name, galaxy_config["tool_data_table_config_path"])
             loc_file, need_remap = _get_galaxy_loc_file(name, galaxy_dt, galaxy_config["tool_data_path"],
                                                         galaxy_base)
@@ -210,6 +211,7 @@ REMAP_NAMES = {"tophat2": "bowtie2",
                "samtools": "seq"}
 S3_INFO = {"bucket": "biodata",
            "key": "prepped/{build}/{build}-{target}.tar.gz"}
+INPLACE_INDEX = {"star": star.index}
 
 def _download_prepped_genome(genome_build, data, name, need_remap):
     """Get a pre-prepared genome from S3, unpacking it locally.
@@ -220,11 +222,16 @@ def _download_prepped_genome(genome_build, data, name, need_remap):
                                               "inputs", "data", "genomes"))
     ref_dir = os.path.join(out_dir, genome_build, REMAP_NAMES.get(name, name))
     if not os.path.exists(ref_dir):
-        with utils.chdir(out_dir):
-            bucket = S3_INFO["bucket"]
-            key = S3_INFO["key"].format(build=genome_build, target=REMAP_NAMES.get(name, name))
-            cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
-            do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
+        target = REMAP_NAMES.get(name, name)
+        if target in INPLACE_INDEX:
+            ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
+            INPLACE_INDEX[target](ref_file, ref_dir, data)
+        else:
+            with utils.chdir(out_dir):
+                bucket = S3_INFO["bucket"]
+                key = S3_INFO["key"].format(build=genome_build, target=REMAP_NAMES.get(name, name))
+                cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
+                do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     genome_dir = os.path.join(out_dir, genome_build)
     genome_build = genome_build.replace("-test", "")
     if need_remap or name == "samtools":

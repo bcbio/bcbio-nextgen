@@ -95,3 +95,22 @@ def remap_index_fn(ref_file):
     """Map sequence references to equivalent star indexes
     """
     return os.path.join(os.path.dirname(os.path.dirname(ref_file)), "star")
+
+def index(ref_file, out_dir, data):
+    """Create a STAR index in the defined reference directory.
+    """
+    (ref_dir, local_file) = os.path.split(ref_file)
+    gtf_file = os.path.join(ref_dir, os.pardir, "rnaseq", "ref-transcripts.gtf")
+    if not utils.file_exists(gtf_file):
+        raise ValueError("%s not found, could not create a star index." % (gtf_file))
+    if not utils.file_exists(out_dir):
+        with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
+            num_cores = dd.get_cores(data)
+            cmd = ("STAR --genomeDir {tx_out_dir} --genomeFastaFiles {ref_file} "
+                   "--runThreadN {num_cores} "
+                   "--runMode genomeGenerate --sjdbOverhang 99 --sjdbGTFfile {gtf_file}")
+            do.run(cmd.format(**locals()), "Index STAR")
+            if os.path.exists(out_dir):
+                shutil.rmtree(out_dir)
+            shutil.move(tx_out_dir, out_dir)
+    return out_dir

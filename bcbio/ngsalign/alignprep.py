@@ -71,7 +71,8 @@ def parallel_multiplier(items):
     """
     multiplier = 1
     for data in (x[0] for x in items):
-        if data["config"]["algorithm"].get("align_split_size"):
+        if (tz.get_in(["config", "algorithm", "align_split_size"], data) or
+              tz.get_in(["algorithm", "align_split_size"], data)):
             multiplier += 50
     return multiplier
 

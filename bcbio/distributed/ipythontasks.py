@@ -10,7 +10,7 @@ from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
-                            qcsummary, shared, variation, rnaseq)
+                            qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
 from bcbio.variation import (bamprep, coverage, genotype, ensemble, joint,
                              multi, population, recalibrate, validate, vcfutils)
@@ -267,3 +267,9 @@ def cufflinks_merge(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(rnaseq.cufflinks_merge, *args))
+
+@require(run_info)
+def organize_samples(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(run_info.organize, *args))

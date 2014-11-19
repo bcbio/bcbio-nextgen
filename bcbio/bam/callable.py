@@ -86,7 +86,7 @@ def _group_by_ctype(bed_file, depth, region_file, out_file):
     with open(full_out_file, "w") as out_handle:
         kwargs = {"g": [1, 4], "c": [1, 2, 3, 4], "ops": ["first", "first", "max", "first"]}
         # back compatible precision https://github.com/chapmanb/bcbio-nextgen/issues/664
-        if LooseVersion(programs.get_version_manifest("bedtools")) >= LooseVersion("2.23.0"):
+        if LooseVersion(programs.get_version_manifest("bedtools")) >= LooseVersion("2.22.0"):
             kwargs["prec"] = 21
         for line in open(pybedtools.BedTool(bed_file).each(assign_coverage).saveas()
                                                      .groupby(**kwargs).fn):

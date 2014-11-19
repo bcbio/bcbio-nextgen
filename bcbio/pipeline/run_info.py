@@ -16,6 +16,7 @@ from bcbio import install, utils
 from bcbio.log import logger
 from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
+from bcbio.provenance import diagnostics, programs, versioncheck
 from bcbio.variation import effects, genotype, population, joint
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
@@ -23,15 +24,18 @@ from bcbio.bam.fastq import open_fastq
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
                          "phasing", "svcaller", "jointcaller", "tools_off", "mixup_check"]
 
-def organize(dirs, config, run_info_yaml):
+def organize(dirs, config, run_info_yaml, sample_names):
     """Organize run information from a passed YAML file or the Galaxy API.
 
     Creates the high level structure used for subsequent processing.
+
+    sample_names is a list of samples to include from the overall file, for cases
+    where we are running multiple pipelines from the same configuration file.
     """
     logger.info("Using input YAML configuration: %s" % run_info_yaml)
     assert run_info_yaml and os.path.exists(run_info_yaml), \
         "Did not find input sample YAML file: %s" % run_info_yaml
-    run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config)
+    run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config, sample_names)
     out = []
     for item in run_details:
         item["dirs"] = dirs
@@ -52,16 +56,21 @@ def organize(dirs, config, run_info_yaml):
             item["config"]["resources"]["tmp"] = genome.abs_file_paths(
                 utils.get_in(item, ("config", "resources", "tmp")))
         out.append(item)
+    out = _add_provenance(out, dirs, config)
     return out
 
-def organize_samples(run_info_yaml, bcbio_system, work_dir, fc_dir, config):
-    """Externally callable function to read and organize configurations for samples.
-    """
-    config, config_file = config_utils.load_system_config(bcbio_system, work_dir)
-    if config.get("log_dir", None) is None:
-        config["log_dir"] = os.path.join(work_dir, "log")
-    dirs = setup_directories(work_dir, fc_dir, config, config_file)
-    return organize(dirs, config, run_info_yaml)
+def _add_provenance(items, dirs, config):
+    p = programs.write_versions(dirs, config)
+    versioncheck.testall(items)
+    p_db = diagnostics.initialize(dirs)
+    out = []
+    for item in items:
+        entity_id = diagnostics.store_entity(item)
+        item["config"]["resources"]["program_versions"] = p
+        item["provenance"] = {"programs": p, "entity": entity_id,
+                              "db": p_db}
+        out.append([item])
+    return out
 
 def setup_directories(work_dir, fc_dir, config, config_file):
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
@@ -434,7 +443,7 @@ def _sanity_check_files(item, files):
     if msg:
         raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
-def _run_info_from_yaml(fc_dir, run_info_yaml, config):
+def _run_info_from_yaml(fc_dir, run_info_yaml, config, sample_names):
     """Read run information from a passed YAML file.
     """
     with open(run_info_yaml) as in_handle:
@@ -457,6 +466,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config):
         global_vars = global_config.pop("globals", {})
         resources = global_config.pop("resources", {})
         loaded = loaded["details"]
+    loaded = [x for x in loaded if x["description"] in sample_names]
 
     run_details = []
     for i, item in enumerate(loaded):
