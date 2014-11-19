@@ -1,4 +1,4 @@
-## 0.8.3 (in progress)
+## 0.8.3 (19 November 2014)
 
 - Improve tumor/normal calling with FreeBayes, MuTect, VarDict and VarScan by
   validating against DREAM synthetic 3 data.
