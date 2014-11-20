@@ -1,5 +1,5 @@
 import os
-from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq
+from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq, express
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
 
@@ -10,6 +10,9 @@ def estimate_expression(samples, run_parallel):
     combined = count.combine_count_files(count_files)
     gtf_file = dd.get_gtf_file(samples[0][0], None)
     annotated = count.annotate_combined_count_file(combined, gtf_file)
+    samples = run_parallel("run_express", samples)
+    express_counts_combined = combine_express(samples, combined)
+
     samples = run_parallel("run_cufflinks", samples)
     #gene
     fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
@@ -37,6 +40,10 @@ def estimate_expression(samples, run_parallel):
             dd.set_combined_fpkm(x[0], fpkm_combined)
         if fpkm_isoform_combined:
             dd.set_combined_fpkm_isoform(x[0], fpkm_combined)
+        if express_counts_combined:
+            dd.set_combined_eff_counts(x[0], express_counts_combined['counts'])
+            dd.set_combined_tpm_counts(x[0], express_counts_combined['tpm'])
+            dd.set_combined_fpkm_counts(x[0], express_counts_combined['fpkm'])
         if dexseq_combined:
             dd.set_dexseq_counts(x[0], dexseq_combined_file)
     return samples
@@ -55,6 +62,29 @@ def generate_transcript_counts(data):
         base, ext = os.path.splitext(dd.get_work_bam(data))
         data = dd.set_transcriptome_bam(data, base + ".transcriptome" + ext)
     return [[data]]
+
+def run_express(data):
+    """Quantitative isoform expression by  express"""
+    out_files = express.run(data)
+    if out_files:
+        data['eff_counts'], data['tpm_counts'], data['fpkm_counts'] = out_files
+    return [[data]]
+
+def combine_express(samples, combined):
+    """Combine tpm, effective counts and fpkm from express results"""
+    to_combine = [x[0]["eff_counts"] for x in samples if "eff_counts" in x[0]]
+    if len(to_combine) > 0:
+        eff_counts_combined_file = os.path.splitext(combined)[0] + "_eff.counts"
+        eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file)
+        to_combine = [x[0]["tpm_counts"] for x in samples if "tpm_counts" in x[0]]
+        tpm_counts_combined_file = os.path.splitext(combined)[0] + ".tpm"
+        tpm_counts_combined = count.combine_count_files(to_combine, tpm_counts_combined_file)
+        to_combine = [x[0]["fpkm_counts"] for x in samples if "fpkm_counts" in x[0]]
+        fpkm_counts_combined_file = os.path.splitext(combined)[0] + ".fpkm"
+        fpkm_counts_combined = count.combine_count_files(to_combine, fpkm_counts_combined_file)
+        return {'counts': eff_counts_combined, 'tpm': tpm_counts_combined,
+                'fpkm': fpkm_counts_combined}
+    return None
 
 def run_cufflinks(data):
     """Quantitate transcript expression with Cufflinks"""
