@@ -36,7 +36,8 @@ def get_fastq_files(item):
     if should_gzip:
         ready_files = [_gzip_fastq(x) for x in ready_files]
     for in_file in ready_files:
-        assert os.path.exists(in_file), "%s does not exist." % in_file
+        if not in_file.startswith(utils.SUPPORTED_REMOTES):
+            assert os.path.exists(in_file), "%s does not exist." % in_file
     return ((ready_files[0] if len(ready_files) > 0 else None),
             (ready_files[1] if len(ready_files) > 1 else None))
 
@@ -44,7 +45,8 @@ def _gzip_fastq(in_file):
     """
     gzip a fastq file if it is not already gzipped
     """
-    if fastq.is_fastq(in_file) and not utils.is_gzipped(in_file):
+    if (fastq.is_fastq(in_file) and not utils.is_gzipped(in_file)
+          and not in_file.startswith(utils.SUPPORTED_REMOTES)):
         gzipped_file = in_file + ".gz"
         if file_exists(gzipped_file):
             return gzipped_file
