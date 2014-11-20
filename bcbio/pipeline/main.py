@@ -138,7 +138,7 @@ class Variant2Pipeline(AbstractPipeline):
                               (["reference", "fasta"], ["reference", "aligner"], ["files"])),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            with profile.report("prepare samples", dirs):
+            with profile.report("organize samples", dirs):
                 samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                              [x[0]["description"] for x in samples]]])
             with profile.report("alignment preparation", dirs):
@@ -223,7 +223,7 @@ class StandardPipeline(AbstractPipeline):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
         with prun.start(_wres(parallel, ["aligner"]),
                         samples, config, dirs, "multicore") as run_parallel:
-            with profile.report("prepare samples", dirs):
+            with profile.report("organize samples", dirs):
                 samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                              [x[0]["description"] for x in samples]]])
             with profile.report("alignment", dirs):
@@ -249,9 +249,9 @@ class SailfishPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, run_info_yaml, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
+        with prun.start(_wres(parallel, ["picard", "cutadapt"]),
                         samples, config, dirs, "trimming") as run_parallel:
-            with profile.report("prepare samples", dirs):
+            with profile.report("organize samples", dirs):
                 samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                              [x[0]["description"] for x in samples]]])
             with profile.report("adapter trimming", dirs):
@@ -274,7 +274,7 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("organize samples", dirs):
                 samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                              [x[0]["description"] for x in samples]]])
-        with prun.start(_wres(parallel, ["picard", "AlienTrimmer"]),
+        with prun.start(_wres(parallel, ["picard", "cutadapt"]),
                         samples, config, dirs, "trimming") as run_parallel:
             with profile.report("adapter trimming", dirs):
                 samples = run_parallel("prepare_sample", samples)
@@ -309,7 +309,7 @@ class ChipseqPipeline(AbstractPipeline):
         with prun.start(_wres(parallel, ["aligner", "picard"]),
                         samples, config, dirs, "multicore",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            with profile.report("prepare samples", dirs):
+            with profile.report("organize samples", dirs):
                 samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                              [x[0]["description"] for x in samples]]])
             samples = run_parallel("prepare_sample", samples)
