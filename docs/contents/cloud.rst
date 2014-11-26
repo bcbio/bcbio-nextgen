@@ -18,9 +18,6 @@ usage to make it more intuitive so provides the same functionality as
 bcbio uses `Elasticluster <https://github.com/gc3-uzh-ch/elasticluster>`_,
 to build a cluster on AWS with an optional Lustre shared filesystem.
 
-AWS support is still a work in progress and the current approach only supports
-GRCh37 analyses. We welcome feedback and will continue to improve.
-
 Local setup
 ===========
 
@@ -60,6 +57,10 @@ fastq and BAM files with the right samples, and add a found BED files as
 ``variant_regions`` in the configuration. It will then upload the final
 configuration back to S3 as ``s3://your-project/name.yaml``, which you can run
 directly from a bcbio cluster on AWS.
+
+We currently support human analysis with both the GRCh37 and hg19 genomes. We
+can also add additional genomes as needed by the community and generally welcome
+feedback and comments on reference data support.
 
 Extra software
 ~~~~~~~~~~~~~~
@@ -106,6 +107,14 @@ and sets up your elasticluster config in ``~/.bcbio/elasticluster/config``::
 The second configures a VPC to host bcbio::
 
   bcbio_vm.py aws vpc
+
+The ``aws vpc`` command is idempotent and can run multiple times if you change or
+remove parts of the infrastructure. You can also rerun the ``aws iam`` command,
+but if you'd like to generate a new elasticluster
+``~/.bcbio/elasticluster/config`` add the recreate flag: ``bcbio_vm.py aws iam
+--recreate``. This generates a new set of IAM credentials and public/private
+keys. These are only stored in the ``~/.bcbio`` directory so you need to fully
+recreate them if you delete the old ones.
 
 Running a cluster
 =================
