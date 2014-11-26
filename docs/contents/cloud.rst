@@ -128,7 +128,7 @@ To start a cluster with a SLURM manager front end node and 2 compute nodes::
     flavor=r3.8xlarge
 
     [cluster/bcbio/frontend]
-    flavor=m3.large
+    flavor=c3.large
     root_volume_size=100
     root_volume_type=gp2
 
@@ -138,7 +138,7 @@ To start a single machine without a cluster to compute directly on::
     setup_provider=ansible
     frontend_nodes=1
     compute_nodes=0
-    flavor=m3.large
+    flavor=c3.large
 
     [cluster/bcbio/frontend]
     flavor=m3.2xlarge
@@ -152,13 +152,15 @@ for details on launching and attaching this to a cluster.
 
 Once customized, start the cluster with::
 
-    bcbio_vm.py elasticluster start bcbio
+    bcbio_vm.py elasticluster start bcbio -v
 
-The cluster will take five to ten minutes to start. Once running,
+The cluster will take five to ten minutes to start. If you encounter any
+intermittent failures due to connectivity, you can rerun the configuration step with
+``bcbio_vm.py elasticluster setup bcbio -v`` on the same cluster. Once running,
 install the bcbio wrapper code, Dockerized tools and system configuration
 with::
 
-    bcbio_vm.py aws bcbio bootstrap
+    bcbio_vm.py aws bcbio bootstrap -v
 
 Running Lustre
 ==============
@@ -211,7 +213,11 @@ To run on a full cluster with a Lustre filesystem::
 
 Where 30 is the cores per node on the worker machines (minus 2 to account for
 the base bcbio_vm script and IPython controller) and 60 is the total number of
-cores across all the worker nodes.
+cores across all the worker nodes. The `SLURM workload manager <http://slurm.schedmd.com/>`_
+distributes jobs across your cluster. A ``slurm-PID.out`` file in the work
+directory contains the current status of the job, and ``sacct`` provides the
+status of jobs on the cluster. If you are new to SLURM, here is a summary
+of useful `SLURM commands <https://rc.fas.harvard.edu/resources/running-jobs/#Summary_of_SLURM_commands>`_.
 
 On successful completion, bcbio uploads the results of the analysis back into your s3
 bucket as ``s3://your-project/final``. You can now cleanup the cluster and

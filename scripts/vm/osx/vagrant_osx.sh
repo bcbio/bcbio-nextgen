@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/Vagrantfile
 wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/bootstrap.sh
 vagrant up

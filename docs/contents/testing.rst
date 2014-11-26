@@ -244,7 +244,7 @@ Now go into the work directory and run the analysis::
 
    cd seqc/work
    bcbio_nextgen.py ../config/seqc.yaml -n 8
-   
+
 This will run a full scale RNAseq experiment using Tophat2 as the
 aligner and will take a long time to finish on a single machine. At
 the end it will output counts, Cufflinks quantitation and a set of QC

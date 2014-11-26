@@ -54,7 +54,7 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, config):
             tmp_fq1 = append_stem(of1_tx, ".tmp")
             tmp_fq2 = append_stem(of2_tx, ".tmp")
             singles_file = of1_tx + ".single"
-            message = "Trimming %s and %s in single end mode with cutadapt." % (fastq_files[0],
+            message = "Trimming %s and %s in paired end mode with cutadapt." % (fastq_files[0],
                                                                                 fastq_files[1])
             do.run(cmd.format(**locals()), message)
     return out_files
