@@ -138,8 +138,9 @@ To start a cluster with a SLURM manager front end node and 2 compute nodes::
 
     [cluster/bcbio/frontend]
     flavor=c3.large
-    root_volume_size=100
-    root_volume_type=gp2
+    root_volume_size=200
+    root_volume_type=io1
+    root_volume_iops=3000
 
 To start a single machine without a cluster to compute directly on::
 
@@ -147,12 +148,12 @@ To start a single machine without a cluster to compute directly on::
     setup_provider=ansible
     frontend_nodes=1
     compute_nodes=0
-    flavor=c3.large
 
     [cluster/bcbio/frontend]
     flavor=m3.2xlarge
-    root_volume_size=100
-    root_volume_type=gp2
+    root_volume_size=200
+    root_volume_type=io1
+    root_volume_iops=3000
 
 Adjust the number of nodes, machine size flavors and root volume size as
 desired. Elasticluster mounts the frontend root volume across all machines using
