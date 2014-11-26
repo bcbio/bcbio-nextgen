@@ -2,6 +2,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 import os
+import shutil
 from bcbio.rnaseq import rsem
 from bcbio.utils import file_exists
 
@@ -13,6 +14,7 @@ class Rsem(unittest.TestCase):
         self.gtf = os.path.abspath("../data/genomes/mm9/rnaseq/ref-transcripts.gtf")
         self.rsem_genome_dir = os.path.abspath("bcbio-nextgen-test-data/data/rsem")
         self.bam = os.path.abspath("bcbio-nextgen-test-data/data/rsem/Test1.transcriptome.bam")
+        self.out_dir = "rsem_test"
 
 
     @attr("unit")
@@ -23,4 +25,8 @@ class Rsem(unittest.TestCase):
     @attr("unit")
     def test_rsem_calculate_expression(self):
         out_file = rsem.rsem_calculate_expression(self.bam, self.rsem_genome_dir, "Test",
-                                                  "chr22", "tmp")
+                                                  "chr22", self.out_dir)
+
+    def tearDown(self):
+        if os.path.exists(self.out_dir):
+            shutil.rmtree(self.out_dir)
