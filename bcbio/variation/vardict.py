@@ -120,7 +120,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             vardict = config_utils.get_program("vardict", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             strandbias = "testsomatic.R"
-            var2vcf = "var2vcf_somatic.pl"
+            var2vcf = "var2vcf_paired.pl"
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
             # merge bed file regions as amplicon VarDict is only supported in single sample mode
@@ -138,7 +138,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             cmd = ("{vardict} -G {ref_file} -f {freq} "
                    "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                    "| {strandbias} "
-                   "| {var2vcf} -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
+                   "| {var2vcf} -M -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
                    "{somatic_filter} | {fix_ambig} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
