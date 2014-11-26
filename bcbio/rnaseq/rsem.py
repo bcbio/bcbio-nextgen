@@ -1,8 +1,3 @@
-# what has to happen to run rsem
-# get the transcriptome alignment file if it exists from the data dictionary
-# run rsem
-# how to run rsem, i think it runs in two steps
-#
 import subprocess
 from bcbio.distributed.transaction import tx_tmpdir, file_transaction
 from bcbio.utils import chdir, which, safe_makedir
