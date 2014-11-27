@@ -15,7 +15,7 @@ from bcbio.provenance import do
 from bcbio.variation import annotation, bamprep, vcfutils
 
 def _vardict_options_from_config(items, config, out_file, region=None, do_merge=False):
-    opts = ["-z", "-F", "-c 1", "-S 2", "-E 3", "-g 4"]
+    opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
     #["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
     # "-k", "3", "-r", "4", "-m", "8"]
 
