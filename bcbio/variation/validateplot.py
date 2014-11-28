@@ -15,7 +15,7 @@ try:
     import prettyplotlib as ppl
     import pandas as pd
 except ImportError:
-    gg, pd, ppl = None, None, None
+    pd, ppl = None, None
 
 from bcbio import utils
 from bcbio.variation import bamprep

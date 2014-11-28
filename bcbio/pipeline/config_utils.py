@@ -86,7 +86,8 @@ def _merge_system_configs(host_config, container_config, out_file=None):
                     out[k][pname] = resources
                 else:
                     for rname, rval in resources.iteritems():
-                        if rname in set(["cores", "jvm_opts", "memory"]):
+                        if (rname in set(["cores", "jvm_opts", "memory"])
+                              or pname in set(["gatk", "mutect"])):
                             if pname not in out[k]:
                                 out[k][pname] = {}
                             out[k][pname][rname] = rval

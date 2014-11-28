@@ -1,5 +1,11 @@
 ## 0.8.4 (in progress)
 
+- Improvements in VarDict calling on somatic samples.
+- Fix compatibility issue with bedtools 2.22.0 when calculating genome coverage.
+- Fix joint calling upload to avoid redundant inclusion of full VCF file in
+  individual sample directories.
+- Fixes for inclusion of GATK jars inside Docker contains when running
+  distributed jobs.
 - Enable generation of STAR indexes on demand to handle running STAR on AWS
   instances.
 - Re-organize code to prepare samples and reference genomes so it runs inside
