@@ -143,7 +143,10 @@ def _get_variant_file(x, key):
     """
     out = []
     fname = utils.get_in(x, key)
-    if fname:
+    upload_key = list(key)
+    upload_key[-1] = "do_upload"
+    do_upload = tz.get_in(tuple(upload_key), x, True)
+    if fname and do_upload:
         if fname.endswith(".vcf.gz"):
             out.append({"path": fname,
                         "type": "vcf.gz",

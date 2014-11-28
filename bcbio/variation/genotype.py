@@ -66,7 +66,8 @@ def combine_multiple_callers(samples):
                 ready_calls.append({"variantcaller": jointcaller,
                                     "vrn_file": data.get("vrn_file"),
                                     "vrn_file_batch": data.get("vrn_file_batch"),
-                                    "validate": data.get("validate")})
+                                    "validate": data.get("validate"),
+                                    "do_upload": False})
         final = callgroup[0][-1]
         def orig_variantcaller_order(x):
             try:

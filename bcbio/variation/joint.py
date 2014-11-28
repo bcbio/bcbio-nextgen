@@ -140,9 +140,9 @@ def _fix_orig_vcf_refs(data):
     if variantcaller:
         data["vrn_file_orig"] = data["vrn_file"]
     for i, sub in enumerate(data["group_orig"]):
-        sub_vc = tz.get_in(("config", "algorithm", "variantcaller"), sub)
-        if sub_vc:
-            sub["vrn_file_orig"] = sub.pop("vrn_file")
+        sub_vrn = sub.pop("vrn_file", None)
+        if sub_vrn:
+            sub["vrn_file_orig"] = sub_vrn
             data["group_orig"][i] = sub
     return data
 
