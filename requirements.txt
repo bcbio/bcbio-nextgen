@@ -36,4 +36,4 @@ PyVCF>=0.6.7
 sh>=1.07
 # To be added after 0.8.4 release
 # scikit-learn>=0.15.2
-bcbio-nextgen==0.8.3
+bcbio-nextgen==0.8.4

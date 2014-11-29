@@ -186,7 +186,7 @@ def _update_conda_packages():
     pkgs = ["biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "pandas", "patsy", "pycrypto",
             "pip", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests", "scikit-learn",
-            "scipy", "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
+            "scipy", "seaborn", "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes", "numpy"])

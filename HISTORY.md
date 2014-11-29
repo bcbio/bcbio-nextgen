@@ -1,4 +1,4 @@
-## 0.8.4 (in progress)
+## 0.8.4 (29 November 2014)
 
 - Improvements in VarDict calling on somatic samples.
 - Fix compatibility issue with bedtools 2.22.0 when calculating genome coverage.
