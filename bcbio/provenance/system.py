@@ -188,7 +188,7 @@ def _combine_machine_info(xs):
 def get_info(dirs, parallel):
     """Retrieve cluster or local filesystem resources from pre-retrieved information.
     """
-    if parallel["type"] in ["ipython"]:
+    if parallel["type"] in ["ipython"] and not parallel["queue"] == "localrun":
         cache_file = _get_cache_file(dirs, parallel)
         if utils.file_exists(cache_file):
             with open(cache_file) as in_handle:

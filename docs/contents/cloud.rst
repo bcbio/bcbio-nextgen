@@ -127,6 +127,11 @@ The ``~/.bcbio/elasticluster/config`` file defines the number of compute nodes
 to start. If you set up your AWS configuration manually, the bcbio-vm GitHub
 repository has the `latest example configuration
 <https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
+You'll want to edit this to match the number of cores and resources you'd like
+to use. The defaults only have small instances to prevent accidentally starting
+an `expensive run <http://aws.amazon.com/ec2/pricing/>`_. If you're planning a
+run with less than 32 cores, do not use a cluster and instead run directly on a single
+machine using one of the `large r3 or c3 instances <http://aws.amazon.com/ec2/instance-types/>`_.
 
 To start a cluster with a SLURM manager front end node and 2 compute nodes::
 
@@ -134,7 +139,7 @@ To start a cluster with a SLURM manager front end node and 2 compute nodes::
     setup_provider=ansible-slurm
     frontend_nodes=1
     compute_nodes=2
-    flavor=r3.8xlarge
+    flavor=c3.8xlarge
 
     [cluster/bcbio/frontend]
     flavor=c3.large
@@ -217,13 +222,12 @@ To run on a full cluster with a Lustre filesystem::
     sudo mkdir /scratch/cancer-dream-syn3-exome
     sudo chown ubuntu !$
     cd !$ && mkdir work && cd work
-    bcbio_vm.py ipythonprep s3://your-project/name.yaml \
-                            slurm cloud -r 'mincores=30' -r 'timelimit=2-00:00:00' -n 60
+    bcbio_vm.py ipythonprep s3://your-project/name.yaml slurm cloud -n 60
     sbatch bcbio_submit.sh
 
-Where 30 is the cores per node on the worker machines (minus 2 to account for
-the base bcbio_vm script and IPython controller) and 60 is the total number of
-cores across all the worker nodes. The `SLURM workload manager <http://slurm.schedmd.com/>`_
+Where 60 is the total number of cores to use across all the worker nodes.
+Of your total machine cores, allocate 2 for the base bcbio_vm script and IPython
+controller instances. The `SLURM workload manager <http://slurm.schedmd.com/>`_
 distributes jobs across your cluster. A ``slurm-PID.out`` file in the work
 directory contains the current status of the job, and ``sacct`` provides the
 status of jobs on the cluster. If you are new to SLURM, here is a summary

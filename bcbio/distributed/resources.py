@@ -164,4 +164,5 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
     parallel["cores_per_job"] = cores_per_job
     parallel["num_jobs"] = num_jobs
     parallel["mem"] = str(memory_per_job)
+    parallel["system_cores"] = sysinfo.get("cores", 1)
     return parallel

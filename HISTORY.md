@@ -1,5 +1,8 @@
 ## 0.8.5 (in progress)
 
+- Use `mincores` specification to ipython-cluster-helper to combine single core
+  jobs into a single submission job for better memory shared on resource
+  constrained systems.
 - Switch to seaborn as matplotlib wrapper, from prettplotlib.
 
 ## 0.8.4 (29 November 2014)

@@ -27,8 +27,21 @@ def create(parallel, dirs, config):
     """Create a cluster based on the provided parallel arguments.
 
     Returns an IPython view on the cluster, enabling processing on jobs.
+
+    Adds a mincores specification if he have machines with a larger
+    number of cores to allow jobs to be batched together for shared
+    memory usage.
     """
     profile_dir = utils.safe_makedir(os.path.join(dirs["work"], get_log_dir(config), "ipython"))
+    has_mincores = any(x.startswith("mincores=") for x in parallel["resources"])
+    if parallel["system_cores"] > 3 and not has_mincores:
+        cores = parallel["system_cores"]
+        # if we have larger number of cores, leave room for standard batch script and controller
+        if parallel["system_cores"] > 30:
+            cores = cores - 2
+        elif parallel["system_cores"] > 15:
+            cores = cores - 1
+        parallel["resources"].append("mincores=%s" % cores)
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                         parallel["num_jobs"], parallel["cores_per_job"],
                                         profile=profile_dir, start_wait=parallel["timeout"],
