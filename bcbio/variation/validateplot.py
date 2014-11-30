@@ -7,16 +7,20 @@ import collections
 import os
 
 import numpy as np
-try:
-    import matplotlib
-    matplotlib.use('Agg', force=True)
-    import matplotlib.pyplot as plt
-    plt.ioff()
-    import prettyplotlib as ppl
-    import pandas as pd
-except ImportError:
-    pd, ppl = None, None
+import pandas as pd
 
+try:
+    import matplotlib as mpl
+    mpl.use('Agg', force=True)
+    import matplotlib.pyplot as plt
+except ImportError:
+    mpl, plt = None, None
+try:
+    import seaborn as sns
+except ImportError:
+    sns = None
+
+from bcbio.log import logger
 from bcbio import utils
 from bcbio.variation import bamprep
 
@@ -29,8 +33,11 @@ def create(plot_data, header, ploti, sample_config, out_file_base, outtype="pdf"
            title=None, size=None):
     """Create plots of validation results for a sample, labeling prep strategies.
     """
-    if pd is None or ppl is None:
+    if mpl is None or plt is None or sns is None:
+        not_found = ", ".join([x for x in ['mpl', 'plt', 'sns'] if eval(x) is None])
+        logger.info("No validation plot. Missing imports: %s" % not_found)
         return None
+
     if header:
         df = pd.DataFrame(plot_data, columns=header)
     else:
@@ -63,18 +70,20 @@ def plot_prep_methods(df, prep, prepi, out_file_base, outtype, title=None,
     assert len(samples) >= 1, samples
     out_file = "%s-%s.%s" % (out_file_base, samples[0], outtype)
     df = df[df["category"].isin(cat_labels)]
-    _prettyplot(df, prep, prepi, out_file, title, size)
+    _seaborn(df, prep, prepi, out_file, title, size)
     return out_file
 
-def _prettyplot(df, prep, prepi, out_file, title=None, size=None):
-    """Plot using prettyplot wrapper around matplotlib.
+def _seaborn(df, prep, prepi, out_file, title=None, size=None):
+    """Plot using seaborn wrapper around matplotlib.
     """
+    plt.ioff()
+    sns.set(style='dark')
     vtypes = df["variant.type"].unique()
     callers = sorted(df["caller"].unique())
     cats = _check_cats(["concordant", "discordant-missing-total",
                         "discordant-extra-total", "discordant-shared-total"],
                        vtypes, df, prep, callers)
-    fig, axs = ppl.subplots(len(vtypes), len(cats))
+    fig, axs = plt.subplots(len(vtypes), len(cats))
     width = 0.8
     for i, vtype in enumerate(vtypes):
         ax_row = axs[i] if len(vtypes) > 1 else axs
@@ -86,8 +95,7 @@ def _prettyplot(df, prep, prepi, out_file, title=None, size=None):
             ax.get_yaxis().set_ticks([])
             if j == 0:
                 ax.set_ylabel(vtype_labels[vtype], size=14)
-            ppl.bar(ax, np.arange(len(callers)), vals,
-                    color=ppl.colors.set2[prepi], width=width)
+            ax.bar(np.arange(len(callers)), vals, width=width)
             ax.set_ylim(0, maxval)
             if i == len(vtypes) - 1:
                 ax.set_xticks(np.arange(len(callers)) + width / 2.0)
@@ -98,7 +106,6 @@ def _prettyplot(df, prep, prepi, out_file, title=None, size=None):
             _annotate(ax, labels, vals, np.arange(len(callers)), width)
     fig.text(.5, .95, prep_labels.get(prep, "") if title is None else title, horizontalalignment='center', size=16)
     fig.subplots_adjust(left=0.05, right=0.95, top=0.87, bottom=0.15, wspace=0.1, hspace=0.1)
-    #fig.tight_layout()
     x, y = (10, 5) if size is None else size
     fig.set_size_inches(x, y)
     fig.savefig(out_file)
@@ -138,9 +145,9 @@ def _get_chart_info(df, vtype, cat, prep, callers):
     return vals, labels, maxval_raw
 
 def _annotate(ax, annotate, height, left, width):
-    """Annotate axis with labels. Adjusted from prettyplotlib to be more configurable.
+    """Annotate axis with labels.
     """
-    annotate_yrange_factor = 0.025
+    annotate_yrange_factor = 0.010
     xticks = np.array(left) + width / 2.0
     ymin, ymax = ax.get_ylim()
     yrange = ymax - ymin
@@ -148,9 +155,9 @@ def _annotate(ax, annotate, height, left, width):
     # Reset ymax and ymin so there's enough room to see the annotation of
     # the top-most
     if ymax > 0:
-        ymax += yrange * 0.1
+        ymax += yrange * 0.15
     if ymin < 0:
-        ymin -= yrange * 0.1
+        ymin -= yrange * 0.15
     ax.set_ylim(ymin, ymax)
     yrange = ymax - ymin
 
@@ -175,8 +182,7 @@ def _annotate(ax, annotate, height, left, width):
         ax.annotate(annotation, (x, h + offset),
                     verticalalignment=verticalalignment,
                     horizontalalignment='center',
-                    size=size,
-                    color=ppl.colors.almost_black)
+                    size=size)
 
 def _ggplot(df, out_file):
     """Plot faceted items with ggplot wrapper on top of matplotlib.

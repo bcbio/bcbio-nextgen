@@ -1,3 +1,7 @@
+## 0.8.5 (in progress)
+
+- Switch to seaborn as matplotlib wrapper, from prettplotlib.
+
 ## 0.8.4 (29 November 2014)
 
 - Improvements in VarDict calling on somatic samples.

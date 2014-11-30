@@ -10,12 +10,19 @@ import os
 
 import toolz as tz
 import numpy as np
+import pandas as pd
 try:
-    import pandas as pd
-    import prettyplotlib as ppl
+    import matplotlib as mpl
+    mpl.use('Agg', force=True)
+    import matplotlib.pyplot as plt
 except ImportError:
-    pd, ppl = None, None
+    mpl, plt = None, None
+try:
+    import seaborn as sns
+except ImportError:
+    sns = None
 
+from bcbio.log import logger
 from bcbio import utils
 
 _EVENT_SIZES = [(1, 250), (250, 1000), (1000, 5000), (5000, 25000), (25000, int(1e6))]
@@ -89,13 +96,16 @@ def _evaluate_multi(callers, truth_svtypes, ensemble, exclude):
 def _plot_evaluation(df_csv):
     """Provide plot of evaluation metrics, stratified by event size.
     """
-    if ppl is None:
+    if mpl is None or plt is None or sns is None:
+        not_found = ", ".join([x for x in ['mpl', 'plt', 'sns'] if eval(x) is None])
+        logger.info("No validation plot. Missing imports: %s" % not_found)
         return None
+
     out_file = "%s.pdf" % os.path.splitext(df_csv)[0]
     if not utils.file_uptodate(out_file, df_csv):
         metrics = ["sensitivity", "precision"]
         df = pd.read_csv(df_csv).fillna("0%")
-        fig, axs = ppl.subplots(len(_EVENT_SIZES), len(metrics))
+        fig, axs = plt.subplots(len(_EVENT_SIZES), len(metrics))
         callers = sorted(df["caller"].unique())
         if "ensemble" in callers:
             callers.remove("ensemble")
@@ -112,7 +122,7 @@ def _plot_evaluation(df_csv):
                 if i == 0:
                     ax.set_title(metric, size=12, y=1.2)
                 vals, labels = _get_plot_val_labels(df, size, metric, callers)
-                ppl.barh(ax, np.arange(len(vals)), vals, yticklabels=callers)
+                ax.barh(np.arange(len(vals)), vals, yticklabels=callers)
                 if j == 0:
                     ax.tick_params(axis='y', which='major', labelsize=8)
                     ax.text(80, 4.2, size_label, fontsize=10)
