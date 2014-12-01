@@ -1,46 +1,44 @@
 import os
 from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq
 import bcbio.pipeline.datadict as dd
+from bcbio.utils import filter_missing
 
-def filter_none(xs):
-    return filter(lambda x: x, xs)
 
 def estimate_expression(samples, run_parallel):
     samples = run_parallel("generate_transcript_counts", samples)
-    count_files = filter_none([dd.get_count_file(x[0]) for x in samples])
+    count_files = filter_missing([dd.get_count_file(x[0]) for x in samples])
     combined = count.combine_count_files(count_files)
     gtf_file = dd.get_gtf_file(samples[0][0], None)
     annotated = count.annotate_combined_count_file(combined, gtf_file)
     samples = run_parallel("run_cufflinks", samples)
     #gene
     fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
-    fpkm_files = filter_none([dd.get_fpkm(x[0]) for x in samples])
+    fpkm_files = filter_missing([dd.get_fpkm(x[0]) for x in samples])
     fpkm_combined = count.combine_count_files(fpkm_files, fpkm_combined_file)
     #isoform
     fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
-    isoform_files = filter_none([dd.get_fpkm_isoform(x[0]) for x in samples])
+    isoform_files = filter_missing([dd.get_fpkm_isoform(x[0]) for x in samples])
     fpkm_isoform_combined = count.combine_count_files(isoform_files,
                                                       fpkm_isoform_combined_file,
                                                       ".isoform.fpkm")
     dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
-    to_combine_dexseq = filter_none([dd.get_dexseq_counts(data[0]) for data in samples])
+    to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data in samples])
     if to_combine_dexseq:
         dexseq_combined = count.combine_count_files(to_combine_dexseq,
                                                     dexseq_combined_file, ".dexseq")
     else:
         dexseq_combined = None
 
-    for x in samples:
-        x[0] = dd.set_combined_counts(x[0], combined)
+    for data in dd.sample_data_iterator(samples):
+        dd.set_combined_counts(data, combined)
         if annotated:
-            x[0] = dd.set_annotated_combined_counts(x[0], annotated)
+            dd.set_annotated_combined_counts(data, annotated)
         if fpkm_combined:
-            x[0] = dd.set_combined_fpkm(x[0], fpkm_combined)
+            dd.set_combined_fpkm(x[0], fpkm_combined)
         if fpkm_isoform_combined:
-            x[0] = dd.set_combined_fpkm_isoform(x[0], fpkm_combined)
+            dd.set_combined_fpkm_isoform(x[0], fpkm_combined)
         if dexseq_combined:
-            x[0] = dd.set_dexseq_counts(x[0], dexseq_combined_file)
-
+            dd.set_dexseq_counts(x[0], dexseq_combined_file)
     return samples
 
 def generate_transcript_counts(data):
@@ -78,17 +76,17 @@ def cufflinks_assemble(data):
     return [[data]]
 
 def cufflinks_merge(*samples):
+    to_merge = filter_missing([dd.get_assembled_gtf(data) for data in
+                            dd.sample_data_iterator(samples)])
     data = samples[0][0]
     bam_file = dd.get_work_bam(data)
     ref_file = dd.get_sam_ref(data)
     gtf_file = dd.get_gtf_file(data)
     out_dir = os.path.join(dd.get_work_dir(data), "assembly")
     num_cores = dd.get_num_cores(data)
-    to_merge = [dd.get_assembled_gtf(sample[0]) for sample in samples if
-                dd.get_assembled_gtf(sample[0])]
     merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores, samples[0][0])
-    for data in samples:
-        data[0] = dd.set_assembled_gtf(data[0], merged_gtf)
+    for data in dd.sample_data_iterator(samples):
+        dd.set_assembled_gtf(data, merged_gtf)
     return samples
 
 def assemble_transcripts(run_parallel, samples):

@@ -673,3 +673,9 @@ def open_possible_gzip(fname, flag="r"):
         return gzip.open(fname, flag)
     else:
         return open(fname, flag)
+
+def filter_missing(xs):
+    """
+    remove items from a list if they evaluate to False
+    """
+    return filter(lambda x: x, xs)
