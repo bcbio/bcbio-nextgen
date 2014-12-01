@@ -20,10 +20,12 @@ import shutil
 import yaml
 import gffutils
 from gffutils.iterators import DataIterator
-
+import tempfile
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
+
+ERCC_BUCKET = "bcbio-data.s3.amazonaws.com/"
 
 def gff3_to_gtf(gff3_file):
 
@@ -92,6 +94,19 @@ def install_gtf_file(build_dir, gtf, build):
         shutil.copyfile(gtf, out_file)
     return out_file
 
+def append_ercc(gtf_file, fasta_file):
+    ercc_fa = ERCC_BUCKET + "ERCC92.fasta.gz"
+    tmp_fa = tempfile.NamedTemporaryFile(delete=False, suffix=".gz").name
+    append_fa_cmd = "wget {ercc_fa} -O {tmp_fa}; gzip -cd {tmp_fa} >> {fasta_file}"
+    print append_fa_cmd.format(**locals())
+    subprocess.check_call(append_fa_cmd.format(**locals()), shell=True)
+    ercc_gtf = ERCC_BUCKET + "ERCC92.gtf.gz"
+    tmp_gtf = tempfile.NamedTemporaryFile(delete=False, suffix=".gz").name
+    append_gtf_cmd = "wget {ercc_gtf} -O {tmp_gtf}; gzip -cd {tmp_gtf} >> {gtf_file}"
+    print append_gtf_cmd.format(**locals())
+    subprocess.check_call(append_gtf_cmd.format(**locals()), shell=True)
+
+
 if __name__ == "__main__":
     description = ("Set up a custom genome for bcbio-nextgen. This will "
                    "place the genome under name/build in the genomes "
@@ -110,6 +125,8 @@ if __name__ == "__main__":
                         help="Build of genome, for example hg19.")
     parser.add_argument("-i", "--indexes", choices=SUPPORTED_INDEXES, nargs="*",
                         default=["seq"], help="Space separated list of indexes to make")
+    parser.add_argument("--ercc", action='store_true', default=False,
+                        help="Add ERCC spike-ins.")
 
     args = parser.parse_args()
     env.hosts = ["localhost"]
@@ -122,6 +139,11 @@ if __name__ == "__main__":
     fabmod = __import__("cloudbio", fromlist=["fabutils"])
     fabutils = getattr(fabmod, 'fabutils')
     fabutils.configure_runsudo(env)
+
+    system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+    with open(system_config) as in_handle:
+        config = yaml.load(in_handle)
+    env.picard_home = config_utils.get_program("picard", config, ptype="dir")
 
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
@@ -149,6 +171,10 @@ if __name__ == "__main__":
         gtf_file = install_gtf_file(build_dir, args.gtf, args.build)
         print "Installed GTF as %s." % (gtf_file)
 
+    if args.ercc:
+        print "Appending ERCC sequences to %s and %s." % (gtf_file, fasta_file)
+        append_ercc(gtf_file, fasta_file)
+
     indexed = {}
     for index in args.indexes:
         print "Creating the %s index." % (index)
@@ -159,15 +185,10 @@ if __name__ == "__main__":
         indexed[index] = index_fn(fasta_file)
     indexed["samtools"] = fasta_file
 
-
     if args.gtf:
-        system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
-        with open(system_config) as in_handle:
-            config = yaml.load(in_handle)
-        picard_dir = config_utils.get_program("picard", config, ptype="dir")
         "Preparing transcriptome."
         os.chdir(os.path.join(build_dir, os.pardir))
-        cmd = ("{sys.executable} {prepare_tx} --gtf {args.gtf} {picard_dir} "
+        cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {env.picard_home} "
                "{args.build}")
         subprocess.check_call(cmd.format(**locals()), shell=True)
 
