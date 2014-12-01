@@ -98,3 +98,10 @@ for k, v in LOOKUPS.items():
     setter_fn = 'set_' + k
     if setter_fn not in _g:
         _g["set_" + k] = setter(keys, v.get('checker', None))
+
+def sample_data_iterator(samples):
+    """
+    for a list of samples, return the data dictionary of each sample
+    """
+    for sample in samples:
+        yield sample[0]
