@@ -9,17 +9,25 @@ from bcbio.log import logger
 import sys
 
 LOOKUPS = {
+    "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
+                  "default": 1},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
     "work_dir": {"keys": ['dirs', 'work']},
+    "sam_ref": {"keys": ["sam_ref"]},
     "lane": {"keys": ["rgnames", "lane"]},
     "cores": {"keys": ["config", "algorithm", "num_cores"], "default": 1},
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
     "work_bam": {"keys": ["work_bam"]},
+    "count_file": {"keys": ["count_file"]},
+    "combined_counts": {"keys": ["combined_counts"]},
+    "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "ref_file": {"keys": ["reference", "fasta", "base"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
+    "combined_fpkm": {"keys": ['combined_fpkm']},
+    "combined_fpkm_isoform": {"keys": ['combined_fpkm_isoform']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "dexseq_counts": {"keys": ['dexseq_counts']},
     "description": {"keys": ['description']},
@@ -32,8 +40,15 @@ LOOKUPS = {
                   "checker": file_exists},
     "mixup_check": {"keys": ["config", "algorithm", "mixup_check"],
                     "default": False},
+    "cufflinks_dir": {"keys": ['cufflinks_dir']},
     "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
-    "transcriptome_bam": {"keys": ["transcriptome_bam"]}
+    "transcriptome_bam": {"keys": ["transcriptome_bam"]},
+    "fpkm_isoform": {"keys": ["fpkm_isoform"]},
+    "fpkm": {"keys": ["fpkm"]},
+    "assembled_gtf": {"keys": ["assembled_gtf"]},
+    "assemble_transcripts": {"keys": ["config", "algorithm", "assemble_transcripts"],
+                             "default": False},
+    "oncofuse_file": {"keys": ["oncofuse_file"]}
 }
 
 def get_dexseq_gff(config, default=None):
