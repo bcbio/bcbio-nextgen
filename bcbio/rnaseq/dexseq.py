@@ -10,6 +10,8 @@ from bcbio import bam
 from bcbio.log import logger
 import bcbio.pipeline.datadict as dd
 
+
+
 def bcbio_run(data):
     out_dir = os.path.join(dd.get_work_dir(data), "dexseq")
     safe_makedir(out_dir)
@@ -29,7 +31,10 @@ def run_count(bam_file, dexseq_gff, stranded, out_file, data):
     assert sort_order, "Cannot determine sort order of %s." % bam_file
     strand_flag = _strand_flag(stranded)
     assert strand_flag, "%s is not a valid strandedness value." % stranded
-    if not file_exists(dexseq_gff):
+    if not dexseq_gff:
+        logger.info("No DEXSeq GFF file was found, skipping exon-level counting.")
+        return None
+    elif not file_exists(dexseq_gff):
         logger.info("%s was not found, so exon-level counting is being "
                     "skipped." % dexseq_gff)
         return None
