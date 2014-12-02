@@ -56,7 +56,6 @@ def get_dexseq_gff(config, default=None):
     some older versions of the genomes have the DEXseq gff file as
     gff instead of gff3, so this handles that by looking for either one
     """
-    print config
     dexseq_gff = tz.get_in(tz.get_in(['dexseq_gff', 'keys'], LOOKUPS, {}),
                            config, None)
     if not dexseq_gff:
