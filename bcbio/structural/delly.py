@@ -189,7 +189,7 @@ def run(items):
                                  in itertools.product(sshared.get_sv_chroms(items, exclude_file), sv_types)],
                                 config, parallel)
     out_file = "%s.vcf.gz" % sshared.outname_from_inputs(bytype_vcfs)
-    combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, items[0]["config"])
+    combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, config)
     out = []
     for data in items:
         if "sv" not in data:
