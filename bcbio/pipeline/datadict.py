@@ -56,11 +56,16 @@ def get_dexseq_gff(config, default=None):
     some older versions of the genomes have the DEXseq gff file as
     gff instead of gff3, so this handles that by looking for either one
     """
-    dexseq_gff  = tz.get_in(tz.get_in(['dexseq_gff', 'keys'], LOOKUPS, {}),
-                            config, None)
+    print config
+    dexseq_gff = tz.get_in(tz.get_in(['dexseq_gff', 'keys'], LOOKUPS, {}),
+                           config, None)
     if not dexseq_gff:
         return None
-    base_dir = os.path.dirname(get_gtf_file(config))
+    gtf_file = get_gtf_file(config)
+    if gtf_file:
+        base_dir = os.path.dirname(gtf_file)
+    else:
+        base_dir = os.path.dirname(dexseq_gff)
     base, _ = os.path.splitext(dexseq_gff)
     gff_file = os.path.join(base_dir, base + ".gff")
     if file_exists(gff_file):

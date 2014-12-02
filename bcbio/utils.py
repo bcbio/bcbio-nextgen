@@ -645,11 +645,19 @@ def dictapply(d, fn):
             d[k] = fn(v)
     return d
 
+def R_sitelib():
+    """Retrieve the R site-library installed with the bcbio installer.
+    """
+    from bcbio import install
+    return os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
+                        "lib", "R", "site-library")
+
 def R_package_path(package):
     """
     return the path to an installed R package
     """
-    cmd = "Rscript -e 'find.package(\"{package}\")'"
+    local_sitelib = R_sitelib()
+    cmd = """Rscript -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError, e:
