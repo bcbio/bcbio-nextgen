@@ -25,7 +25,7 @@ except ImportError:
 from bcbio.log import logger
 from bcbio import utils
 
-_EVENT_SIZES = [(1, 250), (250, 1000), (1000, 5000), (5000, 25000), (25000, int(1e6))]
+EVENT_SIZES = [(1, 250), (250, 1000), (1000, 5000), (5000, 25000), (25000, int(1e6))]
 
 def _stat_str(x, n):
     if n > 0:
@@ -51,13 +51,20 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
                 return False
         else:
             return False
+    def wham_matches(name):
+        """Flexibly handle WHAM comparisons, allowing DUP/DEL matches during comparisons.
+        """
+        allowed = set(["DUP", "DEL"])
+        curtype, curcaller = name.split("_")[:2]
+        return curcaller == "wham" and curtype in allowed and svtype in allowed
     def in_size_range(feat):
         minf, maxf = size_range
         size = feat.end - feat.start
         return size >= minf and size < maxf
     def is_caller_svtype(feat):
         for name in feat.name.split(","):
-            if (name.startswith(svtype) or cnv_matches(name)) and (caller == "ensemble" or name.endswith(caller)):
+            if ((name.startswith(svtype) or cnv_matches(name) or wham_matches(name))
+                  and (caller == "ensemble" or name.endswith(caller))):
                 return True
         return False
     exfeats = pybedtools.BedTool(exclude)
@@ -82,7 +89,7 @@ def _evaluate_multi(callers, truth_svtypes, ensemble, exclude):
                 writer.writerow(["svtype", "size", "caller", "sensitivity", "precision"])
                 dfwriter.writerow(["svtype", "size", "caller", "metric", "value", "label"])
                 for svtype, truth in truth_svtypes.items():
-                    for size in _EVENT_SIZES:
+                    for size in EVENT_SIZES:
                         str_size = "%s-%s" % size
                         for caller in callers:
                             evalout = _evaluate_one(caller, svtype, size, ensemble, truth, exclude)
@@ -101,17 +108,17 @@ def _plot_evaluation(df_csv):
         logger.info("No validation plot. Missing imports: %s" % not_found)
         return None
 
-    out_file = "%s.pdf" % os.path.splitext(df_csv)[0]
+    out_file = "%s.png" % os.path.splitext(df_csv)[0]
     sns.set(style='white')
     if not utils.file_uptodate(out_file, df_csv):
         metrics = ["sensitivity", "precision"]
         df = pd.read_csv(df_csv).fillna("0%")
-        fig, axs = plt.subplots(len(_EVENT_SIZES), len(metrics), tight_layout=True)
+        fig, axs = plt.subplots(len(EVENT_SIZES), len(metrics), tight_layout=True)
         callers = sorted(df["caller"].unique())
         if "ensemble" in callers:
             callers.remove("ensemble")
             callers.append("ensemble")
-        for i, size in enumerate(_EVENT_SIZES):
+        for i, size in enumerate(EVENT_SIZES):
             size_label = "%s to %sbp" % size
             size = "%s-%s" % size
             for j, metric in enumerate(metrics):

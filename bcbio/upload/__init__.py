@@ -102,8 +102,9 @@ def _get_files_variantcall(sample):
 
 def _maybe_add_validate(algorith, sample, out):
     for i, plot in enumerate(tz.get_in(("validate", "grading_plots"), sample, [])):
+        ptype = os.path.splitext(plot)[-1].replace(".", "")
         out.append({"path": plot,
-                    "type": "pdf",
+                    "type": ptype,
                     "ext": "validate%s" % ("" if i == 0 else "-%s" % (i + 1))})
     return out
 
@@ -129,9 +130,10 @@ def _maybe_add_sv(algorithm, sample, out):
                             "ext": "%s-sample" % svcall["variantcaller"],
                             "variantcaller": svcall["variantcaller"]})
             if "validate" in svcall:
-                for vkey, vext in [("csv", "csv"), ("plot", "pdf")]:
+                for vkey in ["csv", "plot"]:
                     vfile = tz.get_in(["validate", vkey], svcall)
                     if vfile:
+                        vext = os.path.splitext(vfile)[-1].replace(".", "")
                         out.append({"path": vfile,
                                     "type": vext,
                                     "ext": "%s-validate" % svcall["variantcaller"],

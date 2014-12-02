@@ -13,6 +13,8 @@ import vcf
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
+from bcbio.structural import validate
+from bcbio.variation import bedutils
 
 # ## Conversions to simplified BED files
 
@@ -80,19 +82,30 @@ def summarize(calls, data):
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                                sample, "ensemble"))
     out_file = os.path.join(work_dir, "%s-ensemble.bed" % sample)
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            with shared.bedtools_tmpdir(data):
-                input_beds = filter(lambda x: x is not None,
-                                    [_create_bed(c, out_file, data) for c in calls])
-                if len(input_beds) > 0:
-                    all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
-                    with open(all_file, "w") as out_handle:
-                        for line in fileinput.input(input_beds):
-                            out_handle.write(line)
-                    pybedtools.BedTool(all_file).sort(stream=True)\
-                      .merge(c=4, o="distinct", delim=",").saveas(tx_out_file)
+    with shared.bedtools_tmpdir(data):
+        input_beds = filter(lambda x: x is not None,
+                            [_create_bed(c, out_file, data) for c in calls])
+    if len(input_beds) > 0:
+        size_beds = []
+        for e_start, e_end in validate.EVENT_SIZES:
+            base, ext = os.path.splitext(out_file)
+            size_out_file = "%s-%s_%s%s" % (base, e_start, e_end, ext)
+            if not utils.file_exists(size_out_file):
+                with file_transaction(data, size_out_file) as tx_out_file:
+                    with shared.bedtools_tmpdir(data):
+                        all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
+                        with open(all_file, "w") as out_handle:
+                            for line in fileinput.input(input_beds):
+                                chrom, start, end = line.split()[:3]
+                                size = int(end) - int(start)
+                                if size >= e_start and size < e_end:
+                                    out_handle.write(line)
+                        pybedtools.BedTool(all_file).sort(stream=True)\
+                          .merge(c=4, o="distinct", delim=",").saveas(tx_out_file)
+            size_beds.append(size_out_file)
+        out_file = bedutils.combine(size_beds, out_file, data["config"])
     if utils.file_exists(out_file):
+        bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "bedprep"))
         calls.append({"variantcaller": "ensemble",
-                      "vrn_file": out_file})
+                      "vrn_file": bedutils.clean_file(out_file, data, bedprep_dir=bedprep_dir)})
     return calls
