@@ -12,11 +12,12 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
-def clean_file(in_file, data, prefix=""):
+def clean_file(in_file, data, prefix="", bedprep_dir=None):
     """Prepare a clean sorted input BED file without headers
     """
     if in_file:
-        bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
+        if not bedprep_dir:
+            bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file))).replace(".gz", "")
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:

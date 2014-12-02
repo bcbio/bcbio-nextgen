@@ -5,6 +5,7 @@ the evidence from each input.
 """
 import fileinput
 import os
+import shutil
 
 import toolz as tz
 import vcf
@@ -48,9 +49,13 @@ def _cnvbed_to_bed(in_file, caller, out_file):
                                         "cnv%s_%s" % (feat.score, caller)])
                              + "\n")
 
+def _copy_file(in_file, caller, out_file):
+    shutil.copy(in_file, out_file)
+
 CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "delly": _vcf_to_bed,
-                 "cn_mops": _cnvbed_to_bed}
+                 "cn_mops": _cnvbed_to_bed,
+                 "wham": _copy_file}
 
 def _create_bed(call, base_file, data):
     """Create a simplified BED file from caller specific input.

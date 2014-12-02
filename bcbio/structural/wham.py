@@ -15,7 +15,8 @@ except ImportError:
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import vcfutils
+from bcbio.structural import ensemble
+from bcbio.variation import bedutils, vcfutils
 from bcbio.provenance import do
 
 def run(items, background=None):
@@ -28,7 +29,7 @@ def run(items, background=None):
         background_bams = [paired.normal_bam]
         background_names = [paired.normal_name]
     else:
-        inputs = [items]
+        inputs = items
         background_bams = [x["align_bam"] for x in background]
         background_names = [dd.get_sample_name(x) for x in background]
     orig_vcf_file = _run_wham(inputs, background_bams)
@@ -39,8 +40,9 @@ def run(items, background=None):
     for data in items:
         if "sv" not in data:
             data["sv"] = []
-        data["sv"].append({"variantcaller": "wham", "vrn_file": vcf_file,
-                           "bed_file": bed_file})
+        data["sv"].append({"variantcaller": "wham",
+                           "vrn_file": _subset_to_sample(bed_file, vcf_file, data),
+                           "vcf_file": vcf_file})
         out.append(data)
     return out
 
@@ -64,6 +66,57 @@ def _run_wham(inputs, background_bams):
                    "| sed 's/Numper/Number/' > {tx_out_file}")
             do.run(cmd.format(**locals()), "Run WHAM")
     return out_file
+
+def _subset_to_sample(bed_file, vcf_file, data):
+    """Convert the global BED file into sample specific calls.
+    """
+    name = dd.get_sample_name(data)
+    base, ext = os.path.splitext(bed_file)
+    out_file = "%s-%s%s" % (base, name, ext)
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            calls = _get_sample_calls(vcf_file, name)
+            with open(bed_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    for line in in_handle:
+                        sample_line = _check_bed_call(line, calls)
+                        if sample_line:
+                            out_handle.write(sample_line)
+    bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "bedprep"))
+    return bedutils.clean_file(out_file, data, bedprep_dir=bedprep_dir)
+
+def _check_bed_call(line, calls):
+    """Check if a BED file line is called
+    """
+    chrom, start, end, stype_str = line.split("\t")[:4]
+    caller, stype = stype_str.split("_")
+    stype_str = "%s_%s" % (stype, caller)
+    start, end = int(start), int(end)
+    if (chrom, start) in calls:
+        if end < start:
+            fstart, fend = end, start
+        else:
+            fstart, fend = start, end
+        if fend - fstart < ensemble.MAX_SVSIZE:
+            return "%s\t%s\t%s\t%s\n" % (chrom, fstart, fend, stype_str)
+
+def _get_sample_calls(vcf_file, name):
+    """Get a set of positions called in the input VCF file for the sample.
+    """
+    gindex = None
+    calls = set([])
+    with open(vcf_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("#CHROM"):
+                gindex = line.strip().split("\t").index(name)
+            elif not line.startswith("#"):
+                assert gindex
+                cur_parts = line.split("\t")
+                cur_gt = cur_parts[gindex].split(":")[0]
+                if len(set(cur_gt.split("|/")) - set(["0", "."])) > 0:
+                    chrom, start = cur_parts[:2]
+                    calls.add((chrom, int(start) - 1))
+    return calls
 
 def _convert_to_bed(vcf_file, inputs):
     """Convert WHAM output file into BED format for ensemble calling.

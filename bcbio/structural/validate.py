@@ -102,10 +102,11 @@ def _plot_evaluation(df_csv):
         return None
 
     out_file = "%s.pdf" % os.path.splitext(df_csv)[0]
+    sns.set(style='white')
     if not utils.file_uptodate(out_file, df_csv):
         metrics = ["sensitivity", "precision"]
         df = pd.read_csv(df_csv).fillna("0%")
-        fig, axs = plt.subplots(len(_EVENT_SIZES), len(metrics))
+        fig, axs = plt.subplots(len(_EVENT_SIZES), len(metrics), tight_layout=True)
         callers = sorted(df["caller"].unique())
         if "ensemble" in callers:
             callers.remove("ensemble")
@@ -118,18 +119,22 @@ def _plot_evaluation(df_csv):
                 ax.get_xaxis().set_ticks([])
                 ax.spines['bottom'].set_visible(False)
                 ax.spines['left'].set_visible(False)
-                ax.set_xlim(0, 100.0)
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+                ax.set_xlim(0, 125.0)
                 if i == 0:
                     ax.set_title(metric, size=12, y=1.2)
                 vals, labels = _get_plot_val_labels(df, size, metric, callers)
-                ax.barh(np.arange(len(vals)), vals, yticklabels=callers)
+                ax.barh(np.arange(len(vals)), vals)
                 if j == 0:
                     ax.tick_params(axis='y', which='major', labelsize=8)
-                    ax.text(80, 4.2, size_label, fontsize=10)
+                    ax.locator_params(nbins=len(callers) + 2, axis="y", tight=True)
+                    ax.set_yticklabels(callers, va="bottom")
+                    ax.text(100, 4.0, size_label, fontsize=10)
                 else:
                     ax.get_yaxis().set_ticks([])
                 for ai, (val, label) in enumerate(zip(vals, labels)):
-                    ax.annotate(label, (val + 1, ai + 0.35), va='center', size=7)
+                    ax.annotate(label, (val + 0.75, ai + 0.35), va='center', size=7)
         fig.set_size_inches(7, 6)
         fig.savefig(out_file)
     return out_file
