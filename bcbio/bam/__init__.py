@@ -41,11 +41,13 @@ def index(in_bam, config):
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(config, index_file) as tx_index_file:
-            samtools_cmd = "{samtools} index {in_bam} {tx_index_file}"
             if sambamba:
                 cmd = "{sambamba} index -t {num_cores} {in_bam} {tx_index_file}"
             else:
-                cmd = samtools_cmd
+                assert tx_index_file.find(".bam.bai") > 0
+                tx_bam_file = tx_index_file.replace(".bam.bai", ".bam")
+                utils.symlink_plus(in_bam, tx_bam_file)
+                cmd = "{samtools} index {tx_bam_file}"
             # sambamba has intermittent multicore failures. Allow
             # retries with single core
             try:
