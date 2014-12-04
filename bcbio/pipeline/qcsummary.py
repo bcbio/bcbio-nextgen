@@ -399,7 +399,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
                     os.remove("%s.zip" % tx_fastqc_out)
                 if not os.path.exists(sentry_file) and os.path.exists(tx_combo_file):
                     utils.safe_makedir(fastqc_out)
-                    shutil.copy(os.path.join(tx_fastqc_out, "fastqc_data.txt"), fastqc_out)
+                    shutil.move(os.path.join(tx_fastqc_out, "fastqc_data.txt"), fastqc_out)
                     shutil.move(tx_combo_file, sentry_file)
                 elif not os.path.exists(sentry_file):
                     if os.path.exists(fastqc_out):
