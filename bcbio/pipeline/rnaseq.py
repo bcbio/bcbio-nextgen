@@ -10,6 +10,7 @@ def estimate_expression(samples, run_parallel):
     combined = count.combine_count_files(count_files)
     gtf_file = dd.get_gtf_file(samples[0][0], None)
     annotated = count.annotate_combined_count_file(combined, gtf_file)
+
     samples = run_parallel("run_express", samples)
     express_counts_combined = combine_express(samples, combined)
 
@@ -74,13 +75,13 @@ def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""
     to_combine = [x[0]["eff_counts"] for x in samples if "eff_counts" in x[0]]
     if len(to_combine) > 0:
-        eff_counts_combined_file = os.path.splitext(combined)[0] + "_eff.counts"
+        eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.eff_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file)
         to_combine = [x[0]["tpm_counts"] for x in samples if "tpm_counts" in x[0]]
-        tpm_counts_combined_file = os.path.splitext(combined)[0] + ".tpm"
+        tpm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.tpm"
         tpm_counts_combined = count.combine_count_files(to_combine, tpm_counts_combined_file)
         to_combine = [x[0]["fpkm_counts"] for x in samples if "fpkm_counts" in x[0]]
-        fpkm_counts_combined_file = os.path.splitext(combined)[0] + ".fpkm"
+        fpkm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.eff_fpkm"
         fpkm_counts_combined = count.combine_count_files(to_combine, fpkm_counts_combined_file)
         return {'counts': eff_counts_combined, 'tpm': tpm_counts_combined,
                 'fpkm': fpkm_counts_combined}

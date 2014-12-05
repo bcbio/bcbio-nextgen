@@ -6,6 +6,7 @@
   jobs into a single submission job for better memory shared on resource
   constrained systems.
 - Switch to seaborn as matplotlib wrapper, from prettplotlib.
+- Add Express to RNA-seq pipeline
 
 ## 0.8.4 (29 November 2014)
 
