@@ -1,7 +1,8 @@
 ## 0.8.5 (in progress)
 
-- Run `vcffixup` following `vcfallelicprimitves` in FreeBayes, Platypus and
-  Scalpel calling to prevent introduction of problematic AN INFO fields.
+- No longer keep INFO and FORMAT fields with `vcfallelicprimitves` in FreeBayes,
+  Platypus and Scalpel calling to prevent introduction of problematic INFO
+  fields.
 - Use `mincores` specification to ipython-cluster-helper to combine single core
   jobs into a single submission job for better memory shared on resource
   constrained systems.
