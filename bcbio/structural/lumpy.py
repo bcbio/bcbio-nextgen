@@ -176,7 +176,7 @@ def _filter_by_bedpe(vcf_file, bedpe_file, data):
 def run(items):
     """Perform detection of structural variations with lumpy, using bwa-mem alignment.
     """
-    if not all(utils.get_in(data, ("config", "algorithm", "aligner")) == "bwa" for data in items):
+    if not all(utils.get_in(data, ("config", "algorithm", "aligner")) in ["bwa", False, None] for data in items):
         raise ValueError("Require bwa-mem alignment input for lumpy structural variation detection")
     work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "structural", items[0]["name"][-1],
                                                "lumpy"))
