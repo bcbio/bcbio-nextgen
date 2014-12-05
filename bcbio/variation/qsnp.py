@@ -8,18 +8,13 @@ import os
 import shutil
 from re import sub
 
-try:
-    import vcf
-except ImportError:
-    vcf = None
-
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils
-from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index, combine_variant_files, PairedData
+from bcbio.variation.vcfutils import get_paired_bams, bgzip_and_index, combine_variant_files, PairedData
 
 def is_installed(config):
     """Check for qsnp installation on machine.
@@ -30,34 +25,33 @@ def is_installed(config):
     except config_utils.CmdNotFound:
         return False
 
-
 def run_qsnp(align_bams, items, ref_file, assoc_files, region=None,
-                  out_file=None):
-    """Run Qsnp calling, paired tumor/normal.
+             out_file=None):
+    """Run qSNP calling on paired tumor/normal.
     """
     if utils.file_exists(out_file):
         return out_file
-    if is_paired_analysis(align_bams, items):
+    paired = get_paired_bams(align_bams, items)
+    if paired.normal_bam:
         region_files = []
         regions = _clean_regions(items, region)
         if regions:
             for region in regions:
                 out_region_file = out_file.replace(".vcf.gz", _to_str(region) + ".vcf.gz")
-                call_file = _run_qsnp_paired(align_bams, items, ref_file,
-                                             assoc_files, region, out_region_file)
-                region_files.append(call_file)
-            call_file = combine_variant_files(region_files, out_file, ref_file, items[0]["config"])
+                region_file = _run_qsnp_paired(align_bams, items, ref_file,
+                                               assoc_files, region, out_region_file)
+                region_files.append(region_file)
+            out_file = combine_variant_files(region_files, out_file, ref_file, items[0]["config"])
         if not region:
-            call_file = _run_qsnp_paired(align_bams, items, ref_file,
-                                         assoc_files, region, out_file)
-        return call_file
+            out_file = _run_qsnp_paired(align_bams, items, ref_file,
+                                        assoc_files, region, out_file)
+        return out_file
     else:
         raise ValueError("qSNP only works on paired samples")
 
-
 def _run_qsnp_paired(align_bams, items, ref_file, assoc_files,
-                          region=None, out_file=None):
-    """Detect somatic mutations with Qsnp.
+                     region=None, out_file=None):
+    """Detect somatic mutations with qSNP.
 
     This is used for paired tumor / normal samples.
     """
@@ -70,17 +64,21 @@ def _run_qsnp_paired(align_bams, items, ref_file, assoc_files,
             with tx_tmpdir() as tmpdir:
                 paired = get_paired_bams(align_bams, items)
                 qsnp = config_utils.get_program("qsnp", config)
+                resources = config_utils.get_resources("qsnp", config)
+                mem = " ".join(resources.get("jvm_opts", ["-Xms750m -Xmx4g"]))
                 qsnp_log = os.path.join(tmpdir, "qsnp.log")
                 qsnp_init = os.path.join(tmpdir, "qsnp.ini")
                 if region:
-                    paired = _create_bam_region(paired, region, tmpdir, config)
+                    paired = _create_bam_region(paired, region, tmpdir)
                 _create_input(paired, tx_out_file, ref_file, assoc_files['dbsnp'], qsnp_init)
-                cl = ("{qsnp} -i {qsnp_init} -log {qsnp_log}")
+                cl = ("{qsnp} {mem} -i {qsnp_init} -log {qsnp_log}")
                 do.run(cl.format(**locals()), "Genotyping paired variants with Qsnp", {})
-        out_file = _fix_vcf(out_file)
+        out_file = _filter_vcf(out_file)
         out_file = bgzip_and_index(out_file, config)
-    return out_file
-
+    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
+                                               assoc_files.get("dbsnp"),
+                                               ref_file, config)
+    return ann_file
 
 def _clean_regions(items, region):
     """Intersect region with target file if it exists"""
@@ -90,13 +88,12 @@ def _clean_regions(items, region):
         target = subset_variant_regions(variant_regions, region, tx_out_file, items)
         if target:
             if isinstance(target, basestring) and os.path.isfile(target):
-                target = _load_file(target)
+                target = _load_regions(target)
             else:
                 target = [target]
             return target
 
-
-def _load_file(target):
+def _load_regions(target):
     """Get list of tupples from bed file"""
     regions = []
     with open(target) as in_handle:
@@ -106,16 +103,13 @@ def _load_file(target):
                 regions.append((c, s, e))
     return regions
 
-
-def _create_bam_region(paired, region, tmp_dir, config):
+def _create_bam_region(paired, region, tmp_dir):
     """create temporal normal/tumor bam_file only with reads on that region"""
     tumor_name, normal_name = paired.tumor_name, paired.normal_name
-    normal_bam = _slice_bam(paired.normal_bam, region, tmp_dir, config)
-    tumor_bam = _slice_bam(paired.tumor_bam, region, tmp_dir, config)
-    print([tumor_name, normal_name])
-    paired = PairedData(tumor_bam, tumor_name, normal_bam, normal_name, None, None)
+    normal_bam = _slice_bam(paired.normal_bam, region, tmp_dir, paired.tumor_config)
+    tumor_bam = _slice_bam(paired.tumor_bam, region, tmp_dir, paired.tumor_config)
+    paired = PairedData(tumor_bam, tumor_name, normal_bam, normal_name, None, None, None)
     return paired
-
 
 def _slice_bam(in_bam, region, tmp_dir, config):
     """Use sambamba to slice a bam region"""
@@ -127,7 +121,6 @@ def _slice_bam(in_bam, region, tmp_dir, config):
         cmd = ("{sambamba} slice {in_bam} {region} -o {tx_out_file}")
         do.run(cmd.format(**locals()), "Slice region", {})
     return out_file
-
 
 def _create_input(paired, out_file, ref_file, snp_file, qsnp_file):
     """Create INI input for qSNP"""
@@ -146,8 +139,7 @@ def _create_input(paired, out_file, ref_file, snp_file, qsnp_file):
                 if value != "":
                     out_handle.write("%s = %s\n" % (opt, value))
 
-
-def _fix_vcf(out_file):
+def _filter_vcf(out_file):
     """Fix sample names, FILTER and FORMAT fields"""
     in_file = out_file.replace(".vcf", "-ori.vcf")
     FILTER_line = ('##FILTER=<ID=SBIAS,Description="Due to bias">\n'
@@ -167,29 +159,40 @@ def _fix_vcf(out_file):
                     line = line.replace("Normal", normal_name)
                     line = line.replace("Tumour", tumor_name)
                 if line.startswith("##INFO=<ID=FS"):
-                    line = line.replace("ID=FS", "ID=FSQ")
+                    line = line.replace("ID=FS", "ID=RNT")
                 if line.find("FS=") > -1:
-                    line = line.replace("FS=", "FSQ=")
+                    line = line.replace("FS=", "RNT=")
                 if "5BP" in line:
                     line = sub("5BP[0-9]+", "5BP", line)
+                if line.find("PASS") == -1:
+                    line = _set_reject(line)
+                if line.find("PASS") > - 1 and line.find("SOMATIC") == -1:
+                    line = _set_reject(line)
                 out_handle.write("%s" % line)
-                if FILTER_line and line.startswith("##FILTER"):
+                if line.startswith("##FILTER") and FILTER_line:
                     out_handle.write("%s" % FILTER_line)
                     FILTER_line = ""
                 if line.startswith("##INFO") and SOMATIC_line:
                     out_handle.write("%s" % SOMATIC_line)
                     SOMATIC_line = ""
-                if line.find("PASS") > - 1 and line.find("SOMATIC") == -1:
-                    out_handle.write("%s" % line.replace("PASS", "REJECT"))
     return out_file
-
 
 def _to_str(region):
     return "_" + "_".join(map(str, list(region)))
 
-
 def _to_sambamba(region):
     return "%s:%s-%s" % (region[0], region[1]+1, region[2]+1)
+
+def _set_reject(line):
+    """Set REJECT in VCF line, or add it if there is something else."""
+    if line.startswith("#"):
+        return line
+    parts = line.split("\t")
+    if parts[6] == "PASS":
+        parts[6] = "REJECT"
+    else:
+        parts[6] += ";REJECT"
+    return "\t".join(parts)
 
 
 ini_file = {"[inputFiles]":{
