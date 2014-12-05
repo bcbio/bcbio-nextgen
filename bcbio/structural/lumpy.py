@@ -160,18 +160,15 @@ def _filter_by_bedpe(vcf_file, bedpe_file, data):
                     for line in in_handle:
                         if not line.startswith("#"):
                             parts = line.split("\t")
-                            ref_allele = parts[3]
                             # Problem breakends can have empty alleles when at contig ends
-                            if not ref_allele.strip():
-                                line = None
-                            else:
-                                cur_id = parts[2].split("_")[0]
-                                cur_filter = filters.get(cur_id, "PASS")
-                                if cur_filter != "PASS":
-                                    parts[6] = cur_filter
-                                line = "\t".join(parts)
-                        if line:
-                            out_handle.write(line)
+                            if not parts[3].strip():
+                                parts[3] = "N"
+                            cur_id = parts[2].split("_")[0]
+                            cur_filter = filters.get(cur_id, "PASS")
+                            if cur_filter != "PASS":
+                                parts[6] = cur_filter
+                            line = "\t".join(parts)
+                        out_handle.write(line)
         if out_file.endswith(".gz"):
             vcfutils.bgzip_and_index(nogzip_out_file, data["config"])
     return out_file
