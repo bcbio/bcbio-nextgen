@@ -135,6 +135,10 @@ def run_disambiguate(*args):
     return disambiguate.run(*args)
 
 @utils.map_wrap
+def disambiguate_split(*args):
+    return disambiguate.split(*args)
+
+@utils.map_wrap
 def clean_chipseq_alignment(*args):
     return chipseq.clean_chipseq_alignment(*args)
 

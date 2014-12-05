@@ -19,7 +19,7 @@ from bcbio.provenance import do
 from bcbio import bam
 
 
-def split(items):
+def split(*items):
     """Split samples into all possible genomes for alignment.
     """
     out = []

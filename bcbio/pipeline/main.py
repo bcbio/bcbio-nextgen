@@ -143,7 +143,7 @@ class Variant2Pipeline(AbstractPipeline):
                                                              [x[0]["description"] for x in samples]]])
             with profile.report("alignment preparation", dirs):
                 samples = run_parallel("prep_align_inputs", samples)
-                samples = disambiguate.split(samples)
+                samples = run_parallel("disambiguate_split", [samples])
             with profile.report("alignment", dirs):
                 samples = run_parallel("process_alignment", samples)
                 samples = alignprep.merge_split_alignments(samples, run_parallel)
@@ -284,7 +284,7 @@ class RnaseqPipeline(AbstractPipeline):
                         samples, config, dirs, "alignment",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             with profile.report("alignment", dirs):
-                samples = disambiguate.split(samples)
+                samples = run_parallel("disambiguate_split", [samples])
                 samples = run_parallel("process_alignment", samples)
         with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
@@ -314,10 +314,12 @@ class ChipseqPipeline(AbstractPipeline):
                                                              [x[0]["description"] for x in samples]]])
             samples = run_parallel("prepare_sample", samples)
             samples = run_parallel("trim_sample", samples)
-            samples = disambiguate.split(samples)
+            samples = run_parallel("disambiguate_split", [samples])
             samples = run_parallel("process_alignment", samples)
         with prun.start(_wres(parallel, ["picard", "fastqc"]),
                         samples, config, dirs, "persample") as run_parallel:
+            with profile.report("disambiguation", dirs):
+                samples = disambiguate.resolve(samples, run_parallel)
             samples = run_parallel("clean_chipseq_alignment", samples)
             samples = qcsummary.generate_parallel(samples, run_parallel)
         return samples
