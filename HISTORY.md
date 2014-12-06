@@ -10,6 +10,7 @@
   preparation occurs on worker nodes or inside Docker containers. Enables on
   demand download of disambiguation genomes.
 - Switch to seaborn as matplotlib wrapper, from prettplotlib.
+- Add Express to RNA-seq pipeline
 
 ## 0.8.4 (29 November 2014)
 
