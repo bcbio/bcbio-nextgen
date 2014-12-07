@@ -42,24 +42,28 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
     """Normalize any file paths found in a subdirectory of configuration input.
     """
     ignore_keys = set([]) if ignore_keys is None else set(ignore_keys)
-    if not isinstance(xs, dict):
-        return xs
     if base_dir is None:
         base_dir = os.getcwd()
     orig_dir = os.getcwd()
     os.chdir(base_dir)
     input_dir = os.path.join(base_dir, "inputs")
-    out = {}
-    for k, v in xs.iteritems():
-        if k not in ignore_keys and v and isinstance(v, basestring):
-            if v.lower() == "none":
-                out[k] = None
-            elif os.path.exists(v) or v.startswith(utils.SUPPORTED_REMOTES):
-                out[k] = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(v, input_dir)))
+    if isinstance(xs, dict):
+        out = {}
+        for k, v in xs.iteritems():
+            if k not in ignore_keys and v and isinstance(v, basestring):
+                if v.lower() == "none":
+                    out[k] = None
+                elif os.path.exists(v) or v.startswith(utils.SUPPORTED_REMOTES):
+                    out[k] = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(v, input_dir)))
+                else:
+                    out[k] = v
             else:
                 out[k] = v
+    elif isinstance(xs, basestring):
+        if os.path.exists(xs) or xs.startswith(utils.SUPPORTED_REMOTES):
+            out = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(xs, input_dir)))
         else:
-            out[k] = v
+            out = xs
     os.chdir(orig_dir)
     return out
 

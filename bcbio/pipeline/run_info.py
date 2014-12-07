@@ -17,7 +17,7 @@ from bcbio.log import logger
 from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.provenance import diagnostics, programs, versioncheck
-from bcbio.variation import effects, genotype, population, joint
+from bcbio.variation import effects, genotype, population, joint, vcfutils
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
@@ -497,6 +497,8 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config, sample_names):
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
+        if item.get("vrn_file"):
+            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(item["vrn_file"]), config)
         item = _clean_metadata(item)
         item = _clean_algorithm(item)
         # Add any global resource specifications
