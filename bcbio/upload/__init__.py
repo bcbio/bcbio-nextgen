@@ -295,5 +295,11 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["assembled_gtf"]})
     if dd.get_dexseq_counts(sample):
         out.append({"path": dd.get_dexseq_counts(sample)})
+    if dd.get_express_counts(sample):
+        out.append({"path": dd.get_express_counts(sample)})
+    if dd.get_express_fpkm(sample):
+        out.append({"path": dd.get_express_fpkm(sample)})
+    if dd.get_express_tpm(sample):
+        out.append({"path": dd.get_express_tpm(sample)})
 
     return _add_meta(out, config=upload_config)

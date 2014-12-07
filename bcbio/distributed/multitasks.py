@@ -2,7 +2,7 @@
 """
 from bcbio import structural, utils, chipseq
 from bcbio.bam import callable
-from bcbio.rnaseq import sailfish
+from bcbio.rnaseq import (sailfish, express)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, sample,
                             main, shared, variation, run_info, rnaseq)
@@ -77,6 +77,10 @@ def generate_transcript_counts(*args):
 @utils.map_wrap
 def run_cufflinks(*args):
     return rnaseq.run_cufflinks(*args)
+
+@utils.map_wrap
+def run_express(*args):
+    return rnaseq.run_express(*args)
 
 @utils.map_wrap
 def combine_bam(*args):
