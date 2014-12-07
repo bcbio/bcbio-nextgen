@@ -29,17 +29,19 @@ def estimate_expression(samples, run_parallel):
     else:
         dexseq_combined = None
 
+    updated_samples = []
     for data in dd.sample_data_iterator(samples):
-        dd.set_combined_counts(data, combined)
+        data = dd.set_combined_counts(data, combined)
         if annotated:
-            dd.set_annotated_combined_counts(data, annotated)
+            data = dd.set_annotated_combined_counts(data, annotated)
         if fpkm_combined:
-            dd.set_combined_fpkm(x[0], fpkm_combined)
+            data = dd.set_combined_fpkm(data, fpkm_combined)
         if fpkm_isoform_combined:
-            dd.set_combined_fpkm_isoform(x[0], fpkm_combined)
+            data = dd.set_combined_fpkm_isoform(data, fpkm_combined)
         if dexseq_combined:
-            dd.set_dexseq_counts(x[0], dexseq_combined_file)
-    return samples
+            data = dd.set_dexseq_counts(data, dexseq_combined_file)
+        updated_samples.append([data])
+    return updated_samples
 
 def generate_transcript_counts(data):
     """Generate counts per transcript and per exon from an alignment"""
@@ -47,7 +49,7 @@ def generate_transcript_counts(data):
     if dd.get_fusion_mode(data, False):
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
-            dd.set_oncofuse_file(data, oncofuse_file)
+            data = dd.set_oncofuse_file(data, oncofuse_file)
     if dd.get_dexseq_gff(data, None):
         data = dd.set_dexseq_counts(data, dexseq.bcbio_run(data))
     # if RSEM was run, stick the transcriptome BAM file into the datadict
@@ -86,7 +88,7 @@ def cufflinks_merge(*samples):
     num_cores = dd.get_num_cores(data)
     merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores, samples[0][0])
     for data in dd.sample_data_iterator(samples):
-        dd.set_assembled_gtf(data, merged_gtf)
+        data = dd.set_assembled_gtf(data, merged_gtf)
     return samples
 
 def assemble_transcripts(run_parallel, samples):
