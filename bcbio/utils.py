@@ -113,7 +113,14 @@ def s3_handle(fname):
 
     bucket, key = s3_bucket_key(fname)
     s3 = boto.connect_s3()
-    s3b = s3.get_bucket(bucket)
+    try:
+        s3b = s3.get_bucket(bucket)
+    except boto.exception.S3ResponseError, e:
+        # if we don't have bucket permissions but folder permissions, try without validation
+        if e.status == 403:
+            s3b = s3.get_bucket(bucket, validate=False)
+        else:
+            raise
     s3key = s3b.get_key(key)
     return S3Handle(s3key)
 
