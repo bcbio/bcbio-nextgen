@@ -62,17 +62,18 @@ def _run_qsnp_paired(align_bams, items, ref_file, assoc_files,
         out_file = out_file.replace(".gz", "")
         with file_transaction(config, out_file) as tx_out_file:
             with tx_tmpdir() as tmpdir:
-                paired = get_paired_bams(align_bams, items)
-                qsnp = config_utils.get_program("qsnp", config)
-                resources = config_utils.get_resources("qsnp", config)
-                mem = " ".join(resources.get("jvm_opts", ["-Xms750m -Xmx4g"]))
-                qsnp_log = os.path.join(tmpdir, "qsnp.log")
-                qsnp_init = os.path.join(tmpdir, "qsnp.ini")
-                if region:
-                    paired = _create_bam_region(paired, region, tmpdir)
-                _create_input(paired, tx_out_file, ref_file, assoc_files['dbsnp'], qsnp_init)
-                cl = ("{qsnp} {mem} -i {qsnp_init} -log {qsnp_log}")
-                do.run(cl.format(**locals()), "Genotyping paired variants with Qsnp", {})
+                with utils.chdir(tmpdir):
+                    paired = get_paired_bams(align_bams, items)
+                    qsnp = config_utils.get_program("qsnp", config)
+                    resources = config_utils.get_resources("qsnp", config)
+                    mem = " ".join(resources.get("jvm_opts", ["-Xms750m -Xmx4g"]))
+                    qsnp_log = os.path.join(tmpdir, "qsnp.log")
+                    qsnp_init = os.path.join(tmpdir, "qsnp.ini")
+                    if region:
+                        paired = _create_bam_region(paired, region, tmpdir)
+                    _create_input(paired, tx_out_file, ref_file, assoc_files['dbsnp'], qsnp_init)
+                    cl = ("{qsnp} {mem} -i {qsnp_init} -log {qsnp_log}")
+                    do.run(cl.format(**locals()), "Genotyping paired variants with Qsnp", {})
         out_file = _filter_vcf(out_file)
         out_file = bgzip_and_index(out_file, config)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
