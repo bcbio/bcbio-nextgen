@@ -20,11 +20,13 @@ def create_inputs(data):
     """Index input reads and prepare groups of reads to process concurrently.
 
     Allows parallelization of alignment beyond processors available on a single
-    machine. Uses gbzip and grabix to prepare an indexed fastq file.
+    machine. Uses bgzip and grabix to prepare an indexed fastq file.
     """
     aligner = tz.get_in(("config", "algorithm", "aligner"), data)
-    # CRAM files must be converted to bgzipped fastq, unless not aligning
-    if not ("files" in data and _is_cram_input(data["files"]) and aligner):
+    # CRAM files must be converted to bgzipped fastq, unless not aligning.
+    # Also need to prep and download remote files.
+    if not ("files" in data and aligner and (_is_cram_input(data["files"]) or
+                                             _is_remote_input(data["files"]))):
         # skip indexing on samples without input files or not doing alignment
         if ("files" not in data or data["files"][0] is None or
               data["config"]["algorithm"].get("align_split_size") is None
@@ -142,6 +144,9 @@ def _is_bam_input(in_files):
 
 def _is_cram_input(in_files):
     return in_files[0].endswith(".cram") and (len(in_files) == 1 or in_files[1] is None)
+
+def _is_remote_input(in_files):
+    return in_files[0].startswith(utils.SUPPORTED_REMOTES)
 
 def _prep_grabix_indexes(in_files, dirs, data):
     if _is_bam_input(in_files):
@@ -322,8 +327,9 @@ def _grabix_index(data):
     config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     gbi_file = in_file + ".gbi"
-    if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
-        do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
+    if tz.get_in(["algorithm", "align_split_size"], config):
+        if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
+            do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
     return [gbi_file]
 
 def _is_partial_index(gbi_file):
@@ -346,9 +352,11 @@ def _bgzip_from_fastq(data):
     needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
     if in_file.endswith(".gz") and not in_file.startswith(utils.SUPPORTED_REMOTES):
         needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix, needs_convert)
+    elif in_file.startswith(utils.SUPPORTED_REMOTES) and not tz.get_in(["algorithm", "align_split_size"], config):
+        needs_bgzip, needs_gunzip = False, False
     else:
         needs_bgzip, needs_gunzip = True, False
-    if needs_bgzip or needs_gunzip or needs_convert:
+    if needs_bgzip or needs_gunzip or needs_convert or in_file.startswith(utils.SUPPORTED_REMOTES):
         out_file = _bgzip_file(in_file, data["dirs"], config, needs_bgzip, needs_gunzip,
                                needs_convert)
     else:
@@ -363,9 +371,9 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
-            assert needs_bgzip
             bgzip = tools.get_bgzip_cmd(config)
-            in_file = utils.remote_cl_input(in_file)
+            is_remote = in_file.startswith(utils.SUPPORTED_REMOTES)
+            in_file = utils.remote_cl_input(in_file, unpack=needs_gunzip or needs_convert or needs_bgzip)
             if needs_convert:
                 in_file = fastq_convert_pipe_cl(in_file, {"config": config})
             if needs_gunzip:
@@ -374,8 +382,14 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
             else:
                 gunzip_cmd = ""
                 bgzip_in = in_file
-            do.run("{gunzip_cmd} {bgzip} -c {bgzip_in} > {tx_out_file}".format(**locals()),
-                   "bgzip input file")
+            if needs_bgzip:
+                do.run("{gunzip_cmd} {bgzip} -c {bgzip_in} > {tx_out_file}".format(**locals()),
+                       "bgzip input file")
+            elif is_remote:
+                do.run("cat {in_file} > {tx_out_file}".format(**locals()), "Get remote input")
+            else:
+                raise ValueError("Unexpected inputs: %s %s %s %s" % (in_file, needs_bgzip,
+                                                                     needs_gunzip, needs_convert))
     return out_file
 
 def _check_gzipped_input(in_file, grabix, needs_convert):

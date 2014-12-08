@@ -47,14 +47,14 @@ def dl_remotes(fname, input_dir, dl_dir=None):
     else:
         return fname
 
-def remote_cl_input(fname):
+def remote_cl_input(fname, unpack=True):
     """Return command line input for a file, handling streaming remote cases.
     """
     if not fname:
         return fname
     elif fname.startswith("s3://"):
         bucket, key = s3_bucket_key(fname)
-        gunzip = "| gunzip -c" if fname.endswith(".gz") else ""
+        gunzip = "| gunzip -c" if fname.endswith(".gz") and unpack else ""
         return "<(gof3r get --no-md5 -k {key} -b {bucket} {gunzip})".format(**locals())
     else:
         return fname
