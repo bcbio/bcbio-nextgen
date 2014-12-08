@@ -55,7 +55,7 @@ def _sam_to_sortbam_cl(data, tmpdir, tx_out_file):
     """
     samtools = config_utils.get_program("samtools", data["config"])
     sambamba = config_utils.get_program("sambamba", data["config"])
-    cores, mem = _get_cores_memory(data, downscale=3)
+    cores, mem = _get_cores_memory(data, downscale=2)
     return ("{samtools} view -b -S -u - | "
             "{sambamba} sort -t {cores} -m {mem} "
             "--tmpdir {tmpdir} -o {tx_out_file} /dev/stdin".format(**locals()))
@@ -66,7 +66,7 @@ def samblaster_dedup_sort(data, tmpdir, tx_out_file, tx_sr_file, tx_disc_file):
     sambamba = config_utils.get_program("sambamba", data["config"])
     samblaster = config_utils.get_program("samblaster", data["config"])
     samtools = config_utils.get_program("samtools", data["config"])
-    cores, mem = _get_cores_memory(data, downscale=3)
+    cores, mem = _get_cores_memory(data, downscale=2)
     for dname in ["spl", "disc", "full"]:
         utils.safe_makedir(os.path.join(tmpdir, dname))
     tobam_cmd = ("{samtools} view -S -u /dev/stdin | "
@@ -86,7 +86,7 @@ def _biobambam_dedup_sort(data, tmpdir, tx_out_file):
     sambamba = config_utils.get_program("sambamba", data["config"])
     bammarkduplicates = config_utils.get_program("bammarkduplicates", data["config"])
     base_tmp = os.path.join(tmpdir, os.path.splitext(os.path.basename(tx_out_file))[0])
-    cores, mem = _get_cores_memory(data, downscale=3)
+    cores, mem = _get_cores_memory(data, downscale=2)
     sort2_tmpdir = utils.safe_makedir(os.path.join(tmpdir, "sort2"))
     return ("{samtools} view -b -S -u - |"
             "{samtools} sort -n -o -@ {cores} -m {mem} - {base_tmp}-sort | "
@@ -115,7 +115,7 @@ def dedup_bam(in_bam, data):
                 with file_transaction(data, out_file) as tx_out_file:
                     bammarkduplicates = config_utils.get_program("bammarkduplicates", data["config"])
                     base_tmp = os.path.join(tmpdir, os.path.splitext(os.path.basename(tx_out_file))[0])
-                    cores, mem = _get_cores_memory(data, downscale=3)
+                    cores, mem = _get_cores_memory(data, downscale=2)
                     cmd = ("{bammarkduplicates} tmpfile={base_tmp}-markdup "
                            "markthreads={cores} I={in_bam} O={tx_out_file}")
                     do.run(cmd.format(**locals()), "De-duplication with biobambam")

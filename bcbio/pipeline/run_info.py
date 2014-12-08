@@ -327,7 +327,7 @@ def _check_quality_format(items):
         fastq_file = next((file for file in item.get('files', []) if
                            any([ext for ext in fastq_extensions if ext in file])), None)
 
-        if fastq_file and specified_format:
+        if fastq_file and specified_format and not fastq_file.startswith(utils.SUPPORTED_REMOTES):
             fastq_format = _detect_fastq_format(fastq_file)
             detected_encodings = set([SAMPLE_FORMAT[x] for x in fastq_format])
             if detected_encodings:
