@@ -497,7 +497,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config, sample_names):
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         item["test_run"] = global_config.get("test_run", False)
-        if item.get("vrn_file"):
+        if item.get("vrn_file") and isinstance(item["vrn_file"], basestring):
             item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(item["vrn_file"]), config)
         item = _clean_metadata(item)
         item = _clean_algorithm(item)

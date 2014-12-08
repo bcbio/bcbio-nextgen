@@ -64,6 +64,8 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
             out = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(xs, input_dir)))
         else:
             out = xs
+    else:
+        out = xs
     os.chdir(orig_dir)
     return out
 
