@@ -70,3 +70,16 @@ def upload_file(fname, bucket, keyname, mditems=None):
     cmd = ["gof3r", "put", "--no-md5", "-b", bucket, "-k", keyname,
            "-p", fname] + metadata
     do.run(cmd, "Upload to s3: %s %s" % (bucket, keyname))
+
+def upload_file_boto(fname, bucketname, keyname, mditems=None):
+    """Upload a file using boto instead of external tools.
+    """
+    conn = boto.connect_s3()
+    bucket = conn.lookup(bucketname)
+    if not bucket:
+        bucket = conn.create_bucket(bucketname)
+    key = bucket.get_key(keyname, validate=False)
+    if mditems:
+        for name, val in mditems.iteritems():
+            key.set_metadata(name, val)
+    key.set_contents_from_filename(fname, encrypt_key=True)

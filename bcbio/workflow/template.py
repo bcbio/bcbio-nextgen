@@ -77,6 +77,7 @@ def _prep_items_from_base(base, in_files):
 
     for i, (ext, files) in enumerate(itertools.groupby(
             in_files, lambda x: KNOWN_EXTS.get(utils.splitext_plus(x)[-1].lower()))):
+        print ext, files
         if ext == "bam":
             for f in files:
                 details.append(_prep_bam_input(f, i, base))
@@ -85,7 +86,7 @@ def _prep_items_from_base(base, in_files):
             for fs in fastq.combine_pairs(files):
                 details.append(_prep_fastq_input(fs, base))
         else:
-            raise ValueError("Unexpected input file types: %s" % str(files))
+            print("Ignoring ynexpected input file types %s: %s" % (ext, list(files)))
     return details
 
 def _expand_file(x):
@@ -333,6 +334,6 @@ def setup(args):
         if remotes.get("base"):
             remote_path = os.path.join(remotes["base"], os.path.basename(out_config_file))
             bucket, key = utils.s3_bucket_key(remote_path)
-            s3.upload_file(out_config_file, bucket, key)
+            s3.upload_file_boto(out_config_file, bucket, key)
             print "Also uploaded to AWS S3 in %s" % remotes["base"]
             print "Run directly with bcbio_vm.py run %s" % remote_path
