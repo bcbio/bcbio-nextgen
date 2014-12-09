@@ -117,7 +117,7 @@ def _has_gemini(config):
         return False
     return True
 
-def do_db_build(samples, check_gemini=True, need_bam=True):
+def do_db_build(samples, check_gemini=True, need_bam=True, gresources=None):
     """Confirm we should build a gemini database: need gemini + human samples + not in tool_skip.
     """
     genomes = set()
@@ -127,7 +127,9 @@ def do_db_build(samples, check_gemini=True, need_bam=True):
         if "gemini" in utils.get_in(data, ("config", "algorithm", "tools_off"), []):
             return False
     if len(genomes) == 1:
-        return (samples[0]["genome_resources"].get("aliases", {}).get("human", False)
+        if not gresources:
+            gresources = samples[0]["genome_resources"]
+        return (tz.get_in(["aliases", "human"], gresources, False)
                 and (not check_gemini or _has_gemini(samples[0]["config"])))
     else:
         return False

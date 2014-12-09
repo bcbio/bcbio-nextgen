@@ -3,6 +3,7 @@
 import ConfigParser
 import glob
 import os
+import sys
 from xml.etree import ElementTree
 
 import toolz as tz
@@ -222,8 +223,12 @@ INPLACE_INDEX = {"star": star.index}
 def _download_prepped_genome(genome_build, data, name, need_remap):
     """Get a pre-prepared genome from S3, unpacking it locally.
 
-    Supports runs on AWS where we can retrieve the resources on demand.
+    Supports runs on AWS where we can retrieve the resources on demand. Upgrades
+    GEMINI in place if installed inside a Docker container with the biological data.
+    GEMINI install requires write permissions to standard data directories -- works
+    on AWS but not generalizable elsewhere.
     """
+    from bcbio.variation import population
     out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
                                               "inputs", "data", "genomes"))
     ref_dir = os.path.join(out_dir, genome_build, REMAP_NAMES.get(name, name))
@@ -238,6 +243,11 @@ def _download_prepped_genome(genome_build, data, name, need_remap):
                 key = S3_INFO["key"].format(build=genome_build, target=REMAP_NAMES.get(name, name))
                 cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
                 do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
+    ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
+    gresources = get_resources(data["genome_build"], ref_file)
+    if data.get("files") and population.do_db_build([data], need_bam=False, gresources=gresources):
+        cmd = [os.path.join(os.path.dirname(sys.executable), "gemini"), "update", "--dataonly"]
+        do.run(cmd, "Download GEMINI data")
     genome_dir = os.path.join(out_dir, genome_build)
     genome_build = genome_build.replace("-test", "")
     if need_remap or name == "samtools":
