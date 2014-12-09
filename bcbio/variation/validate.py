@@ -4,6 +4,7 @@ Automates the process of checking pipeline results against known valid calls
 to identify discordant variants. This provides a baseline for ensuring the
 validity of pipeline updates and algorithm changes.
 """
+import collections
 import csv
 import os
 
@@ -170,6 +171,9 @@ def get_analysis_intervals(data):
     elif data.get("work_bam"):
         return callable.sample_callable_bed(data["work_bam"],
                                             utils.get_in(data, ("reference", "fasta", "base")), data["config"])
+    elif data.get("work_bam_callable"):
+        return callable.sample_callable_bed(data["work_bam_callable"],
+                                            utils.get_in(data, ("reference", "fasta", "base")), data["config"])
     else:
         for key in ["callable_regions", "variant_regions"]:
             intervals = data["config"]["algorithm"].get(key)
@@ -196,40 +200,56 @@ def _has_grading_info(samples):
                 return True
     return False
 
+def _group_validate_samples(samples):
+    extras = []
+    validated = collections.defaultdict(list)
+    for data in (x[0] for x in samples):
+        is_v = False
+        for variant in data.get("variants", []):
+            if variant.get("validate"):
+                is_v = True
+        if is_v:
+            vname = tz.get_in(["metadata", "batch"], data, data["description"])
+            if isinstance(vname, (list, tuple)):
+                vname = vname[0]
+            validated[vname].append(data)
+        else:
+            extras.append([data])
+    return validated, extras
+
 def summarize_grading(samples):
     """Provide summaries of grading results across all samples.
     """
     if not _has_grading_info(samples):
         return samples
     validate_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"], "validate"))
-    out_csv = os.path.join(validate_dir, "grading-summary.csv")
     header = ["sample", "caller", "variant.type", "category", "value"]
-    out = []
-    with open(out_csv, "w") as out_handle:
-        writer = csv.writer(out_handle)
-        writer.writerow(header)
-        plot_num = 0
-        for data in (x[0] for x in samples):
+    validated, out = _group_validate_samples(samples)
+    for vname, vitems in validated.iteritems():
+        out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
+        with open(out_csv, "w") as out_handle:
+            writer = csv.writer(out_handle)
+            writer.writerow(header)
             plot_data = []
-            for variant in data.get("variants", []):
-                if variant.get("validate"):
-                    variant["validate"]["grading_summary"] = out_csv
-                    with open(variant["validate"]["grading"]) as in_handle:
-                        grade_stats = yaml.load(in_handle)
-                    for sample_stats in grade_stats:
-                        sample = sample_stats["sample"]
-                        for vtype, cat, val in _flatten_grading(sample_stats):
-                            row = [sample, variant.get("variantcaller", ""),
-                                   vtype, cat, val]
-                            writer.writerow(row)
-                            plot_data.append(row)
-            plots = (validateplot.create(plot_data, header, plot_num, data["config"],
+            for data in vitems:
+                for variant in data.get("variants", []):
+                    if variant.get("validate"):
+                        variant["validate"]["grading_summary"] = out_csv
+                        with open(variant["validate"]["grading"]) as in_handle:
+                            grade_stats = yaml.load(in_handle)
+                        for sample_stats in grade_stats:
+                            sample = sample_stats["sample"]
+                            for vtype, cat, val in _flatten_grading(sample_stats):
+                                row = [sample, variant.get("variantcaller", ""),
+                                       vtype, cat, val]
+                                writer.writerow(row)
+                                plot_data.append(row)
+            plots = (validateplot.create(plot_data, header, 0, data["config"],
                                          os.path.splitext(out_csv)[0])
                      if plot_data else None)
-            if plots:
-                plot_num += 1
+            for data in vitems:
                 for variant in data.get("variants", []):
                     if variant.get("validate"):
                         variant["validate"]["grading_plots"] = plots
-            out.append([data])
+                out.append([data])
     return out

@@ -24,12 +24,12 @@ from bcbio.log import logger
 from bcbio import utils
 from bcbio.variation import bamprep
 
-def create_from_csv(in_csv, config=None, outtype="pdf", title=None, size=None):
+def create_from_csv(in_csv, config=None, outtype="png", title=None, size=None):
     df = pd.read_csv(in_csv)
     create(df, None, 0, config or {}, os.path.splitext(in_csv)[0], outtype, title,
            size)
 
-def create(plot_data, header, ploti, sample_config, out_file_base, outtype="pdf",
+def create(plot_data, header, ploti, sample_config, out_file_base, outtype="png",
            title=None, size=None):
     """Create plots of validation results for a sample, labeling prep strategies.
     """

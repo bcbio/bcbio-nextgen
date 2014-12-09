@@ -62,10 +62,15 @@ def combine_multiple_callers(samples):
                 if jointcaller:
                     cur["population"] = False
                 ready_calls.append(cur)
-            if jointcaller:
+            elif jointcaller:
                 ready_calls.append({"variantcaller": jointcaller,
                                     "vrn_file": data.get("vrn_file"),
                                     "vrn_file_batch": data.get("vrn_file_batch"),
+                                    "validate": data.get("validate"),
+                                    "do_upload": False})
+            else:
+                ready_calls.append({"variantcaller": "precalled",
+                                    "vrn_file": data.get("vrn_file"),
                                     "validate": data.get("validate"),
                                     "do_upload": False})
         final = callgroup[0][-1]

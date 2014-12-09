@@ -383,7 +383,7 @@ def combine_sample_regions(*samples):
     out = []
     analysis_files = []
     with shared.bedtools_tmpdir(samples[0]):
-        for batch, items in vmulti.group_by_batch(samples).items():
+        for batch, items in vmulti.group_by_batch(samples, require_bam=False).items():
             if global_analysis_file:
                 analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
             else:
@@ -397,6 +397,11 @@ def combine_sample_regions(*samples):
                     data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(analysis_file).count()
                 elif vr_file:
                     data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(vr_file).count()
+                # attach a representative sample for calculating callable region
+                if not data.get("work_bam"):
+                    for x in items:
+                        if x.get("work_bam"):
+                            data["work_bam_callable"] = x["work_bam"]
                 out.append([data])
         assert len(out) == len(samples)
         if len(analysis_files) > 0:

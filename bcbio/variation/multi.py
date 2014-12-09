@@ -13,15 +13,15 @@ from bcbio.variation import vcfutils
 
 # ## Group batches to process together
 
-def group_by_batch(items):
+def group_by_batch(items, require_bam=True):
     """Group a set of sample items by batch (or singleton) name.
 
     Items in multiple batches cause two batches to be merged together.
     """
     out = collections.defaultdict(list)
-    batch_groups = _get_representative_batch(_merge_batches(_find_all_groups(items)))
+    batch_groups = _get_representative_batch(_merge_batches(_find_all_groups(items, require_bam)))
     for data in items:
-        batch = batch_groups[_get_batches(data)[0]]
+        batch = batch_groups[_get_batches(data, require_bam)[0]]
         out[batch].append(data)
     return dict(out)
 
@@ -33,8 +33,8 @@ def bam_needs_processing(data):
                 ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
                  "jointcaller"]))
 
-def _get_batches(data):
-    if bam_needs_processing(data):
+def _get_batches(data, require_bam=True):
+    if bam_needs_processing(data) or not require_bam:
         batches = tz.get_in(("metadata", "batch"), data, data["description"])
     else:
         batches = data["description"]
@@ -42,12 +42,12 @@ def _get_batches(data):
         batches = [batches]
     return batches
 
-def _find_all_groups(items):
+def _find_all_groups(items, require_bam=True):
     """Find all groups
     """
     all_groups = []
     for data in items:
-        batches = _get_batches(data)
+        batches = _get_batches(data, require_bam)
         all_groups.append(batches)
     return all_groups
 

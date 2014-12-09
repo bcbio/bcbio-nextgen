@@ -11,9 +11,10 @@ details:
     vrn_file: [../data/reference_material/7_100326_FC6107FAAXX-grade.vcf]
     genome_build: hg19
     algorithm:
-      variant_regions: ../data/automated/variant_regions-bam.bed
       validate_genome_build: hg19
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+    metadata:
+      batch: TestBatch1
   - algorithm:
       #aligner: false
       #bam_clean: picard
