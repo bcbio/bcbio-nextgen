@@ -106,7 +106,7 @@ def _galaxy_loc_iter(loc_file, galaxy_dt, need_remap=False):
         with open(loc_file) as in_handle:
             for line in in_handle:
                 if line.strip() and not line.startswith("#"):
-                    parts = line.strip().split("\t")
+                    parts = [x.strip() for x in line.strip().split("\t")]
                     # Detect and report spaces instead of tabs
                     if len(parts) == 1:
                         parts = [x.strip() for x in line.strip().split(" ") if x.strip()]
