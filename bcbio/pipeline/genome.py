@@ -10,6 +10,7 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
+from bcbio.log import logger
 from bcbio.ngsalign import star
 from bcbio.pipeline import alignment
 from bcbio.provenance import do
@@ -134,6 +135,13 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
     remap_fn = alignment.TOOLS[name].remap_index_fn
     need_remap = remap_fn is not None
     if len(refs) == 0:
+        # if we have an S3 connection, try to download
+        try:
+            import boto
+            boto.connect_s3()
+        except:
+            raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
+        logger.info("Downloading %s %s from AWS" % (genome_build, name))
         cur_ref = _download_prepped_genome(genome_build, data, name, need_remap)
     # allow multiple references in a file and use the most recently added
     else:
