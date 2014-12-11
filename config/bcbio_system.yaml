@@ -43,6 +43,8 @@ resources:
   qsignature: 
     cores: 1
     memory: 2g
+  qsnp:
+    jvm_opts: ["-Xms750m", "-Xmx4g"]
   freebayes:
     memory: 2g
   gatk:
