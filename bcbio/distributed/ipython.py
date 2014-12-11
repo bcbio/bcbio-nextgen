@@ -8,6 +8,7 @@ Cluster implementation from ipython-cluster-helper:
 
 https://github.com/roryk/ipython-cluster-helper
 """
+import math
 import os
 import time
 
@@ -36,11 +37,16 @@ def create(parallel, dirs, config):
     has_mincores = any(x.startswith("mincores=") for x in parallel["resources"])
     if parallel["system_cores"] > 3 and not has_mincores:
         cores = parallel["system_cores"]
-        # if we have larger number of cores, leave room for standard batch script and controller
-        if parallel["system_cores"] > 30:
-            cores = cores - 2
-        elif parallel["system_cores"] > 15:
-            cores = cores - 1
+        # if we have less scheduled cores than per machine, use the scheduled count
+        if cores > parallel["cores"]:
+            cores = parallel["cores"]
+        else:
+            cores = int(math.floor(cores * float(parallel.get("mem_pct", 1.0))))
+            # if we have larger number of cores, leave room for standard batch script and controller
+            if cores > 30 and parallel["num_jobs"] // cores < 5:
+                cores = cores - 2
+            elif cores > 15 and parallel["num_jobs"] // cores < 10:
+                cores = cores - 1
         parallel["resources"].append("mincores=%s" % cores)
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                         parallel["num_jobs"], parallel["cores_per_job"],

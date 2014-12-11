@@ -77,13 +77,21 @@ def _get_prog_memory(resources, cores_per_job):
 def _scale_cores_to_memory(cores, mem_per_core, sysinfo, system_memory):
     """Scale multicore usage to avoid excessive memory usage based on system information.
     """
-    total_mem = "%.1f" % (cores * mem_per_core + system_memory)
+    total_mem = "%.2f" % (cores * mem_per_core + system_memory)
     if "cores" not in sysinfo:
-        return cores, total_mem
-    cores = min(cores, int(sysinfo["cores"]))
+        return cores, total_mem, 1.0
+
     total_mem = min(float(total_mem), float(sysinfo["memory"]) - system_memory)
-    cores = max(1, min(cores, int(math.floor(float(total_mem) / mem_per_core))))
-    return cores, total_mem
+    cores = min(cores, int(sysinfo["cores"]))
+    mem_cores = int(math.floor(float(total_mem) / mem_per_core))  # cores based on available memory
+    if mem_cores < 1:
+        out_cores = 1
+    elif mem_cores < cores:
+        out_cores = mem_cores
+    else:
+        out_cores = cores
+    mem_pct = float(out_cores) / float(cores)
+    return out_cores, total_mem, mem_pct
 
 def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     """When scheduling jobs with single cores, avoid overscheduling due to memory.
@@ -94,9 +102,9 @@ def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     if sys_mem_per_core < mem_per_core:
         pct = sys_mem_per_core / float(mem_per_core)
         target_jobs = int(math.floor(jobs * pct))
-        return max(target_jobs, 1)
+        return max(target_jobs, 1), pct
     else:
-        return jobs
+        return jobs, 1.0
 
 def calculate(parallel, items, sysinfo, config, multiplier=1,
               max_multicore=None):
@@ -143,18 +151,18 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
     memory_per_core = max(all_memory)
 
     logger.debug("Resource requests: {progs}; memory: {memory}; cores: {cores}".format(
-        progs=", ".join(progs), memory=", ".join("%.1f" % x for x in all_memory),
+        progs=", ".join(progs), memory=", ".join("%.2f" % x for x in all_memory),
         cores=", ".join(str(x) for x in all_cores)))
 
     cores_per_job, memory_per_core = _ensure_min_resources(progs, cores_per_job, memory_per_core,
                                                            min_memory=parallel.get("ensure_mem", {}))
     if cores_per_job == 1:
-        memory_per_job = "%.1f" % (memory_per_core + system_memory)
-        num_jobs = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
+        memory_per_job = "%.2f" % (memory_per_core + system_memory)
+        num_jobs, mem_pct = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
     else:
-        cores_per_job, memory_per_job = _scale_cores_to_memory(cores_per_job,
-                                                               memory_per_core, sysinfo,
-                                                               system_memory)
+        cores_per_job, memory_per_job, mem_pct = _scale_cores_to_memory(cores_per_job,
+                                                                        memory_per_core, sysinfo,
+                                                                        system_memory)
     # do not overschedule if we don't have extra items to process
     num_jobs = min(num_jobs, len(items) * multiplier)
     logger.debug("Configuring %d jobs to run, using %d cores each with %sg of "
@@ -164,5 +172,6 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
     parallel["cores_per_job"] = cores_per_job
     parallel["num_jobs"] = num_jobs
     parallel["mem"] = str(memory_per_job)
+    parallel["mem_pct"] = "%.2f" % mem_pct
     parallel["system_cores"] = sysinfo.get("cores", 1)
     return parallel
