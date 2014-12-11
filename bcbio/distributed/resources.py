@@ -119,8 +119,8 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
     assert len(items) > 0, "Finding job resources but no items to process"
     all_cores = []
     all_memory = []
-    # Provide 250Mb of additional memory for the system
-    system_memory = 0.25
+    # Provide 100Mb of additional memory for the system
+    system_memory = 0.10
     algs = [config_utils.get_algorithm_config(x) for x in items]
     progs = _get_resource_programs(parallel.get("progs", []), algs)
     # Calculate cores
@@ -157,7 +157,7 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
     cores_per_job, memory_per_core = _ensure_min_resources(progs, cores_per_job, memory_per_core,
                                                            min_memory=parallel.get("ensure_mem", {}))
     if cores_per_job == 1:
-        memory_per_job = "%.2f" % (memory_per_core + system_memory)
+        memory_per_job = "%.2f" % memory_per_core
         num_jobs, mem_pct = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
     else:
         cores_per_job, memory_per_job, mem_pct = _scale_cores_to_memory(cores_per_job,
