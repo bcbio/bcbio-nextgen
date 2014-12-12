@@ -15,11 +15,13 @@ description.
 import sys
 
 import arrow
+from tabulate import tabulate
 
 def main(log_file):
     prev_time = None
     total_time = None
     cur_process = None
+    vals = []
     with open(log_file) as in_handle:
         for line in in_handle:
             if line.strip() and line.find("Timing:") > 0 or line.lower().find("unexpected error") > 0:
@@ -32,10 +34,11 @@ def main(log_file):
                         else:
                             total_time = tdiff
                     if cur_process.lower().find("unexpected error") == -1:
-                        print cur_process, "  ", tdiff
+                        vals.append([cur_process, str(tdiff).replace(":00", "")])
                 cur_process = line.split(":")[-1].strip()
                 prev_time = cur_time
-    print "Total  ", total_time
+    header = ["Total", str(total_time).replace(":00", "")]
+    print tabulate(vals, header, tablefmt="orgtbl")
 
 if __name__ == "__main__":
     main(sys.argv[1])

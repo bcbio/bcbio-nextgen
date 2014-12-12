@@ -36,8 +36,8 @@ way to install is using `conda`_ with an isolated Python::
 Data preparation
 ================
 
-The easiest way to organize an AWS project is using an `S3 bucket
-<http://aws.amazon.com/s3/>`_. Create a unique bucket for your analysis and
+The easiest way to organize AWS projects is using an analysis folder inside an
+`S3 bucket <http://aws.amazon.com/s3/>`_. Create a bucket and folder for your analysis and
 upload fastq, BAM and, optionally, a region BED file. You can do this using the
 `AWS S3 web console <https://console.aws.amazon.com/s3/>`_,
 `the AWS cli client <http://aws.amazon.com/cli/>`_ or specialized tools
@@ -50,12 +50,12 @@ upload both of these files to S3.
 
 With that in place, prepare and upload the final configuration to S3 with::
 
-    bcbio_vm.py template s3://your-project/template.yaml s3://your-project/name.csv
+    bcbio_vm.py template s3://your-project/your-analysis/template.yaml s3://your-project/your-analysis/name.csv
 
-This will find the input files in the ``s3://your-project`` bucket, associate
+This will find the input files in the ``s3://your-project/your-analysis`` bucket, associate
 fastq and BAM files with the right samples, and add a found BED files as
 ``variant_regions`` in the configuration. It will then upload the final
-configuration back to S3 as ``s3://your-project/name.yaml``, which you can run
+configuration back to S3 as ``s3://your-project/your-analysis/name.yaml``, which you can run
 directly from a bcbio cluster on AWS.
 
 We currently support human analysis with both the GRCh37 and hg19 genomes. We
@@ -71,9 +71,9 @@ manual download from the `GATK download`_ site for academic users.  Appistry
 provides `a distribution of GATK for commercial users`_. Commercial users also
 need a license for somatic calling with muTect. To make these jars available,
 upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
-include the correct GATK and muTect directives during your run.  You can also
-manually specify the path to the jars using the global ``resources`` section
-of your input sample YAML file::
+include the correct GATK and muTect directives during your run.  Alternatively,
+you can also manually specify the path to the jars using the global
+``resources`` section of your input sample YAML file::
 
     resources:
       gatk:
@@ -213,7 +213,7 @@ If you started a single machine without a cluster run with::
 
     mkdir ~/run/your-project
     cd !$ && mkdir work && cd work
-    bcbio_vm.py run -n 8 s3://your-project/name.yaml
+    bcbio_vm.py run -n 8 s3://your-project/your-analysis/name.yaml
 
 Where the ``-n`` argument should be the number of cores on the machine.
 
@@ -222,7 +222,7 @@ To run on a full cluster with a Lustre filesystem::
     sudo mkdir /scratch/cancer-dream-syn3-exome
     sudo chown ubuntu !$
     cd !$ && mkdir work && cd work
-    bcbio_vm.py ipythonprep s3://your-project/name.yaml slurm cloud -n 60
+    bcbio_vm.py ipythonprep s3://your-project/your-analysis/name.yaml slurm cloud -n 60
     sbatch bcbio_submit.sh
 
 Where 60 is the total number of cores to use across all the worker nodes.
@@ -234,8 +234,38 @@ status of jobs on the cluster. If you are new to SLURM, here is a summary
 of useful `SLURM commands <https://rc.fas.harvard.edu/resources/running-jobs/#Summary_of_SLURM_commands>`_.
 
 On successful completion, bcbio uploads the results of the analysis back into your s3
-bucket as ``s3://your-project/final``. You can now cleanup the cluster and
+bucket and folder as ``s3://your-project/your-analysis/final``. You can now cleanup the cluster and
 Lustre filesystem.
+
+Graphing resource usage
+=======================
+
+AWS runs include automatic monitoring of resource usage with
+`collectl <http://collectl.sourceforge.net/>`_. bcbio_vm uses collectl statistics
+to plot CPU, memory, disk and network usage during each step of a run. To
+prepare resource usage plots after finishing an analysis, first copy the
+``bcbio-nextgen.log`` file to your local computer. Either use
+``bcbio_vm.py elasticluster sftp bcbio`` to copy from the work directory on AWS
+(``~/run/your-project/work/log/bcbio-nextgen.log``) or transfer it from the
+output S3 bucket (``your-project/your-analysis/final/DATE_your-project/bcbio-nextgen.log``).
+
+If your run worked cleanly you can use the log input file directly. If you had
+failures and restarts, or would only like to graph part of the run, you can edit
+the timing steps. Run ``grep Timing bcbio-nextgen.log > your-run.txt`` to get
+the timing steps only, then edit as desired.
+
+Retrieve the collectl statistics from the AWS cluster and prepare the resource
+usage graphs with::
+
+    bcbio_vm.py graph bcbio-nextgen.log
+
+Collectl stats will be in ``monitoring/collectl`` and plots are in
+``monitoring/graphs``. If you need to re-run plots later after shutting the
+cluster down, you can use the local collectl stats instead of retrieving from
+the server by running ``bcbio_vm.py graph bcbio-nextgen.log --cluster none``.
+In addition to plots, the
+`summarize_timing.py <https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/utils/summarize_timing.py>`_
+utility script prepares a summary table of run times per step.
 
 Shutting down
 =============
