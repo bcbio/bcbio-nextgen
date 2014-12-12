@@ -59,32 +59,25 @@ CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed,
                  "wham": _copy_file}
 
-def _create_bed(call, base_file, data):
+def _create_bed(call, sample, work_dir, data):
     """Create a simplified BED file from caller specific input.
     """
-    out_file = "%s-%s.bed" % (utils.splitext_plus(base_file)[0], call["variantcaller"])
+    out_file = os.path.join(work_dir, "%s-ensemble-%s.bed" % (sample, call["variantcaller"]))
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             convert_fn = CALLER_TO_BED.get(call["variantcaller"])
             if convert_fn:
                 convert_fn(call["vrn_file"], call["variantcaller"], tx_out_file)
-
     if utils.file_exists(out_file):
         return out_file
 
 # ## Top level
 
-def summarize(calls, data):
-    """Summarize results from multiple callers into a single flattened BED file.
+def _combine_bed_by_size(input_beds, sample, work_dir, data):
+    """Combine a set of BED files, breaking into individual size chunks.
     """
     import pybedtools
-    sample = tz.get_in(["rgnames", "sample"], data)
-    work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
-                                               sample, "ensemble"))
     out_file = os.path.join(work_dir, "%s-ensemble.bed" % sample)
-    with shared.bedtools_tmpdir(data):
-        input_beds = filter(lambda x: x is not None,
-                            [_create_bed(c, out_file, data) for c in calls])
     if len(input_beds) > 0:
         size_beds = []
         for e_start, e_end in validate.EVENT_SIZES:
@@ -94,18 +87,36 @@ def summarize(calls, data):
                 with file_transaction(data, size_out_file) as tx_out_file:
                     with shared.bedtools_tmpdir(data):
                         all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
+                        has_regions = False
                         with open(all_file, "w") as out_handle:
                             for line in fileinput.input(input_beds):
                                 chrom, start, end = line.split()[:3]
                                 size = int(end) - int(start)
                                 if size >= e_start and size < e_end:
                                     out_handle.write(line)
-                        pybedtools.BedTool(all_file).sort(stream=True)\
-                          .merge(c=4, o="distinct", delim=",").saveas(tx_out_file)
-            size_beds.append(size_out_file)
-        out_file = bedutils.combine(size_beds, out_file, data["config"])
-    if utils.file_exists(out_file):
-        bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "bedprep"))
-        calls.append({"variantcaller": "ensemble",
-                      "vrn_file": bedutils.clean_file(out_file, data, bedprep_dir=bedprep_dir)})
+                                    has_regions = True
+                        if has_regions:
+                            pybedtools.BedTool(all_file).sort(stream=True)\
+                              .merge(c=4, o="distinct", delim=",").saveas(tx_out_file)
+            if utils.file_exists(size_out_file):
+                size_beds.append(size_out_file)
+        if len(size_beds) > 0:
+            out_file = bedutils.combine(size_beds, out_file, data)
+    return out_file
+
+def summarize(calls, data):
+    """Summarize results from multiple callers into a single flattened BED file.
+    """
+    sample = tz.get_in(["rgnames", "sample"], data)
+    work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
+                                               sample, "ensemble"))
+    with shared.bedtools_tmpdir(data):
+        input_beds = filter(lambda x: x is not None,
+                            [_create_bed(c, sample, work_dir, data) for c in calls])
+    if len(input_beds) > 0:
+        out_file = _combine_bed_by_size(input_beds, sample, work_dir, data)
+        if utils.file_exists(out_file):
+            bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "bedprep"))
+            calls.append({"variantcaller": "ensemble",
+                          "vrn_file": bedutils.clean_file(out_file, data, bedprep_dir=bedprep_dir)})
     return calls
