@@ -225,13 +225,15 @@ To run on a full cluster with a Lustre filesystem::
     bcbio_vm.py ipythonprep s3://your-project/your-analysis/name.yaml slurm cloud -n 60
     sbatch bcbio_submit.sh
 
-Where 60 is the total number of cores to use across all the worker nodes.
-Of your total machine cores, allocate 2 for the base bcbio_vm script and IPython
+Where 60 is the total number of cores to use across all the worker nodes.  Of
+your total machine cores, allocate 2 for the base bcbio_vm script and IPython
 controller instances. The `SLURM workload manager <http://slurm.schedmd.com/>`_
-distributes jobs across your cluster. A ``slurm-PID.out`` file in the work
-directory contains the current status of the job, and ``sacct`` provides the
-status of jobs on the cluster. If you are new to SLURM, here is a summary
-of useful `SLURM commands <https://rc.fas.harvard.edu/resources/running-jobs/#Summary_of_SLURM_commands>`_.
+distributes jobs across your cluster on a queue called ``cloud``.  A
+``slurm-PID.out`` file in the work directory contains the current status of the
+job, and ``sacct_std`` provides the status of jobs on the cluster. If you are
+new to SLURM, here is a summary of useful
+`SLURM commands <https://rc.fas.harvard.edu/resources/running-jobs/#Summary_of_SLURM_commands>`_.
+
 
 On successful completion, bcbio uploads the results of the analysis back into your s3
 bucket and folder as ``s3://your-project/your-analysis/final``. You can now cleanup the cluster and
@@ -263,6 +265,8 @@ Collectl stats will be in ``monitoring/collectl`` and plots are in
 ``monitoring/graphs``. If you need to re-run plots later after shutting the
 cluster down, you can use the local collectl stats instead of retrieving from
 the server by running ``bcbio_vm.py graph bcbio-nextgen.log --cluster none``.
+If you'd like to run graphing from a local non-AWS run, manually place collectl
+files from each node to analyze in ``monitoring/collectl/yournodename-timestamp.raw.gz``.
 In addition to plots, the
 `summarize_timing.py <https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/utils/summarize_timing.py>`_
 utility script prepares a summary table of run times per step.
