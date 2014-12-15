@@ -10,7 +10,11 @@
   preparation occurs on worker nodes or inside Docker containers. Enables on
   demand download of disambiguation genomes.
 - Switch to seaborn as matplotlib wrapper, from prettplotlib.
-- Add Express to RNA-seq pipeline
+- Fixes for ensemble structural variant calling on single samples.
+- Support for qSNP for tumor-normal calling.
+- Add Express to RNA-seq pipeline.
+- Change logging time stamps to be UTC and set explicitly as ISO 8601 compliant
+  output. Improves benchmarking analysis and comparability across runs.
 
 ## 0.8.4 (29 November 2014)
 

@@ -52,9 +52,9 @@ class IOSafeMultiProcessingSubscriber(logbook.queues.MultiProcessingSubscriber):
                 raise
 
 def _create_log_handler(config, add_hostname=False, direct_hostname=False):
-    logbook.set_datetime_format("local")
+    logbook.set_datetime_format("utc")
     handlers = [logbook.NullHandler()]
-    format_str = "".join(["[{record.time:%Y-%m-%d %H:%M}] " if config.get("include_time", True) else "",
+    format_str = "".join(["[{record.time:%Y-%m-%dT%H:%MZ}] " if config.get("include_time", True) else "",
                           "{record.extra[source]}: " if add_hostname else "",
                           "%s: " % (socket.gethostname)() if direct_hostname else "",
                           "{record.message}"])
