@@ -9,7 +9,7 @@ import toolz as tz
 from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import region
-from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vfilter, qsnp
+from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vfilter
 
 # ## Variant filtration -- shared functionality
 
@@ -182,7 +182,7 @@ def handle_multiple_callers(data, key, default=None):
         return out
 
 def get_variantcallers():
-    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, platypus, scalpel, vardict
+    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, platypus, scalpel, vardict, qsnp
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "freebayes": freebayes.run_freebayes,

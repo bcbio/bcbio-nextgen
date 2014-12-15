@@ -29,38 +29,47 @@ def prep_gemini_db(fnames, call_info, samples):
     if not utils.file_exists(gemini_db) and use_gemini_quick:
         use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
         if use_gemini:
-            with file_transaction(data, gemini_db) as tx_gemini_db:
-                gemini = config_utils.get_program("gemini", data["config"])
-                if "program_versions" in data["config"].get("resources", {}):
-                    gemini_ver = programs.get_version("gemini", config=data["config"])
-                else:
-                    gemini_ver = None
-                # Recent versions of gemini allow loading only passing variants
-                load_opts = ""
-                if not gemini_ver or LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
-                    load_opts += " --passonly"
-                # For small test files, skip gene table loading which takes a long time
-                if gemini_ver and LooseVersion(gemini_ver) > LooseVersion("0.6.4"):
-                    if _is_small_vcf(gemini_vcf):
-                        load_opts += " --skip-gene-tables"
-                    if "/test_automated_output/" in gemini_vcf:
-                        load_opts += " --test-mode"
-                # Skip CADD or gerp-bp if neither are loaded
-                if gemini_ver and LooseVersion(gemini_ver) >= LooseVersion("0.7.0"):
-                    gemini_dir = install.get_gemini_dir()
-                    for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz")]:
-                        if not os.path.exists(os.path.join(gemini_dir, check_file)):
-                            load_opts += " %s" % skip_cmd
-                # skip gerp-bp which slows down loading
-                load_opts += " --skip-gerp-bp "
-                num_cores = data["config"]["algorithm"].get("num_cores", 1)
-                eanns = ("snpEff" if tz.get_in(("config", "algorithm", "effects"), data, "snpeff") == "snpeff"
-                         else "VEP")
-                cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t {eanns} --cores {num_cores} {tx_gemini_db}"
-                cmd = cmd.format(**locals())
-                do.run(cmd, "Create gemini database for %s %s" % (name, caller), data)
+            gemini_db = create_gemini_db(gemini_vcf, data, gemini_db)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
                               "vcf": gemini_vcf if is_batch else None}]]
+
+def create_gemini_db(gemini_vcf, data, gemini_db=None):
+    if not gemini_db:
+        gemini_db = "%s.db" % utils.splitext_plus(gemini_vcf)[0]
+    if not utils.file_exists(gemini_db):
+        if not vcfutils.vcf_has_variants(gemini_vcf):
+            return None
+        with file_transaction(data, gemini_db) as tx_gemini_db:
+            gemini = config_utils.get_program("gemini", data["config"])
+            if "program_versions" in data["config"].get("resources", {}):
+                gemini_ver = programs.get_version("gemini", config=data["config"])
+            else:
+                gemini_ver = None
+            # Recent versions of gemini allow loading only passing variants
+            load_opts = ""
+            if not gemini_ver or LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
+                load_opts += " --passonly"
+            # For small test files, skip gene table loading which takes a long time
+            if gemini_ver and LooseVersion(gemini_ver) > LooseVersion("0.6.4"):
+                if _is_small_vcf(gemini_vcf):
+                    load_opts += " --skip-gene-tables"
+                if "/test_automated_output/" in gemini_vcf:
+                    load_opts += " --test-mode"
+            # Skip CADD or gerp-bp if neither are loaded
+            if gemini_ver and LooseVersion(gemini_ver) >= LooseVersion("0.7.0"):
+                gemini_dir = install.get_gemini_dir()
+                for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz")]:
+                    if not os.path.exists(os.path.join(gemini_dir, check_file)):
+                        load_opts += " %s" % skip_cmd
+            # skip gerp-bp which slows down loading
+            load_opts += " --skip-gerp-bp "
+            num_cores = data["config"]["algorithm"].get("num_cores", 1)
+            eanns = ("snpEff" if tz.get_in(("config", "algorithm", "effects"), data, "snpeff") == "snpeff"
+                     else "VEP")
+            cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t {eanns} --cores {num_cores} {tx_gemini_db}"
+            cmd = cmd.format(**locals())
+            do.run(cmd, "Create gemini database for %s" % gemini_vcf, data)
+    return gemini_db
 
 def _is_small_vcf(vcf_file):
     """Check for small VCFs which we want to analyze quicker.

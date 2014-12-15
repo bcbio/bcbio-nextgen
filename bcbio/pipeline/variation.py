@@ -4,7 +4,7 @@ import toolz as tz
 
 from bcbio.log import logger
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
-from bcbio.variation import effects
+from bcbio.variation import effects, prioritize
 
 # ## Genotyping
 
@@ -29,4 +29,6 @@ def postprocess_variants(data):
         data["vrn_file"] = variant_filtration(data["vrn_file"], data["sam_ref"],
                                               tz.get_in(("genome_resources", "variation"), data, {}),
                                               data)
+        logger.info("Prioritization for %s" % cur_name)
+        data["vrn_file"] = prioritize.handle_vcf_calls(data["vrn_file"], data)
     return [[data]]
