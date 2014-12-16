@@ -408,7 +408,7 @@ def move_vcf(orig_file, new_file):
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
 
-def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd=""):
+def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd="", tabix_args=None):
     """bgzip and tabix index an input file, handling VCF and BED.
     """
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
@@ -431,7 +431,7 @@ def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd=""):
                 os.remove(in_file)
             except OSError:  # Handle cases where run in parallel and file has been deleted
                 pass
-    tabix_index(out_file, config)
+    tabix_index(out_file, config, tabix_args=tabix_args)
     return out_file
 
 @utils.map_wrap
@@ -451,10 +451,9 @@ def _guess_preset(f):
     else:
         raise ValueError("Unexpected tabix input: %s" % f)
 
-def tabix_index(in_file, config, preset=None):
+def tabix_index(in_file, config, preset=None, tabix_args=None):
     """Index a file using tabix.
     """
-    preset = _guess_preset(in_file) if preset is None else preset
     in_file = os.path.abspath(in_file)
     out_file = in_file + ".tbi"
     if not utils.file_exists(out_file) or not utils.file_uptodate(out_file, in_file):
@@ -462,6 +461,10 @@ def tabix_index(in_file, config, preset=None):
             tabix = tools.get_tabix_cmd(config)
             tx_in_file = os.path.splitext(tx_out_file)[0]
             utils.symlink_plus(in_file, tx_in_file)
-            cmd = "{tabix} -f -p {preset} {tx_in_file}"
+            if tabix_args:
+                cmd = "{tabix} -f {tabix_args} {tx_in_file}"
+            else:
+                preset = _guess_preset(in_file) if preset is None else preset
+                cmd = "{tabix} -f -p {preset} {tx_in_file}"
             do.run(cmd.format(**locals()), "tabix index %s" % os.path.basename(in_file))
     return out_file
