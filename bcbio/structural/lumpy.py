@@ -132,7 +132,8 @@ def _bedpe_to_vcf(bedpe_file, sconfig_file, items):
                     cmd = [sys.executable, tovcf_script, "-c", sconfig_file, "-f", dd.get_ref_file(items[0]),
                            "-t", "LUMPY", "-b", bedpe_file, "-o", tx_raw_file]
                     do.run(cmd, "Convert lumpy bedpe output to VCF")
-            prep_file = vcfutils.sort_by_ref(raw_file, items[0])
+            clean_file = _clean_lumpy_vcf(raw_file, items[0])
+            prep_file = vcfutils.sort_by_ref(clean_file, items[0])
             if not utils.file_exists(out_nogzip):
                 utils.symlink_plus(prep_file, out_nogzip)
         out_file = vcfutils.bgzip_and_index(out_nogzip, items[0]["config"])
@@ -140,8 +141,6 @@ def _bedpe_to_vcf(bedpe_file, sconfig_file, items):
 
 def _filter_by_bedpe(vcf_file, bedpe_file, data):
     """Add filters to VCF based on pre-filtered bedpe file.
-
-    Also removes problem calls in the output VCF with missing alleles.
     """
     out_file = "%s-filter%s" % utils.splitext_plus(vcf_file)
     nogzip_out_file = out_file.replace(".vcf.gz", ".vcf")
@@ -160,9 +159,6 @@ def _filter_by_bedpe(vcf_file, bedpe_file, data):
                     for line in in_handle:
                         if not line.startswith("#"):
                             parts = line.split("\t")
-                            # Problem breakends can have empty alleles when at contig ends
-                            if not parts[3].strip():
-                                parts[3] = "N"
                             cur_id = parts[2].split("_")[0]
                             cur_filter = filters.get(cur_id, "PASS")
                             if cur_filter != "PASS":
@@ -171,6 +167,25 @@ def _filter_by_bedpe(vcf_file, bedpe_file, data):
                         out_handle.write(line)
         if out_file.endswith(".gz"):
             vcfutils.bgzip_and_index(nogzip_out_file, data["config"])
+    return out_file
+
+def _clean_lumpy_vcf(vcf_file, data):
+    """Remove problem calls in the output VCF with missing alleles.
+    """
+    assert not vcf_file.endswith(".gz")
+    out_file = "%s-clean%s" % utils.splitext_plus(vcf_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                with utils.open_gzipsafe(vcf_file) as in_handle:
+                    for line in in_handle:
+                        if not line.startswith("#"):
+                            parts = line.split("\t")
+                            # Problem breakends can have empty alleles when at contig ends
+                            if not parts[3].strip():
+                                parts[3] = "N"
+                            line = "\t".join(parts)
+                        out_handle.write(line)
     return out_file
 
 def run(items):
