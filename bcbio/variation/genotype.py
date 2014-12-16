@@ -62,13 +62,13 @@ def combine_multiple_callers(samples):
                 if jointcaller:
                     cur["population"] = False
                 ready_calls.append(cur)
-            elif jointcaller:
+            if jointcaller:
                 ready_calls.append({"variantcaller": jointcaller,
                                     "vrn_file": data.get("vrn_file"),
                                     "vrn_file_batch": data.get("vrn_file_batch"),
                                     "validate": data.get("validate"),
                                     "do_upload": False})
-            else:
+            if not jointcaller and not variantcaller:
                 ready_calls.append({"variantcaller": "precalled",
                                     "vrn_file": data.get("vrn_file"),
                                     "validate": data.get("validate"),
@@ -175,9 +175,22 @@ def handle_multiple_callers(data, key, default=None):
         out = []
         for caller in callers:
             base = copy.deepcopy(data)
-            base["config"]["algorithm"]["orig_%s" % key] = \
-              base["config"]["algorithm"][key]
+            if not base["config"]["algorithm"].get("orig_%s" % key):
+                base["config"]["algorithm"]["orig_%s" % key] = \
+                  base["config"]["algorithm"][key]
             base["config"]["algorithm"][key] = caller
+            # if splitting by variant caller, also split by jointcaller
+            if key == "variantcaller":
+                jcallers = get_variantcaller(data, "jointcaller", [])
+                if isinstance(jcallers, basestring):
+                    jcallers = [jcallers]
+                if jcallers:
+                    base["config"]["algorithm"]["orig_jointcaller"] = jcallers
+                    jcallers = [x for x in jcallers if x.startswith(caller)]
+                    if jcallers:
+                        base["config"]["algorithm"]["jointcaller"] = jcallers[0]
+                    else:
+                        base["config"]["algorithm"]["jointcaller"] = False
             out.append(base)
         return out
 

@@ -11,6 +11,7 @@
   demand download of disambiguation genomes.
 - Switch to seaborn as matplotlib wrapper, from prettplotlib.
 - Fixes for ensemble structural variant calling on single samples.
+- Fixes for mixing joint and pooled calling in a single configuration file.
 - Support for qSNP for tumor-normal calling.
 - Add Express to RNA-seq pipeline.
 - Change logging time stamps to be UTC and set explicitly as ISO 8601 compliant

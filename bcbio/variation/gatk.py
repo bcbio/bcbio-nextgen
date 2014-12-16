@@ -70,7 +70,7 @@ def _joint_calling(items):
         assert len(items) == 1, "Can only do joint calling preparation with GATK with single samples"
         assert tz.get_in(("metadata", "batch"), items[0]) is not None, \
             "Joint calling requires batched samples, %s has no metadata batch." % dd.get_sample_name(items[0])
-    return jointcaller is not None
+    return jointcaller
 
 def haplotype_caller(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
