@@ -386,7 +386,8 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
                 do.run("{gunzip_cmd} {bgzip} -c {bgzip_in} > {tx_out_file}".format(**locals()),
                        "bgzip input file")
             elif is_remote:
-                do.run("cat {in_file} > {tx_out_file}".format(**locals()), "Get remote input")
+                bgzip = "| bgzip -c" if needs_convert else ""
+                do.run("cat {in_file} {bgzip} > {tx_out_file}".format(**locals()), "Get remote input")
             else:
                 raise ValueError("Unexpected inputs: %s %s %s %s" % (in_file, needs_bgzip,
                                                                      needs_gunzip, needs_convert))
