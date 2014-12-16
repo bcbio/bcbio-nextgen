@@ -38,7 +38,11 @@ Data preparation
 
 The easiest way to organize AWS projects is using an analysis folder inside an
 `S3 bucket <http://aws.amazon.com/s3/>`_. Create a bucket and folder for your analysis and
-upload fastq, BAM and, optionally, a region BED file. You can do this using the
+upload fastq, BAM and, optionally, a region BED file. Bucket names should
+include only lowercase letters, numbers and hyphens (``-``) to conform to
+`S3 bucket naming restrictions <http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html>`_
+and avoid issues with resolution of SSL keys. You can create buckets and upload
+files using the
 `AWS S3 web console <https://console.aws.amazon.com/s3/>`_,
 `the AWS cli client <http://aws.amazon.com/cli/>`_ or specialized tools
 like `gof3r <https://github.com/rlmcpherson/s3gof3r>`_.
