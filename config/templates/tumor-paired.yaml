@@ -9,14 +9,17 @@ details:
     # should be a sample with "tumor" phenotype and a sample with "normal"
     # phenotype (no more than two samples per batch)
     metadata:
-       batch: your-arbitrary-batch-name
+       batch: your-batch-name
        phenotype: tumor # or "normal"
     algorithm:
       aligner: bwa
-      mark_duplicates: picard
-      recalibrate: gatk
-      realign: gatk
-      variantcaller: mutect # Valid values are "mutect" or "varscan"
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      variantcaller: [vardict, mutect, freebayes]
+      indelcaller: false
+      ensemble:
+        numpass: 2
       platform: illumina
       quality_format: Standard
       # for targetted projects, set the region
