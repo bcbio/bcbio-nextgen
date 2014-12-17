@@ -376,7 +376,7 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
             in_file = utils.remote_cl_input(in_file, unpack=needs_gunzip or needs_convert or needs_bgzip)
             if needs_convert:
                 in_file = fastq_convert_pipe_cl(in_file, {"config": config})
-            if needs_gunzip:
+            if needs_gunzip and not needs_convert:
                 gunzip_cmd = "gunzip -c {in_file} |".format(**locals())
                 bgzip_in = "/dev/stdin"
             else:
