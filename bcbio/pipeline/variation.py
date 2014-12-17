@@ -15,7 +15,7 @@ def postprocess_variants(data):
     logger.info("Finalizing variant calls: %s" % cur_name)
     if data.get("align_bam") and data.get("vrn_file"):
         logger.info("Calculating variation effects for %s" % cur_name)
-        effect_todo = tz.get_in(("config", "algorithm", "effects"), data, "snpeff")
+        effect_todo = effects.get_type(data)
         if effect_todo:
             if effect_todo == "snpeff":
                 ann_vrn_file = effects.snpeff_effects(data)

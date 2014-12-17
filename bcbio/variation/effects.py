@@ -18,6 +18,14 @@ from bcbio.pipeline import config_utils, tools
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
+# ## High level
+
+def get_type(data):
+    """Retrieve the type of effects calculation to do.
+    """
+    if data["analysis"].lower().startswith("var"):
+        return tz.get_in(("config", "algorithm", "effects"), data, "snpeff")
+
 # ## Ensembl VEP
 
 def vep_version(config):
