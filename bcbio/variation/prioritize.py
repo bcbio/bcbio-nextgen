@@ -9,7 +9,7 @@ data. Uses GEMINI to load a database of variants with associated third party
 query information. Makes use of ExAC, dbSNP, 1000 genomes, clinvar, cosmic and
 effects annotations. The general idea is to prioritize deleterious variants
 missing or present at a low frequency in the population, or secondarily identified
-in external databases.
+in external databases like COSMIC and ClinVar.
 """
 import csv
 
@@ -47,7 +47,7 @@ def _apply_priority_filter(in_file, priority_file, data):
                 out_handle.write(header)
             cmd = ("bcftools annotate -a {priority_file} -h {header_file} "
                    "-c CHROM,FROM,TO,REF,ALT,INFO/EPR {in_file} | "
-                   "bcftools filter -m '+' -s 'NonPriority' "
+                   "bcftools filter -m '+' -s 'LowPriority' "
                    "-e 'EPR[*] != \"pass\"' | "
                    r"""sed 's/\\\"pass\\\"/pass/' | bgzip -c > {tx_out_file}""")
             do.run(cmd.format(**locals()), "Run external annotation based prioritization filtering")
@@ -62,7 +62,7 @@ def _prep_priority_filter(gemini_db, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             gq = GeminiQuery(gemini_db)
-            attrs = ("chrom, start, end, ref, alt, impact_so, in_dbsnp, "
+            attrs = ("chrom, start, end, ref, alt, impact_so, impact_severity, in_dbsnp, "
                      "aaf_esp_all, aaf_1kg_all, aaf_adj_exac_all, cosmic_ids, "
                      "clinvar_sig, clinvar_origin, gt_ref_depths, gt_alt_depths").split(", ")
             gq.run("SELECT %s FROM variants" % ", ".join(attrs))
@@ -86,8 +86,38 @@ def _prep_priority_filter(gemini_db, data):
 def _calc_priority_filter(row):
     """Calculate the priority filter based on external associated data.
     """
-    # TODO: calculate priorities
-    return "pass"
+    filters = []
+    passes = []
+    if row["impact_severity"] in ["LOW"]:
+        filters.append("lowseverity")
+    passes.extend(_find_known(row))
+    filters.extend(_known_populations(row))
+    if len(filters) == 0 or len(passes) > 0:
+        passes.insert(0, "pass")
+    return ",".join(passes + filters)
+
+def _known_populations(row):
+    """Find variants present in higher frequency in population databases.
+    """
+    cutoff = 0.1
+    out = []
+    for pop, key in [("esp", "aaf_esp_all"), ("1000g", "aaf_1kg_all"),
+                     ("exac", "aaf_adj_exac_all")]:
+        val = row[key]
+        if val and val > cutoff:
+            out.append(pop)
+    return out
+
+def _find_known(row):
+    """Find variant present in known pathogenic databases.
+    """
+    out = []
+    clinvar_no = set(["unknown", "untested", "non-pathogenic", "probable-non-pathogenic"])
+    if row["cosmic_ids"]:
+        out.append("cosmic")
+    if (row["clinvar_sig"] and not row["clinvar_sig"] in clinvar_no):
+        out.append("clinvar")
+    return out
 
 def _do_prioritize(data):
     """Determine if we should perform prioritization.
