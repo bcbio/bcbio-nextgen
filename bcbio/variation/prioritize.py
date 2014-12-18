@@ -76,7 +76,10 @@ def _prep_priority_filter(gemini_db, data):
                 for row in gq:
                     ref_depth = row.gt_ref_depths[sidx]
                     alt_depth = row.gt_alt_depths[sidx]
-                    row.row["freq"] = "%.2f" % (float(alt_depth) / float(ref_depth + alt_depth))
+                    try:
+                        row.row["freq"] = "%.2f" % (float(alt_depth) / float(ref_depth + alt_depth))
+                    except ZeroDivisionError:
+                        row.row["freq"] = "0.00"
                     row.row["filter"] = _calc_priority_filter(row)
                     out = [row[x] for x in header]
                     writer.writerow(out)
@@ -85,6 +88,10 @@ def _prep_priority_filter(gemini_db, data):
 
 def _calc_priority_filter(row):
     """Calculate the priority filter based on external associated data.
+
+    - Pass high/medium impact variants not found in population databases
+    - Pass variants found in COSMIC or Clinvar provided they don't have two
+      additional reasons to filter (low severity or found in multiple external populations)
     """
     filters = []
     passes = []
@@ -92,7 +99,7 @@ def _calc_priority_filter(row):
         filters.append("lowseverity")
     passes.extend(_find_known(row))
     filters.extend(_known_populations(row))
-    if len(filters) == 0 or len(passes) > 0:
+    if len(filters) == 0 or (len(passes) > 0 and len(filters) < 2):
         passes.insert(0, "pass")
     return ",".join(passes + filters)
 
