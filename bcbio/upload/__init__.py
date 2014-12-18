@@ -254,6 +254,14 @@ def _get_files_project(sample, upload_config):
                         "type": "external_command_log",
                         "ext": ""})
 
+    if os.path.exists("/var/log/collectl"):
+        for fname in os.listdir("/var/log/collectl"):
+            if not fname.endswith(".raw.gz"):
+                continue
+            out.append({"path": os.path.join("/var/log/collectl", fname),
+                        "type": "raw_collectl_data",
+                        "ext": ""})
+
     if "summary" in sample and sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
     mixup_check = tz.get_in(["summary", "mixup_check"], sample)
