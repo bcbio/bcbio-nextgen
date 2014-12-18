@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 from bcbio.utils import chdir, file_exists, safe_makedir, get_in
+from bcbio.bam import is_paired
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import tx_tmpdir, file_transaction
@@ -24,11 +25,12 @@ def run(data):
     if not in_bam:
         logger.info("Transcriptome-mapped BAM file not found, skipping eXpress.")
         return None
+    strand = _set_stranded_flag(in_bam, data['config'])
     if not file_exists(out_file):
         with tx_tmpdir() as tmp_dir:
             chdir(tmp_dir)
             ref_transcript = _do_fasta(tophat_fa)
-            cmd = ("{express} {ref_transcript} {in_bam}")
+            cmd = ("{express} {strand} {ref_transcript} {in_bam}")
             do.run(cmd.format(**locals()), "Run express", {})
             shutil.move("results.xprs", out_file)
     eff_count_file = _get_column(out_file, out_file.replace(".xprs", "_eff.counts"), 7)
@@ -71,3 +73,18 @@ def _get_column(in_file, out_file, column):
                         number = int(round(float(number), 0))
                     out_handle.write("%s\t%s\n" % (cols[1], number))
     return out_file
+
+def _set_stranded_flag(bam_file, config):
+    strand_flag = {"unstranded": "",
+                   "firststrand": "--rf-stranded",
+                   "secondstrand": "--fr-stranded",
+                   "firststrand-s": "--r-stranded",
+                   "secondstrand-s": "--f-stranded"}
+    stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
+    assert stranded in strand_flag, ("%s is not a valid strandedness value. "
+            "Valid values are 'firststrand', "
+            "'secondstrand' and 'unstranded" % (stranded))
+    if not is_paired(bam_file):
+        stranded += "-s"
+    flag = strand_flag[stranded]
+    return flag
