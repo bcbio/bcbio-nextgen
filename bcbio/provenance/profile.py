@@ -9,3 +9,4 @@ from bcbio.log import logger
 def report(label, dirs):
     """Log timing information for later graphing of resource usage."""
     logger.info("Timing: %s" % label)
+    yield None
