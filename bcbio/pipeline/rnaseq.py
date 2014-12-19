@@ -3,53 +3,22 @@ from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq, expr
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
 
-
-def estimate_expression(samples, run_parallel):
+def quantitate_expression_parallel(samples, run_parallel):
+    """
+    quantitate expression, all programs run here should be multithreaded to
+    take advantage of the threaded run_parallel environment
+    """
     samples = run_parallel("generate_transcript_counts", samples)
-    count_files = filter_missing([dd.get_count_file(x[0]) for x in samples])
-    combined = count.combine_count_files(count_files)
-    gtf_file = dd.get_gtf_file(samples[0][0], None)
-    annotated = count.annotate_combined_count_file(combined, gtf_file)
-
-    samples = run_parallel("run_express", samples)
-    express_counts_combined = combine_express(samples, combined)
-
     samples = run_parallel("run_cufflinks", samples)
-    #gene
-    fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
-    fpkm_files = filter_missing([dd.get_fpkm(x[0]) for x in samples])
-    fpkm_combined = count.combine_count_files(fpkm_files, fpkm_combined_file)
-    #isoform
-    fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
-    isoform_files = filter_missing([dd.get_fpkm_isoform(x[0]) for x in samples])
-    fpkm_isoform_combined = count.combine_count_files(isoform_files,
-                                                      fpkm_isoform_combined_file,
-                                                      ".isoform.fpkm")
-    dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
-    to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data in samples])
-    if to_combine_dexseq:
-        dexseq_combined = count.combine_count_files(to_combine_dexseq,
-                                                    dexseq_combined_file, ".dexseq")
-    else:
-        dexseq_combined = None
+    return samples
 
-    updated_samples = []
-    for data in dd.sample_data_iterator(samples):
-        data = dd.set_combined_counts(data, combined)
-        if annotated:
-            data = dd.set_annotated_combined_counts(data, annotated)
-        if fpkm_combined:
-            data = dd.set_combined_fpkm(data, fpkm_combined)
-        if fpkm_isoform_combined:
-            data = dd.set_combined_fpkm_isoform(data, fpkm_combined)
-        if express_counts_combined:
-            data = dd.set_express_counts(data, express_counts_combined['counts'])
-            data = dd.set_express_tpm(data, express_counts_combined['tpm'])
-            data = dd.set_express_fpkm(data, express_counts_combined['fpkm'])
-        if dexseq_combined:
-            data = dd.set_dexseq_counts(data, dexseq_combined_file)
-        updated_samples.append([data])
-    return updated_samples
+def quantitate_expression_noparallel(samples, run_parallel):
+    """
+    run transcript quantitation for algorithms that don't run in parallel
+    """
+    samples = run_parallel("run_express", samples)
+    samples = run_parallel("run_dexseq", samples)
+    return samples
 
 def generate_transcript_counts(data):
     """Generate counts per transcript and per exon from an alignment"""
@@ -58,20 +27,25 @@ def generate_transcript_counts(data):
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
-    if dd.get_dexseq_gff(data, None):
-        data = dd.set_dexseq_counts(data, dexseq.bcbio_run(data))
     # if RSEM was run, stick the transcriptome BAM file into the datadict
     if dd.get_aligner(data).lower() == "star" and dd.get_rsem(data):
         base, ext = os.path.splitext(dd.get_work_bam(data))
         data = dd.set_transcriptome_bam(data, base + ".transcriptome" + ext)
     return [[data]]
 
+def run_dexseq(data):
+    """Quantitate exon-level counts with DEXSeq"""
+    if dd.get_dexseq_gff(data, None):
+        data = dd.set_dexseq_counts(data, dexseq.bcbio_run(data))
+    return [[data]]
+
 def run_express(data):
-    """Quantitative isoform expression by  express"""
+    """Quantitative isoform expression by eXpress"""
     out_files = express.run(data)
     if out_files:
         data['eff_counts'], data['tpm_counts'], data['fpkm_counts'] = out_files
     return [[data]]
+
 
 def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""
@@ -136,3 +110,53 @@ def assemble_transcripts(run_parallel, samples):
         samples = run_parallel("cufflinks_assemble", samples)
         samples = run_parallel("cufflinks_merge", [samples])
     return samples
+
+def combine_files(samples):
+    """
+    after quantitation, combine the counts/FPKM/TPM/etc into a single table with
+    all samples
+    """
+    gtf_file = dd.get_gtf_file(samples[0][0], None)
+    # combine featureCount files
+    count_files = filter_missing([dd.get_count_file(x[0]) for x in samples])
+    combined = count.combine_count_files(count_files)
+    annotated = count.annotate_combined_count_file(combined, gtf_file)
+
+    # combine eXpress files
+    express_counts_combined = combine_express(samples, combined)
+
+    # combine Cufflinks files
+    fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
+    fpkm_files = filter_missing([dd.get_fpkm(x[0]) for x in samples])
+    fpkm_combined = count.combine_count_files(fpkm_files, fpkm_combined_file)
+    fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
+    isoform_files = filter_missing([dd.get_fpkm_isoform(x[0]) for x in samples])
+    fpkm_isoform_combined = count.combine_count_files(isoform_files,
+                                                      fpkm_isoform_combined_file,
+                                                      ".isoform.fpkm")
+
+    # combine DEXseq files
+    dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
+    to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data in samples])
+    if to_combine_dexseq:
+        dexseq_combined = count.combine_count_files(to_combine_dexseq,
+                                                    dexseq_combined_file, ".dexseq")
+    else:
+        dexseq_combined = None
+    updated_samples = []
+    for data in dd.sample_data_iterator(samples):
+        data = dd.set_combined_counts(data, combined)
+        if annotated:
+            data = dd.set_annotated_combined_counts(data, annotated)
+        if fpkm_combined:
+            data = dd.set_combined_fpkm(data, fpkm_combined)
+        if fpkm_isoform_combined:
+            data = dd.set_combined_fpkm_isoform(data, fpkm_combined)
+        if express_counts_combined:
+            data = dd.set_express_counts(data, express_counts_combined['counts'])
+            data = dd.set_express_tpm(data, express_counts_combined['tpm'])
+            data = dd.set_express_fpkm(data, express_counts_combined['fpkm'])
+        if dexseq_combined:
+            data = dd.set_dexseq_counts(data, dexseq_combined_file)
+        updated_samples.append([data])
+    return updated_samples

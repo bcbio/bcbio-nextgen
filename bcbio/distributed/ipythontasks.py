@@ -168,6 +168,12 @@ def run_express(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(rnaseq.run_express, *args))
 
+@require(rnaseq)
+def run_dexseq(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.run_dexseq, *args))
+
 
 @require(shared)
 def combine_bam(*args):

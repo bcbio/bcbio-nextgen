@@ -292,8 +292,13 @@ class RnaseqPipeline(AbstractPipeline):
                 samples = disambiguate.resolve(samples, run_parallel)
             with profile.report("transcript assembly", dirs):
                 samples = rnaseq.assemble_transcripts(run_parallel, samples)
-            with profile.report("estimate expression", dirs):
-                samples = rnaseq.estimate_expression(samples, run_parallel)
+            with profile.report("estimate expression (threaded)", dirs):
+                samples = rnaseq.quantitate_expression_parallel(samples, run_parallel)
+        with prun.start(_wres(parallel, ["dexseq", "express"]), samples, config,
+                        dirs, "rnaseqcount-singlethread") as run_parallel:
+            with profile.report("estimate expression (single threaded)", dirs):
+                samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
+        samples = rnaseq.combine_files(samples)
         with prun.start(_wres(parallel, ["picard", "fastqc", "rnaseqc", "kraken"]),
                         samples, config, dirs, "qc") as run_parallel:
             with profile.report("quality control", dirs):
