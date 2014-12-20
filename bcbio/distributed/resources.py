@@ -97,7 +97,7 @@ def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     """When scheduling jobs with single cores, avoid overscheduling due to memory.
     """
     if "cores" not in sysinfo:
-        return jobs
+        return jobs, 1.0
     sys_mem_per_core = float(sysinfo["memory"]) / float(sysinfo["cores"])
     if sys_mem_per_core < mem_per_core:
         pct = sys_mem_per_core / float(mem_per_core)
