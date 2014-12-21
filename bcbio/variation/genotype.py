@@ -8,6 +8,7 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.split import grouped_parallel_split_combine
+from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region
 from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vfilter
 
@@ -154,6 +155,7 @@ def parallel_variantcall_region(samples, run_parallel):
             added = True
             to_process.append([add])
         if not added:
+            data = _handle_precalled(data)
             extras.append([data])
     split_fn = _split_by_ready_regions(".vcf.gz", "work_bam", get_variantcaller)
     samples = _collapse_by_bam_variantcaller(
@@ -162,6 +164,18 @@ def parallel_variantcall_region(samples, run_parallel):
                                        "variantcall_sample", "concat_variant_files",
                                        "vrn_file", ["region", "sam_ref", "config"]))
     return extras + samples
+
+def _handle_precalled(data):
+    """Symlink in external pre-called variants fed into analysis.
+    """
+    if data.get("vrn_file"):
+        precalled_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "precalled"))
+        ext = utils.splitext_plus(data["vrn_file"])[-1]
+        orig_file = os.path.abspath(data["vrn_file"])
+        our_vrn_file = os.path.join(precalled_dir, "%s-precalled%s" % (dd.get_sample_name(data), ext))
+        utils.symlink_plus(orig_file, our_vrn_file)
+        data["vrn_file"] = our_vrn_file
+    return data
 
 def handle_multiple_callers(data, key, default=None):
     """Split samples that potentially require multiple variant calling approaches.
