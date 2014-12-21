@@ -11,9 +11,18 @@ import toolz as tz
 from bcbio.distributed.split import parallel_split_combine
 
 def get_max_counts(samples):
-    """Retrieve the maximum region size from a set of callable regions
+    """Retrieve number of regions that can be processed in parallel from current samples.
     """
-    return max([tz.get_in(["config", "algorithm", "callable_count"], data[0], 1) for data in samples])
+    counts = []
+    for data in (x[0] for x in samples):
+        count = tz.get_in(["config", "algorithm", "callable_count"], data, 1)
+        vcs = tz.get_in(["config", "algorithm", "variantcaller"], data, [])
+        if isinstance(vcs, basestring):
+            vcs = [vcs]
+        if vcs:
+            count *= len(vcs)
+        counts.append(count)
+    return max(counts)
 
 # ## BAM preparation
 
