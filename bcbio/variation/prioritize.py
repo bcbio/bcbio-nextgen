@@ -13,6 +13,8 @@ in external databases like COSMIC and ClinVar.
 """
 import csv
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -134,7 +136,8 @@ def _do_prioritize(data):
     if vcfutils.get_paired_phenotype(data):
         has_tumor = False
         has_normal = False
-        for i, sub_data in enumerate(vmulti.get_orig_items(data)):
+        orig_items = vmulti.get_orig_items(data) if tz.get_in(["metadata", "batch"], data) else [data]
+        for sub_data in orig_items:
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":
                 has_tumor = True
             elif vcfutils.get_paired_phenotype(sub_data) == "normal":

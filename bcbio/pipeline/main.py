@@ -201,8 +201,10 @@ def _debug_samples(i, samples):
         print "  ", sample["description"], sample.get("region"), \
             utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
             utils.get_in(sample, ("config", "algorithm", "jointcaller")), \
+            utils.get_in(sample, ("metadata", "batch")), \
             [x.get("variantcaller") for x in sample.get("variants", [])], \
-            sample.get("work_bam")
+            sample.get("work_bam"), \
+            sample.get("vrn_file")
 
 class SNPCallingPipeline(Variant2Pipeline):
     """Back compatible: old name for variant analysis.
