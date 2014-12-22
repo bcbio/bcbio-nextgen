@@ -5,6 +5,7 @@ fc_name: ERP000591
 details:
   - analysis: RNA-seq
     algorithm:
+      rsem: True
       aligner: star
       quality_format: Standard
       trim_reads: read_through
