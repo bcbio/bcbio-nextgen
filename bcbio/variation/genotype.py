@@ -169,9 +169,13 @@ def _handle_precalled(data):
     """Symlink in external pre-called variants fed into analysis.
     """
     if data.get("vrn_file"):
+        vrn_file = data["vrn_file"]
+        if isinstance(vrn_file, (list, tuple)):
+            assert len(vrn_file) == 1
+            vrn_file = vrn_file[0]
         precalled_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "precalled"))
-        ext = utils.splitext_plus(data["vrn_file"])[-1]
-        orig_file = os.path.abspath(data["vrn_file"])
+        ext = utils.splitext_plus(vrn_file)[-1]
+        orig_file = os.path.abspath(vrn_file)
         our_vrn_file = os.path.join(precalled_dir, "%s-precalled%s" % (dd.get_sample_name(data), ext))
         utils.symlink_plus(orig_file, our_vrn_file)
         data["vrn_file"] = our_vrn_file
