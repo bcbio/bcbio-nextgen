@@ -1,7 +1,9 @@
 import os
 from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq, express
+from bcbio.ngsalign import bwa
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
+from bcbio.log import logger
 
 def quantitate_expression_parallel(samples, run_parallel):
     """
@@ -27,10 +29,14 @@ def generate_transcript_counts(data):
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
-    # if RSEM was run, stick the transcriptome BAM file into the datadict
-    if dd.get_aligner(data).lower() == "star" and dd.get_rsem(data):
-        base, ext = os.path.splitext(dd.get_work_bam(data))
-        data = dd.set_transcriptome_bam(data, base + ".transcriptome" + ext)
+    # if RSEM set to run, but the aligner didn't create the transcriptome BAM
+    # file, make one with bwa
+    if dd.get_rsem(data) and not dd.get_transcriptome_bam(data):
+        file1, file2 = dd.get_input_sequence_files(data)
+        ref_file = dd.get_ref_file(data)
+        logger.info("RSEM was flagged to run, but the transcriptome BAM file"
+                    "was not found. Aligning to the transcriptome with bwa.")
+        data = bwa.align_transcriptome(file1, file2, ref_file, data)
     return [[data]]
 
 def run_dexseq(data):
@@ -45,7 +51,6 @@ def run_express(data):
     if out_files:
         data['eff_counts'], data['tpm_counts'], data['fpkm_counts'] = out_files
     return [[data]]
-
 
 def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""

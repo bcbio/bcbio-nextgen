@@ -29,10 +29,12 @@ def complete_features(db):
         if gene_id and transcript_id and feature.featuretype != "transcript":
             yield feature
 
-def gtf_to_fasta(gtf, ref_fasta, cds=False, out_file=None):
+def gtf_to_fasta(gtf_file, ref_fasta, cds=False, out_file=None):
     """
     convert a GTF to FASTA format if cds=True, use the start/stop codons
     to output only the CDS
+    handles malformed FASTA files where a single transcript is repeated multiple
+    times by just using the first one
     """
     if out_file and file_exists(out_file):
         return out_file
@@ -42,19 +44,29 @@ def gtf_to_fasta(gtf, ref_fasta, cds=False, out_file=None):
 
     tmp_file = out_file + ".tmp"
     if cds:
-        cmd = "gffread -g {ref_fasta} -x {tx_tmp_file} {gtf}"
+        cmd = "gffread -g {ref_fasta} -x {tx_tmp_file} {gtf_file}"
     else:
-        cmd = "gffread -g {ref_fasta} -w {tx_tmp_file} {gtf}"
-    message = "Converting %s to FASTA format." % gtf
+        cmd = "gffread -g {ref_fasta} -w {tx_tmp_file} {gtf_file}"
+    message = "Converting %s to FASTA format." % gtf_file
     with file_transaction(tmp_file) as tx_tmp_file:
         do.run(cmd.format(**locals()), message)
 
+    transcript = ""
+    skipping = False
     with file_transaction(out_file) as tx_out_file:
         with open(tmp_file) as in_handle, open(tx_out_file, "w") as out_handle:
             for line in in_handle:
                 if line.startswith(">"):
+                    if transcript == line.split(" ")[1]:
+                        logger.info("Transcript %s has already been seen, skipping this "
+                                    "version.")
+                        skipping = True
+                    else:
+                        transcript = line.split(" ")[1]
+                        skipping = False
                     line = line.split()[0] + "\n"
-                out_handle.write(line)
+                if not skipping:
+                    out_handle.write(line)
     return out_file
 
 def partition_gtf(gtf, coding=False, out_file=False):
