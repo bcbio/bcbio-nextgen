@@ -62,7 +62,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
 
     if dd.get_rsem(data):
         transcriptome_file = _move_transcriptome_file(out_dir, names)
-    return final_out
+        data = dd.set_transcriptome_bam(data, transcriptome_file)
+    data = dd.set_work_bam(data, final_out)
+    return data
 
 def _move_transcriptome_file(out_dir, names):
     out_file = os.path.join(out_dir, "{0}.transcriptome.bam".format(names["sample"]))
