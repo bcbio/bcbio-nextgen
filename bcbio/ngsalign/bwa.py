@@ -10,6 +10,8 @@ from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.ngsalign import alignprep, novoalign, postalign
 from bcbio.provenance import do
+from bcbio.rnaseq import gtf
+import bcbio.pipeline.datadict as dd
 
 galaxy_location_file = "bwa_index.loc"
 
@@ -56,7 +58,7 @@ def _can_use_mem(fastq_file, data):
     Randomly samples 5000 reads from the first two million.
     Default to no piping if more than 75% of the sampled reads are small.
     """
-    min_size = 70
+
     thresh = 0.75
     head_count = 8000000
     tocheck = 5000
@@ -163,3 +165,37 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
     aln_cl += [ref_file, fastq_file]
     cmd = "{cl} > {out_file}".format(cl=" ".join(aln_cl), out_file=out_file)
     do.run(cmd, "bwa aln: {f}".format(f=os.path.basename(fastq_file)), None)
+
+def index_transcriptome(gtf_file, ref_file, data):
+    """
+    use a GTF file and a reference FASTA file to index the transcriptome
+    """
+    gtf_fasta = gtf.gtf_to_fasta(gtf_file, ref_file)
+    bwa = config_utils.get_program("bwa", data["config"])
+    cmd = "{bwa} index {gtf_fasta}".format(**locals())
+    message = "Creating transcriptome index of %s with bwa." % (gtf_fasta)
+    do.run(cmd, message)
+    return gtf_fasta
+
+def align_transcriptome(fastq_file, pair_file, ref_file, data):
+    """
+    bwa mem with settings for aligning to the transcriptome for eXpress/RSEM/etc
+    """
+    work_bam = dd.get_work_bam(data)
+    base, ext = os.path.splitext(work_bam)
+    out_file = base + ".tramscriptome" + ext
+    if utils.file_exists(out_file):
+        data = dd.set_trascriptome_bam(data, out_file)
+        return data
+    bwa = config_utils.get_program("bwa", data["config"])
+    gtf_file = dd.get_gtf_file(data)
+    gtf_fasta = index_transcriptome(gtf_file, ref_file, data)
+    args = " ".join(_bwa_args_from_config(data["config"]))
+    num_cores = data["config"]["algorithm"].get("num_cores", 1)
+    cmd = ("{bwa} mem {args} -a -t {num_cores} {gtf_fasta} {fastq_file} "
+           "{pair_file} > {tx_out_file}")
+    with file_transaction(out_file) as tx_out_file:
+        message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
+        do.run(cmd.format(**locals()), message)
+    data = dd.set_transcriptome_bam(data, out_file)
+    return data
