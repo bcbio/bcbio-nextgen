@@ -90,13 +90,7 @@ def _add_supplemental_bams(data):
 def process_alignment(data):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
-    if "files" not in data:
-        fastq1, fastq2 = None, None
-    elif len(data["files"]) == 2:
-        fastq1, fastq2 = data["files"]
-    else:
-        assert len(data["files"]) == 1, data["files"]
-        fastq1, fastq2 = data["files"][0], None
+    fastq1, fastq2 = dd.get_input_sequence_files(data)
     config = data["config"]
     aligner = config["algorithm"].get("aligner", None)
     if fastq1 and utils.file_exists_or_remote(fastq1) and aligner:

@@ -54,6 +54,20 @@ LOOKUPS = {
     "oncofuse_file": {"keys": ["oncofuse_file"]}
 }
 
+def get_input_sequence_files(data, default=None):
+    """
+    returns the input sequencing files, these can be single or paired FASTQ
+    files or BAM files
+    """
+    if "files" not in data:
+        file1, file2 = None, None
+    elif len(data["files"]) == 2:
+        file1, file2 = data["files"]
+    else:
+        assert len(data["files"]) == 1, data["files"]
+        file1, file2 = data["files"][0], None
+    return file1, file2
+
 def get_dexseq_gff(config, default=None):
     """
     some older versions of the genomes have the DEXseq gff file as
