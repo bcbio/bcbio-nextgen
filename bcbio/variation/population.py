@@ -179,7 +179,11 @@ def _group_by_batches(samples, check_fn):
     return batch_groups, singles, out_retrieve, extras
 
 def _has_variant_calls(data):
-    return data.get("align_bam") and data.get("vrn_file") and vcfutils.vcf_has_variants(data["vrn_file"])
+    if data.get("align_bam"):
+        for vrn in data["variants"]:
+            if vrn.get("vrn_file") and vcfutils.vcf_has_variants(vrn["vrn_file"]):
+                return True
+    return False
 
 def prep_db_parallel(samples, parallel_fn):
     """Prepares gemini databases in parallel, handling jointly called populations.
