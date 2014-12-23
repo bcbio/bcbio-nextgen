@@ -1,6 +1,9 @@
 import os
 import sys
 import shutil
+import subprocess
+import contextlib
+from distutils.version import LooseVersion
 
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -49,7 +52,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if strandedness == "unstranded":
         cmd += " --outSAMstrandField intronMotif "
 
-    if dd.get_rsem(data):
+    if dd.get_rsem(data) and not is_transcriptome_broken():
         cmd += " --quantMode TranscriptomeSAM "
 
     with tx_tmpdir(data) as tmp_dir:
@@ -60,7 +63,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         with file_transaction(data, final_out) as tx_final_out:
             do.run(cmd.format(**locals()), run_message, None)
 
-    if dd.get_rsem(data):
+    if dd.get_rsem(data) and not is_transcriptome_broken():
         transcriptome_file = _move_transcriptome_file(out_dir, names)
         data = dd.set_transcriptome_bam(data, transcriptome_file)
     data = dd.set_work_bam(data, final_out)
@@ -116,3 +119,22 @@ def index(ref_file, out_dir, data):
                 shutil.rmtree(out_dir)
             shutil.move(tx_out_dir, out_dir)
     return out_dir
+
+def get_star_version():
+    cmd = "STAR --version"
+    subp = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            shell=True)
+    with contextlib.closing(subp.stdout) as stdout:
+        for line in stdout:
+            if "STAR_" in line:
+                version = line.split("STAR_")[1].strip()
+    return version
+
+def is_transcriptome_broken():
+    """
+    mapping to the transcriptome causes segfaults, but will be supported later
+    until it is fixed, skip this and use the fallback mapping instead
+    """
+    version = get_star_version()
+    return LooseVersion(version) <= LooseVersion("2.4.0h1")
