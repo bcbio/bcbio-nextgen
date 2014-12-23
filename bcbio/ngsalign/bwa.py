@@ -58,7 +58,7 @@ def _can_use_mem(fastq_file, data):
     Randomly samples 5000 reads from the first two million.
     Default to no piping if more than 75% of the sampled reads are small.
     """
-
+    min_size = 70
     thresh = 0.75
     head_count = 8000000
     tocheck = 5000
@@ -183,7 +183,7 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     """
     work_bam = dd.get_work_bam(data)
     base, ext = os.path.splitext(work_bam)
-    out_file = base + ".tramscriptome" + ext
+    out_file = base + ".transcriptome" + ext
     if utils.file_exists(out_file):
         data = dd.set_trascriptome_bam(data, out_file)
         return data
