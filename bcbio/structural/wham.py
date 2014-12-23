@@ -2,6 +2,7 @@
 
 https://github.com/jewmanchue/wham
 """
+import csv
 import os
 import subprocess
 import sys
@@ -41,7 +42,7 @@ def run(items, background=None):
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append({"variantcaller": "wham",
-                           "vrn_file": _subset_to_sample(bed_file, vcf_file, data),
+                           "vrn_file": _subset_to_sample(bed_file, data),
                            "vcf_file": vcf_file})
         out.append(data)
     return out
@@ -67,32 +68,33 @@ def _run_wham(inputs, background_bams):
             do.run(cmd.format(**locals()), "Run WHAM")
     return out_file
 
-def _subset_to_sample(bed_file, vcf_file, data):
+def _subset_to_sample(bed_file, data):
     """Convert the global BED file into sample specific calls.
     """
     name = dd.get_sample_name(data)
     base, ext = os.path.splitext(bed_file)
     out_file = "%s-%s%s" % (base, name, ext)
-    if not utils.file_exists(out_file):
+    if not utils.file_uptodate(out_file, bed_file):
         with file_transaction(data, out_file) as tx_out_file:
-            calls = _get_sample_calls(vcf_file, name)
             with open(bed_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
-                        sample_line = _check_bed_call(line, calls)
+                        sample_line = _check_bed_call(line, name)
                         if sample_line:
                             out_handle.write(sample_line)
-    bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "bedprep"))
-    return bedutils.clean_file(out_file, data, bedprep_dir=bedprep_dir)
+    if utils.file_exists(out_file):
+        bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "bedprep"))
+        return bedutils.clean_file(out_file, data, bedprep_dir=bedprep_dir)
+    else:
+        return out_file
 
-def _check_bed_call(line, calls):
+def _check_bed_call(line, name):
     """Check if a BED file line is called
     """
-    chrom, start, end, stype_str = line.split("\t")[:4]
-    caller, stype = stype_str.split("_")
-    stype_str = "%s_%s" % (stype, caller)
+    chrom, start, end, stype_str, samples = line.split("\t")[:5]
+    samples = set(samples.strip().split(";"))
     start, end = int(start), int(end)
-    if (chrom, start) in calls:
+    if name in samples:
         if end < start:
             fstart, fend = end, start
         else:
@@ -100,34 +102,26 @@ def _check_bed_call(line, calls):
         if fend - fstart < ensemble.MAX_SVSIZE:
             return "%s\t%s\t%s\t%s\n" % (chrom, fstart, fend, stype_str)
 
-def _get_sample_calls(vcf_file, name):
-    """Get a set of positions called in the input VCF file for the sample.
-    """
-    gindex = None
-    calls = set([])
-    with open(vcf_file) as in_handle:
-        for line in in_handle:
-            if line.startswith("#CHROM"):
-                gindex = line.strip().split("\t").index(name)
-            elif not line.startswith("#"):
-                assert gindex
-                cur_parts = line.split("\t")
-                cur_gt = cur_parts[gindex].split(":")[0]
-                if len(set(cur_gt.split("|/")) - set(["0", "."])) > 0:
-                    chrom, start = cur_parts[:2]
-                    calls.add((chrom, int(start) - 1))
-    return calls
-
 def _convert_to_bed(vcf_file, inputs):
     """Convert WHAM output file into BED format for ensemble calling.
     """
-    wham_sharedir = os.path.normpath(os.path.join(os.path.dirname(subprocess.check_output(["which", "WHAM-BAM"])),
-                                                  os.pardir, "share", "wham"))
+    buffer_size = 25  # bp around break ends
     out_file = "%s.bed" % utils.splitext_plus(vcf_file)[0]
-    if not utils.file_exists(out_file):
+    if not utils.file_uptodate(out_file, vcf_file):
         with file_transaction(inputs[0], out_file) as tx_out_file:
-            cmd = ("perl {wham_sharedir}/whamToBed.pl --paired --append --file {vcf_file} > {tx_out_file}")
-            do.run(cmd.format(**locals()), "WHAM VCF to BED")
+            with open(tx_out_file, "w") as out_handle:
+                reader = vcf.Reader(filename=vcf_file)
+                writer = csv.writer(out_handle, dialect="excel-tab")
+                for rec in reader:
+                    start = max(rec.start - buffer_size, 0)
+                    if rec.INFO["BE"] != ".":
+                        other_chrom, end, count = rec.INFO["BE"]
+                        if int(end) > start and other_chrom == rec.CHROM:
+                            samples = [g.sample for g in rec.samples if g.gt_type > 0]
+                            if len(samples) > 0:
+                                end = int(end) + buffer_size
+                                writer.writerow([rec.CHROM, start, end, "%s_wham" % rec.INFO["WC"],
+                                                 ";".join(samples)])
     return out_file
 
 def _add_wham_classification(in_file, items):
@@ -165,4 +159,4 @@ def _is_sv(rec):
     """
     size = max([len(x) for x in [rec.REF] + rec.ALT])
     is_sv = rec.is_sv or any(x for x in rec.ALT if str(x).startswith("<"))
-    return size > 20 or is_sv
+    return size > 10 or is_sv

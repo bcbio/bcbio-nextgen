@@ -63,7 +63,7 @@ def _create_bed(call, sample, work_dir, data):
     """Create a simplified BED file from caller specific input.
     """
     out_file = os.path.join(work_dir, "%s-ensemble-%s.bed" % (sample, call["variantcaller"]))
-    if not utils.file_exists(out_file):
+    if call.get("vrn_file") and not utils.file_uptodate(out_file, call["vrn_file"]):
         with file_transaction(data, out_file) as tx_out_file:
             convert_fn = CALLER_TO_BED.get(call["variantcaller"])
             if convert_fn:
