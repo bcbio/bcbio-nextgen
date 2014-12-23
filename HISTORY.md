@@ -3,12 +3,15 @@
 - No longer keep INFO fields with `vcfallelicprimitves` in FreeBayes,
   Platypus and Scalpel calling to prevent introduction of problematic
   fields for multi-allelic MNPs.
+- Fix batching problem when using `coverage` and multiple shared batches
+  like a global normal in cancer calling. Thanks to Luca Beltrame.
 - Use `mincores` specification to ipython-cluster-helper to combine single core
   jobs into a single submission job for better memory shared on resource
   constrained systems.
 - Move disambiguation split work inside parallel framework so download and
   preparation occurs on worker nodes or inside Docker containers. Enables on
   demand download of disambiguation genomes.
+- Ensure population databases created when some inputs do not have variant calls.
 - Switch to seaborn as matplotlib wrapper, from prettplotlib.
 - Fixes for ensemble structural variant calling on single samples.
 - Fixes for mixing joint and pooled calling in a single configuration file.

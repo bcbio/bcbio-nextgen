@@ -50,21 +50,28 @@ def _uniquify_bed_names(bed_file, out_dir, data):
             with open(bed_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     namecounts = collections.defaultdict(int)
-                    for line in in_handle:
+                    for i, line in enumerate(in_handle):
                         parts = line.rstrip("\r\n").split("\t")
-                        name = parts[3]
+                        if len(parts) >= 4:
+                            name = parts[3]
+                        else:
+                            name = str(i)
                         namecount = namecounts.get(name, 0)
                         namecounts[name] += 1
                         if namecount > 0:
                             name = "%s-%s" % (name, namecount)
-                        parts[3] = name
+                        if len(parts) >= 4:
+                            parts[3] = name
+                        else:
+                            assert len(parts) == 3
+                            parts.append(name)
                         out_handle.write("\t".join(parts) + "\n")
     return out_file
 
 def _get_group_batch(items):
     out = None
     for data in items:
-        batches = tz.get_in(("metadata", "batch"), items[0], [dd.get_sample_name(data)])
+        batches = tz.get_in(("metadata", "batch"), data, [dd.get_sample_name(data)])
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
         if not out:
@@ -73,19 +80,41 @@ def _get_group_batch(items):
             out = out.intersection(set(batches))
     return list(out)[0]
 
+def _handle_multi_batches(prepped, multi_batches):
+    """Avoid carrying items present in multiple batches along in analysis.
+    """
+    out = []
+    handled = set([])
+    for data in (x[0] for x in prepped):
+        name = dd.get_sample_name(data)
+        if name in multi_batches:
+            if name not in handled:
+                out.append([data])
+                handled.add(name)
+            multi_batches.remove(name)
+        elif name not in handled:
+            out.append([data])
+    assert len(multi_batches) == 0, "Did not find all multi_batch items: %s" % (list(multi_batches))
+    return out
+
 def summarize_samples(samples, run_parallel):
     """Back compatibility for existing pipelines. Should be replaced with summary when ready.
     """
     extras = []
     to_run = collections.defaultdict(list)
+    multi_batches = set([])
     for data in [x[0] for x in samples]:
         if tz.get_in(["config", "algorithm", "coverage"], data):
             batches = tz.get_in(("metadata", "batch"), data, [dd.get_sample_name(data)])
             if not isinstance(batches, (tuple, list)):
                 batches = [batches]
+            else:
+                multi_batches.add(dd.get_sample_name(data))
             for batch in batches:
-                to_run[batch].append(data)
+                to_run[batch].append(utils.deepish_copy(data))
         else:
             extras.append([data])
     out = run_parallel("coverage_summary", [[xs] for xs in to_run.values()]) if len(to_run) > 0 else []
+    out = _handle_multi_batches(out, multi_batches)
+    assert len(out + extras) == len(samples), (len(out + extras), len(samples))
     return out + extras
