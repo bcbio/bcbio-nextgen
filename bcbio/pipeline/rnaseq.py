@@ -34,7 +34,7 @@ def generate_transcript_counts(data):
     if dd.get_rsem(data) and not dd.get_transcriptome_bam(data):
         file1, file2 = dd.get_input_sequence_files(data)
         ref_file = dd.get_ref_file(data)
-        logger.info("RSEM was flagged to run, but the transcriptome BAM file"
+        logger.info("RSEM was flagged to run, but the transcriptome BAM file "
                     "was not found. Aligning to the transcriptome with bwa.")
         data = bwa.align_transcriptome(file1, file2, ref_file, data)
     return [[data]]
