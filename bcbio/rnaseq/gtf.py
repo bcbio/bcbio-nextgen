@@ -2,9 +2,10 @@ import gffutils
 import tempfile
 import os
 import random
-from bcbio.utils import file_exists, chdir
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
+from bcbio.log import logger
 
 def get_gtf_db(gtf, in_memory=False):
     """
