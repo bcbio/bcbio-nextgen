@@ -16,6 +16,7 @@ import csv
 import toolz as tz
 
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -56,20 +57,32 @@ def _apply_priority_filter(in_file, priority_file, data):
     vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
 
+def _hg19_to_GRCh37(chrom):
+    """Cheap and ugly conversion from hg19 to GRCh37 contigs.
+    """
+    if chrom == "chrM":
+        return "MT"
+    else:
+        return chrom.replace("chr", "")
+
 def _prep_priority_filter(gemini_db, data):
     """Prepare tabix indexed file with priority based filters and supporting information
     """
     from gemini import GeminiQuery
     out_file = "%s-priority.tsv" % utils.splitext_plus(gemini_db)[0]
     if not utils.file_exists(out_file):
+        ref_chroms = set([x.name for x in ref.file_contigs(dd.get_ref_file(data), data["config"])])
         with file_transaction(data, out_file) as tx_out_file:
             gq = GeminiQuery(gemini_db)
+            pops = ["aaf_esp_ea", "aaf_esp_aa", "aaf_esp_all", "aaf_1kg_amr", "aaf_1kg_eas",
+                    "aaf_1kg_sas", "aaf_1kg_afr", "aaf_1kg_eur", "aaf_1kg_all", "aaf_adj_exac_all",
+                    "aaf_adj_exac_afr", "aaf_adj_exac_amr", "aaf_adj_exac_eas", "aaf_adj_exac_fin",
+                    "aaf_adj_exac_nfe", "aaf_adj_exac_oth", "aaf_adj_exac_sas"]
             attrs = ("chrom, start, end, ref, alt, impact_so, impact_severity, in_dbsnp, "
-                     "aaf_esp_all, aaf_1kg_all, aaf_adj_exac_all, cosmic_ids, "
-                     "clinvar_sig, clinvar_origin, gt_ref_depths, gt_alt_depths").split(", ")
-            gq.run("SELECT %s FROM variants" % ", ".join(attrs))
+                     "cosmic_ids, clinvar_sig, clinvar_origin, gt_ref_depths, gt_alt_depths").split(", ")
+            gq.run("SELECT %s FROM variants" % ", ".join(attrs + pops))
             sidx = gq.sample_to_idx[dd.get_sample_name(data)]
-            header = attrs[:5] + ["filter"] + attrs[5:-2] + ["freq"]
+            header = attrs[:5] + ["filter"] + attrs[5:-2] + [x for x in pops if x.endswith("_all")] + ["freq"]
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle, dialect="excel-tab")
                 cheader = header[:]
@@ -82,13 +95,15 @@ def _prep_priority_filter(gemini_db, data):
                         row.row["freq"] = "%.2f" % (float(alt_depth) / float(ref_depth + alt_depth))
                     except ZeroDivisionError:
                         row.row["freq"] = "0.00"
-                    row.row["filter"] = _calc_priority_filter(row)
+                    row.row["filter"] = _calc_priority_filter(row, pops)
+                    if row["chrom"] not in ref_chroms and _hg19_to_GRCh37(row["chrom"]) in ref_chroms:
+                        row.row["chrom"] = _hg19_to_GRCh37(row["chrom"])
                     out = [row[x] for x in header]
                     writer.writerow(out)
     return vcfutils.bgzip_and_index(out_file, data["config"],
                                     tabix_args="-0 -c '#' -s 1 -b 2 -e 3")
 
-def _calc_priority_filter(row):
+def _calc_priority_filter(row, pops):
     """Calculate the priority filter based on external associated data.
 
     - Pass high/medium impact variants not found in population databases
@@ -100,22 +115,23 @@ def _calc_priority_filter(row):
     if row["impact_severity"] in ["LOW"]:
         filters.append("lowseverity")
     passes.extend(_find_known(row))
-    filters.extend(_known_populations(row))
+    filters.extend(_known_populations(row, pops))
     if len(filters) == 0 or (len(passes) > 0 and len(filters) < 2):
         passes.insert(0, "pass")
     return ",".join(passes + filters)
 
-def _known_populations(row):
-    """Find variants present in higher frequency in population databases.
+def _known_populations(row, pops):
+    """Find variants present in substantial frequency in population databases.
     """
-    cutoff = 0.1
-    out = []
-    for pop, key in [("esp", "aaf_esp_all"), ("1000g", "aaf_1kg_all"),
-                     ("exac", "aaf_adj_exac_all")]:
-        val = row[key]
-        if val and val > cutoff:
-            out.append(pop)
-    return out
+    cutoff = 0.05
+    out = set([])
+    for pop, base in [("esp", "aaf_esp"), ("1000g", "aaf_1kg"),
+                      ("exac", "aaf_adj_exac")]:
+        for key in [x for x in pops if x.startswith(base)]:
+            val = row[key]
+            if val and val > cutoff:
+                out.add(pop)
+    return sorted(list(out))
 
 def _find_known(row):
     """Find variant present in known pathogenic databases.
