@@ -185,7 +185,7 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     base, ext = os.path.splitext(work_bam)
     out_file = base + ".transcriptome" + ext
     if utils.file_exists(out_file):
-        data = dd.set_trascriptome_bam(data, out_file)
+        data = dd.set_transcriptome_bam(data, out_file)
         return data
     bwa = config_utils.get_program("bwa", data["config"])
     gtf_file = dd.get_gtf_file(data)
