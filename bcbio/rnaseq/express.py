@@ -1,11 +1,10 @@
 import os
 import shutil
-import tempfile
-from bcbio.utils import chdir, file_exists, safe_makedir, get_in
+from bcbio.utils import file_exists
 from bcbio.bam import is_paired
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.distributed.transaction import tx_tmpdir, file_transaction
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.rnaseq import gtf
 from bcbio.log import logger
@@ -20,15 +19,13 @@ def run(data):
     gtf_fasta = gtf.gtf_to_fasta(dd.get_gtf_file(data), dd.get_ref_file(data))
     out_dir = os.path.join(dd.get_work_dir(data), "express", name)
     out_file = os.path.join(out_dir, name + ".xprs")
-    safe_makedir(out_dir)
     express = config_utils.get_program("express", data['config'])
     strand = _set_stranded_flag(in_bam, data)
     if not file_exists(out_file):
-        with tx_tmpdir() as tmp_dir:
-            chdir(tmp_dir)
-            cmd = ("{express} {strand} {gtf_fasta} {in_bam}")
-            do.run(cmd.format(**locals()), "Run express", {})
-            shutil.move("results.xprs", out_file)
+        with file_transaction(out_dir) as tx_out_dir:
+            cmd = ("{express} --no-update-check -o {tx_out_dir} {strand} {gtf_fasta} {in_bam}")
+            do.run(cmd.format(**locals()), "Run express on %s." % in_bam, {})
+        shutil.move(os.path.join(out_dir, "results.xprs"), out_file)
     eff_count_file = _get_column(out_file, out_file.replace(".xprs", "_eff.counts"), 7)
     tpm_file = _get_column(out_file, out_file.replace("xprs", "tpm"), 14)
     fpkm_file = _get_column(out_file, out_file.replace("xprs","fpkm"), 10)
