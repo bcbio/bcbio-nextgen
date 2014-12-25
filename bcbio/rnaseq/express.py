@@ -15,7 +15,7 @@ def run(data):
     in_bam = dd.get_transcriptome_bam(data)
     if not in_bam:
         logger.info("Transcriptome-mapped BAM file not found, skipping eXpress.")
-        return None
+        return data
     gtf_fasta = gtf.gtf_to_fasta(dd.get_gtf_file(data), dd.get_ref_file(data))
     out_dir = os.path.join(dd.get_work_dir(data), "express", name)
     out_file = os.path.join(out_dir, name + ".xprs")
@@ -28,8 +28,11 @@ def run(data):
         shutil.move(os.path.join(out_dir, "results.xprs"), out_file)
     eff_count_file = _get_column(out_file, out_file.replace(".xprs", "_eff.counts"), 7)
     tpm_file = _get_column(out_file, out_file.replace("xprs", "tpm"), 14)
-    fpkm_file = _get_column(out_file, out_file.replace("xprs","fpkm"), 10)
-    return (eff_count_file, tpm_file, fpkm_file)
+    fpkm_file = _get_column(out_file, out_file.replace("xprs", "fpkm"), 10)
+    data = dd.set_express_counts(data, eff_count_file)
+    data = dd.set_express_tpm(data, tpm_file)
+    data = dd.set_express_fpkm(data, fpkm_file)
+    return data
 
 def _get_column(in_file, out_file, column):
     """Subset one column from a file

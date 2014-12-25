@@ -42,14 +42,12 @@ def generate_transcript_counts(data):
 def run_dexseq(data):
     """Quantitate exon-level counts with DEXSeq"""
     if dd.get_dexseq_gff(data, None):
-        data = dd.set_dexseq_counts(data, dexseq.bcbio_run(data))
+        data = dexseq.bcbio_run(data)
     return [[data]]
 
 def run_express(data):
     """Quantitative isoform expression by eXpress"""
-    out_files = express.run(data)
-    if out_files:
-        data['eff_counts'], data['tpm_counts'], data['fpkm_counts'] = out_files
+    data = express.run(data)
     return [[data]]
 
 def combine_express(samples, combined):

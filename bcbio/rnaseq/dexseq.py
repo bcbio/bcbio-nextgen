@@ -20,7 +20,9 @@ def bcbio_run(data):
     bam_file = dd.get_work_bam(data)
     dexseq_gff = dd.get_dexseq_gff(data)
     stranded = dd.get_strandedness(data)
-    return run_count(bam_file, dexseq_gff, stranded, out_file, data)
+    counts = run_count(bam_file, dexseq_gff, stranded, out_file, data)
+    data = dd.set_dexseq_counts(data, counts)
+    return data
 
 def run_count(bam_file, dexseq_gff, stranded, out_file, data):
     """
