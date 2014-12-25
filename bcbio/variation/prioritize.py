@@ -79,7 +79,7 @@ def _prep_priority_filter(gemini_db, data):
                     "aaf_adj_exac_afr", "aaf_adj_exac_amr", "aaf_adj_exac_eas", "aaf_adj_exac_fin",
                     "aaf_adj_exac_nfe", "aaf_adj_exac_oth", "aaf_adj_exac_sas"]
             attrs = ("chrom, start, end, ref, alt, impact_so, impact_severity, in_dbsnp, "
-                     "cosmic_ids, clinvar_sig, clinvar_origin, gt_ref_depths, gt_alt_depths").split(", ")
+                     "cosmic_ids, clinvar_sig, clinvar_origin, fitcons, gt_ref_depths, gt_alt_depths").split(", ")
             gq.run("SELECT %s FROM variants" % ", ".join(attrs + pops))
             sidx = gq.sample_to_idx[dd.get_sample_name(data)]
             header = attrs[:5] + ["filter"] + attrs[5:-2] + [x for x in pops if x.endswith("_all")] + ["freq"]
@@ -123,7 +123,7 @@ def _calc_priority_filter(row, pops):
 def _known_populations(row, pops):
     """Find variants present in substantial frequency in population databases.
     """
-    cutoff = 0.05
+    cutoff = 0.01
     out = set([])
     for pop, base in [("esp", "aaf_esp"), ("1000g", "aaf_1kg"),
                       ("exac", "aaf_adj_exac")]:
