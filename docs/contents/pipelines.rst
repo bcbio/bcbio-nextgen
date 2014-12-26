@@ -158,7 +158,7 @@ bcbio-nextgen also implements a configurable best-practice pipeline for RNA-seq
 quality control, adapter trimming, alignment and post-alignment quantitation
 
 - Adapter trimming:
-  - `AlienTrimmer`_
+  - `cutadapt`_
 
 - Sequence alignment:
   - `tophat2`_
@@ -169,7 +169,9 @@ quality control, adapter trimming, alignment and post-alignment quantitation
   - `FastQC`_
 
 - Quantitation:
-  - `HTSeq`_
+  - `featureCounts`_
+  - `DEXSeq`_
+  - `eXpress`_
 
 After a run you will have in the ``upload`` directory a directory for each
 sample which contains a BAM file of the aligned and unaligned reads, a
@@ -330,4 +332,5 @@ templating system.
 .. _parameters: http://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html
 .. _template: http://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
 .. _illumina-rnaseq: http://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml
-.. _AlienTrimmer: http://www.ncbi.nlm.nih.gov/pubmed/23912058
+.. _eXpress: http://bio.math.berkeley.edu/eXpress/overview.html
+.. _featureCounts: http://bioinf.wehi.edu.au/featureCounts/
