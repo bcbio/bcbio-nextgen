@@ -60,6 +60,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
+    out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_chipseq(sample):
@@ -106,6 +107,13 @@ def _maybe_add_validate(algorith, sample, out):
         out.append({"path": plot,
                     "type": ptype,
                     "ext": "validate%s" % ("" if i == 0 else "-%s" % (i + 1))})
+    return out
+
+def _maybe_add_rnaseq_variant_file(algorithm, sample, out):
+    if sample.get("vrn_file"):
+        out.append({"path": sample.get("vrn_file"),
+                    "type": "vcf",
+                    "ext": "vcf"})
     return out
 
 def _maybe_add_variant_file(algorithm, sample, out):

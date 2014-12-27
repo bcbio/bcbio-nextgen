@@ -87,6 +87,10 @@ def run_dexseq(*args):
     return rnaseq.run_dexseq(*args)
 
 @utils.map_wrap
+def run_rnaseq_variant_calling(*args):
+    return rnaseq.run_rnaseq_variant_calling(*args)
+
+@utils.map_wrap
 def combine_bam(*args):
     return shared.combine_bam(*args)
 

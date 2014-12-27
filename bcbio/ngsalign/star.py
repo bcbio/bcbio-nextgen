@@ -31,7 +31,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
 
     final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):
-        return final_out
+        data = dd.set_work_bam(data, final_out)
+        data = dd.set_align_bam(data, final_out)
+        return data
     star_path = config_utils.get_program("STAR", config)
     fastq = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = config["algorithm"].get("num_cores", 1)
@@ -67,6 +69,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         transcriptome_file = _move_transcriptome_file(out_dir, names)
         data = dd.set_transcriptome_bam(data, transcriptome_file)
     data = dd.set_work_bam(data, final_out)
+    data = dd.set_align_bam(data, final_out)
     return data
 
 def _move_transcriptome_file(out_dir, names):

@@ -9,6 +9,7 @@ from bcbio.log import logger
 import sys
 
 LOOKUPS = {
+    "config": {"keys": ['config']},
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
                   "default": 1},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
@@ -20,6 +21,7 @@ LOOKUPS = {
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
+    "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "work_bam": {"keys": ["work_bam"]},
     "count_file": {"keys": ["count_file"]},
     "combined_counts": {"keys": ["combined_counts"]},
@@ -51,7 +53,11 @@ LOOKUPS = {
     "assembled_gtf": {"keys": ["assembled_gtf"]},
     "assemble_transcripts": {"keys": ["config", "algorithm", "assemble_transcripts"],
                              "default": False},
-    "oncofuse_file": {"keys": ["oncofuse_file"]}
+    "oncofuse_file": {"keys": ["oncofuse_file"]},
+    "split_bam": {"keys": ["split_bam"]},
+    "vrn_file": {"keys": ["vrn_file"]},
+    "deduped_bam": {"keys": ["deduped_bam"]},
+    "align_bam": {"keys": ["align_bam"]}
 }
 
 def get_input_sequence_files(data, default=None):

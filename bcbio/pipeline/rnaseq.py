@@ -1,9 +1,23 @@
 import os
-from bcbio.rnaseq import featureCounts, cufflinks, oncofuse, count, dexseq, express
+from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
+                          express, variation)
 from bcbio.ngsalign import bwa
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
 from bcbio.log import logger
+
+def rnaseq_variant_calling(samples, run_parallel):
+    """
+    run RNA-seq variant calling using GATK
+    """
+    samples = run_parallel("run_rnaseq_variant_calling", samples)
+    return samples
+
+def run_rnaseq_variant_calling(data):
+    variantcaller = dd.get_variantcaller(data)
+    if variantcaller and "gatk" in variantcaller:
+        data = variation.rnaseq_gatk_variant_calling(data)
+    return [[data]]
 
 def quantitate_expression_parallel(samples, run_parallel):
     """
