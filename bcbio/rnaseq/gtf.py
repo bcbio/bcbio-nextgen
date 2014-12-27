@@ -60,7 +60,7 @@ def gtf_to_fasta(gtf_file, ref_fasta, cds=False, out_file=None):
                 if line.startswith(">"):
                     if transcript == line.split(" ")[1]:
                         logger.info("Transcript %s has already been seen, skipping this "
-                                    "version.")
+                                    "version." % transcript)
                         skipping = True
                     else:
                         transcript = line.split(" ")[1]
