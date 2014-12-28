@@ -297,7 +297,7 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("estimate expression (threaded)", dirs):
                 samples = rnaseq.quantitate_expression_parallel(samples, run_parallel)
         with prun.start(_wres(parallel, ["dexseq", "express"]), samples, config,
-                        dirs, "rnaseqcount-singlethread") as run_parallel:
+                        dirs, "rnaseqcount-singlethread", max_multicore=1) as run_parallel:
             with profile.report("estimate expression (single threaded)", dirs):
                 samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
         samples = rnaseq.combine_files(samples)
