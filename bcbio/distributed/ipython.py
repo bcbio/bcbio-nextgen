@@ -40,6 +40,9 @@ def create(parallel, dirs, config):
         # if we have less scheduled cores than per machine, use the scheduled count
         if cores > parallel["cores"]:
             cores = parallel["cores"]
+        # if we have less total cores required for the entire process, use that
+        elif cores > parallel["num_jobs"] * parallel["cores_per_job"]:
+            cores = parallel["num_jobs"] * parallel["cores_per_job"]
         else:
             cores = int(math.floor(cores * float(parallel.get("mem_pct", 1.0))))
             # if we have larger number of cores, leave room for standard batch script and controller
