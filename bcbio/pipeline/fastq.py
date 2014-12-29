@@ -12,20 +12,20 @@ from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 
 
-def get_fastq_files(item):
+def get_fastq_files(data):
     """Retrieve fastq files for the given lane, ready to process.
     """
-    assert "files" in item, "Did not find `files` in input; nothing to process"
+    assert "files" in data, "Did not find `files` in input; nothing to process"
     ready_files = []
     should_gzip = True
     # Bowtie does not accept gzipped fastq
-    if 'bowtie' in item['reference'].keys():
+    if 'bowtie' in data['reference'].keys():
         should_gzip = False
-    for fname in item["files"]:
+    for fname in data["files"]:
         if fname.endswith(".bam"):
-            if _pipeline_needs_fastq(item["config"], item):
-                ready_files = _convert_bam_to_fastq(fname, item["dirs"]["work"],
-                                                    item, item["dirs"], item["config"])
+            if _pipeline_needs_fastq(data["config"], data):
+                ready_files = _convert_bam_to_fastq(fname, data["dirs"]["work"],
+                                                    data, data["dirs"], data["config"])
             else:
                 ready_files = [fname]
         elif fname.startswith(utils.SUPPORTED_REMOTES):
@@ -55,14 +55,14 @@ def _gzip_fastq(in_file):
         return gzipped_file
     return in_file
 
-def _pipeline_needs_fastq(config, item):
+def _pipeline_needs_fastq(config, data):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
     """
     aligner = config["algorithm"].get("aligner")
     support_bam = aligner in alignment.metadata.get("support_bam", [])
     return aligner and not support_bam
 
-def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
+def _convert_bam_to_fastq(in_file, work_dir, data, dirs, config):
     """Convert BAM input file into FASTQ files.
     """
     out_dir = safe_makedir(os.path.join(work_dir, "fastq_convert"))
@@ -71,7 +71,7 @@ def _convert_bam_to_fastq(in_file, work_dir, item, dirs, config):
     if (qual_bin_method == "prealignment" or
          (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
         out_bindir = safe_makedir(os.path.join(out_dir, "qualbin"))
-        in_file = cram.illumina_qual_bin(in_file, item["sam_ref"], out_bindir, config)
+        in_file = cram.illumina_qual_bin(in_file, data["sam_ref"], out_bindir, config)
 
     out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
                  os.path.splitext(os.path.basename(in_file))[0], x))
