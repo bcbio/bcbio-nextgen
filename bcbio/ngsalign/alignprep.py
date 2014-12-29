@@ -14,6 +14,7 @@ from bcbio.log import logger
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
 def create_inputs(data):
@@ -199,6 +200,24 @@ def _bgzip_from_cram(cram_file, dirs, data):
         assert utils.file_exists(out_s)
         return [out_s]
 
+def _bgzip_from_cram_sambamba(cram_file, dirs, data):
+    """Use sambamba to extract from CRAM via regions.
+    """
+    raise NotImplementedError("sambamba doesn't yet support retrieval from CRAM by BED file")
+    region_file = (tz.get_in(["config", "algorithm", "variant_regions"], data)
+                   if tz.get_in(["config", "algorithm", "coverage_interval"], data) in ["regional", "exome"]
+                   else None)
+    base_name = utils.splitext_plus(os.path.basename(cram_file))[0]
+    work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep",
+                                               "%s-parts" % base_name))
+    f1, f2, o1, o2, si = [os.path.join(work_dir, "%s.fq" % x) for x in ["match1", "match2", "unmatch1", "unmatch2",
+                                                                        "single"]]
+    ref_file = dd.get_ref_file(data)
+    region = "-L %s" % region_file if region_file else ""
+    cmd = ("sambamba view -f bam -l 0 -C {cram_file} -T {ref_file} {region} | "
+           "bamtofastq F={f1} F2={f2} S={si} O={o1} O2={o2}")
+    do.run(cmd.format(**locals()), "Convert CRAM to fastq in regions")
+
 def _merge_and_bgzip(orig_files, out_file, base_file, ext=""):
     """Merge a group of gzipped input files into a final bgzipped output.
 
@@ -250,16 +269,17 @@ def _cram_to_fastq_region(cram_file, work_dir, base_name, region, data):
     cores = tz.get_in(["config", "algorithm", "num_cores"], data, 1)
     max_mem = int(resources.get("memory", "1073741824")) * cores  # 1Gb/core default
     rext = "-%s" % region.replace(":", "_").replace("-", "_") if region else "full"
-    out_s, out_p1, out_p2 = [os.path.join(work_dir, "%s%s-%s.fq.gz" %
-                                          (base_name, rext, fext))
-                             for fext in ["s1", "p1", "p2"]]
+    out_s, out_p1, out_p2, out_o1, out_o2 = [os.path.join(work_dir, "%s%s-%s.fq.gz" %
+                                                          (base_name, rext, fext))
+                                             for fext in ["s1", "p1", "p2", "o1", "o2"]]
     if not utils.file_exists(out_p1):
-        with file_transaction(data, out_s, out_p1, out_p2) as (tx_out_s, tx_out_p1, tx_out_p2):
+        with file_transaction(data, out_s, out_p1, out_p2, out_o1, out_o2) as \
+             (tx_out_s, tx_out_p1, tx_out_p2, tx_out_o1, tx_out_o2):
             cram_file = utils.remote_cl_input(cram_file)
             sortprefix = "%s-sort" % utils.splitext_plus(tx_out_s)[0]
             cmd = ("bamtofastq filename={cram_file} inputformat=cram T={sortprefix} "
-                   "gz=1 collate=1 colsbs={max_mem} "
-                   "F={tx_out_p1} F2={tx_out_p2} S={tx_out_s} O=/dev/null O2=/dev/null "
+                   "gz=1 collate=1 colsbs={max_mem} exclude=SECONDARY,SUPPLEMENTARY "
+                   "F={tx_out_p1} F2={tx_out_p2} S={tx_out_s} O={tx_out_o1} O2={tx_out_o2} "
                    "reference={ref_file}")
             if region:
                 cmd += " ranges='{region}'"
