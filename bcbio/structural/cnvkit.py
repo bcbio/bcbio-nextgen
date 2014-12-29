@@ -22,7 +22,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do
-from bcbio.structural import theta
+from bcbio.structural import shared, theta
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -61,13 +61,19 @@ def _associate_cnvkit_out(ckout, items):
         out.append(data)
     return out
 
-def _run_cnvkit_single(data, access_file):
-    """Process a single input file with a uniform background.
+def _run_cnvkit_single(data, access_file, background=None):
+    """Process a single input file with BAM or uniform background.
     """
     test_bams = [data["align_bam"]]
-    background_bams = []
+    if background:
+        background_bams = [x["align_bam"] for x in background]
+        background_name = os.path.splitext(os.path.basename(background_bams[0]))[0]
+    else:
+        background_bams = []
+        background_name = None
     work_dir = _sv_workdir(data)
-    ckout = _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir)
+    ckout = _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
+                               background_name=background_name)
     return _associate_cnvkit_out(ckout, [data])
 
 def _run_cnvkit_cancer(items, background, access_file):
@@ -86,7 +92,9 @@ def _run_cnvkit_population(items, background, access_file):
     Currently uses a flat background for each sample and calls independently. Could
     be improved to use population information but this is a starting point.
     """
-    return [_run_cnvkit_single(data, access_file)[0] for data in items]
+    assert not background
+    inputs, background = shared.find_case_control(items)
+    return [_run_cnvkit_single(data, access_file, background)[0] for data in inputs]
 
 def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                        background_name=None):

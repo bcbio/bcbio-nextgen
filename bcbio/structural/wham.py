@@ -16,12 +16,12 @@ except ImportError:
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.structural import ensemble
+from bcbio.structural import ensemble, shared
 from bcbio.variation import bedutils, vcfutils
 from bcbio.provenance import do
 
 def run(items, background=None):
-    """Detect copy number variations from batched set of samples using CNVkit.
+    """Detect copy number variations from batched set of samples using WHAM.
     """
     if not background: background = []
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
@@ -30,7 +30,8 @@ def run(items, background=None):
         background_bams = [paired.normal_bam]
         background_names = [paired.normal_name]
     else:
-        inputs = items
+        assert not background
+        inputs, background = shared.find_case_control(items)
         background_bams = [x["align_bam"] for x in background]
         background_names = [dd.get_sample_name(x) for x in background]
     orig_vcf_file = _run_wham(inputs, background_bams)
@@ -114,7 +115,7 @@ def _convert_to_bed(vcf_file, inputs):
                 writer = csv.writer(out_handle, dialect="excel-tab")
                 for rec in reader:
                     start = max(rec.start - buffer_size, 0)
-                    if rec.INFO["BE"] != ".":
+                    if rec.INFO["BE"][0] not in [".", None]:
                         other_chrom, end, count = rec.INFO["BE"]
                         if int(end) > start and other_chrom == rec.CHROM:
                             samples = [g.sample for g in rec.samples if g.gt_type > 0]
