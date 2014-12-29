@@ -54,9 +54,11 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
     def wham_matches(name):
         """Flexibly handle WHAM comparisons, allowing DUP/DEL matches during comparisons.
         """
-        allowed = set(["DUP", "DEL"])
+        allowed = {"DEL": set(["DUP", "DEL"]),
+                   "DUP": set(["DEL"]),
+                   "INV": set(["INV", "INR"])}
         curtype, curcaller = name.split("_")[:2]
-        return curcaller == "wham" and curtype in allowed and svtype in allowed
+        return curcaller == "wham" and svtype in allowed and curtype in allowed[svtype]
     def in_size_range(feat):
         minf, maxf = size_range
         size = feat.end - feat.start
@@ -101,24 +103,34 @@ def _evaluate_multi(callers, truth_svtypes, ensemble, exclude):
     return out_file, df_file
 
 def _plot_evaluation(df_csv):
-    """Provide plot of evaluation metrics, stratified by event size.
-    """
     if mpl is None or plt is None or sns is None:
         not_found = ", ".join([x for x in ['mpl', 'plt', 'sns'] if eval(x) is None])
         logger.info("No validation plot. Missing imports: %s" % not_found)
         return None
+    df = pd.read_csv(df_csv).fillna("0%")
+    out = {}
+    for event in df["svtype"].unique():
+        out[event] = _plot_evaluation_event(df_csv, event)
+    return out
 
-    out_file = "%s.png" % os.path.splitext(df_csv)[0]
+def _plot_evaluation_event(df_csv, svtype):
+    """Provide plot of evaluation metrics for an SV event, stratified by event size.
+    """
+    titles = {"INV": "Inversions", "DEL": "Deletions", "DUP": "Duplications",
+              "INS": "Insertions"}
+    out_file = "%s-%s.png" % (os.path.splitext(df_csv)[0], svtype)
     sns.set(style='white')
     if not utils.file_uptodate(out_file, df_csv):
         metrics = ["sensitivity", "precision"]
         df = pd.read_csv(df_csv).fillna("0%")
-        fig, axs = plt.subplots(len(EVENT_SIZES), len(metrics), tight_layout=True)
+        df = df[(df["svtype"] == svtype)]
+        event_sizes = _find_events_to_include(df, EVENT_SIZES)
+        fig, axs = plt.subplots(len(event_sizes), len(metrics), tight_layout=True)
         callers = sorted(df["caller"].unique())
         if "ensemble" in callers:
             callers.remove("ensemble")
             callers.append("ensemble")
-        for i, size in enumerate(EVENT_SIZES):
+        for i, size in enumerate(event_sizes):
             size_label = "%s to %sbp" % size
             size = "%s-%s" % size
             for j, metric in enumerate(metrics):
@@ -142,9 +154,22 @@ def _plot_evaluation(df_csv):
                     ax.get_yaxis().set_ticks([])
                 for ai, (val, label) in enumerate(zip(vals, labels)):
                     ax.annotate(label, (val + 0.75, ai + 0.35), va='center', size=7)
-        fig.set_size_inches(7, 6)
+        if svtype in titles:
+            fig.text(0.025, 0.95, titles[svtype], size=14)
+        fig.set_size_inches(7, len(event_sizes) + 1)
         fig.savefig(out_file)
     return out_file
+
+def _find_events_to_include(df, event_sizes):
+    out = []
+    for size in event_sizes:
+        str_size = "%s-%s" % size
+        curdf = df[(df["size"] == str_size) & (df["metric"] == "sensitivity")]
+        for val in list(curdf["label"]):
+            if val != "0%":
+                out.append(size)
+                break
+    return out
 
 def _get_plot_val_labels(df, size, metric, callers):
     curdf = df[(df["size"] == size) & (df["metric"] == metric)]
@@ -169,14 +194,15 @@ def evaluate(data, sv_calls):
         exclude_files = [f for f in [x.get("exclude_file") for x in sv_calls] if f]
         exclude_file = exclude_files[0] if len(exclude_files) > 0 else None
         val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, exclude_file)
-        summary_plot = _plot_evaluation(df_csv)
+        summary_plots = _plot_evaluation(df_csv)
         ensemble_i, ensemble = ensemble_callsets[0]
-        ensemble["validate"] = {"csv": val_summary, "plot": summary_plot}
+        ensemble["validate"] = {"csv": val_summary, "plot": summary_plots, "df": df_csv}
         sv_calls[ensemble_i] = ensemble
     return sv_calls
 
 if __name__ == "__main__":
-    _, df_csv = _evaluate_multi(["lumpy", "delly", "cn_mops", "ensemble"],
-                                {"DEL": "NA12878.50X.ldgp.molpb_val.20140508.bed"},
-                                "NA12878-ensemble.bed", "LCR.bed.gz")
-    _plot_evaluation(df_csv)
+    #_, df_csv = _evaluate_multi(["lumpy", "delly", "cn_mops", "ensemble"],
+    #                            {"DEL": "NA12878.50X.ldgp.molpb_val.20140508.bed"},
+    #                            "NA12878-ensemble.bed", "LCR.bed.gz")
+    import sys
+    _plot_evaluation(sys.argv[1])
