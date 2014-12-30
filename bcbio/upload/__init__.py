@@ -144,9 +144,9 @@ def _maybe_add_sv(algorithm, sample, out):
                         to_u = []
                         if isinstance(vfile, dict):
                             for svtype, fname in vfile.items():
-                                to_u.append((fname, "%s-svtype"))
+                                to_u.append((fname, "-%s" % svtype))
                         else:
-                            to_u.append((vfile, "-%s" % vkey if vkey in (set["df"]) else ""))
+                            to_u.append((vfile, "-%s" % vkey if vkey in ["df"] else ""))
                         for vfile, ext in to_u:
                             vext = os.path.splitext(vfile)[-1].replace(".", "")
                             out.append({"path": vfile,
