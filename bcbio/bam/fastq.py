@@ -11,23 +11,22 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import utils
 from bcbio.utils import open_possible_gzip
-
+from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 
 @utils.memoize_outfile(stem=".groom")
-def groom(in_file, in_qual="fastq-sanger", out_dir=None, out_file=None):
+def groom(in_file, data, in_qual="illumina", out_dir=None, out_file=None):
     """
-    Grooms a FASTQ file into sanger format, if it is not already in that
-    format. Use fastq-illumina for Illumina 1.3-1.7 qualities and
-    fastq-solexa for the original solexa qualities. When in doubt, your
-    sequences are probably fastq-sanger.
-
+    Grooms a FASTQ file from Illumina 1.3/1.5 quality scores into 
+    sanger format, if it is not already in that format. 
     """
+    seqtk = config_utils.get_program("seqtk", data["config"])
     if in_qual == "fastq-sanger":
-        logger.info("%s is already in Sanger format." % (in_file))
+        logger.info("%s is already in Sanger format." % in_file)
         return out_file
     with file_transaction(out_file) as tmp_out_file:
-        count = SeqIO.convert(in_file, in_qual, tmp_out_file, "fastq-sanger")
-    logger.info("Converted %d reads in %s to %s." % (count, in_file, out_file))
+        cmd = "{seqtk} seq -Q64 {in_file} | gzip > {tmp_out_file}".format(**locals())
+        do.run(cmd, "Converting %s to Sanger format." % in_file)
     return out_file
 
 @utils.memoize_outfile(stem=".fixed")
