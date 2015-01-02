@@ -57,6 +57,7 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
                 vcfutils.write_empty_vcf(tx_out_file, samples=names)
             else:
                 exclude = ["-x", _delly_exclude_file(items, out_file, chrom)]
+                map_qual = ["--map-qual", "1"]
                 cmd = ["delly", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
                 multi_cmd = "export OMP_NUM_THREADS=%s && export LC_ALL=C && " % cores
                 try:
@@ -119,8 +120,13 @@ def _prep_subsampled_bams(data, work_dir):
     evaluations on NA12878 whole genome data:
 
     https://github.com/cc2qe/speedseq/blob/ca624ba9affb0bd0fb88834ca896e9122639ec94/bin/speedseq#L1102
+
+    XXX Currently does not downsample as new versions do not get good sensitivity with
+    downsampled BAMs.
     """
     full_bam, sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
+    return [full_bam]
+
     ds_bam = bam.downsample(full_bam, data, 1e8, read_filter="-F 'not secondary_alignment and proper_pair'",
                             always_run=True, work_dir=work_dir)
     out_bam = "%s-final%s" % utils.splitext_plus(ds_bam)
