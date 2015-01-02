@@ -374,39 +374,51 @@ def combine_sample_regions(*samples):
     """
     import pybedtools
     samples = [x[0] for x in samples]
-    # back compatibility -- global file for entire sample set
-    global_analysis_file = os.path.join(samples[0]["dirs"]["work"], "analysis_blocks.bed")
-    if utils.file_exists(global_analysis_file) and not _needs_region_update(global_analysis_file, samples):
-        global_no_analysis_file = os.path.join(os.path.dirname(global_analysis_file), "noanalysis_blocks.bed")
-    else:
-        global_analysis_file = None
+    out = multi.run_multicore(_p_combine_sample_regions_batch,
+                              [[batch, items] for batch, items in
+                               vmulti.group_by_batch(samples, require_bam=False).items()],
+                              samples[0]["config"])
+    assert len(out) == len(samples)
+    analysis_files = filter(lambda x: x is not None,
+                            [tz.get_in(["config", "algorithm", "callable_regions"], x[0]) for x in out])
+    if len(analysis_files) > 0:
+        final_regions = pybedtools.BedTool(analysis_files[0])
+        _analysis_block_stats(final_regions)
+    return out
+
+@utils.map_wrap
+@multi.zeromq_aware_logging
+def _p_combine_sample_regions_batch(batch, items):
+    """Parallel-aware combination of batches.
+    """
+    import pybedtools
     out = []
-    analysis_files = []
-    with shared.bedtools_tmpdir(samples[0]):
-        for batch, items in vmulti.group_by_batch(samples, require_bam=False).items():
-            if global_analysis_file:
-                analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
-            else:
-                analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
-            for data in items:
-                vr_file = tz.get_in(["config", "algorithm", "variant_regions"], data)
-                if analysis_file:
-                    analysis_files.append(analysis_file)
-                    data["config"]["algorithm"]["callable_regions"] = analysis_file
-                    data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
-                    data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(analysis_file).count()
-                elif vr_file:
-                    data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(vr_file).count()
-                # attach a representative sample for calculating callable region
-                if not data.get("work_bam"):
-                    for x in items:
-                        if x.get("work_bam"):
-                            data["work_bam_callable"] = x["work_bam"]
-                out.append([data])
-        assert len(out) == len(samples)
-        if len(analysis_files) > 0:
-            final_regions = pybedtools.BedTool(analysis_files[0])
-            _analysis_block_stats(final_regions)
+    with shared.bedtools_tmpdir(items[0]):
+        # back compatibility -- global file for entire sample set
+        global_analysis_file = os.path.join(items[0]["dirs"]["work"], "analysis_blocks.bed")
+        if utils.file_exists(global_analysis_file) and not _needs_region_update(global_analysis_file, items):
+            global_no_analysis_file = os.path.join(os.path.dirname(global_analysis_file), "noanalysis_blocks.bed")
+        else:
+            global_analysis_file = None
+        if global_analysis_file:
+            analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
+        else:
+            analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
+
+        for data in items:
+            vr_file = tz.get_in(["config", "algorithm", "variant_regions"], data)
+            if analysis_file:
+                data["config"]["algorithm"]["callable_regions"] = analysis_file
+                data["config"]["algorithm"]["non_callable_regions"] = no_analysis_file
+                data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(analysis_file).count()
+            elif vr_file:
+                data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(vr_file).count()
+            # attach a representative sample for calculating callable region
+            if not data.get("work_bam"):
+                for x in items:
+                    if x.get("work_bam"):
+                        data["work_bam_callable"] = x["work_bam"]
+            out.append([data])
     return out
 
 def _combine_sample_regions_batch(batch, items):
