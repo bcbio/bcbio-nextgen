@@ -11,6 +11,8 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio import bam
+from bcbio.pipeline import datadict as dd
+from bcbio.rnaseq import gtf
 
 def _bowtie2_args_from_config(config):
     """Configurable high level options for bowtie2.
@@ -102,3 +104,38 @@ ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
             "variant2": {"params": ["-X", 2000]},
             "Standard": {"params": ["-X", 2000]},
             "RNA-seq": {"params": ["--sensitive", "-X", 2000]}}
+
+def index_transcriptome(gtf_file, ref_file, data):
+    """
+    use a GTF file and a reference FASTA file to index the transcriptome
+    """
+    gtf_fasta = gtf.gtf_to_fasta(gtf_file, ref_file)
+    bowtie2_index = os.path.splitext(gtf_fasta)[0]
+    bowtie2_build = config_utils.get_program("bowtie2", data["config"]) + "-build"
+    cmd = "{bowtie2_build} --offrate 1 {gtf_fasta} {bowtie2_index}".format(**locals())
+    message = "Creating transcriptome index of %s with bowtie2." % (gtf_fasta)
+    do.run(cmd, message)
+    return bowtie2_index
+
+
+def align_transcriptome(fastq_file, pair_file, ref_file, data):
+    """
+    bowtie2 with settings for aligning to the transcriptome for eXpress/RSEM/etc
+    """
+    work_bam = dd.get_work_bam(data)
+    base, ext = os.path.splitext(work_bam)
+    out_file = base + ".transcriptome" + ext
+    if file_exists(out_file):
+        data = dd.set_transcriptome_bam(data, out_file)
+        return data
+    bowtie2 = config_utils.get_program("bowtie2", data["config"])
+    gtf_file = dd.get_gtf_file(data)
+    gtf_index = index_transcriptome(gtf_file, ref_file, data)
+    num_cores = data["config"]["algorithm"].get("num_cores", 1)
+    pair_cmd = "-2 %s " % pair_file if pair_file else ""
+    cmd = ("{bowtie2} -p {num_cores} -a -X 600 --rdg 6,5 --rfg 6,5 --score-min L,-.6,-.4 --no-discordant --no-mixed -x {gtf_index} -1 {fastq_file} {pair_cmd} | samtools view -hbS - > {tx_out_file}")
+    with file_transaction(out_file) as tx_out_file:
+        message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
+        do.run(cmd.format(**locals()), message)
+    data = dd.set_transcriptome_bam(data, out_file)
+    return data
