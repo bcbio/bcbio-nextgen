@@ -70,13 +70,20 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
                 return True
         return False
     exfeats = pybedtools.BedTool(exclude)
+    minf, maxf = size_range
+    if minf < 600:
+        overlap = 0.2
+    elif minf < 2500:
+        overlap = 0.5
+    else:
+        overlap = 0.8
     efeats = pybedtools.BedTool(ensemble).filter(in_size_range).filter(is_caller_svtype).saveas()\
-                       .intersect(exfeats, v=True, f=0.50, r=True).sort().merge().saveas()
+                       .intersect(exfeats, v=True, f=overlap).sort().merge()
     tfeats = pybedtools.BedTool(truth).filter(in_size_range)\
-                                      .intersect(exfeats, v=True, f=0.50, r=True).sort().merge().saveas()
+                                      .intersect(exfeats, v=True, f=overlap).sort().merge().saveas()
     etotal = efeats.count()
     ttotal = tfeats.count()
-    match = efeats.intersect(tfeats).sort().merge().saveas().count()
+    match = efeats.intersect(tfeats, u=True).sort().merge().saveas().count()
     return {"sensitivity": _stat_str(match, ttotal),
             "precision": _stat_str(match, etotal)}
 
@@ -201,6 +208,9 @@ def evaluate(data, sv_calls):
     return sv_calls
 
 if __name__ == "__main__":
+    #_, df_csv = _evaluate_multi(["lumpy", "delly", "wham", "ensemble"],
+    #                            {"DEL": "synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed"},
+    #                            "syn3-tumor-ensemble-filter.bed", "sv_exclude.bed")
     #_, df_csv = _evaluate_multi(["lumpy", "delly", "cn_mops", "ensemble"],
     #                            {"DEL": "NA12878.50X.ldgp.molpb_val.20140508.bed"},
     #                            "NA12878-ensemble.bed", "LCR.bed.gz")
