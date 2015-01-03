@@ -25,7 +25,7 @@ except ImportError:
 from bcbio.log import logger
 from bcbio import utils
 
-EVENT_SIZES = [(1, 250), (250, 1000), (1000, 5000), (5000, 25000), (25000, int(1e6))]
+EVENT_SIZES = [(1, 450), (450, 2000), (2000, 5000), (5000, 25000), (25000, int(1e6))]
 
 def _stat_str(x, n):
     if n > 0:
