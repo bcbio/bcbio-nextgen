@@ -1,7 +1,7 @@
 import os
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation)
-from bcbio.ngsalign import bwa
+from bcbio.ngsalign import bwa, bowtie2
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
 from bcbio.log import logger
@@ -49,8 +49,8 @@ def generate_transcript_counts(data):
         file1, file2 = dd.get_input_sequence_files(data)
         ref_file = dd.get_ref_file(data)
         logger.info("RSEM was flagged to run, but the transcriptome BAM file "
-                    "was not found. Aligning to the transcriptome with bwa.")
-        data = bwa.align_transcriptome(file1, file2, ref_file, data)
+                    "was not found. Aligning to the transcriptome with bowtie2.")
+        data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
     return [[data]]
 
 def run_dexseq(data):

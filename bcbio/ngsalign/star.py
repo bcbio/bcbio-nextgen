@@ -140,4 +140,4 @@ def is_transcriptome_broken():
     until it is fixed, skip this and use the fallback mapping instead
     """
     version = get_star_version()
-    return LooseVersion(version) <= LooseVersion("2.4.0h1")
+    return LooseVersion(version) >= LooseVersion("2.4.0g")
