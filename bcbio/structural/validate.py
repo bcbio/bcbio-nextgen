@@ -34,23 +34,26 @@ def _stat_str(x, n):
     else:
         return {"label": "", "val": 0}
 
+def cnv_to_event(name):
+    """Convert a CNV to an event name -- XXX hardcoded for diploid comparisons.
+    """
+    if name.startswith("cnv"):
+        num = int(name.split("_")[0].replace("cnv", ""))
+        if num < 2:
+            return "DEL"
+        elif num > 2:
+            return "DUP"
+        else:
+            return name
+    else:
+        return name
+
 def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
     """Compare a ensemble results for a caller against a specific caller and SV type.
     """
     import pybedtools
     def cnv_matches(name):
-        """Check for CNV matches -- XXX hardcoded for diploid comparisons.
-        """
-        if name.startswith("cnv"):
-            num = int(name.split("_")[0].replace("cnv", ""))
-            if svtype == "DEL" and num < 2:
-                return True
-            elif svtype == "DUP" and num > 2:
-                return True
-            else:
-                return False
-        else:
-            return False
+        return cnv_to_event(name) == svtype
     def wham_matches(name):
         """Flexibly handle WHAM comparisons, allowing DUP/DEL matches during comparisons.
         """
