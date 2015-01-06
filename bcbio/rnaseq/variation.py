@@ -22,6 +22,10 @@ def gatk_splitreads(data):
     deduped_bam = dd.get_deduped_bam(data)
     base, ext = os.path.splitext(deduped_bam)
     split_bam = base + ".splitN" + ext
+    if dd.get_quality_format(data) == "illumina":
+        quality_flag = ["--fix_misencoded_quality_scores", "-fixMisencodedQuals"]
+    else:
+        quality_flag = []
     if file_exists(split_bam):
         data = dd.set_split_bam(data, split_bam)
         return data
@@ -33,7 +37,8 @@ def gatk_splitreads(data):
                   "-rf", "ReassignOneMappingQuality",
                   "-RMQF", "225",
                   "-RMQT", "60",
-                  "-U", "ALLOW_N_CIGAR_READS"]
+                  "-rf", "UnmappedRead",
+                  "-U", "ALLOW_N_CIGAR_READS"] + quality_flag
         broad_runner.run_gatk(params)
     bam.index(split_bam, dd.get_config(data))
     data = dd.set_split_bam(data, split_bam)
