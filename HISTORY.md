@@ -16,9 +16,12 @@
 - Fixes for ensemble structural variant calling on single samples.
 - Fixes for mixing joint and pooled calling in a single configuration file.
 - Support for qSNP for tumor-normal calling.
-- Add Express to RNA-seq pipeline.
+- Add eXpress to RNA-seq pipeline.
+- Add transcriptome-only mapping with STAR, bowtie2 or bwa.
 - Change logging time stamps to be UTC and set explicitly as ISO 8601 compliant
   output. Improves benchmarking analysis and comparability across runs.
+- Add support for RNA-seq variant calling with HaplotypeCaller
+- Fix parallelization of DEXSeq.
 
 ## 0.8.4 (29 November 2014)
 
