@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 
+import numpy as np
 import toolz as tz
 try:
     import vcf
@@ -37,7 +38,7 @@ def run(items, background=None):
     orig_vcf_file = _run_wham(inputs, background_bams)
     wclass_vcf_file = _add_wham_classification(orig_vcf_file, inputs)
     vcf_file = _fix_vcf(wclass_vcf_file, inputs, background_names)
-    bed_file = _convert_to_bed(vcf_file, inputs)
+    bed_file = _convert_to_bed(vcf_file, inputs, use_lrt=len(background_bams) > 0)
     out = []
     for data in items:
         if "sv" not in data:
@@ -103,27 +104,52 @@ def _check_bed_call(line, name):
         if fend - fstart < ensemble.MAX_SVSIZE:
             return "%s\t%s\t%s\t%s\n" % (chrom, fstart, fend, stype_str)
 
-def _convert_to_bed(vcf_file, inputs):
+def _convert_to_bed(vcf_file, inputs, use_lrt=False):
     """Convert WHAM output file into BED format for ensemble calling.
+
+    Only outputs passing variants that have break end support and
+    are above the mean of the likelihood ratio test
+    score, if use_lrt is True.
     """
     buffer_size = 25  # bp around break ends
     out_file = "%s.bed" % utils.splitext_plus(vcf_file)[0]
     if not utils.file_uptodate(out_file, vcf_file):
+        lrt_thresh = _calc_lrt_thresh(vcf_file) if use_lrt else 0.0
         with file_transaction(inputs[0], out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                reader = vcf.Reader(filename=vcf_file)
                 writer = csv.writer(out_handle, dialect="excel-tab")
-                for rec in reader:
+                for rec in _wham_pass_iter(vcf_file):
                     start = max(rec.start - buffer_size, 0)
-                    if rec.INFO["BE"][0] not in [".", None]:
-                        other_chrom, end, count = rec.INFO["BE"]
-                        if int(end) > start and other_chrom == rec.CHROM:
-                            samples = [g.sample for g in rec.samples if g.gt_type > 0]
-                            if len(samples) > 0:
-                                end = int(end) + buffer_size
-                                writer.writerow([rec.CHROM, start, end, "%s_wham" % rec.INFO["WC"],
-                                                 ";".join(samples)])
+                    _, end, _ = rec.INFO["BE"]
+                    samples = [g.sample for g in rec.samples if g.gt_type > 0]
+                    end = int(end) + buffer_size
+                    if not use_lrt or rec.INFO.get("LRT", 0.0) > lrt_thresh:
+                        writer.writerow([rec.CHROM, start, end, "%s_wham" % rec.INFO["WC"],
+                                         ";".join(samples)])
     return out_file
+
+def _calc_lrt_thresh(vcf_file):
+    """Calculate threshold to use for including samples based on likelihood ratio test.
+
+    For tumor/normal or case/control samples, this provides a threshold to include
+    samples with higher likelihood in the cases. Calculates a simple mean
+    threshold to use for inclusion.
+    """
+    lrts = [rec.INFO.get("LRT") for rec in _wham_pass_iter(vcf_file)]
+    lrts = [x for x in lrts if x is not None]
+    return np.mean(lrts)
+
+def _wham_pass_iter(vcf_file):
+    """Iterator over WHAM records that have breakend support and a called genotype.
+    """
+    reader = vcf.Reader(filename=vcf_file)
+    for rec in reader:
+        if rec.INFO["BE"][0] not in [".", None]:
+            other_chrom, end, count = rec.INFO["BE"]
+            if int(end) > int(rec.start) and other_chrom == rec.CHROM:
+                samples = [g.sample for g in rec.samples if g.gt_type > 0]
+                if len(samples) > 0:
+                    yield rec
 
 def _add_wham_classification(in_file, items):
     """Run WHAM classifier to assign a structural variant type to each call.
