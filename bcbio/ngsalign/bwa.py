@@ -12,6 +12,8 @@ from bcbio.ngsalign import alignprep, novoalign, postalign
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
 import bcbio.pipeline.datadict as dd
+from bcbio.bam import fastq
+from bcbio.log import logger
 
 galaxy_location_file = "bwa_index.loc"
 
@@ -187,13 +189,21 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     if utils.file_exists(out_file):
         data = dd.set_transcriptome_bam(data, out_file)
         return data
+    # bwa mem needs phred+33 quality, so convert if it is Illumina
+    if dd.get_quality_format(data).lower() == "illumina":
+        logger.info("bwa mem does not support the phred+64 quality format, "
+                    "converting %s and %s to phred+33.")
+        fastq_file = fastq.groom(fastq_file, in_qual="fastq-illumina", data=data)
+        if pair_file:
+            pair_file = fastq.groom(pair_file, in_qual="fastq-illumina", data=data)
     bwa = config_utils.get_program("bwa", data["config"])
     gtf_file = dd.get_gtf_file(data)
     gtf_fasta = index_transcriptome(gtf_file, ref_file, data)
     args = " ".join(_bwa_args_from_config(data["config"]))
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     cmd = ("{bwa} mem {args} -a -t {num_cores} {gtf_fasta} {fastq_file} "
-           "{pair_file} > {tx_out_file}")
+           "{pair_file} | samtools view -bhS - > {tx_out_file}")
+
     with file_transaction(out_file) as tx_out_file:
         message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
         do.run(cmd.format(**locals()), message)

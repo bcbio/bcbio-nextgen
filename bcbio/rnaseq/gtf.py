@@ -58,14 +58,15 @@ def gtf_to_fasta(gtf_file, ref_fasta, cds=False, out_file=None):
         with open(tmp_file) as in_handle, open(tx_out_file, "w") as out_handle:
             for line in in_handle:
                 if line.startswith(">"):
-                    if transcript == line.split(" ")[1]:
+                    cur_transcript = line.split(" ")[0][1:]
+                    if transcript == cur_transcript:
                         logger.info("Transcript %s has already been seen, skipping this "
-                                    "version." % transcript)
+                                    "version." % cur_transcript)
                         skipping = True
                     else:
-                        transcript = line.split(" ")[1]
+                        transcript = cur_transcript
                         skipping = False
-                    line = line.split()[0] + "\n"
+                    line = ">" + transcript + "\n"
                 if not skipping:
                     out_handle.write(line)
     return out_file

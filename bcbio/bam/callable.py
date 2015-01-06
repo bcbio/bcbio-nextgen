@@ -434,7 +434,7 @@ def _combine_sample_regions_batch(batch, items):
                 min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
                 block_filter = NBlockRegionPicker(ref_regions, config)
                 final_nblock_regions = nblock_regions.filter(
-                    block_filter.include_block).each(block_filter.expand_block).saveas(
+                    block_filter.include_block).saveas().each(block_filter.expand_block).saveas(
                         "%s-nblockfinal%s" % utils.splitext_plus(tx_afile))
                 final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
                 _write_bed_regions(items[0], final_regions, tx_afile, tx_noafile)

@@ -12,7 +12,7 @@ from bcbio.variation import vcfutils
 _CALLERS = {}
 _BATCH_CALLERS = {"cn.mops": cn_mops.run, "cnvkit": cnvkit.run,
                   "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run}
-_NEEDS_BACKGROUND = set(["cn.mops", "cnvkit", "wham"])
+_NEEDS_BACKGROUND = set(["cn.mops"])
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")

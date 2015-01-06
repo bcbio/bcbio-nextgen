@@ -3,6 +3,7 @@
 Takes a simple union approach for reporting the final set of calls, reporting
 the evidence from each input.
 """
+import collections
 import fileinput
 import os
 import shutil
@@ -19,6 +20,7 @@ from bcbio.variation import bedutils
 # ## Conversions to simplified BED files
 
 MAX_SVSIZE = 1e6  # 1Mb maximum size from callers to avoid huge calls collapsing all structural variants
+N_FILTER_CALLERS = 2  # Minimum number of callers for doing filtering of ensemble calls
 
 def _vcf_to_bed(in_file, caller, out_file):
     if in_file and in_file.endswith((".vcf", "vcf.gz")):
@@ -104,6 +106,37 @@ def _combine_bed_by_size(input_beds, sample, work_dir, data):
             out_file = bedutils.combine(size_beds, out_file, data)
     return out_file
 
+def _filter_ensemble(in_bed, data):
+    """Filter ensemble set of calls, requiring calls supported by 2 callers.
+
+    We filter only smaller size events, which seem to benefit the most since
+    they have lower precision. We also check to be sure that the required
+    number of callers actually called in each event, since some callers don't handle
+    all event types.
+    """
+    max_size = max([xs[1] for xs in validate.EVENT_SIZES[:2]])
+    out_file = "%s-filter%s" % utils.splitext_plus(in_bed)
+    total_callers = collections.defaultdict(set)
+    with open(in_bed) as in_handle:
+        for line in in_handle:
+            caller_strs = line.strip().split()[-1]
+            for event, caller in [x.split("_") for x in caller_strs.split(",")]:
+                total_callers[validate.cnv_to_event(event)].add(caller)
+
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                with open(in_bed) as in_handle:
+                    for line in in_handle:
+                        chrom, start, end, caller_strs = line.strip().split()
+                        size = int(end) - int(start)
+                        callers = set([x.split("_")[-1] for x in caller_strs.split(",")])
+                        events = set([validate.cnv_to_event(x.split("_")[0]) for x in caller_strs.split(",")])
+                        pass_event_counts = [len(total_callers[e]) > N_FILTER_CALLERS for e in list(events)]
+                        if len(callers) > 1 or size > max_size or not any(pass_event_counts):
+                            out_handle.write(line)
+    return out_file
+
 def summarize(calls, data):
     """Summarize results from multiple callers into a single flattened BED file.
     """
@@ -116,7 +149,11 @@ def summarize(calls, data):
     if len(input_beds) > 0:
         out_file = _combine_bed_by_size(input_beds, sample, work_dir, data)
         if utils.file_exists(out_file):
-            bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(out_file), "bedprep"))
+            if len(input_beds) > N_FILTER_CALLERS:
+                filter_file = _filter_ensemble(out_file, data)
+            else:
+                filter_file = out_file
+            bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(filter_file), "bedprep"))
             calls.append({"variantcaller": "ensemble",
-                          "vrn_file": bedutils.clean_file(out_file, data, bedprep_dir=bedprep_dir)})
+                          "vrn_file": bedutils.clean_file(filter_file, data, bedprep_dir=bedprep_dir)})
     return calls

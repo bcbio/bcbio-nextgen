@@ -33,7 +33,11 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if file_exists(final_out):
         data = dd.set_work_bam(data, final_out)
         data = dd.set_align_bam(data, final_out)
+        if dd.get_rsem(data) and not is_transcriptome_broken():
+            transcriptome_file = _move_transcriptome_file(out_dir, names)
+            data = dd.set_transcriptome_bam(data, transcriptome_file)
         return data
+
     star_path = config_utils.get_program("STAR", config)
     fastq = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = config["algorithm"].get("num_cores", 1)
@@ -140,4 +144,4 @@ def is_transcriptome_broken():
     until it is fixed, skip this and use the fallback mapping instead
     """
     version = get_star_version()
-    return LooseVersion(version) <= LooseVersion("2.4.0h1")
+    return LooseVersion(version) >= LooseVersion("2.4.0g")

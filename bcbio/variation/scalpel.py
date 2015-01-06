@@ -22,7 +22,11 @@ from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_
 def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
     opts = []
     # output vcf, report only variants within bed regions
-    opts += ["--format", "vcf", "--intarget", "--covthr 3", "--lowcov 1"]
+    opts += ["--format", "vcf", "--intarget"]
+    # Improve sensitivity in low coverage regions
+    opts += ["--covthr 3", "--lowcov 1"]
+    # Avoid oversampling in repeat regions
+    opts += ["--pathlimit", "10000"]
     variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
     target = subset_variant_regions(variant_regions, region, out_file, items)
     if target:
@@ -105,7 +109,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             sample_name_str = items[0]["name"][1]
             cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' | "
-                   "vcfallelicprimitives --keep-geno | vcffixup | vcfstreamsort "
+                   "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -164,7 +168,7 @@ def get_scalpel_bcftools_filter_expression(filter_type, config):
     bcftools = config_utils.get_program("bcftools", config)
     filter_string = "{bcftools} filter -m '+' -O v --soft-filter "
     if filter_type == "chi2":
-        filter_string += "'CHI2FILTER' -e 'INFO/CHI2 > 10.8' "
+        filter_string += "'CHI2FILTER' -e 'INFO/CHI2 > 20.0' "
     elif filter_type == "reject":
         filter_string += "'REJECT' -e '%TYPE=\"indel\"' "
     else:

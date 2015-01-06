@@ -15,6 +15,25 @@ from bcbio.ngsalign import postalign
 from bcbio.pipeline import shared, config_utils
 from bcbio.provenance import do
 
+# ## Case/control
+
+def find_case_control(items):
+    """Find case/control items in a population of multiple samples.
+    """
+    case_phenotypes = set(["affected"])
+    control_phenotypes = set(["unaffected"])
+    cases = []
+    controls = []
+    for data in items:
+        phenotype = tz.get_in(["metadata", "phenotype"], data)
+        if phenotype in case_phenotypes:
+            cases.append(data)
+        elif phenotype in control_phenotypes:
+            controls.append(data)
+        else:
+            cases.append(data)
+    return cases, controls
+
 # ## Prepare exclusion regions (repeats, telomeres, centromeres)
 
 def _get_sv_exclude_file(items):
