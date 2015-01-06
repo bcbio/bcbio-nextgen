@@ -31,11 +31,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
 
     final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):
-        data = dd.set_work_bam(data, final_out)
-        data = dd.set_align_bam(data, final_out)
-        if dd.get_rsem(data) and not is_transcriptome_broken():
-            transcriptome_file = _move_transcriptome_file(out_dir, names)
-            data = dd.set_transcriptome_bam(data, transcriptome_file)
+        data = _update_data(final_out, out_dir, names, data)
         return data
 
     star_path = config_utils.get_program("STAR", config)
@@ -69,11 +65,15 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         with file_transaction(data, final_out) as tx_final_out:
             do.run(cmd.format(**locals()), run_message, None)
 
+    data = _update_data(final_out, out_dir, names, data)
+    return data
+
+def _update_data(align_file, out_dir, names, data):
+    data = dd.set_work_bam(data, align_file)
+    data = dd.set_align_bam(data, align_file)
     if dd.get_rsem(data) and not is_transcriptome_broken():
         transcriptome_file = _move_transcriptome_file(out_dir, names)
         data = dd.set_transcriptome_bam(data, transcriptome_file)
-    data = dd.set_work_bam(data, final_out)
-    data = dd.set_align_bam(data, final_out)
     return data
 
 def _move_transcriptome_file(out_dir, names):
@@ -83,7 +83,6 @@ def _move_transcriptome_file(out_dir, names):
                                 "{0}Aligned.toTranscriptome.out.bam".format(names["lane"]))
         shutil.move(tmp_file, out_file)
     return out_file
-
 
 def _read_group_option(names):
     rg_id = names["rg"]
