@@ -53,13 +53,25 @@ def _cnvbed_to_bed(in_file, caller, out_file):
                                         "cnv%s_%s" % (feat.score, caller)])
                              + "\n")
 
+def _cnvkit_to_bed(in_file, caller, out_file):
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction({}, out_file) as tx_out_file:
+            with open(in_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    for line in in_handle:
+                        chrom, start, end, sample, copyn = line.strip().split("\t")
+                        out_handle.write("\t".join([chrom, start, end, "cnv%s_%s" % (copyn, caller)])
+                                         + "\n")
+    return out_file
+
 def _copy_file(in_file, caller, out_file):
     shutil.copy(in_file, out_file)
 
 CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "delly": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed,
-                 "wham": _copy_file}
+                 "wham": _copy_file,
+                 "cnvkit": _cnvkit_to_bed}
 
 def _create_bed(call, sample, work_dir, data):
     """Create a simplified BED file from caller specific input.
@@ -154,6 +166,6 @@ def summarize(calls, data):
             else:
                 filter_file = out_file
             bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(filter_file), "bedprep"))
-            calls.append({"variantcaller": "ensemble",
+            calls.append({"variantcaller": "sv-ensemble",
                           "vrn_file": bedutils.clean_file(filter_file, data, bedprep_dir=bedprep_dir)})
     return calls

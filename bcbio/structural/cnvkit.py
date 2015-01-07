@@ -7,10 +7,6 @@ import shutil
 import sys
 
 try:
-    from cnvlib import commands as cnvlib_cmd
-except ImportError:
-    cnvlib_cmd = None
-try:
     import pybedtools
 except ImportError:
     pybedtools = None
@@ -27,8 +23,6 @@ from bcbio.structural import shared, theta
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
     """
-    if not cnvlib_cmd:
-        raise ImportError("cnvkit not installed")
     if not background: background = []
     return _cnvkit_by_type(items, background)
 
@@ -55,6 +49,7 @@ def _associate_cnvkit_out(ckout, items):
     ckout["variantcaller"] = "cnvkit"
     out = []
     for data in items:
+        ckout = _add_bed_to_output(ckout, data)
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append(ckout)
@@ -105,13 +100,17 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
     out_base = os.path.splitext(os.path.basename(test_bams[0]))[0]
     background_cnn = "%s_background.cnn" % (background_name if background_name else "flat")
     if not utils.file_exists(os.path.join(raw_work_dir, "%s.cnr" % out_base)):
+        if os.path.exists(raw_work_dir):
+            shutil.rmtree(raw_work_dir)
         with tx_tmpdir(data, work_dir) as tx_work_dir:
             target_bed = tz.get_in(["config", "algorithm", "variant_regions"], data)
-            cmd = ["batch"] + test_bams + ["-n"] + background_bams + ["-f", ref_file] + \
+            cores = min(tz.get_in(["config", "algorithm", "num_cores"], data, 1),
+                        len(test_bams) + len(background_bams))
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "batch"] + \
+                  test_bams + ["-n"] + background_bams + ["-f", ref_file] + \
                   ["--targets", target_bed, "--access", access_file,
-                   "-d", raw_work_dir, "--split",
-                   "-p", str(tz.get_in(["config", "algorithm", "num_cores"], data, 1)),
-                   "--output-reference", os.path.join(raw_work_dir, background_cnn)]
+                   "-d", tx_work_dir, "--split", "-p", str(cores),
+                   "--output-reference", os.path.join(tx_work_dir, background_cnn)]
             at_avg, at_min, t_avg = _get_antitarget_size(access_file, target_bed)
             if at_avg:
                 cmd += ["--antitarget-avg-size", str(at_avg), "--antitarget-min-size", str(at_min),
@@ -119,8 +118,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
             local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                          "lib", "R", "site-library")
             cmd += ["--rlibpath", local_sitelib]
-            args = cnvlib_cmd.parse_args(cmd)
-            args.func(args)
+            do.run(cmd, "CNVkit batch")
             shutil.move(tx_work_dir, raw_work_dir)
     return {"cnr": os.path.join(raw_work_dir, "%s.cnr" % out_base),
             "cns": os.path.join(raw_work_dir, "%s.cns" % out_base),
@@ -132,10 +130,27 @@ def _add_seg_to_output(out, items):
     out_file = "%s.seg" % os.path.splitext(out["cns"])[0]
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
-            cmd = ["export", "seg", "-o", tx_out_file, out["cns"]]
-            args = cnvlib_cmd.parse_args(cmd)
-            args.func(args)
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
+                   "seg", "-o", tx_out_file, out["cns"]]
+            do.run(cmd, "CNVkit export seg")
     out["seg"] = out_file
+    return out
+
+def _add_bed_to_output(out, data):
+    """Add FreeBayes cnvmap BED-like representation to the output.
+    """
+    out_file = "%s.bed" % os.path.splitext(out["cns"])[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
+                   "freebayes", "--name", dd.get_sample_name(data),
+                   "--ploidy", str(dd.get_ploidy(data)),
+                   "-o", tx_out_file, out["cns"]]
+            gender = dd.get_gender(data)
+            if gender:
+                cmd += ["--gender", gender]
+            do.run(cmd, "CNVkit export FreeBayes BED cnvmap")
+    out["vrn_file"] = out_file
     return out
 
 def _get_antitarget_size(access_file, target_bed):
