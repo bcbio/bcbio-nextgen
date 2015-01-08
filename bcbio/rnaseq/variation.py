@@ -35,7 +35,7 @@ def gatk_splitreads(data):
                   "-I", deduped_bam,
                   "-o", tx_split_bam,
                   "-rf", "ReassignOneMappingQuality",
-                  "-RMQF", "225",
+                  "-RMQF", "255",
                   "-RMQT", "60",
                   "-rf", "UnmappedRead",
                   "-U", "ALLOW_N_CIGAR_READS"] + quality_flag
