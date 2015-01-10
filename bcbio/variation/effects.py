@@ -256,7 +256,7 @@ def _run_snpeff(snp_in, out_format, data):
         else:
             bgzip_cmd = ""
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = ("{snpeff_cmd} {config_args} -noLog -1 -i vcf -o {out_format} "
+            cmd = ("{snpeff_cmd} {config_args} -noLog -i vcf -o {out_format} "
                    "{snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)
     if ext.endswith(".gz"):
