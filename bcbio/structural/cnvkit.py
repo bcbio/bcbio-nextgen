@@ -89,7 +89,8 @@ def _run_cnvkit_population(items, background, access_file):
     """
     assert not background
     inputs, background = shared.find_case_control(items)
-    return [_run_cnvkit_single(data, access_file, background)[0] for data in inputs]
+    return [_run_cnvkit_single(data, access_file, background)[0] for data in inputs] + \
+           [_run_cnvkit_single(data, access_file)[0] for data in background]
 
 def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                        background_name=None):
