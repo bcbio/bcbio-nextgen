@@ -21,7 +21,7 @@ arvados-python-client>=0.1.1405019228.4a7ca04
 bioblend>=0.4.3
 chanjo>=2.0.2
 click>=3.3
-cnvkit>=0.2.5
+cnvkit>=0.3.1
 cutadapt==1.4.2
 fabric>=1.7.0
 gffutils>=0.8.2
@@ -35,9 +35,6 @@ pythonpy>=0.3.6
 PyVCF>=0.6.7
 sh>=1.07
 tabulate>=0.7.3
-# To add after 0.8.5 release
-# scikit-learn>=0.15.2
-# seaborn>=0.5.0
-# To remove after 0.8.5 release
-prettyplotlib>=0.1.7
-bcbio-nextgen==0.8.4
+scikit-learn>=0.15.2
+seaborn>=0.5.0
+bcbio-nextgen==0.8.5

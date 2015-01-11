@@ -1,4 +1,4 @@
-## 0.8.5 (in progress)
+## 0.8.5 (11 January 2015)
 
 - No longer keep INFO fields with `vcfallelicprimitves` in FreeBayes,
   Platypus and Scalpel calling to prevent introduction of problematic
