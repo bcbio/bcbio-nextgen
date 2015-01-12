@@ -3,19 +3,17 @@ upload:
 details:
   - analysis: variant2
     algorithm:
-      #aligner: bwa
-      aligner: novoalign
-      variantcaller: [gatk, freebayes]
+      aligner: bwa
+      #aligner: novoalign
+      variantcaller: [samtools, gatk-haplotype, freebayes]
       #variantcaller: gatk-haplotype
       #variantcaller: freebayes
       #variantcaller: cortex
       #sv_detection: hydra
+      recalibrate: false
+      realign: false
       ensemble:
-        #caller: platypus
-        classifiers:
-          balance: [AD, FS, Entropy]
-          calling: [ReadPosEndDist, PL, PLratio, Entropy, NBQ]
-        trusted_pct: 0.65
+        numpass: 2
       quality_format: Standard
       tools_off: [gemini]
       coverage_interval: regional
@@ -27,5 +25,5 @@ details:
     metadata:
       batch: TestBatch1
     genome_build: hg19
-    files: [7_100326_FC6107FAAXX_1_fastq.txt, 7_100326_FC6107FAAXX_2_fastq.txt]
+    files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
     lane: 7

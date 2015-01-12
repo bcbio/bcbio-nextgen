@@ -90,6 +90,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         with file_transaction(items[0], out_file) as tx_out_file:
             params += ["-T", "HaplotypeCaller",
                        "-o", tx_out_file,
+                       "-ploidy", str(ploidy.get_ploidy(items, region)),
                        "--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
             # Enable hardware based optimizations in GATK 3.1+
