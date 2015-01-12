@@ -1,3 +1,8 @@
+## 0.8.6 (in progress)
+
+- Support snpEff 4.1, including re-download of snpEff databases on demand if out
+  of sync with older versions.
+
 ## 0.8.5 (11 January 2015)
 
 - No longer keep INFO fields with `vcfallelicprimitves` in FreeBayes,

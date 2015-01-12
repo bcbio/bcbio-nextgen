@@ -8,9 +8,9 @@ import collections
 import contextlib
 import datetime
 from distutils.version import LooseVersion
+import gzip
 import os
 import shutil
-import string
 import subprocess
 import sys
 
@@ -20,7 +20,6 @@ import yaml
 from bcbio import broad, utils
 from bcbio.pipeline import genome
 from bcbio.variation import effects
-from bcbio.provenance import programs
 from bcbio.distributed.transaction import file_transaction
 
 REMOTES = {
@@ -274,9 +273,13 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                                                          "reference": {"fasta": {"base": ref_file}}})
             if snpeff_db:
                 snpeff_db_dir = os.path.join(snpeff_base_dir, snpeff_db)
+                if os.path.exists(snpeff_db_dir) and _is_old_database(snpeff_db_dir, args):
+                    shutil.rmtree(snpeff_db_dir)
                 if not os.path.exists(snpeff_db_dir):
                     print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
-                    dl_url = remotes["snpeff_dl_url"].format(snpeff_ver=_get_snpeff_version(args), genome=snpeff_db)
+                    dl_url = remotes["snpeff_dl_url"].format(
+                        snpeff_ver=effects.snpeff_version(args).replace(".", "_"),
+                        genome=snpeff_db)
                     dl_file = os.path.basename(dl_url)
                     with utils.chdir(snpeff_base_dir):
                         subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
@@ -286,18 +289,20 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                     os.rename(dl_dir, snpeff_db_dir)
                     os.rmdir(os.path.join(snpeff_base_dir, "data"))
 
-def _get_snpeff_version(args):
-    tooldir = args.tooldir or get_defaults()["tooldir"]
-    raw_version = programs.get_version_manifest("snpeff")
-    if not raw_version:
-        config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
-                                           "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
-        raw_version = programs.java_versioner("snpeff", "snpEff",
-                                              stdout_flag="snpEff version SnpEff")(config)
-    snpeff_version = "".join([x for x in raw_version
-                              if x in set(string.digits + ".")]).replace(".", "_")
-    assert snpeff_version, "Did not find snpEff version information"
-    return snpeff_version
+def _is_old_database(db_dir, args):
+    """Check for old database versions, supported in snpEff 4.1.
+    """
+    snpeff_version = effects.snpeff_version(args)
+    if LooseVersion(snpeff_version) >= LooseVersion("4.1"):
+        pred_file = os.path.join(db_dir, "snpEffectPredictor.bin")
+        if not utils.file_exists(pred_file):
+            return True
+        with gzip.open(pred_file) as in_handle:
+            version_info = in_handle.readline().strip().split("\t")
+        program, version = version_info[:2]
+        if not program.lower() == "snpeff" or LooseVersion(snpeff_version) > LooseVersion(version):
+            return True
+    return False
 
 def _get_biodata(base_file, args):
     with open(base_file) as in_handle:

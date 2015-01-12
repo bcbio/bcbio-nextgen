@@ -4,9 +4,11 @@ Supported:
   snpEff: http://sourceforge.net/projects/snpeff/
   VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
 """
+from distutils.version import LooseVersion
 import os
 import glob
 import shutil
+import string
 import subprocess
 
 import toolz as tz
@@ -15,7 +17,7 @@ import yaml
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
 # ## High level
@@ -169,6 +171,20 @@ def _get_loftee(data):
 
 # ## snpEff variant effects
 
+def snpeff_version(args=None):
+    from bcbio.install import get_defaults
+    tooldir = (args and args.tooldir) or get_defaults()["tooldir"]
+    raw_version = programs.get_version_manifest("snpeff")
+    if not raw_version:
+        config = {"resources": {"snpeff": {"jvm_opts": ["-Xms500m", "-Xmx1g"],
+                                           "dir": os.path.join(tooldir, "share", "java", "snpeff")}}}
+        raw_version = programs.java_versioner("snpeff", "snpEff",
+                                              stdout_flag="snpEff version SnpEff")(config)
+    snpeff_version = "".join([x for x in str(raw_version)
+                              if x in set(string.digits + ".")])
+    assert snpeff_version, "Did not find snpEff version information"
+    return snpeff_version
+
 def snpeff_effects(data):
     """Annotate input VCF file with effects calculated by snpEff.
     """
@@ -181,15 +197,17 @@ def _snpeff_args_from_config(data):
     """
     config = data["config"]
     args = []
+    # Use older EFF formatting instead of new combined ANN formatting until
+    # downstream tools catch up, then remove this.
+    if LooseVersion(snpeff_version()) >= LooseVersion("4.1"):
+        args += ["-formatEff"]
     # General supplied arguments
     resources = config_utils.get_resources("snpeff", config)
     if resources.get("options"):
         args += [str(x) for x in resources.get("options", [])]
     # cancer specific calling arguments
-    # XXX not used properly right now and interferes with snpEff shell script parsing
-    # in homebrew (`-c` flags picked up from start of `-cancer` by regexp)
-    #if vcfutils.get_paired_phenotype(data):
-    #    args += ["-cancer"]
+    if vcfutils.get_paired_phenotype(data):
+        args += ["-cancer"]
     # Provide options tuned to reporting variants in clinical environments
     if config["algorithm"].get("clinical_reporting"):
         args += ["-canon", "-hgvs"]
