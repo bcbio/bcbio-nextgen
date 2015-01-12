@@ -547,8 +547,23 @@ Ensemble variant calling
 
 In addition to single method variant calling, we support calling with
 multiple calling methods and consolidating into a final Ensemble
-callset. This requires the `bcbio.variation`_ toolkit to perform the
-consolidation. An example configuration in the ``algorithm`` section is::
+callset.
+
+The recommended method to do this uses a simple majority rule ensemble
+classifier that builds a final callset based on the intersection of calls. It
+selects variants represented in at least a specified number of callers::
+
+    variantcaller: [mutect, varscan, freebayes, vardict]
+    ensemble:
+      numpass: 2
+
+This example selects variants present in 2 out of the 4 callers.
+`bcbio.variation.recall`_ implements this approach, which handles speed and file
+sorting limitations in the `bcbio.variation`_ approach.
+
+This older approach uses the `bcbio.variation`_
+toolkit to perform the consolidation. An example configuration in the
+``algorithm`` section is::
 
     variantcaller: [gatk, freebayes, samtools, gatk-haplotype, varscan]
     ensemble:
@@ -577,18 +592,6 @@ the multiple methods:
   callset. In the example, variants called by more than 65% of the
   approaches (4 or more callers) pass without being requiring SVM
   filtering.
-
-We also have a new in-progress approach to do ensemble calling that builds a
-final callset based on the intersection of calls. It selects variants
-represented in at least a specified number of callers::
-
-    variantcaller: [mutect, varscan, freebayes, vardict]
-    ensemble:
-      numpass: 2
-
-This selects variants present in 2 out of the 4 callers.
-`bcbio.variation.recall`_ implements this approach, which handles speed and file
-sorting limitations in the `bcbio.variation`_ approach.
 
 .. _config-resources:
 

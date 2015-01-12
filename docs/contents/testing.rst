@@ -94,71 +94,6 @@ data as above but a different input configuration file::
   cd ../work_joint
   bcbio_nextgen.py ../config/NA12878-trio-wgs-joint.yaml -n 16
 
-Structural variant calling -- whole genome trio (50x)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This example runs structural variant calling with multiple callers (Lumpy, Delly
-and cn.mops), providing a combined output summary file and validation metrics
-against NA12878 deletions. It uses the same NA12878 family starting material as
-the whole genome trio example.
-
-To run the analysis do::
-
-  mkdir -p NA12878-sv-eval/config NA12878-sv-eval/input NA12878-sv-eval/work
-  cd NA12878-sv-eval/config
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv.yaml
-  cd ../input
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv-getdata.sh
-  bash NA12878-trio-sv-getdata.sh
-  cd ../work
-  bcbio_nextgen.py ../config/NA12878-trio-sv.yaml -n 16
-
-This is large whole genome analysis and the timing and disk space requirements
-for the NA12878 trio analysis above apply here as well.
-
-Whole genome (10x)
-~~~~~~~~~~~~~~~~~~
-An input configuration for running whole gnome variant calling with
-bwa and GATK, using Illumina's `Platinum genomes project`_
-(`NA12878-illumina.yaml`_). See this
-`blog post on whole genome scaling`_ for expected run times and more
-information about the pipeline. To run the analysis:
-
-- Create an input directory structure like::
-
-    ├── config
-    │   └── NA12878-illumina.yaml
-    ├── input
-    └── work
-
-- Retrieve inputs and comparison calls::
-
-    cd input
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
-    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed.gz
-    gunzip *.vcf.gz *.bed.gz
-
-- Retrieve configuration input file::
-
-    cd config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
-
-- Run analysis on 16 core machine::
-
-    cd work
-    bcbio_nextgen.py ../config/NA12878-illumina.yaml -n 16
-
-- Examine summary of concordance and discordance to comparison calls
-  from the ``grading-summary.csv`` file in the work directory.
-
-.. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
-.. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
-.. _blog post on whole genome scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
-
 Exome with validation against reference materials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -225,6 +160,28 @@ analyses. It enables exome by default, but you can use the larger whole genome
 evaluation by uncommenting the relevant parts of the configuration and retrieval
 script.
 
+Structural variant calling -- whole genome trio (50x)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example runs structural variant calling with multiple callers (Lumpy, Delly
+and cn.mops), providing a combined output summary file and validation metrics
+against NA12878 deletions. It uses the same NA12878 family starting material as
+the whole genome trio example.
+
+To run the analysis do::
+
+  mkdir -p NA12878-sv-eval/config NA12878-sv-eval/input NA12878-sv-eval/work
+  cd NA12878-sv-eval/config
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv.yaml
+  cd ../input
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv-getdata.sh
+  bash NA12878-trio-sv-getdata.sh
+  cd ../work
+  bcbio_nextgen.py ../config/NA12878-trio-sv.yaml -n 16
+
+This is large whole genome analysis and the timing and disk space requirements
+for the NA12878 trio analysis above apply here as well.
+
 RNAseq example
 ~~~~~~~~~~~~~~
 
@@ -258,6 +215,50 @@ A nice looking standalone `report`_ of the bcbio-nextgen run can be generated us
 .. _parallelize it: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
 .. _bcbio.rnaseq: https://github.com/roryk/bcbio.rnaseq
 .. _report: https://rawgit.com/roryk/bcbio.rnaseq/master/docs/qc-summary.html
+
+Whole genome (10x)
+~~~~~~~~~~~~~~~~~~
+An input configuration for running whole gnome variant calling with
+bwa and GATK, using Illumina's `Platinum genomes project`_
+(`NA12878-illumina.yaml`_). See this
+`blog post on whole genome scaling`_ for expected run times and more
+information about the pipeline. To run the analysis:
+
+- Create an input directory structure like::
+
+    ├── config
+    │   └── NA12878-illumina.yaml
+    ├── input
+    └── work
+
+- Retrieve inputs and comparison calls::
+
+    cd input
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
+    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+     NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
+    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
+     union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed.gz
+    gunzip *.vcf.gz *.bed.gz
+
+- Retrieve configuration input file::
+
+    cd config
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+
+- Run analysis on 16 core machine::
+
+    cd work
+    bcbio_nextgen.py ../config/NA12878-illumina.yaml -n 16
+
+- Examine summary of concordance and discordance to comparison calls
+  from the ``grading-summary.csv`` file in the work directory.
+
+.. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
+.. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+.. _blog post on whole genome scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+
 
 Test suite
 ==========
