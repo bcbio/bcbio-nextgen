@@ -87,7 +87,7 @@ def _create_bed(call, sample, work_dir, data):
 
 # ## Top level
 
-def _combine_bed_by_size(input_beds, sample, work_dir, data):
+def combine_bed_by_size(input_beds, sample, work_dir, data, delim=","):
     """Combine a set of BED files, breaking into individual size chunks.
     """
     import pybedtools
@@ -111,7 +111,7 @@ def _combine_bed_by_size(input_beds, sample, work_dir, data):
                                     has_regions = True
                         if has_regions:
                             pybedtools.BedTool(all_file).sort(stream=True)\
-                              .merge(c=4, o="distinct", delim=",").saveas(tx_out_file)
+                              .merge(c=4, o="distinct", delim=delim).saveas(tx_out_file)
             if utils.file_exists(size_out_file):
                 size_beds.append(size_out_file)
         if len(size_beds) > 0:
@@ -159,7 +159,7 @@ def summarize(calls, data):
         input_beds = filter(lambda x: x is not None,
                             [_create_bed(c, sample, work_dir, data) for c in calls])
     if len(input_beds) > 0:
-        out_file = _combine_bed_by_size(input_beds, sample, work_dir, data)
+        out_file = combine_bed_by_size(input_beds, sample, work_dir, data)
         if utils.file_exists(out_file):
             if len(input_beds) > N_FILTER_CALLERS:
                 filter_file = _filter_ensemble(out_file, data)

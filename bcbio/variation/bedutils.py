@@ -19,7 +19,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None):
         if not bedprep_dir:
             bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file))).replace(".gz", "")
-        if not utils.file_exists(out_file):
+        if not utils.file_uptodate(out_file, in_file):
             with file_transaction(data, out_file) as tx_out_file:
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
@@ -27,7 +27,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None):
                        "{py_cl} -x 'bcbio.variation.bedutils.remove_bad(x)' | "
                        "sort -k1,1 -k2,2n > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
-        vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
+        vcfutils.bgzip_and_index(out_file, data.get("config", {}), remove_orig=False)
         return out_file
 
 def remove_bad(line):
