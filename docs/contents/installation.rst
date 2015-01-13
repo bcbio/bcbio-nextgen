@@ -73,7 +73,8 @@ To install bcbio-nextgen in an isolated non-root environment::
 This requires the following additional system requirements to be in place:
 
 - Java 1.7
-- Ruby
+- Ruby (including libraries and irb. On CentOS these are separate packages:
+  ``ruby-libs`` and ``ruby-irb``.)
 - R with Rscript (currently optional, but increasingly used in the pipeline)
 - bzip2 (with development libraries)
 - curl (with development libraries)
