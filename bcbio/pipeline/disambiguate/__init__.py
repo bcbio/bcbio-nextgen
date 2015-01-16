@@ -29,6 +29,9 @@ def split(*items):
             data["disambiguate"] = {"genome_build": data["genome_build"],
                                     "base": True}
             out.append([data])
+            # handle the instance where a single organism is disambiguated
+            if isinstance(dis_orgs, basestring):
+                dis_orgs = [dis_orgs]
             for dis_org in dis_orgs:
                 dis_data = copy.deepcopy(data)
                 dis_data["disambiguate"] = {"genome_build": dis_org}
