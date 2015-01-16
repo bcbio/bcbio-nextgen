@@ -181,7 +181,7 @@ def _set_global_vars(metadata):
     for sample in metadata.keys():
         for k, v in metadata[sample].items():
             print k, v
-            if os.path.isfile(v):
+            if isinstance(v, basestring) and os.path.isfile(v):
                 v = _expand_file(v)
                 metadata[sample][k] = v
                 fnames[v].append(k)
@@ -196,7 +196,7 @@ def _set_global_vars(metadata):
             global_vars[name] = fname
     for sample in metadata.keys():
         for k, v in metadata[sample].items():
-            if v in global_var_sub:
+            if isinstance(v, basestring) and v in global_var_sub:
                 metadata[sample][k] = global_var_sub[v]
     return metadata, global_vars
 
@@ -214,10 +214,17 @@ def _parse_metadata(in_handle):
             break
     keys = [x.strip() for x in header[1:]]
     for sinfo in (x for x in reader if not x[0].startswith("#")):
-        sample = sinfo[0].strip()
-        metadata[sample] = dict(zip(keys, (x.strip() for x in sinfo[1:])))
+        sinfo = [_strip_and_convert_lists(x) for x in sinfo]
+        sample = sinfo[0]
+        metadata[sample] = dict(zip(keys, sinfo[1:]))
     metadata, global_vars = _set_global_vars(metadata)
     return metadata, global_vars
+
+def _strip_and_convert_lists(field):
+    field = field.strip()
+    if "," in field:
+        field = [x.strip() for x in field.split(",")]
+    return field
 
 def _pname_and_metadata(in_file):
     """Retrieve metadata and project name from the input metadata CSV file.
@@ -243,6 +250,8 @@ def _handle_special_yaml_cases(v):
     """
     if ";" in v:
         v = v.split(";")
+    elif isinstance(v, list):
+        v = v
     else:
         try:
             v = int(v)
