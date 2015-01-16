@@ -298,16 +298,16 @@ def _get_files_project(sample, upload_config):
         if cov_db:
             out.append({"path": cov_db, "type": "sqlite", "ext": "coverage"})
 
-    if "combined_counts" in sample:
-        out.append({"path": sample["combined_counts"]})
-    if "annotated_combined_counts" in sample:
-        out.append({"path": sample["annotated_combined_counts"]})
-    if "combined_fpkm" in sample:
-        out.append({"path": sample["combined_fpkm"]})
-    if "combined_fpkm_isoform" in sample:
-        out.append({"path": sample["combined_fpkm_isoform"]})
-    if "assembled_gtf" in sample:
-        out.append({"path": sample["assembled_gtf"]})
+    if dd.get_combined_counts(sample):
+        out.append({"path": dd.get_combined_counts(sample)})
+    if dd.get_annotated_combined_counts(sample):
+        out.append({"path": dd.get_annotated_combined_counts(sample)})
+    if dd.get_combined_fpkm(sample):
+        out.append({"path": dd.get_combined_fpkm(sample)})
+    if dd.get_combined_fpkm_isoform(sample):
+        out.append({"path": dd.get_combined_fpkm_isoform(sample)})
+    if dd.get_assembled_gtf(sample):
+        out.append({"path": dd.get_assembled_gtf(sample)})
     if dd.get_dexseq_counts(sample):
         out.append({"path": dd.get_dexseq_counts(sample)})
     if dd.get_express_counts(sample):
