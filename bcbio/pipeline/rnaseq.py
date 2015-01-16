@@ -66,19 +66,22 @@ def run_express(data):
 
 def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""
-    to_combine = [x[0]["eff_counts"] for x in samples if "eff_counts" in x[0]]
+    to_combine = [dd.get_express_counts(x) for x in
+                  dd.sample_data_iterator(samples) if dd.get_express_counts(x)]
     if len(to_combine) > 0:
-        eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.eff_counts"
+        eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file)
-        to_combine = [x[0]["tpm_counts"] for x in samples if "tpm_counts" in x[0]]
-        tpm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.tpm"
+        to_combine = [dd.get_express_tpm(x) for x in
+                      dd.sample_data_iterator(samples) if dd.get_express_tpm(x)]
+        tpm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_tpm"
         tpm_counts_combined = count.combine_count_files(to_combine, tpm_counts_combined_file)
-        to_combine = [x[0]["fpkm_counts"] for x in samples if "fpkm_counts" in x[0]]
-        fpkm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.eff_fpkm"
+        to_combine = [dd.get_express_fpkm(x) for x in dd.sample_data_iterator(samples)
+                      if dd.get_express_fpkm(x)]
+        fpkm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_fpkm"
         fpkm_counts_combined = count.combine_count_files(to_combine, fpkm_counts_combined_file)
         return {'counts': eff_counts_combined, 'tpm': tpm_counts_combined,
                 'fpkm': fpkm_counts_combined}
-    return None
+    return {}
 
 def run_cufflinks(data):
     """Quantitate transcript expression with Cufflinks"""
