@@ -48,10 +48,6 @@ def parallel_callable_loci(in_bam, ref_file, config):
 @multi.zeromq_aware_logging
 def calc_callable_loci(data, region=None, out_file=None):
     """Determine callable bases for an input BAM in the given region.
-
-    We also identify super high depth regions (7x more than the set maximum depth) to
-    avoid calling in since these are repetitive centromere and telomere regions that spike
-    memory usage.
     """
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]

@@ -1,5 +1,8 @@
 ## 0.8.6 (in progress)
 
+- Calculate high depth regions with more than 20x median coverage as targets for
+  filtering in structural variants. Attempts to detect and avoid spurious calls
+  in repetitive regions.
 - Support snpEff 4.1, including re-download of snpEff databases on demand if out
   of sync with older versions.
 - Pass ploidy to GATK HaplotypeCaller, supporting multiple ploidies and correct

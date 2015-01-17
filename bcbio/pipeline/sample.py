@@ -11,7 +11,7 @@ import toolz as tz
 from bcbio import utils, bam, broad
 from bcbio.log import logger
 from bcbio.pipeline.merge import merge_bam_files
-from bcbio.bam import fastq, callable
+from bcbio.bam import fastq, callable, highdepth
 from bcbio.bam.trim import trim_adapters
 from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
@@ -147,7 +147,8 @@ def postprocess_alignment(data):
     if vmulti.bam_needs_processing(data) and data["work_bam"].endswith(".bam"):
         callable_region_bed, nblock_bed, callable_bed = \
             callable.block_regions(data["work_bam"], data["sam_ref"], data["config"])
-        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed}
+        highdepth_bed = highdepth.identify(data)
+        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed, "highdepth": highdepth_bed}
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
