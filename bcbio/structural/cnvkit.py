@@ -84,13 +84,13 @@ def _run_cnvkit_cancer(items, background, access_file):
 def _run_cnvkit_population(items, background, access_file):
     """Run CNVkit on a population of samples.
 
-    Currently uses a flat background for each sample and calls independently. Could
-    be improved to use population information but this is a starting point.
+    Tries to calculate background based on case/controls, otherwise uses
+    a flat background for each sample and calls independently.
     """
     assert not background
     inputs, background = shared.find_case_control(items)
     return [_run_cnvkit_single(data, access_file, background)[0] for data in inputs] + \
-           [_run_cnvkit_single(data, access_file)[0] for data in background]
+           [_run_cnvkit_single(data, access_file, inputs)[0] for data in background]
 
 def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                        background_name=None):
