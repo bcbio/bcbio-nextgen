@@ -1,6 +1,6 @@
 import os
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation)
+                          express, variation, gtf)
 from bcbio.ngsalign import bwa, bowtie2
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
@@ -68,6 +68,9 @@ def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""
     to_combine = [dd.get_express_counts(x) for x in
                   dd.sample_data_iterator(samples) if dd.get_express_counts(x)]
+    gtf_file = dd.get_gtf_file(samples[0][0])
+    isoform_to_gene_file = os.path.join(os.path.dirname(combined), "isoform_to_gene.txt")
+    isoform_to_gene_file = express.isoform_to_gene_name(gtf_file, isoform_to_gene_file)
     if len(to_combine) > 0:
         eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file)
@@ -80,7 +83,7 @@ def combine_express(samples, combined):
         fpkm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_fpkm"
         fpkm_counts_combined = count.combine_count_files(to_combine, fpkm_counts_combined_file)
         return {'counts': eff_counts_combined, 'tpm': tpm_counts_combined,
-                'fpkm': fpkm_counts_combined}
+                'fpkm': fpkm_counts_combined, 'isoform_to_gene': isoform_to_gene_file}
     return {}
 
 def run_cufflinks(data):
@@ -176,6 +179,7 @@ def combine_files(samples):
             data = dd.set_express_counts(data, express_counts_combined['counts'])
             data = dd.set_express_tpm(data, express_counts_combined['tpm'])
             data = dd.set_express_fpkm(data, express_counts_combined['fpkm'])
+            data = dd.set_isoform_to_gene(data, express_counts_combined['isoform_to_gene'])
         if dexseq_combined:
             data = dd.set_dexseq_counts(data, dexseq_combined_file)
         updated_samples.append([data])

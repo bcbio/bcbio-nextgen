@@ -35,6 +35,7 @@ LOOKUPS = {
     "express_fpkm": {"keys": ['express_fpkm']},
     "express_tpm": {"keys": ['express_tpm']},
     "express_counts": {"keys": ['express_counts']},
+    "isoform_to_gene": {"keys": ['isoform_to_gene']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "dexseq_counts": {"keys": ['dexseq_counts']},
     "description": {"keys": ['description']},

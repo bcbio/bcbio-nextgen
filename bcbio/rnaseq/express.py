@@ -1,5 +1,6 @@
 import os
 import shutil
+import tempfile
 from bcbio.utils import file_exists
 from bcbio.bam import is_paired
 from bcbio.pipeline import datadict as dd
@@ -64,3 +65,21 @@ def _set_stranded_flag(bam_file, data):
         stranded += "-s"
     flag = strand_flag[stranded]
     return flag
+
+def isoform_to_gene_name(gtf_file, out_file=None):
+    """
+    produce a table of isoform -> gene mappings for loading into EBSeq
+    """
+    if not out_file:
+         out_file = tempfile.NamedTemporaryFile(delete=False).name
+    if file_exists(out_file):
+        return out_file
+    db = gtf.get_gtf_db(gtf_file)
+    line_format = "{transcript}\t{gene}\n"
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            for feature in db.features_of_type('transcript'):
+                transcript = feature['transcript_id'][0]
+                gene = feature['gene_id'][0]
+                out_handle.write(line_format.format(**locals()))
+    return out_file
