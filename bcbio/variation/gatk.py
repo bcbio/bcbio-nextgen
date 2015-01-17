@@ -90,12 +90,14 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         with file_transaction(items[0], out_file) as tx_out_file:
             params += ["-T", "HaplotypeCaller",
                        "-o", tx_out_file,
-                       "-ploidy", str(ploidy.get_ploidy(items, region)),
                        "--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
             # Enable hardware based optimizations in GATK 3.1+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
                 params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
+            # Enable non-diploid calling in GATK 3.3+
+            if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
+                params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             if _joint_calling(items):  # Prepare gVCFs if doing joint calling
                 params += ["--emitRefConfidence", "GVCF", "--variant_index_type", "LINEAR",
                            "--variant_index_parameter", "128000"]
