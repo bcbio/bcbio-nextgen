@@ -11,6 +11,7 @@ def rnaseq_variant_calling(samples, run_parallel):
     run RNA-seq variant calling using GATK
     """
     samples = run_parallel("run_rnaseq_variant_calling", samples)
+    samples = run_parallel("run_rnaseq_joint_genotyping", [samples])
     return samples
 
 def run_rnaseq_variant_calling(data):
@@ -18,6 +19,20 @@ def run_rnaseq_variant_calling(data):
     if variantcaller and "gatk" in variantcaller:
         data = variation.rnaseq_gatk_variant_calling(data)
     return [[data]]
+
+def run_rnaseq_joint_genotyping(*samples):
+    data = samples[0][0]
+    variantcaller = dd.get_variantcaller(data)
+    ref_file = dd.get_ref_file(data)
+    out_file = os.path.join(dd.get_work_dir(data, "."), "variation", "combined.vcf")
+    if variantcaller and "gatk" in variantcaller:
+        vrn_files = [dd.get_vrn_file(d) for d in dd.sample_data_iterator(samples)]
+        out_file = variation.gatk_joint_calling(data, vrn_files, ref_file, out_file)
+    updated_samples = []
+    for data in dd.sample_data_iterator(samples):
+        data = dd.set_square_vcf(data, out_file)
+        updated_samples.append([data])
+    return updated_samples
 
 def quantitate_expression_parallel(samples, run_parallel):
     """

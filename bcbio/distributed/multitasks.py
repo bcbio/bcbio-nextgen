@@ -91,6 +91,10 @@ def run_rnaseq_variant_calling(*args):
     return rnaseq.run_rnaseq_variant_calling(*args)
 
 @utils.map_wrap
+def run_rnaseq_joint_genotyping(*args):
+    return rnaseq.run_rnaseq_joint_genotyping(*args)
+
+@utils.map_wrap
 def combine_bam(*args):
     return shared.combine_bam(*args)
 

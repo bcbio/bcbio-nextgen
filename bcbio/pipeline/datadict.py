@@ -21,6 +21,7 @@ LOOKUPS = {
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
+    "square_vcf": {"keys": ['square_vcf']},
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
     "gender": {"keys": ["metadata", "sex"], "default": ""},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},

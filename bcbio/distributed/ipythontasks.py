@@ -169,6 +169,12 @@ def run_rnaseq_variant_calling(*args):
         return ipython.zip_args(apply(rnaseq.run_rnaseq_variant_calling, *args))
 
 @require(rnaseq)
+def run_rnaseq_joint_genotyping(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.run_rnaseq_joint_genotyping, *args))
+
+@require(rnaseq)
 def run_express(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
