@@ -118,6 +118,25 @@ def combine_bed_by_size(input_beds, sample, work_dir, data, delim=","):
             out_file = bedutils.combine(size_beds, out_file, data)
     return out_file
 
+def _limit_calls(in_file, highdepth_beds, data):
+    """Limit calls to avoid calling in problematic genomic regions.
+
+    - highdepth_beds -- high depth regions with reads in repeat regions.
+    """
+    import pybedtools
+    out_file = "%s-glimit%s" % utils.splitext_plus(in_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with shared.bedtools_tmpdir(data):
+                all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
+                with open(all_file, "w") as out_handle:
+                    for line in fileinput.input(highdepth_beds):
+                        out_handle.write(line)
+                to_remove = pybedtools.BedTool(all_file).sort(stream=True)\
+                                                        .merge(c=4, o="distinct", delim=",").saveas()
+                pybedtools.BedTool(in_file).intersect(to_remove, v=True).saveas(tx_out_file)
+    return out_file
+
 def _filter_ensemble(in_bed, data):
     """Filter ensemble set of calls, requiring calls supported by 2 callers.
 
@@ -149,14 +168,14 @@ def _filter_ensemble(in_bed, data):
                             out_handle.write(line)
     return out_file
 
-def summarize(calls, data):
+def summarize(calls, data, highdepth_beds):
     """Summarize results from multiple callers into a single flattened BED file.
     """
     sample = tz.get_in(["rgnames", "sample"], data)
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                                sample, "ensemble"))
     with shared.bedtools_tmpdir(data):
-        input_beds = filter(lambda x: x is not None,
+        input_beds = filter(lambda x: x is not None and utils.file_exists(x),
                             [_create_bed(c, sample, work_dir, data) for c in calls])
     if len(input_beds) > 0:
         out_file = combine_bed_by_size(input_beds, sample, work_dir, data)
@@ -165,7 +184,11 @@ def summarize(calls, data):
                 filter_file = _filter_ensemble(out_file, data)
             else:
                 filter_file = out_file
-            bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(filter_file), "bedprep"))
+            if len(highdepth_beds) > 0:
+                limit_file = _limit_calls(filter_file, highdepth_beds, data)
+            else:
+                limit_file = filter_file
+            bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(limit_file), "bedprep"))
             calls.append({"variantcaller": "sv-ensemble",
-                          "vrn_file": bedutils.clean_file(filter_file, data, bedprep_dir=bedprep_dir)})
+                          "vrn_file": bedutils.clean_file(limit_file, data, bedprep_dir=bedprep_dir)})
     return calls

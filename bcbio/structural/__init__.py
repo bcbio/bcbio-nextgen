@@ -42,6 +42,8 @@ def _combine_multiple_svcallers(samples):
             by_bam[x[0]["align_bam"]].append(x[0])
         except KeyError:
             by_bam[x[0]["align_bam"]] = [x[0]]
+    highdepths = filter(lambda x: x is not None,
+                        list(set([tz.get_in(["config", "algorithm", "highdepth_regions"], x[0]) for x in samples])))
     out = []
     for grouped_calls in by_bam.values():
         def orig_svcaller_order(x):
@@ -50,7 +52,7 @@ def _combine_multiple_svcallers(samples):
                                 key=orig_svcaller_order)
         final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
         final = grouped_calls[0]
-        final_calls = ensemble.summarize(final_calls, final)
+        final_calls = ensemble.summarize(final_calls, final, highdepths)
         final_calls = validate.evaluate(final, final_calls)
         final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]

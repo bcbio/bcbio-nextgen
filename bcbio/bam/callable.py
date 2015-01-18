@@ -393,6 +393,9 @@ def combine_sample_regions(*samples):
                     data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(analysis_file).count()
                 elif vr_file:
                     data["config"]["algorithm"]["callable_count"] = pybedtools.BedTool(vr_file).count()
+                highdepth_bed = tz.get_in(["regions", "highdepth"], data)
+                if highdepth_bed:
+                    data["config"]["algorithm"]["highdepth_regions"] = highdepth_bed
                 # attach a representative sample for calculating callable region
                 if not data.get("work_bam"):
                     for x in items:
