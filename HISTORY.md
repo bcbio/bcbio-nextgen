@@ -7,6 +7,9 @@
   of sync with older versions.
 - Pass ploidy to GATK HaplotypeCaller, supporting multiple ploidies and correct
   calling of X/Y/MT chromosomes. Requires GATK 3.3.
+- Provide better defaults for mincores that packs together multiple single IPython
+  processes on a single cluster request -- use core specification from input
+  configuration. Thanks to Miika Ahdesmaki.
 
 ## 0.8.5 (11 January 2015)
 

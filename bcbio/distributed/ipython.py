@@ -8,6 +8,7 @@ Cluster implementation from ipython-cluster-helper:
 
 https://github.com/roryk/ipython-cluster-helper
 """
+import collections
 import math
 import os
 import time
@@ -35,8 +36,8 @@ def create(parallel, dirs, config):
     """
     profile_dir = utils.safe_makedir(os.path.join(dirs["work"], get_log_dir(config), "ipython"))
     has_mincores = any(x.startswith("mincores=") for x in parallel["resources"])
-    if parallel["system_cores"] > 3 and not has_mincores:
-        cores = parallel["system_cores"]
+    cores = min(_get_common_cores(config["resources"]), parallel["system_cores"])
+    if cores > 1 and not has_mincores:
         # if we have less scheduled cores than per machine, use the scheduled count
         if cores > parallel["cores"]:
             cores = parallel["cores"]
@@ -59,6 +60,16 @@ def create(parallel, dirs, config):
                                                       "tag": parallel.get("tag"),
                                                       "run_local": parallel.get("run_local")},
                                         retries=parallel.get("retries"))
+
+def _get_common_cores(resources):
+    """Retrieve the most common configured number of cores in the input file.
+    """
+    all_cores = []
+    for vs in resources.values():
+        cores = vs.get("cores")
+        if cores:
+            all_cores.append(int(vs["cores"]))
+    return collections.Counter(all_cores).most_common(1)[0][0]
 
 def stop(view):
     try:
