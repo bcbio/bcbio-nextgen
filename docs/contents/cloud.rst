@@ -104,7 +104,7 @@ to bcbio using the standard environmental variables::
 
 With this in place, two commands setup your elasticluster and AWS environment to
 run a bcbio cluster. The first creates public/private keys, a bcbio IAM user,
-and sets up your elasticluster config in ``~/.bcbio/elasticluster/config``::
+and sets up an elasticluster config in ``~/.bcbio/elasticluster/config``::
 
   bcbio_vm.py aws iam
 
@@ -114,8 +114,8 @@ The second configures a VPC to host bcbio::
 
 The ``aws vpc`` command is idempotent and can run multiple times if you change or
 remove parts of the infrastructure. You can also rerun the ``aws iam`` command,
-but if you'd like to generate a new elasticluster
-``~/.bcbio/elasticluster/config`` add the recreate flag: ``bcbio_vm.py aws iam
+but if you'd like to generate a new elasticluster configuration file
+(``~/.bcbio/elasticluster/config``) add the recreate flag: ``bcbio_vm.py aws iam
 --recreate``. This generates a new set of IAM credentials and public/private
 keys. These are only stored in the ``~/.bcbio`` directory so you need to fully
 recreate them if you delete the old ones.
@@ -127,59 +127,34 @@ Following this setup, you're ready to run a bcbio cluster on AWS. We start
 from a standard Ubuntu AMI, installing all software for bcbio and the cluster as
 part of the boot process.
 
-The ``~/.bcbio/elasticluster/config`` file defines the number of compute nodes
-to start. If you set up your AWS configuration manually, the bcbio-vm GitHub
-repository has the `latest example configuration
-<https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
-You'll want to edit this to match the number of cores and resources you'd like
-to use. The defaults only have small instances to prevent accidentally starting
-an `expensive run <http://aws.amazon.com/ec2/pricing/>`_. If you're planning a
-run with less than 32 cores, do not use a cluster and instead run directly on a single
-machine using one of the `large r3 or c3 instances <http://aws.amazon.com/ec2/instance-types/>`_.
+To configure your cluster run::
 
-To start a cluster with a SLURM manager front end node and 2 compute nodes::
+   bcbio_vm.py aws config edit
 
-    [cluster/bcbio]
-    setup_provider=ansible-slurm
-    frontend_nodes=1
-    compute_nodes=2
-    flavor=c3.8xlarge
+This dialog allows you to define the cluster size and machine resources you'd
+like to use. The defaults only have small instances to prevent accidentally
+starting an `expensive run <http://aws.amazon.com/ec2/pricing/>`_. If you're
+planning a run with less than 32 cores, do not use a cluster and instead run
+directly on a single machine using one of the `large r3 or c3 instances
+<http://aws.amazon.com/ec2/instance-types/>`_.
 
-    [cluster/bcbio/frontend]
-    flavor=c3.large
-    root_volume_size=200
-    root_volume_type=io1
-    root_volume_iops=3000
+This script also sets the mounted NFS drive size, which you can use to store
+processing data when running across a distributed cluster. At scale, you can
+replace this with a Lustre shared filesystem. See below for details on launching
+and attaching a Lustre filesystem to a cluster.
 
-To start a single machine without a cluster to compute directly on::
+To ensure everything is correctly configured, run::
 
-    [cluster/bcbio]
-    setup_provider=ansible
-    frontend_nodes=1
-    compute_nodes=0
+    bcbio_vm.py aws info
 
-    [cluster/bcbio/frontend]
-    flavor=m3.2xlarge
-    root_volume_size=200
-    root_volume_type=io1
-    root_volume_iops=3000
+When happy with your setup, start the cluster with::
 
-Adjust the number of nodes, machine size flavors and root volume size as
-desired. Elasticluster mounts the frontend root volume across all machines using
-NFS. At scale, you can replace this with a Lustre shared filesystem. See below
-for details on launching and attaching this to a cluster.
-
-Once customized, start the cluster with::
-
-    bcbio_vm.py elasticluster start bcbio -v
+    bcbio_vm.py aws cluster start
 
 The cluster will take five to ten minutes to start. If you encounter any
-intermittent failures due to connectivity, you can rerun the configuration step with
-``bcbio_vm.py elasticluster setup bcbio -v`` on the same cluster. Once running,
-install the bcbio wrapper code, Dockerized tools and system configuration
-with::
-
-    bcbio_vm.py aws bcbio bootstrap -v
+intermittent failures, you can rerun the cluster configuration step with
+``bcbio_vm.py aws cluster setup`` or the bcbio-specific installation with
+``bcbio_vm.py aws cluster bootstrap``.
 
 Running Lustre
 ==============
@@ -211,7 +186,7 @@ Running an analysis
 
 To run the analysis, connect to the head node with::
 
-    bcbio_vm.py elasticluster ssh bcbio
+    bcbio_vm.py aws cluster ssh
 
 If you started a single machine without a cluster run with::
 
@@ -237,7 +212,6 @@ distributes jobs across your cluster on a queue called ``cloud``.  A
 job, and ``sacct_std`` provides the status of jobs on the cluster. If you are
 new to SLURM, here is a summary of useful
 `SLURM commands <https://rc.fas.harvard.edu/resources/running-jobs/#Summary_of_SLURM_commands>`_.
-
 
 On successful completion, bcbio uploads the results of the analysis back into your s3
 bucket and folder as ``s3://your-project/your-analysis/final``. You can now cleanup the cluster and
@@ -282,7 +256,7 @@ The bcbio Elasticluster and Lustre integration can spin up a lot of AWS
 resources. You'll be paying for these by the hour so you want to clean them up
 when you finish running your analysis. To stop the cluster::
 
-    bcbio_vm.py elasticluster stop bcbio
+    bcbio_vm.py aws cluster stop
 
 To remove the Lustre stack::
 
@@ -290,3 +264,15 @@ To remove the Lustre stack::
 
 Double check that all instances have been properly stopped by looking in the AWS
 console.
+
+Manual configuration
+====================
+
+Experienced `elasticluster <https://github.com/gc3-uzh-ch/elasticluster>`_ users
+can edit the configuration files themselves. bcbio provides a small wrapper
+that automatically reads and writes these configurations to avoid users needing
+to understand elasticluster internals, but all functionality is fully available.
+Edit your ``~/.bcbio/elasticluster/config`` file to change parameters. You can
+also see the `latest example configuration
+<https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
+in the bcbio-vm GitHub repository for more details on the other available options.
