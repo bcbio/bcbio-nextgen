@@ -318,5 +318,7 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_express_tpm(sample)})
     if dd.get_isoform_to_gene(sample):
         out.append({"path": dd.get_isoform_to_gene(sample)})
+    if dd.get_square_vcf(sample):
+        out.append({"path": dd.get_square_vcf(sample)})
 
     return _add_meta(out, config=upload_config)

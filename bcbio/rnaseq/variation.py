@@ -72,9 +72,9 @@ def gatk_rnaseq_calling(data):
 
 def gatk_joint_calling(data, vrn_files, ref_file, out_file=None):
     if out_file is None:
-        out_file = vrn_files[0]
+        out_file = os.path.join("variation", "combined.vcf")
     if not file_exists(out_file):
-        out_file = _run_genotype_gvcfs(data, vrn_files, ref_file, "combined.gvcf")
+        out_file = _run_genotype_gvcfs(data, vrn_files, ref_file, out_file)
     return out_file
 
 def _run_genotype_gvcfs(data, vrn_files, ref_file, out_file):
