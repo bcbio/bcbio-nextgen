@@ -27,6 +27,7 @@ from bcbio.distributed import multi, prun
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
 from bcbio.variation import bedutils
 from bcbio.variation import multi as vmulti
@@ -316,7 +317,7 @@ def _write_bed_regions(data, final_regions, out_file, out_file_ref):
     final_regions.saveas(out_file)
     noanalysis_regions.saveas(out_file_ref)
 
-def _analysis_block_stats(regions):
+def _analysis_block_stats(regions, samples):
     """Provide statistics on sizes and number of analysis blocks.
     """
     prev = None
@@ -343,7 +344,8 @@ def _analysis_block_stats(regions):
                 "Block sizes:\n%s\n" % descriptive_stats(region_sizes) +
                 "Between block sizes:\n%s\n" % descriptive_stats(between_sizes))
     if len(region_sizes) == 0:
-        raise ValueError("No callable analysis regions found in all samples")
+        raise ValueError("No callable regions found in: %s" %
+                         (", ".join([dd.get_sample_name(x) for x in samples])))
 
 def _needs_region_update(out_file, samples):
     """Check if we need to update BED file of regions, supporting back compatibility.
@@ -378,8 +380,10 @@ def combine_sample_regions(*samples):
         global_analysis_file = None
     out = []
     analysis_files = []
+    batches = []
     with shared.bedtools_tmpdir(samples[0]):
         for batch, items in vmulti.group_by_batch(samples, require_bam=False).items():
+            batches.append(items)
             if global_analysis_file:
                 analysis_file, no_analysis_file = global_analysis_file, global_no_analysis_file
             else:
@@ -405,7 +409,7 @@ def combine_sample_regions(*samples):
         assert len(out) == len(samples)
         if len(analysis_files) > 0:
             final_regions = pybedtools.BedTool(analysis_files[0])
-            _analysis_block_stats(final_regions)
+            _analysis_block_stats(final_regions, batches[0])
     return out
 
 def _combine_sample_regions_batch(batch, items):
@@ -437,4 +441,7 @@ def _combine_sample_regions_batch(batch, items):
                         "%s-nblockfinal%s" % utils.splitext_plus(tx_afile))
                 final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
                 _write_bed_regions(items[0], final_regions, tx_afile, tx_noafile)
-    return analysis_file, no_analysis_file
+    if analysis_file and utils.file_exists(analysis_file):
+        return analysis_file, no_analysis_file
+    else:
+        return None, None
