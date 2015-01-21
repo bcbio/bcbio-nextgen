@@ -31,7 +31,7 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
     if prep_params.get("max_depth"):
         args += ["--downsample_to_coverage", str(prep_params["max_depth"])]
     if prep_params["recal"] == "gatk":
-        if _recal_has_reads(data["prep_recal"]):
+        if "prep_recal" in data and _recal_has_reads(data["prep_recal"]):
             args += ["-BQSR", data["prep_recal"]]
     elif prep_params["recal"]:
         raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
