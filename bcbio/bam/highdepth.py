@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import sys
 
+import numpy
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -34,12 +36,16 @@ def identify(data):
                    "| head -n {sample_size} "
                    "| cut -f 5 | {py_cl} -l 'numpy.median([float(x) for x in l])'")
             median_cov = float(subprocess.check_output(cmd.format(**locals()), shell=True))
-            high_thresh = int(high_multiplier * median_cov)
-            cmd = ("sambamba depth window -t {cores} -c {median_cov} "
-                   "--window-size {window_size} -T {high_thresh} {work_bam} "
-                   "| {py_cl} -fx 'float(x.split()[5]) >= {high_percentage}' "
-                   "| cut -f 1-3,7 > {tx_raw_file} ")
-            do.run(cmd.format(**locals()), "Identify high coverage regions")
+            if not numpy.isnan(median_cov):
+                high_thresh = int(high_multiplier * median_cov)
+                cmd = ("sambamba depth window -t {cores} -c {median_cov} "
+                       "--window-size {window_size} -T {high_thresh} {work_bam} "
+                       "| {py_cl} -fx 'float(x.split()[5]) >= {high_percentage}' "
+                       "| cut -f 1-3,7 > {tx_raw_file} ")
+                do.run(cmd.format(**locals()), "Identify high coverage regions")
+            else:
+                with open(tx_raw_file, "w") as out_handle:
+                    out_handle.write("")
             if utils.file_exists(tx_raw_file):
                 cmd = "bedtools merge -i {tx_raw_file} -c 4 -o distinct > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Clean up raw coverage file")
