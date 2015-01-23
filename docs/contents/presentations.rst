@@ -1,6 +1,9 @@
 Presentations
 =============
 
+- Talk at `Good Start Genetics <https://www.goodstartgenetics.com/>`_ (23
+  January 2015): `slides <https://github.com/chapmanb/bcbb/raw/master/talks/gsg2015_bcbio_nextgen/chapman_bcbio.pdf>`_
+
 - Boston area `Bioinformatics Interest Group <http://openwetware.org/wiki/BioMicroCenter:BIG_meeting>`_ (15 October 2014):
   `slides <https://github.com/chapmanb/bcbb/raw/master/talks/big2014_bcbio_val/chapman_bcbio.pdf>`_
 
