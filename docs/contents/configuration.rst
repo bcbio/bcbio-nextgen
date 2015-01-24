@@ -655,6 +655,14 @@ enough space to handle intermediates. The space differs between steps but
 generally you'd need to have 2 times the largest input file per sample and
 account for samples running simultaneously on multiple core machines.
 
+To handle clusters that specify local scratch space with an environmental
+variable, bcbio will resolve environmental variables like::
+
+
+    resources:
+      tmp:
+        dir: $YOUR_SCRATCH_LOCATION
+
 Sample specific resources
 =========================
 

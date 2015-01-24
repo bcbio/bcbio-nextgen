@@ -50,11 +50,11 @@ def organize(dirs, config, run_info_yaml, sample_names):
         item["config"] = config_utils.update_w_custom(config, item)
         item.pop("algorithm", None)
         item = add_reference_resources(item)
-        # Create temporary directories and make absolute
-        if utils.get_in(item, ("config", "resources", "tmp", "dir")):
-            utils.safe_makedir(utils.get_in(item, ("config", "resources", "tmp", "dir")))
-            item["config"]["resources"]["tmp"] = genome.abs_file_paths(
-                utils.get_in(item, ("config", "resources", "tmp")))
+        # Create temporary directories and make absolute, expanding environmental variables
+        tmp_dir = tz.get_in(["config", "resources", "tmp", "dir"], item)
+        if tmp_dir:
+            tmp_dir = utils.safe_makedir(os.path.expandvars(tmp_dir))
+            item["config"]["resources"]["tmp"]["dir"] = genome.abs_file_paths(tmp_dir)
         out.append(item)
     out = _add_provenance(out, dirs, config)
     return out
