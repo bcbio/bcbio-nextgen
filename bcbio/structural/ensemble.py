@@ -151,7 +151,7 @@ def _filter_ensemble(in_bed, data):
     with open(in_bed) as in_handle:
         for line in in_handle:
             caller_strs = line.strip().split()[-1]
-            for event, caller in [x.split("_") for x in caller_strs.split(",")]:
+            for event, caller in [x.split("_", 1) for x in caller_strs.split(",")]:
                 total_callers[validate.cnv_to_event(event)].add(caller)
 
     if not utils.file_exists(out_file):
@@ -161,8 +161,8 @@ def _filter_ensemble(in_bed, data):
                     for line in in_handle:
                         chrom, start, end, caller_strs = line.strip().split()
                         size = int(end) - int(start)
-                        callers = set([x.split("_")[-1] for x in caller_strs.split(",")])
-                        events = set([validate.cnv_to_event(x.split("_")[0]) for x in caller_strs.split(",")])
+                        callers = set([x.split("_", 1)[-1] for x in caller_strs.split(",")])
+                        events = set([validate.cnv_to_event(x.split("_", 1)[0]) for x in caller_strs.split(",")])
                         pass_event_counts = [len(total_callers[e]) > N_FILTER_CALLERS for e in list(events)]
                         if len(callers) > 1 or size > max_size or not any(pass_event_counts):
                             out_handle.write(line)
