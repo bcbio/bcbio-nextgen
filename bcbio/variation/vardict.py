@@ -95,10 +95,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 vcfutils.merge_variant_files(orig_files=sample_vcf_names,
                                              out_file=tx_out_file, ref_file=ref_file,
                                              config=config, region=bamprep.region_to_gatk(region))
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"),
-                                               ref_file, config)
-    return ann_file
+    return out_file
 
 def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
@@ -143,7 +140,4 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"), ref_file,
-                                               config)
-    return ann_file
+    return out_file
