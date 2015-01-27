@@ -22,6 +22,19 @@ from bcbio.variation import vcfutils
 
 # ## High level
 
+def add_to_vcf(in_file, data):
+    effect_todo = get_type(data)
+    if effect_todo:
+        if effect_todo == "snpeff":
+            ann_vrn_file = snpeff_effects(in_file, data)
+        elif effect_todo == "vep":
+            ann_vrn_file = run_vep(in_file, data)
+        else:
+            raise ValueError("Unexpected variant effects configuration: %s" % effect_todo)
+        if ann_vrn_file:
+            return ann_vrn_file
+    return None
+
 def get_type(data):
     """Retrieve the type of effects calculation to do.
     """
@@ -96,11 +109,11 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             return vep_dir, ensembl_name
     return None, None
 
-def run_vep(data):
+def run_vep(in_file, data):
     """Annotate input VCF file with Ensembl variant effect predictor.
     """
-    out_file = utils.append_stem(data["vrn_file"], "-vepeffects")
-    assert data["vrn_file"].endswith(".gz") and out_file.endswith(".gz")
+    out_file = utils.append_stem(in_file, "-vepeffects")
+    assert in_file.endswith(".gz") and out_file.endswith(".gz")
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             vep_dir, ensembl_name = prep_vep_cache(data["genome_build"],
@@ -137,7 +150,7 @@ def run_vep(data):
                     #  variant.
 
                     cmd += ["--pick"]
-                cmd = "gunzip -c %s | %s | bgzip -c > %s" % (data["vrn_file"], " ".join(cmd), tx_out_file)
+                cmd = "gunzip -c %s | %s | bgzip -c > %s" % (in_file, " ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
         vcfutils.bgzip_and_index(out_file, data["config"])
@@ -185,10 +198,9 @@ def snpeff_version(args=None):
     assert snpeff_version, "Did not find snpEff version information"
     return snpeff_version
 
-def snpeff_effects(data):
+def snpeff_effects(vcf_in, data):
     """Annotate input VCF file with effects calculated by snpEff.
     """
-    vcf_in = data["vrn_file"]
     if vcfutils.vcf_has_variants(vcf_in):
         return _run_snpeff(vcf_in, "vcf", data)
 
