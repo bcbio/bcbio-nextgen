@@ -5,6 +5,8 @@
   in repetitive regions.
 - Support snpEff 4.1, including re-download of snpEff databases on demand if out
   of sync with older versions.
+- Split multi-allelic variants into bi-allelic calls prior to loading into
+  GEMINI, since it only handles bi-allelic inputs. Thanks to Pär Larsson.
 - Pass ploidy to GATK HaplotypeCaller, supporting multiple ploidies and correct
   calling of X/Y/MT chromosomes. Requires GATK 3.3.
 - Provide better defaults for mincores that packs together multiple single IPython

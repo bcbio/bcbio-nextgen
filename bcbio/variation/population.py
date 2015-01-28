@@ -14,7 +14,7 @@ from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do, programs
-from bcbio.variation import vcfutils
+from bcbio.variation import multiallelic, vcfutils
 
 def prep_gemini_db(fnames, call_info, samples):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
@@ -23,7 +23,8 @@ def prep_gemini_db(fnames, call_info, samples):
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     name, caller, is_batch = call_info
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
-    gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
+    multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
+    gemini_vcf = multiallelic.to_single(multisample_vcf, data)
     use_gemini_quick = (do_db_build(samples, check_gemini=False) and
                         any(vcfutils.vcf_has_variants(f) for f in fnames))
     if not utils.file_exists(gemini_db) and use_gemini_quick:

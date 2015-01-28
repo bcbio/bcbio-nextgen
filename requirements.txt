@@ -23,6 +23,7 @@ chanjo>=2.0.2
 click>=3.3
 cnvkit>=0.3.1
 cutadapt==1.4.2
+cyvcf>=0.1.11
 fabric>=1.7.0
 gffutils>=0.8.2
 HTSeq >= 0.5.4p5
