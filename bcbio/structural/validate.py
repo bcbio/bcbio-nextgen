@@ -24,6 +24,7 @@ except ImportError:
 
 from bcbio.log import logger
 from bcbio import utils
+from bcbio.pipeline import datadict as dd
 
 EVENT_SIZES = [(1, 450), (450, 2000), (2000, 4000), (4000, 20000), (20000, 60000),
                (60000, int(1e5)), (int(1e5), int(1e6))]
@@ -35,26 +36,27 @@ def _stat_str(x, n):
     else:
         return {"label": "", "val": 0}
 
-def cnv_to_event(name):
-    """Convert a CNV to an event name -- XXX hardcoded for diploid comparisons.
+def cnv_to_event(name, data):
+    """Convert a CNV to an event name.
     """
+    ploidy = dd.get_ploidy(data)
     if name.startswith("cnv"):
         num = int(name.split("_")[0].replace("cnv", ""))
-        if num < 2:
+        if num < ploidy:
             return "DEL"
-        elif num > 2:
+        elif num > ploidy:
             return "DUP"
         else:
             return name
     else:
         return name
 
-def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
+def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude, data):
     """Compare a ensemble results for a caller against a specific caller and SV type.
     """
     import pybedtools
     def cnv_matches(name):
-        return cnv_to_event(name) == svtype
+        return cnv_to_event(name, data) == svtype
     def wham_matches(name):
         """Flexibly handle WHAM comparisons, allowing DUP/DEL matches during comparisons.
         """
@@ -70,7 +72,7 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
     def is_caller_svtype(feat):
         for name in feat.name.split(","):
             if ((name.startswith(svtype) or cnv_matches(name) or wham_matches(name))
-                  and (caller == "ensemble" or name.endswith(caller))):
+                  and (caller == "sv-ensemble" or name.endswith(caller))):
                 return True
         return False
     exfeats = pybedtools.BedTool(exclude)
@@ -91,7 +93,7 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude):
     return {"sensitivity": _stat_str(match, ttotal),
             "precision": _stat_str(match, etotal)}
 
-def _evaluate_multi(callers, truth_svtypes, ensemble, exclude):
+def _evaluate_multi(callers, truth_svtypes, ensemble, exclude, data):
     out_file = "%s-validate.csv" % utils.splitext_plus(ensemble)[0]
     df_file = "%s-validate-df.csv" % utils.splitext_plus(ensemble)[0]
     if not utils.file_uptodate(out_file, ensemble) or not utils.file_uptodate(df_file, ensemble):
@@ -105,7 +107,7 @@ def _evaluate_multi(callers, truth_svtypes, ensemble, exclude):
                     for size in EVENT_SIZES:
                         str_size = "%s-%s" % size
                         for caller in callers:
-                            evalout = _evaluate_one(caller, svtype, size, ensemble, truth, exclude)
+                            evalout = _evaluate_one(caller, svtype, size, ensemble, truth, exclude, data)
                             writer.writerow([svtype, str_size, caller,
                                              evalout["sensitivity"]["label"], evalout["precision"]["label"]])
                             for metric in ["sensitivity", "precision"]:
@@ -138,9 +140,9 @@ def _plot_evaluation_event(df_csv, svtype):
         event_sizes = _find_events_to_include(df, EVENT_SIZES)
         fig, axs = plt.subplots(len(event_sizes), len(metrics), tight_layout=True)
         callers = sorted(df["caller"].unique())
-        if "ensemble" in callers:
-            callers.remove("ensemble")
-            callers.append("ensemble")
+        if "sv-ensemble" in callers:
+            callers.remove("sv-ensemble")
+            callers.append("sv-ensemble")
         for i, size in enumerate(event_sizes):
             size_label = "%s to %sbp" % size
             size = "%s-%s" % size
@@ -198,13 +200,13 @@ def evaluate(data, sv_calls):
     """Provide evaluations for multiple callers split by structural variant type.
     """
     truth_sets = tz.get_in(["config", "algorithm", "svvalidate"], data)
-    ensemble_callsets = [(i, x) for (i, x) in enumerate(sv_calls) if x["variantcaller"] == "ensemble"]
+    ensemble_callsets = [(i, x) for (i, x) in enumerate(sv_calls) if x["variantcaller"] == "sv-ensemble"]
     if truth_sets and len(ensemble_callsets) > 0:
         callers = [x["variantcaller"] for x in sv_calls]
         ensemble_bed = ensemble_callsets[0][-1]["vrn_file"]
         exclude_files = [f for f in [x.get("exclude_file") for x in sv_calls] if f]
         exclude_file = exclude_files[0] if len(exclude_files) > 0 else None
-        val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, exclude_file)
+        val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, exclude_file, data)
         summary_plots = _plot_evaluation(df_csv)
         ensemble_i, ensemble = ensemble_callsets[0]
         ensemble["validate"] = {"csv": val_summary, "plot": summary_plots, "df": df_csv}
@@ -212,10 +214,10 @@ def evaluate(data, sv_calls):
     return sv_calls
 
 if __name__ == "__main__":
-    #_, df_csv = _evaluate_multi(["lumpy", "delly", "wham", "ensemble"],
+    #_, df_csv = _evaluate_multi(["lumpy", "delly", "wham", "sv-ensemble"],
     #                            {"DEL": "synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed"},
     #                            "syn3-tumor-ensemble-filter.bed", "sv_exclude.bed")
-    #_, df_csv = _evaluate_multi(["lumpy", "delly", "cn_mops", "ensemble"],
+    #_, df_csv = _evaluate_multi(["lumpy", "delly", "cn_mops", "sv-ensemble"],
     #                            {"DEL": "NA12878.50X.ldgp.molpb_val.20140508.bed"},
     #                            "NA12878-ensemble.bed", "LCR.bed.gz")
     import sys
