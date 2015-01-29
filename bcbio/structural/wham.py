@@ -104,6 +104,13 @@ def _check_bed_call(line, name):
         if fend - fstart < ensemble.MAX_SVSIZE:
             return "%s\t%s\t%s\t%s\n" % (chrom, fstart, fend, stype_str)
 
+def _remap_wc(wc):
+    remap = {"copy_number_loss": "DEL",
+             "indel": "DUP",
+             "inversion": "INV",
+             "mobile_element_insertion": "INR"}
+    return remap.get(wc, wc)
+
 def _convert_to_bed(vcf_file, inputs, use_lrt=False):
     """Convert WHAM output file into BED format for ensemble calling.
 
@@ -118,13 +125,12 @@ def _convert_to_bed(vcf_file, inputs, use_lrt=False):
         with file_transaction(inputs[0], out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle, dialect="excel-tab")
-                for rec in _wham_pass_iter(vcf_file):
+                for rec, end, call_type in _wham_pass_iter(vcf_file):
                     start = max(rec.start - buffer_size, 0)
-                    _, end, _ = rec.INFO["BE"]
-                    samples = [g.sample for g in rec.samples if g.gt_type > 0]
                     end = int(end) + buffer_size
+                    samples = [g.sample for g in rec.samples if g.gt_type > 0]
                     if not use_lrt or rec.INFO.get("LRT", 0.0) > lrt_thresh:
-                        writer.writerow([rec.CHROM, start, end, "%s_wham" % rec.INFO["WC"],
+                        writer.writerow([rec.CHROM, start, end, "%s_wham" % call_type,
                                          ";".join(samples)])
     return out_file
 
@@ -135,7 +141,7 @@ def _calc_lrt_thresh(vcf_file):
     samples with higher likelihood in the cases. Calculates a simple mean
     threshold to use for inclusion.
     """
-    lrts = [rec.INFO.get("LRT") for rec in _wham_pass_iter(vcf_file)]
+    lrts = [call[0].INFO.get("LRT") for call in _wham_pass_iter(vcf_file)]
     lrts = [x for x in lrts if x is not None]
     return np.mean(lrts)
 
@@ -144,24 +150,30 @@ def _wham_pass_iter(vcf_file):
     """
     reader = vcf.Reader(filename=vcf_file)
     for rec in reader:
-        if rec.INFO["BE"][0] not in [".", None]:
-            other_chrom, end, count = rec.INFO["BE"]
-            if int(end) > int(rec.start) and other_chrom == rec.CHROM:
-                samples = [g.sample for g in rec.samples if g.gt_type > 0]
-                if len(samples) > 0:
-                    yield rec
+        samples = [g.sample for g in rec.samples if g.gt_type > 0]
+        if len(samples) > 0:
+            if rec.INFO["BE"][0] not in [".", None]:
+                other_chrom, end, count = rec.INFO["BE"]
+                if int(end) > int(rec.start) and other_chrom == rec.CHROM:
+                    yield rec, end, _remap_wc(rec.INFO["WC"])
+            else:
+                end = rec.start + max([len(x) for x in rec.ALT])
+                yield rec, end, "BND"
 
 def _add_wham_classification(in_file, items):
     """Run WHAM classifier to assign a structural variant type to each call.
     """
     wham_sharedir = os.path.normpath(os.path.join(os.path.dirname(subprocess.check_output(["which", "WHAM-BAM"])),
                                                   os.pardir, "share", "wham"))
+    #training_data = "WHAM_training_phase3_10bp_training.txt"
+    training_data = "WHAM_training_data.txt"
     out_file = "%s-class%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             this_python = sys.executable
-            cmd = ("{this_python} {wham_sharedir}/classify_WHAM_vcf.py {in_file} "
-                   "{wham_sharedir}/WHAM_training_data.txt > {tx_out_file}")
+            cores = dd.get_cores(items[0])
+            cmd = ("{this_python} {wham_sharedir}/classify_WHAM_vcf.py --proc {cores} "
+                   "{in_file} {wham_sharedir}/{training_data} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Classify WHAM calls")
     return out_file
 

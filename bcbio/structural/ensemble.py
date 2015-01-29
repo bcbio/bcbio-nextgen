@@ -104,9 +104,10 @@ def combine_bed_by_size(input_beds, sample, work_dir, data, delim=","):
                         has_regions = False
                         with open(all_file, "w") as out_handle:
                             for line in fileinput.input(input_beds):
-                                chrom, start, end = line.split()[:3]
+                                chrom, start, end, event_str = line.split()[:4]
+                                event = event_str.split("_", 1)[0]
                                 size = int(end) - int(start)
-                                if size >= e_start and size < e_end:
+                                if size >= e_start and size < e_end or event == "BND":
                                     out_handle.write(line)
                                     has_regions = True
                         if has_regions:

@@ -65,13 +65,15 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude, data):
                    "INV": set(["INV", "INR"])}
         curtype, curcaller = name.split("_")[:2]
         return curcaller == "wham" and svtype in allowed and curtype in allowed[svtype]
+    def is_breakend(name):
+        return name.startswith("BND")
     def in_size_range(feat):
         minf, maxf = size_range
         size = feat.end - feat.start
         return size >= minf and size < maxf
     def is_caller_svtype(feat):
         for name in feat.name.split(","):
-            if ((name.startswith(svtype) or cnv_matches(name) or wham_matches(name))
+            if ((name.startswith(svtype) or cnv_matches(name) or wham_matches(name) or is_breakend(name))
                   and (caller == "sv-ensemble" or name.endswith(caller))):
                 return True
         return False
@@ -96,6 +98,8 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, exclude, data):
 def _evaluate_multi(callers, truth_svtypes, ensemble, exclude, data):
     out_file = "%s-validate.csv" % utils.splitext_plus(ensemble)[0]
     df_file = "%s-validate-df.csv" % utils.splitext_plus(ensemble)[0]
+    print callers
+    print truth_svtypes
     if not utils.file_uptodate(out_file, ensemble) or not utils.file_uptodate(df_file, ensemble):
         with open(out_file, "w") as out_handle:
             with open(df_file, "w") as df_out_handle:
