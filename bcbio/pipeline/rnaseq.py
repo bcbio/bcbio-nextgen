@@ -28,11 +28,12 @@ def run_rnaseq_joint_genotyping(*samples):
     if variantcaller and "gatk" in variantcaller:
         vrn_files = [dd.get_vrn_file(d) for d in dd.sample_data_iterator(samples)]
         out_file = variation.gatk_joint_calling(data, vrn_files, ref_file, out_file)
-    updated_samples = []
-    for data in dd.sample_data_iterator(samples):
-        data = dd.set_square_vcf(data, out_file)
-        updated_samples.append([data])
-    return updated_samples
+        updated_samples = []
+        for data in dd.sample_data_iterator(samples):
+            data = dd.set_square_vcf(data, out_file)
+            updated_samples.append([data])
+        return updated_samples
+    return samples
 
 def quantitate_expression_parallel(samples, run_parallel):
     """
