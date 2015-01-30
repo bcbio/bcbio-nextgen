@@ -15,6 +15,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.structural import validate
+from bcbio.structural import shared as sshared
 from bcbio.variation import bedutils
 
 # ## Conversions to simplified BED files
@@ -172,6 +173,12 @@ def _filter_ensemble(in_bed, data):
 
 def summarize(calls, data, highdepth_beds):
     """Summarize results from multiple callers into a single flattened BED file.
+
+    Approach:
+      - Combine all calls found in all files
+      - Filter files retaining those present with multiple levels of support.
+      - Remove calls in high depth regions.
+      - Remove calls with ends overlapping exclusion regions like low complexity regions.
     """
     sample = tz.get_in(["rgnames", "sample"], data)
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
@@ -190,7 +197,13 @@ def summarize(calls, data, highdepth_beds):
                 limit_file = _limit_calls(filter_file, highdepth_beds, data)
             else:
                 limit_file = filter_file
-            bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(limit_file), "bedprep"))
+            exclude_files = [f for f in [x.get("exclude_file") for x in calls] if f]
+            exclude_file = exclude_files[0] if len(exclude_files) > 0 else None
+            if exclude_file:
+                noexclude_file = sshared.exclude_by_ends(limit_file, exclude_file, data)
+            else:
+                noexclude_file = limit_file
+            bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(noexclude_file), "bedprep"))
             calls.append({"variantcaller": "sv-ensemble",
-                          "vrn_file": bedutils.clean_file(limit_file, data, bedprep_dir=bedprep_dir)})
+                          "vrn_file": bedutils.clean_file(noexclude_file, data, bedprep_dir=bedprep_dir)})
     return calls

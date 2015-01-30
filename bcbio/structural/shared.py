@@ -2,6 +2,7 @@
 
 Handles exclusion regions and preparing discordant regions.
 """
+import collections
 from contextlib import closing
 import os
 
@@ -95,6 +96,76 @@ def prepare_exclude_file(items, base_file, chrom=None):
                     full_bedtool.subtract(want_bedtool).saveas(tx_out_file)
                 else:
                     full_bedtool.saveas(tx_out_file)
+    return out_file
+
+def exclude_by_ends(in_file, exclude_file, data, in_params=None):
+    """Exclude calls based on overlap of the ends with exclusion regions.
+
+    Removes structural variants with either end being in a repeat: a large
+    source of false positives.
+
+    Parameters tuned based on removal of LCR overlapping false positives in DREAM
+    synthetic 3 data.
+    """
+    params = {"end_buffer": 50,
+              "rpt_pct": 0.9,
+              "total_rpt_pct": 0.2,
+              "sv_pct": 0.5}
+    if in_params:
+        params.update(in_params)
+    assert in_file.endswith(".bed")
+    out_file = "%s-norepeats%s" % utils.splitext_plus(in_file)
+    to_filter = collections.defaultdict(list)
+    removed = 0
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with shared.bedtools_tmpdir(data):
+                for coord, end_name in [(1, "end1"), (2, "end2")]:
+                    base, ext = utils.splitext_plus(tx_out_file)
+                    end_file = _create_end_file(in_file, coord, params, "%s-%s%s" % (base, end_name, ext))
+                    to_filter = _find_to_filter(end_file, exclude_file, params, to_filter)
+            with open(tx_out_file, "w") as out_handle:
+                with open(in_file) as in_handle:
+                    for line in in_handle:
+                        key = "%s:%s-%s" % tuple(line.strip().split("\t")[:3])
+                        total_rpt_size = sum(to_filter.get(key, [0]))
+                        if total_rpt_size <= (params["total_rpt_pct"] * params["end_buffer"]):
+                            out_handle.write(line)
+                        else:
+                            removed += 1
+    return out_file, removed
+
+def _find_to_filter(in_file, exclude_file, params, to_exclude):
+    """Identify regions in the end file that overlap the exclusion file.
+
+    We look for ends with a large percentage in a repeat or where the end contains
+    an entire repeat.
+    """
+    import pybedtools
+    for feat in pybedtools.BedTool(in_file).intersect(pybedtools.BedTool(exclude_file), wao=True):
+        us_chrom, us_start, us_end, name, other_chrom, other_start, other_end, overlap = feat.fields
+        if float(overlap) > 0:
+            other_size = float(other_end) - float(other_start)
+            other_pct = float(overlap) / other_size
+            us_pct = float(overlap) / (float(us_end) - float(us_start))
+            if us_pct > params["sv_pct"] or (other_pct > params["rpt_pct"]):
+                to_exclude[name].append(float(overlap))
+    return to_exclude
+
+def _create_end_file(in_file, coord, params, out_file):
+    with open(in_file) as in_handle:
+        with open(out_file, "w") as out_handle:
+            for line in in_handle:
+                parts = line.strip().split("\t")
+                name = "%s:%s-%s" % tuple(parts[:3])
+                curpos = int(parts[coord])
+                if coord == 1:
+                    start, end = curpos, curpos + params["end_buffer"]
+                else:
+                    start, end = curpos - params["end_buffer"], curpos
+                out_handle.write("\t".join([parts[0], str(start),
+                                            str(end), name])
+                                 + "\n")
     return out_file
 
 def get_sv_chroms(items, exclude_file):
