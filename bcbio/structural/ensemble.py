@@ -167,8 +167,11 @@ def _filter_ensemble(in_bed, data):
                         events = set([validate.cnv_to_event(x.split("_", 1)[0], data)
                                       for x in caller_strs.split(",")])
                         pass_event_counts = [len(total_callers[e]) > N_FILTER_CALLERS for e in list(events)]
-                        if len(callers) > 1 or size > max_size or not any(pass_event_counts):
-                            out_handle.write(line)
+                        # ignore breakend only calls
+                        if not (len(events) == 1 and list(events)[0] == "BND"):
+                            # Ensure calls have reasonable support
+                            if len(callers) > 1 or size > max_size or not any(pass_event_counts):
+                                out_handle.write(line)
     return out_file
 
 def summarize(calls, data, highdepth_beds):
@@ -200,7 +203,7 @@ def summarize(calls, data, highdepth_beds):
             exclude_files = [f for f in [x.get("exclude_file") for x in calls] if f]
             exclude_file = exclude_files[0] if len(exclude_files) > 0 else None
             if exclude_file:
-                noexclude_file = sshared.exclude_by_ends(limit_file, exclude_file, data)
+                noexclude_file, _ = sshared.exclude_by_ends(limit_file, exclude_file, data)
             else:
                 noexclude_file = limit_file
             bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(noexclude_file), "bedprep"))
