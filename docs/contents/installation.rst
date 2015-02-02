@@ -12,6 +12,11 @@ and RNA-seq analysis, bundled into an isolated directory or virtual environment:
      python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
        --genomes GRCh37 --aligners bwa --aligners bowtie2
 
+bcbio should install cleanly on most Linux systems. For Mac OSX, we suggest
+trying `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ which runs
+bcbio on :ref:`docs-cloud` or isolates all the third party tools inside a
+Docker container.
+
 It places genomes, indexes and associated data files in
 ``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``. You should edit
 the pre-created system configuration file in
@@ -271,28 +276,6 @@ Having a .pydistutils.cfg file in your home directory can mess with
 where the libraries get installed. If you have this file in your
 home directory, temporarily renaming it to something else may fix
 your installation issue.
-
-On a Virtual Machine
-====================
-If you are looking to quickly try out bcbio-nextgen on your personal
-machine before installing it on your cluster, installing bcbio-nextgen
-on a virtual machine is a great way to go and is dead simple to boot,
-using `Vagrant`_.
-
-OSX
-~~~
-- Download and install `VirtualBox`_
-- Download and install `Vagrant for OSX`_
-- Ensure your system has wget installed.
-- Get and run the installer script::
-
-    mkdir bcbio && cd bcbio
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/osx/vagrant_osx.sh
-    sh vagrant_osx.sh
-
-.. _Vagrant for OSX: http://www.vagrantup.com/downloads.html
-.. _VirtualBox: https://www.virtualbox.org/wiki/Downloads
-.. _Vagrant: http://www.vagrantup.com/
 
 Manual process
 ==============

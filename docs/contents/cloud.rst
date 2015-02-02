@@ -12,24 +12,26 @@ entire setup, run and teardown process.
 `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ provides a wrapper
 around bcbio-nextgen that automates interaction with AWS and `Docker
 <https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans up the command line
-usage to make it more intuitive so provides the same functionality as
-``bcbio_nextgen.py`` but with additional tools.
-
-bcbio uses `Elasticluster <https://github.com/gc3-uzh-ch/elasticluster>`_,
+usage to make it more intuitive and provides a superset of functionality
+available in ``bcbio_nextgen.py``. bcbio-vm uses
+`Elasticluster <https://github.com/gc3-uzh-ch/elasticluster>`_
 to build a cluster on AWS with an optional Lustre shared filesystem.
 
 Local setup
 ===========
 
 ``bcbio_vm.py`` provides the automation to start up and administer remote bcbio
-runs on AWS. This only requires the python wrapper code, not any of the Docker
-containers or biological data, which will all get installed on AWS. The easier
-way to install is using `conda`_ with an isolated Python::
+runs on AWS. This only requires a local installation of the python wrapper code,
+not any of the Docker containers or biological data, which will all get
+installed on AWS. The easier way to install is using `conda`_ with an isolated
+Python::
 
     wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
     bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
     ~/install/bcbio-vm/anaconda/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
+
+We support both Linux and Mac OSX as clients for running remote AWS bcbio clusters.
 
 .. _conda: http://conda.pydata.org/
 
