@@ -2,10 +2,10 @@ import os
 import shutil
 import tempfile
 from bcbio.utils import file_exists
-from bcbio.bam import is_paired
+from bcbio.bam import is_paired, _get_sort_order, sort_cmd
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils
 from bcbio.rnaseq import gtf
 from bcbio.log import logger
@@ -14,6 +14,7 @@ def run(data):
     """Quantitaive isoforms expression by eXpress"""
     name = dd.get_sample_name(data)
     in_bam = dd.get_transcriptome_bam(data)
+    config = data['config']
     if not in_bam:
         logger.info("Transcriptome-mapped BAM file not found, skipping eXpress.")
         return data
@@ -23,10 +24,12 @@ def run(data):
     express = config_utils.get_program("express", data['config'])
     strand = _set_stranded_flag(in_bam, data)
     if not file_exists(out_file):
-        with file_transaction(out_dir) as tx_out_dir:
-            cmd = ("{express} --no-update-check -o {tx_out_dir} {strand} {gtf_fasta} {in_bam}")
-            do.run(cmd.format(**locals()), "Run express on %s." % in_bam, {})
-        shutil.move(os.path.join(out_dir, "results.xprs"), out_file)
+        with tx_tmpdir(data) as tmp_dir:
+            with file_transaction(out_dir) as tx_out_dir:
+                pipe_cmd = _prepare_bam(in_bam, tmp_dir, config)
+                cmd = ("{pipe_cmd} |  {express} --no-update-check -o {tx_out_dir} {strand} {gtf_fasta}")
+                do.run(cmd.format(**locals()), "Run express on %s." % in_bam, {})
+            shutil.move(os.path.join(out_dir, "results.xprs"), out_file)
     eff_count_file = _get_column(out_file, out_file.replace(".xprs", "_eff.counts"), 7)
     tpm_file = _get_column(out_file, out_file.replace("xprs", "tpm"), 14)
     fpkm_file = _get_column(out_file, out_file.replace("xprs", "fpkm"), 10)
@@ -65,6 +68,18 @@ def _set_stranded_flag(bam_file, data):
         stranded += "-s"
     flag = strand_flag[stranded]
     return flag
+
+def _prepare_bam(bam_file, tmp_dir, config):
+    """
+    Pipe sort by name cmd in case sort by coordinates
+    """
+    sort_mode = _get_sort_order(bam_file, config)
+    sort = sort_cmd(config, tmp_dir, named_pipe=bam_file, order="queryname")
+    if sort_mode != "queryname":
+        sort_pipe = ("{0} -o /dev/stdout | samtools view -h  - ").format(sort)
+    else:
+        sort_pipe = ("samtools view -h {0} ").format(bam_file)
+    return sort_pipe
 
 def isoform_to_gene_name(gtf_file, out_file=None):
     """
