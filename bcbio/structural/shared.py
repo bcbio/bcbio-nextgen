@@ -202,7 +202,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
             with file_transaction(data, sr_file) as tx_sr_file:
                 with file_transaction(data, disc_file) as tx_disc_file:
                     with file_transaction(data, dedup_file) as tx_dedup_file:
-                        samblaster_cl = postalign.samblaster_dedup_sort(data, tmpdir, tx_dedup_file,
+                        samblaster_cl = postalign.samblaster_dedup_sort(data, tx_dedup_file,
                                                                         tx_sr_file, tx_disc_file)
                         out_base = os.path.join(tmpdir, "%s-namesort" % os.path.splitext(in_bam)[0])
                         cmd = ("{samtools} sort -n -o -@ {cores} -m {mem} {in_bam} {out_base} | "

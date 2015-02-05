@@ -9,6 +9,8 @@
   GEMINI, since it only handles bi-allelic inputs. Thanks to Pär Larsson.
 - Pass ploidy to GATK HaplotypeCaller, supporting multiple ploidies and correct
   calling of X/Y/MT chromosomes. Requires GATK 3.3.
+- Switch to samtools sort from sambamba sort during alignment streaming. Saves
+  steps in processing and conversions on single sample no deduplication inputs.
 - On AWS, download inputs for S3 instead of streaming into fastq preparation to
   avoid issues with converting BAM to fasta. Thanks to Roy Ronen.
 - Provide better defaults for mincores that packs together multiple single IPython
