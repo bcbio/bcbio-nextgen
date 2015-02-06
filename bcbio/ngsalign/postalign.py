@@ -27,7 +27,7 @@ def tobam_cl(data, out_file, is_paired=False):
     do_dedup = _check_dedup(data)
     with file_transaction(data, out_file) as tx_out_file:
         if not do_dedup:
-            yield (_sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
+            yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
         elif is_paired:
             sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
             disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
@@ -49,7 +49,7 @@ def _get_cores_memory(data, downscale=2):
                                          downscale, "decrease").upper()
     return num_cores, max_mem
 
-def _sam_to_sortbam_cl(data, tx_out_file):
+def sam_to_sortbam_cl(data, tx_out_file):
     """Convert to sorted BAM output.
     """
     samtools = config_utils.get_program("samtools", data["config"])
