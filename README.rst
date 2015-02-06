@@ -94,22 +94,24 @@ Contributors
 - `Alla Bushoy`_, AstraZeneca
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Nick Carriero <http://www.simonsfoundation.org/about-us/staff/staff-bios/#nick-carriero-ph-d>`_, Simons Foundation
-- `Brad Chapman`_, Harvard School of Public Health
+- `Brad Chapman`_, Harvard Chan Bioinformatics Core
+- `Saket Choudhary`_, University Of Southern California
 - `Peter Cock`_, The James Hutton Institute
 - `Matt Edwards`_, MIT
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Karl Gutwin <https://twitter.com/kgutwin>`_, Biogen
 - `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
 - `John Kern <https://github.com/kern3020>`_
-- `Rory Kirchner`_, Harvard School of Public Health
+- `Rory Kirchner`_, Harvard Chan Bioinformatics Core
 - `Jakub Nowacki`_, AstraZeneca
+- `John Morrissey <https://github.com/jwm>`_, Harvard Chan Bioinformatics Core
+- `Lorena Pantano <https://github.com/lpantano>`_, Harvard Chan Bioinformatics Core
 - `Brent Pedersen`_, University of Colorado Denver
 - `James Porter`_, The University of Chicago
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Paul Tang`_, UCSF
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
-- `Saket Choudhary`_, University Of Southern California
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
