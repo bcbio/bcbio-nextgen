@@ -12,6 +12,7 @@ from bcbio.provenance import do
 from bcbio import bam, utils
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
+from bcbio.ngsalign import postalign
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
@@ -57,13 +58,10 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if dd.get_rsem(data) and not is_transcriptome_broken():
         cmd += " --quantMode TranscriptomeSAM "
 
-    with tx_tmpdir(data) as tmp_dir:
-        sam_to_bam = bam.sam_to_bam_stream_cmd(config)
-        sort = bam.sort_cmd(config, tmp_dir)
-        cmd += "| {sam_to_bam} | {sort} -o {tx_final_out} "
+    with file_transaction(data, final_out) as tx_final_out:
+        cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
-        with file_transaction(data, final_out) as tx_final_out:
-            do.run(cmd.format(**locals()), run_message, None)
+        do.run(cmd.format(**locals()), run_message, None)
 
     data = _update_data(final_out, out_dir, names, data)
     return data
