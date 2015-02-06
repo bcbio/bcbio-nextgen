@@ -117,9 +117,9 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             # Rationale: MuTect writes another table to stdout, which we don't need
             params += ["--vcf", tx_out_file, "-o", os.devnull]
             broad_runner.run_mutect(params)
-        out_file_mutect = _rename_allelic_fraction_field(out_file_orig, config, out_file_mutect)
-        indelcaller = vcfutils.get_indelcaller(base_config)
         is_paired = "-I:normal" in params
+        out_file_mutect = _fix_mutect_output(out_file_orig, config, out_file_mutect, is_paired)
+        indelcaller = vcfutils.get_indelcaller(base_config)
         if "scalpel" in indelcaller.lower():
             # Scalpel InDels
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
@@ -205,18 +205,30 @@ def _SID_call_prep(align_bams, items, ref_file, assoc_files, region=None, out_fi
                    "INTERSECTION"]
     return params
 
-def _rename_allelic_fraction_field(orig_file, config, out_file):
-    """Rename allelic fraction field in mutect output
-       from FA to FREQ to standarize with other tools
+def _fix_mutect_output(orig_file, config, out_file, is_paired):
+    """Adjust MuTect output to match other callers.
+
+    - Rename allelic fraction field in mutect output from FA to FREQ to standarize with other tools
+    - Remove extra 'none' samples introduced when calling tumor-only samples
     """
     out_file_noc = out_file.replace(".vcf.gz", ".vcf")
+    none_index = -1
     with file_transaction(config, out_file_noc) as tx_out_file:
         with open_gzipsafe(orig_file) as in_handle:
             with open(tx_out_file, 'w') as out_handle:
                 for line in in_handle:
-                    if line.startswith("##FORMAT=<ID=FA"):
+                    if not is_paired and line.startswith("#CHROM"):
+                        parts = line.rstrip().split("\t")
+                        none_index = parts.index("none")
+                        del parts[none_index]
+                        line = "\t".join(parts) + "\n"
+                    elif line.startswith("##FORMAT=<ID=FA"):
                         line = line.replace("=FA", "=FREQ")
-                    if not line.startswith("#"):
+                    elif not line.startswith("#"):
+                        if none_index > 0:
+                            parts = line.rstrip().split("\t")
+                            del parts[none_index]
+                            line = "\t".join(parts) + "\n"
                         line = line.replace("FA", "FREQ")
                     out_handle.write(line)
     return bgzip_and_index(out_file_noc, config)
