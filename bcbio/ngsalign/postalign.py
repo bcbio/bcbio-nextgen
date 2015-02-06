@@ -49,13 +49,16 @@ def _get_cores_memory(data, downscale=2):
                                          downscale, "decrease").upper()
     return num_cores, max_mem
 
-def sam_to_sortbam_cl(data, tx_out_file):
+def sam_to_sortbam_cl(data, tx_out_file, name_sort=False):
     """Convert to sorted BAM output.
+
+    Set name_sort to True to sort reads by queryname
     """
     samtools = config_utils.get_program("samtools", data["config"])
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
-    return ("{samtools} sort -@ {cores} -m {mem} "
+    sort_flag = "-n" if name_sort else ""
+    return ("{samtools} sort -@ {cores} -m {mem} {sort_flag} "
             "-T {tmp_file} -o {tx_out_file} /dev/stdin".format(**locals()))
 
 def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
