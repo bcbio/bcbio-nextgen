@@ -40,7 +40,7 @@ resources:
   kraken:
     cores: 6
     memory: 4g
-  qsignature: 
+  qsignature:
     cores: 1
     memory: 2g
   qsnp:
@@ -59,7 +59,6 @@ resources:
     dir: /usr/local/share/java/picard
   snpeff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
-    dir: /usr/local/share/java/snpeff
   bcbio_variation:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/local/share/java/bcbio_variation
@@ -92,7 +91,7 @@ resources:
 # Location of galaxy configuration file, which has pointers to reference data
 # https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#reference-genome-files
 galaxy_config: universe_wsgi.ini
-    
+
 # -- Additional options for specific integration, not required for standalone usage.
 
 # Galaxy integration. Required for retrieving information from Galaxy LIMS.
