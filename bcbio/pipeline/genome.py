@@ -142,7 +142,7 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
         except:
             raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
         logger.info("Downloading %s %s from AWS" % (genome_build, name))
-        cur_ref = _download_prepped_genome(genome_build, data, name, need_remap)
+        cur_ref = download_prepped_genome(genome_build, data, name, need_remap)
     # allow multiple references in a file and use the most recently added
     else:
         cur_ref = refs[-1]
@@ -228,7 +228,7 @@ S3_INFO = {"bucket": "biodata",
            "key": "prepped/{build}/{build}-{target}.tar.gz"}
 INPLACE_INDEX = {"star": star.index}
 
-def _download_prepped_genome(genome_build, data, name, need_remap):
+def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
     """Get a pre-prepared genome from S3, unpacking it locally.
 
     Supports runs on AWS where we can retrieve the resources on demand. Upgrades
@@ -237,8 +237,9 @@ def _download_prepped_genome(genome_build, data, name, need_remap):
     on AWS but not generalizable elsewhere.
     """
     from bcbio.variation import population
-    out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
-                                              "inputs", "data", "genomes"))
+    if not out_dir:
+        out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
+                                                  "inputs", "data", "genomes"))
     ref_dir = os.path.join(out_dir, genome_build, REMAP_NAMES.get(name, name))
     if not os.path.exists(ref_dir):
         target = REMAP_NAMES.get(name, name)
@@ -252,10 +253,11 @@ def _download_prepped_genome(genome_build, data, name, need_remap):
                 cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
                 do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
-    gresources = get_resources(data["genome_build"], ref_file)
-    if data.get("files") and population.do_db_build([data], need_bam=False, gresources=gresources):
-        cmd = [os.path.join(os.path.dirname(sys.executable), "gemini"), "update", "--dataonly"]
-        do.run(cmd, "Download GEMINI data")
+    if data.get("genome_build"):
+        gresources = get_resources(data["genome_build"], ref_file)
+        if data.get("files") and population.do_db_build([data], need_bam=False, gresources=gresources):
+            cmd = [os.path.join(os.path.dirname(sys.executable), "gemini"), "update", "--dataonly"]
+            do.run(cmd, "Download GEMINI data")
     genome_dir = os.path.join(out_dir, genome_build)
     genome_build = genome_build.replace("-test", "")
     if need_remap or name == "samtools":

@@ -74,10 +74,10 @@ def upgrade_bcbio(args):
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
     if args.install_data:
+        if len(args.aligners) == 0:
+            print("Warning: no aligners provided with `--aligners` flag")
         if len(args.genomes) == 0:
             print("Data not installed, no genomes provided with `--genomes` flag")
-        elif len(args.aligners) == 0:
-            print("Data not installed, no aligners provided with `--aligners` flag")
         else:
             with bcbio_tmpdir():
                 print("Upgrading bcbio-nextgen data files")
