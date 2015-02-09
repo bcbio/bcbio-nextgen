@@ -29,9 +29,9 @@ def create_inputs(data):
     if not ("files" in data and aligner and (_is_cram_input(data["files"]) or
                                              _is_remote_input(data["files"]))):
         # skip indexing on samples without input files or not doing alignment
-        if ("files" not in data or data["files"][0] is None or
-              data["config"]["algorithm"].get("align_split_size") is None
-              or not aligner):
+        # skip if we're not BAM and not doing alignment splitting
+        if ("files" not in data or data["files"][0] is None or not aligner
+              or _no_index_needed(data)):
             return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data)
     data["files"] = ready_files
@@ -50,6 +50,10 @@ def create_inputs(data):
             cur_data["align_split"] = list(split)
             out.append([cur_data])
         return out
+
+def _no_index_needed(data):
+    return (not data["files"][0].endswith(".bam")
+            and data["config"]["algorithm"].get("align_split_size") is None)
 
 def split_namedpipe_cl(in_file, data):
     """Create a commandline suitable for use as a named pipe with reads in a given region.
