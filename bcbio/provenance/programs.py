@@ -239,13 +239,17 @@ def write_versions(dirs, config=None, is_wrapper=False):
                 out_handle.write("{program},{version}\n".format(**p))
     return out_file
 
-def get_version_manifest(name):
+def get_version_manifest(name, required=False):
     """Retrieve a version from the currently installed manifest.
     """
     manifest_vs = _get_versions_manifest()
     for x in manifest_vs:
         if x["program"] == name:
-            return x.get("version", "")
+            v = x.get("version", "")
+            if v:
+                return v
+    if required:
+        raise ValueError("Did not find %s in install manifest. Could not check version." % name)
     return ""
 
 def add_subparser(subparsers):
