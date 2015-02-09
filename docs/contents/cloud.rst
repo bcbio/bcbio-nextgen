@@ -6,16 +6,16 @@ Amazon Web Services
 `Amazon Web Services (AWS) <https://aws.amazon.com/>`_ provides a flexible cloud
 based environment for running analyses. Cloud approaches offer the ability to
 perform analyses at scale with no investment in local hardware. They also offer
-full programmatic control over the environment, allowing us to automate the
+full programmatic control over the environment, allowing bcbio to automate the
 entire setup, run and teardown process.
 
 `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ provides a wrapper
 around bcbio-nextgen that automates interaction with AWS and `Docker
 <https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans up the command line
 usage to make it more intuitive and provides a superset of functionality
-available in ``bcbio_nextgen.py``. bcbio-vm uses
-`Elasticluster <https://github.com/gc3-uzh-ch/elasticluster>`_
-to build a cluster on AWS with an optional Lustre shared filesystem.
+available in ``bcbio_nextgen.py``. bcbio-vm uses `Elasticluster
+<https://github.com/gc3-uzh-ch/elasticluster>`_ to build a cluster on AWS with
+an encrypted NFS mounted drive and an optional Lustre shared filesystem.
 
 Local setup
 ===========
@@ -140,10 +140,11 @@ planning a run with less than 32 cores, do not use a cluster and instead run
 directly on a single machine using one of the `large r3 or c3 instances
 <http://aws.amazon.com/ec2/instance-types/>`_.
 
-This script also sets the mounted NFS drive size, which you can use to store
-processing data when running across a distributed cluster. At scale, you can
-replace this with a Lustre shared filesystem. See below for details on launching
-and attaching a Lustre filesystem to a cluster.
+This script also sets the size of the `encrypted NFS-mounted drive
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html>`_, which
+you can use to store processing data when running across a distributed
+cluster. At scale, you can replace this with a Lustre shared filesystem. See
+below for details on launching and attaching a Lustre filesystem to a cluster.
 
 To ensure everything is correctly configured, run::
 
@@ -190,9 +191,9 @@ To run the analysis, connect to the head node with::
 
     bcbio_vm.py aws cluster ssh
 
-If you started a single machine without a cluster run with::
+If you started a single machine, or a cluster using encrypted NFS, run with::
 
-    mkdir ~/run/your-project
+    mkdir /encrypted/your-project
     cd !$ && mkdir work && cd work
     bcbio_vm.py run -n 8 s3://your-project/your-analysis/name.yaml
 
@@ -228,7 +229,7 @@ to plot CPU, memory, disk and network usage during each step of a run. To
 prepare resource usage plots after finishing an analysis, first copy the
 ``bcbio-nextgen.log`` file to your local computer. Either use
 ``bcbio_vm.py elasticluster sftp bcbio`` to copy from the work directory on AWS
-(``~/run/your-project/work/log/bcbio-nextgen.log``) or transfer it from the
+(``/encrypted/your-project/work/log/bcbio-nextgen.log``) or transfer it from the
 output S3 bucket (``your-project/your-analysis/final/DATE_your-project/bcbio-nextgen.log``).
 
 If your run worked cleanly you can use the log input file directly. If you had
