@@ -46,6 +46,10 @@ def run_count(bam_file, dexseq_gff, stranded, out_file, data):
         logger.info("DEXseq is not installed, skipping exon-level counting.")
         return None
 
+    if dd.get_aligner(data) == "bwa":
+        logger.info("Can't use DEXSeq with bwa alignments, skipping exon-level counting.")
+        return None
+
     sort_flag = "name" if sort_order == "queryname" else "pos"
     is_paired = bam.is_paired(bam_file)
     paired_flag = "yes" if is_paired else "no"
