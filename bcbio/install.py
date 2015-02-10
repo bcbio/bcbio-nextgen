@@ -73,6 +73,9 @@ def upgrade_bcbio(args):
             _symlink_bcbio(args, script="bcbio_setup_genome.py")
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
+    if args.toolplus:
+        print("Installing additional tools")
+        _install_toolplus(args)
     if args.install_data:
         if len(args.aligners) == 0:
             print("Warning: no aligners provided with `--aligners` flag")
@@ -346,12 +349,11 @@ def upgrade_thirdparty_tools(args, remotes):
             if not fname.startswith("toolplus"):
                 os.remove(os.path.join(manifest_dir, fname))
     cbl_manifest.create(manifest_dir, args.tooldir)
-    print("Installing additional tools")
-    _install_toolplus(args, manifest_dir)
 
-def _install_toolplus(args, manifest_dir):
+def _install_toolplus(args):
     """Install additional tools we cannot distribute, updating local manifest.
     """
+    manifest_dir = os.path.join(_get_data_dir(), "manifest")
     toolplus_manifest = os.path.join(manifest_dir, "toolplus-packages.yaml")
     system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
     toolplus_dir = os.path.join(_get_data_dir(), "toolplus")
@@ -512,8 +514,10 @@ def save_install_defaults(args):
 def add_install_defaults(args):
     """Add any saved installation defaults to the upgrade.
     """
+    def _has_data_toolplus(args):
+        return len([x for x in args.toolplus if x.name not in ["gatk", "mutect"]]) > 0
     # Ensure we install data if we've specified any secondary installation targets
-    if len(args.genomes) > 0 or len(args.aligners) > 0 or len(args.toolplus) > 0:
+    if len(args.genomes) > 0 or len(args.aligners) > 0 or _has_data_toolplus(args):
         args.install_data = True
     install_config = _get_install_config()
     if install_config is None or not utils.file_exists(install_config):
