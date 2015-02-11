@@ -54,7 +54,7 @@ your own research.
 - `Science for Life Laboratory`_: The genomics core platform in
   the Swedish National Infrastructure (`NGI`_) for genomics, has crunched
   over 16TBp (terabasepairs) and processed almost 7000+ samples
-  from the beggining of 2013 until the end of July. `UPPMAX`_, our
+  from the beginning of 2013 until the end of July. `UPPMAX`_, our
   cluster located in Uppsala runs the pipeline in production since 2010.
 
 .. _Science for Life Laboratory: http://scilifelab.se/
@@ -107,3 +107,16 @@ your own research.
 .. _Dell: http://www.dell.com/learn/us/en/70/healthcare
 .. _NMTRC: http://nmtrc.org/about
    
+- `Computer Science and Artificial Intelligence Laboratory (CSAIL),
+  MIT`_: The `Gifford lab`_ uses the bcbio-nextgen pipeline to analyze
+  a variety of sequencing datasets for their research in genetics and
+  regulatory genomics (including the `SysCode`_ and
+  `stemcell.mit.edu`_ projects).  The pipeline applies
+  collaboratively-developed best practices for analysis as well as
+  computation, which enables the lab to run the pipeline on local
+  clusters and Amazon EC2.
+
+.. _Computer Science and Artificial Intelligence Laboratory (CSAIL), MIT: http://www.csail.mit.edu/
+.. _Gifford lab: http://cgs.csail.mit.edu/
+.. _SysCode: http://syscode.org/
+.. _stemcell.mit.edu: http://stemcell.mit.edu/
