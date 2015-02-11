@@ -120,7 +120,7 @@ def _set_matplotlib_default_backend():
 def _matplotlib_installed():
     try:
         import matplotlib
-    except importError:
+    except ImportError:
         return False
     return True
 
@@ -542,9 +542,9 @@ def add_install_defaults(args):
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
-    if "sudo" in default_args and not args.sudo is False:
+    if "sudo" in default_args and args.sudo is not False:
         args.sudo = default_args["sudo"]
-    if "isolate" in default_args and not args.isolate is True:
+    if "isolate" in default_args and args.isolate is not True:
         args.isolate = default_args["isolate"]
     return args
 
@@ -587,7 +587,7 @@ def add_subparser(subparsers):
                         action="append", default=[], choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
-                        choices = SUPPORTED_INDEXES)
+                        choices=SUPPORTED_INDEXES)
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
     parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",
