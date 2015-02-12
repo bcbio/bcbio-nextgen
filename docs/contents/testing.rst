@@ -111,7 +111,7 @@ can take more than 24 hours on machines using multiple cores.
 
 First get the input configuration file, fastq reads, reference materials and analysis regions::
 
-    mkdir NA12878-exome-eval/config NA12878-exome-eval/input NA12878-exome-eval/work
+    mkdir -p NA12878-exome-eval/config NA12878-exome-eval/input NA12878-exome-eval/work
     cd NA12878-exome-eval/config
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
     cd ../input
@@ -143,7 +143,7 @@ variant callers.
 
 To get the data::
 
-    mkdir cancer-dream-syn3/config cancer-dream-syn3/input cancer-dream-syn3/work
+    mkdir -p cancer-dream-syn3/config cancer-dream-syn3/input cancer-dream-syn3/work
     cd cancer-dream-syn3/config
     wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-dream-syn3.yaml
     cd ../input
