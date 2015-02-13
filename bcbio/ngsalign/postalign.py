@@ -66,13 +66,18 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     """
     samblaster = config_utils.get_program("samblaster", data["config"])
     samtools = config_utils.get_program("samtools", data["config"])
-    cores, mem = _get_cores_memory(data, downscale=2)
-    tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
+    cores, mem = _get_cores_memory(data, downscale=3)
+    tmp_prefix = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
+    for ext in ["spl", "disc", "full"]:
+        utils.safe_makedir("%s-%s" % (tmp_prefix, ext))
+    full_tobam_cmd = ("samtools view -b -S -u - | "
+                      "sambamba sort -t {cores} -m {mem} "
+                      "--tmpdir {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
     tobam_cmd = ("{samtools} sort -@ {cores} -m {mem} "
-                 "-T {tmp_file}-{dext} -o {out_file} /dev/stdin")
+                 "-T {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
     splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, dext="spl", **locals())
     discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, dext="disc", **locals())
-    dedup_cmd = tobam_cmd.format(out_file=tx_out_file, dext="full", **locals())
+    dedup_cmd = full_tobam_cmd.format(out_file=tx_out_file, dext="full", **locals())
     cmd = ("{samblaster} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
            "| {dedup_cmd}")
     return cmd.format(**locals())
