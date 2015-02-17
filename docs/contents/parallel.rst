@@ -96,6 +96,19 @@ the queue, configure ``mem_free`` as a complex value. If a host called ``myngsho
 has 128GB of RAM, the corresponding command would be 
 ``qconf -mattr exechost complex_values mem_free=128G myngshost``
 
+There are also special ``-r`` resources parameters to support the pipeline:
+
+- ``-r conmem=4`` -- Specify the memory for the controller process, in Gb. This
+  currently applies to SLURM processing and defaults to 4Gb.
+
+- ``-r mincores=16`` -- Specify the minimum number of cores to batch together
+  for parallel single core processes like variant calling. This will run
+  multiple processes together under a single submission to allow sharing of
+  resources like memory, which is helpful when a small percentage of the time a
+  process like variant calling will use a lot of memory. By default, bcbio will
+  calculate ``mincores`` based on specifications for multicore calling so this
+  doesn't normally require a user to set.
+
 .. _qsub man page: http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
 .. _pyzmq: https://github.com/zeromq/pyzmq
