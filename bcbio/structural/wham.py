@@ -65,8 +65,7 @@ def _run_wham(inputs, background_bams):
             target_bams = ",".join(x["align_bam"] for x in inputs)
             target_bed = tz.get_in(["config", "algorithm", "variant_regions"], inputs[0])
             target_str = "-e %s" % target_bed if target_bed else ""
-            cmd = ("WHAM-BAM -x {cores} -t {target_bams} {background} {target_str} "
-                   "| sed 's/Numper/Number/' > {tx_out_file}")
+            cmd = ("WHAM-BAM -x {cores} -t {target_bams} {background} {target_str} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Run WHAM")
     return out_file
 

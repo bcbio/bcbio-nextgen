@@ -60,8 +60,8 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     def wham_matches(name):
         """Flexibly handle WHAM comparisons, allowing DUP/DEL matches during comparisons.
         """
-        allowed = {"DEL": set(["DUP", "DEL"]),
-                   "DUP": set(["DEL"]),
+        allowed = {"DEL": set(["DEL", "INR"]),
+                   "DUP": set(["DUP"]),
                    "INV": set(["INV", "INR"])}
         curtype, curcaller = name.split("_")[:2]
         return curcaller == "wham" and svtype in allowed and curtype in allowed[svtype]
