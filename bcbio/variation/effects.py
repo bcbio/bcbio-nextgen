@@ -112,6 +112,8 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
 def run_vep(in_file, data):
     """Annotate input VCF file with Ensembl variant effect predictor.
     """
+    if not vcfutils.vcf_has_variants(in_file):
+        return None
     out_file = utils.append_stem(in_file, "-vepeffects")
     assert in_file.endswith(".gz") and out_file.endswith(".gz")
     if not utils.file_exists(out_file):
