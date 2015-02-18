@@ -78,7 +78,7 @@ def _run_cnvkit_cancer(items, background, access_file):
     work_dir = _sv_workdir(items[0])
     ckout = _run_cnvkit_shared(items[0], [paired.tumor_bam], [paired.normal_bam],
                                access_file, work_dir, background_name=paired.normal_name)
-    ckout = theta.run(ckout, paired)
+    #ckout = theta.run(ckout, paired)
     return _associate_cnvkit_out(ckout, items)
 
 def _run_cnvkit_population(items, background, access_file):
