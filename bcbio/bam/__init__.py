@@ -48,14 +48,7 @@ def index(in_bam, config):
                 cmd = "{sambamba} index -t {num_cores} {tx_bam_file}"
             else:
                 cmd = "{samtools} index {tx_bam_file}"
-            # sambamba has intermittent multicore failures. Allow
-            # retries with single core
-            try:
-                do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam),
-                       log_error=False)
-            except:
-                do.run(samtools_cmd.format(**locals()),
-                       "Index BAM file (single core): %s" % os.path.basename(in_bam))
+            do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam))
     return index_file if utils.file_uptodate(index_file, in_bam) else alt_index_file
 
 def idxstats(in_bam, data):
