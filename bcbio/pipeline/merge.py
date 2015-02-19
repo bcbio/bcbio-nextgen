@@ -41,6 +41,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
     file handle limits.
     """
     if len(bam_files) == 1:
+        bam.index(bam_files[0], config)
         return bam_files[0]
     else:
         if out_file is None:
@@ -48,7 +49,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
         if batch is not None:
             base, ext = os.path.splitext(out_file)
             out_file = "%s-b%s%s" % (base, batch, ext)
-        if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".bai"):
+        if not utils.file_exists(out_file):
             sambamba = config_utils.get_program("sambamba", config)
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)

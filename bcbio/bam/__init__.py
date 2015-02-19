@@ -37,6 +37,9 @@ def index(in_bam, config):
     alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
     if (not utils.file_uptodate(index_file, in_bam) and
           not utils.file_uptodate(alt_index_file, in_bam)):
+        # Remove old index files and re-run to prevent linking into tx directory
+        for fname in [index_file, alt_index_file]:
+            utils.remove_safe(fname)
         sambamba = _get_sambamba(config)
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
@@ -291,7 +294,8 @@ def merge(bamfiles, out_bam, config):
         except subprocess.CalledProcessError:
             files = " -in ".join(bamfiles)
             cmd = "{bamtools} merge -in {files} -out {tx_out_bam}"
-            do.run(cmd.format(**locals()), "Error with other tools. Merge %s into %s with bamtools" % (bamfiles, out_bam))
+            do.run(cmd.format(**locals()), "Error with other tools. Merge %s into %s with bamtools" %
+                   (bamfiles, out_bam))
     index(out_bam, config)
     return out_bam
 
