@@ -29,6 +29,27 @@ Overview
 
 .. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 
+Project directory
+=================
+
+bcbio encourages a project structure like::
+
+    my-project/
+    ├── config
+    ├── final
+    └── work
+
+with the input configuration in the ``config`` directory, the outputs of the
+pipeline in the ``final`` directory, and the actual processing done in the
+``work`` directory. Run the ``bcbio_nextgen.py`` script from inside the ``work``
+directory to keep all intermediates there.  The ``final`` directory, relative to
+the parent directory of the ``work`` directory, is the default location
+specified in the example configuration files and gets created during
+processing. The ``final`` directory has all of the finished outputs and you can
+remove the ``work`` intermediates to cleanup disk space after confirming the
+results. All of these locations are configurable and this project structure is
+only a recommendation.
+
 Logging
 =======
 
