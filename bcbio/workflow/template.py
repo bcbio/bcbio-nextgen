@@ -277,7 +277,7 @@ def _add_metadata(item, metadata, remotes):
                                         metadata.get(os.path.splitext(os.path.basename(item["files"][0]))[0], {})))
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
-    TOP_LEVEL = set(["description", "genome_build", "lane"])
+    TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_files", "files", "analysis"])
     if len(item_md) > 0:
         if "metadata" not in item:
             item["metadata"] = {}
