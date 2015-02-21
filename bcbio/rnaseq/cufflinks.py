@@ -24,6 +24,7 @@ def run(align_file, ref_file, data):
     fpkm_file_isoform = os.path.join(out_dir, data['rgnames']['sample']) + ".isoform.fpkm"
     if not file_exists(fpkm_file):
         with file_transaction(data, out_dir) as tmp_out_dir:
+            safe_makedir(tmp_out_dir)
             cmd.extend(["--output-dir", tmp_out_dir])
             cmd.extend([align_file])
             cmd = map(str, cmd)
