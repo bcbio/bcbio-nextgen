@@ -76,7 +76,7 @@ def _prepare_bam(bam_file, tmp_dir, config):
     sort_mode = _get_sort_order(bam_file, config)
     sort = sort_cmd(config, tmp_dir, named_pipe=bam_file, order="queryname")
     if sort_mode != "queryname":
-        sort_pipe = ("{0} -o /dev/stdout | samtools view -h  - ").format(sort)
+        sort_pipe = ("{0} | samtools view -h  - ").format(sort)
     else:
         sort_pipe = ("samtools view -h {0} ").format(bam_file)
     return sort_pipe

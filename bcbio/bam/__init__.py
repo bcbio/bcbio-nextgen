@@ -346,7 +346,7 @@ def sort_cmd(config, tmp_dir, named_pipe=None, order="coordinate"):
     pipe = named_pipe if named_pipe else "/dev/stdin"
     order_flag = "-n" if order is "queryname" else ""
     num_cores = config["algorithm"].get("num_cores", 1)
-    cmd = "{sambamba} sort --tmpdir {tmp_dir} -t {num_cores} {order_flag} {pipe}"
+    cmd = "{sambamba} sort --tmpdir {tmp_dir} -t {num_cores} {order_flag} -o /dev/stdout {pipe}"
     return cmd.format(**locals())
 
 
