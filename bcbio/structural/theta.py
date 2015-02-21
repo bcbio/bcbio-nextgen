@@ -37,9 +37,10 @@ def _run_theta(cmds, exome_input, data, work_dir):
     multiple subclones.
     """
     out_dir = os.path.join(work_dir, "raw")
-    result_file = os.path.join(out_dir, "%s.n2.results" % dd.get_sample_name(data))
+    result_file = os.path.join(out_dir, "%s.n2.results" % utils.splitext_plus(os.path.basename(exome_input))[0])
     if not utils.file_exists(result_file):
         with file_transaction(data, out_dir) as tx_out_dir:
+            utils.safe_makedir(tx_out_dir)
             cmd = cmds["run_theta"] + ["-n", "2", "-k", "4", "-m", ".90",
                                        exome_input, "--NUM_PROCESSES", dd.get_cores(data),
                                        "--FORCE", "-d", tx_out_dir]
