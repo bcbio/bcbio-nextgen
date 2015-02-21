@@ -42,10 +42,10 @@ def get_paired_bams(align_bams, items):
         phenotype = get_paired_phenotype(item)
         if phenotype == "normal":
             normal_bam = bamfile
-            normal_name = item["name"][1]
+            normal_name = dd.get_sample_name(item)
         elif phenotype == "tumor":
             tumor_bam = bamfile
-            tumor_name = item["name"][1]
+            tumor_name = dd.get_sample_name(item)
             tumor_data = item
             tumor_config = item["config"]
             normal_panel = item["config"]["algorithm"].get("background")

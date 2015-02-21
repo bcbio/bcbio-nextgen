@@ -28,24 +28,22 @@ def run(items, background=None):
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
-                                           tz.get_in(["rgnames", "sample"], data),
-                                           "cnvkit"))
+                                           dd.get_sample_name(data), "cnvkit"))
 
 def _cnvkit_by_type(items, background):
     """Dispatch to specific CNVkit functionality based on input type.
     """
-    access_file = _create_access_file(dd.get_ref_file(items[0]), _sv_workdir(items[0]), items[0])
     if len(items + background) == 1:
-        return _run_cnvkit_single(items[0], access_file)
+        return _run_cnvkit_single(items[0])
     elif vcfutils.get_paired_phenotype(items[0]):
-        return _run_cnvkit_cancer(items, background, access_file)
+        return _run_cnvkit_cancer(items, background)
     else:
-        return _run_cnvkit_population(items, background, access_file)
+        return _run_cnvkit_population(items, background)
 
 def _associate_cnvkit_out(ckout, items):
     """Associate cnvkit output with individual items.
     """
-    ckout = _add_seg_to_output(ckout, items)
+    ckout = _add_seg_to_output(ckout, items[0])
     ckout["variantcaller"] = "cnvkit"
     out = []
     for data in items:
@@ -56,9 +54,12 @@ def _associate_cnvkit_out(ckout, items):
         out.append(data)
     return out
 
-def _run_cnvkit_single(data, access_file, background=None):
+def _run_cnvkit_single(data, access_file=None, background=None):
     """Process a single input file with BAM or uniform background.
     """
+    work_dir = _sv_workdir(data)
+    if not access_file:
+        access_file = _create_access_file(dd.get_ref_file(data), work_dir, data)
     test_bams = [data["align_bam"]]
     if background:
         background_bams = [x["align_bam"] for x in background]
@@ -66,22 +67,24 @@ def _run_cnvkit_single(data, access_file, background=None):
     else:
         background_bams = []
         background_name = None
-    work_dir = _sv_workdir(data)
     ckout = _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                                background_name=background_name)
     return _associate_cnvkit_out(ckout, [data])
 
-def _run_cnvkit_cancer(items, background, access_file):
+def _run_cnvkit_cancer(items, background):
     """Run CNVkit on a tumor/normal pair.
     """
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
-    work_dir = _sv_workdir(items[0])
-    ckout = _run_cnvkit_shared(items[0], [paired.tumor_bam], [paired.normal_bam],
+    work_dir = _sv_workdir(paired.tumor_data)
+    access_file = _create_access_file(dd.get_ref_file(paired.tumor_data), work_dir, paired.tumor_data)
+    ckout = _run_cnvkit_shared(paired.tumor_data, [paired.tumor_bam], [paired.normal_bam],
                                access_file, work_dir, background_name=paired.normal_name)
     #ckout = theta.run(ckout, paired)
-    return _associate_cnvkit_out(ckout, items)
+    tumor_data = _associate_cnvkit_out(ckout, [paired.tumor_data])
+    normal_data = [x for x in items if dd.get_sample_name(x) != paired.tumor_name]
+    return tumor_data + normal_data
 
-def _run_cnvkit_population(items, background, access_file):
+def _run_cnvkit_population(items, background):
     """Run CNVkit on a population of samples.
 
     Tries to calculate background based on case/controls, otherwise uses
@@ -89,6 +92,7 @@ def _run_cnvkit_population(items, background, access_file):
     """
     assert not background
     inputs, background = shared.find_case_control(items)
+    access_file = _create_access_file(dd.get_ref_file(inputs[0]), _sv_workdir(inputs[0]), inputs[0])
     return [_run_cnvkit_single(data, access_file, background)[0] for data in inputs] + \
            [_run_cnvkit_single(data, access_file, inputs)[0] for data in background]
 
@@ -125,12 +129,12 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
             "cns": os.path.join(raw_work_dir, "%s.cns" % out_base),
             "back_cnn": os.path.join(raw_work_dir, background_cnn)}
 
-def _add_seg_to_output(out, items):
+def _add_seg_to_output(out, data):
     """Export outputs to 'seg' format compatible with IGV and GenePattern.
     """
     out_file = "%s.seg" % os.path.splitext(out["cns"])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
                    "seg", "-o", tx_out_file, out["cns"]]
             do.run(cmd, "CNVkit export seg")

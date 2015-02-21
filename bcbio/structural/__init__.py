@@ -34,7 +34,7 @@ def _handle_multiple_svcallers(data):
     return out
 
 def _combine_multiple_svcallers(samples):
-    """
+    """Combine results from multiple sv callers into a single ordered 'sv' key.
     """
     by_bam = collections.OrderedDict()
     for x in samples:
@@ -50,11 +50,12 @@ def _combine_multiple_svcallers(samples):
             return _get_svcallers(x).index(x["config"]["algorithm"]["svcaller_active"])
         sorted_svcalls = sorted([x for x in grouped_calls if "sv" in x],
                                 key=orig_svcaller_order)
-        final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
         final = grouped_calls[0]
-        final_calls = ensemble.summarize(final_calls, final, highdepths)
-        final_calls = validate.evaluate(final, final_calls)
-        final["sv"] = final_calls
+        if len(sorted_svcalls) > 0:
+            final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
+            final_calls = ensemble.summarize(final_calls, final, highdepths)
+            final_calls = validate.evaluate(final, final_calls)
+            final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]
         out.append([final])
     return out
