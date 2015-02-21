@@ -345,10 +345,11 @@ def sort_cmd(config, tmp_dir, named_pipe=None, order="coordinate"):
     sambamba = _get_sambamba(config)
     pipe = named_pipe if named_pipe else "/dev/stdin"
     order_flag = "-n" if order is "queryname" else ""
+    resources = config_utils.get_resources("samtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
-    cmd = "{sambamba} sort --tmpdir {tmp_dir} -t {num_cores} {order_flag} -o /dev/stdout {pipe}"
+    mem = config_utils.adjust_memory(resources.get("memory", "2G"), 1, "decrease").upper()
+    cmd = ("{sambamba} sort -m {mem} --tmpdir {tmp_dir} -t {num_cores} {order_flag} -o /dev/stdout {pipe}")
     return cmd.format(**locals())
-
 
 def _get_sambamba(config):
     try:
