@@ -2,7 +2,7 @@ import os
 import shutil
 import tempfile
 from bcbio.utils import file_exists
-from bcbio.bam import is_paired, _get_sort_order, sort_cmd
+from bcbio.bam import is_paired, _get_sort_order, sort
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -26,8 +26,8 @@ def run(data):
     if not file_exists(out_file):
         with tx_tmpdir(data) as tmp_dir:
             with file_transaction(out_dir) as tx_out_dir:
-                pipe_cmd = _prepare_bam(in_bam, tmp_dir, config)
-                cmd = ("{pipe_cmd} |  {express} --no-update-check -o {tx_out_dir} {strand} {gtf_fasta}")
+                bam_file = _prepare_bam_file(in_bam, tmp_dir, config)
+                cmd = ("{express} --no-update-check -o {tx_out_dir} {strand} {gtf_fasta} {bam_file}")
                 do.run(cmd.format(**locals()), "Run express on %s." % in_bam, {})
             shutil.move(os.path.join(out_dir, "results.xprs"), out_file)
     eff_count_file = _get_column(out_file, out_file.replace(".xprs", "_eff.counts"), 7)
@@ -69,17 +69,14 @@ def _set_stranded_flag(bam_file, data):
     flag = strand_flag[stranded]
     return flag
 
-def _prepare_bam(bam_file, tmp_dir, config):
+def _prepare_bam_file(bam_file, tmp_dir, config):
     """
     Pipe sort by name cmd in case sort by coordinates
     """
     sort_mode = _get_sort_order(bam_file, config)
-    sort = sort_cmd(config, tmp_dir, named_pipe=bam_file, order="queryname")
     if sort_mode != "queryname":
-        sort_pipe = ("{0} | samtools view -h  - ").format(sort)
-    else:
-        sort_pipe = ("samtools view -h {0} ").format(bam_file)
-    return sort_pipe
+        bam_file = sort(bam_file, config, "queryname")
+    return bam_file
 
 def isoform_to_gene_name(gtf_file, out_file=None):
     """
