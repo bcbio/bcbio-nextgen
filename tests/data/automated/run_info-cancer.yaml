@@ -19,7 +19,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [cn.mops, cnvkit, wham]
+      svcaller: [cn.mops, cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
     description: c-tumor
@@ -38,7 +38,7 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [cn.mops, cnvkit, wham]
+      svcaller: [cn.mops, cnvkit]
       tools_off: [vardict_somatic_filter]
       variant_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
@@ -58,5 +58,5 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 5.0
-      svcaller: [cn.mops, cnvkit, wham]
+      svcaller: [cn.mops, cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed

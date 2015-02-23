@@ -1,4 +1,4 @@
-## 0.8.6 (in progress)
+## 0.8.6 (23 February 2015)
 
 - Calculate high depth regions with more than 20x median coverage as targets for
   filtering in structural variants. Attempts to detect and avoid spurious calls
