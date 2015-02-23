@@ -72,7 +72,7 @@ to the underlying queue scheduler. This currently supports SGE's
 or resources to the scheduler (see the `qsub man page`_). You may specify multiple
 resources, so ``-r mem=4g -r ct=01:40:00``
 translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
-``-r "account=a2010002;timelimit=04:00:00"`` when using SLURM, for
+``-r "account=a2010002" -r "timelimit=04:00:00"`` when using SLURM, for
 instance. SLURM and Torque support specification of an account parameter with
 ``-r account=your_name``, which IPython transfers into ``-A``.
 
@@ -87,16 +87,16 @@ environment. To specify an advanced reservation with the ``-ar`` flag, use
 ``-r ar=ar_id``. To specify an alternative memory management model instead of
 ``mem_free`` use ``-r memtype=approach``. It is further recommended to configure
 ``mem_free`` (or any other chosen memory management model) as a consumable, requestable
-resource in SGE to prevent overfilling hosts that do not have sufficient memory per slot. 
+resource in SGE to prevent overfilling hosts that do not have sufficient memory per slot.
 This can be done in two steps. First, launch ``qmon`` as an admin,
-select ``Complex Configuration`` in qmon, click on ``mem_free`, 
+select ``Complex Configuration`` in qmon, click on ``mem_free`,
 under the ``Consumable`` dialog select ``JOB`` (instead of ``YES`` or ``NO``) and
 finally click ``Modify`` for the changes to take effect. Secondly, for each host in
-the queue, configure ``mem_free`` as a complex value. If a host called ``myngshost`` 
-has 128GB of RAM, the corresponding command would be 
+the queue, configure ``mem_free`` as a complex value. If a host called ``myngshost``
+has 128GB of RAM, the corresponding command would be
 ``qconf -mattr exechost complex_values mem_free=128G myngshost``
 
-There are also special ``-r`` resources parameters to support the pipeline:
+There are also special ``-r`` resources parameters to support pipeline configuration:
 
 - ``-r conmem=4`` -- Specify the memory for the controller process, in Gb. This
   currently applies to SLURM processing and defaults to 4Gb.
