@@ -268,7 +268,7 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
         "Some count files in %s do not exist." % files
     for f in files:
         assert file_exists(f), "%s does not exist or is empty." % f
-    col_names = [os.path.basename(x.split(ext)[0]) for x in files]
+    col_names = [os.path.basename(os.path.splitext(x)[0]) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
         out_file = os.path.join(out_dir, "combined.counts")
