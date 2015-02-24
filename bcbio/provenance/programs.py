@@ -182,8 +182,6 @@ def _get_versions(config=None):
     else:
         assert config is not None, "Need configuration to retrieve from non-manifest installs"
         brew_vs = _get_brew_versions()
-        import HTSeq
-        out.append({"program": "htseq", "version": HTSeq.__version__})
         for p in _cl_progs:
             out.append({"program": p["cmd"],
                         "version": (brew_vs[p["cmd"]] if p["cmd"] in brew_vs else

@@ -3,7 +3,6 @@ import os
 from bcbio.utils import (file_exists, get_in, safe_makedir)
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
-from bcbio.rnaseq.count import htseq_count
 from bcbio.bam import is_paired
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
@@ -31,15 +30,7 @@ def count(data):
 
     config = data["config"]
 
-    try:
-        featureCounts = config_utils.get_program("featureCounts", config)
-    except config_utils.CmdNotFound:
-        logger.info("featureCounts not found, falling back to htseq-count "
-                    "for feature counting. You can upgrade the tools to "
-                    "install featureCount with bcbio_nextgen.py upgrade "
-                    "--tools.")
-        return htseq_count(data)
-
+    featureCounts = config_utils.get_program("featureCounts", config)
     paired_flag = _paired_flag(in_bam)
     strand_flag = _strand_flag(config)
 
