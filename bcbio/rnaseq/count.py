@@ -19,41 +19,6 @@ from bcbio.log import logger
 from bcbio import bam
 import bcbio.pipeline.datadict as dd
 
-
-def _get_files(data):
-    mapped = bam.mapped(data["work_bam"], data["config"])
-    in_file = bam.sort(mapped, data["config"], order="queryname")
-    gtf_file = dd.get_gtf_file(data)
-    work_dir = dd.get_work_dir(data)
-    out_dir = os.path.join(work_dir, "htseq-count")
-    sample_name = dd.get_sample_name(data)
-    out_file = os.path.join(out_dir, sample_name + ".counts")
-    stats_file = os.path.join(out_dir, sample_name + ".stats")
-    return in_file, gtf_file, out_file, stats_file
-
-
-def invert_strand(iv):
-    iv2 = iv.copy()
-    if iv2.strand == "+":
-        iv2.strand = "-"
-    elif iv2.strand == "-":
-        iv2.strand = "+"
-    else:
-        raise ValueError("Illegal strand")
-    return iv2
-
-
-def _get_stranded_flag(data):
-    strand_flag = {"unstranded": "no",
-                   "firststrand": "reverse",
-                   "secondstrand": "yes"}
-    stranded = dd.get_strandedness(data, "unstranded").lower()
-    assert stranded in strand_flag, ("%s is not a valid strandedness value. "
-                                     "Valid values are 'firststrand', 'secondstrand', "
-                                     "and 'unstranded")
-    return strand_flag[stranded]
-
-
 def combine_count_files(files, out_file=None, ext=".fpkm"):
     """
     combine a set of count files into a single combined file

@@ -16,8 +16,7 @@ except ImportError:
 def count(data):
     """
     count reads mapping to genes using featureCounts
-    falls back on htseq_count method if featureCounts is not
-    found
+    http://subread.sourceforge.net
     """
     in_bam = dd.get_work_bam(data)
     gtf_file = dd.get_gtf_file(data)
@@ -28,11 +27,9 @@ def count(data):
     if file_exists(count_file):
         return count_file
 
-    config = data["config"]
-
-    featureCounts = config_utils.get_program("featureCounts", config)
+    featureCounts = config_utils.get_program("featureCounts", dd.get_config(data))
     paired_flag = _paired_flag(in_bam)
-    strand_flag = _strand_flag(config)
+    strand_flag = _strand_flag(data)
 
     cmd = ("{featureCounts} -a {gtf_file} -o {tx_count_file} -s {strand_flag} "
            "{paired_flag} {in_bam}")
@@ -64,14 +61,14 @@ def _format_count_file(count_file, data):
     return out_file
 
 
-def _strand_flag(config):
+def _strand_flag(data):
     """
     0: unstranded 1: stranded 2: reverse stranded
     """
     strand_flag = {"unstranded": "0",
                    "firststrand": "2",
                    "secondstrand": "1"}
-    stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
+    stranded = dd.get_strandedness(data)
 
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
                                      "Valid values are 'firststrand', 'secondstrand', "
@@ -79,6 +76,9 @@ def _strand_flag(config):
     return strand_flag[stranded]
 
 def _paired_flag(bam_file):
+    """
+    sets flags to handle paired-end BAM files
+    """
     if is_paired(bam_file):
         return "-p -B -C"
     else:
