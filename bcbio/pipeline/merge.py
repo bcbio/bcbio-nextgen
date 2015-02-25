@@ -70,6 +70,10 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                             cmd = _sambamba_merge(bam_files)
                             do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
                                    None)
+                            # Remove pre-created merged index file, which can cause issues
+                            # on some systems with inconsistent timestamps
+                            if os.path.exists(tx_out_file + ".bai"):
+                                utils.remove_safe(tx_out_file + ".bai")
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         bam.index(out_file, config)
