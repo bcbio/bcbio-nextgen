@@ -87,7 +87,7 @@ def write_noanalysis_reads(in_file, region_file, out_file, config):
             bedtools = config_utils.get_program("bedtools", config)
             sambamba = config_utils.get_program("sambamba", config)
             cl = ("{sambamba} view -f bam -L {region_file} {in_file} | "
-                  "{bedtools} intersect -abam - -b {region_file} -f 1.0 "
+                  "{bedtools} intersect -abam - -b {region_file} -f 1.0 -nonamecheck"
                   "> {tx_out_file}")
             do.run(cl.format(**locals()), "Select unanalyzed reads")
     return out_file
@@ -126,9 +126,9 @@ def _subset_bed_by_region(in_file, out_file, region, do_merge=True):
     orig_bed = pybedtools.BedTool(in_file)
     region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
     if do_merge:
-        orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).merge().saveas(out_file)
+        orig_bed.intersect(region_bed, nonamecheck=True).filter(lambda x: len(x) > 5).merge().saveas(out_file)
     else:
-        orig_bed.intersect(region_bed).filter(lambda x: len(x) > 5).saveas(out_file)
+        orig_bed.intersect(region_bed, nonamecheck=True).filter(lambda x: len(x) > 5).saveas(out_file)
 
 def get_lcr_bed(items):
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))

@@ -1,3 +1,8 @@
+## 0.8.7 (in progress)
+
+- Skip contig order naming checking with bedtools 2.23.0+ to avoid potential
+  issues with complex naming schemes.
+
 ## 0.8.6 (23 February 2015)
 
 - Calculate high depth regions with more than 20x median coverage as targets for

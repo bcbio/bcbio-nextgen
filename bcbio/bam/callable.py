@@ -88,7 +88,7 @@ def _group_by_ctype(bed_file, depth, region_file, out_file):
         for line in open(pybedtools.BedTool(bed_file).each(assign_coverage).saveas()
                                                      .groupby(**kwargs).fn):
             out_handle.write("\t".join(line.split("\t")[2:]))
-    pybedtools.BedTool(full_out_file).intersect(region_file).saveas(out_file)
+    pybedtools.BedTool(full_out_file).intersect(region_file, nonamecheck=True).saveas(out_file)
 
 def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, data):
     """Retrieve summary of coverage in a region.
@@ -164,7 +164,7 @@ def sample_callable_bed(bam_file, ref_file, config):
                 if input_regions_bed:
                     if not utils.file_uptodate(out_file, input_regions_bed):
                         input_regions = pybedtools.BedTool(input_regions_bed)
-                        filter_regions.intersect(input_regions).saveas(tx_out_file)
+                        filter_regions.intersect(input_regions, nonamecheck=True).saveas(tx_out_file)
                 else:
                     filter_regions.saveas(tx_out_file)
     return out_file
