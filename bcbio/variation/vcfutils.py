@@ -372,7 +372,7 @@ def merge_sorted(orig_files, out_file, data):
     from pysam import VariantFile
     def _position_iter(bcf_in):
         for rec in bcf_in:
-            yield (rec.chrom, rec.start, rec)
+            yield (rec.rid, rec.start, rec)
     if out_file.endswith(".vcf.gz"):
         out_file = out_file.replace(".vcf.gz", ".vcf")
     if not utils.file_exists(out_file):
