@@ -35,11 +35,14 @@ def to_single(in_file, data):
     out_file = "%s-nomultiallelic%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         ba_file, ma_file = _split_mulitallelic(in_file, data)
-        ready_ma_file = _decompose(ma_file, data)
-        ann_ma_file = effects.add_to_vcf(ready_ma_file, data)
-        if ann_ma_file:
-            ready_ma_file = ann_ma_file
-        out_file = vcfutils.merge_sorted([ready_ma_file, ba_file], out_file, data)
+        if vcfutils.vcf_has_variants(ma_file):
+            ready_ma_file = _decompose(ma_file, data)
+            ann_ma_file = effects.add_to_vcf(ready_ma_file, data)
+            if ann_ma_file:
+                ready_ma_file = ann_ma_file
+            out_file = vcfutils.merge_sorted([ready_ma_file, ba_file], out_file, data)
+        else:
+            utils.symlink_plus(in_file, out_file)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def _decompose(in_file, data):
