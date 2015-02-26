@@ -39,8 +39,7 @@ def to_single(in_file, data):
         ann_ma_file = effects.add_to_vcf(ready_ma_file, data)
         if ann_ma_file:
             ready_ma_file = ann_ma_file
-        vcfutils.combine_variant_files([ba_file, ready_ma_file], out_file,
-                                       dd.get_ref_file(data), data["config"])
+        out_file = vcfutils.merge_sorted([ready_ma_file, ba_file], out_file, data)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def _decompose(in_file, data):

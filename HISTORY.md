@@ -1,5 +1,8 @@
 ## 0.8.7 (in progress)
 
+- Fix preparation of multi-allelic inputs to GEMINI by implementing custom merge
+  of bi-allelic and split multi-allelic. Previous implementation using GATK
+  CombineVariants re-merged some split multi-allelic, losing effects annotations.
 - Skip contig order naming checking with bedtools 2.23.0+ to avoid potential
   issues with complex naming schemes.
 
