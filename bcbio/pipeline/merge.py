@@ -5,6 +5,7 @@ items to combine within a group.
 """
 import os
 import shutil
+import subprocess
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -70,10 +71,11 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                             cmd = _sambamba_merge(bam_files)
                             do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
                                    None)
-                            # Remove pre-created merged index file, which can cause issues
-                            # on some systems with inconsistent timestamps
-                            if os.path.exists(tx_out_file + ".bai"):
-                                utils.remove_safe(tx_out_file + ".bai")
+            # Ensure timestamps are up to date on output file and index
+            # Works around issues on systems with inconsistent times
+            for ext in ["", ".bai"]:
+                if os.path.exists(out_file + ext):
+                    subprocess.check_call(["touch", out_file + ext])
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         bam.index(out_file, config)
