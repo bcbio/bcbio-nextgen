@@ -9,7 +9,7 @@ from xml.etree import ElementTree
 import toolz as tz
 import yaml
 
-from bcbio import install, utils
+from bcbio import utils
 from bcbio.log import logger
 from bcbio.ngsalign import star
 from bcbio.pipeline import alignment
@@ -237,6 +237,7 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
     on AWS but not generalizable elsewhere.
     """
     from bcbio.variation import population
+    from bcbio import install
     if not out_dir:
         out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
                                                   "inputs", "data", "genomes"))
