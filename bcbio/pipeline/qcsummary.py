@@ -625,7 +625,11 @@ def _run_qsignature_generator(bam_file, data, out_dir):
     """
     position = dd.get_qsig_file(data)
     mixup_check = dd.get_mixup_check(data)
-    if position and mixup_check and mixup_check.startswith("qsignature"):
+    if mixup_check and mixup_check.startswith("qsignature"):
+        if not position:
+            logger.info("There is no qsignature for this species: %s"
+                        % tz.get_in(['genome_build'], data))
+            return {}
         jvm_opts = "-Xms750m -Xmx2g"
         limit_reads = 20000000
         if mixup_check == "qsignature_full":
@@ -659,10 +663,7 @@ def _run_qsignature_generator(bam_file, data, out_dir):
             else:
                 raise IOError("File doesn't exist %s" % file_qsign_out)
         return {'qsig_vcf': out_file}
-    else:
-        logger.info("There is no qsignature for this species: %s"
-                    % tz.get_in(['genome_build'], data))
-        return {}
+    return {}
 
 
 def qsignature_summary(*samples):
