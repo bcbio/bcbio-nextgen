@@ -6,6 +6,7 @@ ipython-cluster-helper>=0.4.0
 Logbook>=0.6.0
 lxml>=3.3.5
 msgpack-python>=0.4.0
+HTSeq >= 0.5.4p5
 nose>=1.3.0
 pandas>=0.14.1
 pysam>=0.8.2.1
