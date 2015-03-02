@@ -4,6 +4,7 @@ Uses the gemini framework (https://github.com/arq5x/gemini) to build SQLite
 database of variations for query and evaluation.
 """
 import collections
+import csv
 from distutils.version import LooseVersion
 import os
 import subprocess
@@ -13,10 +14,11 @@ import toolz as tz
 from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
 from bcbio.variation import multiallelic, vcfutils
 
-def prep_gemini_db(fnames, call_info, samples):
+def prep_gemini_db(fnames, call_info, samples, extras):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
     """
     data = samples[0]
@@ -30,11 +32,12 @@ def prep_gemini_db(fnames, call_info, samples):
     if not utils.file_exists(gemini_db) and use_gemini_quick:
         use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
         if use_gemini:
-            gemini_db = create_gemini_db(gemini_vcf, data, gemini_db)
+            ped_file = create_ped_file(samples + extras, gemini_vcf)
+            gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
                               "vcf": gemini_vcf if is_batch else None}]]
 
-def create_gemini_db(gemini_vcf, data, gemini_db=None):
+def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
     if not gemini_db:
         gemini_db = "%s.db" % utils.splitext_plus(gemini_vcf)[0]
     if not utils.file_exists(gemini_db):
@@ -67,10 +70,59 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None):
             num_cores = data["config"]["algorithm"].get("num_cores", 1)
             eanns = ("snpEff" if tz.get_in(("config", "algorithm", "effects"), data, "snpeff") == "snpeff"
                      else "VEP")
+            if ped_file:
+                load_opts += " -p %s" % ped_file
             cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t {eanns} --cores {num_cores} {tx_gemini_db}"
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % gemini_vcf, data)
     return gemini_db
+
+def get_affected_status(data):
+    """Retrieve the affected/unaffected status of sample.
+
+    Uses unaffected (1), affected (2), unknown (0) coding from PED files:
+
+    http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped
+    """
+    affected = set(["tumor", "affected"])
+    unaffected = set(["normal", "unaffected"])
+    phenotype = tz.get_in(["metadata", "phenotype"], data, "").lower()
+    if phenotype in affected:
+        return 2
+    elif phenotype in unaffected:
+        return 1
+    else:
+        return 0
+
+def create_ped_file(samples, base_vcf):
+    """Create a GEMINI-compatible PED file, including gender, family and phenotype information.
+    """
+    def _code_gender(data):
+        g = dd.get_gender(data)
+        if g and g.lower() == "male":
+            return 1
+        elif g and g.lower() == "female":
+            return 2
+        else:
+            return 0
+    out_file = "%s.ped" % utils.splitext_plus(base_vcf)[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(samples[0], out_file) as tx_out_file:
+            header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID", "Sex", "Phenotype", "Ethnicity"]
+            with open(tx_out_file, "w") as out_handle:
+                writer = csv.writer(out_handle, dialect="excel-tab")
+                writer.writerow(header)
+                batch = _find_shared_batch(samples)
+                for data in samples:
+                    writer.writerow([batch, dd.get_sample_name(data), "-9", "-9",
+                                     _code_gender(data), get_affected_status(data), "-9"])
+    return out_file
+
+def _find_shared_batch(samples):
+    for data in samples:
+        batch = tz.get_in(["metadata", "batch"], data, dd.get_sample_name(data))
+        if not isinstance(batch, (list, tuple)):
+            return batch
 
 def _is_small_vcf(vcf_file):
     """Check for small VCFs which we want to analyze quicker.
@@ -194,10 +246,10 @@ def prep_db_parallel(samples, parallel_fn):
     has_batches = False
     for (name, caller), info in batch_groups.iteritems():
         fnames = [x[0] for x in info]
-        to_process.append([fnames, (str(name), caller, True), [x[1] for x in info]])
+        to_process.append([fnames, (str(name), caller, True), [x[1] for x in info], extras])
         has_batches = True
     for name, caller, data, fname in singles:
-        to_process.append([[fname], (str(name), caller, False), [data]])
+        to_process.append([[fname], (str(name), caller, False), [data], extras])
     if len(samples) > 0 and not do_db_build([x[0] for x in samples], check_gemini=False) and not has_batches:
         return samples
     output = parallel_fn("prep_gemini_db", to_process)

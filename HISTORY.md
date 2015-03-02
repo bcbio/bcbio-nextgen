@@ -1,5 +1,7 @@
 ## 0.8.7 (in progress)
 
+- Add PED file to GEMINI database load, containing family, gender and phenotype
+  information from bcbio metadata. Thanks to Luca Beltrame and Roy Ronen.
 - Fix preparation of multi-allelic inputs to GEMINI by implementing custom merge
   of bi-allelic and split multi-allelic. Previous implementation using GATK
   CombineVariants re-merged some split multi-allelic, losing effects annotations.
