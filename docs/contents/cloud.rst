@@ -162,10 +162,11 @@ intermittent failures, you can rerun the cluster configuration step with
 Running Lustre
 ==============
 
-Elasticluster mounts the cluster frontend root volume ``/home`` directory as a
-NFS share available across all of the worker machines. You can use this as a
-processing directory for smaller runs but for larger runs will need a
-distributed file system. bcbio supports using `Intel Cloud Edition for Lustre (ICEL) <https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+Software>`_
+Elasticluster mounts the ``/encrypted`` directory as a NFS share available
+across all of the worker machines. You can use this as a processing directory
+for smaller runs but for larger runs may need a scalable distributed file
+system. bcbio supports using
+`Intel Cloud Edition for Lustre (ICEL) <https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+Software>`_
 to set up a Lustre scratch filesystem on AWS.
 
 - Subscribe to `ICEL in the Amazon Marketplace
