@@ -178,6 +178,12 @@ to set up a Lustre scratch filesystem on AWS.
 
     bcbio_vm.py aws icel create
 
+  If you encounter any intermittent failures when installing collectl plugin, that
+  means lustre server is created successfully, you can rerun the lustre configuration step
+  with ``bcbio_vm.py aws icel create --setup``. If you had any failure creating the lustre
+  server before the collectl plugin installation, you should stop it, and try again.
+  
+
 - Once the ICEL stack and elasticluster cluster are both running, mount the
   filesystem on the cluster::
 
