@@ -38,7 +38,7 @@ def _run_theta(cmds, exome_input, data, work_dir):
     """
     out_dir = os.path.join(work_dir, "raw")
     result_file = os.path.join(out_dir, "%s.n2.results" % utils.splitext_plus(os.path.basename(exome_input))[0])
-    if not utils.file_exists(result_file):
+    if not utils.file_exists(result_file) and not utils.file_exists(result_file + ".skipped"):
         with file_transaction(data, out_dir) as tx_out_dir:
             utils.safe_makedir(tx_out_dir)
             cmd = cmds["run_theta"] + ["-n", "2", "-k", "4", "-m", ".90",
@@ -48,7 +48,9 @@ def _run_theta(cmds, exome_input, data, work_dir):
                 do.run(cmd, "Run THetA to calculate purity", log_error=False)
             except subprocess.CalledProcessError, msg:
                 if "Number of intervals must be greater than 1" in str(msg):
-                    pass
+                    with open(os.path.join(tx_out_dir,
+                                           os.path.basename(result_file) + ".skipped"), "w") as out_handle:
+                        out_handle.write("Expected failure, skipping")
                 else:
                     raise
     return result_file

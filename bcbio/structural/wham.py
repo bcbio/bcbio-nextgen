@@ -169,12 +169,15 @@ def _add_wham_classification(in_file, items):
     training_data = os.path.join(wham_sharedir, "WHAM_training_data.txt")
     training_data = _prep_training_data(training_data, out_file, items[0])
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
-            this_python = sys.executable
-            cores = dd.get_cores(items[0])
-            cmd = ("{this_python} {wham_sharedir}/classify_WHAM_vcf.py --proc {cores} "
-                   "--minclassfreq {minclassfreq} {in_file} {training_data} > {tx_out_file}")
-            do.run(cmd.format(**locals()), "Classify WHAM calls")
+        if vcfutils.vcf_has_variants(in_file):
+            with file_transaction(items[0], out_file) as tx_out_file:
+                this_python = sys.executable
+                cores = dd.get_cores(items[0])
+                cmd = ("{this_python} {wham_sharedir}/classify_WHAM_vcf.py --proc {cores} "
+                       "--minclassfreq {minclassfreq} {in_file} {training_data} > {tx_out_file}")
+                do.run(cmd.format(**locals()), "Classify WHAM calls")
+        else:
+            utils.symlink_plus(in_file, out_file)
     return out_file
 
 def _prep_training_data(orig_train, base_file, data):
