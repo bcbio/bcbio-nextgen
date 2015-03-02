@@ -147,6 +147,7 @@ def _filter_ensemble(in_bed, data):
     number of callers actually called in each event, since some callers don't handle
     all event types.
     """
+    support_events = set(["BND", "UKN"])
     max_size = max([xs[1] for xs in validate.EVENT_SIZES[:2]])
     out_file = "%s-filter%s" % utils.splitext_plus(in_bed)
     total_callers = collections.defaultdict(set)
@@ -163,15 +164,17 @@ def _filter_ensemble(in_bed, data):
                     for line in in_handle:
                         chrom, start, end, caller_strs = line.strip().split()
                         size = int(end) - int(start)
-                        callers = set([x.split("_", 1)[-1] for x in caller_strs.split(",")])
-                        events = set([validate.cnv_to_event(x.split("_", 1)[0], data)
-                                      for x in caller_strs.split(",")])
-                        pass_event_counts = [len(total_callers[e]) > N_FILTER_CALLERS for e in list(events)]
-                        # ignore breakend only calls
-                        if not (len(events) == 1 and list(events)[0] == "BND"):
-                            # Ensure calls have reasonable support
-                            if len(callers) > 1 or size > max_size or not any(pass_event_counts):
-                                out_handle.write(line)
+                        events = collections.defaultdict(set)
+                        for event, caller in [x.split("_", 1) for x in caller_strs.split(",")]:
+                            events[validate.cnv_to_event(event, data)].add(caller)
+                        all_callers = set([])
+                        for event, callers in events.iteritems():
+                            all_callers = all_callers.union(callers)
+                            if event not in support_events:
+                                if (len(all_callers) > 1 or size > max_size
+                                      or len(total_callers[event]) <= N_FILTER_CALLERS):
+                                    out_handle.write(line)
+                                    break
     return out_file
 
 def summarize(calls, data, highdepth_beds):

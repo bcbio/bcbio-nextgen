@@ -60,9 +60,9 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     def wham_matches(name):
         """Flexibly handle WHAM comparisons, allowing DUP/DEL matches during comparisons.
         """
-        allowed = {"DEL": set(["DEL", "INR"]),
+        allowed = {"DEL": set(["DEL", "UKN"]),
                    "DUP": set(["DUP"]),
-                   "INV": set(["INV", "INR"])}
+                   "INV": set(["INV"])}
         curtype, curcaller = name.split("_")[:2]
         return curcaller == "wham" and svtype in allowed and curtype in allowed[svtype]
     def is_breakend(name):

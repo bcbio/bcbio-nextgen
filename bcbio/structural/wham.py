@@ -164,16 +164,34 @@ def _add_wham_classification(in_file, items):
     """
     wham_sharedir = os.path.normpath(os.path.join(os.path.dirname(subprocess.check_output(["which", "WHAM-BAM"])),
                                                   os.pardir, "share", "wham"))
-    #training_data = "WHAM_training_phase3_10bp_training.txt"
-    training_data = "WHAM_training_data.txt"
+    minclassfreq = 0.4  # Need at least this much support to classify a variant, otherwise unknown
     out_file = "%s-class%s" % utils.splitext_plus(in_file)
+    training_data = os.path.join(wham_sharedir, "WHAM_training_data.txt")
+    training_data = _prep_training_data(training_data, out_file, items[0])
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             this_python = sys.executable
             cores = dd.get_cores(items[0])
             cmd = ("{this_python} {wham_sharedir}/classify_WHAM_vcf.py --proc {cores} "
-                   "{in_file} {wham_sharedir}/{training_data} > {tx_out_file}")
+                   "--minclassfreq {minclassfreq} {in_file} {training_data} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Classify WHAM calls")
+    return out_file
+
+def _prep_training_data(orig_train, base_file, data):
+    """Prepare training data, removing training data that cause misclassification.
+
+    Insertions dominate classification on test sets, so this cleans them out of
+    the training data set.
+    """
+    to_remove = set(["INR"])
+    out_file = "%s-training.txt" % utils.splitext_plus(base_file)[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(orig_train) as in_handle:
+                with open(out_file, "w") as out_handle:
+                    for line in in_handle:
+                        if line.rstrip().split("\t")[-1] not in to_remove:
+                            out_handle.write(line)
     return out_file
 
 def _fix_vcf(orig_file, items, background_names):
