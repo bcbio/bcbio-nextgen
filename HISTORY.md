@@ -1,5 +1,7 @@
 ## 0.8.7 (in progress)
 
+- Run snpEff 4.1 in back-compatibility mode to work with GEMINI database
+  loading. Fixes snpEff 4.1/GEMINI effects loading.
 - Add PED file to GEMINI database load, containing family, gender and phenotype
   information from bcbio metadata. Thanks to Luca Beltrame and Roy Ronen.
 - Fix preparation of multi-allelic inputs to GEMINI by implementing custom merge

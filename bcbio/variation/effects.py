@@ -209,7 +209,7 @@ def _snpeff_args_from_config(data):
     # Use older EFF formatting instead of new combined ANN formatting until
     # downstream tools catch up, then remove this.
     if LooseVersion(snpeff_version()) >= LooseVersion("4.1"):
-        args += ["-formatEff"]
+        args += ["-formatEff", "-classic"]
     # General supplied arguments
     resources = config_utils.get_resources("snpeff", config)
     if resources.get("options"):
