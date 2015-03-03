@@ -65,6 +65,10 @@ def _clean_args(sys_argv, args, bcbio):
 def bootstrap_bcbionextgen(anaconda, args, remotes):
     """Install bcbio-nextgen to bootstrap rest of installation process.
     """
+    # Set PIP SSL certificate to installed conda certificate to avoid SSL errors
+    cert_file = os.path.join(anaconda["dir"], "ssl", "cert.pem")
+    if os.path.exists(cert_file):
+        os.environ["PIP_CERT"] = cert_file
     subprocess.check_call([anaconda["pip"], "install", "fabric"])
     subprocess.check_call([anaconda["pip"], "install", "-r", remotes["requirements"]])
     if args.upgrade == "development":
@@ -87,7 +91,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
 
 def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "lxml",
-            "matplotlib", "msgpack-python", "nose", "numpy", "pandas", "patsy", "pycrypto",
+            "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
             "pip", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests", "scikit-learn",
             "scipy", "seaborn", "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]

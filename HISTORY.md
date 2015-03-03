@@ -9,6 +9,9 @@
   CombineVariants re-merged some split multi-allelic, losing effects annotations.
 - Skip contig order naming checking with bedtools 2.23.0+ to avoid potential
   issues with complex naming schemes.
+- Installation and upgrade: Set pip SSL certificates to point at installed conda
+  SSL package if present. Avoids SSL errors when pip can't find system
+  certificates. Thanks to Andrew Oler.
 
 ## 0.8.6 (23 February 2015)
 

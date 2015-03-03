@@ -46,16 +46,18 @@ def upgrade_bcbio(args):
     if args.upgrade in ["skip"]:
         pass
     elif args.upgrade in ["stable", "system"]:
-        _update_conda_packages()
+        anaconda_dir = _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest stable version")
+        _set_pip_ssl(anaconda_dir)
         sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
         subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
         print("Upgrade of bcbio-nextgen code complete.")
     elif args.upgrade in ["deps"]:
         _update_conda_packages()
     else:
-        _update_conda_packages()
+        anaconda_dir = _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
+        _set_pip_ssl(anaconda_dir)
         subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
         subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
                                "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
@@ -96,6 +98,13 @@ def upgrade_bcbio(args):
     print("Upgrade completed successfully.")
     return args
 
+def _set_pip_ssl(anaconda_dir):
+    """Set PIP SSL certificate to installed conda certificate to avoid SSL errors
+    """
+    if anaconda_dir:
+        cert_file = os.path.join(anaconda_dir, "ssl", "cert.pem")
+        if os.path.exists(cert_file):
+            os.environ["PIP_CERT"] = cert_file
 
 def _set_matplotlib_default_backend():
     """
@@ -186,13 +195,14 @@ def _update_conda_packages():
     """
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
     pkgs = ["biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "lxml",
-            "matplotlib", "msgpack-python", "nose", "numpy", "pandas", "patsy", "pycrypto",
+            "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
             "pip", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests", "scikit-learn",
             "scipy", "seaborn", "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]
     if os.path.exists(conda_bin):
         subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
         subprocess.check_call([conda_bin, "install", "--yes"] + channels + pkgs)
+        return os.path.dirname(os.path.dirname(conda_bin))
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
