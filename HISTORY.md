@@ -4,6 +4,9 @@
   loading. Fixes snpEff 4.1/GEMINI effects loading.
 - Add PED file to GEMINI database load, containing family, gender and phenotype
   information from bcbio metadata. Thanks to Luca Beltrame and Roy Ronen.
+- Enable specification of input PED files into template creation, extracting
+  family, gender and phenotype information. Any sample rows from PED files get
+  used when creating the GEMINI database.
 - Fix preparation of multi-allelic inputs to GEMINI by implementing custom merge
   of bi-allelic and split multi-allelic. Previous implementation using GATK
   CombineVariants re-merged some split multi-allelic, losing effects annotations.

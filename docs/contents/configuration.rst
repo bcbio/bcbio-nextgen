@@ -69,8 +69,9 @@ multiple samples using the template workflow command::
      documentation for details on how these map to read group information.
 
    -  :ref:`sample-configuration` metadata key/value pairs. Any columns not
-      falling into the above cases will go into the metadata section.
-
+      falling into the above cases will go into the metadata section. A ``ped``
+      specification will allow bcbio to read family, gender and phenotype
+      information from a PED input file.
 
   Individual column items can contain booleans (true or false), integers, or
   lists (separated by semi-colons). These get converted into the expected time
@@ -204,8 +205,17 @@ The sample configuration file defines ``details`` of each sample to process::
        sample to pair with multiple tumor samples in paired cancer variant
        calling (``batch: [MatchWithTumor1, MatchWithTumor2]``).
 
-    - ``sex`` specifies the sample sex used to correctly prepare X/Y
+    - ``sex`` specifies the sample gender used to correctly prepare X/Y
       chromosomes.
+
+    -  ``phenotype`` stratifies cancer samples into ``tumor`` and ``normal`` or
+       case/controls into ``affected`` and ``unaffected``.
+
+    - ``ped`` provides a `PED phenotype file
+      <http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped>`_
+      containing sample phenotype and family information. Template creation uses
+      this to extract ``sex`` and ``phenotype`` information. GEMINI database
+      creation uses the PED file.
 
 Setting up a test run
 ~~~~~~~~~~~~~~~~~~~~~
