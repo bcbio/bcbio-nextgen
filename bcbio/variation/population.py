@@ -70,11 +70,12 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
             num_cores = data["config"]["algorithm"].get("num_cores", 1)
             eanns = ("snpEff" if tz.get_in(("config", "algorithm", "effects"), data, "snpeff") == "snpeff"
                      else "VEP")
-            if ped_file:
-                load_opts += " -p %s" % ped_file
             cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t {eanns} --cores {num_cores} {tx_gemini_db}"
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % gemini_vcf, data)
+            if ped_file:
+                cmd = [gemini, "amend", "--sample", ped_file, tx_gemini_db]
+                do.run(cmd, "Add PED file to gemini database", data)
     return gemini_db
 
 def get_affected_status(data):
@@ -96,6 +97,9 @@ def get_affected_status(data):
 
 def create_ped_file(samples, base_vcf):
     """Create a GEMINI-compatible PED file, including gender, family and phenotype information.
+
+    Checks for a specified `ped` file in metadata, and will use sample information from this file
+    before reconstituting from metadata information.
     """
     def _code_gender(data):
         g = dd.get_gender(data)
@@ -106,16 +110,30 @@ def create_ped_file(samples, base_vcf):
         else:
             return 0
     out_file = "%s.ped" % utils.splitext_plus(base_vcf)[0]
+    sample_ped_lines = {}
+    header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID", "Sex", "Phenotype", "Ethnicity"]
+    for md_ped in list(set([x for x in [tz.get_in(["metadata", "ped"], data)
+                                        for data in samples] if x is not None])):
+        with open(md_ped) as in_handle:
+            reader = csv.reader(in_handle, dialect="excel-tab")
+            for parts in reader:
+                if parts[0].startswith("#") and len(parts) > len(header):
+                    header = header + parts[len(header):]
+                else:
+                    sample_ped_lines[parts[1]] = parts
     if not utils.file_exists(out_file):
         with file_transaction(samples[0], out_file) as tx_out_file:
-            header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID", "Sex", "Phenotype", "Ethnicity"]
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle, dialect="excel-tab")
                 writer.writerow(header)
                 batch = _find_shared_batch(samples)
                 for data in samples:
-                    writer.writerow([batch, dd.get_sample_name(data), "-9", "-9",
-                                     _code_gender(data), get_affected_status(data), "-9"])
+                    sname = dd.get_sample_name(data)
+                    if sname in sample_ped_lines:
+                        writer.writerow(sample_ped_lines[sname])
+                    else:
+                        writer.writerow([batch, sname, "-9", "-9",
+                                         _code_gender(data), get_affected_status(data), "-9"])
     return out_file
 
 def _find_shared_batch(samples):
