@@ -16,6 +16,7 @@ import shutil
 import urllib2
 
 import boto
+import toolz as tz
 import yaml
 
 from bcbio import utils
@@ -77,7 +78,6 @@ def _prep_items_from_base(base, in_files):
 
     for i, (ext, files) in enumerate(itertools.groupby(
             in_files, lambda x: KNOWN_EXTS.get(utils.splitext_plus(x)[-1].lower()))):
-        print ext, files
         if ext == "bam":
             for f in files:
                 details.append(_prep_bam_input(f, i, base))
@@ -185,19 +185,20 @@ def _set_global_vars(metadata):
                 v = _expand_file(v)
                 metadata[sample][k] = v
                 fnames[v].append(k)
-    loc_counts = collections.defaultdict(int)
     global_vars = {}
-    global_var_sub = {}
-    for fname, locs in fnames.items():
-        if len(locs) > 1:
-            loc_counts[locs[0]] += 1
-            name = "%s%s" % (locs[0], loc_counts[locs[0]])
-            global_var_sub[fname] = name
-            global_vars[name] = fname
-    for sample in metadata.keys():
-        for k, v in metadata[sample].items():
-            if isinstance(v, basestring) and v in global_var_sub:
-                metadata[sample][k] = global_var_sub[v]
+    # Skip global vars -- more confusing than useful
+    # loc_counts = collections.defaultdict(int)
+    # global_var_sub = {}
+    # for fname, locs in fnames.items():
+    #     if len(locs) > 1:
+    #         loc_counts[locs[0]] += 1
+    #         name = "%s%s" % (locs[0], loc_counts[locs[0]])
+    #         global_var_sub[fname] = name
+    #         global_vars[name] = fname
+    # for sample in metadata.keys():
+    #     for k, v in metadata[sample].items():
+    #         if isinstance(v, basestring) and v in global_var_sub:
+    #             metadata[sample][k] = global_var_sub[v]
     return metadata, global_vars
 
 def _parse_metadata(in_handle):
@@ -262,6 +263,36 @@ def _handle_special_yaml_cases(v):
                     v = False
     return v
 
+def _add_ped_metadata(name, metadata):
+    """Add standard PED file attributes into metadata if not present.
+
+    http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped
+    """
+    def _ped_mapping(x, valmap):
+        try:
+            x = int(x)
+        except ValueError:
+            x = -1
+        for k, v in valmap.items():
+            if k == x:
+                return v
+        return None
+    def _ped_to_gender(x):
+        return _ped_mapping(x, {1: "male", 2: "female"})
+    def _ped_to_phenotype(x):
+        return _ped_mapping(x, {1: "unaffected", 2: "affected"})
+    with open(metadata["ped"]) as in_handle:
+        for line in in_handle:
+            parts = line.split("\t")[:6]
+            if parts[1] == str(name):
+                for index, key, convert_fn in [(4, "sex", _ped_to_gender), (0, "batch", lambda x: x),
+                                               (5, "phenotype", _ped_to_phenotype)]:
+                    val = convert_fn(parts[index])
+                    if val is not None and key not in metadata:
+                        metadata[key] = val
+                break
+    return metadata
+
 def _add_metadata(item, metadata, remotes):
     """Add metadata information from CSV file to current item.
 
@@ -293,6 +324,8 @@ def _add_metadata(item, metadata, remotes):
     elif len(metadata) > 0:
         print "Metadata not found for sample %s, %s" % (item["description"],
                                                         os.path.basename(item["files"][0]))
+    if tz.get_in(["metadata", "ped"], item):
+        item["metadata"] = _add_ped_metadata(item["description"], item["metadata"])
     return item
 
 def _retrieve_remote(fnames):
@@ -317,6 +350,17 @@ def _retrieve_remote(fnames):
                     "region": regions[0] if len(regions) == 1 else None}
     return {}
 
+def _convert_to_relpaths(data, work_dir):
+    """Convert absolute paths in the input data to relative paths to the work directory.
+    """
+    work_dir = os.path.abspath(work_dir)
+    data["files"] = [os.path.relpath(f, work_dir) for f in data["files"]]
+    for topk in ["metadata", "algorithm"]:
+        for k, v in data[topk].items():
+            if isinstance(v, basestring) and os.path.isfile(v) and os.path.isabs(v):
+                data[topk][k] = os.path.relpath(v, work_dir)
+    return data
+
 def setup(args):
     template, template_txt = name_to_config(args.template)
     base_item = template["details"][0]
@@ -328,6 +372,8 @@ def setup(args):
 
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
+    if hasattr(args, "relpaths") and args.relpaths:
+        items = [_convert_to_relpaths(x, work_dir) for x in items]
     if len(items) == 0:
         out_config_file = _write_template_config(template_txt, project_name, out_dir)
         print "Template configuration file created at: %s" % out_config_file
