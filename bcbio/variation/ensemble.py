@@ -41,6 +41,7 @@ def combine_calls(batch_id, samples, data):
             config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
             callinfo = _run_ensemble(batch_id, vrn_files, config_file, base_dir,
                                      edata["sam_ref"], edata)
+            callinfo["vrn_file"] = vcfutils.bgzip_and_index(callinfo["vrn_file"], data["config"])
         edata["config"]["algorithm"]["variantcaller"] = "ensemble"
         edata["vrn_file"] = callinfo["vrn_file"]
         edata["ensemble_bed"] = callinfo["bed_file"]
@@ -49,7 +50,7 @@ def combine_calls(batch_id, samples, data):
         out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(batch_id))
         vcfutils.write_empty_vcf(out_vcf_file)
         callinfo = {"variantcaller": "ensemble",
-                    "vrn_file": out_vcf_file,
+                    "vrn_file": vcfutils.bgzip_and_index(out_vcf_file, data["config"]),
                     "bed_file": None}
     return [[batch_id, callinfo]]
 
