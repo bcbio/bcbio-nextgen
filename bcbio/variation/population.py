@@ -35,7 +35,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
             ped_file = create_ped_file(samples + extras, gemini_vcf)
             gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
-                              "vcf": gemini_vcf if is_batch else None}]]
+                              "vcf": multisample_vcf if is_batch else None}]]
 
 def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
     if not gemini_db:
