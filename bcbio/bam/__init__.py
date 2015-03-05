@@ -376,18 +376,11 @@ def _get_sort_stem(in_bam, order):
     return sort_base + SUFFIXES[order]
 
 def sample_name(in_bam):
+    """Get sample name from BAM file.
     """
-    get sample name from a BAM file as a work around for pysam 0.6 header
-    parsing issues. This can get replaced by the pysam version in cortex.py
-    when we move to Docker.
-    """
-    cmd = "samtools view -H {in_bam}".format(**locals())
-    out, _ = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()
-    name = None
-    for line in out.split("\n"):
-        if line.startswith("@RG"):
-            name = [x.split(":")[1] for x in line.split() if x.split(":")[0] == "SM"]
-    return name[0] if name else None
+    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
+        if "RG" in in_pysam.header:
+            return in_pysam.header["RG"][0]["SM"]
 
 def estimate_read_length(bam_file, nreads=1000):
     """

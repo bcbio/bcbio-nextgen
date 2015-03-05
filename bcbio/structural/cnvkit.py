@@ -102,7 +102,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
     """
     ref_file = dd.get_ref_file(data)
     raw_work_dir = os.path.join(work_dir, "raw")
-    out_base = os.path.splitext(os.path.basename(test_bams[0]))[0]
+    out_base = os.path.splitext(os.path.basename(test_bams[0]))[0].split(".")[0]
     background_cnn = "%s_background.cnn" % (background_name if background_name else "flat")
     if not utils.file_exists(os.path.join(raw_work_dir, "%s.cnr" % out_base)):
         if os.path.exists(raw_work_dir):
