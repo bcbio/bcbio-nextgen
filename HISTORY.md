@@ -15,6 +15,7 @@
 - Installation and upgrade: Set pip SSL certificates to point at installed conda
   SSL package if present. Avoids SSL errors when pip can't find system
   certificates. Thanks to Andrew Oler.
+- Enable support for PBSPro schedulers through ipython-cluster-helper.
 
 ## 0.8.6 (23 February 2015)
 

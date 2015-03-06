@@ -80,7 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--memory-per-job", default=2, help="Memory in GB to reserve per job.")
     parser.add_argument("--timeout", default=15, help="Time to wait before giving up starting.")
     parser.add_argument("-s", "--scheduler", help="Type of scheduler to use.",
-                        choices=["lsf", "slurm", "torque", "sge"])
+                        choices=["lsf", "slurm", "torque", "sge", "pbspro"])
     parser.add_argument("-r", "--resources", help="Extra scheduler resource flags.")
     parser.add_argument("-q", "--queue", help="Queue to submit jobs to.")
     parser.add_argument("-t", "--paralleltype",

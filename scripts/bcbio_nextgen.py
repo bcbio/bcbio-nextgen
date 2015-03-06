@@ -23,7 +23,7 @@ Usage:
           - local: Non-distributed, possibly multiple if n > 1 (default)
           - ipython: IPython distributed processing
      -n total number of processes to use
-     -s scheduler for ipython parallelization (lsf, sge, slurm)
+     -s scheduler for ipython parallelization (lsf, sge, slurm, torque, pbspro)
      -q queue to submit jobs for ipython parallelization
 """
 import os
@@ -77,7 +77,7 @@ def parse_cl_args(in_args):
                             choices=["local", "ipython"],
                             default="local", help="Approach to parallelization")
         parser.add_argument("-s", "--scheduler",
-                            choices=["lsf", "sge", "torque", "slurm"],
+                            choices=["lsf", "sge", "torque", "slurm", "pbspro"],
                             help="Scheduler to use for ipython parallel")
         parser.add_argument("-q", "--queue",
                             help=("Scheduler queue to run jobs on, for "
