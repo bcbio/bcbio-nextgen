@@ -46,11 +46,7 @@ def create(parallel, dirs, config):
             cores = parallel["num_jobs"] * parallel["cores_per_job"]
         else:
             cores = int(math.floor(cores * float(parallel.get("mem_pct", 1.0))))
-            # if we have larger number of cores, leave room for standard batch script and controller
-            if cores > 30 and parallel["num_jobs"] // cores < 5:
-                cores = cores - 2
-            elif cores > 15 and parallel["num_jobs"] // cores < 10:
-                cores = cores - 1
+            cores = per_machine_target_cores(cores, parallel["num_jobs"] // cores)
         parallel["resources"].append("mincores=%s" % cores)
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                         parallel["num_jobs"], parallel["cores_per_job"],
@@ -60,6 +56,19 @@ def create(parallel, dirs, config):
                                                       "tag": parallel.get("tag"),
                                                       "run_local": parallel.get("run_local")},
                                         retries=parallel.get("retries"))
+
+def per_machine_target_cores(cores, num_jobs):
+    """Select target cores on larger machines to leave room for batch script and controller.
+
+    On resource constrained environments, we want to pack all bcbio submissions onto a specific
+    number of machines. This gives up some cores to enable sharing cores with the controller
+    and batch script on larger machines.
+    """
+    if cores > 30:
+        cores = cores - 2
+    elif cores > 15 and num_jobs < 10:
+        cores = cores - 1
+    return cores
 
 def _get_common_cores(resources):
     """Retrieve the most common configured number of cores in the input file.
