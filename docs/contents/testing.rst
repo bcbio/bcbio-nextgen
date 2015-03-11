@@ -151,6 +151,8 @@ to the NIST reference materials, enabling rapid comparisons of methods.
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
 .. _EdgeBio's: http://www.edgebio.com/
 
+.. _example-cancer:
+
 Cancer tumor normal
 ~~~~~~~~~~~~~~~~~~~
 

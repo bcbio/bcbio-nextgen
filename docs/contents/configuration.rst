@@ -501,6 +501,8 @@ Structural variant calling
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
   ``disambiguate`` enables disambiguation of ``STAR`` output [false, true].
 
+.. _config-cancer:
+
 Cancer variant calling
 ======================
 

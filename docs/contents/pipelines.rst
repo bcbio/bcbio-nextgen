@@ -50,10 +50,10 @@ prepare a `GEMINI database`_ that associates variants with multiple
 external annotations in a SQL-based query interface.
 
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
-.. _variant evaluation framework: https://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
-.. _FreeBayes and BAM post-alignment processing: https://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
-.. _improve variant filtering: http://bcbio.wordpress.com/2014/05/12/wgs-trio-variant-evaluation/
-.. _Validation of structural variant detection: http://bcbio.wordpress.com/2014/08/12/validated-whole-genome-structural-variation-detection-using-multiple-callers/
+.. _variant evaluation framework: https://bcb.io/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
+.. _FreeBayes and BAM post-alignment processing: https://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+.. _improve variant filtering: http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/
+.. _Validation of structural variant detection: http://bcb.io/2014/08/12/validated-whole-genome-structural-variation-detection-using-multiple-callers/
 
 .. _GATK UnifiedGenotyper: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_genotyper_UnifiedGenotyper.html
 .. _GATK HaplotypeCaller: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_haplotypecaller_HaplotypeCaller.html
@@ -64,7 +64,7 @@ external annotations in a SQL-based query interface.
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _GEMINI database: http://gemini.readthedocs.org/en/latest/
 .. _Variant Effect Predictor: http://www.ensembl.org/info/docs/tools/vep/index.html
-.. _evaluation of joint calling: http://bcbio.wordpress.com/2014/10/07/joint-calling/
+.. _evaluation of joint calling: http://bcb.io/2014/10/07/joint-calling/
 
 Basic germline calling
 ======================
@@ -132,23 +132,35 @@ all merged sample calls. bcbio has two methods to call samples together:
 
 Cancer variant calling
 ~~~~~~~~~~~~~~~~~~~~~~
+bcbio supports somatic cancer calling with tumor and optionally matched normal pairs using
+multiple SNP, indel and structural variant callers. A `full evaluation of cancer calling`_
+validates callers against `synthetic dataset 3 from the ICGC-TCGA DREAM challenge`_.
+bcbio uses a majority voting ensemble approach to combining calls from
+multiple SNP and indel callers, and also flattens structural variant calls into a
+combined representation.
 
-We support cancer calling with tumor and optionally matched normal pairs using
-multiple callers:
+The `example configuration <https://github.com/chapmanb/bcbio-nextgen/blob/master/config/examples/cancer-dream-syn3.yaml>`_
+for the :ref:`example-cancer` validation is a good starting point for setting up
+a tumor/normal run on your own dataset. The configuration works similarly to
+population based calling. Supply a consistent batch for tumor/normal pairs and
+mark them with the phenotype::
 
-   - `MuTect`_ (version 1.1.5 and above)
-   - `VarScan`_
-   - `FreeBayes`_
-   - `VarDict`_
+    - description: your-tumor
+      metadata:
+        batch: batch1
+        phenotype: tumor
+    - description: your-normal
+      metadata:
+        batch: batch1
+        phenotype: normal
 
-We're actively working on evaluating and tuning these callers using `synthetic
-dataset 3 from the ICGC-TCGA DREAM challenge`_ and will be reporting on those
-results and suggesting recommended approaches.
+Other :ref:`config-cancer` configuration options allow tweaking of the
+processing parameters.
 
-.. _MuTect: http://www.broadinstitute.org/cancer/cga/mutect
-.. _VarScan: http://varscan.sourceforge.net
-.. _VarDict: https://github.com/AstraZeneca-NGS/VarDict
-.. _FreeBayes: https://github.com/ekg/freebayes
+We're actively working on improving calling to better account for the
+heterogeneity and structural variability that define cancer genomes.
+
+.. _full evaluation of cancer calling: http://bcb.io/2015/03/05/cancerval/
 .. _synthetic dataset 3 from the ICGC-TCGA DREAM challenge: https://www.synapse.org/#!Synapse:syn312572/wiki/62018
 
 RNA-seq

@@ -22,11 +22,11 @@ Contents:
 
    contents/introduction
    contents/installation
+   contents/pipelines
    contents/testing
    contents/configuration
    contents/parallel
    contents/cloud
-   contents/pipelines
    contents/outputs
    contents/code
    contents/sequencer

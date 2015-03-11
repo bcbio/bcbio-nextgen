@@ -18,7 +18,7 @@ details:
     ensemble:
       numpass: 2
     variant_regions: ../input/NGv3.bed
-    #svcaller: [cn.mops, lumpy, delly]
+    # svcaller: [cnvkit, lumpy, delly]
   analysis: variant2
   description: syn3-normal
   #files: ../input/synthetic.challenge.set3.normal.bam
@@ -46,7 +46,7 @@ details:
     variant_regions: ../input/NGv3.bed
     validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
     validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
-  #   svcaller: [cn.mops, lumpy, delly]
+    # svcaller: [cnvkit, lumpy, delly]
   #   svvalidate:
   #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
   #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
