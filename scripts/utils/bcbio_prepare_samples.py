@@ -41,7 +41,7 @@ def _get_samples_to_process(fn):
                 cols = l.strip().split(",")
                 samples[cols[1]].append(cols)
     for sample, items in samples.iteritems():
-        if is_fastq(items[0][0]):
+        if is_fastq(items[0][0], True):
             fn = fq_merge
             ext = ".fastq.gz"
         elif is_bam(items[0][0]):

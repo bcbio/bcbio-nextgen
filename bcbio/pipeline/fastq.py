@@ -55,6 +55,24 @@ def _gzip_fastq(in_file):
         return gzipped_file
     return in_file
 
+def _bzip_gzip(in_file):
+    """
+    convert from bz2 to gz
+    """
+    if not utils.is_bzipped(in_file):
+        return in_file
+    base, first_ext = os.path.splitext(in_file)
+    if (fastq.is_fastq(base) and not utils.is_gzipped(in_file)
+          and not in_file.startswith(utils.SUPPORTED_REMOTES)):
+        gzipped_file = base + ".gz"
+        if file_exists(gzipped_file):
+            return gzipped_file
+        message = "gzipping {in_file}.".format(in_file=in_file)
+        do.run("bunzip2 -c {in_file} | gzip > {gzipped_file}".format(**locals()), message)
+        return gzipped_file
+    return in_file
+
+
 def _pipeline_needs_fastq(config, data):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
     """
@@ -109,6 +127,7 @@ def _merge_list_fastqs(files, out_file, config):
     assert all(map(utils.file_exists, files)), ("Not all of the files to merge "
                                                 "exist: %s" % (files))
     if not os.path.exists(out_file):
+        files = [_bzip_gzip(fn) for fn in files]
         if len(files) == 1:
             os.symlink(files[0], out_file)
             return out_file

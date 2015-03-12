@@ -148,10 +148,11 @@ def dif(a, b):
     """ copy from http://stackoverflow.com/a/8545526 """
     return [i for i in range(len(a)) if a[i] != b[i]]
 
-
-def is_fastq(in_file):
+def is_fastq(in_file, bzip=True):
     fastq_ends = [".txt", ".fq", ".fastq"]
     zip_ends = [".gzip", ".gz"]
+    if bzip:
+        zip_ends += [".bz2", ".bzip2"]
     base, first_ext = os.path.splitext(in_file)
     second_ext = os.path.splitext(base)[1]
     if first_ext in fastq_ends:

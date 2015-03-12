@@ -681,6 +681,10 @@ def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
     return ext in [".gz", "gzip"]
 
+def is_bzipped(fname):
+    _, ext = os.path.splitext(fname)
+    return ext in [".bz2", "bzip2"]
+
 def open_possible_gzip(fname, flag="r"):
     if is_gzipped(fname):
         if "b" not in flag:
