@@ -1,5 +1,6 @@
-## 0.8.7 (10 March 2015)
+## 0.8.7 (12 March 2015)
 
+- Allow bz2 files in bcbio_prepare_sample.py script
 - Run snpEff 4.1 in back-compatibility mode to work with GEMINI database
   loading. Fixes snpEff 4.1/GEMINI effects loading.
 - Add PED file to GEMINI database load, containing family, gender and phenotype
