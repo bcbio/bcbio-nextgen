@@ -59,19 +59,18 @@ def _bzip_gzip(in_file):
     """
     convert from bz2 to gz
     """
-    if not utils.is_bzipped(in_file):
-        return in_file
     base, first_ext = os.path.splitext(in_file)
-    if (fastq.is_fastq(base) and not utils.is_gzipped(in_file)
+    gzipped_file = base + ".gz"
+    if not file_exists(gzipped_file):
+        return gzipped_file
+    if (fastq.is_fastq(base) and utils.is_bzipped(in_file)
           and not in_file.startswith(utils.SUPPORTED_REMOTES)):
-        gzipped_file = base + ".gz"
         if file_exists(gzipped_file):
             return gzipped_file
         message = "gzipping {in_file}.".format(in_file=in_file)
         do.run("bunzip2 -c {in_file} | gzip > {gzipped_file}".format(**locals()), message)
         return gzipped_file
     return in_file
-
 
 def _pipeline_needs_fastq(config, data):
     """Determine if the pipeline can proceed with a BAM file, or needs fastq conversion.
