@@ -1,6 +1,12 @@
+## 0.8.8 (in progress)
+
+- Update vt decompose to handle additional multi-allelic adjustments including
+  all format attributes, providing full support for new GEMINI changes. Thanks
+  to Brent Pedersen and Adrian Tan.
+- Allow bz2 files in bcbio_prepare_sample.py script.
+
 ## 0.8.7 (12 March 2015)
 
-- Allow bz2 files in bcbio_prepare_sample.py script
 - Run snpEff 4.1 in back-compatibility mode to work with GEMINI database
   loading. Fixes snpEff 4.1/GEMINI effects loading.
 - Add PED file to GEMINI database load, containing family, gender and phenotype

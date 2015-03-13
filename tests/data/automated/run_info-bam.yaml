@@ -33,7 +33,7 @@ details:
       #svcaller: [delly, lumpy, cn.mops]
       #svcaller: cnvkit
       #remove_lcr: true
-      tools_off: [gemini]
+      #tools_off: [gemini]
       mixup_check: qsignature
       #variantcaller: [gatk, gatk-haplotype]
       quality_format: standard

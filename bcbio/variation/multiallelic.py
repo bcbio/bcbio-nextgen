@@ -52,7 +52,9 @@ def _decompose(in_file, data):
     if not utils.file_exists(out_file):
         assert out_file.endswith(".vcf.gz")
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = ("vt decompose %s "
+            cmd = ("gunzip -c %s | "
+                   "sed 's/ID=AD,Number=./ID=AD,Number=R/' | "
+                   "vt decompose -s - "
                    """| awk '{ gsub("./-65", "./."); print $0 }'"""
                    "| bgzip -c > %s")
             do.run(cmd % (in_file, tx_out_file), "Multi-allelic to single allele")
