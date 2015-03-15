@@ -123,7 +123,11 @@ def process_alignment(data):
         data["config"]["algorithm"]["variantcaller"] = False
         data["work_bam"] = None
     else:
-        raise ValueError("Could not process input file: %s" % fastq1)
+        raise ValueError("Could not process input file from sample configuration. \n" +
+                         fastq1 +
+                         "\nIs the path to the file correct?\n" +
+                         "If it is a fastq file (not pre-aligned BAM or CRAM), "
+                         "is an aligner specified in the input configuration?")
     return [[data]]
 
 def prep_samples(*items):
