@@ -10,6 +10,7 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
+from bcbio.distributed import objectstore
 from bcbio.log import logger
 from bcbio.ngsalign import star
 from bcbio.pipeline import alignment
@@ -55,14 +56,14 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
             if k not in ignore_keys and v and isinstance(v, basestring):
                 if v.lower() == "none":
                     out[k] = None
-                elif os.path.exists(v) or v.startswith(utils.SUPPORTED_REMOTES):
+                elif os.path.exists(v) or objectstore.is_remote(v):
                     out[k] = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(v, input_dir)))
                 else:
                     out[k] = v
             else:
                 out[k] = v
     elif isinstance(xs, basestring):
-        if os.path.exists(xs) or xs.startswith(utils.SUPPORTED_REMOTES):
+        if os.path.exists(xs) or objectstore.is_remote(xs):
             out = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(xs, input_dir)))
         else:
             out = xs
@@ -135,12 +136,6 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
     remap_fn = alignment.TOOLS[name].remap_index_fn
     need_remap = remap_fn is not None
     if len(refs) == 0:
-        # if we have an S3 connection, try to download
-        try:
-            import boto
-            boto.connect_s3()
-        except:
-            raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
         logger.info("Downloading %s %s from AWS" % (genome_build, name))
         cur_ref = download_prepped_genome(genome_build, data, name, need_remap)
     # allow multiple references in a file and use the most recently added
@@ -224,8 +219,6 @@ def get_builds(galaxy_base):
 
 REMAP_NAMES = {"tophat2": "bowtie2",
                "samtools": "seq"}
-S3_INFO = {"bucket": "biodata",
-           "key": "prepped/{build}/{build}-{target}.tar.gz"}
 INPLACE_INDEX = {"star": star.index}
 
 def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
@@ -248,9 +241,16 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
             ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
             INPLACE_INDEX[target](ref_file, ref_dir, data)
         else:
+            # XXX Currently only supports genomes from S3 us-east-1 bucket.
+            # Need to assess how slow this is from multiple regions and generalize to non-AWS.
+            bucket = objectstore.BIODATA_INFO["S3"]["bucket"]
+            key = objectstore.BIODATA_INFO["S3"]["key"].format(build=genome_build,
+                                                               target=REMAP_NAMES.get(name, name))
+            try:
+                objectstore.connect("s3://{bucket}".format(**locals()))
+            except:
+                raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
             with utils.chdir(out_dir):
-                bucket = S3_INFO["bucket"]
-                key = S3_INFO["key"].format(build=genome_build, target=REMAP_NAMES.get(name, name))
                 cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
                 do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]

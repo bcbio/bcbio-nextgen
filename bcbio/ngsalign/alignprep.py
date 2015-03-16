@@ -11,6 +11,7 @@ import toolz as tz
 from bcbio import bam, utils
 from bcbio.bam import cram
 from bcbio.log import logger
+from bcbio.distributed import objectstore
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
@@ -27,7 +28,7 @@ def create_inputs(data):
     # CRAM files must be converted to bgzipped fastq, unless not aligning.
     # Also need to prep and download remote files.
     if not ("files" in data and aligner and (_is_cram_input(data["files"]) or
-                                             _is_remote_input(data["files"]))):
+                                             objectstore.is_remote(data["files"][0]))):
         # skip indexing on samples without input files or not doing alignment
         # skip if we're not BAM and not doing alignment splitting
         if ("files" not in data or data["files"][0] is None or not aligner
@@ -149,9 +150,6 @@ def _is_bam_input(in_files):
 
 def _is_cram_input(in_files):
     return in_files[0].endswith(".cram") and (len(in_files) == 1 or in_files[1] is None)
-
-def _is_remote_input(in_files):
-    return in_files[0].startswith(utils.SUPPORTED_REMOTES)
 
 def _prep_grabix_indexes(in_files, dirs, data):
     if _is_bam_input(in_files):
@@ -374,13 +372,13 @@ def _bgzip_from_fastq(data):
     config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
-    if in_file.endswith(".gz") and not in_file.startswith(utils.SUPPORTED_REMOTES):
+    if in_file.endswith(".gz") and not objectstore.is_remote(in_file):
         needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix, needs_convert)
-    elif in_file.startswith(utils.SUPPORTED_REMOTES) and not tz.get_in(["algorithm", "align_split_size"], config):
+    elif objectstore.is_remote(in_file) and not tz.get_in(["algorithm", "align_split_size"], config):
         needs_bgzip, needs_gunzip = False, False
     else:
         needs_bgzip, needs_gunzip = True, False
-    if needs_bgzip or needs_gunzip or needs_convert or in_file.startswith(utils.SUPPORTED_REMOTES):
+    if needs_bgzip or needs_gunzip or needs_convert or objectstore.is_remote(in_file):
         out_file = _bgzip_file(in_file, data["dirs"], config, needs_bgzip, needs_gunzip,
                                needs_convert)
     else:
@@ -396,7 +394,7 @@ def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert)
     if not utils.file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
             bgzip = tools.get_bgzip_cmd(config)
-            is_remote = in_file.startswith(utils.SUPPORTED_REMOTES)
+            is_remote = objectstore.is_remote(in_file)
             in_file = utils.remote_cl_input(in_file, unpack=needs_gunzip or needs_convert or needs_bgzip)
             if needs_convert:
                 in_file = fastq_convert_pipe_cl(in_file, {"config": config})

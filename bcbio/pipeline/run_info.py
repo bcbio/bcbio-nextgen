@@ -14,6 +14,7 @@ import yaml
 
 from bcbio import install, utils
 from bcbio.log import logger
+from bcbio.distributed import objectstore
 from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.provenance import diagnostics, programs, versioncheck
@@ -97,7 +98,7 @@ def _add_remote_resources(resources):
     out = copy.deepcopy(resources)
     for prog, info in resources.iteritems():
         for key, val in info.iteritems():
-            if key == "jar" and val.startswith(utils.SUPPORTED_REMOTES):
+            if key == "jar" and objectstore.is_remote(val):
                 store_dir = utils.safe_makedir(os.path.join(os.getcwd(), "inputs", "jars", prog))
                 fname = utils.dl_remotes(val, store_dir, store_dir)
                 version_file = os.path.join(store_dir, "version.txt")
@@ -328,7 +329,7 @@ def _check_quality_format(items):
         fastq_file = next((file for file in item.get('files', []) if
                            any([ext for ext in fastq_extensions if ext in file])), None)
 
-        if fastq_file and specified_format and not fastq_file.startswith(utils.SUPPORTED_REMOTES):
+        if fastq_file and specified_format and not objectstore.is_remote(fastq_file):
             fastq_format = _detect_fastq_format(fastq_file)
             detected_encodings = set([SAMPLE_FORMAT[x] for x in fastq_format])
             if detected_encodings:
@@ -398,7 +399,7 @@ def _file_to_abs(x, dnames):
     """
     if x is None or os.path.isabs(x):
         return x
-    elif isinstance(x, basestring) and x.lower().startswith(utils.SUPPORTED_REMOTES):
+    elif isinstance(x, basestring) and objectstore.is_remote(x):
         return x
     elif isinstance(x, basestring) and x.lower() == "none":
         return None

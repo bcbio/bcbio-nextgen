@@ -6,6 +6,7 @@ import sys
 from bcbio import bam, broad, utils
 from bcbio.bam import fastq
 from bcbio.bam import cram
+from bcbio.distributed import objectstore
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir, splitext_plus
 from bcbio.provenance import do
@@ -28,7 +29,7 @@ def get_fastq_files(data):
                                                     data, data["dirs"], data["config"])
             else:
                 ready_files = [fname]
-        elif fname.startswith(utils.SUPPORTED_REMOTES):
+        elif objectstore.is_remote(fname):
             ready_files.append(fname)
         else:
             ready_files.append(fname)
@@ -36,7 +37,7 @@ def get_fastq_files(data):
     if should_gzip:
         ready_files = [_gzip_fastq(x) for x in ready_files]
     for in_file in ready_files:
-        if not in_file.startswith(utils.SUPPORTED_REMOTES):
+        if not objectstore.is_remote(in_file):
             assert os.path.exists(in_file), "%s does not exist." % in_file
     return ((ready_files[0] if len(ready_files) > 0 else None),
             (ready_files[1] if len(ready_files) > 1 else None))
@@ -46,7 +47,7 @@ def _gzip_fastq(in_file):
     gzip a fastq file if it is not already gzipped
     """
     if (fastq.is_fastq(in_file) and not utils.is_gzipped(in_file)
-          and not in_file.startswith(utils.SUPPORTED_REMOTES)):
+          and not objectstore.is_remote(in_file)):
         gzipped_file = in_file + ".gz"
         if file_exists(gzipped_file):
             return gzipped_file
@@ -64,7 +65,7 @@ def _bzip_gzip(in_file):
     if not file_exists(gzipped_file):
         return gzipped_file
     if (fastq.is_fastq(base) and utils.is_bzipped(in_file)
-          and not in_file.startswith(utils.SUPPORTED_REMOTES)):
+          and not objectstore.is_remote(in_file)):
         if file_exists(gzipped_file):
             return gzipped_file
         message = "gzipping {in_file}.".format(in_file=in_file)

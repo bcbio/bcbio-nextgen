@@ -21,6 +21,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.bam import fastq, sample_name
+from bcbio.distributed import objectstore
 from bcbio.upload import s3
 from bcbio.pipeline import run_info
 from bcbio.workflow.xprize import HelpArgParser
@@ -42,10 +43,10 @@ def setup_args(parser):
 # ## Prepare sequence data inputs
 
 def _prep_bam_input(f, i, base):
-    if not os.path.exists(f) and not f.startswith(utils.SUPPORTED_REMOTES):
+    if not os.path.exists(f) and not objectstore.is_remote(f):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
-    if f.startswith(utils.SUPPORTED_REMOTES):
+    if objectstore.is_remote(f):
         cur["files"] = [f]
         cur["description"] = os.path.splitext(os.path.basename(f))[0]
     else:
@@ -56,10 +57,10 @@ def _prep_bam_input(f, i, base):
 
 def _prep_fastq_input(fs, base):
     for f in fs:
-        if not os.path.exists(f) and not f.startswith(utils.SUPPORTED_REMOTES):
+        if not os.path.exists(f) and not objectstore.is_remote(f):
             raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
-    cur["files"] = [os.path.abspath(f) if not f.startswith(utils.SUPPORTED_REMOTES) else f for f in fs]
+    cur["files"] = [os.path.abspath(f) if not objectstore.is_remote(f) else f for f in fs]
     d = os.path.commonprefix([utils.splitext_plus(os.path.basename(f))[0] for f in fs])
     cur["description"] = fastq.rstrip_extra(d)
     return cur
@@ -120,7 +121,7 @@ def name_to_config(template):
     Handles well-known template names, pulled from GitHub repository and local
     files.
     """
-    if template.startswith(utils.SUPPORTED_REMOTES):
+    if objectstore.is_remote(template):
         with utils.s3_handle(template) as in_handle:
             config = yaml.load(in_handle)
         txt_config = None
@@ -238,7 +239,7 @@ def _pname_and_metadata(in_file):
         with open(in_file) as in_handle:
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
-    elif in_file.startswith(utils.SUPPORTED_REMOTES):
+    elif objectstore.is_remote(in_file):
         with utils.s3_handle(in_file) as in_handle:
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
@@ -332,7 +333,7 @@ def _retrieve_remote(fnames):
     """Retrieve remote inputs found in the same bucket as the template or metadata files.
     """
     for fname in fnames:
-        if fname.startswith(utils.SUPPORTED_REMOTES):
+        if objectstore.is_remote(fname):
             bucket_name, key_name = utils.s3_bucket_key(fname)
             folder = os.path.dirname(key_name)
             conn = boto.connect_s3()

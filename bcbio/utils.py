@@ -27,8 +27,6 @@ except ImportError:
 
 # ## S3 interaction
 
-SUPPORTED_REMOTES = ("s3://",)
-
 def s3_bucket_key(fname):
     return fname.split("//")[-1].split("/", 1)
 
@@ -285,14 +283,6 @@ def tmpfile(*args, **kwargs):
         os.close(fd)
         if os.path.exists(fname):
             os.remove(fname)
-
-def file_exists_or_remote(fname):
-    """Check if a file exists or is accessible remotely.
-    """
-    if fname.startswith(SUPPORTED_REMOTES):
-        return True
-    else:
-        return file_exists(fname)
 
 def file_exists(fname):
     """Check if a file exists and is non-empty.
