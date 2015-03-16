@@ -12,6 +12,7 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.bam import ref
+from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -19,7 +20,7 @@ from bcbio.provenance import do
 def is_paired(bam_file):
     """Determine if a BAM file has paired reads.
     """
-    bam_file = utils.remote_cl_input(bam_file)
+    bam_file = objectstore.cl_input(bam_file)
     cmd = ("sambamba view -h {bam_file} | head -50000 | "
            "sambamba view -S -F paired /dev/stdin  | head -1 | wc -l")
     out = subprocess.check_output(cmd.format(**locals()), shell=True,

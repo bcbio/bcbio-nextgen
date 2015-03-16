@@ -122,7 +122,7 @@ def name_to_config(template):
     files.
     """
     if objectstore.is_remote(template):
-        with utils.s3_handle(template) as in_handle:
+        with objectstore.open(template) as in_handle:
             config = yaml.load(in_handle)
         txt_config = None
     elif os.path.isfile(template):
@@ -240,7 +240,7 @@ def _pname_and_metadata(in_file):
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
     elif objectstore.is_remote(in_file):
-        with utils.s3_handle(in_file) as in_handle:
+        with objectstore.open(in_file) as in_handle:
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
     else:
@@ -334,18 +334,14 @@ def _retrieve_remote(fnames):
     """
     for fname in fnames:
         if objectstore.is_remote(fname):
-            bucket_name, key_name = utils.s3_bucket_key(fname)
-            folder = os.path.dirname(key_name)
-            conn = boto.connect_s3()
-            bucket = conn.get_bucket(bucket_name)
             inputs = []
             regions = []
-            for key in bucket.get_all_keys(prefix=folder):
-                if key.name.endswith(tuple(KNOWN_EXTS.keys())):
-                    inputs.append("s3://%s/%s" % (bucket_name, key.name))
-                elif key.name.endswith((".bed", ".bed.gz")):
-                    regions.append("s3://%s/%s" % (bucket_name, key.name))
-            remote_base = "s3://{bucket_name}/{folder}".format(**locals())
+            remote_base = os.path.dirname(fname)
+            for rfname in objectstore.list(remote_base):
+                if rfname.endswith(tuple(KNOWN_EXTS.keys())):
+                    inputs.append(rfname)
+                elif rfname.endswith((".bed", ".bed.gz")):
+                    regions.append(rfname)
             return {"base": remote_base,
                     "inputs": inputs,
                     "region": regions[0] if len(regions) == 1 else None}
@@ -389,7 +385,6 @@ def setup(args):
         print "  bcbio_nextgen.py ../config/%s" % os.path.basename(out_config_file)
         if remotes.get("base"):
             remote_path = os.path.join(remotes["base"], os.path.basename(out_config_file))
-            bucket, key = utils.s3_bucket_key(remote_path)
-            s3.upload_file_boto(out_config_file, bucket, key)
+            s3.upload_file_boto(out_config_file, remote_path)
             print "Also uploaded to AWS S3 in %s" % remotes["base"]
             print "Run directly with bcbio_vm.py run %s" % remote_path

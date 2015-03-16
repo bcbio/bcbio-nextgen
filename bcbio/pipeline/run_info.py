@@ -100,7 +100,7 @@ def _add_remote_resources(resources):
         for key, val in info.iteritems():
             if key == "jar" and objectstore.is_remote(val):
                 store_dir = utils.safe_makedir(os.path.join(os.getcwd(), "inputs", "jars", prog))
-                fname = utils.dl_remotes(val, store_dir, store_dir)
+                fname = objectstore.download(val, store_dir, store_dir)
                 version_file = os.path.join(store_dir, "version.txt")
                 if not utils.file_exists(version_file):
                     version = install.get_gatk_jar_version(prog, fname)

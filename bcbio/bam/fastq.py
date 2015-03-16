@@ -7,6 +7,7 @@ import random
 import gzip
 
 from Bio import SeqIO
+from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import utils
@@ -235,8 +236,8 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
 def open_fastq(in_file):
     """ open a fastq file, using gzip if it is gzipped
     """
-    if in_file.startswith("s3:"):
-        return utils.s3_handle(in_file)
+    if objectstore.is_remote(in_file):
+        return objectstore.open(in_file)
     _, ext = os.path.splitext(in_file)
     if ext == ".gz":
         return gzip.open(in_file, 'rb')

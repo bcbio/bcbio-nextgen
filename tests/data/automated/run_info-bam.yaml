@@ -58,10 +58,10 @@ details:
     description: Test1
     genome_build: hg19
     lane: 7
-    files: ['s3://bcbio_nextgen/testing/7_100326_FC6107FAAXX_1_fastq.txt.gz', 's3://bcbio_nextgen/testing/7_100326_FC6107FAAXX_2_fastq.txt.gz']
+    #files: ['s3://bcbio_nextgen/testing/7_100326_FC6107FAAXX_1_fastq.txt.gz', 's3://bcbio_nextgen/testing/7_100326_FC6107FAAXX_2_fastq.txt.gz']
     #files: s3://bcbio_test_run1/align/Test1/Test1-sort.bam
     #files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
-    #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
+    files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
     #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
   # - algorithm:
   #     aligner: bwa

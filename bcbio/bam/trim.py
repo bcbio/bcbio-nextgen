@@ -6,6 +6,7 @@ import sys
 from bcbio import utils
 from bcbio.utils import (file_exists, append_stem, replace_directory)
 from bcbio.log import logger
+from bcbio.distributed import objectstore
 from bcbio.provenance import do
 from Bio.Seq import Seq
 from bcbio.distributed.transaction import file_transaction
@@ -93,7 +94,7 @@ def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     """
     min_length = MINIMUM_LENGTH
     cmd = base_cmd + " --minimum-length={min_length} ".format(**locals())
-    fq1 = utils.remote_cl_input(fastq_files[0])
+    fq1 = objectstore.cl_input(fastq_files[0])
     of1 = out_files[0]
     cmd += " -o {of1} " + str(fq1)
     return cmd
@@ -104,7 +105,7 @@ def _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd):
     https://github.com/najoshi/sickle/issues/32
     until that is resolved, this is a workaround which avoids using sickle
     """
-    fq1, fq2 = [utils.remote_cl_input(x) for x in fastq_files]
+    fq1, fq2 = [objectstore.cl_input(x) for x in fastq_files]
     of1, of2 = out_files
     base_cmd += " --minimum-length={min_length} ".format(min_length=MINIMUM_LENGTH)
     first_cmd = base_cmd + " -o {tmp_fq1} -p {tmp_fq2} " + fq1 + " " + fq2

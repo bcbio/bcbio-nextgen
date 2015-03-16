@@ -13,7 +13,6 @@ import ConfigParser
 import collections
 import fnmatch
 import subprocess
-import zlib
 
 import toolz as tz
 import yaml
@@ -24,103 +23,6 @@ except ImportError:
         import futures
     except ImportError:
         futures = None
-
-# ## S3 interaction
-
-def s3_bucket_key(fname):
-    return fname.split("//")[-1].split("/", 1)
-
-def dl_remotes(fname, input_dir, dl_dir=None):
-    if fname.startswith("s3://"):
-        from bcbio.distributed.transaction import file_transaction
-        bucket, key = s3_bucket_key(fname)
-        if not dl_dir:
-            dl_dir = safe_makedir(os.path.join(input_dir, bucket, os.path.dirname(key)))
-        out_file = os.path.join(dl_dir, os.path.basename(key))
-        if not file_exists(out_file):
-            with file_transaction({}, out_file) as tx_out_file:
-                cmd = ["gof3r", "get", "--no-md5", "-k", key, "-b", bucket, "-p", tx_out_file]
-                subprocess.check_call(cmd)
-        return out_file
-    else:
-        return fname
-
-def remote_cl_input(fname, unpack=True):
-    """Return command line input for a file, handling streaming remote cases.
-    """
-    if not fname:
-        return fname
-    elif fname.startswith("s3://"):
-        bucket, key = s3_bucket_key(fname)
-        gunzip = "| gunzip -c" if fname.endswith(".gz") and unpack else ""
-        return "<(gof3r get --no-md5 -k {key} -b {bucket} {gunzip})".format(**locals())
-    else:
-        return fname
-
-def s3_handle(fname):
-    """Return a handle like object for streaming from S3.
-    """
-    import boto
-
-    class S3Handle:
-        def __init__(self, key):
-            self._key = key
-            self._iter = self._line_iter()
-        def _line_iter(self):
-            """From mrjob: https://github.com/Yelp/mrjob/blob/master/mrjob/util.py
-            """
-            buf = ""
-            search_offset = 0
-            for chunk in self._chunk_iter():
-                buf += chunk
-                start = 0
-                while True:
-                    end = buf.find("\n", start + search_offset) + 1
-                    if end:  # if find() returned -1, end would be 0
-                        yield buf[start:end]
-                        start = end
-                        # reset the search offset
-                        search_offset = 0
-                    else:
-                        # this will happen eventually
-                        buf = buf[start:]
-                        # set search offset so we do not need to scan this part of the buffer again
-                        search_offset = len(buf)
-                        break
-                if buf:
-                    yield buf + '\n'
-        def _chunk_iter(self):
-            dec = zlib.decompressobj(16 | zlib.MAX_WBITS) if self._key.name.endswith(".gz") else None
-            for chunk in self._key:
-                if dec:
-                    chunk = dec.decompress(chunk)
-                if chunk:
-                    yield chunk
-        def __enter__(self):
-            return self
-        def __exit__(self, *args):
-            self.close()
-        def __iter__(self):
-            return self
-        def read(self, size):
-            return self._key.read(size)
-        def next(self):
-            return self._iter.next()
-        def close(self):
-            self._key.close(fast=True)
-
-    bucket, key = s3_bucket_key(fname)
-    s3 = boto.connect_s3()
-    try:
-        s3b = s3.get_bucket(bucket)
-    except boto.exception.S3ResponseError, e:
-        # if we don't have bucket permissions but folder permissions, try without validation
-        if e.status == 403:
-            s3b = s3.get_bucket(bucket, validate=False)
-        else:
-            raise
-    s3key = s3b.get_key(key)
-    return S3Handle(s3key)
 
 @contextlib.contextmanager
 def cpmap(cores=1):

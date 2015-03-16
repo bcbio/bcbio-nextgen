@@ -57,14 +57,14 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
                 if v.lower() == "none":
                     out[k] = None
                 elif os.path.exists(v) or objectstore.is_remote(v):
-                    out[k] = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(v, input_dir)))
+                    out[k] = os.path.normpath(os.path.join(base_dir, objectstore.download(v, input_dir)))
                 else:
                     out[k] = v
             else:
                 out[k] = v
     elif isinstance(xs, basestring):
         if os.path.exists(xs) or objectstore.is_remote(xs):
-            out = os.path.normpath(os.path.join(base_dir, utils.dl_remotes(xs, input_dir)))
+            out = os.path.normpath(os.path.join(base_dir, objectstore.download(xs, input_dir)))
         else:
             out = xs
     else:
@@ -243,15 +243,14 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
         else:
             # XXX Currently only supports genomes from S3 us-east-1 bucket.
             # Need to assess how slow this is from multiple regions and generalize to non-AWS.
-            bucket = objectstore.BIODATA_INFO["S3"]["bucket"]
-            key = objectstore.BIODATA_INFO["S3"]["key"].format(build=genome_build,
-                                                               target=REMAP_NAMES.get(name, name))
+            fname = objectstore.BIODATA_INFO["S3"].format(build=genome_build,
+                                                          target=REMAP_NAMES.get(name, name))
             try:
-                objectstore.connect("s3://{bucket}".format(**locals()))
+                objectstore.connect(fname)
             except:
                 raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
             with utils.chdir(out_dir):
-                cmd = ("gof3r get --no-md5 -k {key} -b {bucket} | pigz -d -c | tar -xvp")
+                cmd = objectstore.cl_input(fname, unpack=False, anonpipe=False) + " | pigz -d -c | tar -xvp"
                 do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
     if data.get("genome_build"):

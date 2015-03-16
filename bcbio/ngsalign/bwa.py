@@ -7,6 +7,7 @@ import toolz as tz
 
 from bcbio.pipeline import config_utils
 from bcbio import bam, utils
+from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.ngsalign import alignprep, novoalign, postalign
 from bcbio.provenance import do
@@ -46,7 +47,6 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
             with postalign.tobam_cl(data, out_file, bam.is_paired(in_bam)) as (tobam_cl, tx_out_file):
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
-                in_bam = utils.remote_cl_input(in_bam)
                 cmd = ("{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
                        "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
                        "| {bwa} mem -p -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 {ref_file} - | ")
@@ -65,7 +65,7 @@ def _can_use_mem(fastq_file, data):
     head_count = 8000000
     tocheck = 5000
     seqtk = config_utils.get_program("seqtk", data["config"])
-    fastq_file = utils.remote_cl_input(fastq_file)
+    fastq_file = objectstore.cl_input(fastq_file)
     gzip_cmd = "zcat {fastq_file}" if fastq_file.endswith(".gz") else "cat {fastq_file}"
     cmd = (gzip_cmd + " | head -n {head_count} | "
            "{seqtk} sample -s42 - {tocheck} | "
@@ -98,9 +98,6 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
             fastq_file = alignprep.fastq_convert_pipe_cl(fastq_file, data)
             if pair_file:
                 pair_file = alignprep.fastq_convert_pipe_cl(pair_file, data)
-        else:
-            fastq_file = utils.remote_cl_input(fastq_file)
-            pair_file = utils.remote_cl_input(pair_file)
     rg_info = novoalign.get_rg_info(names)
     if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         # If we cannot do piping, use older bwa aln approach
