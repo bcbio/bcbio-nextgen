@@ -1,6 +1,6 @@
 """Multiprocessing ready entry points for sample analysis.
 """
-from bcbio import structural, utils, chipseq
+from bcbio import structural, utils, chipseq, upload
 from bcbio.bam import callable
 from bcbio.rnaseq import (sailfish, express)
 from bcbio.ngsalign import alignprep
@@ -177,6 +177,10 @@ def cufflinks_merge(*args):
 @utils.map_wrap
 def organize_samples(*args):
     return run_info.organize(*args)
+
+@utils.map_wrap
+def upload_samples(*args):
+    return upload.from_sample(*args)
 
 @utils.map_wrap
 def run_main(*args):

@@ -4,7 +4,7 @@ import contextlib
 
 from IPython.parallel import require
 
-from bcbio import chipseq, structural
+from bcbio import chipseq, structural, upload
 from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
@@ -304,3 +304,9 @@ def organize_samples(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(run_info.organize, *args))
+
+@require(upload)
+def upload_samples(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(upload.from_sample, *args))

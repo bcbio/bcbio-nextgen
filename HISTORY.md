@@ -3,6 +3,8 @@
 - Update vt decompose to handle additional multi-allelic adjustments including
   all format attributes, providing full support for new GEMINI changes. Thanks
   to Brent Pedersen and Adrian Tan.
+- Run upload process on distributed machines, allowing upload to S3 on AWS to take
+  advantage of machines with multiple cores. Thanks to Lorena Pantano.
 - Re-write interactions with external object stores like S3 to be more general
   and incorporate multiple regions and future support for non-S3 storage.
 - Allow bz2 files in bcbio_prepare_sample.py script.

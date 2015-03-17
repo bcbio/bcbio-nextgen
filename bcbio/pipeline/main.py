@@ -12,7 +12,7 @@ import tempfile
 
 import yaml
 
-from bcbio import log, structural, utils, upload
+from bcbio import log, structural, utils
 from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.log import logger
@@ -74,15 +74,11 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     pipelines = _pair_samples_with_pipelines(run_info_yaml)
     system.write_info(dirs, parallel, config)
-    final = []
     with tx_tmpdir(config) as tmpdir:
         tempfile.tempdir = tmpdir
         for pipeline, samples in pipelines.items():
             for xs in pipeline.run(config, run_info_yaml, parallel, dirs, samples):
-                if len(xs) == 1:
-                    upload.from_sample(xs[0])
-                    final.append(xs[0])
-
+                pass
 
 # ## Generic pipeline framework
 
@@ -192,6 +188,9 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
             with profile.report("archive", dirs):
                 samples = archive.compress(samples, run_parallel)
+            with profile.report("upload", dirs):
+                for sample in samples:
+                    run_parallel("upload_samples", [sample])
         logger.info("Timing: finished")
         return samples
 
@@ -240,6 +239,9 @@ class StandardPipeline(AbstractPipeline):
                         samples, config, dirs, "multicore2") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("upload", dirs):
+                for sample in samples:
+                    run_parallel("upload_samples", [sample])
         logger.info("Timing: finished")
         return samples
 
@@ -263,6 +265,9 @@ class SailfishPipeline(AbstractPipeline):
                             "sailfish") as run_parallel:
                 with profile.report("sailfish", dirs):
                     samples = run_parallel("run_sailfish", samples)
+                with profile.report("upload", dirs):
+                    for sample in samples:
+                        run_parallel("upload_samples", [sample])
         return samples
 
 class RnaseqPipeline(AbstractPipeline):
@@ -307,6 +312,9 @@ class RnaseqPipeline(AbstractPipeline):
                         samples, config, dirs, "qc") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("upload", dirs):
+                for sample in samples:
+                    run_parallel("upload_samples", [sample])
         logger.info("Timing: finished")
         return samples
 
@@ -331,6 +339,9 @@ class ChipseqPipeline(AbstractPipeline):
                 samples = disambiguate.resolve(samples, run_parallel)
             samples = run_parallel("clean_chipseq_alignment", samples)
             samples = qcsummary.generate_parallel(samples, run_parallel)
+            with profile.report("upload", dirs):
+                for sample in samples:
+                    run_parallel("upload_samples", [sample])
         return samples
 
 def _get_pipeline(item):
