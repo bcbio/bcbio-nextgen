@@ -3,6 +3,7 @@
 import collections
 import os
 import subprocess
+import sys
 import zlib
 
 import boto
@@ -13,7 +14,8 @@ from bcbio import utils
 # ## definitions
 
 SUPPORTED_REMOTES = ("s3://",)
-BIODATA_INFO = {"S3": "s3://biodata/prepped/{build}/{build}-{target}.tar.gz"}
+BIODATA_INFO = {"s3": "s3://biodata/prepped/{build}/{build}-{target}.tar.gz"}
+REGIONS_NEWPERMS = {"s3": ["eu-central-1"]}
 
 # ## Utilities
 
@@ -78,17 +80,34 @@ def default_region(fname):
 # ## Retrieve files
 
 def _s3_download_cl(fname):
-    """Provide potentially streaming download from S3 using gof3r
+    """Provide potentially streaming download from S3 using gof3r or the AWS CLI.
 
     Selects the correct endpoint for non us-east support:
     http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+
+    In eu-central-1 gof3r does not support new AWS signatures, so we fall back
+    to the standard AWS commandline interface:
+
+    https://github.com/rlmcpherson/s3gof3r/issues/45
     """
     r_fname = parse_remote(fname)
     cmd = ["gof3r", "get", "--no-md5", "-k", r_fname.key, "-b", r_fname.bucket]
     region = _get_region_s3(fname)
     if region != "us-east-1":
+        if region in REGIONS_NEWPERMS["s3"]:
+            return _s3_download_cl_aws_cli(fname)
         cmd.append("--endpoint=s3-%s.amazonaws.com" % region)
-    return cmd
+    return cmd, "gof3r"
+
+def _s3_download_cl_aws_cli(fname):
+    """Potentially streaming download via the standard AWS command line interface.
+    """
+    r_fname = parse_remote(fname)
+    region = _get_region_s3(fname)
+    s3file = "s3://%s/%s" % (r_fname.bucket, r_fname.key)
+    region = _get_region_s3(fname)
+    cmd = [os.path.join(os.path.dirname(sys.executable), "aws"), "s3", "cp", "--region", region, s3file]
+    return cmd, "awscli"
 
 def download(fname, input_dir, dl_dir=None):
     if fname.startswith("s3://"):
@@ -98,7 +117,13 @@ def download(fname, input_dir, dl_dir=None):
         out_file = os.path.join(dl_dir, os.path.basename(r_fname.key))
         if not utils.file_exists(out_file):
             with file_transaction({}, out_file) as tx_out_file:
-                cmd = _s3_download_cl(fname) + ["-p", tx_out_file]
+                cmd, prog = _s3_download_cl(fname)
+                if prog == "gof3r":
+                    cmd += ["-p", tx_out_file]
+                elif prog == "awscli":
+                    cmd += [tx_out_file]
+                else:
+                    raise NotImplementedError("Unexpected download program %s" % prog)
                 subprocess.check_call(cmd)
         return out_file
     elif not fname or os.path.exists(fname):
@@ -112,7 +137,10 @@ def cl_input(fname, unpack=True, anonpipe=True):
     if not fname:
         return fname
     elif fname.startswith("s3://"):
-        cmd = _s3_download_cl(fname)
+        cmd, prog = _s3_download_cl(fname)
+        if prog == "awscli":
+            cmd += ["-"]
+        cmd = " ".join(cmd)
         if fname.endswith(".gz") and unpack:
             cmd += " | gunzip -c"
         if anonpipe:

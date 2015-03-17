@@ -19,6 +19,7 @@ google-api-python-client>=0.1.2,<1.3.1
 # soft dependencies -- not required for bcbio-nextgen-vm
 arrow>=0.4.4
 arvados-python-client>=0.1.1405019228.4a7ca04
+awscli>=1.7.14
 bioblend>=0.4.3
 chanjo>=2.0.2
 click>=3.3

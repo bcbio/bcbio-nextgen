@@ -243,7 +243,7 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
         else:
             # XXX Currently only supports genomes from S3 us-east-1 bucket.
             # Need to assess how slow this is from multiple regions and generalize to non-AWS.
-            fname = objectstore.BIODATA_INFO["S3"].format(build=genome_build,
+            fname = objectstore.BIODATA_INFO["s3"].format(build=genome_build,
                                                           target=REMAP_NAMES.get(name, name))
             try:
                 objectstore.connect(fname)
