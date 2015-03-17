@@ -69,6 +69,12 @@ def _get_region_s3(fname=None):
             return r_fname.region
     return os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
+def default_region(fname):
+    if fname.startswith("s3://"):
+        return _get_region_s3()
+    else:
+        raise NotImplementedError("Unexpected object store %s" % fname)
+
 # ## Retrieve files
 
 def _s3_download_cl(fname):
