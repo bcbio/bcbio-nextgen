@@ -15,7 +15,6 @@ import os
 import shutil
 import urllib2
 
-import boto
 import toolz as tz
 import yaml
 
@@ -149,7 +148,8 @@ def _write_template_config(template_txt, project_name, out_dir):
         out_handle.write(template_txt)
     return out_config_file
 
-def _write_config_file(items, global_vars, template, project_name, out_dir):
+def _write_config_file(items, global_vars, template, project_name, out_dir,
+                       remotes):
     """Write configuration file, adding required top level attributes.
     """
     config_dir = utils.safe_makedir(os.path.join(out_dir, "config"))
@@ -158,6 +158,13 @@ def _write_config_file(items, global_vars, template, project_name, out_dir):
            "fc_name": project_name,
            "upload": {"dir": "../final"},
            "details": items}
+    if remotes.get("base"):
+        r_base = objectstore.parse_remote(remotes.get("base"))
+        out["upload"]["method"] = r_base.store
+        out["upload"]["bucket"] = r_base.bucket
+        out["upload"]["folder"] = os.path.join(r_base.key, "final") if r_base.key else "final"
+        if r_base.region:
+            out["upload"]["region"] = r_base.region
     if global_vars:
         out["globals"] = global_vars
     for k, v in template.iteritems():
@@ -362,7 +369,7 @@ def setup(args):
     template, template_txt = name_to_config(args.template)
     base_item = template["details"][0]
     project_name, metadata, global_vars = _pname_and_metadata(args.metadata)
-    remotes = _retrieve_remote([args.template, args.metadata])
+    remotes = _retrieve_remote([args.metadata, args.template])
     inputs = args.input_files + remotes.get("inputs", [])
     items = [_add_metadata(item, metadata, remotes)
              for item in _prep_items_from_base(base_item, inputs)]
@@ -378,7 +385,8 @@ def setup(args):
         print "  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
             (out_config_file, project_name)
     else:
-        out_config_file = _write_config_file(items, global_vars, template, project_name, out_dir)
+        out_config_file = _write_config_file(items, global_vars, template, project_name, out_dir,
+                                             remotes)
         print "Configuration file created at: %s" % out_config_file
         print "Edit to finalize and run with:"
         print "  cd %s" % work_dir

@@ -62,7 +62,9 @@ This will find the input files in the ``s3://your-project/your-analysis`` bucket
 fastq and BAM files with the right samples, and add a found BED files as
 ``variant_regions`` in the configuration. It will then upload the final
 configuration back to S3 as ``s3://your-project/your-analysis/name.yaml``, which you can run
-directly from a bcbio cluster on AWS.
+directly from a bcbio cluster on AWS. By default, bcbio will use the us-east S3
+region, but you can specify a different region in the s3 path to the
+metadata file: ``s3://your-project@eu-central-1/your-analysis/name.csv``
 
 We currently support human analysis with both the GRCh37 and hg19 genomes. We
 can also add additional genomes as needed by the community and generally welcome

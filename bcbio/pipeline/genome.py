@@ -257,11 +257,14 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
         gresources = get_resources(data["genome_build"], ref_file)
         if data.get("files") and population.do_db_build([data], need_bam=False, gresources=gresources):
             # symlink base GEMINI directory to work directory, avoiding write/space issues
-            out_gemini_dir = utils.safe_makedir(os.path.join(ref_dir, "gemini_data"))
+            out_gemini_dir = utils.safe_makedir(os.path.join(os.path.dirname(ref_dir), "gemini_data"))
             orig_gemini_dir = install.get_gemini_dir()
             # Remove empty initial directory created by installer
             if os.path.isdir(orig_gemini_dir) and len(os.listdir(orig_gemini_dir)) == 0:
-                os.rmdir(orig_gemini_dir)
+                if os.path.islink(orig_gemini_dir):
+                    os.remove(orig_gemini_dir)
+                else:
+                    os.rmdir(orig_gemini_dir)
             if not os.path.exists(orig_gemini_dir):
                 os.symlink(out_gemini_dir, orig_gemini_dir)
             cmd = [os.path.join(os.path.dirname(sys.executable), "gemini"), "update", "--dataonly"]

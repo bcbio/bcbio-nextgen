@@ -36,14 +36,15 @@ def parse_remote(fname):
     Handles S3 with optional region name specified in key:
       BUCKETNAME@REGIONNAME/KEY
     """
-    RemoteFile = collections.namedtuple("RemoteFile", "bucket,key,region")
+    RemoteFile = collections.namedtuple("RemoteFile", "store,bucket,key,region")
     if fname.startswith("s3://"):
-        bucket, key = fname.split("//")[-1].split("/", 1)
+        parts = fname.split("//")[-1].split("/", 1)
+        bucket, key = parts if len(parts) == 2 else (parts[0], None)
         if bucket.find("@") > 0:
             bucket, region = bucket.split("@")
         else:
             region = None
-        return RemoteFile(bucket, key, region)
+        return RemoteFile("s3", bucket, key, region)
     else:
         raise NotImplementedError("Unexpected object store %s" % fname)
 
@@ -159,7 +160,7 @@ def list(remote_dirname):
 
 def _s3_list(remote_dirname):
     r_fname = parse_remote(remote_dirname)
-    conn = boto.connect_s3(remote_dirname)
+    conn = connect(remote_dirname)
     bucket = conn.get_bucket(r_fname.bucket)
     out = []
     region = "@%s" % r_fname.region if r_fname.region else ""
