@@ -127,7 +127,7 @@ def file_reasonable_size(target_file, input_file):
         if input_file.strip().startswith("<("):
             return True
         if input_file.endswith((".bam", ".gz")):
-            scale = 5.0
+            scale = 7.0
         else:
             scale = 10.0
         orig_size = os.path.getsize(input_file) / pow(1024.0, 3)
