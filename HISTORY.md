@@ -8,7 +8,10 @@
 - Re-write interactions with external object stores like S3 to be more general
   and incorporate multiple regions and future support for non-S3 storage.
 - Allow bz2 files in bcbio_prepare_sample.py script.
-- Ensure GEMINI statistics run for project summary file. Thanks to Luca Beltrame.
+- Ensure GEMINI statistics run for project summary file. Thanks to Luca
+  Beltrame.
+- Better error checking for booleans in input configuration. Thanks to Daryl
+  Waggott.
 
 ## 0.8.7 (12 March 2015)
 

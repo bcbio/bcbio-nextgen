@@ -36,7 +36,7 @@ def organize(dirs, config, run_info_yaml, sample_names):
     logger.info("Using input YAML configuration: %s" % run_info_yaml)
     assert run_info_yaml and os.path.exists(run_info_yaml), \
         "Did not find input sample YAML file: %s" % run_info_yaml
-    run_details = _run_info_from_yaml(dirs["flowcell"], run_info_yaml, config, sample_names)
+    run_details = _run_info_from_yaml(dirs, run_info_yaml, config, sample_names)
     out = []
     for item in run_details:
         item["dirs"] = dirs
@@ -255,6 +255,11 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "archive", "tools_off", "assemble_transcripts", "mixup_check"] +
                      # back compatibility
                       ["coverage_depth"])
+ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr", "clinical_reporting",
+                          "fusion_mode", "rsem", "assemble_transcripts", "trim_reads"])
+ALG_ALLOW_FALSE = set(["aligner", "recalibrate", "realign", "effects", "phasing", "mixup_check"])
+
+ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
 
 def _check_algorithm_keys(item):
     """Check for unexpected keys in the algorithm section.
@@ -262,12 +267,28 @@ def _check_algorithm_keys(item):
     Needs to be manually updated when introducing new keys, but avoids silent bugs
     with typos in key names.
     """
-    url = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
     problem_keys = [k for k in item["algorithm"].iterkeys() if k not in ALGORITHM_KEYS]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
                          "See configuration documentation for supported options:\n%s\n"
-                         % (problem_keys, url))
+                         % (problem_keys, ALG_DOC_URL))
+
+def _check_algorithm_values(item):
+    """Check for misplaced inputs in the algorithms.
+
+    - Identify incorrect boolean values where a choice is required.
+    """
+    problems = []
+    for k, v in item.get("algorithm", {}).items():
+        if v is True and k not in ALG_ALLOW_BOOLEANS:
+            problems.append("%s set as true" % k)
+        elif v is False and (k not in ALG_ALLOW_BOOLEANS and k not in ALG_ALLOW_FALSE):
+            problems.append("%s set as false" % k)
+    if len(problems) > 0:
+        raise ValueError("Incorrect settings in 'algorithm' section for %s:\n%s"
+                         "\nSee configuration documentation for supported options:\n%s\n"
+                         % (item["description"], "\n".join(problems), ALG_DOC_URL))
+
 
 def _check_toplevel_misplaced(item):
     """Check for algorithm keys accidentally placed at the top level.
@@ -388,13 +409,14 @@ def _check_sample_config(items, in_file):
 
     [_check_toplevel_misplaced(x) for x in items]
     [_check_algorithm_keys(x) for x in items]
+    [_check_algorithm_values(x) for x in items]
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
     [_check_jointcaller(x) for x in items]
 
 # ## Read bcbio_sample.yaml files
 
-def _file_to_abs(x, dnames):
+def _file_to_abs(x, dnames, makedir=False):
     """Make a file absolute using the supplied base directory choices.
     """
     if x is None or os.path.isabs(x):
@@ -408,6 +430,9 @@ def _file_to_abs(x, dnames):
             if dname:
                 normx = os.path.normpath(os.path.join(dname, x))
                 if os.path.exists(normx):
+                    return normx
+                elif makedir:
+                    utils.safe_makedir(normx)
                     return normx
         raise ValueError("Did not find input file %s in %s" % (x, dnames))
 
@@ -445,15 +470,15 @@ def _sanity_check_files(item, files):
     if msg:
         raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
-def _run_info_from_yaml(fc_dir, run_info_yaml, config, sample_names):
+def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names):
     """Read run information from a passed YAML file.
     """
     with open(run_info_yaml) as in_handle:
         loaded = yaml.load(in_handle)
     fc_name, fc_date = None, None
-    if fc_dir:
+    if dirs.get("flowcell"):
         try:
-            fc_name, fc_date = flowcell.parse_dirname(fc_dir)
+            fc_name, fc_date = flowcell.parse_dirname(dirs.get("flowcell"))
         except ValueError:
             pass
     global_config = {}
@@ -472,7 +497,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config, sample_names):
 
     run_details = []
     for i, item in enumerate(loaded):
-        item = _normalize_files(item, fc_dir)
+        item = _normalize_files(item, dirs.get("flowcell"))
         if "lane" not in item:
             item["lane"] = str(i + 1)
         item["lane"] = _clean_characters(str(item["lane"]))
@@ -491,6 +516,7 @@ def _run_info_from_yaml(fc_dir, run_info_yaml, config, sample_names):
                 upload["fc_name"] = fc_name
                 upload["fc_date"] = fc_date
             upload["run_id"] = ""
+            upload["dir"] = _file_to_abs(upload["dir"], [dirs.get("work")], makedir=True)
             item["upload"] = upload
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
