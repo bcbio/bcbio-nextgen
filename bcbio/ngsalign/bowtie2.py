@@ -31,7 +31,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
     """Alignment with bowtie2.
     """
     config = data["config"]
-    analysis_config = ANALYSIS.get(data["analysis"])
+    analysis_config = ANALYSIS.get(data["analysis"].lower())
     assert analysis_config, "Analysis %s is not supported by bowtie2" % (data["analysis"])
     out_file = os.path.join(align_dir, "%s.sam" % names["lane"])
     if not file_exists(out_file):
@@ -102,8 +102,8 @@ def _is_unique(read):
 
 ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
             "variant2": {"params": ["-X", 2000]},
-            "Standard": {"params": ["-X", 2000]},
-            "RNA-seq": {"params": ["--sensitive", "-X", 2000]}}
+            "standard": {"params": ["-X", 2000]},
+            "rna-seq": {"params": ["--sensitive", "-X", 2000]}}
 
 def index_transcriptome(gtf_file, ref_file, data):
     """
