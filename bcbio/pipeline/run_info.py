@@ -256,7 +256,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                      # back compatibility
                       ["coverage_depth"])
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr", "clinical_reporting",
-                          "fusion_mode", "rsem", "assemble_transcripts", "trim_reads"])
+                          "fusion_mode", "rsem", "assemble_transcripts", "trim_reads", "kraken"])
 ALG_ALLOW_FALSE = set(["aligner", "recalibrate", "realign", "effects", "phasing", "mixup_check"])
 
 ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
