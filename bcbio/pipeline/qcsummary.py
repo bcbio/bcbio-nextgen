@@ -99,8 +99,9 @@ def _run_qc_tools(bam_file, data):
     to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower().startswith("rna-seq"):
         to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
-#        to_run.append(("coverage", _run_gene_coverage))
+        # to_run.append(("coverage", _run_gene_coverage))
         to_run.append(("complexity", _run_complexity))
+        # to_run.append(("qualimap", _rnaseq_qualimap))
     elif data["analysis"].lower().startswith("chip-seq"):
         to_run.append(["bamtools", _run_bamtools_stats])
     else:
@@ -535,6 +536,162 @@ def _run_qualimap(bam_file, data, out_dir):
             cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % data["name"][-1])
     return _parse_qualimap_metrics(report_file)
+
+# ## RNAseq Qualimap
+
+def _parse_metrics(metrics):
+    missing = set(["Genes Detected", "Transcripts Detected",
+                   "Mean Per Base Cov."])
+    correct = set(["Intergenic pct", "Intronic pct", "Exonic pct"])
+    to_change = dict({"5'-3' bias": 1, "Intergenic pct": "Intergenic Rate",
+                      "Intronic pct": "Intronic Rate", "Exonic pct": "Exonic Rate",
+                      "Not aligned": 0, 'Aligned to genes': 0, 'Non-unique alignment': 0,
+                      "No feature assigned": 0, "Duplication Rate of Mapped": 1,
+                      "Fragment Length Mean": 1,
+                      "rRNA": 1, "Ambiguou alignment": 0})
+    total = ["Not aligned", "Aligned to genes", "No feature assigned"]
+
+    out = {}
+    total_reads = sum([int(metrics[name]) for name in total])
+    out['rRNA rate'] = 1.0 * int(metrics["rRNA"]) / total_reads
+    out['Mapped'] = sum([int(metrics[name]) for name in total[1:]])
+    out['Mapping Rate'] = 1.0 * int(out['Mapped']) / total_reads
+    [out.update({name: 0}) for name in missing]
+    [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in correct]
+
+    for name in to_change:
+        if not to_change[name]:
+            continue
+        if to_change[name] == 1:
+            out.update({name: float(metrics[name])})
+        else:
+            out.update({to_change[name]: float(metrics[name])})
+    return out
+
+def _detect_duplicates(bam_file, out_dir, config):
+    """
+    Detect duplicates metrics with Picard
+    """
+    out_file = os.path.join(out_dir, "dup_metrics")
+    if not utils.file_exists(out_file):
+        broad_runner = broad.runner_from_config(config)
+        (dup_align_bam, metrics_file) = broad_runner.run_fn("picard_mark_duplicates", bam_file, remove_dups=True)
+        shutil.move(metrics_file, out_file)
+    metrics = []
+    with open(out_file) as in_handle:
+        reader = csv.reader(in_handle, dialect="excel-tab")
+        for line in reader:
+            if line and not line[0].startswith("#"):
+                metrics.append(line)
+    metrics = dict(zip(metrics[0], metrics[1]))
+    return {"Duplication Rate of Mapped": metrics["PERCENT_DUPLICATION"]}
+
+def _transform_browser_coor(rRNA_interval, rRNA_coor):
+    """
+    transform interval format to browser coord: chr:start-end
+    """
+    with open(rRNA_coor, 'w') as out_handle:
+        with open(rRNA_interval, 'r') as in_handle:
+            for line in in_handle:
+                c, bio, source, s, e = line.split("\t")[:5]
+                if bio.startswith("rRNA"):
+                    out_handle.write(("{0}:{1}-{2}\n").format(c, s, e))
+
+def _detect_rRNA(config, bam_file, rRNA_file, ref_file, out_dir, single_end):
+    """
+    Calculate rRNA with gatk-framework
+    """
+    if not utils.file_exists(rRNA_file):
+        return {'rRNA': 0}
+    out_file = os.path.join(out_dir, "rRNA.counts")
+    if not utils.file_exists(out_file):
+        out_file = _count_rRNA_reads(bam_file, out_file, ref_file, rRNA_file, single_end, config)
+    with open(out_file) as in_handle:
+        for line in in_handle:
+            if line.find("CountReads counted") > -1:
+                rRNA_reads = line.split()[6]
+                break
+    return {'rRNA': rRNA_reads}
+
+def _count_rRNA_reads(in_bam, out_file, ref_file, rRNA_interval, single_end, config):
+    """Use GATK counter to count reads in rRNA genes
+    """
+    bam.index(in_bam, config)
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            rRNA_coor = os.path.join(os.path.dirname(out_file), "rRNA.list")
+            _transform_browser_coor(rRNA_interval, rRNA_coor)
+            params = ["-T", "CountReads",
+                      "-R", ref_file,
+                      "-I", in_bam,
+                      "-log", tx_out_file,
+                      "-L", rRNA_coor,
+                      "--filter_reads_with_N_cigar"]
+            jvm_opts = broad.get_gatk_framework_opts(config)
+            cmd = [config_utils.get_program("gatk-framework", config)] + jvm_opts + params
+            do.run(cmd, "counts rRNA for %s" % in_bam)
+        return out_file
+
+def _parse_qualimap_rnaseq(table):
+    """
+    Retrieve metrics of interest from globals table.
+    """
+    out = {}
+    for row in table.xpath("table/tr"):
+        col, val = [x.text for x in row.xpath("td")]
+        out.update(_parse_num_pct(col.replace(":", "").strip(), val.replace("%", "")))
+    return out
+
+def _parse_rnaseq_qualimap_metrics(report_file):
+    """Extract useful metrics from the qualimap HTML report file.
+    """
+    out = {}
+    parsers = ["Reads alignment", "Reads genomic origin", "Transcript coverage profile"]
+    root = lxml.html.parse(report_file).getroot()
+    for table in root.xpath("//div[@class='table-summary']"):
+        header = table.xpath("h3")[0].text
+        if header in parsers:
+            out.update(_parse_qualimap_rnaseq(table))
+    return out
+
+def _rnaseq_qualimap(bam_file, data, out_dir):
+    """
+    Run qualimap for a rnaseq bam file and parse results
+    """
+    report_file = os.path.join(out_dir, "qualimapReport.html")
+    config = data["config"]
+    # genome_dir = os.path.dirname(os.path.dirname(data["sam_ref"]))
+    gtf_file = dd.get_gtf_file(data)
+    ref_file = dd.get_ref_file(data)
+    # rRNA_gtf = os.path.join(os.path.dirname(gtf_file), "rRNA.interval_list")
+    single_end = not bam.is_paired(bam_file)
+    if not utils.file_exists(report_file):
+        utils.safe_makedir(out_dir)
+        bam.index(bam_file, config)
+        # rna_file = config_utils.get_rRNA_sequence(genome_dir)
+        cmd = _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file, single_end)
+        do.run(cmd, "Qualimap for {}".format(data["name"][-1]))
+    metrics = _parse_rnaseq_qualimap_metrics(report_file)
+    # metrics_bam = _run_qualimap(bam_file, data, os.path.join(out_dir, "bam"))
+    # print metrics_bam
+    metrics.update(_detect_duplicates(bam_file, out_dir, config))
+    metrics.update(_detect_rRNA(config, bam_file, gtf_file, ref_file, out_dir, single_end))
+    metrics.update({"Fragment Length Mean": bam.estimate_fragment_size(bam_file)})
+    metrics = _parse_metrics(metrics)
+    return metrics
+
+def _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file=None, single_end=None):
+    """
+    Create command lines for qualimap
+    """
+    num_cores = config["algorithm"].get("num_cores", 1)
+    qualimap = config_utils.get_program("qualimap", config)
+    resources = config_utils.get_resources("qualimap", config)
+    max_mem = config_utils.adjust_memory(resources.get("memory", "4G"),
+                                         num_cores)
+    cmd = ("unset DISPLAY && {qualimap} rnaseq -outdir {out_dir} -a proportional -bam {bam_file} "
+           "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
+    return cmd
 
 # ## Lightweight QC approaches
 
