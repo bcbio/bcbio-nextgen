@@ -471,7 +471,7 @@ def _install_kraken_db(datadir, args):
                 subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
             cmd = ["tar", "-xzvf", compress, "-C", kraken]
             subprocess.check_call(cmd)
-            shutil.move(os.path.join(kraken, "minikraken_20140330"), os.path.join(kraken, "minikraken"))
+            shutil.move(os.path.join(kraken, "minikraken_20141208"), os.path.join(kraken, "minikraken"))
             utils.remove_safe(compress)
     else:
         raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
