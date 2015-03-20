@@ -7,12 +7,15 @@ import argparse
 import collections
 import contextlib
 import datetime
+import dateutil
 from distutils.version import LooseVersion
 import gzip
 import os
 import shutil
 import subprocess
 import sys
+import glob
+import urllib
 
 import requests
 import yaml
@@ -463,16 +466,30 @@ def _install_kraken_db(datadir, args):
     base, ext = utils.splitext_plus(os.path.basename(url))
     db = os.path.join(kraken, base)
     tooldir = args.tooldir or get_defaults()["tooldir"]
+    requests.packages.urllib3.disable_warnings()
+    last_mod = urllib.urlopen(url).info().getheader('Last-Modified')
+    last_mod = dateutil.parser.parse(last_mod).astimezone(dateutil.tz.tzutc())
     if os.path.exists(os.path.join(tooldir, "bin", "kraken")):
+        if not os.path.exists(db):
+            is_new_version = True
+        else:
+            cur_file = glob.glob(os.path.join(kraken, "minikraken_*"))[0]
+            cur_version = datetime.datetime.utcfromtimestamp(os.path.getmtime(cur_file))
+            is_new_version = last_mod.date() > cur_version.date()
+            if is_new_version:
+                shutil.move(cur_file, cur_file.replace('minikraken', 'old'))
         if not os.path.exists(kraken):
             utils.safe_makedir(kraken)
-        if not os.path.exists(db):
+        if is_new_version:
             if not os.path.exists(compress):
                 subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
             cmd = ["tar", "-xzvf", compress, "-C", kraken]
             subprocess.check_call(cmd)
-            shutil.move(os.path.join(kraken, "minikraken_20141208"), os.path.join(kraken, "minikraken"))
+            last_version = glob.glob(os.path.join(kraken, "minikraken_*"))
+            utils.symlink_plus(os.path.join(kraken, last_version[0]), os.path.join(kraken, "minikraken"))
             utils.remove_safe(compress)
+        else:
+            print "You have the latest version %s." % last_mod
     else:
         raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
                                          os.path.join(tooldir, "bin", "kraken"))
