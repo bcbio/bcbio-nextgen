@@ -24,6 +24,7 @@ def from_sample(sample):
             approach.update_file(finfo, sample, upload_config)
         for finfo in _get_files_project(sample, upload_config):
             approach.update_file(finfo, None, upload_config)
+    return [[sample]]
 
 # ## File information from sample
 
