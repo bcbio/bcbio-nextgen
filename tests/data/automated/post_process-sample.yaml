@@ -8,7 +8,6 @@ custom_algorithms:
     aligner: bwa
     recalibrate: gatk
     snpcall: true
-    coverage_interval: "exome" # other options: genome
   'RNA-seq':
     aligner: tophat2
     transcript_assemble: true

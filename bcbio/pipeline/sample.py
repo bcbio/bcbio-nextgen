@@ -18,7 +18,7 @@ from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
-from bcbio.variation import bedutils, recalibrate
+from bcbio.variation import bedutils, coverage, recalibrate
 from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
 
@@ -44,7 +44,6 @@ def trim_sample(data):
     Support methods: read_through.
     """
     to_trim = [x for x in data["files"] if x is not None]
-    dirs = data["dirs"]
     config = data["config"]
     # this block is to maintain legacy configuration files
     trim_reads = config["algorithm"].get("trim_reads", False)
@@ -150,10 +149,14 @@ def postprocess_alignment(data):
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
     if vmulti.bam_needs_processing(data) and data["work_bam"].endswith(".bam"):
+        ref_file = dd.get_ref_file(data)
         callable_region_bed, nblock_bed, callable_bed = \
-            callable.block_regions(data["work_bam"], data["sam_ref"], data["config"])
+            callable.block_regions(data["work_bam"], ref_file, data["config"])
         highdepth_bed = highdepth.identify(data)
-        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed, "highdepth": highdepth_bed}
+        sample_callable = callable.sample_callable_bed(data["work_bam"], ref_file, data["config"])
+        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed, "highdepth": highdepth_bed,
+                           "sample_callable": sample_callable}
+        data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed

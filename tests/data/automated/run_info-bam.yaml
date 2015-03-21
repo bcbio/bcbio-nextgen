@@ -39,7 +39,6 @@ details:
       quality_format: standard
       nomap_split_size: 50
       nomap_split_targets: 100
-      coverage_interval: regional
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
@@ -70,7 +69,6 @@ details:
   #     recalibrate: false
   #     mark_duplicates: samtools
   #     quality_format: Standard
-  #     coverage_interval: regional
   #     variant_regions: ../data/automated/variant_regions-bam.bed
   #     nomap_split_size: 500
   #     # svcaller: [delly, lumpy, cn.mops]

@@ -23,4 +23,4 @@ def file_contigs(ref_file, config):
     with open(fasta_idx(ref_file, config)) as in_handle:
         for line in (l for l in in_handle if l.strip()):
             name, size = line.split()[:2]
-            yield ContigInfo(name, size)
+            yield ContigInfo(name, int(size))

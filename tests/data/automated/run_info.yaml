@@ -1,7 +1,5 @@
 - analysis: variant2
   description: Test1
-  algorithm:
-    coverage_interval: regional
   genome_build: hg19
   lane: 1
   multiplex:
@@ -59,8 +57,6 @@
     sequence: NNNNNN
 - analysis: variant2
   description: Test2
-  algorithm:
-    coverage_interval: regional
   genome_build: hg19
   lane: 2
   multiplex:
@@ -113,8 +109,6 @@
     name: BAC02
     sequence: CTTGTA
 - analysis: variant2
-  algorithm:
-    coverage_interval: regional
   description: Test3
   genome_build: hg19
   lane: 3

@@ -1,5 +1,7 @@
 ## 0.8.8 (in progress)
 
+- Automatically calculate `coverage_interval` based on coverage calculations,
+  avoiding need to set this directly in input configuration.
 - Update vt decompose to handle additional multi-allelic adjustments including
   all format attributes, providing full support for new GEMINI changes. Thanks
   to Brent Pedersen and Adrian Tan.

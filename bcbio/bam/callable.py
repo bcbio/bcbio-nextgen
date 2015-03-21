@@ -129,8 +129,7 @@ def _regions_for_coverage(data, region, ref_file, out_file):
     """Retrieve BED file of regions we need to calculate coverage in.
     """
     import pybedtools
-    variant_regions = bedutils.merge_overlaps(utils.get_in(data, ("config", "algorithm", "variant_regions")),
-                                              data)
+    variant_regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
     ready_region = shared.subset_variant_regions(variant_regions, region, out_file)
     custom_file = "%s-coverageregions.bed" % utils.splitext_plus(out_file)[0]
     if not ready_region:
@@ -389,7 +388,7 @@ def combine_sample_regions(*samples):
             else:
                 analysis_file, no_analysis_file = _combine_sample_regions_batch(batch, items)
             for data in items:
-                vr_file = tz.get_in(["config", "algorithm", "variant_regions"], data)
+                vr_file = dd.get_variant_regions(data)
                 if analysis_file:
                     analysis_files.append(analysis_file)
                     data["config"]["algorithm"]["callable_regions"] = analysis_file
