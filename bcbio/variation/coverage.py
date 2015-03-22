@@ -19,24 +19,31 @@ from bcbio.variation import bedutils
 
 def assign_interval(data):
     """Identify coverage based on percent of genome covered and relation to targets.
+
+    Classifies coverage into 3 categories:
+      - genome: Full genome coverage
+      - regional: Regional coverage, like exome capture, with off-target reads
+      - amplicon: Amplication based regional coverage without off-target reads
     """
     genome_cov_thresh = 0.40  # percent of genome covered for whole genome analysis
+    offtarget_pct = 0.1  # percent of offtarget reads needed relative to covered bases
     import pybedtools
     if not dd.get_coverage_interval(data):
         vrs = dd.get_variant_regions(data)
         callable_file = dd.get_sample_callable(data)
-        print callable_file
         if vrs:
             seq_size = pybedtools.BedTool(vrs).total_coverage()
-            offtarget_size = -1
         else:
             seq_size = pybedtools.BedTool(callable_file).total_coverage()
-            offtarget_size = 0
         total_size = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
         if seq_size / float(total_size) > genome_cov_thresh:
             cov_interval = "genome"
         else:
-            cov_interval = "regional"
+            offtarget_count = dd.get_offtarget_count(data)
+            if offtarget_count > (total_size * offtarget_pct):
+                cov_interval = "regional"
+            else:
+                cov_interval = "amplicon"
         data["config"]["algorithm"]["coverage_interval"] = cov_interval
     return data
 

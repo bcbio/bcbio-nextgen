@@ -168,6 +168,22 @@ def sample_callable_bed(bam_file, ref_file, config):
                     filter_regions.saveas(tx_out_file)
     return out_file
 
+def calculate_offtarget(bam_file, ref_file, data):
+    """Generate file of offtarget read counts for inputs with variant regions.
+    """
+    import pybedtools
+    vrs_file = dd.get_variant_regions(data)
+    if vrs_file:
+        out_file = "%s-offtarget_count.txt" % os.path.splitext(bam_file)[0]
+        if not utils.file_exists(out_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                offtarget_regions = "%s-regions.bed" % utils.splitext_plus(out_file)[0]
+                ref_bed = get_ref_bedtool(ref_file, data["config"])
+                ref_bed.subtract(pybedtools.BedTool(vrs_file)).saveas(offtarget_regions)
+                cmd = "samtools view {bam_file} -L {offtarget_regions} | wc -l > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Count offtarget reads")
+        return out_file
+
 def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
     """

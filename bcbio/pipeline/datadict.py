@@ -62,6 +62,7 @@ LOOKUPS = {
     "vrn_file": {"keys": ["vrn_file"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "callable_regions": {"keys": ["regions", "callable"]},
+    "offtarget_count": {"keys": ["regions", "offtarget_count"]},
     "sample_callable": {"keys": ["regions", "sample_callable"]},
     "coverage_interval": {"keys": ["config", "algorithm", "coverage_interval"]},
     "deduped_bam": {"keys": ["deduped_bam"]},

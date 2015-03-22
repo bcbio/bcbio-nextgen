@@ -387,7 +387,7 @@ Experimental information
    when set to 'genome', otherwise we apply hard filters. Also affects cn.mops
    structural variant calling and deep panel calling in cancer samples, where
    we tune regional/exome analyses to maximize sensitivity.
-   [exome, genome, regional]
+   [genome, regional, amplicon]
 - ``coverage_depth_max`` Maximum depth of coverage. We downsample coverage
    regions with more than this value to approximately the specified
    coverage. Actual coverage depth per position will be higher since we
