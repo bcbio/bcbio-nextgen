@@ -312,7 +312,6 @@ def sort(in_bam, config, order="coordinate"):
     sort_file = sort_stem + ".bam"
     if not utils.file_exists(sort_file):
         sambamba = _get_sambamba(config)
-        sambamba = None
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(config, sort_file) as tx_sort_file:
