@@ -256,7 +256,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                      # back compatibility
                       ["coverage_depth"])
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr", "clinical_reporting",
-                          "fusion_mode", "rsem", "assemble_transcripts", "trim_reads", "kraken",
+                          "fusion_mode", "rsem", "assemble_transcripts", "trim_reads",
                           "recalibrate", "realign"])
 ALG_ALLOW_FALSE = set(["aligner", "effects", "phasing", "mixup_check"])
 
