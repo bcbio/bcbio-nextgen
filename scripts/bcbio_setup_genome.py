@@ -7,7 +7,7 @@ import argparse
 from argparse import ArgumentParser
 import os
 import toolz as tz
-from bcbio.utils import safe_makedir, file_exists
+from bcbio.utils import safe_makedir, file_exists, chdir
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
@@ -187,10 +187,10 @@ if __name__ == "__main__":
 
     if args.gtf:
         "Preparing transcriptome."
-        os.chdir(os.path.join(build_dir, os.pardir))
-        cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {env.picard_home} "
-               "{args.build}")
-        subprocess.check_call(cmd.format(**locals()), shell=True)
+        with chdir(os.path.join(build_dir, os.pardir)):
+            cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {env.picard_home} "
+                "{args.build}")
+            subprocess.check_call(cmd.format(**locals()), shell=True)
 
     base_dir = os.path.normpath(os.path.dirname(fasta_file))
     resource_file = os.path.join(base_dir, "%s-resources.yaml" % args.build)
