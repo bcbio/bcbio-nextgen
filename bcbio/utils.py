@@ -590,3 +590,14 @@ def filter_missing(xs):
     remove items from a list if they evaluate to False
     """
     return filter(lambda x: x, xs)
+
+def rbind(dfs):
+    """
+    acts like rbind for pandas dataframes
+    """
+    if len(dfs) == 1:
+        return dfs[0]
+    df = dfs[0]
+    for d in dfs[1:]:
+        df = df.append(d)
+    return df
