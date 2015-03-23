@@ -108,13 +108,22 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
         if os.path.exists(raw_work_dir):
             shutil.rmtree(raw_work_dir)
         with tx_tmpdir(data, work_dir) as tx_work_dir:
-            target_bed = tz.get_in(["config", "algorithm", "variant_regions"], data)
+            target_bed = dd.get_variant_regions(data)
+            # pick targets, anti-targets and access files based on analysis type
+            # http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
+            cov_interval = dd.get_coverage_interval(data)
+            if cov_interval == "amplicon":
+                target_opts = ["--targets", target_bed, "--access", target_bed]
+            elif cov_interval == "genome":
+                target_opts = ["--targets", target_bed, "--access", target_bed]
+            else:
+                target_opts = ["--targets", target_bed, "--access", access_file]
             cores = min(tz.get_in(["config", "algorithm", "num_cores"], data, 1),
                         len(test_bams) + len(background_bams))
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "batch"] + \
                   test_bams + ["-n"] + background_bams + ["-f", ref_file] + \
-                  ["--targets", target_bed, "--access", access_file,
-                   "-d", tx_work_dir, "--split", "-p", str(cores),
+                  target_opts + \
+                  ["-d", tx_work_dir, "--split", "-p", str(cores),
                    "--output-reference", os.path.join(tx_work_dir, background_cnn)]
             at_avg, at_min, t_avg = _get_antitarget_size(access_file, target_bed)
             if at_avg:
@@ -148,7 +157,7 @@ def _add_bed_to_output(out, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
-                   "freebayes", "--name", dd.get_sample_name(data),
+                   "freebayes", "--sample-id", dd.get_sample_name(data),
                    "--ploidy", str(dd.get_ploidy(data)),
                    "-o", tx_out_file, out["cns"]]
             gender = dd.get_gender(data)
