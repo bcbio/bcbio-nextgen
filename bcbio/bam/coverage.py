@@ -11,7 +11,6 @@ brad had to do that already but it needs to get rolled into bcbio-nextgen
 first thing to do is, given a BAM file and a region calculate the coverage in that
 region.
 """
-
 import tempfile
 import subprocess
 import sys
@@ -41,8 +40,9 @@ def _calc_regional_coverage(in_bam, chrom, start, end, samplename):
 
     cmd = ("bedtools coverage -abam {in_bam} -b {region_file} -d")
     out = subprocess.check_output(cmd.format(**locals()), shell=True)
-    df =  pd.io.parsers.read_table(StringIO(out), sep="\t", header=None,
-                                names=["chom", "start", "end", "offset", "coverage"])
+    names = ["chom", "start", "end", "offset", "coverage"]
+    df = pd.io.parsers.read_table(StringIO(out), sep="\t", header=None,
+                                  names=names)
     df["sample"] = samplename
     df["chrom"] = chrom
     df["position"] = df["start"] + df["offset"] - 1
