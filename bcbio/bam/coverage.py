@@ -62,25 +62,24 @@ def _combine_regional_coverage(in_bams, samplenames, chrom, start, end):
            in zip(in_bams, samplenames)]
     return rbind(dfs)
 
-def plot_regional_coverage(samples, chrom, start, end, out_file):
+def plot_multiple_regions_coverage(samples, regions, out_file):
     """
-    given a set of bcbio samples, extract the working BAM file and sample names
-    and make a plot of the coverage in the specified region for each sample
+    given a list of bcbio samples and a list of tuples of regions of the format
+    (chrom, start, end), make a plot of the coverage in the regions for
+    the set of samples
     """
-    if not out_file:
-        out_fn = "coverage-{chrom}:{start}-{end}.pdf".format(**locals())
-        out_file = os.path.join("coverage", out_fn)
     if file_exists(out_file):
         return out_file
-
     in_bams = [dd.get_work_bam(x) for x in samples]
     samplenames = [dd.get_sample_name(x) for x in samples]
-    df = _combine_regional_coverage(in_bams, samplenames, chrom, start, end)
     with file_transaction(out_file) as tx_out_file:
         with PdfPages(tx_out_file) as pdf_out:
             sns.despine()
-            plot = sns.tsplot(df, time="position", unit="chrom", value="coverage",
-                              condition="sample")
-            pdf_out.savefig(plot.get_figure())
-            plt.close()
+            for chrom, start, end in regions:
+                df = _combine_regional_coverage(in_bams, samplenames, chrom,
+                                                start, end)
+                plot = sns.tsplot(df, time="position", unit="chrom",
+                                  value="coverage", condition="sample")
+                plt.title("{chrom}:{start}-{end}".format(**locals()))
+                pdf_out.savefig(plot.get_figure())
     return out_file
