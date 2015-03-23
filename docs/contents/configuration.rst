@@ -388,11 +388,11 @@ Experimental information
    does not determine coverage correctly. ``genome`` specifies full genome
    sequencing, ``regional`` identifies partial-genome pull down sequencing like
    exome analyses, and ``amplicon`` is partial-genome sequencing from
-   amplification. Influences GATK options for filtering and GATK will use
+   PCR amplicon sequencing. This influences GATK options for filtering: we use
    Variant Quality Score Recalibration when set to ``genome``, otherwise we
    apply hard filters. Also affects copy number calling with CNVkit, structural
    variant calling and deep panel calling in cancer samples, where we tune
-   regional/amplicons analyses to maximize sensitivity.
+   regional/amplicon analyses to maximize sensitivity.
    [genome, regional, amplicon]
 - ``coverage_depth_max`` Maximum depth of coverage. We downsample coverage
    regions with more than this value to approximately the specified

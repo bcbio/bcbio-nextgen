@@ -10,11 +10,18 @@ import subprocess
 import sys
 
 import numpy
+import yaml
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+
+def _get_files(data):
+    work_bam = dd.get_work_bam(data)
+    out_file = "%s-highdepth.bed" % utils.splitext_plus(work_bam)[0]
+    stats_file = "%s-stats.yaml" % utils.splitext_plus(out_file)[0]
+    return work_bam, out_file, stats_file
 
 def identify(data):
     """Identify high depth regions in the alignment file for potential filtering.
@@ -24,8 +31,7 @@ def identify(data):
     high_percentage = 25.0
     min_coverage = 10
     window_size = 250
-    work_bam = dd.get_work_bam(data)
-    out_file = "%s-highdepth.bed" % utils.splitext_plus(work_bam)[0]
+    work_bam, out_file, stats_file = _get_files(data)
     if not os.path.exists(out_file):
         cores = dd.get_num_cores(data)
         with file_transaction(data, out_file) as tx_out_file:
@@ -43,6 +49,9 @@ def identify(data):
                        "| {py_cl} -fx 'float(x.split()[5]) >= {high_percentage}' "
                        "| cut -f 1-3,7 > {tx_raw_file} ")
                 do.run(cmd.format(**locals()), "Identify high coverage regions")
+                with open(stats_file, "w") as out_handle:
+                    yaml.safe_dump({"median_cov": median_cov}, out_handle,
+                                   allow_unicode=False, default_flow_style=False)
             else:
                 with open(tx_raw_file, "w") as out_handle:
                     out_handle.write("")
@@ -52,3 +61,9 @@ def identify(data):
             else:
                 shutil.move(tx_raw_file, tx_out_file)
     return out_file if os.path.exists(out_file) else None
+
+def get_median_coverage(data):
+    stats_file = _get_files(data)[-1]
+    with open(stats_file) as in_handle:
+        stats = yaml.safe_load(in_handle)
+    return stats["median_cov"]

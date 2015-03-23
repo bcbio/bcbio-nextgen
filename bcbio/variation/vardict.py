@@ -8,11 +8,12 @@ import sys
 import toolz as tz
 
 from bcbio import bam, utils
+from bcbio.bam import highdepth
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation, bamprep, vcfutils
+from bcbio.variation import bamprep, vcfutils
 
 def _vardict_options_from_config(items, config, out_file, region=None, do_merge=False):
     opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
@@ -70,7 +71,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 # for deep targeted panels, require 50 worth of coverage
-                var2vcf_opts = " -v 50 " if coverage_interval in ["regional", "amplicon"] else ""
+                var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 500 else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 sample = item["name"][1]
                 cmd = ("{vardict} -G {ref_file} -f {freq} "
@@ -124,7 +125,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             opts = " ".join(_vardict_options_from_config(items, config, out_file, region, do_merge=True))
             coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
             # for deep targeted panels, require 50 worth of coverage
-            var2vcf_opts = " -v 50 " if coverage_interval in ["regional", "amplicon"] else ""
+            var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 500 else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
             if any("vardict_somatic_filter" in tz.get_in(("config", "algorithm", "tools_off"), data, [])
                    for data in items):
