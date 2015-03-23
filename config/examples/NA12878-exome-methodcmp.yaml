@@ -18,8 +18,6 @@ details:
       aligner: bwa
       align_split_size: 5000000
       variantcaller: [freebayes, gatk-haplotype, samtools]
-      quality_format: Standard
-      coverage_interval: regional
       recalibrate: gatk
       realign: gatk
       merge_bamprep: true
@@ -41,8 +39,6 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype, samtools]
-      quality_format: Standard
-      coverage_interval: regional
       merge_bamprep: false
       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed

@@ -27,8 +27,6 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
-      quality_format: Standard
-      coverage_interval: genome
       remove_lcr: true
       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
@@ -45,8 +43,6 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
-      quality_format: Standard
-      coverage_interval: genome
   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
     description: NA12892-1
     metadata:
@@ -60,8 +56,6 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
-      quality_format: Standard
-      coverage_interval: genome
   # bwa, joint calling
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-3
@@ -77,8 +71,6 @@ details:
       realign: false
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint, samtools-joint]
-      quality_format: Standard
-      coverage_interval: genome
       remove_lcr: true
       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
@@ -96,8 +88,6 @@ details:
       realign: false
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint, samtools-joint]
-      quality_format: Standard
-      coverage_interval: genome
   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
     description: NA12892-3
     metadata:
@@ -112,8 +102,6 @@ details:
       realign: false
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint, samtools-joint]
-      quality_format: Standard
-      coverage_interval: genome
   # bwa, single sample calling
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-5
@@ -127,8 +115,6 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
-      quality_format: Standard
-      coverage_interval: genome
       remove_lcr: true
       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
@@ -146,8 +132,6 @@ details:
 #      recalibrate: false
 #      realign: false
 #      variantcaller: [freebayes, gatk-haplotype, platypus]
-#      quality_format: Standard
-#      coverage_interval: genome
 #      remove_lcr: true
 #      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
 #      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
@@ -164,8 +148,6 @@ details:
 #      recalibrate: false
 #      realign: false
 #      variantcaller: [freebayes, gatk-haplotype, platypus]
-#      quality_format: Standard
-#      coverage_interval: genome
 #  - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
 #    description: NA12892-2
 #    metadata:
@@ -179,8 +161,6 @@ details:
 #      recalibrate: false
 #      realign: false
 #      variantcaller: [freebayes, gatk-haplotype, platypus]
-#      quality_format: Standard
-#      coverage_interval: genome
 #   # snap, joint calling
 #   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #     description: NA12878-4
@@ -196,8 +176,6 @@ details:
 #       realign: false
 #       variantcaller: [freebayes, gatk-haplotype, platypus]
 #       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
-#       quality_format: Standard
-#       coverage_interval: genome
 #       remove_lcr: true
 #       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
 #       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
@@ -215,8 +193,6 @@ details:
 #       realign: false
 #       variantcaller: [freebayes, gatk-haplotype, platypus]
 #       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
-#       quality_format: Standard
-#       coverage_interval: genome
 #   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
 #     description: NA12892-4
 #     metadata:
@@ -231,8 +207,6 @@ details:
 #       realign: false
 #       variantcaller: [freebayes, gatk-haplotype, platypus]
 #       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
-#       quality_format: Standard
-#       coverage_interval: genome
 #  # snap, single sample calling
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-6
@@ -246,8 +220,6 @@ details:
 #      recalibrate: false
 #      realign: false
 #      variantcaller: [freebayes, gatk-haplotype, platypus]
-#      quality_format: Standard
-#      coverage_interval: genome
 #      remove_lcr: true
 #      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
 #      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed

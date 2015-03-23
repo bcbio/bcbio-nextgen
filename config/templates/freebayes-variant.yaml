@@ -14,7 +14,5 @@ details:
       recalibrate: false
       realign: false
       variantcaller: freebayes
-      platform: illumina
-      quality_format: Standard
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

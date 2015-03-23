@@ -24,4 +24,3 @@ details:
     algorithm:
       aligner: novoalign
       variantcaller: gatk
-      quality_format: Standard

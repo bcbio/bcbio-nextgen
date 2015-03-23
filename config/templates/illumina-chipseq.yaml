@@ -10,6 +10,5 @@ details:
     #   batch: your-arbitrary-batch-name
     algorithm:
       aligner: bowtie2
-      quality_format: Standard
       trim_reads: read_through
       adapters: [truseq]

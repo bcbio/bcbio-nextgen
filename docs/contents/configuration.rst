@@ -46,9 +46,9 @@ multiple samples using the template workflow command::
 - ``project1.csv`` is a comma separated value file containing sample
   metadata, descriptions and algorithm tweaks::
 
-        samplename,description,batch,phenotype,sex,coverage_interval
-        sample1,ERR256785,batch1,normal,female,genome
-        sample2,ERR256786,batch1,tumor,,genome
+        samplename,description,batch,phenotype,sex,variant_regions
+        sample1,ERR256785,batch1,normal,female,/path/to/regions.bed
+        sample2,ERR256786,batch1,tumor,,/path/to/regions.bed
 
   The first column links the metadata to a specific input file. The
   template command tries to identify the ``samplename`` from read group
@@ -118,10 +118,10 @@ The main parameters are:
 but having as many duplicate lines for each samples as files to be merged::
 
 
-        samplename,description,batch,phenotype,sex,coverage_interval
-        file1.fastq,sample1,batch1,normal,female,genome
-        file2.fastq,sample1,batch1,normal,female,genome
-        file1.fastq,sample2,batch1,tumor,,genome
+        samplename,description,batch,phenotype,sex,variant_regions
+        file1.fastq,sample1,batch1,normal,female,,/path/to/regions.bed
+        file2.fastq,sample1,batch1,normal,female,/path/to/regions.bed
+        file1.fastq,sample2,batch1,tumor,,/path/to/regions.bed
 
 An example of usage is::
 
@@ -136,9 +136,9 @@ in the same folder than the input CSV :``project1-merged.csv``. Later, it can be
 
 The new CSV file will look like::
 
-        samplename,description,batch,phenotype,sex,coverage_interval
-        sample1.fastq,sample1,batch1,normal,female,genome
-        sample2.fastq,sample2,batch1,tumor,,genome
+        samplename,description,batch,phenotype,sex,variant_regions
+        sample1.fastq,sample1,batch1,normal,female,/path/to/regions.bed
+        sample2.fastq,sample2,batch1,tumor,,/path/to/regions.bed
 
 It supports parallelization the same way ``bcbio_nextgen.py`` does::
 
@@ -153,18 +153,18 @@ See more examples at `parallelize pipeline`_.
 
 In case of paired reads, the CSV file should contain all files::
 
-        samplename,description,batch,phenotype,sex,coverage_interval
-        file1_R1.fastq,sample1,batch1,normal,female,genome
-        file2_R1.fastq,sample1,batch1,normal,female,genome
-        file1_R2.fastq,sample1,batch1,normal,femela,genome
-        file2_R2.fastq,sample1,batch1,normal,female,genome
+        samplename,description,batch,phenotype,sex,variant_regions
+        file1_R1.fastq,sample1,batch1,normal,female,/path/to/regions.bed
+        file2_R1.fastq,sample1,batch1,normal,female,/path/to/regions.bed
+        file1_R2.fastq,sample1,batch1,normal,femela,/path/to/regions.bed
+        file2_R2.fastq,sample1,batch1,normal,female,/path/to/regions.bed
 
 The script will try to guess the paired files the same way than ``bcbio_nextgen.py -w template`` does. It would detect paired files if the difference among two files is only _R1/_R2 or -1/-2 or _1/_2 or .1/.2
 
 The output CSV will look like and is compatible with bcbio::
 
-        samplename,description,batch,phenotype,sex,coverage_interval
-        sample1,sample1,batch1,normal,female,genome
+        samplename,description,batch,phenotype,sex,variant_regions
+        sample1,sample1,batch1,normal,female,/path/to/regions.bed
 
 
 Sample information
@@ -382,11 +382,17 @@ Alignment
 Experimental information
 ========================
 
--  ``coverage_interval`` Regions covered by sequencing. Influences GATK
-   options for filtering and GATK will use Variant Quality Score Recalibration
-   when set to 'genome', otherwise we apply hard filters. Also affects cn.mops
-   structural variant calling and deep panel calling in cancer samples, where
-   we tune regional/exome analyses to maximize sensitivity.
+- ``coverage_interval`` Regions covered by sequencing. bcbio calculates this
+   automatically from alignment coverage information, so you only need to
+   specify it in the input configuration if you have specific needs or bcbio
+   does not determine coverage correctly. ``genome`` specifies full genome
+   sequencing, ``regional`` identifies partial-genome pull down sequencing like
+   exome analyses, and ``amplicon`` is partial-genome sequencing from
+   amplification. Influences GATK options for filtering and GATK will use
+   Variant Quality Score Recalibration when set to ``genome``, otherwise we
+   apply hard filters. Also affects copy number calling with CNVkit, structural
+   variant calling and deep panel calling in cancer samples, where we tune
+   regional/amplicons analyses to maximize sensitivity.
    [genome, regional, amplicon]
 - ``coverage_depth_max`` Maximum depth of coverage. We downsample coverage
    regions with more than this value to approximately the specified

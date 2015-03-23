@@ -18,8 +18,5 @@ details:
       recalibrate: false
       realign: false
       variantcaller: freebayes
-      platform: illumina
-      quality_format: Standard
-      coverage_interval: genome
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

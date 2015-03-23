@@ -12,8 +12,5 @@ details:
       recalibrate: gatk
       realign: gatk
       variantcaller: gatk-haplotype
-      platform: illumina
-      quality_format: Standard
-      coverage_interval: genome
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

@@ -20,7 +20,5 @@ details:
       indelcaller: false
       ensemble:
         numpass: 2
-      platform: illumina
-      quality_format: Standard
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

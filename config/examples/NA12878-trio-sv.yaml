@@ -10,8 +10,6 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
-    quality_format: Standard
-    coverage_interval: genome
     recalibrate: false
     realign: false
     variantcaller: false
@@ -31,8 +29,6 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
-    quality_format: Standard
-    coverage_interval: genome
     recalibrate: false
     realign: false
     variantcaller: false
@@ -50,8 +46,6 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
-    quality_format: Standard
-    coverage_interval: genome
     recalibrate: false
     realign: false
     variantcaller: false

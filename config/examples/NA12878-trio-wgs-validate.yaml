@@ -23,8 +23,6 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype]
-      quality_format: Standard
-      coverage_interval: genome
       remove_lcr: true
       validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
       validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
@@ -42,8 +40,6 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype]
-      quality_format: Standard
-      coverage_interval: genome
   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
     description: NA12892
     metadata:
@@ -58,5 +54,3 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, gatk-haplotype]
-      quality_format: Standard
-      coverage_interval: genome

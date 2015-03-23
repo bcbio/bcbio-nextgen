@@ -14,8 +14,6 @@ details:
   - algorithm:
       aligner: bwa
       variantcaller: gatk
-      quality_format: Standard
-      coverage_interval: genome
       validate: ../input/NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf
       validate_regions: ../input/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed
     analysis: variant2
