@@ -413,8 +413,8 @@ Variant calling
 ===============
 
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
-   multiple options [gatk, freebayes, gatk-haplotype, platypus,
-   mutect, scalpel, vardict, varscan, samtools]
+   multiple options or false to skip [gatk, freebayes, gatk-haplotype, platypus,
+   mutect, scalpel, vardict, varscan, samtools, false]
 
     - Paired (typically somatic, tumor-normal) variant calling is currently
       supported by freebayes, varscan, mutect (see disclaimer below),
