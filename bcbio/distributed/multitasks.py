@@ -119,6 +119,10 @@ def detect_sv(*args):
     return structural.detect_sv(*args)
 
 @utils.map_wrap
+def finalize_sv(*args):
+    return structural.finalize_sv(*args)
+
+@utils.map_wrap
 def combine_calls(*args):
     return ensemble.combine_calls(*args)
 

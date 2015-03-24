@@ -6,7 +6,8 @@ import operator
 
 import toolz as tz
 
-from bcbio.structural import cn_mops, cnvkit, delly, ensemble, lumpy, validate, wham
+from bcbio.pipeline import datadict as dd
+from bcbio.structural import annotate, cn_mops, cnvkit, delly, ensemble, lumpy, plot, validate, wham
 from bcbio.variation import vcfutils
 
 _CALLERS = {}
@@ -33,18 +34,21 @@ def _handle_multiple_svcallers(data):
         out.append(base)
     return out
 
-def _combine_multiple_svcallers(samples):
+def finalize_sv(samples, config):
     """Combine results from multiple sv callers into a single ordered 'sv' key.
+
+    Handles ensemble calling and plotting of results.
     """
     by_bam = collections.OrderedDict()
     for x in samples:
         try:
-            by_bam[x[0]["align_bam"]].append(x[0])
+            by_bam[x["align_bam"]].append(x)
         except KeyError:
-            by_bam[x[0]["align_bam"]] = [x[0]]
+            by_bam[x["align_bam"]] = [x]
     highdepths = filter(lambda x: x is not None,
-                        list(set([tz.get_in(["config", "algorithm", "highdepth_regions"], x[0]) for x in samples])))
-    out = []
+                        list(set([tz.get_in(["config", "algorithm", "highdepth_regions"], x) for x in samples])))
+    by_batch = collections.OrderedDict()
+    lead_batches = {}
     for grouped_calls in by_bam.values():
         def orig_svcaller_order(x):
             return _get_svcallers(x).index(x["config"]["algorithm"]["svcaller_active"])
@@ -54,10 +58,24 @@ def _combine_multiple_svcallers(samples):
         if len(sorted_svcalls) > 0:
             final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
             final_calls = ensemble.summarize(final_calls, final, highdepths)
+            final_calls = annotate.with_genes(final_calls)
             final_calls = validate.evaluate(final, final_calls)
             final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]
-        out.append([final])
+        batch = dd.get_batch(final) or dd.get_sample_name(final)
+        batches = batch if isinstance(batch, (list, tuple)) else [batch]
+        lead_batches[dd.get_sample_name(final)] = batches[0]
+        for batch in batches:
+            try:
+                by_batch[batch].append(final)
+            except KeyError:
+                by_batch[batch] = [final]
+    out = []
+    for batch, items in by_batch.items():
+        plot_items = plot.by_regions(items)
+        for data in plot_items:
+            if lead_batches[dd.get_sample_name(data)] == batch:
+                out.append([data])
     return out
 
 def run(samples, run_parallel):
@@ -85,7 +103,8 @@ def run(samples, run_parallel):
         else:
             extras.append([data])
     processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"]] for xs in to_process.values()))
-    return extras + _combine_multiple_svcallers(processed)
+    finalized = run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"])])
+    return extras + finalized
 
 def detect_sv(items, all_items, config):
     """Top level parallel target for examining structural variation.

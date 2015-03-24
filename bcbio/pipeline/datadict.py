@@ -24,6 +24,7 @@ LOOKUPS = {
     "square_vcf": {"keys": ['square_vcf']},
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
     "gender": {"keys": ["metadata", "sex"], "default": ""},
+    "batch": {"keys": ["metadata", "batch"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "work_bam": {"keys": ["work_bam"]},
     "count_file": {"keys": ["count_file"]},

@@ -235,6 +235,12 @@ def detect_sv(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(structural.detect_sv, *args))
 
+@require(structural)
+def finalize_sv(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(structural.finalize_sv, *args))
+
 @require(ensemble)
 def combine_calls(*args):
     args = ipython.unzip_args(args)
