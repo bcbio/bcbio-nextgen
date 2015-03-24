@@ -77,6 +77,11 @@ def _clean_java_out(version_str):
             out.append(line)
     return "\n".join(out)
 
+def _check_for_bad_version(version, program):
+    if version.find("bad major version") >= 0 or version.find("UnsupportedClassVersionError") >= 0:
+        raise ValueError("Problem getting version for %s. "
+                         "This often indicates you're not running Java 1.7:\n%s" % (program, version))
+
 def get_gatk_version(gatk_jar):
     cl = ["java", "-Xms128m", "-Xmx256m"] + get_default_jvm_opts() + ["-jar", gatk_jar, "-version"]
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
@@ -92,6 +97,7 @@ def get_gatk_version(gatk_jar):
             version = out
     if version.startswith("v"):
         version = version[1:]
+    _check_for_bad_version(version, "GATK")
     return version
 
 def get_mutect_version(mutect_jar):
@@ -112,6 +118,7 @@ def get_mutect_version(mutect_jar):
     if version is "":
         raise ValueError("Unable to determine MuTect version from jar file. "
                          "Need to have version contained in jar (ie. muTect-1.1.5.jar): %s" % mutect_jar)
+    _check_for_bad_version(version, "MuTect")
     return version + mutect_type
 
 class BroadRunner:
