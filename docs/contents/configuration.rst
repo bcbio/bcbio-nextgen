@@ -428,7 +428,7 @@ Variant calling
 -  ``indelcaller`` For SNP only variant callers it is possible to combine the calling
    with indelcallers such as scalpel, pindel and somatic indel detector (for Appistry MuTect
    users only). Currently an experimental option that adds these indel calls to
-   MuTect's SNP-only output. Omit to ignore. [scalpel, pindel, sid]
+   MuTect's SNP-only output. Omit to ignore. [scalpel, pindel, sid, false]
 -  ``jointcaller`` Joint calling algorithm, combining variants called with the
    specified ``variantcaller``. Can be a list of multiple options but needs to
    match with appropriate ``variantcaller``
