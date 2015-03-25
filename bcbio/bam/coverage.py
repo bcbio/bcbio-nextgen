@@ -46,22 +46,32 @@ def _combine_regional_coverage(in_bams, samplenames, chrom, start, end):
 
     chrom position coverage name
     """
-    in_bams = [dd.get_work_bam(x) for x in samples]
-    samplenames = [dd.get_sample_name(x) for x in samples]
     dfs = [_calc_regional_coverage(bam, chrom, start, end, sample) for bam, sample
            in zip(in_bams, samplenames)]
     return rbind(dfs)
 
-def plot_multiple_regions_coverage(samples, regions, out_file):
+def _bed_to_regions(bed_file):
+    regions = []
+    with open(bed_file) as in_handle:
+        for line in in_handle:
+            tokens = line.split()
+            regions.append((tokens[0], tokens[1], tokens[2]))
+    return regions
+
+def plot_multiple_regions_coverage(samples, out_file, region_bed=None, regions=None):
     """
-    given a list of bcbio samples and a list of tuples of regions of the format
-    (chrom, start, end), make a plot of the coverage in the regions for
-    the set of samples
+    given a list of bcbio samples and a bed file of regions or a list of tuples
+    of regions the form (chrom, start, end) make a plot of the coverage in the
+    regions for the set of samples
     """
+    assert (region_bed or regions), ("A region bed file or a list of tuples of "
+                                     "regions must be provided")
     if file_exists(out_file):
         return out_file
     in_bams = [dd.get_work_bam(x) for x in samples]
     samplenames = [dd.get_sample_name(x) for x in samples]
+    if not regions:
+        regions = _bed_to_regions(region_bed)
     with file_transaction(out_file) as tx_out_file:
         with PdfPages(tx_out_file) as pdf_out:
             sns.despine()
@@ -72,4 +82,5 @@ def plot_multiple_regions_coverage(samples, regions, out_file):
                                   value="coverage", condition="sample")
                 plt.title("{chrom}:{start}-{end}".format(**locals()))
                 pdf_out.savefig(plot.get_figure())
+                plt.close()
     return out_file
