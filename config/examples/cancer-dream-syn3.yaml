@@ -19,6 +19,7 @@ details:
       numpass: 2
     variant_regions: ../input/NGv3.bed
     # svcaller: [cnvkit, lumpy, delly]
+    # coverage_interval: amplicon
   analysis: variant2
   description: syn3-normal
   #files: ../input/synthetic.challenge.set3.normal.bam
@@ -47,6 +48,7 @@ details:
     validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
     validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
     # svcaller: [cnvkit, lumpy, delly]
+    # coverage_interval: amplicon
   #   svvalidate:
   #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
   #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed

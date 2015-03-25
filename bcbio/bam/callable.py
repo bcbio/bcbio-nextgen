@@ -182,7 +182,8 @@ def calculate_offtarget(bam_file, ref_file, data):
                 offtarget_regions = "%s-regions.bed" % utils.splitext_plus(out_file)[0]
                 ref_bed = get_ref_bedtool(ref_file, data["config"])
                 ref_bed.subtract(pybedtools.BedTool(vrs_file)).saveas(offtarget_regions)
-                cmd = "samtools view {bam_file} -L {offtarget_regions} | wc -l"
+                cmd = ("samtools view -u {bam_file} -L {offtarget_regions} | "
+                       "bedtools intersect -sorted -abam - -b {offtarget_regions} -f 1.0 -bed | wc -l")
                 offtarget_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
                 cmd = "samtools idxstats {bam_file} | awk '{{s+=$3}} END {{print s}}'"
                 mapped_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
