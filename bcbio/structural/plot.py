@@ -6,6 +6,7 @@ variants.
 """
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
+from bcbio.bam.coverage import plot_multiple_regions_coverage
 
 def _sort_by_type(x):
     """Simple prioritization to identify 'lead' items within a batch.
@@ -15,6 +16,9 @@ def _sort_by_type(x):
     else:
         priority = 1
     return [priority, dd.get_sample_name(x)]
+
+def _merge_sv_calls(calls):
+    pass
 
 def by_regions(items):
     """Plot for a union set of combined ensemble regions across all of the data items.
@@ -30,6 +34,9 @@ def by_regions(items):
         # Merge SV calls into a union set
         # Make summary level plots
         # Add plots to SV information for lead item
+        # merged_bed = _merge_sv_calls(calls)
+        # plot = plot_multiple_regions_coverage(items, plot_file,
+        #                                       region_bed=merged_bed)
         pass
     print [x["description"] for x in items]
     return items
