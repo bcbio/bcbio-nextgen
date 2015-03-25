@@ -1,15 +1,5 @@
 """
-from a set of BED files and a region foo, plot coverage across the region
-x-axis: bases along the region
-y-axis: coverage
-each sample is a line on the coverage plot
-
-https://github.com/hbc/projects/blob/master/tanzi_ad/scripts/sv_region_plot.py
-
-brad had to do that already but it needs to get rolled into bcbio-nextgen
-
-first thing to do is, given a BAM file and a region calculate the coverage in that
-region.
+calculate coverage across a list of regions
 """
 import tempfile
 import subprocess
