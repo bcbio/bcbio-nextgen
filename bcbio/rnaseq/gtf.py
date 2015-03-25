@@ -19,6 +19,29 @@ def get_gtf_db(gtf, in_memory=False):
     else:
         return gffutils.FeatureDB(db_file)
 
+def gtf_to_bed(gtf):
+    """
+    create a BED file of transcript-level features with attached gene name
+    or gene ids
+    """
+    db = get_gtf_db(gtf)
+    out_file = os.path.splitext(gtf)[0] + ".bed"
+    if file_exists(out_file):
+        return out_file
+    with open(out_file, "w") as out_handle:
+        for feature in db.features_of_type('transcript'):
+            chrom = feature.chrom
+            start = feature.start
+            end = feature.end
+            attributes = feature.attributes.keys()
+            strand = feature.strand
+            name = (feature['gene_name'][0] if 'gene_name' in attributes else
+                    feature['gene_id'][0])
+            line = "\t".join([str(x) for x in [chrom, start, end, name, ".",
+                                               strand]])
+            out_handle.write(line + "\n")
+    return out_file
+
 def complete_features(db):
     """
     iterator returning features which are complete (have a 'gene_id' and a
