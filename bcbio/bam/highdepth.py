@@ -18,7 +18,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
 def _get_files(data):
-    work_bam = dd.get_work_bam(data)
+    work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     out_file = "%s-highdepth.bed" % utils.splitext_plus(work_bam)[0]
     stats_file = "%s-stats.yaml" % utils.splitext_plus(out_file)[0]
     return work_bam, out_file, stats_file

@@ -71,7 +71,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 # for deep targeted panels, require 50 worth of coverage
-                var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 500 else ""
+                var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 sample = item["name"][1]
                 cmd = ("{vardict} -G {ref_file} -f {freq} "
@@ -125,7 +125,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             opts = " ".join(_vardict_options_from_config(items, config, out_file, region, do_merge=True))
             coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
             # for deep targeted panels, require 50 worth of coverage
-            var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 500 else ""
+            var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
             if any("vardict_somatic_filter" in tz.get_in(("config", "algorithm", "tools_off"), data, [])
                    for data in items):

@@ -154,10 +154,10 @@ def postprocess_alignment(data):
             callable.block_regions(data["work_bam"], ref_file, data["config"])
         highdepth_bed = highdepth.identify(data)
         sample_callable = callable.sample_callable_bed(data["work_bam"], ref_file, data["config"])
-        offtarget_count = callable.calculate_offtarget(data["work_bam"], ref_file, data)
+        offtarget_stats = callable.calculate_offtarget(data["work_bam"], ref_file, data)
         data["regions"] = {"nblock": nblock_bed, "callable": callable_bed, "highdepth": highdepth_bed,
                            "sample_callable": sample_callable,
-                           "offtarget_count": int(open(offtarget_count).read()) if offtarget_count else 0}
+                           "offtarget_stats": offtarget_stats}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):

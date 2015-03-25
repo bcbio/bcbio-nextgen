@@ -103,7 +103,8 @@ def run(samples, run_parallel):
         else:
             extras.append([data])
     processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"]] for xs in to_process.values()))
-    finalized = run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"])])
+    finalized = (run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"])])
+                 if len(processed) > 0 else [])
     return extras + finalized
 
 def detect_sv(items, all_items, config):

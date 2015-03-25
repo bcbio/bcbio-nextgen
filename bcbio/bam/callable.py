@@ -14,11 +14,13 @@ import copy
 from distutils.version import LooseVersion
 import operator
 import os
+import subprocess
 import sys
 
 import numpy
 import pysam
 import toolz as tz
+import yaml
 
 from bcbio import bam, broad, utils
 from bcbio.bam import ref
@@ -174,14 +176,19 @@ def calculate_offtarget(bam_file, ref_file, data):
     import pybedtools
     vrs_file = dd.get_variant_regions(data)
     if vrs_file:
-        out_file = "%s-offtarget_count.txt" % os.path.splitext(bam_file)[0]
+        out_file = "%s-offtarget-stats.yaml" % os.path.splitext(bam_file)[0]
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
                 offtarget_regions = "%s-regions.bed" % utils.splitext_plus(out_file)[0]
                 ref_bed = get_ref_bedtool(ref_file, data["config"])
                 ref_bed.subtract(pybedtools.BedTool(vrs_file)).saveas(offtarget_regions)
-                cmd = "samtools view {bam_file} -L {offtarget_regions} | wc -l > {tx_out_file}"
-                do.run(cmd.format(**locals()), "Count offtarget reads")
+                cmd = "samtools view {bam_file} -L {offtarget_regions} | wc -l"
+                offtarget_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                cmd = "samtools idxstats {bam_file} | awk '{{s+=$3}} END {{print s}}'"
+                mapped_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                with open(tx_out_file, "w") as out_handle:
+                    yaml.safe_dump({"mapped": mapped_count, "offtarget": offtarget_count}, out_handle,
+                                   allow_unicode=False, default_flow_style=False)
         return out_file
 
 def get_ref_bedtool(ref_file, config, chrom=None):

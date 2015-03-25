@@ -9,10 +9,12 @@ import os
 import sys
 
 import toolz as tz
+import yaml
 
 from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils
@@ -26,7 +28,7 @@ def assign_interval(data):
       - amplicon: Amplication based regional coverage without off-target reads
     """
     genome_cov_thresh = 0.40  # percent of genome covered for whole genome analysis
-    offtarget_pct = 0.1  # percent of offtarget reads needed relative to covered bases
+    offtarget_thresh = 0.10  # percent of offtarget reads required to be capture (not amplification) based
     import pybedtools
     if not dd.get_coverage_interval(data):
         vrs = dd.get_variant_regions(data)
@@ -36,14 +38,24 @@ def assign_interval(data):
         else:
             seq_size = pybedtools.BedTool(callable_file).total_coverage()
         total_size = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
-        if seq_size / float(total_size) > genome_cov_thresh:
+        genome_cov_pct = seq_size / float(total_size)
+        if genome_cov_pct > genome_cov_thresh:
             cov_interval = "genome"
+            offtarget_pct = 0.0
         else:
-            offtarget_count = dd.get_offtarget_count(data)
-            if offtarget_count > (total_size * offtarget_pct):
+            offtarget_stat_file = dd.get_offtarget_stats(data)
+            if not offtarget_stat_file:
+                offtarget_pct = 0.0
+            else:
+                with open(offtarget_stat_file) as in_handle:
+                    stats = yaml.safe_load(in_handle)
+                offtarget_pct = stats["offtarget"] / float(stats["mapped"])
+            if offtarget_pct > offtarget_thresh:
                 cov_interval = "regional"
             else:
                 cov_interval = "amplicon"
+        logger.info("Assigned coverage as '%s' with %.1f%% genome coverage and %.1f%% offtarget coverage"
+                    % (cov_interval, genome_cov_pct * 100.0, offtarget_pct * 100.0))
         data["config"]["algorithm"]["coverage_interval"] = cov_interval
     return data
 
