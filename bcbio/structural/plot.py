@@ -27,7 +27,7 @@ def by_regions(items):
     items = sorted(items, key=_sort_by_type)
     calls = []
     for data in items:
-        for sv in data["sv"]:
+        for sv in data.get("sv", []):
             if sv["variantcaller"] == "sv-ensemble":
                 calls.append(sv)
     if len(calls) > 0:

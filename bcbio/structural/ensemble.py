@@ -210,6 +210,7 @@ def summarize(calls, data, highdepth_beds):
             else:
                 noexclude_file = limit_file
             bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(noexclude_file), "bedprep"))
-            calls.append({"variantcaller": "sv-ensemble",
-                          "vrn_file": bedutils.clean_file(noexclude_file, data, bedprep_dir=bedprep_dir)})
+            if utils.file_exists(noexclude_file):
+                calls.append({"variantcaller": "sv-ensemble",
+                              "vrn_file": bedutils.clean_file(noexclude_file, data, bedprep_dir=bedprep_dir)})
     return calls
