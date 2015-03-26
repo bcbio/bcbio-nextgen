@@ -51,7 +51,7 @@ def _run_theta(cmds, exome_input, data, work_dir):
                       "This sample isn't a good candidate for THetA analysis" in str(msg)):
                     with open(os.path.join(tx_out_dir,
                                            os.path.basename(result_file) + ".skipped"), "w") as out_handle:
-                        out_handle.write("Expected failure, skipping")
+                        out_handle.write("Expected TheTA failure, skipping")
                 else:
                     raise
     return result_file

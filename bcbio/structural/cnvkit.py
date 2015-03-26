@@ -104,7 +104,10 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
     raw_work_dir = os.path.join(work_dir, "raw")
     out_base = os.path.splitext(os.path.basename(test_bams[0]))[0].split(".")[0]
     background_cnn = "%s_background.cnn" % (background_name if background_name else "flat")
-    if not utils.file_exists(os.path.join(raw_work_dir, "%s.cnr" % out_base)):
+    files = {"cnr": os.path.join(raw_work_dir, "%s.cnr" % out_base),
+             "cns": os.path.join(raw_work_dir, "%s.cns" % out_base),
+             "back_cnn": os.path.join(raw_work_dir, background_cnn)}
+    if not utils.file_exists(files["cnr"]):
         if os.path.exists(raw_work_dir):
             shutil.rmtree(raw_work_dir)
         with tx_tmpdir(data, work_dir) as tx_work_dir:
@@ -134,9 +137,10 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
             cmd += ["--rlibpath", local_sitelib]
             do.run(cmd, "CNVkit batch")
             shutil.move(tx_work_dir, raw_work_dir)
-    return {"cnr": os.path.join(raw_work_dir, "%s.cnr" % out_base),
-            "cns": os.path.join(raw_work_dir, "%s.cns" % out_base),
-            "back_cnn": os.path.join(raw_work_dir, background_cnn)}
+    for ftype in ["cnr", "cns"]:
+        if not os.path.exists(files[ftype]):
+            raise IOError("Missing CNVkit %s file: %s" % (ftype, files[ftype]))
+    return files
 
 def _add_seg_to_output(out, data):
     """Export outputs to 'seg' format compatible with IGV and GenePattern.
