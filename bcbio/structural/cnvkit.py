@@ -79,7 +79,8 @@ def _run_cnvkit_cancer(items, background):
     access_file = _create_access_file(dd.get_ref_file(paired.tumor_data), work_dir, paired.tumor_data)
     ckout = _run_cnvkit_shared(paired.tumor_data, [paired.tumor_bam], [paired.normal_bam],
                                access_file, work_dir, background_name=paired.normal_name)
-    ckout = theta.run(ckout, paired)
+    # Skip THetA runs until we can speed up data preparation steps
+    # ckout = theta.run(ckout, paired)
     tumor_data = _associate_cnvkit_out(ckout, [paired.tumor_data])
     normal_data = [x for x in items if dd.get_sample_name(x) != paired.tumor_name]
     return tumor_data + normal_data
