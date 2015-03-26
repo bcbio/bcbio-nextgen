@@ -34,7 +34,7 @@ def gtf_to_bed(gtf, alt_out_dir=None):
         else:
             out_file = os.path.join(alt_out_dir, os.path.basename(out_file))
     with open(out_file, "w") as out_handle:
-        for feature in db.features_of_type('transcript'):
+        for feature in db.features_of_type('transcript', order_by=("seqid", "start", "end")):
             chrom = feature.chrom
             start = feature.start
             end = feature.end
