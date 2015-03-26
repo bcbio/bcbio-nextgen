@@ -19,7 +19,7 @@ def get_gtf_db(gtf, in_memory=False):
     else:
         return gffutils.FeatureDB(db_file)
 
-def gtf_to_bed(gtf):
+def gtf_to_bed(gtf, alt_out_dir=None):
     """
     create a BED file of transcript-level features with attached gene name
     or gene ids
@@ -28,6 +28,11 @@ def gtf_to_bed(gtf):
     out_file = os.path.splitext(gtf)[0] + ".bed"
     if file_exists(out_file):
         return out_file
+    if not os.access(os.path.dirname(out_file), os.W_OK | os.X_OK):
+        if not alt_out_dir:
+            raise IOError("Cannot write transcript BED output file %s" % out_file)
+        else:
+            out_file = os.path.join(alt_out_dir, os.path.basename(out_file))
     with open(out_file, "w") as out_handle:
         for feature in db.features_of_type('transcript'):
             chrom = feature.chrom

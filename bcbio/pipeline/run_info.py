@@ -125,7 +125,7 @@ def add_reference_resources(data):
     data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
     ref_loc = utils.get_in(data, ("config", "resources", "species", "dir"),
                            utils.get_in(data, ("reference", "fasta", "base")))
-    data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc)
+    data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc, data)
     if effects.get_type(data) == "snpeff":
         data["reference"]["snpeff"] = effects.get_snpeff_files(data)
     alt_genome = utils.get_in(data, ("config", "algorithm", "validate_genome_build"))

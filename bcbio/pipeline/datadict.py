@@ -14,6 +14,8 @@ LOOKUPS = {
                   "default": 1},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
+    "gene_bed": {"keys": ['genome_resources', 'rnaseq', 'gene_bed'],
+                 "checker": file_exists},
     "work_dir": {"keys": ['dirs', 'work']},
     "sam_ref": {"keys": ["sam_ref"]},
     "lane": {"keys": ["rgnames", "lane"]},

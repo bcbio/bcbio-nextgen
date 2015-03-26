@@ -15,10 +15,11 @@ from bcbio.log import logger
 from bcbio.ngsalign import star
 from bcbio.pipeline import alignment
 from bcbio.provenance import do
+from bcbio.rnaseq import gtf
 
 # ## bcbio-nextgen genome resource files
 
-def get_resources(genome, ref_file):
+def get_resources(genome, ref_file, data):
     """Retrieve genome information from a genome-references.yaml file.
     """
     base_dir = os.path.normpath(os.path.dirname(ref_file))
@@ -36,10 +37,20 @@ def get_resources(genome, ref_file):
             return os.path.normpath(os.path.join(base_dir, x))
         return x
 
-    return utils.dictapply(resources, resource_file_path)
+    cleaned = utils.dictapply(resources, resource_file_path)
+    return _ensure_annotations(cleaned, data)
+
+def _ensure_annotations(resources, data):
+    """Prepare any potentially missing annotations for downstream processing in a local directory.
+    """
+    out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
+                                              "inputs", "data", "annotations"))
+    transcript_gff = tz.get_in(["rnaseq", "transcripts"], resources)
+    if transcript_gff:
+        resources["rnaseq"]["gene_bed"] = gtf.gtf_to_bed(transcript_gff, out_dir)
+    return resources
 
 # ## Utilities
-
 
 def abs_file_paths(xs, base_dir=None, ignore_keys=None):
     """Normalize any file paths found in a subdirectory of configuration input.
@@ -254,7 +265,7 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
                 do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
     if data.get("genome_build"):
-        gresources = get_resources(data["genome_build"], ref_file)
+        gresources = get_resources(data["genome_build"], ref_file, data)
         if data.get("files") and population.do_db_build([data], need_bam=False, gresources=gresources):
             # symlink base GEMINI directory to work directory, avoiding write/space issues
             out_gemini_dir = utils.safe_makedir(os.path.join(os.path.dirname(ref_dir), "gemini_data"))
