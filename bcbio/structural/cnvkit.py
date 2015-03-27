@@ -48,6 +48,7 @@ def _associate_cnvkit_out(ckout, items):
     out = []
     for data in items:
         ckout = _add_bed_to_output(ckout, data)
+        ckout = _add_plots_to_output(ckout, data)
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append(ckout)
@@ -97,6 +98,9 @@ def _run_cnvkit_population(items, background):
     return [_run_cnvkit_single(data, access_file, background)[0] for data in inputs] + \
            [_run_cnvkit_single(data, access_file, inputs)[0] for data in background]
 
+def _get_cmd():
+    return os.path.join(os.path.dirname(sys.executable), "cnvkit.py")
+
 def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                        background_name=None):
     """Shared functionality to run CNVkit.
@@ -124,7 +128,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                 target_opts = ["--targets", target_bed, "--access", access_file]
             cores = min(tz.get_in(["config", "algorithm", "num_cores"], data, 1),
                         len(test_bams) + len(background_bams))
-            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "batch"] + \
+            cmd = [_get_cmd(), "batch"] + \
                   test_bams + ["-n"] + background_bams + ["-f", ref_file] + \
                   target_opts + \
                   ["-d", tx_work_dir, "--split", "-p", str(cores),
@@ -168,9 +172,43 @@ def _add_bed_to_output(out, data):
             gender = dd.get_gender(data)
             if gender:
                 cmd += ["--gender", gender]
+                if gender.lower() == "male":
+                    cmd += ["--male-reference"]
             do.run(cmd, "CNVkit export FreeBayes BED cnvmap")
     out["vrn_file"] = annotate.add_genes(out_file, data)
     return out
+
+def _add_plots_to_output(out, data):
+    """Add CNVkit plots summarizing called copy number values.
+    """
+    out["diagram_plot"] = _add_diagram_plot(out, data)
+    #loh_plot = _add_loh_plot(out, data)
+    #if loh_plot:
+    #    out["loh_plot"] = loh_plot
+    return out
+
+def _add_diagram_plot(out, data):
+    out_file = "%s-diagram.pdf" % os.path.splitext(out["cnr"])[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [_get_cmd(), "diagram", "-s", out["cns"],
+                   "-o", tx_out_file, out["cnr"]]
+            gender = dd.get_gender(data)
+            if gender and gender.lower() == "male":
+                cmd += ["--male-reference"]
+            do.run(cmd, "CNVkit diagram plot")
+    return out_file
+
+def _add_loh_plot(out, data):
+    vrn_files = filter(lambda x: x is not None, [x.get("vrn_file") for x in data.get("variants", [])])
+    if len(vrn_files) > 0:
+        out_file = "%s-loh.pdf" % os.path.splitext(out["cnr"])[0]
+        if not utils.file_exists(out_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                cmd = [_get_cmd(), "loh", "-t", "-s", out["cns"],
+                       "-o", tx_out_file, vrn_files[0]]
+                do.run(cmd, "CNVkit diagram plot")
+        return out_file
 
 def _get_antitarget_size(access_file, target_bed):
     """Retrieve anti-target size based on distance between target regions.
