@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eo
 
 # We need about 100Gb for the input files. Confirm we have the space.
 REQ_DISK_SPACE=100  

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eo
 # Retrieve data for doing cancer calling evaluation using synthetic dataset 3
 # from the ICGC-TCGA DREAM challenge:
 # https://www.synapse.org/#!Synapse:syn312572/wiki/62018
