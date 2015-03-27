@@ -16,9 +16,9 @@ import toolz as tz
 from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import vcfutils
+from bcbio.variation import bedutils, vcfutils
 from bcbio.provenance import do
-from bcbio.structural import shared, theta
+from bcbio.structural import annotate, shared, theta
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -112,7 +112,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
         if os.path.exists(raw_work_dir):
             shutil.rmtree(raw_work_dir)
         with tx_tmpdir(data, work_dir) as tx_work_dir:
-            target_bed = dd.get_variant_regions(data)
+            target_bed = annotate.add_genes(bedutils.merge_overlaps(dd.get_variant_regions(data), data), data)
             # pick targets, anti-targets and access files based on analysis type
             # http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
             cov_interval = dd.get_coverage_interval(data)
@@ -169,7 +169,7 @@ def _add_bed_to_output(out, data):
             if gender:
                 cmd += ["--gender", gender]
             do.run(cmd, "CNVkit export FreeBayes BED cnvmap")
-    out["vrn_file"] = out_file
+    out["vrn_file"] = annotate.add_genes(out_file, data)
     return out
 
 def _get_antitarget_size(access_file, target_bed):

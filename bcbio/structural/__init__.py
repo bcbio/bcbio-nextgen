@@ -7,7 +7,7 @@ import operator
 import toolz as tz
 
 from bcbio.pipeline import datadict as dd
-from bcbio.structural import annotate, cn_mops, cnvkit, delly, ensemble, lumpy, plot, validate, wham
+from bcbio.structural import cn_mops, cnvkit, delly, ensemble, lumpy, plot, validate, wham
 from bcbio.variation import vcfutils
 
 _CALLERS = {}
@@ -58,7 +58,6 @@ def finalize_sv(samples, config):
         if len(sorted_svcalls) > 0:
             final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
             final_calls = ensemble.summarize(final_calls, final, highdepths)
-            final_calls = annotate.with_genes(final_calls)
             final_calls = validate.evaluate(final, final_calls)
             final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]

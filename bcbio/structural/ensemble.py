@@ -14,7 +14,7 @@ import vcf
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
-from bcbio.structural import validate
+from bcbio.structural import annotate, validate
 from bcbio.structural import shared as sshared
 from bcbio.variation import bedutils
 
@@ -60,7 +60,7 @@ def _cnvkit_to_bed(in_file, caller, out_file):
             with open(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
-                        chrom, start, end, sample, copyn = line.strip().split("\t")
+                        chrom, start, end, sample, copyn = line.strip().split("\t")[:5]
                         out_handle.write("\t".join([chrom, start, end, "cnv%s_%s" % (copyn, caller)])
                                          + "\n")
     return out_file
@@ -115,7 +115,8 @@ def combine_bed_by_size(input_beds, sample, work_dir, data, delim=","):
                             pybedtools.BedTool(all_file).sort(stream=True)\
                               .merge(c=4, o="distinct", delim=delim).saveas(tx_out_file)
             if utils.file_exists(size_out_file):
-                size_beds.append(size_out_file)
+                ann_size_out_file = annotate.add_genes(size_out_file, data)
+                size_beds.append(ann_size_out_file)
         if len(size_beds) > 0:
             out_file = bedutils.combine(size_beds, out_file, data)
     return out_file
@@ -127,7 +128,7 @@ def _limit_calls(in_file, highdepth_beds, data):
     """
     import pybedtools
     out_file = "%s-glimit%s" % utils.splitext_plus(in_file)
-    if not utils.file_exists(out_file):
+    if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             with shared.bedtools_tmpdir(data):
                 all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
@@ -153,16 +154,16 @@ def _filter_ensemble(in_bed, data):
     total_callers = collections.defaultdict(set)
     with open(in_bed) as in_handle:
         for line in in_handle:
-            caller_strs = line.strip().split()[-1]
+            caller_strs = line.strip().split()[3]
             for event, caller in [x.split("_", 1) for x in caller_strs.split(",")]:
                 total_callers[validate.cnv_to_event(event, data)].add(caller)
 
-    if not utils.file_exists(out_file):
+    if not utils.file_uptodate(out_file, in_bed):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 with open(in_bed) as in_handle:
                     for line in in_handle:
-                        chrom, start, end, caller_strs = line.strip().split()
+                        chrom, start, end, caller_strs = line.strip().split()[:4]
                         size = int(end) - int(start)
                         events = collections.defaultdict(set)
                         for event, caller in [x.split("_", 1) for x in caller_strs.split(",")]:
