@@ -390,3 +390,12 @@ def estimate_read_length(bam_file, nreads=1000):
         reads = tz.itertoolz.take(nreads, bam_handle)
         lengths = [len(x.seq) for x in reads]
     return int(numpy.median(lengths))
+
+def estimate_fragment_size(bam_file, nreads=1000):
+    """
+    estimate median fragment size of a SAM/BAM file
+    """
+    with open_samfile(bam_file) as bam_handle:
+        reads = tz.itertoolz.take(nreads, bam_handle)
+        lengths = [x.tlen for x in reads]
+    return int(numpy.median(lengths))
