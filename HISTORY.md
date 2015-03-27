@@ -1,5 +1,6 @@
 ## 0.8.8 (in progress)
 
+- Implement qualimap for RNAseq QC metrics, but not active yet
 - Automatically calculate `coverage_interval` based on coverage calculations,
   avoiding need to set this directly in input configuration.
 - Update vt decompose to handle additional multi-allelic adjustments including
