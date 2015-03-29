@@ -181,10 +181,10 @@ def _add_bed_to_output(out, data):
 def _add_plots_to_output(out, data):
     """Add CNVkit plots summarizing called copy number values.
     """
-    out["diagram_plot"] = _add_diagram_plot(out, data)
-    #loh_plot = _add_loh_plot(out, data)
-    #if loh_plot:
-    #    out["loh_plot"] = loh_plot
+    out["plot"] = {"diagram": _add_diagram_plot(out, data)}
+    loh_plot = _add_loh_plot(out, data)
+    if loh_plot:
+        out["plot"]["loh"] = loh_plot
     return out
 
 def _add_diagram_plot(out, data):

@@ -154,6 +154,13 @@ def _maybe_add_sv(algorithm, sample, out):
                                         "type": vext,
                                         "ext": "%s-sv-validate%s" % (svcall["variantcaller"], ext),
                                         "variantcaller": svcall["variantcaller"]})
+            if "plot" in svcall:
+                for plot_name, fname in svcall["plot"].items():
+                    ext = os.path.splitext(fname)[-1].replace(".", "")
+                    out.append({"path": fname,
+                                "type": ext,
+                                "ext": "%s-%s" % (svcall["variantcaller"], plot_name),
+                                "variantcaller": svcall["variantcaller"]})
     return out
 
 def _get_variant_file(x, key):
