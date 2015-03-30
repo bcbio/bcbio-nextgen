@@ -1,6 +1,5 @@
 ## 0.8.8 (in progress)
 
-- Implement qualimap for RNAseq QC metrics, but not active yet
 - Automatically calculate `coverage_interval` based on coverage calculations,
   avoiding need to set this directly in input configuration.
 - Update vt decompose to handle additional multi-allelic adjustments including
@@ -10,11 +9,14 @@
   advantage of machines with multiple cores. Thanks to Lorena Pantano.
 - Re-write interactions with external object stores like S3 to be more general
   and incorporate multiple regions and future support for non-S3 storage.
+- Disambiguation: improve parallelization by disambiguating on split alignment
+  parts prior to merging. Thanks to Sven-Eric Schelhorn.
 - Allow bz2 files in bcbio_prepare_sample.py script.
 - Ensure GEMINI statistics run for project summary file. Thanks to Luca
   Beltrame.
 - Better error checking for booleans in input configuration. Thanks to Daryl
   Waggott.
+- Implement qualimap for RNAseq QC metrics, but not active yet.
 
 ## 0.8.7 (12 March 2015)
 

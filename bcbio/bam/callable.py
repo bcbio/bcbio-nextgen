@@ -270,8 +270,8 @@ class NBlockRegionPicker:
     with each new file processed as it keeps track of previous blocks to
     maintain the splitting.
     """
-    def __init__(self, ref_regions, config):
-        self._end_buffer = 250
+    def __init__(self, ref_regions, config, min_n_size):
+        self._end_buffer = 250 if min_n_size > 50 else 0
         self._chr_last_blocks = {}
         target_blocks = int(config["algorithm"].get("nomap_split_targets", 200))
         self._target_size = self._get_target_size(target_blocks, ref_regions)
@@ -458,7 +458,7 @@ def _combine_sample_regions_batch(batch, items):
                 ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
                 ref_regions = get_ref_bedtool(ref_file, config)
                 min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
-                block_filter = NBlockRegionPicker(ref_regions, config)
+                block_filter = NBlockRegionPicker(ref_regions, config, min_n_size)
                 final_nblock_regions = nblock_regions.filter(
                     block_filter.include_block).saveas().each(block_filter.expand_block).saveas(
                         "%s-nblockfinal%s" % utils.splitext_plus(tx_afile))

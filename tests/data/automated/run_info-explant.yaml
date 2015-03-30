@@ -1,6 +1,7 @@
 upload:
   dir: upload
 details:
+  # ## RNA-seq
   - analysis: RNA-seq
     files: ['Hsapiens_Mmusculus_1.fq.gz']
     algorithm:
@@ -27,3 +28,14 @@ details:
     description: Test2
     genome_build: mm9
     lane: 2
+  ## Variant calling
+  # - analysis: variant2
+  #   files: ['../data/1_explant/Hsapiens_Mmusculus_1.fq.gz']
+  #   algorithm:
+  #     aligner: bwa
+  #     align_split_size: 50
+  #     nomap_split_size: 50
+  #     disambiguate: [hg19]
+  #     variantcaller: freebayes
+  #   description: Test3
+  #   genome_build: mm9

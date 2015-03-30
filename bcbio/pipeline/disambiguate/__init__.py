@@ -14,6 +14,7 @@ import os
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.disambiguate.run import main as disambiguate_main
+from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import run_info
 from bcbio.provenance import do
 from bcbio import bam
@@ -49,7 +50,8 @@ def resolve(items, run_parallel):
     to_process = collections.defaultdict(list)
     for data in [x[0] for x in items]:
         if "disambiguate" in data:
-            to_process[data["name"][-1]].append(data)
+            split_part = tuple(data["align_split"]) if data.get("combine") else None
+            to_process[(dd.get_sample_name(data), split_part)].append(data)
         else:
             out.append([data])
     return out + run_parallel("run_disambiguate",
@@ -69,8 +71,14 @@ def run(items, config):
         data_b, data_a = items
     work_bam_a = bam.sort(data_a["work_bam"], config, "queryname")
     work_bam_b = bam.sort(data_b["work_bam"], config, "queryname")
-    out_dir = os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
-                                            os.pardir, "disambiguate_%s" % aligner))
+    if data_a.get("align_split"):
+        base_dir = utils.safe_makedir(os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
+                                                                    os.pardir, os.pardir,
+                                                                    "disambiguate_%s" % aligner)))
+        out_dir = os.path.join(base_dir, "_".join([str(x) for x in data_a["align_split"]]))
+    else:
+        out_dir = os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
+                                                os.pardir, "disambiguate_%s" % aligner))
     base_name = os.path.join(out_dir, os.path.splitext(os.path.basename(work_bam_a))[0])
     summary_file = "%s_summary.txt" % base_name
     if not utils.file_exists(summary_file):
