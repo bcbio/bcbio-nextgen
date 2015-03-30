@@ -99,7 +99,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
             # Recommended options from 1000 genomes low-complexity evaluation
             # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
-            opts += " --min-repeat-entropy 1 --experimental-gls"
+            opts += " --min-repeat-entropy 1"
             if somatic:
                 opts = _add_somatic_opts(opts, somatic)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
@@ -136,7 +136,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 
             freebayes = config_utils.get_program("freebayes", config)
             opts = " ".join(_freebayes_options_from_config(items, config, out_file, region))
-            opts += " --min-repeat-entropy 1 --experimental-gls"
+            opts += " --min-repeat-entropy 1"
             opts = _add_somatic_opts(opts, paired)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()

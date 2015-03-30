@@ -11,6 +11,8 @@
   and incorporate multiple regions and future support for non-S3 storage.
 - Disambiguation: improve parallelization by disambiguating on split alignment
   parts prior to merging. Thanks to Sven-Eric Schelhorn.
+- FreeBayes: update to latest version (0.9.21-7) with validation
+  (http://imgur.com/a/ancGz).
 - Allow bz2 files in bcbio_prepare_sample.py script.
 - Ensure GEMINI statistics run for project summary file. Thanks to Luca
   Beltrame.
