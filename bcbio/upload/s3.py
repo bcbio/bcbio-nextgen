@@ -34,7 +34,7 @@ def update_file(finfo, sample_info, config):
 
     region = "@%s" % config["region"] if config.get("region") else ""
     fname = "s3://%s%s/%s" % (config["bucket"], region, to_transfer[0][1])
-    conn = objectstore.connect(region)
+    conn = objectstore.connect(fname)
     bucket = conn.lookup(config["bucket"])
     if not bucket:
         bucket = conn.create_bucket(config["bucket"])
