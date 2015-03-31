@@ -14,6 +14,7 @@ import numpy
 import toolz as tz
 
 from bcbio import install, utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import bedutils, vcfutils
@@ -187,12 +188,48 @@ def _add_plots_to_output(out, data):
         out["plot"]["loh"] = loh_plot
     return out
 
-def _add_diagram_plot(out, data):
-    out_file = "%s-diagram.pdf" % os.path.splitext(out["cnr"])[0]
+def _get_standard_haplotype_thresh(data):
+    """Find the gap between standard chromosomes and smaller haplotype.
+
+    Used to exclude smaller chromosomes from global chromosome plots.
+    """
+    size_refs = {}
+    all_sizes = []
+    for c in ref.file_contigs(dd.get_ref_file(data), data["config"]):
+        size_refs[c.name] = c.size
+        all_sizes.append(c.size)
+    all_sizes.sort()
+    sizes_w_distance = sorted([(e - s, s, e) for s, e in zip(all_sizes, all_sizes[1:])],
+                              reverse=True)
+    small_e, big_s = sizes_w_distance[0][1:3]
+    hap_thresh = (big_s + small_e) / 2.0
+    return size_refs, hap_thresh
+
+def _remove_haplotype_chroms(in_file, data):
+    """Remove shorter haplotype chromosomes from cns/cnr files for plotting.
+    """
+    chrom_sizes, hap_thresh = _get_standard_haplotype_thresh(data)
+    def _not_haplotype(line):
+        chrom = line.split()[0]
+        return chrom_sizes[chrom] > hap_thresh
+    out_file = "%s-chromfilter%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = [_get_cmd(), "diagram", "-s", out["cns"],
-                   "-o", tx_out_file, out["cnr"]]
+            with open(in_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    for line in in_handle:
+                        if line.startswith("chromosome") or _not_haplotype(line):
+                            out_handle.write(line)
+    return out_file
+
+def _add_diagram_plot(out, data):
+    out_file = "%s-diagram.pdf" % os.path.splitext(out["cnr"])[0]
+    cnr = _remove_haplotype_chroms(out["cnr"], data)
+    cns = _remove_haplotype_chroms(out["cns"], data)
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [_get_cmd(), "diagram", "-s", cns,
+                   "-o", tx_out_file, cnr]
             gender = dd.get_gender(data)
             if gender and gender.lower() == "male":
                 cmd += ["--male-reference"]
@@ -203,9 +240,10 @@ def _add_loh_plot(out, data):
     vrn_files = filter(lambda x: x is not None, [x.get("vrn_file") for x in data.get("variants", [])])
     if len(vrn_files) > 0:
         out_file = "%s-loh.pdf" % os.path.splitext(out["cnr"])[0]
+        cns = _remove_haplotype_chroms(out["cns"], data)
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
-                cmd = [_get_cmd(), "loh", "-t", "-s", out["cns"],
+                cmd = [_get_cmd(), "loh", "-t", "-s", cns,
                        "-o", tx_out_file, vrn_files[0]]
                 do.run(cmd, "CNVkit diagram plot")
         return out_file
