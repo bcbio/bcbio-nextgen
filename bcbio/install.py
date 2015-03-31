@@ -76,6 +76,7 @@ def upgrade_bcbio(args):
             print("Upgrading third party tools to latest versions")
             _symlink_bcbio(args, script="bcbio_nextgen.py")
             _symlink_bcbio(args, script="bcbio_setup_genome.py")
+            _symlink_bcbio(args, script="bcbio_prepare_samples.py")
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
     if args.toolplus:

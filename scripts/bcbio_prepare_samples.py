@@ -1,3 +1,9 @@
+#!/usr/bin/env python -E
+"""
+Script that creates bcbio-compatible inputs in case of multiple files samples 
+"""
+
+
 import os
 import yaml
 import itertools as tz
@@ -70,6 +76,8 @@ def wait_until_complete(jobs):
 
 
 if __name__ == "__main__":
+    description = ("Merge multiple files from the same sample to be compatible with bcbio BAM/FASTQ input files")
+
     parser = ArgumentParser(description="Merge fastq or bam files")
     parser.add_argument("--csv", required=True, help="csv file with metadata")
     parser.add_argument("--out", required=True, help="output dir")
@@ -86,6 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--paralleltype",
                         choices=["local", "ipython"],
                         default="local", help="Run with iptyhon")
+
     args = parser.parse_args()
     system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
     with open(system_config) as in_handle:

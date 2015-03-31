@@ -110,7 +110,7 @@ samples, pointing to this custom configuration file::
 Multiple files per sample
 ~~~~~~~~~~~~~~~~~~
 
-In case you have multiple FASTQ or BAM files for each sample you can use ``scripts/utils/bcbio_prepare_samples.py``. 
+In case you have multiple FASTQ or BAM files for each sample you can use ``bcbio_prepare_samples.py``. 
 The main parameters are:
 
 - ``--out``: the folder where the merged files will be
