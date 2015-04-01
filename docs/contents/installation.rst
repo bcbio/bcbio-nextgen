@@ -40,8 +40,8 @@ requirements:
 
 - Python 2.6 or 2.7, with the development libraries
   installed (the python-dev or python-devel packages).
-- Compilers: Recent versions of gcc and g++. gcc 4.8.x is well tested,
-  although other versions should work fine.
+- Compilers: Recent versions of gcc, g++ and gfortran. gcc 4.8.x
+  is well tested, although other versions should work.
 - The git version control system (http://git-scm.com/).
 - wget for file retrieval (https://www.gnu.org/software/wget/)
 - unzip
@@ -80,7 +80,10 @@ This requires the following additional system requirements to be in place:
 - Java 1.7
 - Ruby (including libraries and irb. On CentOS these are separate packages:
   ``ruby-libs`` and ``ruby-irb``.)
-- R with Rscript (currently optional, but increasingly used in the pipeline)
+- R with Rscript. We test libraries with the most recent R releases as most of
+  the Bioconductor tools track this version. If installing from system packages,
+  also install the development packages (On Ubuntu: ``r-base r-base-dev``,
+  On CentOS: ``R-core R-core-devel R-java libRmath libRmath-devel``)
 - bzip2 (with development libraries)
 - curl (with development libraries)
 - curses (with development libraries)
