@@ -1,42 +1,54 @@
 """Provide plots of structural variations to manually validate results.
-
 Uses existing plots from CNVkit along with custom plotting of coverage to
 provide the ability to quickly validate and explore predicted structural
 variants.
 """
+import os
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.bam.coverage import plot_multiple_regions_coverage
+from bcbio.bed import concat
+from bcbio.utils import file_exists, safe_makedir
 
-def _sort_by_type(x):
-    """Simple prioritization to identify 'lead' items within a batch.
+def _merge_sv_calls(bed_files):
     """
-    if vcfutils.get_paired_phenotype(x) == "tumor":
-        priority = 0
-    else:
-        priority = 1
-    return [priority, dd.get_sample_name(x)]
-
-def _merge_sv_calls(calls):
-    pass
-
-def by_regions(items):
-    """Plot for a union set of combined ensemble regions across all of the data items.
+    merge a set of structural variant BED files and return a bedtools object
     """
-    import pybedtools
-    items = sorted(items, key=_sort_by_type)
-    calls = []
+    merged = concat(bed_files)
+    merged = merged.merge()
+    return(merged)
+
+def _get_ensemble_bed_files(items):
+    """
+    get all ensemble structural BED file calls, skipping any normal samples from
+    tumor/normal calls
+    """
+    bed_files = []
     for data in items:
         for sv in data.get("sv", []):
             if sv["variantcaller"] == "sv-ensemble":
-                calls.append(sv)
-    if len(calls) > 0:
-        # Merge SV calls into a union set
-        # Make summary level plots
-        # Add plots to SV information for lead item
-        # merged_bed = _merge_sv_calls(calls)
-        # plot = plot_multiple_regions_coverage(items, plot_file,
-        #                                       region_bed=merged_bed)
-        pass
-    print [x["description"] for x in items]
+                if "vrn_file" in sv and not vcfutils.get_paired_phenotype(data) == "normal":
+                    bed_files.append(sv["vrn_file"])
+    return bed_files
+
+def _add_regional_coverage_plot(items, plot):
+    for data in items:
+        for sv in data.get("sv", []):
+            if sv["variantcaller"] == "sv-ensemble":
+                sv["coverage_plot"] = plot
+    return items
+
+def by_regions(items):
+    """Plot for a union set of combined ensemble regions across all of the data
+       items.
+    """
+    work_dir = os.path.join(dd.get_work_dir(items[0]), "structural", "coverage")
+    safe_makedir(work_dir)
+    out_file = os.path.join(work_dir, "coverage.pdf")
+    if file_exists(out_file):
+        items = _add_regional_coverage_plot(items, out_file)
+        return items
+    merged = _merge_sv_calls(_get_ensemble_bed_files(items))
+    out_file = plot_multiple_regions_coverage(items, out_file, merged)
+    items = _add_regional_coverage_plot(items, out_file)
     return items
