@@ -1,6 +1,10 @@
 Presentations
 =============
 
+- `Boston Computational Biology and Bioinformatics meetup
+  <http://www.meetup.com/Boston-Computational-Biology-and-Bioinformatics-Meetup/events/220328870/>`_
+  (1 April 2015): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/bcbb2015_bcbio/chapman_bcbio.pdf>`_
+
 - `Program in Genetic Epidemiology and Statistical Genetics seminar series
   <http://www.hsph.harvard.edu/program-molecular-genetic-epidemiology/journal-club/>`_ at
   Harvard Chan School (6 February 2015): `slides <https://github.com/chapmanb/bcbb/raw/master/talks/pgsg2015_bcbio/chapman_bcbio.pdf>`_
