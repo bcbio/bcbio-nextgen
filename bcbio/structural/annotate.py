@@ -12,7 +12,7 @@ def add_genes(in_file, data, max_distance=10000):
     """
     import pybedtools
     gene_file = dd.get_gene_bed(data)
-    if gene_file:
+    if gene_file and utils.file_exists(in_file):
         out_file = "%s-annotated.bed" % utils.splitext_plus(in_file)[0]
         if not utils.file_uptodate(out_file, in_file):
             input_rec = iter(pybedtools.BedTool(in_file)).next()

@@ -14,9 +14,10 @@ def _merge_sv_calls(bed_files):
     """
     merge a set of structural variant BED files and return a bedtools object
     """
-    merged = concat(bed_files)
-    merged = merged.merge()
-    return(merged)
+    if bed_files:
+        merged = concat(bed_files)
+        merged = merged.merge()
+        return(merged)
 
 def _get_ensemble_bed_files(items):
     """
@@ -27,7 +28,8 @@ def _get_ensemble_bed_files(items):
     for data in items:
         for sv in data.get("sv", []):
             if sv["variantcaller"] == "sv-ensemble":
-                if "vrn_file" in sv and not vcfutils.get_paired_phenotype(data) == "normal":
+                if ("vrn_file" in sv and not vcfutils.get_paired_phenotype(data) == "normal"
+                      and file_exists(sv["vrn_file"])):
                     bed_files.append(sv["vrn_file"])
     return bed_files
 
@@ -47,8 +49,9 @@ def by_regions(items):
     out_file = os.path.join(work_dir, "coverage.pdf")
     if file_exists(out_file):
         items = _add_regional_coverage_plot(items, out_file)
-        return items
-    merged = _merge_sv_calls(_get_ensemble_bed_files(items))
-    out_file = plot_multiple_regions_coverage(items, out_file, merged)
-    items = _add_regional_coverage_plot(items, out_file)
+    else:
+        merged = _merge_sv_calls(_get_ensemble_bed_files(items))
+        if merged:
+            out_file = plot_multiple_regions_coverage(items, out_file, merged)
+            items = _add_regional_coverage_plot(items, out_file)
     return items
