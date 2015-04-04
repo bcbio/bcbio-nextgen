@@ -17,4 +17,5 @@ else
 fi
 unset PYTHONHOME
 unset PYTHONPATH
+export PYTHONNOUSERSITE=1
 "$BCBIO_DIR/nosetests" -v -s -a $ATTR "$@"

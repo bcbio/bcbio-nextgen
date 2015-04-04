@@ -1,4 +1,4 @@
-#!/usr/bin/env python -E
+#!/usr/bin/env python -Es
 """Run an automated analysis pipeline for high throughput sequencing data.
 
 Handles runs in local or distributed mode based on the command line or

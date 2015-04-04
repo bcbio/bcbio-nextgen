@@ -264,18 +264,21 @@ use ``https://`` globally instead of ``git://``::
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
 
-ImportError: No module named conda.cli
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Having a PYTHONHOME or PYTHONPATH set can cause installation troubles,
-if you are seeing an error like the above, unsetting these two environment
-variables will help. Fix that with::
+ImportErrors
+~~~~~~~~~~~~
+Import errors with tracebacks containing Python libraries outside of the bcbio
+distribution (``/path/to/bcbio/anaconda``) are often due to other conflicting
+Python installations. bcbio tries to isolate itself as much as possible but
+external libraries can get included during installation due to the
+PYTHONHOME or PYTHONPATH environmental variation or local site libraries.
+These commands will temporary unset those to get bcbio installed, after which it
+should ignore them automatically::
 
     $ unset PYTHONHOME
     $ unset PYTHONPATH
+    $ export PYTHONNOUSERSITE=1
 
-Other import errors
-~~~~~~~~~~~~~~~~~~~
-Having a .pydistutils.cfg file in your home directory can mess with
+Finally, having a .pydistutils.cfg file in your home directory can mess with
 where the libraries get installed. If you have this file in your
 home directory, temporarily renaming it to something else may fix
 your installation issue.

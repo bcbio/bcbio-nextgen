@@ -1,4 +1,4 @@
-#!/usr/bin/env python -E
+#!/usr/bin/env python -Es
 """
 Script that creates bcbio-compatible inputs in case of multiple files samples 
 """
