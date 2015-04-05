@@ -439,23 +439,25 @@ def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd="", tabix_args=N
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
     if not utils.file_exists(out_file) or not os.path.lexists(out_file):
         assert not in_file == out_file, "Input file is bgzipped but not found: %s" % in_file
-        with file_transaction(config, out_file) as tx_out_file:
-            bgzip = tools.get_bgzip_cmd(config)
-            if prep_cmd:
-                cmd = "cat {in_file} | {prep_cmd} | {bgzip} -c > {tx_out_file}"
-            else:
-                cmd = "{bgzip} -c {in_file} > {tx_out_file}"
-            try:
-                do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
-            except subprocess.CalledProcessError:
-                # Race conditions: ignore errors where file has been deleted by another
-                if os.path.exists(in_file) and not os.path.exists(out_file):
-                    raise
-        if remove_orig:
-            try:
-                os.remove(in_file)
-            except OSError:  # Handle cases where run in parallel and file has been deleted
-                pass
+        assert os.path.exists(in_file), "Input file %s not found" % in_file
+        if not utils.file_uptodate(out_file, in_file):
+            with file_transaction(config, out_file) as tx_out_file:
+                bgzip = tools.get_bgzip_cmd(config)
+                if prep_cmd:
+                    cmd = "cat {in_file} | {prep_cmd} | {bgzip} -c > {tx_out_file}"
+                else:
+                    cmd = "{bgzip} -c {in_file} > {tx_out_file}"
+                try:
+                    do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
+                except subprocess.CalledProcessError:
+                    # Race conditions: ignore errors where file has been deleted by another
+                    if os.path.exists(in_file) and not os.path.exists(out_file):
+                        raise
+            if remove_orig:
+                try:
+                    os.remove(in_file)
+                except OSError:  # Handle cases where run in parallel and file has been deleted
+                    pass
     tabix_index(out_file, config, tabix_args=tabix_args)
     return out_file
 
