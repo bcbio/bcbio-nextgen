@@ -41,11 +41,17 @@ def _get_ensemble_bed_files(items):
     return bed_files
 
 def _add_regional_coverage_plot(items, plot):
+    out = []
+    added = False
     for data in items:
         for sv in data.get("sv", []):
-            if sv["variantcaller"] == "sv-ensemble":
-                sv["coverage_plot"] = plot
-    return items
+            if not added and sv["variantcaller"] == "sv-ensemble":
+                added = True
+                if "plot" not in sv:
+                    sv["plot"] = {}
+                sv["plot"]["coverage"] = plot
+        out.append(data)
+    return out
 
 def _prioritize_plot_regions(region_bt, data):
     """Avoid plotting large numbers of regions due to speed issues. Prioritize most interesting.
