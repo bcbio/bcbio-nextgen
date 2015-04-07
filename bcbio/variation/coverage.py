@@ -67,6 +67,7 @@ def summary(items):
                                     items[0])
     bed_file = _uniquify_bed_names(clean_bed, out_dir, items[0])
     batch = _get_group_batch(items)
+    assert batch, "Did not find batch for samples: %s" % ",".join([dd.get_sample_name(x) for x in items])
 
     out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
     if not utils.file_exists(out_file):
@@ -115,15 +116,21 @@ def _uniquify_bed_names(bed_file, out_dir, data):
 
 def _get_group_batch(items):
     out = None
+    all_batches = []
     for data in items:
         batches = tz.get_in(("metadata", "batch"), data, [dd.get_sample_name(data)])
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
+        batches = [b for b in batches if b]
+        all_batches.extend(batches)
         if not out:
             out = set(batches)
         else:
             out = out.intersection(set(batches))
-    return list(out)[0]
+    if len(out) > 0:
+        return out.pop()
+    else:
+        return all_batches[0]
 
 def _handle_multi_batches(prepped, multi_batches):
     """Avoid carrying items present in multiple batches along in analysis.
