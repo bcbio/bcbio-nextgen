@@ -2,12 +2,11 @@
 calculate coverage across a list of regions
 """
 import os
-import subprocess
-import sys
 
 import six
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib
 import seaborn as sns
 import pandas as pd
 import pybedtools
@@ -16,6 +15,9 @@ from bcbio.utils import rbind, file_exists
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 import bcbio.pipeline.datadict as dd
+from pylab import stem, setp
+from collections import defaultdict
+from itertools import repeat
 
 def _calc_regional_coverage(in_bam, chrom, start, end, samplename, work_dir):
     """
@@ -54,29 +56,78 @@ def _combine_regional_coverage(in_bams, samplenames, chrom, start, end, work_dir
            in zip(in_bams, samplenames)]
     return rbind(dfs)
 
-def plot_multiple_regions_coverage(samples, out_file, region_bed=None):
+def _get_callers(samples):
+    callers = []
+    for data in samples:
+        for sv in data.get("sv", []):
+            callers.append(sv["variantcaller"])
+    return sorted(list(set([x for x in callers if x != "sv-ensemble"])))
+
+def _get_caller_colormap(callers):
+    colors = matplotlib.colors.ColorConverter.colors.keys()
+    return {caller: colors[index] for index, caller in enumerate(callers)}
+
+def _get_caller_heights(callers, plot):
+    max_y = plot.get_ylim()[1] * 0.2
+    spacing = max_y / len(callers)
+    return {caller: spacing + spacing * index for index, caller in enumerate(callers)}
+
+def _get_stems_by_callers(intervals, callers):
+    stems = defaultdict(list)
+    for interval in intervals:
+        pos = interval.start
+        caller = interval.fields[3]
+        stems[caller].append(pos)
+    return stems
+
+def _add_stems_to_plot(interval, stem_bed, samples, plot):
+    callers = _get_callers(samples)
+    caller_colormap = _get_caller_colormap(callers)
+    caller_heights = _get_caller_heights(callers, plot)
+    stems = _get_stems_by_callers(stem_bed.tabix_intervals(interval), callers)
+    for caller in callers:
+        stem_color = caller_colormap[caller]
+        caller_stems = stems[caller]
+        stem_heights = list(repeat(caller_heights[caller], len(caller_stems)))
+        markerline, _, baseline = stem(stems[caller], stem_heights, '-.',
+                                       label=caller)
+        setp(markerline, 'markerfacecolor', stem_color)
+        setp(baseline, 'color', 'r', 'linewidth', 0)
+        plt.legend()
+
+def plot_multiple_regions_coverage(samples, out_file, region_bed=None, stem_bed=None):
     """
-    given a list of bcbio samples and a bed file of regions or a list of tuples
-    of regions the form (chrom, start, end) make a plot of the coverage in the
-    regions for the set of samples
+    given a list of bcbio samples and a bed file or BedTool of regions,
+    makes a plot of the coverage in the regions for the set of samples
+
+    if given a bed file or BedTool of locations in stem_bed with a label,
+    plots lollipops at those locations
     """
+    PAD = 100
     if file_exists(out_file):
         return out_file
     in_bams = [dd.get_align_bam(x) for x in samples]
     samplenames = [dd.get_sample_name(x) for x in samples]
     if isinstance(region_bed, six.string_types):
         region_bed = pybedtools.BedTool(region_bed)
+    if isinstance(stem_bed, six.string_types):
+        stem_bed = pybedtools.BedTool(stem_bed)
+    if stem_bed != None:  # tabix indexed bedtools eval to false
+        stem_bed = stem_bed.tabix()
     with file_transaction(out_file) as tx_out_file:
         with PdfPages(tx_out_file) as pdf_out:
             sns.despine()
             for line in region_bed:
                 chrom = line.chrom
-                start = line.start
-                end = line.end
+                start = max(line.start - PAD, 0)
+                end = line.end + PAD
                 df = _combine_regional_coverage(in_bams, samplenames, chrom,
                                                 start, end, os.path.dirname(tx_out_file))
                 plot = sns.tsplot(df, time="position", unit="chrom",
                                   value="coverage", condition="sample")
+                if stem_bed != None: # tabix indexed bedtools eval to false
+                    interval = pybedtools.Interval(chrom, start, end)
+                    _add_stems_to_plot(interval, stem_bed, samples, plot)
                 plt.title("{chrom}:{start}-{end}".format(**locals()))
                 pdf_out.savefig(plot.get_figure())
                 plt.close()
