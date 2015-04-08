@@ -30,6 +30,7 @@ from bcbio.provenance import do
 import bcbio.rnaseq.qc
 from bcbio.rnaseq.coverage import plot_gene_coverage
 import bcbio.pipeline.datadict as dd
+from bcbio import broad
 
 # ## High level functions to generate summary
 
@@ -98,10 +99,10 @@ def _run_qc_tools(bam_file, data):
     metrics = {}
     to_run = [("fastqc", _run_fastqc)]
     if data["analysis"].lower().startswith("rna-seq"):
-        to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
+        # to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
         # to_run.append(("coverage", _run_gene_coverage))
-        to_run.append(("complexity", _run_complexity))
-        # to_run.append(("qualimap", _rnaseq_qualimap))
+        # to_run.append(("complexity", _run_complexity))
+        to_run.append(("qualimap", _rnaseq_qualimap))
     elif data["analysis"].lower().startswith("chip-seq"):
         to_run.append(["bamtools", _run_bamtools_stats])
     else:
@@ -639,7 +640,12 @@ def _parse_qualimap_rnaseq(table):
     out = {}
     for row in table.xpath("table/tr"):
         col, val = [x.text for x in row.xpath("td")]
-        out.update(_parse_num_pct(col.replace(":", "").strip(), val.replace("%", "")))
+        col = col.replace(":", "").strip()
+        val = val.replace(",", "")
+        m = {col: val}
+        if val.find("/") > -1:
+            m = _parse_num_pct(col, val.replace("%", ""))
+        out.update(m)
     return out
 
 def _parse_rnaseq_qualimap_metrics(report_file):
@@ -660,20 +666,15 @@ def _rnaseq_qualimap(bam_file, data, out_dir):
     """
     report_file = os.path.join(out_dir, "qualimapReport.html")
     config = data["config"]
-    # genome_dir = os.path.dirname(os.path.dirname(data["sam_ref"]))
     gtf_file = dd.get_gtf_file(data)
     ref_file = dd.get_ref_file(data)
-    # rRNA_gtf = os.path.join(os.path.dirname(gtf_file), "rRNA.interval_list")
     single_end = not bam.is_paired(bam_file)
     if not utils.file_exists(report_file):
         utils.safe_makedir(out_dir)
         bam.index(bam_file, config)
-        # rna_file = config_utils.get_rRNA_sequence(genome_dir)
         cmd = _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file, single_end)
         do.run(cmd, "Qualimap for {}".format(data["name"][-1]))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
-    # metrics_bam = _run_qualimap(bam_file, data, os.path.join(out_dir, "bam"))
-    # print metrics_bam
     metrics.update(_detect_duplicates(bam_file, out_dir, config))
     metrics.update(_detect_rRNA(config, bam_file, gtf_file, ref_file, out_dir, single_end))
     metrics.update({"Fragment Length Mean": bam.estimate_fragment_size(bam_file)})
