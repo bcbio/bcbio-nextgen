@@ -85,17 +85,21 @@ def _add_regional_coverage_plot(items, plot):
 def _prioritize_plot_regions(region_bt, data):
     """Avoid plotting large numbers of regions due to speed issues. Prioritize most interesting.
 
-    XXX For now, just removes larger regions. Longer term we'll insert biology-based
-    prioritization.
+    XXX For now, just removes larger regions and avoid plotting thousands of regions.
+    Longer term we'll insert biology-based prioritization.
     """
+    max_plots = 1000
     max_size = 100 * 1000 # 100kb
     out_file = "%s-priority%s" % utils.splitext_plus(region_bt.fn)
+    num_plots = 0
     if not utils.file_uptodate(out_file, region_bt.fn):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 for r in region_bt:
                     if r.stop - r.start < max_size:
-                        out_handle.write(str(r))
+                        if num_plots < max_plots:
+                            num_plots += 1
+                            out_handle.write(str(r))
     return out_file
 
 def by_regions(items):
