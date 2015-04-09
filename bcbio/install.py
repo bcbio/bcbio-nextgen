@@ -442,8 +442,8 @@ def _install_gemini(tooldir, datadir, args):
         vurl = "https://raw.github.com/arq5x/gemini/master/requirements.txt"
         r = requests.get(vurl, verify=False)
         for line in r.text.split():
-            if line.startswith("gemini=="):
-                latest_version = line.split("==")[-1]
+            if line.startswith(("gemini=", "gemini>")):
+                latest_version = line.split("=")[-1].split(">")[-1]
         cur_version = subprocess.check_output([gemini, "-v"], stderr=subprocess.STDOUT).strip().split()[-1]
         if LooseVersion(latest_version) > LooseVersion(cur_version):
             subprocess.check_call([gemini, "update"])
