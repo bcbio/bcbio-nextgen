@@ -321,6 +321,9 @@ def sort(in_bam, config, order="coordinate"):
             samtools_cmd = ("{samtools} sort {order_flag} "
                             "{in_bam} {tx_sort_stem}")
             if sambamba:
+                # Use samtools compatible natural sorting
+                # https://github.com/lomereiter/sambamba/issues/132
+                order_flag = "--natural-sort" if order is "queryname" else ""
                 cmd = ("{sambamba} sort -t {num_cores} {order_flag} "
                        "-o {tx_sort_file} --tmpdir={tx_dir} {in_bam}")
             else:
