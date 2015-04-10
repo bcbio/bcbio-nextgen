@@ -10,7 +10,7 @@ try:
     import pybedtools
 except ImportError:
     pybedtools = None
-import numpy
+import numpy as np
 import toolz as tz
 
 from bcbio import install, utils
@@ -188,37 +188,43 @@ def _add_plots_to_output(out, data):
         out["plot"]["loh"] = loh_plot
     return out
 
-def _get_standard_haplotype_thresh(data):
-    """Find the gap between standard chromosomes and smaller haplotype.
-
-    Used to exclude smaller chromosomes from global chromosome plots.
+def _get_larger_chroms(ref_file):
+    """Retrieve larger chromosomes, avoiding the smaller ones for plotting.
     """
-    size_refs = {}
+    from scipy.cluster.vq import kmeans, vq
     all_sizes = []
-    for c in ref.file_contigs(dd.get_ref_file(data), data["config"]):
-        size_refs[c.name] = c.size
-        all_sizes.append(c.size)
+    for c in ref.file_contigs(ref_file):
+        all_sizes.append(float(c.size))
     all_sizes.sort()
-    sizes_w_distance = sorted([(e - s, s, e) for s, e in zip(all_sizes, all_sizes[1:])],
-                              reverse=True)
-    small_e, big_s = sizes_w_distance[0][1:3]
-    hap_thresh = (big_s + small_e) / 2.0
-    return size_refs, hap_thresh
+    # separate out smaller chromosomes and haplotypes with kmeans
+    centroids, _ = kmeans(np.array(all_sizes), 2)
+    idx, _ = vq(np.array(all_sizes), centroids)
+    little_sizes, _ = tz.partitionby(lambda xs: xs[0], zip(idx, all_sizes))
+    little_sizes = [x[1] for x in little_sizes]
+    # create one more cluster with the smaller, removing the haplotypes
+    centroids2, _ = kmeans(np.array(little_sizes), 2)
+    idx2, _ = vq(np.array(little_sizes), centroids2)
+    little_sizes2, _ = tz.partitionby(lambda xs: xs[0], zip(idx2, little_sizes))
+    little_sizes2 = [x[1] for x in little_sizes2]
+    # get any chromosomes not in haplotype/random bin
+    thresh = max(little_sizes2)
+    larger_chroms = []
+    for c in ref.file_contigs(ref_file):
+        if c.size > thresh:
+            larger_chroms.append(c.name)
+    return larger_chroms
 
 def _remove_haplotype_chroms(in_file, data):
     """Remove shorter haplotype chromosomes from cns/cnr files for plotting.
     """
-    chrom_sizes, hap_thresh = _get_standard_haplotype_thresh(data)
-    def _not_haplotype(line):
-        chrom = line.split()[0]
-        return chrom_sizes[chrom] > hap_thresh
+    larger_chroms = set(_get_larger_chroms(dd.get_ref_file(data)))
     out_file = "%s-chromfilter%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
-                        if line.startswith("chromosome") or _not_haplotype(line):
+                        if line.startswith("chromosome") or line.split()[0] in larger_chroms:
                             out_handle.write(line)
     return out_file
 
@@ -261,7 +267,7 @@ def _get_antitarget_size(access_file, target_bed):
         if region.chrom == prev_chrom:
             sizes.append(region.start - prev_end)
         prev = (region.chrom, region.end)
-    avg_size = numpy.median(sizes) if len(sizes) > 0 else 0
+    avg_size = np.median(sizes) if len(sizes) > 0 else 0
     if avg_size < 10000.0:  # Default antitarget-min-size
         return 1000, 75, 1000
     else:
