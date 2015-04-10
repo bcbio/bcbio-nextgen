@@ -200,7 +200,7 @@ def _update_conda_packages():
     conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
     pkgs = ["biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
-            "pip", "python-dateutil", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests",
+            "pip", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests",
             "scikit-learn", "scipy", "seaborn", "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]
     if os.path.exists(conda_bin):

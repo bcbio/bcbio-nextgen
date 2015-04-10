@@ -92,7 +92,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
 def install_conda_pkgs(anaconda):
     pkgs = ["biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
-            "pip", "python-dateutil", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests",
+            "pip", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml", "pyzmq", "reportlab", "requests",
             "scikit-learn", "scipy", "seaborn", "setuptools", "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]
     subprocess.check_call([anaconda["conda"], "install", "--yes", "numpy"])
