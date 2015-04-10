@@ -740,7 +740,7 @@ def _run_gemini_stats(bam_file, data, out_dir):
     """
     out = {}
     gemini_dbs = [d for d in
-                  [tz.get_in(["population", "db"], x) for x in data["variants"]] if d]
+                  [tz.get_in(["population", "db"], x) for x in data.get("variants", [])] if d]
     if len(gemini_dbs) > 0:
         gemini_db = gemini_dbs[0]
         gemini_stat_file = "%s-stats.yaml" % os.path.splitext(gemini_db)[0]
