@@ -28,27 +28,27 @@ def _is_variant(items):
     return any(item.get("analysis", "").lower().startswith("variant") for item in items)
 
 def java(config, items):
-    """GATK and derived tools requires Java 1.7 or better.
+    """GATK and derived tools requires Java 1.7.
     """
     want_version = "1.7" if _is_variant(items) else "1.6"
     try:
         java = config_utils.get_program("java", config)
     except config_utils.CmdNotFound:
-        return ("java not found on PATH. Java %s or better required." % want_version)
+        return ("java not found on PATH. Java %s required." % want_version)
     p = subprocess.Popen([java, "-Xms250m", "-Xmx250m", "-version"],
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
     p.stdout.close()
     version = ""
     for line in output.split("\n"):
-        if line.startswith("java version"):
+        if line.startswith(("java version", "openjdk version")):
             version = line.strip().split()[-1]
             if version.startswith('"'):
                 version = version[1:]
             if version.endswith('"'):
                 version = version[:-1]
     if not version or LooseVersion(version) < LooseVersion(want_version):
-        return ("java version %s or better required for running GATK and other tools. "
+        return ("java version %s required for running GATK and other tools. "
                 "Found version %s at %s" % (want_version, version, java))
 
 def testall(items):
