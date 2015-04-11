@@ -225,6 +225,14 @@ def _parse_metadata(in_handle):
     for sinfo in (x for x in reader if not x[0].startswith("#")):
         sinfo = [_strip_and_convert_lists(x) for x in sinfo]
         sample = sinfo[0]
+        # sanity check to avoid duplicate rows
+        if sample in metadata:
+            raise ValueError("Sample %s present multiple times in metadata file.\n"
+                             "If you need to specify multiple attributes as a list "
+                             "use a semi-colon to separate them on a single line.\n"
+                             "https://bcbio-nextgen.readthedocs.org/en/latest/"
+                             "contents/configuration.html#automated-sample-configuration\n"
+                             "Duplicate line is %s" % (sample, sinfo))
         metadata[sample] = dict(zip(keys, sinfo[1:]))
     metadata, global_vars = _set_global_vars(metadata)
     return metadata, global_vars

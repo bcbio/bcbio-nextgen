@@ -75,7 +75,11 @@ multiple samples using the template workflow command::
 
   Individual column items can contain booleans (true or false), integers, or
   lists (separated by semi-colons). These get converted into the expected time
-  in the output YAML file.
+  in the output YAML file. For instance, to specify a sample that should go into
+  multiple batches::
+
+       samplename,description,phenotype,batch
+       normal.bam,two_normal,normal,Batch1;Batch2
 
   The name of the metadata file, minus the ``.csv`` extension, is a
   short name identifying the current project. The script creates a
