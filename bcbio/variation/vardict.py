@@ -7,10 +7,11 @@ import sys
 
 import toolz as tz
 
-from bcbio import bam, utils
+from bcbio import bam, broad, utils
 from bcbio.bam import highdepth
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import bamprep, vcfutils
@@ -47,6 +48,17 @@ def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
                                         assoc_files, region, out_file)
     return call_file
 
+def _get_jvm_opts(data, out_file):
+    """Retrieve JVM options when running the Java version of VarDict.
+    """
+    if dd.get_variantcaller(data).endswith("-java"):
+        resources = config_utils.get_resources("vardict", data["config"])
+        jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
+        jvm_opts += broad.get_default_jvm_opts(os.path.dirname(out_file))
+        return "export VAR_DICT_OPTS='%s' && " % " ".join(jvm_opts)
+    else:
+        return ""
+
 def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
     """Detect SNPs and indels with VarDict.
@@ -62,7 +74,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
             sample_vcf_names = []  # for individual sample names, given batch calling may be required
             for bamfile, item in itertools.izip(align_bams, items):
                 # prepare commands
-                vardict = config_utils.get_program("vardict", config)
+                vardict = dd.get_variantcaller(items[0])
                 strandbias = "teststrandbias.R"
                 var2vcf = "var2vcf_valid.pl"
                 opts = " ".join(_vardict_options_from_config(items, config, out_file, region))
@@ -74,7 +86,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 sample = item["name"][1]
-                cmd = ("{vardict} -G {ref_file} -f {freq} "
+                jvm_opts = _get_jvm_opts(items[0], tx_out_file)
+                cmd = ("{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
@@ -115,7 +128,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                                assoc_files, region, out_file)
                 return ann_file
             vcffilter = config_utils.get_program("vcffilter", config)
-            vardict = config_utils.get_program("vardict", config)
+            vardict = dd.get_variantcaller(items[0])
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             strandbias = "testsomatic.R"
             var2vcf = "var2vcf_paired.pl"
@@ -133,7 +146,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             else:
                 somatic_filter = ("| %s -x 'bcbio.variation.freebayes.call_somatic(x)'" %
                                   os.path.join(os.path.dirname(sys.executable), "py"))
-            cmd = ("{vardict} -G {ref_file} -f {freq} "
+            jvm_opts = _get_jvm_opts(items[0], tx_out_file)
+            cmd = ("{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                    "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                    "| {strandbias} "
                    "| {var2vcf} -M -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
