@@ -199,12 +199,12 @@ def _get_larger_chroms(ref_file):
     # separate out smaller chromosomes and haplotypes with kmeans
     centroids, _ = kmeans(np.array(all_sizes), 2)
     idx, _ = vq(np.array(all_sizes), centroids)
-    little_sizes, _ = tz.partitionby(lambda xs: xs[0], zip(idx, all_sizes))
+    little_sizes = tz.first(tz.partitionby(lambda xs: xs[0], zip(idx, all_sizes)))
     little_sizes = [x[1] for x in little_sizes]
     # create one more cluster with the smaller, removing the haplotypes
     centroids2, _ = kmeans(np.array(little_sizes), 2)
     idx2, _ = vq(np.array(little_sizes), centroids2)
-    little_sizes2, _ = tz.partitionby(lambda xs: xs[0], zip(idx2, little_sizes))
+    little_sizes2 = tz.first(tz.partitionby(lambda xs: xs[0], zip(idx2, little_sizes)))
     little_sizes2 = [x[1] for x in little_sizes2]
     # get any chromosomes not in haplotype/random bin
     thresh = max(little_sizes2)

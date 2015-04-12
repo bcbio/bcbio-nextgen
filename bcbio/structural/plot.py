@@ -27,6 +27,8 @@ def breakpoints_by_caller(bed_files):
                          chr1 20 20 caller2
     """
     merged = concat(bed_files)
+    if not merged:
+        return []
     grouped_start = merged.groupby(g=[1, 2, 2], c=4, o=["distinct"])
     grouped_end = merged.groupby(g=[1, 3, 3], c=4, o=["distinct"])
     together = concat([grouped_start, grouped_end])

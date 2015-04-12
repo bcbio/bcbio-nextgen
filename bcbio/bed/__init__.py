@@ -6,7 +6,10 @@ def concat(bed_files, catted=None):
     sorted bedtools object of the result
     """
     if len(bed_files) == 0:
-        return catted.sort()
+        if catted:
+            return catted.sort()
+        else:
+            return catted
 
     if not catted:
         bed_files = list(bed_files)
