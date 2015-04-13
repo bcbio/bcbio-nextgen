@@ -10,6 +10,7 @@ from bcbio.utils import file_exists, get_in, open_gzipsafe, remove_safe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils, scalpel
 from bcbio.variation.vcfutils import bgzip_and_index
@@ -77,6 +78,11 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
         bam.index(x, base_config)
 
     paired = vcfutils.get_paired_bams(align_bams, items)
+    if not paired:
+        raise ValueError("Specified MuTect calling but 'tumor' phenotype not present in batch\n"
+                         "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
+                         "pipelines.html#cancer-variant-calling\n"
+                         "for samples: %s" % ", " .join([dd.get_sample_name(x) for x in items]))
     params = ["-R", ref_file, "-T", "MuTect", "-U", "ALLOW_N_CIGAR_READS"]
     # if coverage_depth_max is not given, default to 10000
     downsample_cov = get_in(paired.tumor_config, ("algorithm", "coverage_depth_max"), 10000)
