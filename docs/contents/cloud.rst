@@ -75,9 +75,8 @@ Extra software
 
 We're not able to automatically install some useful tools in pre-built docker
 containers due to licensing restrictions. Variant calling with GATK requires a
-manual download from the `GATK download`_ site for academic users.  Appistry
-provides `a distribution of GATK for commercial users`_. Commercial users also
-need a license for somatic calling with muTect. To make these jars available,
+manual download from the `GATK download`_ site for academic users.  Commercial 
+users `need a license`_ for GTAK and for somatic calling with muTect. To make these jars available,
 upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
 include the correct GATK and muTect directives during your run.  Alternatively,
 you can also manually specify the path to the jars using the global
@@ -88,7 +87,7 @@ you can also manually specify the path to the jars using the global
         jar: s3://bcbio-syn3-eval/jars/GenomeAnalysisTK.jar
 
 .. _GATK download: http://www.broadinstitute.org/gatk/download
-.. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
+.. _need a license: https://www.broadinstitute.org/gatk/about/#licensing
 
 AWS setup
 =========
