@@ -20,6 +20,7 @@ except ImportError:
     plt = None
 import pysam
 import toolz as tz
+import toolz.dicttoolz as dtz
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -541,6 +542,9 @@ def _run_qualimap(bam_file, data, out_dir):
 # ## RNAseq Qualimap
 
 def _parse_metrics(metrics):
+    # skipped metrics can sometimes be in unicode, replace unicode with NA if it exists
+    metrics = dtz.valmap(lambda x: 'nan' if isinstance(x, unicode) else x, metrics)
+
     missing = set(["Genes Detected", "Transcripts Detected",
                    "Mean Per Base Cov."])
     correct = set(["Intergenic pct", "Intronic pct", "Exonic pct"])

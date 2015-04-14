@@ -12,7 +12,7 @@ pybedtools>=0.6.8
 pysam>=0.8.2.1
 pyzmq>=2.2.0
 PyYAML>=3.10
-toolz>=0.6.0
+toolz>=0.7.1
 tornado>=3.1.0
 # soft dependencies -- not required for bcbio-nextgen-vm
 arrow>=0.4.4
