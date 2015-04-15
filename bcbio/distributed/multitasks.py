@@ -19,6 +19,10 @@ def prepare_sample(*args):
     return sample.prepare_sample(*args)
 
 @utils.map_wrap
+def prepare_bcbio_samples(*args):
+    return sample.prepare_bcbio_samples(*args)
+
+@utils.map_wrap
 def trim_sample(*args):
     return sample.trim_sample(*args)
 

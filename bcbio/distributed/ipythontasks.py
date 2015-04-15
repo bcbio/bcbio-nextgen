@@ -61,6 +61,12 @@ def prepare_sample(*args):
         return ipython.zip_args(apply(sample.prepare_sample, *args))
 
 @require(sample)
+def prepare_bcbio_samples(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(sample.prepare_bcbio_samples, *args))
+
+@require(sample)
 def trim_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:

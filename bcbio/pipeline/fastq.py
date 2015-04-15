@@ -60,12 +60,13 @@ def _bzip_gzip(in_file):
     """
     convert from bz2 to gz
     """
+    if not utils.is_bzipped(in_file):
+        return in_file
     base, first_ext = os.path.splitext(in_file)
     gzipped_file = base + ".gz"
-    if not file_exists(gzipped_file):
-        return gzipped_file
-    if (fastq.is_fastq(base) and utils.is_bzipped(in_file)
-          and not objectstore.is_remote(in_file)):
+    if (fastq.is_fastq(base) and
+        not objectstore.is_remote(in_file)):
+
         if file_exists(gzipped_file):
             return gzipped_file
         message = "gzipping {in_file}.".format(in_file=in_file)

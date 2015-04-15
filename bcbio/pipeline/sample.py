@@ -21,6 +21,8 @@ from bcbio.pipeline import cleanbam
 from bcbio.variation import bedutils, coverage, recalibrate
 from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
+from bcbio.pipeline.fastq import merge as fq_merge
+from bcbio.pipeline.merge import merge_bam_files as bam_merge
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -233,3 +235,14 @@ def delayed_bam_merge(data):
         data.pop("region", None)
         data.pop("combine", None)
     return [[data]]
+
+def prepare_bcbio_samples(sample):
+    """
+    Function that will use specific function to merge input files
+    """
+    if sample['fn'] == "fq_merge":
+        out_file = fq_merge(sample['files'], sample['out_file'], sample['config'])
+    elif sample['fn'] == "bam_merge":
+        out_file = bam_merge(sample['files'], sample['out_dir'], sample['config'], sample['out_file'])
+    sample['out_file'] = out_file
+    return [sample]
