@@ -14,6 +14,7 @@ from bcbio.variation import vcfutils
 from bcbio.bam.coverage import plot_multiple_regions_coverage
 from bcbio.bed import concat
 from bcbio.utils import file_exists, safe_makedir
+from bcbio import bed
 
 def breakpoints_by_caller(bed_files):
     """
@@ -35,17 +36,6 @@ def breakpoints_by_caller(bed_files):
     final = together.expand(c=4)
     final = final.sort()
     return final
-
-def _merge_sv_calls(bed_files, out_file, data):
-    """
-    merge a set of structural variant BED files and return a bedtools object
-    """
-    if bed_files:
-        if not utils.file_exists(out_file):
-            with file_transaction(data, out_file) as tx_out_file:
-                merged = concat(bed_files)
-                merged = merged.sort().merge().saveas(tx_out_file)
-        return pybedtools.BedTool(out_file)
 
 def _get_sv_callers(items):
     """
@@ -116,7 +106,7 @@ def by_regions(items):
         items = _add_regional_coverage_plot(items, out_file)
     else:
         bed_files = _get_ensemble_bed_files(items)
-        merged = _merge_sv_calls(bed_files, merged_file, items[0])
+        merged = bed.merge(bed_files)
         breakpoints = breakpoints_by_caller(bed_files)
         if merged:
             priority_merged = _prioritize_plot_regions(merged, items[0])

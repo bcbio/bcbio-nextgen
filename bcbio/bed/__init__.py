@@ -1,4 +1,5 @@
 import pybedtools as bt
+import six
 
 def concat(bed_files, catted=None):
     """
@@ -19,3 +20,12 @@ def concat(bed_files, catted=None):
                             force_truncate=False)
 
     return concat(bed_files, catted)
+
+def merge(bedfiles):
+    """
+    given a BED file or list of BED files merge them an return a bedtools object
+    """
+    if isinstance(bedfiles, list):
+        return concat(bedfiles).sort().merge()
+    else:
+        return concat([bedfiles]).sort().merge()
