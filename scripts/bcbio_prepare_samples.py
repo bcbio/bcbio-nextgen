@@ -119,22 +119,9 @@ if __name__ == "__main__":
     sysinfo = system.machine_info()[0]
     samples = _get_samples_to_process(args.csv, out_dir, config)
     parallel = resources.calculate(parallel, [samples], sysinfo, config)
-    prepped = []
 
     with prun.start(parallel, samples, config, dirs) as run_parallel:
         with profile.report("prepare bcbio samples", dirs):
             samples = run_parallel("prepare_bcbio_samples", samples)
 
-#    if args.paralleltype == "ipython":
-#        logger.info("Starting IPython cluster. This may take a while.")
-#        with get_cluster_view(parallel) as view:
-#            logger.info("IPython cluster is up.")
-#            for info in samples:
-#                logger.info("Merging sample: %s" % info['name'])
-#                prepped.append(view.apply_async(info['fn'], info["files"], os.path.join(args.out, info["out_file"]), config))
-#            prepped = wait_until_complete(prepped)
-#    else:
-#        for info in samples:
-#            logger.info("Merging sample: %s" % info['name'])
-#            prepped.append(info['fn'](info["files"], os.path.join(args.out, info["out_file"]), config))
     create_new_csv(samples, args)
