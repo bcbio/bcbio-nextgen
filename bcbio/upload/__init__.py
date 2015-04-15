@@ -35,16 +35,24 @@ def _get_files(sample):
     metadata about the file and pipeline versions.
     """
     analysis = sample.get("analysis")
+    files = []
     if analysis.lower() in ["variant", "snp calling", "variant2", "standard"]:
-        return _get_files_variantcall(sample)
+        files += _get_files_variantcall(sample)
     elif analysis in ["RNA-seq"]:
-        return _get_files_rnaseq(sample)
+        files += _get_files_rnaseq(sample)
     elif analysis.lower() in ["chip-seq"]:
-        return _get_files_chipseq(sample)
+        files += _get_files_chipseq(sample)
     elif analysis.lower() in ["sailfish"]:
-        return _get_files_sailfish(sample)
-    else:
-        return []
+        files += _get_files_sailfish(sample)
+#    if dd.get_do_disambiguate(sample):
+#        files += _get_files_disambiguate(sample)
+    return files
+
+def _get_files_disambiguate(sample):
+    out = []
+    import ipdb
+    ipdb.set_trace()
+    pass
 
 def _get_files_sailfish(sample):
     out = []

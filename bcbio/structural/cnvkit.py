@@ -19,7 +19,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import bedutils, vcfutils
 from bcbio.provenance import do
-from bcbio.structural import annotate, shared, theta
+from bcbio.structural import annotate, shared, theta, plot
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -186,6 +186,9 @@ def _add_plots_to_output(out, data):
     loh_plot = _add_loh_plot(out, data)
     if loh_plot:
         out["plot"]["loh"] = loh_plot
+    scatter_plot = _add_scatter_plot(out, data)
+    if scatter_plot:
+        out["plot"]["scatter"] = scatter_plot
     return out
 
 def _get_larger_chroms(ref_file):
@@ -226,6 +229,22 @@ def _remove_haplotype_chroms(in_file, data):
                     for line in in_handle:
                         if line.startswith("chromosome") or line.split()[0] in larger_chroms:
                             out_handle.write(line)
+    return out_file
+
+def _add_scatter_plot(out, data):
+    out_file = "%s-scatter.pdf" % os.path.splitext(out["cnr"])[0]
+    priority_regions = dd.get_priority_regions(data)
+    if not priority_regions:
+        return None
+    priority_bed = plot._prioritize_plot_regions(pybedtools.BedTool(priority_regions), data)
+    if utils.file_exists(out_file):
+        return out_file
+    cnr = _remove_haplotype_chroms(out["cnr"], data)
+    cns = _remove_haplotype_chroms(out["cns"], data)
+    with file_transaction(data, out_file) as tx_out_file:
+        cmd = [_get_cmd(), "scatter", "-s", cns, "-o", tx_out_file, "-l",
+               priority_bed, cnr]
+        do.run(cmd, "CNVkit scatter plot")
     return out_file
 
 def _add_diagram_plot(out, data):
