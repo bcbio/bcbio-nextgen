@@ -17,6 +17,7 @@ from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics, programs, versioncheck
 from bcbio.variation import effects, genotype, population, joint, vcfutils
 from bcbio.variation.cortex import get_sample_name
@@ -143,12 +144,18 @@ def add_reference_resources(data):
 
 def _clean_metadata(data):
     batches = tz.get_in(("metadata", "batch"), data)
+    # Ensure batches are strings
     if batches:
         if isinstance(batches, (list, tuple)):
             batches = [str(x) for x in batches]
         else:
             batches = str(batches)
         data["metadata"]["batch"] = batches
+    # If we have jointcalling, add a single batch if not present
+    elif tz.get_in(["algorithm", "jointcaller"], data):
+        if "metadata" not in data:
+            data["metadata"] = {}
+        data["metadata"]["batch"] = "%s-joint" % dd.get_sample_name(data)
     return data
 
 def _clean_algorithm(data):
