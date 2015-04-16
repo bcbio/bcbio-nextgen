@@ -78,12 +78,16 @@ To install bcbio-nextgen in an isolated non-root environment::
 This requires the following additional system requirements to be in place:
 
 - Java 1.7
-- Ruby (including libraries and irb. On CentOS these are separate packages:
-  ``ruby-libs`` and ``ruby-irb``.)
+- Ruby (including libraries and irb. On recent CentOS and other rpm systems
+  these are separate packages:
+  ``ruby-libs`` and ``ruby-irb``)
 - R with Rscript. We test libraries with the most recent R releases as most of
   the Bioconductor tools track this version. If installing from system packages,
-  also install the development packages (On Ubuntu: ``r-base r-base-dev``,
-  On CentOS: ``R-core R-core-devel R-java libRmath libRmath-devel``)
+  also install the development packages (On Ubuntu or other deb systems: ``r-base r-base-dev``,
+  On RedHat or other rpm systems: ``R-core R-core-devel R-java libRmath libRmath-devel``)
+- Perl with development libraries (On Ubuntu or other deb systems:
+  ``perl, libperl-devel`` On RedHat or other rpm systems:
+  ``perl perl-devel perl-core``)
 - bzip2 (with development libraries)
 - curl (with development libraries)
 - curses (with development libraries)
