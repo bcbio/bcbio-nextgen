@@ -64,8 +64,9 @@ def _run_wham(inputs, background_bams):
             background = "-b %s" % ",".join(background_bams) if background_bams else ""
             target_bams = ",".join(x["align_bam"] for x in inputs)
             target_bed = tz.get_in(["config", "algorithm", "variant_regions"], inputs[0])
+            ref_file = dd.get_ref_file(inputs[0])
             target_str = "-e %s" % target_bed if target_bed else ""
-            cmd = ("WHAM-BAM -x {cores} -t {target_bams} {background} {target_str} > {tx_out_file}")
+            cmd = ("WHAM-BAM -x {cores} -f {ref_file} -t {target_bams} {background} {target_str} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Run WHAM")
     return out_file
 
@@ -124,8 +125,8 @@ def _convert_to_bed(vcf_file, inputs, use_lrt=False):
         with file_transaction(inputs[0], out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle, dialect="excel-tab")
-                for rec, end, call_type in _wham_pass_iter(vcf_file):
-                    start = max(rec.start - buffer_size, 0)
+                for rec, start, end, call_type in _wham_pass_iter(vcf_file):
+                    start = max(start - buffer_size, 0)
                     end = int(end) + buffer_size
                     samples = [g.sample for g in rec.samples if g.gt_type > 0]
                     if not use_lrt or rec.INFO.get("LRT", 0.0) > lrt_thresh:
@@ -151,13 +152,21 @@ def _wham_pass_iter(vcf_file):
     for rec in reader:
         samples = [g.sample for g in rec.samples if g.gt_type > 0]
         if len(samples) > 0:
-            if rec.INFO["BE"][0] not in [".", None]:
-                other_chrom, end, count = rec.INFO["BE"]
-                if int(end) > int(rec.start) and other_chrom == rec.CHROM:
-                    yield rec, end, _remap_wc(rec.INFO["WC"])
+            other_chrom = rec.INFO.get("CHR2")
+            if isinstance(other_chrom, (list, tuple)):
+                other_chrom = other_chrom[0]
+            end = rec.INFO.get("END")
+            if other_chrom not in [".", None] and other_chrom == rec.CHROM and end not in [".", None]:
+                end = int(end)
+                if rec.start <= end:
+                    start = rec.start
+                else:
+                    start = end
+                    end = rec.start
+                yield rec, start, end, _remap_wc(rec.INFO["WC"])
             else:
                 end = rec.start + max([len(x) for x in rec.ALT])
-                yield rec, end, "BND"
+                yield rec, rec.start, end, "BND"
 
 def _add_wham_classification(in_file, items):
     """Run WHAM classifier to assign a structural variant type to each call.

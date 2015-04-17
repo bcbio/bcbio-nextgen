@@ -135,9 +135,12 @@ def _limit_calls(in_file, highdepth_beds, data):
                 with open(all_file, "w") as out_handle:
                     for line in fileinput.input(highdepth_beds):
                         out_handle.write(line)
-                to_remove = pybedtools.BedTool(all_file).sort(stream=True)\
-                                                        .merge(c=4, o="distinct", delim=",").saveas()
-                pybedtools.BedTool(in_file).intersect(to_remove, v=True, nonamecheck=True).saveas(tx_out_file)
+                if utils.file_exists(all_file):
+                    to_remove = pybedtools.BedTool(all_file).sort(stream=True)\
+                                                            .merge(c=4, o="distinct", delim=",").saveas()
+                    pybedtools.BedTool(in_file).intersect(to_remove, v=True, nonamecheck=True).saveas(tx_out_file)
+                else:
+                    utils.symlink_plus(in_file, out_file)
     return out_file
 
 def _filter_ensemble(in_bed, data):
