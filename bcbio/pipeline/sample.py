@@ -22,7 +22,7 @@ from bcbio.variation import bedutils, coverage, recalibrate
 from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline.fastq import merge as fq_merge
-from bcbio.pipeline.merge import merge_bam_files as bam_merge
+from bcbio.bam import merge as bam_merge
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -243,6 +243,6 @@ def prepare_bcbio_samples(sample):
     if sample['fn'] == "fq_merge":
         out_file = fq_merge(sample['files'], sample['out_file'], sample['config'])
     elif sample['fn'] == "bam_merge":
-        out_file = bam_merge(sample['files'], sample['out_dir'], sample['config'], sample['out_file'])
+        out_file = bam_merge(sample['files'], sample['out_file'], sample['config'])
     sample['out_file'] = out_file
     return [sample]
