@@ -1,7 +1,6 @@
-version: 5
+version: 6
 
 aliases:
-  snpeff: NCBIM37.66
   ensembl: mus_musculus
 
 rnaseq:

@@ -1,5 +1,5 @@
-version: 1
+version: 2
 
 aliases:
   ensembl: xenopus_tropicalis
-  snpeff: JGI_4.2.75
+  snpeff: JGI_4.2.78

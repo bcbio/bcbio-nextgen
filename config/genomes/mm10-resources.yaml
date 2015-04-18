@@ -1,7 +1,7 @@
-version: 8
+version: 9
 
 aliases:
-  snpeff: GRCm38.75
+  snpeff: GRCm38.78
   ensembl: mus_musculus
 
 variation:

@@ -1,8 +1,8 @@
-version: 5
+version: 6
 
 aliases:
   ensembl: rattus_norvegicus
-  snpeff: Rnor_5.0.75
+  snpeff: Rnor_5.0.78
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
