@@ -257,6 +257,7 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
         # Check for a remote genome resources file
         remote_url = base_url % dbkey
+        requests.packages.urllib3.disable_warnings()
         r = requests.get(remote_url, verify=False)
         if r.status_code == requests.codes.ok:
             local_file = os.path.join(os.path.dirname(ref_file), os.path.basename(remote_url))
@@ -440,6 +441,7 @@ def _install_gemini(tooldir, datadir, args):
     gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
     if os.path.exists(gemini):
         vurl = "https://raw.github.com/arq5x/gemini/master/requirements.txt"
+        requests.packages.urllib3.disable_warnings()
         r = requests.get(vurl, verify=False)
         for line in r.text.split():
             if line.startswith(("gemini=", "gemini>")):
