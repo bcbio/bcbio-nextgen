@@ -8,6 +8,8 @@ import os
 import sys
 import yaml
 
+import toolz as tz
+
 class CmdNotFound(Exception):
     pass
 
@@ -155,7 +157,8 @@ def expand_path(path):
 def get_resources(name, config):
     """Retrieve resources for a program, pulling from multiple config sources.
     """
-    return config.get("resources", {}).get(name, {})
+    return tz.get_in(["resources", name], config,
+                     tz.get_in(["resources", "default"], config, {}))
 
 def get_program(name, config, ptype="cmd", default=None):
     """Retrieve program information from the configuration.

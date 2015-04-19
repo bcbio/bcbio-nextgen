@@ -5,6 +5,8 @@
 - Update vt decompose to handle additional multi-allelic adjustments including
   all format attributes, providing full support for new GEMINI changes. Thanks
   to Brent Pedersen and Adrian Tan.
+- Add `default` configuration target to `bcbio_system.yaml` reducing the need
+  to set program specific arguments for everything.
 - Run upload process on distributed machines, allowing upload to S3 on AWS to take
   advantage of machines with multiple cores. Thanks to Lorena Pantano.
 - Re-write interactions with external object stores like S3 to be more general

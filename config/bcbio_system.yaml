@@ -14,6 +14,12 @@
 # - dir: Directory containing program associated data. Especially useful for
 #        java jars
 resources:
+  # default options, used if other items below are not present
+  # avoids needing to configure/adjust for every program
+  default:
+    memory: 2G
+    cores: 16
+    jvm_opts: ["-Xms750", "-Xmx2000m"]
   log:
     dir: log
   tmp:
@@ -29,14 +35,9 @@ resources:
   star:
     memory: 2g
     cores: 16
-  novoalign:
-    cores: 16
-    memory: 2G
   snap:
     cores: 16
     memory: 4G
-  gemini:
-    cores: 16
   kraken:
     cores: 6
     memory: 4g
@@ -45,8 +46,6 @@ resources:
     memory: 2g
   qsnp:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
-  freebayes:
-    memory: 2g
   gatk:
     jvm_opts: ["-Xms500m", "-Xmx3500m"]
     dir: /usr/local/share/java/gatk
@@ -71,19 +70,11 @@ resources:
   varscan:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/varscan
+  vardict:
+    jvm_opts: ["-Xms750m", "-Xmx4000m"]
   oncofuse:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/oncofuse
-  bowtie2:
-    cores: 16
-  tophat2:
-    cores: 16
-  cufflinks:
-    cores: 16
-  bowtie:
-    cores: 16
-  tophat:
-    cores: 16
   express:
     memory: 8g
 
