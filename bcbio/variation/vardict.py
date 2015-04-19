@@ -53,7 +53,7 @@ def _get_jvm_opts(data, out_file):
     """
     if dd.get_variantcaller(data).endswith("-java"):
         resources = config_utils.get_resources("vardict", data["config"])
-        jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
+        jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx4g"])
         jvm_opts += broad.get_default_jvm_opts(os.path.dirname(out_file))
         return "export VAR_DICT_OPTS='%s' && " % " ".join(jvm_opts)
     else:
