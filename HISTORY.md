@@ -13,6 +13,8 @@
   advantage of machines with multiple cores. Thanks to Lorena Pantano.
 - Re-write interactions with external object stores like S3 to be more general
   and incorporate multiple regions and future support for non-S3 storage.
+- Scale local jobs by total memory usage when memory constrains resource usage
+  jinstead of cores. Thanks to Sven-Eric Schelhorn and Lorena Pantano.
 - Disambiguation: improve parallelization by disambiguating on split alignment
   parts prior to merging. Thanks to Sven-Eric Schelhorn.
 - Fix problem with sambamba name sorting not being compatible with samtools.
