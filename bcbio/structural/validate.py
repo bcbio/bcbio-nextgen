@@ -41,7 +41,7 @@ def cnv_to_event(name, data):
     """
     ploidy = dd.get_ploidy(data)
     if name.startswith("cnv"):
-        num = int(name.split("_")[0].replace("cnv", ""))
+        num = max([int(x) for x in name.split("_")[0].replace("cnv", "").split(";")])
         if num < ploidy:
             return "DEL"
         elif num > ploidy:
