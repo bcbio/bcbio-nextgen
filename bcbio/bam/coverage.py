@@ -4,6 +4,8 @@ calculate coverage across a list of regions
 import os
 
 import six
+import matplotlib as mpl
+mpl.use('Agg', force=True)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib
