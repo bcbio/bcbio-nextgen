@@ -17,9 +17,8 @@ from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.log import logger
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (archive, disambiguate, region, run_info, qcsummary,
-                            rnaseq)
-from bcbio.pipeline.config_utils import load_system_config
+from bcbio.pipeline import (archive, config_utils, disambiguate, region,
+                            run_info, qcsummary, rnaseq)
 from bcbio.provenance import profile, system
 from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
 
@@ -28,7 +27,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     """Run variant analysis, handling command line options.
     """
     os.chdir(workdir)
-    config, config_file = load_system_config(config_file, workdir)
+    config, config_file = config_utils.load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(workdir, "log")
     if parallel["type"] in ["local", "clusterk"]:
@@ -72,7 +71,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     log.setup_local_logging(config, parallel)
     dirs = run_info.setup_directories(work_dir, fc_dir, config, config_file)
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
-    pipelines = _pair_samples_with_pipelines(run_info_yaml)
+    pipelines, config = _pair_samples_with_pipelines(run_info_yaml, config)
     system.write_info(dirs, parallel, config)
     with tx_tmpdir(config) as tmpdir:
         tempfile.tempdir = tmpdir
@@ -356,21 +355,33 @@ def _get_pipeline(item):
     else:
         return SUPPORTED_PIPELINES[analysis_type]
 
-def _pair_samples_with_pipelines(run_info_yaml):
+def _pair_samples_with_pipelines(run_info_yaml, config):
     """Map samples defined in input file to pipelines to run.
     """
     with open(run_info_yaml) as in_handle:
         samples = yaml.safe_load(in_handle)
         if isinstance(samples, dict):
+            resources = samples.pop("resources", {})
             samples = samples["details"]
+        else:
+            resources = {}
     ready_samples = []
     for sample in samples:
         if "files" in sample:
             del sample["files"]
+        # add any resources to this item to recalculate global configuration
+        if "resources" not in sample:
+            sample["resources"] = {}
+        for prog, pkvs in resources.iteritems():
+            if prog not in sample["resources"]:
+                sample["resources"][prog] = {}
+            for key, val in pkvs.iteritems():
+                sample["resources"][prog][key] = val
+        config = config_utils.update_w_custom(config, sample)
         sample["resources"] = {}
         ready_samples.append(sample)
     paired = [(x, _get_pipeline(x)) for x in ready_samples]
     d = defaultdict(list)
     for x in paired:
         d[x[1]].append([x[0]])
-    return d
+    return d, config
