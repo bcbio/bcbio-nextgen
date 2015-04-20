@@ -164,9 +164,9 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
                                                                         memory_per_core, sysinfo,
                                                                         system_memory)
         # For local runs with multiple jobs and multiple cores, potentially scale jobs down
-        if num_jobs > 1:
-            mem_per_core = float(memory_per_job) / cores_per_job
-            num_jobs, _ = _scale_jobs_to_memory(num_jobs, mem_per_core, sysinfo)
+        if num_jobs > 1 and parallel.get("type") == "local":
+            memory_per_core = float(memory_per_job) / cores_per_job
+            num_jobs, _ = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
 
     # do not overschedule if we don't have extra items to process
     num_jobs = min(num_jobs, len(items) * multiplier)
