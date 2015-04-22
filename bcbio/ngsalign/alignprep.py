@@ -270,7 +270,7 @@ def _cram_to_fastq_region(cram_file, work_dir, base_name, region, data):
     ref_file = tz.get_in(["reference", "fasta", "base"], data)
     resources = config_utils.get_resources("bamtofastq", data["config"])
     cores = tz.get_in(["config", "algorithm", "num_cores"], data, 1)
-    max_mem = int(resources.get("memory", "1073741824")) * cores  # 1Gb/core default
+    max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G")) * cores
     rext = "-%s" % region.replace(":", "_").replace("-", "_") if region else "full"
     out_s, out_p1, out_p2, out_o1, out_o2 = [os.path.join(work_dir, "%s%s-%s.fq.gz" %
                                                           (base_name, rext, fext))
@@ -301,7 +301,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
     bamtofastq = config_utils.get_program("bamtofastq", config)
     resources = config_utils.get_resources("bamtofastq", config)
     cores = config["algorithm"].get("num_cores", 1)
-    max_mem = int(resources.get("memory", "1073741824")) * cores  # 1Gb/core default
+    max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G")) * cores
     bgzip = tools.get_bgzip_cmd(config, is_retry)
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
