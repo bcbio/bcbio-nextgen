@@ -370,14 +370,16 @@ def _pair_samples_with_pipelines(run_info_yaml, config):
         if "files" in sample:
             del sample["files"]
         # add any resources to this item to recalculate global configuration
-        if "resources" not in sample:
-            sample["resources"] = {}
+        usample = copy.deepcopy(sample)
+        usample.pop("algorithm", None)
+        if "resources" not in usample:
+            usample["resources"] = {}
         for prog, pkvs in resources.iteritems():
-            if prog not in sample["resources"]:
-                sample["resources"][prog] = {}
+            if prog not in usample["resources"]:
+                usample["resources"][prog] = {}
             for key, val in pkvs.iteritems():
-                sample["resources"][prog][key] = val
-        config = config_utils.update_w_custom(config, sample)
+                usample["resources"][prog][key] = val
+        config = config_utils.update_w_custom(config, usample)
         sample["resources"] = {}
         ready_samples.append(sample)
     paired = [(x, _get_pipeline(x)) for x in ready_samples]
