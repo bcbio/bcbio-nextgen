@@ -1,6 +1,6 @@
 import os
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, gtf)
+                          express, variation, gtf, stringtie)
 from bcbio.ngsalign import bwa, bowtie2
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
@@ -42,6 +42,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     """
     samples = run_parallel("generate_transcript_counts", samples)
     samples = run_parallel("run_cufflinks", samples)
+    #samples = run_parallel("run_stringtie_expression", samples)
     return samples
 
 def quantitate_expression_noparallel(samples, run_parallel):
@@ -67,6 +68,11 @@ def generate_transcript_counts(data):
         logger.info("RSEM was flagged to run, but the transcriptome BAM file "
                     "was not found. Aligning to the transcriptome with bowtie2.")
         data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
+    return [[data]]
+
+def run_stringtie_expression(data):
+    """Calculate transcript and gene level FPKM with Stringtie"""
+    data = stringtie.run_stringtie_expression(data)
     return [[data]]
 
 def run_dexseq(data):

@@ -83,6 +83,10 @@ def run_cufflinks(*args):
     return rnaseq.run_cufflinks(*args)
 
 @utils.map_wrap
+def run_stringtie_expression(*args):
+    return rnaseq.run_stringtie_expression(*args)
+
+@utils.map_wrap
 def run_express(*args):
     return rnaseq.run_express(*args)
 

@@ -9,6 +9,7 @@ from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
+from bcbio import rnaseq
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
@@ -167,6 +168,12 @@ def run_cufflinks(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(rnaseq.run_cufflinks, *args))
+
+@require(rnaseq)
+def run_stringtie_expression(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.run_stringtie_expression, *args))
 
 @require(rnaseq)
 def run_rnaseq_variant_calling(*args):
