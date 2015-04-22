@@ -5,13 +5,8 @@ count number of reads mapping to features of transcripts
 import os
 import sys
 import itertools
-
-# soft imports
-try:
-    import pandas as pd
-    import gffutils
-except ImportError:
-    pd, gffutils = None, None, None
+import pandas as pd
+import gffutils
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
