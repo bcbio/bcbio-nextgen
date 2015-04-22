@@ -179,7 +179,6 @@ def combine_files(samples):
     fpkm_isoform_combined = count.combine_count_files(isoform_files,
                                                       fpkm_isoform_combined_file,
                                                       ".isoform.fpkm")
-
     # combine DEXseq files
     dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
     to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data in samples])
@@ -196,7 +195,7 @@ def combine_files(samples):
         if fpkm_combined:
             data = dd.set_combined_fpkm(data, fpkm_combined)
         if fpkm_isoform_combined:
-            data = dd.set_combined_fpkm_isoform(data, fpkm_combined)
+            data = dd.set_combined_fpkm_isoform(data, fpkm_isoform_combined)
         if express_counts_combined:
             data = dd.set_express_counts(data, express_counts_combined['counts'])
             data = dd.set_express_tpm(data, express_counts_combined['tpm'])
