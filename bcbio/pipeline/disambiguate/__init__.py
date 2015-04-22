@@ -15,7 +15,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.disambiguate.run import main as disambiguate_main
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import run_info
+from bcbio.pipeline import merge, run_info
 from bcbio.provenance import do
 from bcbio import bam
 
@@ -54,8 +54,62 @@ def resolve(items, run_parallel):
             to_process[(dd.get_sample_name(data), split_part)].append(data)
         else:
             out.append([data])
-    return out + run_parallel("run_disambiguate",
-                              [(xs, xs[0]["config"]) for xs in to_process.itervalues()])
+    if len(to_process) > 0:
+        dis1 = run_parallel("run_disambiguate",
+                            [(xs, xs[0]["config"]) for xs in to_process.itervalues()])
+        disambigs = []
+        for xs in dis1:
+            assert len(xs) == 1
+            disambigs.append(xs[0])
+        dis2 = run_parallel("disambiguate_merge_extras",
+                            [[disambigs, disambigs[0]["config"]]])
+    else:
+        dis2 = []
+    return out + dis2
+
+def merge_extras(items, config):
+    """Merge extra disambiguated reads into a final BAM file.
+    """
+    final = {}
+    for extra_name in items[0]["disambiguate"].keys():
+        items_by_name = collections.defaultdict(list)
+        for data in items:
+            items_by_name[dd.get_sample_name(data)].append(data)
+        for sname, name_items in items_by_name.items():
+            if sname not in final:
+                final[sname] = {}
+            in_files = []
+            for data in name_items:
+                in_files.append(data["disambiguate"][extra_name])
+            out_file = "%s-allmerged%s" % os.path.splitext(in_files[0])
+            if in_files[0].endswith(".bam"):
+                merged_file = merge.merge_bam_files(in_files, os.path.dirname(out_file), config,
+                                                    out_file=out_file)
+            else:
+                assert extra_name == "summary", extra_name
+                merged_file = _merge_summary(in_files, out_file, name_items[0])
+            final[sname][extra_name] = merged_file
+    out = []
+    for data in items:
+        data["disambiguate"] = final[dd.get_sample_name(data)]
+        out.append([data])
+    return out
+
+def _merge_summary(in_files, out_file, data):
+    """Create one big summary file for disambiguation from multiple splits.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for i, in_file in enumerate(in_files):
+                    with open(in_file) as in_handle:
+                        for j, line in enumerate(in_handle):
+                            if j == 0:
+                                if i == 0:
+                                    out_handle.write(line)
+                            else:
+                                out_handle.write(line)
+    return out_file
 
 def run(items, config):
     """Run third party disambiguation script, resolving into single set of calls.
@@ -89,9 +143,9 @@ def run(items, config):
                         True, "", aligner)
             disambiguate_main(args)
     data_a["disambiguate"] = \
-      {data_b["genome_build"]: "%s.disambiguatedSpeciesB.bam" % base_name,
-       "%s-ambiguous" % data_a["genome_build"]: "%s.ambiguousSpeciesA.bam" % base_name,
-       "%s-ambiguous" % data_b["genome_build"]: "%s.ambiguousSpeciesB.bam" % base_name,
+      {data_b["genome_build"]: bam.sort("%s.disambiguatedSpeciesB.bam" % base_name, config),
+       "%s-ambiguous" % data_a["genome_build"]: bam.sort("%s.ambiguousSpeciesA.bam" % base_name, config),
+       "%s-ambiguous" % data_b["genome_build"]: bam.sort("%s.ambiguousSpeciesB.bam" % base_name, config),
        "summary": summary_file}
     data_a["work_bam"] = bam.sort("%s.disambiguatedSpeciesA.bam" % base_name, config)
     return [[data_a]]

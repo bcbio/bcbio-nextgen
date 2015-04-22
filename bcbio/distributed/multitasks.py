@@ -163,6 +163,10 @@ def disambiguate_split(*args):
     return disambiguate.split(*args)
 
 @utils.map_wrap
+def disambiguate_merge_extras(*args):
+    return disambiguate.merge_extras(*args)
+
+@utils.map_wrap
 def clean_chipseq_alignment(*args):
     return chipseq.clean_chipseq_alignment(*args)
 

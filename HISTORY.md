@@ -17,6 +17,8 @@
   jinstead of cores. Thanks to Sven-Eric Schelhorn and Lorena Pantano.
 - Disambiguation: improve parallelization by disambiguating on split alignment
   parts prior to merging. Thanks to Sven-Eric Schelhorn.
+- Disambiguation: ensure ambiguous and other organism reads are sorted, merged
+  and passed to final upload directory. Thanks to Sven-Eric Schelhorn.
 - Fix problem with sambamba name sorting not being compatible with samtools.
   Thanks to Sven-Eric Schelhorn.
 - FreeBayes: update to latest version (0.9.21-7) with validation

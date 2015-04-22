@@ -277,6 +277,12 @@ def disambiguate_split(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(disambiguate.split, *args))
 
+@require(disambiguate)
+def disambiguate_merge_extras(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(disambiguate.merge_extras, *args))
+
 @require(system)
 def machine_info(*args):
     args = ipython.unzip_args(args)

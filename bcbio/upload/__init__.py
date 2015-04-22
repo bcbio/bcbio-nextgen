@@ -58,6 +58,7 @@ def _get_files_rnaseq(sample):
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
@@ -97,6 +98,7 @@ def _get_files_variantcall(sample):
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
     out = _maybe_add_sv(algorithm, sample, out)
     out = _maybe_add_validate(algorithm, sample, out)
@@ -231,6 +233,24 @@ def _maybe_add_alignment(algorithm, sample, out):
                                 "plus": isplus,
                                 "index": True,
                                 "ext": ext})
+    return out
+
+def _maybe_add_disambiguate(algorithm, sample, out):
+    if "disambiguate" in sample:
+        for extra_name, fname in sample["disambiguate"].items():
+            ftype = os.path.splitext(fname)[-1].replace(".", "")
+            fext = ".bai" if ftype == "bam" else ""
+            if fname and os.path.exists(fname):
+                out.append({"path": fname,
+                            "type": ftype,
+                            "plus": True,
+                            "ext": "disambiguate-%s" % extra_name})
+                if fext and utils.file_exists(fname + fext):
+                    out.append({"path": fname + fext,
+                                "type": ftype + fext,
+                                "plus": True,
+                                "index": True,
+                                "ext": "disambiguate-%s" % extra_name})
     return out
 
 def _maybe_add_counts(algorithm, sample, out):
