@@ -45,8 +45,6 @@ def finalize_sv(samples, config):
             by_bam[x["align_bam"]].append(x)
         except KeyError:
             by_bam[x["align_bam"]] = [x]
-    highdepths = filter(lambda x: x is not None,
-                        list(set([tz.get_in(["config", "algorithm", "highdepth_regions"], x) for x in samples])))
     by_batch = collections.OrderedDict()
     lead_batches = {}
     for grouped_calls in by_bam.values():
@@ -57,7 +55,7 @@ def finalize_sv(samples, config):
         final = grouped_calls[0]
         if len(sorted_svcalls) > 0:
             final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
-            final_calls = ensemble.summarize(final_calls, final, highdepths)
+            final_calls = ensemble.summarize(final_calls, final, grouped_calls)
             final_calls = validate.evaluate(final, final_calls)
             final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]

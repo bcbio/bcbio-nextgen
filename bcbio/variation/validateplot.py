@@ -57,8 +57,7 @@ cat_labels = {"concordant": "Concordant",
               "discordant-extra-total": "Discordant (extra)",
               "discordant-shared-total": "Discordant (shared)"}
 vtype_labels = {"snp": "SNPs", "indel": "Indels"}
-prep_labels = {"gatk": "GATK best-practice BAM preparation (recalibration, realignment)",
-               "none": "Minimal BAM preparation (samtools de-duplication only)"}
+prep_labels = {}
 caller_labels = {"ensemble": "Ensemble", "freebayes": "FreeBayes",
                  "gatk": "GATK Unified\nGenotyper", "gatk-haplotype": "GATK Haplotype\nCaller"}
 

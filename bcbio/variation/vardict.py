@@ -10,9 +10,8 @@ import toolz as tz
 from bcbio import bam, broad, utils
 from bcbio.bam import highdepth
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do
 from bcbio.variation import bamprep, vcfutils
 
@@ -26,9 +25,12 @@ def _vardict_options_from_config(items, config, out_file, region=None, do_merge=
         opts += resources["options"]
 
     variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
-    target = subset_variant_regions(variant_regions, region, out_file, do_merge=do_merge)
+    target = shared.subset_variant_regions(variant_regions, region, out_file, do_merge=do_merge)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
+            if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
+                   for x in items):
+                target = shared.remove_highdepth_regions(target, items)
             opts += [target]  # this must be the last option
         else:
             # one-based, end-inclusive coordinates as for Gatk
