@@ -36,6 +36,8 @@ def tx_tmpdir(data=None, base_dir=None, remove=True):
     else:
         config_tmpdir = None
     if config_tmpdir:
+        config_tmpdir = utils.safe_makedir(os.path.expandvars(config_tmpdir))
+        config_tmpdir = os.path.normpath(os.path.join(os.getcwd(), config_tmpdir))
         tmp_dir_base = os.path.join(config_tmpdir, "bcbiotx", str(uuid.uuid4()))
         unique_attempts = 0
         while os.path.exists(tmp_dir_base):

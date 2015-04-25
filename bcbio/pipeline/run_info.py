@@ -55,8 +55,12 @@ def organize(dirs, config, run_info_yaml, sample_names):
         # Create temporary directories and make absolute, expanding environmental variables
         tmp_dir = tz.get_in(["config", "resources", "tmp", "dir"], item)
         if tmp_dir:
-            tmp_dir = utils.safe_makedir(os.path.expandvars(tmp_dir))
-            item["config"]["resources"]["tmp"]["dir"] = genome.abs_file_paths(tmp_dir)
+            # if no environmental variables, make and normalize the directory
+            # otherwise we normalize later in distributed.transaction:
+            if os.path.expandvars(tmp_dir) == tmp_dir:
+                tmp_dir = utils.safe_makedir(os.path.expandvars(tmp_dir))
+                tmp_dir = genome.abs_file_paths(tmp_dir)
+            item["config"]["resources"]["tmp"]["dir"] = tmp_dir
         out.append(item)
     out = _add_provenance(out, dirs, config)
     return out
