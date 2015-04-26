@@ -6,6 +6,7 @@ import collections
 from contextlib import closing
 import os
 
+import pybedtools
 import pysam
 import toolz as tz
 
@@ -59,6 +60,18 @@ def has_variant_regions(items, base_file, chrom=None):
                 return False
     return True
 
+def remove_exclude_regions(orig_bed, base_file, items):
+    """Remove centromere and short end regions from an existing BED file of regions to target.
+    """
+    out_bed = os.path.join("%s-noexclude.bed" % (utils.splitext_plus(base_file)[0]))
+    exclude_bed = prepare_exclude_file(items, base_file)
+    with file_transaction(items[0], out_bed) as tx_out_bed:
+        pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(exclude_bed)).saveas(tx_out_bed)
+    if utils.file_exists(out_bed):
+        return out_bed
+    else:
+        return orig_bed
+
 def prepare_exclude_file(items, base_file, chrom=None):
     """Prepare a BED file for exclusion, incorporating variant regions and chromosome.
 
@@ -66,7 +79,6 @@ def prepare_exclude_file(items, base_file, chrom=None):
     centromere regions, both of which contribute to long run times and
     false positive structural variant calls.
     """
-    import pybedtools
     out_file = "%s-exclude.bed" % utils.splitext_plus(base_file)[0]
     all_vrs = _get_variant_regions(items)
     ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)

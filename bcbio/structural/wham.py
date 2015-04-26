@@ -63,7 +63,8 @@ def _run_wham(inputs, background_bams):
             cores = dd.get_cores(inputs[0])
             background = "-b %s" % ",".join(background_bams) if background_bams else ""
             target_bams = ",".join(x["align_bam"] for x in inputs)
-            target_bed = tz.get_in(["config", "algorithm", "variant_regions"], inputs[0])
+            target_bed = shared.remove_exclude_regions(
+                tz.get_in(["config", "algorithm", "variant_regions"], inputs[0]), out_file, inputs)
             ref_file = dd.get_ref_file(inputs[0])
             target_str = "-e %s" % target_bed if target_bed else ""
             cmd = ("WHAM-BAM -x {cores} -f {ref_file} -t {target_bams} {background} {target_str} > {tx_out_file}")
