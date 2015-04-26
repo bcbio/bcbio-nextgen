@@ -1,6 +1,9 @@
 Presentations
 =============
 
+- `NGS Glasgow <http://biotexcel.com/event/ngs-2015-glasgow/>`_ (23 April 2015):
+  `slides <https://dl.dropboxusercontent.com/u/407047/Work/Presentations/20150420%20NGS%20Glasgow.pdf>`_
+
 - `Boston Computational Biology and Bioinformatics meetup
   <http://www.meetup.com/Boston-Computational-Biology-and-Bioinformatics-Meetup/events/220328870/>`_
   (1 April 2015): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/bcbb2015_bcbio/chapman_bcbio.pdf>`_
