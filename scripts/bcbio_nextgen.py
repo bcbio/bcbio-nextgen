@@ -35,6 +35,7 @@ from bcbio.illumina import machine
 from bcbio.distributed import runfn, clargs
 from bcbio.pipeline.main import run_main
 from bcbio.server import main as server_main
+from bcbio.graph import graph
 from bcbio.provenance import programs
 from bcbio.pipeline import version
 
@@ -49,6 +50,7 @@ def parse_cl_args(in_args):
     sub_cmds = {"upgrade": install.add_subparser,
                 "server": server_main.add_subparser,
                 "runfn": runfn.add_subparser,
+                "graph": graph.add_subparser,
                 "version": programs.add_subparser,
                 "sequencer": machine.add_subparser}
     description = "Community developed high throughput sequencing analysis."
@@ -201,6 +203,8 @@ if __name__ == "__main__":
         server_main.start(kwargs["args"])
     elif "runfn" in kwargs and kwargs["runfn"]:
         runfn.process(kwargs["args"])
+    elif "graph" in kwargs and kwargs["graph"]:
+        graph.bootstrap(kwargs["args"])
     elif "version" in kwargs and kwargs["version"]:
         programs.write_versions({"work": kwargs["args"].workdir})
     elif "sequencer" in kwargs and kwargs["sequencer"]:
