@@ -287,7 +287,7 @@ def _get_antitarget_size(access_file, target_bed):
             sizes.append(region.start - prev_end)
         prev = (region.chrom, region.end)
     avg_size = np.median(sizes) if len(sizes) > 0 else 0
-    if avg_size < 10000.0:  # Default antitarget-min-size
+    if len(sizes) < 500 and avg_size < 10000.0:  # Default antitarget-min-size
         return 1000, 75, 1000
     else:
         return None, None, None
