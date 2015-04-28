@@ -39,7 +39,7 @@ def remove_bad(line):
     else:
         return None
 
-def merge_overlaps(in_file, data):
+def merge_overlaps(in_file, data, distance=None, out_dir=None):
     """Merge bed file intervals to avoid overlapping regions.
 
     Overlapping regions (1:1-100, 1:90-100) cause issues with callers like FreeBayes
@@ -48,14 +48,17 @@ def merge_overlaps(in_file, data):
     if in_file:
         bedtools = config_utils.get_program("bedtools", data["config"])
         work_dir = tz.get_in(["dirs", "work"], data)
-        if work_dir:
+        if out_dir:
+            bedprep_dir = out_dir
+        elif work_dir:
             bedprep_dir = utils.safe_makedir(os.path.join(work_dir, "bedprep"))
         else:
             bedprep_dir = os.path.dirname(in_file)
         out_file = os.path.join(bedprep_dir, "%s-merged.bed" % (utils.splitext_plus(os.path.basename(in_file))[0]))
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
-                cmd = "{bedtools} merge -i {in_file} > {tx_out_file}"
+                distance = "-d %s" % distance if distance else ""
+                cmd = "{bedtools} merge {distance} -i {in_file} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prepare merged BED file", data)
         vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
         return out_file

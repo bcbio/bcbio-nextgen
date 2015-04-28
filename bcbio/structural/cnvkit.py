@@ -117,16 +117,23 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
         if os.path.exists(raw_work_dir):
             shutil.rmtree(raw_work_dir)
         with tx_tmpdir(data, work_dir) as tx_work_dir:
-            target_bed = annotate.add_genes(bedutils.merge_overlaps(dd.get_variant_regions(data), data), data)
             # pick targets, anti-targets and access files based on analysis type
             # http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
             cov_interval = dd.get_coverage_interval(data)
+            base_regions = dd.get_variant_regions(data)
+            # For genome calls, subset to regions within 10kb of genes
+            if cov_interval == "genome":
+                base_regions = annotate.subset_by_genes(base_regions, data, work_dir, pad=1e4)
+            raw_target_bed = bedutils.merge_overlaps(base_regions, data, out_dir=work_dir)
+            target_bed = annotate.add_genes(raw_target_bed, data)
+
             if cov_interval == "amplicon":
                 target_opts = ["--targets", target_bed, "--access", target_bed]
             elif cov_interval == "genome":
-                target_opts = ["--targets", target_bed, "--access", target_bed]
+                target_opts = ["--targets", target_bed, "--access", dd.get_variant_regions(data)]
             else:
                 target_opts = ["--targets", target_bed, "--access", access_file]
+
             cores = min(tz.get_in(["config", "algorithm", "num_cores"], data, 1),
                         len(test_bams) + len(background_bams))
             cmd = [_get_cmd(), "batch"] + \
