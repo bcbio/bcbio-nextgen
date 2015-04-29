@@ -61,7 +61,8 @@ def _cnvkit_to_bed(in_file, caller, out_file):
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
                         chrom, start, end, sample, copyn = line.strip().split("\t")[:5]
-                        out_handle.write("\t".join([chrom, start, end, "cnv%s_%s" % (copyn, caller)])
+                        out_handle.write("\t".join([chrom, start, end,
+                                                    "cnv%s_%s" % (copyn.replace(",", ";"), caller)])
                                          + "\n")
     return out_file
 
