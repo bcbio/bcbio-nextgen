@@ -138,6 +138,8 @@ def _plot_evaluation_event(df_csv, svtype):
         df = df[(df["svtype"] == svtype)]
         event_sizes = _find_events_to_include(df, EVENT_SIZES)
         fig, axs = plt.subplots(len(event_sizes), len(metrics), tight_layout=True)
+        if len(event_sizes) == 1:
+            axs = [axs]
         callers = sorted(df["caller"].unique())
         if "sv-ensemble" in callers:
             callers.remove("sv-ensemble")
