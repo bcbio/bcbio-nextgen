@@ -49,6 +49,7 @@ def _associate_cnvkit_out(ckout, items):
     out = []
     for data in items:
         ckout = _add_bed_to_output(ckout, data)
+        ckout = _add_bedgraph_to_output(ckout, data)
         ckout = _add_plots_to_output(ckout, data)
         if "sv" not in data:
             data["sv"] = []
@@ -184,6 +185,23 @@ def _add_bed_to_output(out, data):
                     cmd += ["--male-reference"]
             do.run(cmd, "CNVkit export FreeBayes BED cnvmap")
     out["vrn_file"] = annotate.add_genes(out_file, data)
+    return out
+
+def _add_bedgraph_to_output(out, data):
+    """Add BedGraph representation to the output
+    """
+    out_file = "%s.bedgraph" % os.path.splitext()
+    if utils.file_exists(out_file):
+        out["bedgraph"] = out_file
+        return out
+    bam_file = dd.get_align_bam(data)
+    bedtools = "bedtools"
+    with file_transaction(data, out_file) as tx_out_file:
+        cmd = ("sed 1d {cns_file} | cut -f1,2,3 | "
+               "{bedtools} genomecov -bg -ibam {bam_file} -g - >"
+               "{tx_out_file}")
+        do.run(cmd, "CNVkit bedGraph conversion")
+    out["bedgraph"] = out_file
     return out
 
 def _add_plots_to_output(out, data):
