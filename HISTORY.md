@@ -1,4 +1,4 @@
-## 0.8.8 (in progress)
+## 0.8.8 (29 April 2015)
 
 - Automatically calculate `coverage_interval` based on coverage calculations,
   avoiding need to set this directly in input configuration.
@@ -29,6 +29,9 @@
 - Better error checking for booleans in input configuration. Thanks to Daryl
   Waggott.
 - Implement qualimap for RNAseq QC metrics, but not active yet.
+- collect statistics graphing capabilities moved from bcbio-nextgen-vm, enabling
+  plotting of resource usage during runs. Thanks to John Morrissey and Lorena
+  Pantano.
 
 ## 0.8.7 (12 March 2015)
 
