@@ -1,3 +1,8 @@
+## 0.8.9 (in progress)
+
+- Enable installation of external conda-managed tools. Adds in builds for
+  heterogeneity analysis.
+
 ## 0.8.8 (29 April 2015)
 
 - Automatically calculate `coverage_interval` based on coverage calculations,

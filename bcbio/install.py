@@ -177,6 +177,11 @@ def _install_container_bcbio_system(datadir):
         yaml.safe_dump(expose_config, out_handle, default_flow_style=False, allow_unicode=False)
     return expose_file
 
+def _get_conda_bin():
+    conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
+    if os.path.exists(conda_bin):
+        return conda_bin
+
 def _default_deploy_args(args):
     toolplus = {"data": {"bio_nextgen": []}}
     custom_add = collections.defaultdict(list)
@@ -191,20 +196,21 @@ def _default_deploy_args(args):
             "fabricrc_overrides": {"edition": "minimal",
                                    "use_sudo": args.sudo,
                                    "keep_isolated": args.isolate,
+                                   "conda_cmd": _get_conda_bin(),
                                    "distribution": args.distribution or "__auto__",
                                    "dist_name": "__auto__"}}
 
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
-    conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
     pkgs = ["biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
             "pip", "progressbar","python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",
             "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",
             "sqlalchemy", "statsmodels", "toolz", "tornado"]
     channels = ["-c", "https://conda.binstar.org/bcbio"]
-    if os.path.exists(conda_bin):
+    conda_bin = _get_conda_bin()
+    if conda_bin:
         subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
         subprocess.check_call([conda_bin, "install", "--yes"] + channels + pkgs)
         return os.path.dirname(os.path.dirname(conda_bin))
@@ -347,6 +353,7 @@ def upgrade_thirdparty_tools(args, remotes):
     s = {"fabricrc_overrides": {"system_install": args.tooldir,
                                 "local_install": os.path.join(args.tooldir, "local_install"),
                                 "distribution": args.distribution,
+                                "conda_cmd": _get_conda_bin(),
                                 "use_sudo": args.sudo,
                                 "edition": "minimal"}}
     s = _default_deploy_args(args)
