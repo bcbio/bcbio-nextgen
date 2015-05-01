@@ -131,7 +131,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
             # http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
             cov_interval = dd.get_coverage_interval(data)
             base_regions = dd.get_variant_regions(data)
-            For genome calls, subset to regions within 10kb of genes
+            # For genome calls, subset to regions within 10kb of genes
             if cov_interval == "genome":
                 base_regions = annotate.subset_by_genes(base_regions, data,
                                                         work_dir, pad=1e4)
