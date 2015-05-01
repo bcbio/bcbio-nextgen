@@ -72,7 +72,10 @@ def _run_cnvkit_single(data, access_file=None, background=None):
         background_name = None
     ckout = _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
                                background_name=background_name)
-    return _associate_cnvkit_out(ckout, [data])
+    if not ckout:
+        return [data]
+    else:
+        return _associate_cnvkit_out(ckout, [data])
 
 def _run_cnvkit_cancer(items, background):
     """Run CNVkit on a tumor/normal pair.
@@ -82,6 +85,9 @@ def _run_cnvkit_cancer(items, background):
     access_file = _create_access_file(dd.get_ref_file(paired.tumor_data), work_dir, paired.tumor_data)
     ckout = _run_cnvkit_shared(paired.tumor_data, [paired.tumor_bam], [paired.normal_bam],
                                access_file, work_dir, background_name=paired.normal_name)
+    if not ckout:
+        return items
+
     # Skip THetA runs until we can speed up data preparation steps
     # ckout = theta.run(ckout, paired)
     tumor_data = _associate_cnvkit_out(ckout, [paired.tumor_data])
@@ -124,9 +130,16 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
             base_regions = dd.get_variant_regions(data)
             # For genome calls, subset to regions within 10kb of genes
             if cov_interval == "genome":
-                base_regions = annotate.subset_by_genes(base_regions, data, work_dir, pad=1e4)
-            raw_target_bed = bedutils.merge_overlaps(base_regions, data, out_dir=work_dir)
+                base_regions = annotate.subset_by_genes(base_regions, data,
+                                                        work_dir, pad=1e4)
+
+            raw_target_bed = bedutils.merge_overlaps(base_regions, data,
+                                                     out_dir=work_dir)
             target_bed = annotate.add_genes(raw_target_bed, data)
+
+            # bail out if we ended up with no regions
+            if not utils.file_exists(target_bed):
+                return {}
 
             if cov_interval == "amplicon":
                 target_opts = ["--targets", target_bed, "--access", target_bed]
@@ -190,16 +203,17 @@ def _add_bed_to_output(out, data):
 def _add_bedgraph_to_output(out, data):
     """Add BedGraph representation to the output
     """
-    out_file = "%s.bedgraph" % os.path.splitext()
+    out_file = "%s.bedgraph" % os.path.splitext(out["cns"])[0]
     if utils.file_exists(out_file):
         out["bedgraph"] = out_file
         return out
     bam_file = dd.get_align_bam(data)
     bedtools = "bedtools"
+    cns_file = out["cns"]
     with file_transaction(data, out_file) as tx_out_file:
         cmd = ("sed 1d {cns_file} | cut -f1,2,3 | "
                "{bedtools} genomecov -bg -ibam {bam_file} -g - >"
-               "{tx_out_file}")
+               "{tx_out_file}").format(**locals())
         do.run(cmd, "CNVkit bedGraph conversion")
     out["bedgraph"] = out_file
     return out
