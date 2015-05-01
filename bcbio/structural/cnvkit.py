@@ -5,6 +5,7 @@ http://cnvkit.readthedocs.org
 import os
 import shutil
 import sys
+import tempfile
 
 try:
     import pybedtools
@@ -17,6 +18,7 @@ from bcbio import install, utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.variation import bedutils, vcfutils
 from bcbio.provenance import do
 from bcbio.structural import annotate, shared, theta, plot
@@ -49,7 +51,8 @@ def _associate_cnvkit_out(ckout, items):
     out = []
     for data in items:
         ckout = _add_bed_to_output(ckout, data)
-        ckout = _add_bedgraph_to_output(ckout, data)
+#        ckout = _add_coverage_bedgraph_to_output(ckout, data)
+        ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
         ckout = _add_plots_to_output(ckout, data)
         if "sv" not in data:
             data["sv"] = []
@@ -128,7 +131,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
             # http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
             cov_interval = dd.get_coverage_interval(data)
             base_regions = dd.get_variant_regions(data)
-            # For genome calls, subset to regions within 10kb of genes
+            For genome calls, subset to regions within 10kb of genes
             if cov_interval == "genome":
                 base_regions = annotate.subset_by_genes(base_regions, data,
                                                         work_dir, pad=1e4)
@@ -181,6 +184,23 @@ def _add_seg_to_output(out, data):
     out["seg"] = out_file
     return out
 
+def _add_cnr_bedgraph_and_bed_to_output(out, data):
+    cnr_file = out["cnr"]
+    bedgraph_file = cnr_file + ".bedgraph"
+    if not utils.file_exists(bedgraph_file):
+        with file_transaction(data, bedgraph_file) as tx_out_file:
+            cmd = "sed 1d {cnr_file} | cut -f1,2,3,5 > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Converting cnr to bedgraph format")
+    out["cnr_bedgraph"] = bedgraph_file
+
+    bed_file = cnr_file + ".bed"
+    if not utils.file_exists(bed_file):
+        with file_transaction(data, bed_file) as tx_out_file:
+            cmd = "sed 1d {cnr_file} | cut -f1,2,3,4,5 > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Converting cnr to bed format")
+    out["cnr_bed"] = bed_file
+    return out
+
 def _add_bed_to_output(out, data):
     """Add FreeBayes cnvmap BED-like representation to the output.
     """
@@ -200,21 +220,25 @@ def _add_bed_to_output(out, data):
     out["vrn_file"] = annotate.add_genes(out_file, data)
     return out
 
-def _add_bedgraph_to_output(out, data):
-    """Add BedGraph representation to the output
+def _add_coverage_bedgraph_to_output(out, data):
+    """Add BedGraph representation of coverage to the output
     """
-    out_file = "%s.bedgraph" % os.path.splitext(out["cns"])[0]
+    out_file = "%s.coverage.bedgraph" % os.path.splitext(out["cns"])[0]
     if utils.file_exists(out_file):
         out["bedgraph"] = out_file
         return out
     bam_file = dd.get_align_bam(data)
-    bedtools = "bedtools"
+    bedtools = config_utils.get_program("bedtools", data["config"])
+    samtools = config_utils.get_program("samtools", data["config"])
     cns_file = out["cns"]
+    bed_file = tempfile.NamedTemporaryFile(suffix=".bed", delete=False).name
     with file_transaction(data, out_file) as tx_out_file:
-        cmd = ("sed 1d {cns_file} | cut -f1,2,3 | "
-               "{bedtools} genomecov -bg -ibam {bam_file} -g - >"
+        cmd = ("sed 1d {cns_file} | cut -f1,2,3 > {bed_file}; "
+               "{samtools} view -b -L {bed_file} {bam_file} | "
+               "{bedtools} genomecov -bg -ibam - -g {bed_file} >"
                "{tx_out_file}").format(**locals())
         do.run(cmd, "CNVkit bedGraph conversion")
+        os.remove(bed_file)
     out["bedgraph"] = out_file
     return out
 

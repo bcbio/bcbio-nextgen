@@ -135,6 +135,8 @@ def _maybe_add_sv(algorithm, sample, out):
         for svcall in sample["sv"]:
             out.extend(_get_variant_file(svcall, ("vrn_file",)))
             out.extend(_get_variant_file(svcall, ("bedpe_file",)))
+            out.extend(_get_variant_file(svcall, ("cnr_bed",)))
+            out.extend(_get_variant_file(svcall, ("cnr_bedgraph",)))
             if "sample_bed" in svcall:
                 out.append({"path": svcall["sample_bed"],
                             "type": "bed",
@@ -185,7 +187,7 @@ def _get_variant_file(x, key):
                             "index": True,
                             "ext": x["variantcaller"],
                             "variantcaller": x["variantcaller"]})
-        elif fname.endswith((".vcf", ".bed", ".bedpe")):
+        elif fname.endswith((".vcf", ".bed", ".bedpe", ".bedgraph")):
             ftype = utils.splitext_plus(fname)[-1][1:]
             out.append({"path": fname,
                         "type": ftype,
