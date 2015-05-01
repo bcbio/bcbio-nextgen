@@ -88,7 +88,11 @@ def _seaborn(df, prep, prepi, out_file, title=None, size=None):
         ax_row = axs[i] if len(vtypes) > 1 else axs
         for j, cat in enumerate(cats):
             vals, labels, maxval = _get_chart_info(df, vtype, cat, prep, callers)
-            ax = ax_row[j]
+            if len(cats) == 1:
+                assert j == 0
+                ax = ax_row
+            else:
+                ax = ax_row[j]
             if i == 0:
                 ax.set_title(cat_labels[cat], size=14)
             ax.get_yaxis().set_ticks([])
