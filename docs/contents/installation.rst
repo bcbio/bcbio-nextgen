@@ -83,14 +83,19 @@ This requires the following additional system requirements to be in place:
   ``ruby-libs`` and ``ruby-irb``)
 - R with Rscript. We test libraries with the most recent R releases as most of
   the Bioconductor tools track this version. If installing from system packages,
-  also install the development packages (On Ubuntu or other deb systems: ``r-base r-base-dev``,
-  On RedHat or other rpm systems: ``R-core R-core-devel R-java libRmath libRmath-devel``)
+  also install the development packages. Some packages used by bcbio require R >
+  3.0.3. On Ubuntu or other deb systems you should get the latest R version from
+  the CRAN repository by updating your apt sources
+  (http://cran.r-project.org/bin/linux/ubuntu/README) and installing ``r-base r-base-dev``.
+  On RedHat or other rpm systems install ``R-core R-core-devel R-java libRmath libRmath-devel``.
 - Perl with development libraries (On Ubuntu or other deb systems:
   ``perl, libperl-devel`` On RedHat or other rpm systems:
   ``perl perl-devel perl-core``)
 - bzip2 (with development libraries)
-- curl (with development libraries)
-- curses (with development libraries)
+- curl (with development libraries; On Ubuntu: ``libcurl4-openssl-dev``, On
+  RedHat: ``libcurl4-openssl-dev``)
+- XML development libraries (On Ubuntu: ``libxml2-dev``, on RedHat: ``libxml2-devel``)
+- curses with development libraries (On Ubuntu: ``libncurses5-dev``, on RedHat ``ncurses-devel``)
 
 Installing this way is as isolated and self-contained as possible
 without virtual machines or lightweight system containers. To ensure
@@ -160,7 +165,7 @@ on clusters or multicore machines.
 Disk space requirements for the tools, including all system packages are under
 4Gb. Biological data requirements will depend on the genomes and aligner indices
 used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses
-under 25Gb of storage::
+appromximately 35Gb of storage during preparation and ~25Gb after::
 
     $ du -shc genomes/Hsapiens/GRCh37/*
     3.8G  bowtie2

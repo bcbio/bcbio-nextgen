@@ -19,7 +19,7 @@ resources:
   default:
     memory: 2G
     cores: 16
-    jvm_opts: ["-Xms750", "-Xmx2000m"]
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
   log:
     dir: log
   tmp:
