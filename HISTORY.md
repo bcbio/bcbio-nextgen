@@ -1,5 +1,7 @@
 ## 0.8.9 (in progress)
 
+- Initial support for new human genome build (hg38/GRCh38) including alternative
+  alleles. Usage is in place but still requires validation and additional testing.
 - Enable installation of external conda-managed tools. Adds in builds for
   heterogeneity analysis.
 
