@@ -1,0 +1,8 @@
+version: 0
+
+aliases:
+  human: true
+  snpeff: GRCh38.78
+
+variation:
+  dbsnp: ../variation/dbsnp-142.vcf.gz
