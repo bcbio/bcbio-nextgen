@@ -62,7 +62,9 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
     alt_file = ref_file + ".alt"
     if utils.file_exists(alt_file):
         bwakit_dir = os.path.dirname(os.path.realpath(utils.which("run-bwamem")))
-        alt_cmd = (" | {bwakit_dir}/k8 {bwakit_dir}/bwa-postalt.js -p {out_file}.hla {alt_file}")
+        hla_base = os.path.join(utils.safe_makedir(os.path.join(os.path.dirname(out_file), "hla")),
+			        os.path.basename(out_file) + ".hla")
+        alt_cmd = (" | {bwakit_dir}/k8 {bwakit_dir}/bwa-postalt.js -p {hla_base} {alt_file}")
     else:
         alt_cmd = ""
     bwa = config_utils.get_program("bwa", data["config"])
