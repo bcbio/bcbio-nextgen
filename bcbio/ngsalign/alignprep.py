@@ -99,6 +99,8 @@ def setup_combine(final_file, data):
 
 def merge_split_alignments(samples, run_parallel):
     """Manage merging split alignments back into a final working BAM file.
+
+    Perform de-duplication on the final merged file.
     """
     ready = []
     file_key = "work_bam"

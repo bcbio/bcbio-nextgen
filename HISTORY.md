@@ -1,5 +1,8 @@
 ## 0.8.9 (in progress)
 
+- Improve de-duplication for split alignments. Do not sort/merge during splits,
+  and instead perform a global merge sort and de-duplication of the final set of
+  reads.
 - Initial support for new human genome build (hg38/GRCh38) including alternative
   alleles. Usage is in place but still requires validation and additional testing.
 - Enable installation of external conda-managed tools. Adds in builds for

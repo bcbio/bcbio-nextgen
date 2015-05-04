@@ -52,6 +52,8 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
             out_file = "%s-b%s%s" % (base, batch, ext)
         if not utils.file_exists(out_file):
             sambamba = config_utils.get_program("sambamba", config)
+            samtools = config_utils.get_program("samtools", config)
+            samblaster = config_utils.get_program("samblaster", config)
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
@@ -68,7 +70,10 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                             with open(tx_bam_file_list, "w") as out_handle:
                                 for f in sorted(bam_files):
                                     out_handle.write("%s\n" % f)
-                            cmd = _sambamba_merge(bam_files)
+                            if bam.bam_already_sorted(bam_files[0], config, "coordinate"):
+                                cmd = _sambamba_merge(bam_files)
+                            else:
+                                cmd = _biobambam_merge_dedup()
                             do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
                                    None)
             # Ensure timestamps are up to date on output file and index
@@ -80,6 +85,12 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
         bam.index(out_file, config)
         return out_file
+
+def _biobambam_merge_dedup():
+    """Combine query sorted BAM files, de-duplicate and sort. Handles split prepped files.
+    """
+    return ("bammerge IL={tx_bam_file_list} SO=queryname level=0 tmpfile={tx_out_file}-bammerge | "
+            "bamsormadup threads={num_cores} tmpfile={tx_out_file}-bamsormaduptmp > {tx_out_file}")
 
 def _sambamba_merge(bam_files):
     """Merge multiple BAM files with sambamba.

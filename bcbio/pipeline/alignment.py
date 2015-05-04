@@ -63,7 +63,8 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         data = _align_from_fastq(fastq1, fastq2, aligner, aligner_indexes, ref_file,
                                  names, align_dir, data)
     if data["work_bam"] and utils.file_exists(data["work_bam"]):
-        bam.index(data["work_bam"], data["config"])
+        if not data.get("align_split"):
+            bam.index(data["work_bam"], data["config"])
         for extra in ["-sr", "-disc"]:
             extra_bam = utils.append_stem(data['work_bam'], extra)
             if utils.file_exists(extra_bam):
