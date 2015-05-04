@@ -55,15 +55,17 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
     """Perform piped bwa mem mapping potentially with alternative alleles in GRCh38 + HLA typing.
 
     Commands for HLA post-processing:
-       /usr/local/bin/run-HLA TEST.hla > TEST.hla.top 2> TEST.log.hla;
-       touch TEST.hla.HLA-dummy.gt; cat TEST.hla.HLA*.gt | grep ^GT | cut -f2- > TEST.hla.all;
-       rm -f TEST.hla.HLA*;
+       base=TEST
+       run-HLA $base.hla > $base.hla.top
+       cat $base.hla.HLA*.gt | grep ^GT | cut -f2- > $base.hla.all
+       rm -f $base.hla.HLA*gt
+       rm -f $base.hla.HLA*gz
     """
     alt_file = ref_file + ".alt"
     if utils.file_exists(alt_file):
         bwakit_dir = os.path.dirname(os.path.realpath(utils.which("run-bwamem")))
         hla_base = os.path.join(utils.safe_makedir(os.path.join(os.path.dirname(out_file), "hla")),
-			        os.path.basename(out_file) + ".hla")
+                                os.path.basename(out_file) + ".hla")
         alt_cmd = (" | {bwakit_dir}/k8 {bwakit_dir}/bwa-postalt.js -p {hla_base} {alt_file}")
     else:
         alt_cmd = ""
