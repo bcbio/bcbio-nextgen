@@ -5,6 +5,8 @@
   reads.
 - Initial support for new human genome build (hg38/GRCh38) including alternative
   alleles. Usage is in place but still requires validation and additional testing.
+- Remove alternative alleles from downstream variant calling after using in alignment
+  to avoid issues with chromosome names like `HLA*`.
 - Enable installation of external conda-managed tools. Adds in builds for
   heterogeneity analysis.
 

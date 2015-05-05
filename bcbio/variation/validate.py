@@ -167,13 +167,13 @@ def get_analysis_intervals(data):
         return data["ensemble_bed"]
     elif data.get("align_bam"):
         return callable.sample_callable_bed(data["align_bam"],
-                                            utils.get_in(data, ("reference", "fasta", "base")), data["config"])
+                                            utils.get_in(data, ("reference", "fasta", "base")), data)
     elif data.get("work_bam"):
         return callable.sample_callable_bed(data["work_bam"],
-                                            utils.get_in(data, ("reference", "fasta", "base")), data["config"])
+                                            utils.get_in(data, ("reference", "fasta", "base")), data)
     elif data.get("work_bam_callable"):
         return callable.sample_callable_bed(data["work_bam_callable"],
-                                            utils.get_in(data, ("reference", "fasta", "base")), data["config"])
+                                            utils.get_in(data, ("reference", "fasta", "base")), data)
     else:
         for key in ["callable_regions", "variant_regions"]:
             intervals = data["config"]["algorithm"].get(key)

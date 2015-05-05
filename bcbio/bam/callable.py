@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 import numpy
+import pybedtools
 import pysam
 import toolz as tz
 import yaml
@@ -34,15 +35,15 @@ from bcbio.provenance import do, programs
 from bcbio.variation import bedutils
 from bcbio.variation import multi as vmulti
 
-def parallel_callable_loci(in_bam, ref_file, config):
+def parallel_callable_loci(in_bam, ref_file, data):
+    config = copy.deepcopy(data["config"])
     num_cores = config["algorithm"].get("num_cores", 1)
-    config = copy.deepcopy(config)
     data = {"work_bam": in_bam, "config": config,
-            "reference": {"fasta": {"base": ref_file}}}
+            "reference": data["reference"]}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
     items = [[data]]
     with prun.start(parallel, items, config, multiplier=int(num_cores)) as runner:
-        split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam")
+        split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam", remove_alts=True)
         out = parallel_split_combine(items, split_fn, runner,
                                      "calc_callable_loci", "combine_bed",
                                      "callable_bed", ["config"])[0]
@@ -77,7 +78,6 @@ def _group_by_ctype(bed_file, depth, region_file, out_file):
     https://groups.google.com/d/msg/bedtools-discuss/qYDE6XF-GRA/2icQtUeOX_UJ
     https://gist.github.com/arq5x/b67196a46db5b63bee06
     """
-    import pybedtools
     def assign_coverage(feat):
         feat.name = _get_ctype(float(feat.name), depth)
         return feat
@@ -130,7 +130,6 @@ def _get_ctype(count, depth):
 def _regions_for_coverage(data, region, ref_file, out_file):
     """Retrieve BED file of regions we need to calculate coverage in.
     """
-    import pybedtools
     variant_regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
     ready_region = shared.subset_variant_regions(variant_regions, region, out_file)
     custom_file = "%s-coverageregions.bed" % utils.splitext_plus(out_file)[0]
@@ -150,13 +149,13 @@ def _regions_for_coverage(data, region, ref_file, out_file):
                     out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, "NO_COVERAGE"))
         return custom_file, variant_regions is None
 
-def sample_callable_bed(bam_file, ref_file, config):
+def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.
     """
-    import pybedtools
+    config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
-        callable_bed = parallel_callable_loci(bam_file, ref_file, config)
+        callable_bed = parallel_callable_loci(bam_file, ref_file, data)
         input_regions_bed = config["algorithm"].get("variant_regions", None)
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(config, out_file) as tx_out_file:
@@ -173,7 +172,6 @@ def sample_callable_bed(bam_file, ref_file, config):
 def calculate_offtarget(bam_file, ref_file, data):
     """Generate file of offtarget read counts for inputs with variant regions.
     """
-    import pybedtools
     vrs_file = dd.get_variant_regions(data)
     if vrs_file:
         out_file = "%s-offtarget-stats.yaml" % os.path.splitext(bam_file)[0]
@@ -195,7 +193,6 @@ def calculate_offtarget(bam_file, ref_file, data):
 def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
     """
-    import pybedtools
     broad_runner = broad.runner_from_config(config, "picard")
     ref_dict = broad_runner.run_fn("picard_index_ref", ref_file)
     ref_lines = []
@@ -205,24 +202,27 @@ def get_ref_bedtool(ref_file, config, chrom=None):
                 ref_lines.append("%s\t%s\t%s" % (sq["SN"], 0, sq["LN"]))
     return pybedtools.BedTool("\n".join(ref_lines), from_string=True)
 
-def _get_nblock_regions(in_file, min_n_size):
+def _get_nblock_regions(in_file, min_n_size, ref_regions):
     """Retrieve coordinates of regions in reference genome with no mapping.
     These are potential breakpoints for parallelizing analysis.
     """
-    import pybedtools
     out_lines = []
+    called_contigs = set([])
     with open(in_file) as in_handle:
         for line in in_handle:
             contig, start, end, ctype = line.rstrip().split()
+            called_contigs.add(contig)
             if (ctype in ["REF_N", "NO_COVERAGE", "EXCESSIVE_COVERAGE", "LOW_COVERAGE"] and
                   int(end) - int(start) > min_n_size):
                 out_lines.append("%s\t%s\t%s\n" % (contig, start, end))
+    for refr in ref_regions:
+        if refr.chrom not in called_contigs:
+            out_lines.append("%s\t%s\t%s\n" % (refr.chrom, 0, refr.stop))
     return pybedtools.BedTool("\n".join(out_lines), from_string=True)
 
 def _combine_regions(all_regions, ref_regions):
     """Combine multiple BEDtools regions of regions into sorted final BEDtool.
     """
-    import pybedtools
     chrom_order = {}
     for i, x in enumerate(ref_regions):
         chrom_order[x.chrom] = i
@@ -241,7 +241,6 @@ def _add_config_regions(nblock_regions, ref_regions, config):
     """Add additional nblock regions based on configured regions to call.
     Identifies user defined regions which we should not be analyzing.
     """
-    import pybedtools
     input_regions_bed = config["algorithm"].get("variant_regions", None)
     if input_regions_bed:
         input_regions = pybedtools.BedTool(input_regions_bed)
@@ -288,7 +287,7 @@ class NBlockRegionPicker:
         """
         last_pos = self._chr_last_blocks.get(x.chrom, 0)
         # Region excludes an entire chromosome, typically decoy/haplotypes
-        if last_pos < self._end_buffer and x.stop >= self._ref_sizes.get(x.chrom, 0) - self._end_buffer:
+        if last_pos <= self._end_buffer and x.stop >= self._ref_sizes.get(x.chrom, 0) - self._end_buffer:
             return True
         # Do not split on smaller decoy and haplotype chromosomes
         elif self._ref_sizes.get(x.chrom, 0) <= self._target_size:
@@ -310,20 +309,21 @@ class NBlockRegionPicker:
                 feat.stop = chrom_end
         return feat
 
-def block_regions(in_bam, ref_file, config):
+def block_regions(in_bam, ref_file, data):
     """Find blocks of regions for analysis from mapped input BAM file.
 
     Identifies islands of callable regions, surrounding by regions
     with no read support, that can be analyzed independently.
     """
+    config = data["config"]
     min_n_size = int(config["algorithm"].get("nomap_split_size", 100))
     with shared.bedtools_tmpdir({"config": config}):
-        callable_bed = parallel_callable_loci(in_bam, ref_file, config)
+        callable_bed = parallel_callable_loci(in_bam, ref_file, data)
         nblock_bed = "%s-nblocks%s" % os.path.splitext(callable_bed)
         callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
         if not utils.file_uptodate(nblock_bed, callable_bed):
             ref_regions = get_ref_bedtool(ref_file, config)
-            nblock_regions = _get_nblock_regions(callable_bed, min_n_size)
+            nblock_regions = _get_nblock_regions(callable_bed, min_n_size, ref_regions)
             nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
             nblock_regions.saveas(nblock_bed)
             if len(ref_regions.subtract(nblock_regions)) > 0:
@@ -393,7 +393,6 @@ def combine_sample_regions(*samples):
     Intersects all non-callable (nblock) regions from all samples in a batch,
     producing a global set of callable regions.
     """
-    import pybedtools
     samples = [x[0] for x in samples]
     # back compatibility -- global file for entire sample set
     global_analysis_file = os.path.join(samples[0]["dirs"]["work"], "analysis_blocks.bed")
@@ -438,7 +437,6 @@ def combine_sample_regions(*samples):
 def _combine_sample_regions_batch(batch, items):
     """Combine sample regions within a group of batched samples.
     """
-    import pybedtools
     config = items[0]["config"]
     work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "regions"))
     analysis_file = os.path.join(work_dir, "%s-analysis_blocks.bed" % batch)

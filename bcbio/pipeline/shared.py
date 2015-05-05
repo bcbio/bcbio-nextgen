@@ -28,7 +28,8 @@ def combine_bam(in_files, out_file, config):
     bam.index(out_file, config)
     return out_file
 
-def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ext_fn=None):
+def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ext_fn=None,
+                              remove_alts=False):
     """Provide targets to process a BAM file by individual chromosome regions.
 
     output_ext: extension to supply to output files
@@ -36,10 +37,12 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ex
     default_targets: a list of extra chromosome targets to process, beyond those specified
                      in the BAM file. Useful for retrieval of non-mapped reads.
     dir_ext_fn: A function to retrieve a directory naming extension from input data map.
+    remove_alts: Do not process alternative alleles.
     """
     if default_targets is None:
         default_targets = []
     def _do_work(data):
+        ignore_chroms = set(_get_alt_chroms(data) if remove_alts else [])
         bam_file = data[file_key]
         out_dir = os.path.dirname(bam_file)
         if dir_ext_fn:
@@ -54,13 +57,26 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ex
                 "{base}-split".format(base=os.path.splitext(out_file)[0]))
             with closing(pysam.Samfile(bam_file, "rb")) as work_bam:
                 for chr_ref in list(work_bam.references) + default_targets:
-                    chr_out = os.path.join(work_dir,
-                                           "{base}-{ref}{ext}".format(
-                                               base=os.path.splitext(os.path.basename(bam_file))[0],
-                                               ref=chr_ref, ext=output_ext))
-                    part_info.append((chr_ref, chr_out))
+                    if chr_ref not in ignore_chroms:
+                        chr_out = os.path.join(work_dir,
+                                               "{base}-{ref}{ext}".format(
+                                                   base=os.path.splitext(os.path.basename(bam_file))[0],
+                                                   ref=chr_ref, ext=output_ext))
+                        part_info.append((chr_ref, chr_out))
         return out_file, part_info
     return _do_work
+
+def _get_alt_chroms(data):
+    """Retrieve alternative contigs as defined in bwa *.alts files.
+    """
+    alt_files = [f for f in tz.get_in(["reference", "bwa", "indexes"], data, []) if f.endswith("alt")]
+    alts = []
+    for alt_file in alt_files:
+        with open(alt_file) as in_handle:
+            for line in in_handle:
+                if not line.startswith("@"):
+                    alts.append(line.split()[0].strip())
+    return alts
 
 def write_nochr_reads(in_file, out_file, config):
     """Write a BAM file of reads that are not mapped on a reference chromosome.
