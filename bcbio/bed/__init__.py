@@ -6,9 +6,15 @@ def concat(bed_files, catted=None):
     recursively concat a set of BED files, returning a
     sorted bedtools object of the result
     """
+    bed_files = [x for x in bed_files if x]
     if len(bed_files) == 0:
         if catted:
-            return catted.sort()
+            # move to a .bed extension for downstream tools if not already
+            sorted_bed = catted.sort()
+            if not sorted_bed.fn.endswith(".bed"):
+                return sorted_bed.moveto(sorted_bed.fn + ".bed")
+            else:
+                return sorted_bed
         else:
             return catted
 
