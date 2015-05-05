@@ -67,7 +67,7 @@ def summary(items):
     coverage_bed = dd.get_coverage_regions(data)
     priority_bed = dd.get_priority_regions(data)
     combined_bed = bed.concat([coverage_bed, priority_bed])
-    clean_bed = bedutils.clean_file(combined_bed.fn, data)
+    clean_bed = bedutils.clean_file(combined_bed.fn, data) if len(combined_bed) > 0 else combined_bed.fn
     bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
     batch = _get_group_batch(items)
     assert batch, ("Did not find batch for samples: %s" %
