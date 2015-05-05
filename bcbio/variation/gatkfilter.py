@@ -59,27 +59,38 @@ def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
             broad_runner.run_gatk(params)
     return out_file
 
+def _get_training_data(vrn_files):
+    """Retrieve training data, returning an empty set of information if not available.
+    """
+    out = {"SNP": [], "INDEL": []}
+    # SNPs
+    for name, train_info in [("train_hapmap", "known=false,training=true,truth=true,prior=15.0"),
+                             ("train_omni", "known=false,training=true,truth=true,prior=12.0"),
+                             ("train_1000g", "known=false,training=true,truth=false,prior=10.0"),
+                             ("dbsnp", "known=true,training=false,truth=false,prior=2.0")]:
+        if name not in vrn_files:
+            return {}
+        else:
+            out["SNP"].append((name.replace("train_", ""), train_info, vrn_files[name]))
+    # Indels
+    if "train_indels" in vrn_files:
+        out["INDEL"].append(("mills", "known=true,training=true,truth=true,prior=12.0",
+                             vrn_files["train_indels"]))
+    else:
+        return {}
+    return out
+
+def _have_training_data(vrn_files):
+    return len(_get_training_data(vrn_files)) > 0
+
 def _get_vqsr_training(filter_type, vrn_files):
     """Return parameters for VQSR training, handling SNPs and Indels.
     """
     params = []
-    if filter_type == "SNP":
-        for name, train_info in [("train_hapmap", "known=false,training=true,truth=true,prior=15.0"),
-                                 ("train_omni", "known=false,training=true,truth=true,prior=12.0"),
-                                 ("train_1000g", "known=false,training=true,truth=false,prior=10.0"),
-                                 ("dbsnp", "known=true,training=false,truth=false,prior=2.0")]:
-            if name in vrn_files:
-                assert name in vrn_files, "Missing VQSR SNP training dataset %s" % name
-                params.extend(["-resource:%s,VCF,%s" % (name.replace("train_", ""), train_info),
-                               vrn_files[name]])
-    elif filter_type == "INDEL":
-        assert "train_indels" in vrn_files, "Need indel training file specified"
+    for name, train_info, fname in _get_training_data(vrn_files)[filter_type]:
+        params.extend(["-resource:%s,VCF,%s" % (name, train_info), fname])
+    if filter_type == "INDEL":
         params.extend(["--maxGaussians", "4"])
-        params.extend(
-            ["-resource:mills,VCF,known=true,training=true,truth=true,prior=12.0",
-             vrn_files["train_indels"]])
-    else:
-        raise ValueError("Unexpected filter type for VQSR: %s" % filter_type)
     return params
 
 def _get_vqsr_annotations(filter_type):
@@ -147,11 +158,14 @@ def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
     Hard filter if configuration indicates too little data or already finished a
     hard filtering, otherwise try VQSR.
     """
-    human = tz.get_in(["genome_resources", "aliases", "human"], data)
     # Algorithms multiplied by number of input files to check for large enough sample sizes
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
     if (not config_utils.use_vqsr(algs) or
-          _already_hard_filtered(in_file, filter_type) or not human):
+          _already_hard_filtered(in_file, filter_type)):
+        logger.info("Skipping VQSR, using hard filers: we don't have whole genome input data")
+        return hard_filter_fn(in_file, data)
+    elif not _have_training_data(vrn_files):
+        logger.info("Skipping VQSR, using hard filers: genome build does not have sufficient training data")
         return hard_filter_fn(in_file, data)
     else:
         sensitivities = {"INDEL": "98.0", "SNP": "99.97"}
