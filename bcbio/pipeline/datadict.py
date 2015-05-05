@@ -69,6 +69,7 @@ LOOKUPS = {
     "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
     "sample_callable": {"keys": ["regions", "sample_callable"]},
     "coverage_interval": {"keys": ["config", "algorithm", "coverage_interval"]},
+    "coverage_regions": {"keys": ["config", "algorithm", "coverage"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
     "align_bam": {"keys": ["align_bam"]}
 }
