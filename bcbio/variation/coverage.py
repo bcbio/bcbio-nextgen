@@ -11,7 +11,7 @@ import sys
 import toolz as tz
 import yaml
 
-from bcbio import utils
+from bcbio import utils, bed
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -63,9 +63,11 @@ def summary(items):
     cutoff = 4  # coverage for completeness
     data = items[0]
     work_dir = dd.get_work_dir(data)
-    out_dir = utils.safe_makedir(work_dir, "coverage"))
-    coverage_bed = dd.get_coverage_bed(data)
-    clean_bed = bedutils.clean_file(coverage_bed, data)
+    out_dir = utils.safe_makedir(os.path.join(work_dir, "coverage"))
+    coverage_bed = dd.get_coverage_regions(data)
+    priority_bed = dd.get_priority_regions(data)
+    combined_bed = bed.concat([coverage_bed, priority_bed])
+    clean_bed = bedutils.clean_file(combined_bed.fn, data)
     bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
     batch = _get_group_batch(items)
     assert batch, ("Did not find batch for samples: %s" %
@@ -73,7 +75,7 @@ def summary(items):
 
     out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             chanjo = os.path.join(os.path.dirname(sys.executable), "chanjo")
             cmd = ("{chanjo} --db {tx_out_file} build {bed_file}")
             do.run(cmd.format(**locals()), "Prep chanjo database")
@@ -152,6 +154,9 @@ def _handle_multi_batches(prepped, multi_batches):
     assert len(multi_batches) == 0, "Did not find all multi_batch items: %s" % (list(multi_batches))
     return out
 
+def _needs_coverage(data):
+    return dd.get_coverage_regions(data) or dd.get_priority_regions(data)
+
 def summarize_samples(samples, run_parallel):
     """Back compatibility for existing pipelines. Should be replaced with summary when ready.
     """
@@ -159,8 +164,9 @@ def summarize_samples(samples, run_parallel):
     to_run = collections.defaultdict(list)
     multi_batches = set([])
     for data in [x[0] for x in samples]:
-        if tz.get_in(["config", "algorithm", "coverage"], data):
-            batches = tz.get_in(("metadata", "batch"), data, [dd.get_sample_name(data)])
+        if _needs_coverage(data):
+            sample_name = dd.get_sample_name(data)
+            batches = tz.get_in(("metadata", "batch"), data, sample_name)
             if not isinstance(batches, (tuple, list)):
                 batches = [batches]
             else:
