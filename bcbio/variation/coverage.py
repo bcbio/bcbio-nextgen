@@ -74,7 +74,7 @@ def summary(items):
                    ",".join([dd.get_sample_name(x) for x in items]))
 
     out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) and utils.file_exists(bed_file):
         with file_transaction(data, out_file) as tx_out_file:
             chanjo = os.path.join(os.path.dirname(sys.executable), "chanjo")
             cmd = ("{chanjo} --db {tx_out_file} build {bed_file}")
@@ -88,7 +88,8 @@ def summary(items):
                 do.run(cmd.format(**locals()), "Chanjo coverage", data)
     out = []
     for data in items:
-        data["coverage"] = {"summary": out_file}
+        if utils.file_exists(out_file):
+            data["coverage"] = {"summary": out_file}
         out.append([data])
     return out
 
