@@ -61,13 +61,15 @@ def assign_interval(data):
 
 def summary(items):
     cutoff = 4  # coverage for completeness
-
-    out_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "coverage"))
-    clean_bed = bedutils.clean_file(tz.get_in(["config", "algorithm", "coverage"], items[0]),
-                                    items[0])
-    bed_file = _uniquify_bed_names(clean_bed, out_dir, items[0])
+    data = items[0]
+    work_dir = dd.get_work_dir(data)
+    out_dir = utils.safe_makedir(work_dir, "coverage"))
+    coverage_bed = dd.get_coverage_bed(data)
+    clean_bed = bedutils.clean_file(coverage_bed, data)
+    bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
     batch = _get_group_batch(items)
-    assert batch, "Did not find batch for samples: %s" % ",".join([dd.get_sample_name(x) for x in items])
+    assert batch, ("Did not find batch for samples: %s" %
+                   ",".join([dd.get_sample_name(x) for x in items]))
 
     out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
     if not utils.file_exists(out_file):
@@ -78,7 +80,8 @@ def summary(items):
             for data in items:
                 sample = dd.get_sample_name(data)
                 bam_file = data["work_bam"]
-                cmd = ("{chanjo} annotate -s {sample} -g {batch} -c {cutoff} {bam_file} {bed_file} | "
+                cmd = ("{chanjo} annotate -s {sample} -g {batch} -c {cutoff} "
+                       "{bam_file} {bed_file} | "
                        "{chanjo} --db {tx_out_file} import")
                 do.run(cmd.format(**locals()), "Chanjo coverage", data)
     out = []
