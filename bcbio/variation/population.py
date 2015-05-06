@@ -70,7 +70,9 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
             num_cores = data["config"]["algorithm"].get("num_cores", 1)
             eanns = ("snpEff" if tz.get_in(("config", "algorithm", "effects"), data, "snpeff") == "snpeff"
                      else "VEP")
-            cmd = "{gemini} load {load_opts} -v {gemini_vcf} -t {eanns} --cores {num_cores} {tx_gemini_db}"
+            tmpdir = os.path.dirname(tx_gemini_db)
+            cmd = ("{gemini} load {load_opts} -v {gemini_vcf} -t {eanns} --cores {num_cores} "
+                   "--tempdir {tmpdir} {tx_gemini_db}")
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % gemini_vcf, data)
             if ped_file:
