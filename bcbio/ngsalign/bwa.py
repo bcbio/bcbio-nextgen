@@ -75,7 +75,8 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
     bwa_params = (" ".join([str(x) for x in bwa_resources.get("options", [])])
                   if "options" in bwa_resources else "")
     rg_info = novoalign.get_rg_info(data["rgnames"])
-    bwa_cmd = ("{bwa} mem -p -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 "
+    pairing = "-p" if not fastq2 else ""
+    bwa_cmd = ("{bwa} mem {pairing} -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 "
                "{ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
 
