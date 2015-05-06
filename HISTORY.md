@@ -9,6 +9,8 @@
   to avoid issues with chromosome names like `HLA*`.
 - Enable installation of external conda-managed tools. Adds in builds for
   heterogeneity analysis.
+- Clean up preparation process for multi-allelic inputs to GEMINI to avoid
+  needing to split/merge. Thanks to Sven-Eric Schelhorn.
 
 ## 0.8.8 (29 April 2015)
 
