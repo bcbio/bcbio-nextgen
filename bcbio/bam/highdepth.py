@@ -64,6 +64,9 @@ def identify(data):
 
 def get_median_coverage(data):
     stats_file = _get_files(data)[-1]
-    with open(stats_file) as in_handle:
-        stats = yaml.safe_load(in_handle)
-    return stats["median_cov"]
+    if not utils.file_exists(stats_file):
+        return 0
+    else:
+        with open(stats_file) as in_handle:
+            stats = yaml.safe_load(in_handle)
+        return stats["median_cov"]
