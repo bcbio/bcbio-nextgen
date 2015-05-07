@@ -1,7 +1,4 @@
-version: 6
-
-aliases:
-  ensembl: mus_musculus
+version: 7
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

@@ -1,6 +1,4 @@
 version: 2
 
 aliases:
-  #ensembl: arabidopsis_thaliana
-  #ensembl_version: 22
   snpeff: athalianaTair10

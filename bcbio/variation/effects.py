@@ -43,22 +43,11 @@ def get_type(data):
 
 # ## Ensembl VEP
 
-def vep_version(config):
-    try:
-        vep = config_utils.get_program("variant_effect_predictor.pl", config)
-        help_str = subprocess.check_output([vep, "--help"])
-        for line in help_str.split("\n"):
-            if line.startswith("version"):
-                return line.split()[-1].strip()
-        return None
-    except config_utils.CmdNotFound:
-        return None
-        return False
-
 def _special_dbkey_maps(dbkey, ref_file):
     """Avoid duplicate VEP information for databases with chromosome differences like hg19/GRCh37.
     """
-    remaps = {"hg19": "GRCh37"}
+    remaps = {"hg19": "GRCh37",
+              "hg38-noalt": "hg38"}
     if dbkey in remaps:
         base_dir = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir))
         vep_dir = os.path.normpath(os.path.join(base_dir, "vep"))
@@ -81,32 +70,30 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
     if tooldir:
         os.environ["PERL5LIB"] = "{t}/lib/perl5:{t}/lib/perl5/site_perl:{l}".format(
             t=tooldir, l=os.environ.get("PERL5LIB", ""))
-    vepv = vep_version(config)
-    if os.path.exists(resource_file) and vepv:
+    if os.path.exists(resource_file):
         with open(resource_file) as in_handle:
             resources = yaml.load(in_handle)
         ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
-        ensembl_version = tz.get_in(["aliases", "ensembl_version"], resources)
         symlink_dir = _special_dbkey_maps(dbkey, ref_file)
-        if symlink_dir:
-            return symlink_dir, ensembl_name
+        if symlink_dir and ensembl_name:
+            species, vepv = ensembl_name.split("_vep_")
+            return symlink_dir, species
         elif ensembl_name:
+            species, vepv = ensembl_name.split("_vep_")
             vep_dir = utils.safe_makedir(os.path.normpath(os.path.join(
                 os.path.dirname(os.path.dirname(ref_file)), "vep")))
-            out_dir = os.path.join(vep_dir, ensembl_name, vepv)
+            out_dir = os.path.join(vep_dir, species, vepv)
             if not os.path.exists(out_dir):
                 cmd = ["vep_install.pl", "-a", "c", "-s", ensembl_name,
                        "-c", vep_dir]
-                if ensembl_version:
-                    cmd += ["-v", ensembl_version]
                 do.run(cmd, "Prepare VEP directory for %s" % ensembl_name)
-                cmd = ["vep_convert_cache.pl", "-species", ensembl_name, "-version", vepv,
+                cmd = ["vep_convert_cache.pl", "-species", species, "-version", vepv,
                        "-d", vep_dir]
                 do.run(cmd, "Convert VEP cache to tabix %s" % ensembl_name)
             tmp_dir = os.path.join(vep_dir, "tmp")
             if os.path.exists(tmp_dir):
                 shutil.rmtree(tmp_dir)
-            return vep_dir, ensembl_name
+            return vep_dir, species
     return None, None
 
 def run_vep(in_file, data):

@@ -73,6 +73,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                             if bam.bam_already_sorted(bam_files[0], config, "coordinate"):
                                 cmd = _sambamba_merge(bam_files)
                             else:
+                                assert config.get("mark_duplicates", True)
                                 cmd = _biobambam_merge_dedup()
                             do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
                                    None)
