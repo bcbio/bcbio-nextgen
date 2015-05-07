@@ -53,7 +53,7 @@ def _special_dbkey_maps(dbkey, ref_file):
         vep_dir = os.path.normpath(os.path.join(base_dir, "vep"))
         other_dir = os.path.relpath(os.path.normpath(os.path.join(base_dir, os.pardir, remaps[dbkey], "vep")),
                                     base_dir)
-        if os.path.exists(other_dir):
+        if os.path.exists(os.path.join(base_dir, other_dir)):
             if not os.path.lexists(vep_dir):
                 os.symlink(other_dir, vep_dir)
             return vep_dir
