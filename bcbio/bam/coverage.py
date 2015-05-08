@@ -90,6 +90,20 @@ def _add_stems_to_plot(interval, stem_bed, samples, plot):
         setp(baseline, 'color', 'r', 'linewidth', 0)
         plt.legend()
 
+def _split_regions(chrom, start, end):
+    """Split regions longer than 100kb into smaller sections.
+    """
+    window_size = 1e5
+    if end - start < window_size * 5:
+        return [(chrom, start, end)]
+    else:
+        out = []
+        for r in pybedtools.BedTool().window_maker(w=window_size,
+                                                   b=pybedtools.BedTool("%s\t%s\t%s" % (chrom, start, end),
+                                                                        from_string=True)):
+            out.append((r.chrom, r.start, r.end))
+        return out
+
 def plot_multiple_regions_coverage(samples, out_file, region_bed=None, stem_bed=None):
     """
     given a list of bcbio samples and a bed file or BedTool of regions,
@@ -107,7 +121,7 @@ def plot_multiple_regions_coverage(samples, out_file, region_bed=None, stem_bed=
         region_bed = pybedtools.BedTool(region_bed)
     if isinstance(stem_bed, six.string_types):
         stem_bed = pybedtools.BedTool(stem_bed)
-    if stem_bed != None:  # tabix indexed bedtools eval to false
+    if stem_bed is not None:  # tabix indexed bedtools eval to false
         stem_bed = stem_bed.tabix()
     plt.clf()
     plt.cla()
@@ -115,17 +129,16 @@ def plot_multiple_regions_coverage(samples, out_file, region_bed=None, stem_bed=
         with PdfPages(tx_out_file) as pdf_out:
             sns.despine()
             for line in region_bed:
-                chrom = line.chrom
-                start = max(line.start - PAD, 0)
-                end = line.end + PAD
-                df = _combine_regional_coverage(in_bams, samplenames, chrom,
-                                                start, end, os.path.dirname(tx_out_file))
-                plot = sns.tsplot(df, time="position", unit="chrom",
-                                  value="coverage", condition="sample")
-                if stem_bed != None: # tabix indexed bedtools eval to false
-                    interval = pybedtools.Interval(chrom, start, end)
-                    _add_stems_to_plot(interval, stem_bed, samples, plot)
-                plt.title("{chrom}:{start}-{end}".format(**locals()))
-                pdf_out.savefig(plot.get_figure())
-                plt.close()
+                for chrom, start, end in _split_regions(line.chrom, max(line.start - PAD, 0),
+                                                        line.end + PAD):
+                    df = _combine_regional_coverage(in_bams, samplenames, chrom,
+                                                    start, end, os.path.dirname(tx_out_file))
+                    plot = sns.tsplot(df, time="position", unit="chrom",
+                                      value="coverage", condition="sample")
+                    if stem_bed is not None:  # tabix indexed bedtools eval to false
+                        interval = pybedtools.Interval(chrom, start, end)
+                        _add_stems_to_plot(interval, stem_bed, samples, plot)
+                    plt.title("{chrom}:{start}-{end}".format(**locals()))
+                    pdf_out.savefig(plot.get_figure())
+                    plt.close()
     return out_file
