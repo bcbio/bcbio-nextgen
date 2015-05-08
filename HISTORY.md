@@ -1,5 +1,10 @@
 ## 0.8.9 (in progress)
 
+- Upgrade variant effect predictor (VEP) to the latest Ensembl version (79) with
+  support for hg38. The latest VEP has better support for multiple versions
+  but incompatible database naming. This requires an update of tools and data in
+  a two step process. First `bcbio_nextgen.py upgrade -u stable --tools`
+  (or `-u development`) then `bcbio_nextgen.py upgrade --data`.
 - Improve de-duplication for split alignments. Do not sort/merge during splits,
   and instead perform a global merge sort and de-duplication of the final set of
   reads.

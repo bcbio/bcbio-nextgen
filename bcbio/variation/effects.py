@@ -9,7 +9,6 @@ import os
 import glob
 import shutil
 import string
-import subprocess
 
 import toolz as tz
 import yaml
@@ -117,7 +116,7 @@ def run_vep(in_file, data):
                               "EXON", "PolyPhen", "SIFT", "Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 resources = config_utils.get_resources("vep", data["config"])
                 extra_args = [str(x) for x in resources.get("options", [])]
-                cmd = [vep, "--vcf", "-o", "stdout"] + fork_args + extra_args + \
+                cmd = [vep, "--vcf", "-o", "stdout", "-i", in_file] + fork_args + extra_args + \
                       ["--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
@@ -139,7 +138,10 @@ def run_vep(in_file, data):
                     #  variant.
 
                     cmd += ["--pick"]
-                cmd = "gunzip -c %s | %s | bgzip -c > %s" % (in_file, " ".join(cmd), tx_out_file)
+
+                    # TODO investigate hgvs reporting but requires indexing the reference file
+                    # cmd += ["--hgvs", "--shift-hgvs", "--fasta", dd.get_ref_file(data)]
+                cmd = "%s | bgzip -c > %s" % (" ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
         vcfutils.bgzip_and_index(out_file, data["config"])
