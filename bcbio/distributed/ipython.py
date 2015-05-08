@@ -38,14 +38,15 @@ def create(parallel, dirs, config):
     has_mincores = any(x.startswith("mincores=") for x in parallel["resources"])
     cores = min(_get_common_cores(config["resources"]), parallel["system_cores"])
     if cores > 1 and not has_mincores:
+        adj_cores = int(math.floor(cores * float(parallel.get("mem_pct", 1.0))))
         # if we have less scheduled cores than per machine, use the scheduled count
         if cores > parallel["cores"]:
             cores = parallel["cores"]
         # if we have less total cores required for the entire process, use that
-        elif cores > parallel["num_jobs"] * parallel["cores_per_job"]:
+        elif adj_cores > parallel["num_jobs"] * parallel["cores_per_job"]:
             cores = parallel["num_jobs"] * parallel["cores_per_job"]
         else:
-            cores = int(math.floor(cores * float(parallel.get("mem_pct", 1.0))))
+            cores = adj_cores
             cores = per_machine_target_cores(cores, parallel["num_jobs"] // cores)
         parallel["resources"].append("mincores=%s" % cores)
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
