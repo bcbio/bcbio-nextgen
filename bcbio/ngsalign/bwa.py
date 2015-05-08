@@ -76,7 +76,11 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
                   if "options" in bwa_resources else "")
     rg_info = novoalign.get_rg_info(data["rgnames"])
     pairing = "-p" if not fastq2 else ""
-    bwa_cmd = ("{bwa} mem {pairing} -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 "
+    # Restrict seed occurances to 1/2 of default, manage memory usage for centromere repeats in hg38
+    # https://sourceforge.net/p/bio-bwa/mailman/message/31514937/
+    # http://ehc.ac/p/bio-bwa/mailman/message/32268544/
+    mem_usage = "-c 250"
+    bwa_cmd = ("{bwa} mem {pairing} {mem_usage} -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 "
                "{ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
 
