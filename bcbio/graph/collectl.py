@@ -6,10 +6,9 @@ import os.path
 import re
 
 import pandas as pd
-import progressbar
-
 
 def _parse_raw(fp, start_tstamp, end_tstamp):
+    import progressbar
     widgets = [
         os.path.basename(fp.name), ': ',
         progressbar.Bar(marker='-', left='[', right=']'), ' ',
