@@ -49,6 +49,7 @@ LOOKUPS = {
                        "default": "standard"},
     "adapters": {"keys": ['config', 'algorithm', 'adapters'],
                  "default": []},
+    "variation_resources": {"keys": ["genome_resources", "variation"], "default": {}},
     "qsig_file": {"keys": ['genome_resources', 'variation', 'qsignature'],
                   "checker": file_exists},
     "mixup_check": {"keys": ["config", "algorithm", "mixup_check"],

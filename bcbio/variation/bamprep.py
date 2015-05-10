@@ -9,6 +9,7 @@ import toolz as tz
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import realign
 
@@ -62,11 +63,12 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
             cmd = "{cl} -o {tx_out_file}".format(**locals())
             do.run(cmd, "GATK pre-alignment {0}".format(region), data)
     bam.index(pa_bam, data["config"])
-    dbsnp_vcf = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"], data["config"],
-                                                dbsnp=dbsnp_vcf, region=region_to_gatk(region))
+                                                region=region_to_gatk(region),
+                                                known_vrns=dd.get_variation_resources(data))
     recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],
-                                                 recal_file, tmp_dir, region=region_to_gatk(region))
+                                                 recal_file, tmp_dir, region=region_to_gatk(region),
+                                                 known_vrns=dd.get_variation_resources(data))
     return pa_bam, " ".join(recal_cl)
 
 def _cleanup_tempfiles(data, tmp_files):
