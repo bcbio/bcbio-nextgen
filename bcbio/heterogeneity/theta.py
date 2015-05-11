@@ -9,8 +9,6 @@ import os
 import sys
 import subprocess
 
-import toolz as tz
-
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger

@@ -1,6 +1,6 @@
 """Multiprocessing ready entry points for sample analysis.
 """
-from bcbio import structural, utils, chipseq, upload
+from bcbio import heterogeneity, structural, utils, chipseq, upload
 from bcbio.bam import callable
 from bcbio.rnaseq import (sailfish, express)
 from bcbio.ngsalign import alignprep
@@ -125,6 +125,10 @@ def merge_variant_files(*args):
 @utils.map_wrap
 def detect_sv(*args):
     return structural.detect_sv(*args)
+
+@utils.map_wrap
+def heterogeneity_estimate(*args):
+    return heterogeneity.estimate(*args)
 
 @utils.map_wrap
 def finalize_sv(*args):

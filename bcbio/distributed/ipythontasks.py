@@ -4,7 +4,7 @@ import contextlib
 
 from IPython.parallel import require
 
-from bcbio import chipseq, structural, upload
+from bcbio import heterogeneity, chipseq, structural, upload
 from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
@@ -253,6 +253,12 @@ def finalize_sv(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(structural.finalize_sv, *args))
+
+@require(heterogeneity)
+def heterogeneity_estimate(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(heterogeneity.estimate, *args))
 
 @require(ensemble)
 def combine_calls(*args):

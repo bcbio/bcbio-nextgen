@@ -12,7 +12,7 @@ import tempfile
 
 import yaml
 
-from bcbio import log, structural, utils
+from bcbio import log, heterogeneity, structural, utils
 from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.log import logger
@@ -181,6 +181,8 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = validate.summarize_grading(samples)
             with profile.report("structural variation", dirs):
                 samples = structural.run(samples, run_parallel)
+            with profile.report("heterogeneity", dirs):
+                samples = heterogeneity.run(samples, run_parallel)
             with profile.report("population database", dirs):
                 samples = population.prep_db_parallel(samples, run_parallel)
             with profile.report("quality control", dirs):
