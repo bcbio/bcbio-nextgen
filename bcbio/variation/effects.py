@@ -141,7 +141,8 @@ def run_vep(in_file, data):
 
                     # TODO investigate hgvs reporting but requires indexing the reference file
                     # cmd += ["--hgvs", "--shift-hgvs", "--fasta", dd.get_ref_file(data)]
-                cmd = "%s | bgzip -c > %s" % (" ".join(cmd), tx_out_file)
+                # Remove empty fields (';;') which can cause parsing errors downstream
+                cmd = "%s | sed 's/;;/;/' | bgzip -c > %s" % (" ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
         vcfutils.bgzip_and_index(out_file, data["config"])

@@ -1,5 +1,7 @@
 ## 0.9.0 (in progress)
 
+- Fix VEP/GEMINI incompatibility where empty fields are included in VCF output.
+
 ## 0.8.9 (10 May 2015)
 
 - Upgrade variant effect predictor (VEP) to the latest Ensembl version (79) with
