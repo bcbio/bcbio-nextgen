@@ -16,74 +16,90 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.structural import cnvkit
 
 def run(cnv_info, somatic_info):
     """Run THetA analysis given output from CNV caller on a tumor/normal pair.
     """
-    cmds = _get_cmds()
-    if not cmds:
+    cmd = _get_cmd("RunTHeTA.py")
+    if not cmd:
         logger.info("THetA scripts not found in current PATH. Skipping.")
         return cnv_info
     else:
         work_dir = _sv_workdir(somatic_info.tumor_data)
-        exome_input = _create_exome_input(cmds, cnv_info, somatic_info, work_dir)
-        _run_theta(cmds, exome_input, somatic_info.tumor_data, work_dir)
+        cnv_info = cnvkit.export_theta(cnv_info, somatic_info.tumor_data)
+        cnv_info = _run_theta(cnv_info, somatic_info.tumor_data, work_dir)
         return cnv_info
 
-def _run_theta(cmds, exome_input, data, work_dir):
+def _run_theta(cnv_info, data, work_dir):
     """Run theta, calculating subpopulations and normal contamination.
-
-    TODO: test on larger datasets and explore n=3 or higher values to evaluate
-    multiple subclones.
     """
-    out_dir = os.path.join(work_dir, "raw")
-    result_file = os.path.join(out_dir, "%s.n2.results" % utils.splitext_plus(os.path.basename(exome_input))[0])
-    if not utils.file_exists(result_file) and not utils.file_exists(result_file + ".skipped"):
+    max_cnv = "4"
+    n2_result = _safe_run_theta(cnv_info["theta_input"], os.path.join(work_dir, "n2"), ".n2.results",
+                                ["-n", "2", "-k", max_cnv], data)
+    if n2_result:
+        n2_bounds = "%s.withBounds" % os.path.splitext(n2_result)[0]
+        n3_result = _safe_run_theta(n2_bounds, os.path.join(work_dir, "n3"), ".n3.results",
+                                    ["-n", "3", "-k", max_cnv, "--RESULTS", n2_result], data)
+        if n3_result:
+            best_result = _select_model(n2_bounds, n2_result, n3_result,
+                                        os.path.join(work_dir, "best"), data)
+            cnv_info["theta"] = best_result
+    return cnv_info
+
+def _select_model(n2_bounds, n2_result, n3_result, out_dir, data):
+    """Run final model selection from n=2 and n=3 options.
+    """
+    out_file = os.path.join(out_dir, _split_theta_ext(n2_bounds) + ".BEST.results")
+    if not utils.file_exists(out_file):
         with file_transaction(data, out_dir) as tx_out_dir:
             utils.safe_makedir(tx_out_dir)
-            cmd = cmds["run_theta"] + ["-n", "2", "-k", "4", "-m", ".90",
-                                       exome_input, "--NUM_PROCESSES", dd.get_cores(data),
-                                       "--FORCE", "-d", tx_out_dir]
+            with utils.chdir(tx_out_dir):
+                cmd = _get_cmd("ModelSelection.py") + [n2_bounds, n2_result, n3_result]
+                do.run(cmd, "Select best THetA model")
+    return out_file
+
+def _safe_run_theta(input_file, out_dir, output_ext, args, data):
+    """Run THetA, catching and continuing on any errors.
+    """
+    out_file = _split_theta_ext(input_file) + output_ext
+    skip_file = out_file = ".skipped"
+    if utils.file_exists(skip_file):
+        return None
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_dir) as tx_out_dir:
+            utils.safe_makedir(tx_out_dir)
+            cmd = _get_cmd("RunTHetA.py") + args + \
+                  [input_file, "--NUM_PROCESSES", dd.get_cores(data),
+                   "--FORCE", "-d", tx_out_dir]
             try:
                 do.run(cmd, "Run THetA to calculate purity", log_error=False)
             except subprocess.CalledProcessError, msg:
                 if ("Number of intervals must be greater than 1" in str(msg) or
                       "This sample isn't a good candidate for THetA analysis" in str(msg)):
-                    with open(os.path.join(tx_out_dir,
-                                           os.path.basename(result_file) + ".skipped"), "w") as out_handle:
+                    with open(os.path.join(tx_out_dir, os.path.basename(skip_file)), "w") as out_handle:
                         out_handle.write("Expected TheTA failure, skipping")
+                    return None
                 else:
                     raise
-    return result_file
-
-def _create_exome_input(cmds, cnv_info, somatic_info, work_dir):
-    """Create exome inputs for THetA from existing CNV segmentation inputs.
-    """
-    out_prefix = os.path.join(work_dir, "%s_exome" % dd.get_sample_name(somatic_info.tumor_data))
-    out_file = out_prefix + ".input"
-    if not utils.file_exists(out_file):
-        with file_transaction(somatic_info.tumor_data, out_file) as tx_out_file:
-            tx_out_prefix = tx_out_file.replace(".input", "")
-            target_bed = tz.get_in(["config", "algorithm", "variant_regions"], somatic_info.tumor_data)
-            cmd = cmds["create_input"] + ["-t", somatic_info.tumor_bam, "-n", somatic_info.normal_bam,
-                                          "-s", cnv_info["cns"], "--EXON_FILE", target_bed,
-                                          "--FA", dd.get_ref_file(somatic_info.tumor_data),
-                                          "--OUTPUT_PREFIX", tx_out_prefix]
-            do.run(cmd, "Create exome inputs for THetA")
     return out_file
+
+def _split_theta_ext(fname):
+    base = os.path.splitext(fname)[0]
+    if base.endswith(".n2", ".n3"):
+        base = os.path.splitext(base)[0]
+    return base
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                            dd.get_sample_name(data), "theta"))
 
-def _get_cmds():
+def _get_cmd(cmd):
     """Retrieve required commands for running THetA with our local bcbio python.
     """
-    cmds = {}
-    for (name, cmd) in [("run_theta", "RunTHetA.py"), ("create_input", "createTHetAExomeInput.py")]:
-        try:
-            local_cmd = subprocess.check_output(["which", cmd]).strip()
-        except subprocess.CalledProcessError:
-            return None
-        cmds[name] = [sys.executable, local_cmd]
-    return cmds
+    check_cmd = "RunTHetA.py"
+    try:
+        local_cmd = subprocess.check_output(["which", check_cmd]).strip()
+    except subprocess.CalledProcessError:
+        return None
+    return [sys.executable, "%s/%s" % (os.path.dirname(local_cmd), cmd)]

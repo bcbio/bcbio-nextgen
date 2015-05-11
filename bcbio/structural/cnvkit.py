@@ -7,10 +7,7 @@ import shutil
 import sys
 import tempfile
 
-try:
-    import pybedtools
-except ImportError:
-    pybedtools = None
+import pybedtools
 import numpy as np
 import toolz as tz
 
@@ -21,7 +18,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.variation import bedutils, vcfutils
 from bcbio.provenance import do
-from bcbio.structural import annotate, shared, theta, plot
+from bcbio.structural import annotate, shared, plot
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -32,6 +29,19 @@ def run(items, background=None):
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                            dd.get_sample_name(data), "cnvkit"))
+
+def export_theta(ckout, data):
+    """Provide updated set of data with export information for TheTA2 input.
+    """
+    cns_file = _remove_haplotype_chroms(ckout["cns"], data)
+    cnr_file = _remove_haplotype_chroms(ckout["cnr"], data)
+    out_file = "%s-theta.input" % utils.splitext_plus(cns_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]
+            do.run(cmd, "Export CNVkit calls as inputs for TheTA2")
+    ckout["theta_input"] = out_file
+    return ckout
 
 def _cnvkit_by_type(items, background):
     """Dispatch to specific CNVkit functionality based on input type.
@@ -91,8 +101,6 @@ def _run_cnvkit_cancer(items, background):
     if not ckout:
         return items
 
-    # Skip THetA runs until we can speed up data preparation steps
-    # ckout = theta.run(ckout, paired)
     tumor_data = _associate_cnvkit_out(ckout, [paired.tumor_data])
     normal_data = [x for x in items if dd.get_sample_name(x) != paired.tumor_name]
     return tumor_data + normal_data
