@@ -116,10 +116,12 @@ def _create_validate_config_file(vrn_file, rm_file, rm_interval_file, rm_genome,
                                  base_dir, data):
     config_dir = utils.safe_makedir(os.path.join(base_dir, "config"))
     config_file = os.path.join(config_dir, "validate.yaml")
-    with open(config_file, "w") as out_handle:
-        out = _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
-                                      base_dir, data)
-        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+    if not utils.file_uptodate(config_file, vrn_file):
+        with file_transaction(data, config_file) as tx_config_file:
+            with open(tx_config_file, "w") as out_handle:
+                out = _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
+                                              base_dir, data)
+                yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return config_file
 
 def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
