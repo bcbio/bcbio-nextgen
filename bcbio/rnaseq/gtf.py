@@ -11,7 +11,10 @@ def get_gtf_db(gtf, in_memory=False):
     """
     create a gffutils DB
     """
-    db_file = ":memory:" if in_memory else gtf + ".db"
+    db_file = gtf + ".db"
+    if file_exists(db_file):
+        return gffutils.FeatureDB(db_file)
+    db_file = ":memory:" if in_memory else db_file
     if in_memory or not file_exists(db_file):
         db = gffutils.create_db(gtf, dbfn=db_file)
     if in_memory:

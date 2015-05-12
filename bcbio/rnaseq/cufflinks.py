@@ -162,12 +162,12 @@ def fix_cufflinks_attributes(ref_gtf, merged_gtf, data, out_file=None):
     gene_id and transcript_id from ref_gtf, where available
 
     """
-    ref_db = gtf.get_gtf_db(ref_gtf, in_memory=True)
-    merged_db = gtf.get_gtf_db(merged_gtf, in_memory=True)
     base, ext = os.path.splitext(merged_gtf)
     fixed = out_file if out_file else base + ".clean.fixed" + ext
     if file_exists(fixed):
         return fixed
+    ref_db = gtf.get_gtf_db(ref_gtf)
+    merged_db = gtf.get_gtf_db(merged_gtf, in_memory=True)
 
     ref_tid_to_gid = {}
     for gene in ref_db.features_of_type('gene'):
