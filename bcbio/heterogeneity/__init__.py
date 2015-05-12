@@ -16,7 +16,6 @@ def _get_cnvs(data):
     """
     supported = set(["cnvkit"])
     out = []
-    print data.get("sv")
     for sv in data.get("sv", []):
         if sv["variantcaller"] in supported:
             out.append(sv)
@@ -62,10 +61,10 @@ def estimate(items, batch, config):
 
     XXX In progress, currently uses THetA but not yet turned on
     """
-    # paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
-    # cnvs = _get_cnvs(paired.tumor_data)
-    # new_cnvs = theta.run(cnvs[0], paired)
-    # print(new_cnvs)
+    paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
+    cnvs = _get_cnvs(paired.tumor_data)
+    new_cnvs = theta.run(cnvs[0], paired)
+    print(new_cnvs)
 
     out = []
     for data in items:

@@ -35,7 +35,7 @@ def export_theta(ckout, data):
     """
     cns_file = _remove_haplotype_chroms(ckout["cns"], data)
     cnr_file = _remove_haplotype_chroms(ckout["cnr"], data)
-    out_file = "%s-theta.input" % utils.splitext_plus(cns_file)
+    out_file = "%s-theta.input" % utils.splitext_plus(cns_file)[0]
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]

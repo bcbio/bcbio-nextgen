@@ -41,27 +41,29 @@ def _run_theta(cnv_info, data, work_dir):
                                     ["-n", "3", "-k", max_cnv, "--RESULTS", n2_result], data)
         if n3_result:
             best_result = _select_model(n2_bounds, n2_result, n3_result,
-                                        os.path.join(work_dir, "best"), data)
+                                        os.path.join(work_dir, "n3"), data)
             cnv_info["theta"] = best_result
     return cnv_info
 
 def _select_model(n2_bounds, n2_result, n3_result, out_dir, data):
     """Run final model selection from n=2 and n=3 options.
     """
-    out_file = os.path.join(out_dir, _split_theta_ext(n2_bounds) + ".BEST.results")
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_dir) as tx_out_dir:
-            utils.safe_makedir(tx_out_dir)
-            with utils.chdir(tx_out_dir):
-                cmd = _get_cmd("ModelSelection.py") + [n2_bounds, n2_result, n3_result]
-                do.run(cmd, "Select best THetA model")
-    return out_file
+    n2_out_file = n2_result.replace(".n2.results", ".BEST.results")
+    n3_out_file = n3_result.replace(".n3.results", ".BEST.results")
+    if not utils.file_exists(n2_out_file) and not utils.file_exists(n3_out_file):
+        cmd = _get_cmd("ModelSelection.py") + [n2_bounds, n2_result, n3_result]
+        do.run(cmd, "Select best THetA model")
+    if utils.file_exists(n2_out_file):
+        return n2_out_file
+    else:
+        assert utils.file_exists(n3_out_file)
+        return n3_out_file
 
 def _safe_run_theta(input_file, out_dir, output_ext, args, data):
     """Run THetA, catching and continuing on any errors.
     """
-    out_file = _split_theta_ext(input_file) + output_ext
-    skip_file = out_file = ".skipped"
+    out_file = os.path.join(out_dir, _split_theta_ext(input_file) + output_ext)
+    skip_file = out_file + ".skipped"
     if utils.file_exists(skip_file):
         return None
     if not utils.file_exists(out_file):
@@ -83,8 +85,8 @@ def _safe_run_theta(input_file, out_dir, output_ext, args, data):
     return out_file
 
 def _split_theta_ext(fname):
-    base = os.path.splitext(fname)[0]
-    if base.endswith(".n2", ".n3"):
+    base = os.path.splitext(os.path.basename(fname))[0]
+    if base.endswith((".n2", ".n3")):
         base = os.path.splitext(base)[0]
     return base
 
@@ -100,4 +102,4 @@ def _get_cmd(cmd):
         local_cmd = subprocess.check_output(["which", check_cmd]).strip()
     except subprocess.CalledProcessError:
         return None
-    return [sys.executable, "%s/%s" % (os.path.dirname(local_cmd), cmd)]
+    return [sys.executable, "%s/%s" % (os.path.dirname(os.path.realpath(local_cmd)), cmd)]
