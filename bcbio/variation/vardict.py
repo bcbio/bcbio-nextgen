@@ -6,6 +6,7 @@ import itertools
 import sys
 
 import toolz as tz
+import pybedtools
 
 from bcbio import bam, broad, utils
 from bcbio.bam import highdepth
@@ -17,8 +18,8 @@ from bcbio.variation import bamprep, vcfutils
 
 def _vardict_options_from_config(items, config, out_file, region=None, do_merge=False):
     opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
-    #["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
-    # "-k", "3", "-r", "4", "-m", "8"]
+    # ["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
+    #  "-k", "3", "-r", "4", "-m", "8"]
 
     resources = config_utils.get_resources("vardict", config)
     if resources.get("options"):
@@ -31,11 +32,33 @@ def _vardict_options_from_config(items, config, out_file, region=None, do_merge=
             if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
                    for x in items):
                 target = shared.remove_highdepth_regions(target, items)
+            target = _enforce_max_region_size(target, items[0])
             opts += [target]  # this must be the last option
         else:
             # one-based, end-inclusive coordinates as for Gatk
             opts += ["-R", bamprep.region_to_gatk(target)]
     return opts
+
+def _enforce_max_region_size(in_file, data):
+    """Ensure we don't have any chunks in the region greater than 2Mb.
+
+    Larger sections have high memory usage on VarDictJava and failures
+    on VarDict. This creates minimum windows from the input BED file
+    to avoid these rare cases with the small downside of potentially
+    disrupting variants that span a window break.
+    """
+    max_size = 2e6
+    def _has_larger_regions(f):
+        return any(r.stop - r.start > max_size for r in pybedtools.BedTool(f))
+    out_file = "%s-regionlimit%s" % utils.splitext_plus(in_file)
+    if not utils.file_exists(out_file):
+        if _has_larger_regions(in_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                pybedtools.BedTool().window_maker(w=max_size,
+                                                  b=pybedtools.BedTool(in_file)).saveas(tx_out_file)
+        else:
+            utils.symlink_plus(in_file, out_file)
+    return out_file
 
 def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):

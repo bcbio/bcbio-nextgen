@@ -1,6 +1,8 @@
 ## 0.9.0 (in progress)
 
 - Fix VEP/GEMINI incompatibility where empty fields are included in VCF output.
+- VarDict: restrict maximum region size within a BED file to 2Mb to avoid high
+  memory usage and failures for longer regions.
 
 ## 0.8.9 (10 May 2015)
 
