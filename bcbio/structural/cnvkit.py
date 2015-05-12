@@ -34,8 +34,8 @@ def _sv_workdir(data):
 def export_theta(ckout, data):
     """Provide updated set of data with export information for TheTA2 input.
     """
-    cns_file = chromhacks.bed_to_standardonly(ckout["cns"], data)
-    cnr_file = chromhacks.bed_to_standardonly(ckout["cnr"], data)
+    cns_file = chromhacks.bed_to_standardonly(ckout["cns"], data, headers="chromosome")
+    cnr_file = chromhacks.bed_to_standardonly(ckout["cnr"], data, headers="chromosome")
     out_file = "%s-theta.input" % utils.splitext_plus(cns_file)[0]
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:

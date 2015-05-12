@@ -19,13 +19,13 @@ def _is_autosomal(chrom):
         except ValueError:
             return False
 
-def bed_to_standardonly(in_file, data):
+def bed_to_standardonly(in_file, data, headers=None):
     out_file = "%s-stdchrs%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
-                        if _is_autosomal(line.split()[0]):
+                        if _is_autosomal(line.split()[0]) or (headers and line.startswith(headers)):
                             out_handle.write(line)
     return out_file
