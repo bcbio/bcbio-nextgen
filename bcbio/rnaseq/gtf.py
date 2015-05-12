@@ -2,10 +2,36 @@ import gffutils
 import tempfile
 import os
 import random
+import gzip
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
+
+def guess_infer_extent(gtf_file):
+    """
+    guess if we need to use the gene extent option when making a gffutils
+    database by making a tiny database of 1000 lines from the original
+    GTF and looking for all of the features
+    """
+    _, ext = os.path.splitext(gtf_file)
+    tmp_out = tempfile.NamedTemporaryFile(suffix=".gtf", delete=False).name
+    with open(tmp_out, "w") as out_handle:
+        count = 0
+        in_handle = open(gtf_file) if ext != ".gz" else gzip.open(gtf_file)
+        for line in in_handle:
+            if count > 1000:
+                break
+            out_handle.write(line)
+            count += 1
+        in_handle.close()
+    db = gffutils.create_db(tmp_out, dbfn=":memory:", infer_gene_extent=False)
+    os.remove(tmp_out)
+    features = [x for x in db.featuretypes()]
+    if "gene" in features and "transcript" in features:
+        return False
+    else:
+        return True
 
 def get_gtf_db(gtf, in_memory=False):
     """
@@ -16,7 +42,9 @@ def get_gtf_db(gtf, in_memory=False):
         return gffutils.FeatureDB(db_file)
     db_file = ":memory:" if in_memory else db_file
     if in_memory or not file_exists(db_file):
-        db = gffutils.create_db(gtf, dbfn=db_file)
+        infer_extent = guess_infer_extent(gtf)
+        db = gffutils.create_db(gtf, dbfn=db_file,
+                                infer_gene_extent=infer_extent)
     if in_memory:
         return db
     else:
