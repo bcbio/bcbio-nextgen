@@ -34,16 +34,59 @@ def _run_theta(cnv_info, data, work_dir):
     """
     max_cnv = "4"
     n2_result = _safe_run_theta(cnv_info["theta_input"], os.path.join(work_dir, "n2"), ".n2.results",
-                                ["-n", "2", "-k", max_cnv], data)
+                                ["-n", "2", "-k", max_cnv, "--NUM_INTERVALS", "200"], data)
     if n2_result:
         n2_bounds = "%s.withBounds" % os.path.splitext(n2_result)[0]
         n3_result = _safe_run_theta(n2_bounds, os.path.join(work_dir, "n3"), ".n3.results",
-                                    ["-n", "3", "-k", max_cnv, "--RESULTS", n2_result], data)
+                                    ["-n", "3", "-k", max_cnv, "--RESULTS", n2_result, "--NUM_INTERVALS", "200"],
+                                    data)
         if n3_result:
             best_result = _select_model(n2_bounds, n2_result, n3_result,
                                         os.path.join(work_dir, "n3"), data)
-            cnv_info["theta"] = best_result
+            cnv_info["theta"] = _merge_theta_calls(n2_bounds, best_result, cnv_info["vrn_file"], data)
     return cnv_info
+
+def _update_with_calls(result_file, cnv_file):
+    """Update bounds with calls from CNVkit, inferred copy numbers and p-values from THetA.
+    """
+    results = {}
+    with open(result_file) as in_handle:
+        in_handle.readline()  # header
+        _, _, cs, ps = in_handle.readline().strip().split()
+        for i, (c, p) in enumerate(zip(cs.split(":"), ps.split(","))):
+            results[i] = (c, p)
+    cnvs = {}
+    with open(cnv_file) as in_handle:
+        for line in in_handle:
+            chrom, start, end, _, count = line.rstrip().split()[:5]
+            cnvs[(chrom, start, end)] = count
+    def update(i, line):
+        parts = line.rstrip().split("\t")
+        chrom, start, end = parts[1:4]
+        parts += cnvs.get((chrom, start, end), ".")
+        parts += list(results[i])
+        return "\t".join(parts) + "\n"
+    return update
+
+def _merge_theta_calls(bounds_file, result_file, cnv_file, data):
+    """Create a final output file with merged CNVkit and THetA copy and population estimates.
+    """
+    out_file = "%s-merged.txt" % (result_file.replace(".BEST.results", ""))
+    if not utils.file_uptodate(out_file, result_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            updater = _update_with_calls(result_file, cnv_file)
+            with open(bounds_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    i = 0
+                    for line in in_handle:
+                        if line.startswith("#"):
+                            parts = line.rstrip().split("\t")
+                            parts += ["cnv", "pop_cnvs", "pop_pvals"]
+                            out_handle.write("\t".join(parts) + "\n")
+                        else:
+                            out_handle.write(updater(i, line))
+                            i += 1
+    return out_file
 
 def _select_model(n2_bounds, n2_result, n3_result, out_dir, data):
     """Run final model selection from n=2 and n=3 options.
