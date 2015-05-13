@@ -87,7 +87,7 @@ def run(samples, run_parallel):
             background.append(data)
             for x in ready_data:
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
-                batch = x.get("metadata", {}).get("batch")
+                batch = dd.get_batch(x)
                 if svcaller in _BATCH_CALLERS and batch:
                     batches = batch if isinstance(batch, (list, tuple)) else [batch]
                     for b in batches:
@@ -96,7 +96,7 @@ def run(samples, run_parallel):
                         except KeyError:
                             to_process[(svcaller, b)] = [x]
                 else:
-                    to_process[tz.get_in(["rgnames", "sample"], x)] = [x]
+                    to_process[(svcaller, dd.get_sample_name(x))] = [x]
         else:
             extras.append([data])
     processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"]] for xs in to_process.values()))
