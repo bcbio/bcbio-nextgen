@@ -32,6 +32,7 @@ def _vardict_options_from_config(items, config, out_file, region=None, do_merge=
             if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
                    for x in items):
                 target = shared.remove_highdepth_regions(target, items)
+                target = shared.remove_lcr_regions(target, items)
             target = _enforce_max_region_size(target, items[0])
             opts += [target]  # this must be the last option
         else:
@@ -176,7 +177,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                    "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                    "| {strandbias} "
                    "| {var2vcf} -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
-                   "| bcftools filter -m '+' -s 'REJECT' -e 'STATUS = \"Germline\"' "
+                   "| bcftools filter -m '+' -s 'REJECT' -e 'STATUS = \"Germline\"' 2> /dev/null "
                    "{somatic_filter} | {fix_ambig} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
