@@ -41,8 +41,60 @@ def export_theta(ckout, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]
             do.run(cmd, "Export CNVkit calls as inputs for TheTA2")
-    ckout["theta_input"] = out_file
+    ckout["theta_input"] = _subset_theta_to_calls(out_file, ckout, data)
     return ckout
+
+def _subset_theta_to_calls(in_file, ckout, data):
+    """Subset CNVkit regions to provide additional signal for THetA.
+
+    THetA has default assumptions about lengths of calls and finding
+    useful signal in longer regions. We adjust for this by subsetting
+    calls to a range around the most useful signal.
+    """
+    tn_ratio = 0.9
+    keep_background = False
+    out_file = "%s-cnvsize%s" % utils.splitext_plus(in_file)
+    if not utils.file_uptodate(out_file, in_file):
+        call_sizes = []
+        calls = set([])
+        with open(ckout["vrn_file"]) as in_handle:
+            for line in in_handle:
+                chrom, start, end, _, count = line.split()[:5]
+                if max([int(x) for x in count.split(",")]) < 6:
+                    call_sizes.append((int(end) - int(start)))
+                    calls.add((chrom, start, end))
+        keep_min = np.percentile(call_sizes, 10)
+        keep_max = np.percentile(call_sizes, 90)
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                # Pull out calls that have tumor/normal differences
+                tn_count = 0
+                with open(in_file) as in_handle:
+                    for line in in_handle:
+                        if line.startswith("#"):
+                            out_handle.write(line)
+                        else:
+                            key = tuple(line.split()[1:4])
+                            sizes = [float(x) for x in line.split()[4:6]]
+                            size = int(key[2]) - int(key[1])
+                            if size >= keep_min and size <= keep_max:
+                                if (min(sizes) / max(sizes)) < tn_ratio:
+                                    tn_count += 1
+                                    out_handle.write(line)
+                if keep_background:
+                    # Pull out equal number of background calls
+                    no_tn_count = 0
+                    with open(in_file) as in_handle:
+                        for line in in_handle:
+                            if not line.startswith("#"):
+                                key = tuple(line.split()[1:4])
+                                sizes = [float(x) for x in line.split()[4:6]]
+                                size = int(key[2]) - int(key[1])
+                                if size >= keep_min and size <= keep_max:
+                                    if no_tn_count < tn_count and (min(sizes) / max(sizes)) > tn_ratio:
+                                        no_tn_count += 1
+                                        out_handle.write(line)
+    return out_file
 
 def _cnvkit_by_type(items, background):
     """Dispatch to specific CNVkit functionality based on input type.

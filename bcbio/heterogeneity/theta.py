@@ -9,6 +9,8 @@ import os
 import sys
 import subprocess
 
+import numpy as np
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -29,16 +31,31 @@ def run(cnv_info, somatic_info):
         cnv_info = _run_theta(cnv_info, somatic_info.tumor_data, work_dir)
         return cnv_info
 
+def _median_interval_size(in_file):
+    sizes = []
+    with open(in_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith("#"):
+                start, end = tuple(line.split()[2:4])
+                sizes.append(int(end) - int(start))
+    return np.median(sizes)
+
 def _run_theta(cnv_info, data, work_dir):
     """Run theta, calculating subpopulations and normal contamination.
     """
-    max_cnv = "4"
+    max_cnv = "6"
+    max_normal = "0.9"
+    small_piece_thresh = 5e3
+    #avg_size = _median_interval_size(cnv_info["theta_input"])
     n2_result = _safe_run_theta(cnv_info["theta_input"], os.path.join(work_dir, "n2"), ".n2.results",
-                                ["-n", "2", "-k", max_cnv, "--NUM_INTERVALS", "200"], data)
+                                ["-n", "2", "-k", max_cnv, "-m", max_normal,
+                                 "--NUM_INTERVALS", "100"],
+                                data)
     if n2_result:
         n2_bounds = "%s.withBounds" % os.path.splitext(n2_result)[0]
         n3_result = _safe_run_theta(n2_bounds, os.path.join(work_dir, "n3"), ".n3.results",
-                                    ["-n", "3", "-k", max_cnv, "--RESULTS", n2_result, "--NUM_INTERVALS", "200"],
+                                    ["-n", "3", "-k", max_cnv, "--RESULTS", n2_result,
+                                     "--NUM_INTERVALS", "20"],
                                     data)
         if n3_result:
             best_result = _select_model(n2_bounds, n2_result, n3_result,
