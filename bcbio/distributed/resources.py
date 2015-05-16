@@ -16,6 +16,7 @@ def _get_resource_programs(progs, algs):
     checks = {"gatk-vqsr": config_utils.use_vqsr,
               "snpeff": config_utils.use_snpeff,
               "bcbio-variation-recall": config_utils.use_bcbio_variation_recall}
+    parent_child = {"vardict": _parent_prefix("vardict")}
     out = set([])
     for p in progs:
         if p == "aligner":
@@ -24,6 +25,9 @@ def _get_resource_programs(progs, algs):
                 if aligner:
                     out.add(aligner)
         elif p == "variantcaller":
+            for key, fn in parent_child.items():
+                if fn(algs):
+                    out.add(key)
             for alg in algs:
                 vc = alg.get("variantcaller")
                 if vc:
@@ -38,6 +42,18 @@ def _get_resource_programs(progs, algs):
         else:
             out.add(p)
     return sorted(list(out))
+
+def _parent_prefix(prefix):
+    """Identify a parent prefix we should add to resources if present in a caller name.
+    """
+    def run(algs):
+        for alg in algs:
+            vcs = alg.get("variantcaller")
+            if vcs:
+                if not isinstance(vcs, (list, tuple)):
+                    vcs = [vcs]
+                return any(vc.startswith(prefix) for vc in vcs)
+    return run
 
 def _ensure_min_resources(progs, cores, memory, min_memory):
     """Ensure setting match minimum resources required for used programs.
