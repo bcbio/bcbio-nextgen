@@ -49,6 +49,7 @@ def _enforce_max_region_size(in_file, data):
     disrupting variants that span a window break.
     """
     max_size = 2e6
+    overlap_size = 250
     def _has_larger_regions(f):
         return any(r.stop - r.start > max_size for r in pybedtools.BedTool(f))
     out_file = "%s-regionlimit%s" % utils.splitext_plus(in_file)
@@ -56,6 +57,7 @@ def _enforce_max_region_size(in_file, data):
         if _has_larger_regions(in_file):
             with file_transaction(data, out_file) as tx_out_file:
                 pybedtools.BedTool().window_maker(w=max_size,
+                                                  s=max_size - overlap_size,
                                                   b=pybedtools.BedTool(in_file)).saveas(tx_out_file)
         else:
             utils.symlink_plus(in_file, out_file)

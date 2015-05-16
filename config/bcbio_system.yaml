@@ -71,7 +71,7 @@ resources:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/varscan
   vardict:
-    jvm_opts: ["-Xms750m", "-Xmx4000m"]
+    jvm_opts: ["-Xms750m", "-Xmx3000m"]
   oncofuse:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/oncofuse
