@@ -20,6 +20,7 @@ details:
       ensemble:
         numpass: 2
       svcaller: [cnvkit]
+      hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
       priority_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2

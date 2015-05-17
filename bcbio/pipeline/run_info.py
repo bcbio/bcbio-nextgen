@@ -24,7 +24,7 @@ from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
-                         "phasing", "svcaller", "jointcaller", "tools_off", "mixup_check"]
+                         "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
 
 def organize(dirs, config, run_info_yaml, sample_names):
     """Organize run information from a passed YAML file or the Galaxy API.
@@ -255,7 +255,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "quality_format", "write_summary", "merge_bamprep",
                       "coverage", "coverage_interval", "ploidy", "indelcaller",
                       "variantcaller", "jointcaller", "variant_regions",
-                      "effects", "mark_duplicates", "svcaller", "svvalidate",
+                      "effects", "mark_duplicates", "svcaller", "svvalidate", "hetcaller",
                       "recalibrate", "realign", "phasing", "validate",
                       "validate_regions", "validate_genome_build",
                       "clinical_reporting", "nomap_split_size",
@@ -570,13 +570,13 @@ def _add_algorithm_defaults(algorithm):
     defaults = {"archive": [],
                 "min_allele_fraction": 10.0,
                 "tools_off": []}
-    convert_to_list = set(["archive", "tools_off"])
+    convert_to_list = set(["archive", "tools_off", "hetcaller"])
     for k, v in defaults.items():
         if k not in algorithm:
             algorithm[k] = v
     for k, v in algorithm.items():
         if k in convert_to_list:
-            if not isinstance(v, (list, tuple)):
+            if v and not isinstance(v, (list, tuple)):
                 algorithm[k] = [v]
     return algorithm
 

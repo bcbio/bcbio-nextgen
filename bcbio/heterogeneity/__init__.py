@@ -37,7 +37,8 @@ def _ready_for_het_analysis(items):
     We currently require a tumor/normal sample containing both CNV and variant calls.
     """
     paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
-    if paired and paired.normal_bam:
+    has_het = any(dd.get_hetcaller(d) for d in items)
+    if has_het and paired and paired.normal_bam:
         return _get_variants(paired.tumor_data) and _get_cnvs(paired.tumor_data)
 
 def _get_batches(data):
@@ -56,15 +57,25 @@ def _group_by_batches(items):
                 out[b] = [data]
     return out
 
+def _get_hetcallers(items):
+    out = set([])
+    for d in items:
+        hetcaller = dd.get_hetcaller(d)
+        if hetcaller:
+            out = out.union(set(hetcaller))
+    return sorted(list(out))
+
 def estimate(items, batch, config):
     """Estimate heterogeneity for a pair of tumor/normal samples. Run in parallel.
-
-    XXX In progress, currently uses THetA but not yet turned on
     """
     paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
     cnvs = _get_cnvs(paired.tumor_data)
-    new_cnvs = theta.run(cnvs[0], paired)
-    print(new_cnvs)
+    for hetcaller in _get_hetcallers(items):
+        if hetcaller == "theta":
+            new_cnvs = theta.run(cnvs[0], paired)
+            print(new_cnvs)
+        else:
+            print "%s not yet implemented" % hetcaller
 
     out = []
     for data in items:
