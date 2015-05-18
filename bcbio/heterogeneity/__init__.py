@@ -7,7 +7,7 @@ especially in complex cancer samples.
 """
 import collections
 
-from bcbio.heterogeneity import theta
+from bcbio.heterogeneity import bubbletree, theta
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 
@@ -68,15 +68,17 @@ def _get_hetcallers(items):
 def estimate(items, batch, config):
     """Estimate heterogeneity for a pair of tumor/normal samples. Run in parallel.
     """
+    hetcallers = {"theta": theta.run,
+                  "bubbletree": bubbletree.run}
     paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
     cnvs = _get_cnvs(paired.tumor_data)
+    variants = _get_variants(paired.tumor_data)
     for hetcaller in _get_hetcallers(items):
-        if hetcaller == "theta":
-            new_cnvs = theta.run(cnvs[0], paired)
-            print(new_cnvs)
-        else:
+        try:
+            out = hetcallers(hetcaller)(variants[0], cnvs[0], paired)
+            print out
+        except KeyError:
             print "%s not yet implemented" % hetcaller
-
     out = []
     for data in items:
         if batch == _get_batches(data)[0]:

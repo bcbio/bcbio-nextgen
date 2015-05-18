@@ -18,7 +18,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import cnvkit
 
-def run(cnv_info, somatic_info):
+def run(vrn_info, cnv_info, somatic_info):
     """Run THetA analysis given output from CNV caller on a tumor/normal pair.
     """
     cmd = _get_cmd("RunTHeTA.py")
