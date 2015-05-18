@@ -41,7 +41,8 @@ def export_theta(ckout, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]
             do.run(cmd, "Export CNVkit calls as inputs for TheTA2")
-    ckout["theta_input"] = _subset_theta_to_calls(out_file, ckout, data)
+    #ckout["theta_input"] = _subset_theta_to_calls(out_file, ckout, data)
+    ckout["theta_input"] = out_file
     return ckout
 
 def _subset_theta_to_calls(in_file, ckout, data):

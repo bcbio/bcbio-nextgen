@@ -9,6 +9,7 @@ from pysam import VariantFile
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd
 
 def run(vrn_info, cnv_info, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
@@ -24,8 +25,8 @@ def _prep_vrn_file(in_file, work_dir, somatic_info):
     params = {"min_freq": 0.4,
               "max_freq": 0.6,
               "min_depth": 15}
-    out_file = os.path.join(work_dir, "%s-prep.vcf" % (utils.splitext_plus(os.path.basename(in_file))))
-    if not utils.file_uptodata(out_file, in_file):
+    out_file = os.path.join(work_dir, "%s-prep.vcf" % utils.splitext_plus(os.path.basename(in_file))[0])
+    if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             bcf_in = VariantFile(in_file)
             bcf_out = VariantFile(tx_out_file, "w", header=bcf_in.header)
@@ -39,10 +40,12 @@ def _is_possible_loh(rec, params, somatic_info):
     """
     normal_good, tumor_good = False, False
     for sample in rec.samples:
+        print sample
         if sample.name == somatic_info.normal_name:
             pass
         elif sample.name == somatic_info.tumor_name:
             pass
+        raise NotImplementedError
     return normal_good and tumor_good
 
 def _cur_workdir(data):
