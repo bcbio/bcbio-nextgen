@@ -39,15 +39,46 @@ def _is_possible_loh(rec, params, somatic_info):
     """Check if the VCF record is a het in the normal with sufficient support.
     """
     normal_good, tumor_good = False, False
-    for sample in rec.samples:
-        print sample
-        if sample.name == somatic_info.normal_name:
-            pass
-        elif sample.name == somatic_info.tumor_name:
-            pass
-        raise NotImplementedError
+    for name, sample in rec.samples.items():
+        alt, depth = _get_alt_and_depth(sample)
+        if alt is not None and depth is not None:
+            freq = float(alt) / float(depth)
+            if name == somatic_info.normal_name:
+                normal_good = (depth >= params["min_depth"] and
+                               (freq >= params["min_freq"] and freq <= params["max_freq"]))
+            elif name == somatic_info.tumor_name:
+                tumor_good = depth >= params["min_depth"]
     return normal_good and tumor_good
+
+def _get_alt_and_depth(sample):
+    """Flexibly get ALT allele and depth counts, handling FreeBayes, MuTect and other cases.
+    """
+    if "AD" in sample:
+        counts = sum([int(x) for x in sample["AD"][1:]])
+    elif "AO" in sample:
+        alts = sample["AO"]
+        if not isinstance(alts, (list, tuple)):
+            alts = []
+        counts = sum([int(x) for x in alts])
+    else:
+        counts = None
+    if counts is None or "DP" not in sample:
+        return None, None
+    else:
+        return counts, sample["DP"]
 
 def _cur_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "heterogeneity",
                                            dd.get_sample_name(data), "bubbletree"))
+
+if __name__ == "__main__":
+    import sys
+    import collections
+    bcf_in = VariantFile(sys.argv[1])
+    somatic = collections.namedtuple("Somatic", "normal_name,tumor_name")
+    params = {"min_freq": 0.4,
+              "max_freq": 0.6,
+              "min_depth": 15}
+    for rec in bcf_in:
+        if _is_possible_loh(rec, params, somatic(sys.argv[2], sys.argv[3])):
+            print rec
