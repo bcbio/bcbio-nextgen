@@ -180,6 +180,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                    "| {strandbias} "
                    "| {var2vcf} -N \"{paired.tumor_name}|{paired.normal_name}\" -f {freq} {var2vcf_opts} "
                    "| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
+                   "| sed 's/\\\\.*Somatic\\\\/Somatic/' "
                    "{somatic_filter} | {fix_ambig} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)

@@ -24,12 +24,13 @@ def _get_cnvs(data):
 def _get_variants(data):
     """Retrieve set of variant calls to use for heterogeneity analysis.
     """
-    supported = set(["vardict", "mutect", "freebayes"])
+    supported = ["vardict-java", "freebayes", "mutect"]
     out = []
     for v in data.get("variants", []):
         if v["variantcaller"] in supported:
-            out.append(v)
-    return out
+            out.append((supported.index(v["variantcaller"]), v))
+    out.sort()
+    return [xs[1] for xs in out]
 
 def _ready_for_het_analysis(items):
     """Check if a sample has input information for heterogeneity analysis.
