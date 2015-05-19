@@ -1,6 +1,9 @@
 Presentations
 =============
 
+- Overview of variant calling for `NGS Data Analysis Course at Harvard Medical School <https://wiki.harvard.edu/confluence/display/hbctraining/NGS+Data+Analysis+Course+Application%2C+Spring+2015>`
+  (19 May 2015): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2015_teaching/variant_ngscourse.pdf>`
+
 - `NGS Glasgow <http://biotexcel.com/event/ngs-2015-glasgow/>`_ (23 April 2015):
   `slides <https://dl.dropboxusercontent.com/u/407047/Work/Presentations/20150420%20NGS%20Glasgow.pdf>`_
 
