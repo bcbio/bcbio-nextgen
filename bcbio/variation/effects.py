@@ -25,14 +25,16 @@ def add_to_vcf(in_file, data):
     effect_todo = get_type(data)
     if effect_todo:
         if effect_todo == "snpeff":
-            ann_vrn_file = snpeff_effects(in_file, data)
+            ann_vrn_file, stats_file = snpeff_effects(in_file, data)
+            stats = {"effects-stats": stats_file}
         elif effect_todo == "vep":
             ann_vrn_file = run_vep(in_file, data)
+            stats = None
         else:
             raise ValueError("Unexpected variant effects configuration: %s" % effect_todo)
         if ann_vrn_file:
-            return ann_vrn_file
-    return None
+            return ann_vrn_file, stats
+    return None, None
 
 def get_type(data):
     """Retrieve the type of effects calculation to do.
@@ -253,13 +255,14 @@ def _run_snpeff(snp_in, out_format, data):
     """
     snpeff_db, datadir = get_db(data)
     if not snpeff_db:
-        return None
+        return None, None
 
     assert os.path.exists(os.path.join(datadir, snpeff_db)), \
         "Did not find %s snpEff genome data in %s" % (snpeff_db, datadir)
     snpeff_cmd = get_cmd("eff", datadir, data["config"])
     ext = utils.splitext_plus(snp_in)[1] if out_format == "vcf" else ".tsv"
     out_file = "%s-effects%s" % (utils.splitext_plus(snp_in)[0], ext)
+    stats_file = "%s-stats.html" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(out_file):
         config_args = " ".join(_snpeff_args_from_config(data))
         if ext.endswith(".gz"):
@@ -268,11 +271,11 @@ def _run_snpeff(snp_in, out_format, data):
             bgzip_cmd = ""
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("{snpeff_cmd} {config_args} -noLog -i vcf -o {out_format} "
-                   "{snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
+                   "-s {stats_file} {snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)
     if ext.endswith(".gz"):
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])
-    return out_file
+    return out_file, stats_file
 
 # ## back-compatibility
 

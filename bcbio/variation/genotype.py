@@ -59,6 +59,7 @@ def combine_multiple_callers(samples):
                 cur = {"variantcaller": variantcaller,
                        "vrn_file": data.get("vrn_file_orig") if jointcaller else data.get("vrn_file"),
                        "vrn_file_batch": data.get("vrn_file_batch") if not jointcaller else None,
+                       "vrn_stats": data.get("vrn_stats"),
                        "validate": data.get("validate") if not jointcaller else None}
                 if jointcaller:
                     cur["population"] = False
@@ -89,6 +90,7 @@ def combine_multiple_callers(samples):
             final["variants"] = ready_calls
         final.pop("vrn_file_batch", None)
         final.pop("vrn_file_orig", None)
+        final.pop("vrn_stats", None)
         out.append([final])
     return out
 

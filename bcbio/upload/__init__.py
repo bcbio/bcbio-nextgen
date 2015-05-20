@@ -128,6 +128,13 @@ def _maybe_add_variant_file(algorithm, sample, out):
                             "type": "bed",
                             "ext": "%s-callregions" % x["variantcaller"],
                             "variantcaller": x["variantcaller"]})
+            if x.get("vrn_stats"):
+                for extra, fname in x["vrn_stats"].items():
+                    ext = utils.splitext_plus(fname)[-1].replace(".", "")
+                    out.append({"path": fname,
+                                "type": ext,
+                                "ext": "%s-%s" % (x["variantcaller"], extra),
+                                "variantcaller": x["variantcaller"]})
     return out
 
 def _maybe_add_sv(algorithm, sample, out):

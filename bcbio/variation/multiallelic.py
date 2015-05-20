@@ -35,7 +35,7 @@ def to_single(in_file, data):
     if not utils.file_exists(out_file):
         if vcfutils.vcf_has_variants(in_file):
             ready_ma_file = _decompose(in_file, data)
-            ann_ma_file = effects.add_to_vcf(ready_ma_file, data)
+            ann_ma_file, _ = effects.add_to_vcf(ready_ma_file, data)
             if ann_ma_file:
                 ready_ma_file = ann_ma_file
             out_file = ready_ma_file
