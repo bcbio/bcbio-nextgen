@@ -4,22 +4,34 @@ paired up analyses
 
 handles pairing primary and metastasized tumors with blood or solid normals
 with the following rules:
+1) use the blood sample as the matched normal if it exists
+2) if more than one normal exists, choose the highest priority (blood > tissue)
+normal and run the rest of the normals as tumors in their own batch
+3 if multiple tumor sample types exist, combine them all together and run
+   against the priority normal normal
+
+So for example if there is:
+
 1) 1 tumor (01) and 1 normal (10) run 01/10 as a batch
 2) 1 tumor (01) and multiple normals (10, 11) run 01/10 as a batch
    and run 11 (the tissue tumor) as tumor alone
-3) where there are multiple tumors (01, 06) with 1 normal (10), run
+3) multiple tumors (01, 06) with 1 normal (10), run
    01+06/10 as a batch
+4) multiple tumors (01, 06) with multiple normals (10, 11) run
+   01+06/10 as a batch and 11 alone as a batch
 
 normals and tumors are prioritized by the PRIOTIZED_TUMOR_CODES
-and PRIORITIZED_NORMAL_CODES, preferred codes are first
+and PRIORITIZED_NORMAL_CODES dictionaries
 """
 import re
 import os
+import collections
 import toolz as tz
 import itertools
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from argparse import ArgumentParser
+
 
 TCGA_RE = ("\w+.TCGA-"
            "(?P<tissue_source>\w{2})-"
@@ -31,19 +43,22 @@ TCGA_RE = ("\w+.TCGA-"
            "(?P<version>\d*)")
 
 # ordered to prefer the primary tumor
-PRIORITIZED_TUMOR_CODES = ["01", "02", "03", "04", "05", "06", "07", "08", "09"]
+PRIORITIZED_TUMOR_CODES = {"01": 1, "02": 2, "03": 3, "04": 4, "05": 5,
+                           "06": 6, "07": 7, "08": 8, "09": 9}
 # ordered to prefer normals from blood
-PRIORITIZED_NORMAL_CODES = ["10", "11", "12", "13", "14"]
+PRIORITIZED_NORMAL_CODES = {"10": 1, "11": 2, "12": 3, "13": 4, "14": 5}
 VALID_TCGA_FIELDS = ["analyte", "batch", "center", "participant", "plate",
                      "portion", "sample_type", "tissue_source", "vial", "version"]
 TCGA_HEADER = (["samplename", "description", "batch", "phenotype"] +
                VALID_TCGA_FIELDS)
 
 def get_phenotype(sample):
+    if "phenotype" in sample:
+        return sample["phenotype"]
     sample_type = sample["sample_type"]
-    if sample_type in PRIORITIZED_TUMOR_CODES:
+    if sample_type in PRIORITIZED_TUMOR_CODES.keys():
         return "tumor"
-    elif sample_type in PRIORITIZED_NORMAL_CODES:
+    elif sample_type in PRIORITIZED_NORMAL_CODES.keys():
         return "normal"
     else:
         return "unknown"
@@ -54,27 +69,6 @@ def is_tcga(fn):
     """
     return re.match(TCGA_RE, fn) is not None
 
-def is_tumor_normal(sample_types):
-    if len(sample_types) != 2:
-        return False
-    if "10" in sample_types and "01" in sample_types:
-        return True
-    return False
-
-def is_multiple_tumor_one_normal(sample_types):
-    if len(sample_types) < 3:
-        return False
-    if "01" in sample_types and "06" in sample_types and "10" in sample_types:
-        return True
-    return False
-
-def is_one_tumor_multiple_normal(sample_types):
-    if len(sample_types) < 3:
-        return False
-    if "01" in sample_types and "11" in sample_types and "10" in sample_types:
-        return True
-    return False
-
 def sample_to_bcbio(sample):
     samplename = os.path.splitext(sample["fn"])[0]
     phenotype = get_phenotype(sample)
@@ -84,17 +78,27 @@ def sample_to_bcbio(sample):
                  '{phenotype}'.format(**locals()))
     return required + "," + ",".join([sample[x] for x in VALID_TCGA_FIELDS])
 
+def prioritize_normals(metadata):
+    normals = sorted(filter(lambda x: x["sample_type"] in
+                            PRIORITIZED_NORMAL_CODES.keys(), metadata),
+                     key=lambda x: PRIORITIZED_NORMAL_CODES[x["sample_type"]])
+    if len(normals) == 0:
+        return [], []
+    normal_rest = [] if len(normals) < 2 else normals[1:]
+    return normals[0], normal_rest
+
 def rebatch_metadata_by_experiment(metadata):
+    normal, normal_rest = prioritize_normals(metadata)
     batch = metadata[0]["participant"]
-    samples = [x["sample_type"] for x in metadata]
-    if is_one_tumor_multiple_normal(samples):
-        normalbatch = batch + "-solid"
-        paired_batch = [tz.assoc(x, "batch", x["participant"]) for x in
-                        metadata if x["sample_type"] in ["01", "10"]]
-        normal_batch = [tz.assoc(x, "batch", normalbatch)
-                         for x in metadata if x["sample_type"] in ["11"]]
-        return paired_batch + normal_batch
-    return [tz.assoc(x, "batch", x["participant"]) for x in metadata]
+    tumor_batch = [tz.assoc(x, "batch", batch) for x in metadata
+                   if x["sample_type"] in PRIORITIZED_TUMOR_CODES.keys()]
+    normal = [tz.assoc(normal, "batch", batch)] if normal else []
+    # run each non priority normal as its own tumor sample with no control
+    normal_rest = [tz.assoc(x, "batch", batch + "-" + x["sample_type"]) for x
+                   in normal_rest]
+    normal_rest = [tz.assoc(x, "phenotype", "tumor") for x in normal_rest]
+    all_batches = normal + normal_rest + tumor_batch
+    return all_batches
 
 def batch_tcga_metadata_by_participant(fns):
     metadata = [re.match(TCGA_RE, fn).groupdict() for fn in fns]
@@ -112,12 +116,12 @@ def keep_latest_sample(batch):
 def tcga_to_bcbio_csv(fns, out_file):
     if file_exists(out_file):
         return out_file
-    fns = [x for x in fns if is_tcga(x)]
+    fns = set([x for x in fns if is_tcga(x)])
     batches = batch_tcga_metadata_by_participant(fns)
     batches = [keep_latest_sample(batch) for batch in batches]
     batches = [rebatch_metadata_by_experiment(x) for x in batches]
     batches = itertools.chain.from_iterable(batches)
-    batches = [sample_to_bcbio(x) for x in batches]
+    batches = set([sample_to_bcbio(x) for x in batches])
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
             out_handle.write(",".join(TCGA_HEADER) + "\n")
