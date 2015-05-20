@@ -335,6 +335,9 @@ def _detect_fastq_format(in_file, MAX_RECORDS=1000):
                 break
             count += 1
             vals = [ord(c) for c in line.rstrip()]
+            # if there is a short sequence, skip it
+            if len(vals) < 20:
+                continue
             lmin = min(vals)
             lmax = max(vals)
             for encoding, (emin, emax) in ranges.items():
