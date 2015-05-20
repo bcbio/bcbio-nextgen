@@ -51,7 +51,7 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, config):
             do.run(cmd.format(**locals()), message)
     else:
         with file_transaction(config, out_files) as tx_out_files:
-            of1_tx, of2_tx = out_files
+            of1_tx, of2_tx = tx_out_files
             tmp_fq1 = append_stem(of1_tx, ".tmp")
             tmp_fq2 = append_stem(of2_tx, ".tmp")
             singles_file = of1_tx + ".single"
