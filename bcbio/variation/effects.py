@@ -24,12 +24,13 @@ from bcbio.variation import vcfutils
 def add_to_vcf(in_file, data):
     effect_todo = get_type(data)
     if effect_todo:
+        stats = None
         if effect_todo == "snpeff":
             ann_vrn_file, stats_file = snpeff_effects(in_file, data)
-            stats = {"effects-stats": stats_file}
+            if utils.file_exists(stats_file):
+                stats = {"effects-stats": stats_file}
         elif effect_todo == "vep":
             ann_vrn_file = run_vep(in_file, data)
-            stats = None
         else:
             raise ValueError("Unexpected variant effects configuration: %s" % effect_todo)
         if ann_vrn_file:
