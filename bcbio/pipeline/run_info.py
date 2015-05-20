@@ -356,7 +356,7 @@ def _check_quality_format(items):
                      "illumina_1.8+": "standard",
                      "solexa": "solexa",
                      "sanger": "standard"}
-    fastq_extensions = ["fq.gz", "fastq.gz", ".fastq" ".fq"]
+    fastq_extensions = ["fq.gz", "fastq.gz", ".fastq", ".fq"]
 
     for item in items:
         specified_format = item["algorithm"].get("quality_format", "standard").lower()
