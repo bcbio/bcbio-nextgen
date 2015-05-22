@@ -19,25 +19,26 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
         bam.index(x, config)
-    # GATK can only downsample to a minimum of 200
-    coverage_depth_max = max(200, utils.get_in(config, ("algorithm", "coverage_depth_max"), 2000))
-    coverage_depth_min = utils.get_in(config, ("algorithm", "coverage_depth_min"), 4)
-    variant_regions = config["algorithm"].get("variant_regions", None)
-    confidence = "4.0" if coverage_depth_min < 4 else "30.0"
-    region = subset_variant_regions(variant_regions, region, out_file, items)
-
-    params = ["-R", ref_file,
-              "--standard_min_confidence_threshold_for_calling", confidence,
-              "--standard_min_confidence_threshold_for_emitting", confidence,
-              "--downsample_to_coverage", str(coverage_depth_max),
-              "--downsampling_type", "BY_SAMPLE",
-              ]
+    params = ["-R", ref_file]
+    coverage_depth_max = tz.get_in(["algorithm", "coverage_depth_max"], config)
+    if coverage_depth_max:
+        # GATK can only downsample to a minimum of 200
+        coverage_depth_max = max([200, coverage_depth_max])
+        params += ["--downsample_to_coverage", str(coverage_depth_max),
+                   "--downsampling_type", "BY_SAMPLE"]
+    coverage_depth_min = tz.get_in(["algorithm", "coverage_depth_min"], config)
+    if coverage_depth_min and coverage_depth_min < 4:
+        confidence = "4.0"
+        params += ["--standard_min_confidence_threshold_for_calling", confidence,
+                   "--standard_min_confidence_threshold_for_emitting", confidence]
     for a in annotation.get_gatk_annotations(config):
         params += ["--annotation", a]
     for x in align_bams:
         params += ["-I", x]
     if dbsnp:
         params += ["--dbsnp", dbsnp]
+    variant_regions = tz.get_in(["algorithm", "variant_regions"], config)
+    region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     return broad_runner, params

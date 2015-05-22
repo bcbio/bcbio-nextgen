@@ -1,5 +1,7 @@
 ## 0.9.0 (in progress)
 
+- GATK 3.4: support HaplotypeCaller by avoiding setting downsampling (-dcov)
+  option by default.
 - Single sample structural variant calling: corectly handle multiple variant
   callers. Thanks to Sven-Eric Schelhorn.
 - Fix VEP/GEMINI incompatibility where empty fields are included in VCF output.
