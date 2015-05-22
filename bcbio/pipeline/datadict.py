@@ -19,6 +19,8 @@ LOOKUPS = {
                  "checker": file_exists},
     "work_dir": {"keys": ['dirs', 'work']},
     "sam_ref": {"keys": ["sam_ref"]},
+    "disambiguate": {"keys": ["config", "algorithm", "disambiguate"],
+                     "default": False},
     "lane": {"keys": ["rgnames", "lane"]},
     "cores": {"keys": ["config", "algorithm", "num_cores"], "default": 1},
     "sample_name": {"keys": ['rgnames', 'sample']},

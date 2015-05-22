@@ -62,6 +62,10 @@ def generate_transcript_counts(data):
             data = dd.set_oncofuse_file(data, oncofuse_file)
     # if RSEM set to run, but the aligner didn't create the transcriptome BAM
     # file, make one with bwa
+    if dd.get_disambiguate(data):
+        logger.info("RSEM is not supported yet for disambiguation protocols. "
+                    "See https://github.com/chapmanb/bcbio-nextgen/issues/859")
+        return [[data]]
     if dd.get_rsem(data) and not dd.get_transcriptome_bam(data):
         file1, file2 = dd.get_input_sequence_files(data)
         ref_file = dd.get_ref_file(data)
