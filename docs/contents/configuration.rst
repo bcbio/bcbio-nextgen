@@ -546,7 +546,7 @@ Post-processing
   query during variant calling pipelines. ``vardict_somatic_filter`` runs
   a post calling filter to remove variants found in normal samples. ``bwa-mem``
   forces use of original bwa aln alignment. Without this, we use bwa mem with
-  70bp or longer reads.
+  70bp or longer reads. ``fastqc`` turns off quality control FastQC usage.
   Default: [] -- all tools on.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit

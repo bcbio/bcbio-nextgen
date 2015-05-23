@@ -98,7 +98,9 @@ def _run_qc_tools(bam_file, data):
         :returns: dict with output of different tools
     """
     metrics = {}
-    to_run = [("fastqc", _run_fastqc)]
+    to_run = []
+    if "fastqc" not in tz.get_in(("config", "algorithm", "tools_off"), data, []):
+        to_run.append(("fastqc", _run_fastqc))
     if data["analysis"].lower().startswith("rna-seq"):
         # to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
         # to_run.append(("coverage", _run_gene_coverage))
