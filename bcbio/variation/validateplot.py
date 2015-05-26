@@ -252,3 +252,23 @@ def get_bamprep(x, config):
         return "mixed"
     else:
         return ""
+
+# ## Frequency plots
+
+def facet_freq_plot(freq_csv, caller):
+    """Prepare a facet plot of frequencies stratified by variant type and status (TP, FP, FN).
+
+    Makes a nice plot with the output from validate.freq_summary
+    """
+    out_file = "%s.png" % os.path.splitext(freq_csv)[0]
+    plt.ioff()
+    sns.set(style='dark')
+    df = pd.read_csv(freq_csv)
+    g = sns.FacetGrid(df, row="vtype", col="valclass", margin_titles=True,
+                      col_order=["TP", "FN", "FP"], row_order=["snp", "indel"],
+                      sharey=False)
+    g.map(plt.hist, "freq", bins=20, align="left")
+    g.set(xlim=(0.0, 1.0))
+    g.fig.set_size_inches(8, 6)
+    g.fig.text(.05, .97, caller, horizontalalignment='center', size=14)
+    g.fig.savefig(out_file)

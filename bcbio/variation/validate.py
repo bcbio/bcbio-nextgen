@@ -8,12 +8,14 @@ import collections
 import csv
 import os
 
-import yaml
+from pysam import VariantFile
 import toolz as tz
+import yaml
 
 from bcbio import broad, utils
 from bcbio.bam import callable
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
 from bcbio.variation import validateplot, multi
@@ -254,4 +256,69 @@ def summarize_grading(samples):
                     if variant.get("validate"):
                         variant["validate"]["grading_plots"] = plots
                 out.append([data])
+    return out
+
+# ## Summarize by frequency
+
+def freq_summary(val_file, call_file, truth_file, target_name):
+    """Summarize true and false positive calls by variant type and frequency.
+
+    Resolve differences in true/false calls based on output from hap.py:
+    https://github.com/sequencing/hap.py
+    """
+    out_file = "%s-freqs.csv" % utils.splitext_plus(val_file)[0]
+    truth_freqs = _read_truth_freqs(truth_file)
+    call_freqs = _read_call_freqs(call_file, target_name)
+    with VariantFile(val_file) as val_in:
+        with open(out_file, "w") as out_handle:
+            writer = csv.writer(out_handle)
+            writer.writerow(["vtype", "valclass", "freq"])
+            for rec in val_in:
+                call_type = _classify_rec(rec)
+                val_type = _get_validation_status(rec)
+                key = _get_key(rec)
+                freq = truth_freqs.get(key, call_freqs.get(key, 0.0))
+                writer.writerow([call_type, val_type, freq])
+    return out_file
+
+def _get_key(rec):
+    return (rec.contig, rec.pos, rec.ref, rec.alts[0])
+
+def _classify_rec(rec):
+    """Determine class of variant in the record.
+    """
+    if max([len(x) for x in rec.alleles]) == 1:
+        return "snp"
+    else:
+        return "indel"
+
+def _get_validation_status(rec):
+    """Retrieve the status of the validation, supporting hap.py output
+    """
+    return rec.info["type"]
+
+def _read_call_freqs(in_file, sample_name):
+    """Identify frequencies for calls in the input file.
+    """
+    out = {}
+    with VariantFile(in_file) as call_in:
+        for rec in call_in:
+            if rec.filter.keys() == ["PASS"]:
+                for name, sample in rec.samples.items():
+                    if name == sample_name:
+                        alt, depth = bubbletree.sample_alt_and_depth(sample)
+                        if depth > 0:
+                            out[_get_key(rec)] = float(alt) / float(depth)
+    return out
+
+def _read_truth_freqs(in_file):
+    """Read frequency of calls from truth VCF.
+
+    Currently handles DREAM data, needs generalization for other datasets.
+    """
+    out = {}
+    with VariantFile(in_file) as bcf_in:
+        for rec in bcf_in:
+            freq = float(rec.info.get("VAF", 1.0))
+            out[_get_key(rec)] = freq
     return out

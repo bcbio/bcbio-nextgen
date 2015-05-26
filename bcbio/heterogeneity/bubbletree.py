@@ -41,7 +41,7 @@ def _is_possible_loh(rec, params, somatic_info):
     """
     normal_good, tumor_good = False, False
     for name, sample in rec.samples.items():
-        alt, depth = _get_alt_and_depth(sample)
+        alt, depth = sample_alt_and_depth(sample)
         if alt is not None and depth is not None and depth > 0:
             freq = float(alt) / float(depth)
             if name == somatic_info.normal_name:
@@ -52,17 +52,17 @@ def _is_possible_loh(rec, params, somatic_info):
                               (freq < params["min_freq"] or freq > params["max_freq"]))
     return normal_good and tumor_good
 
-def _get_alt_and_depth(sample):
+def sample_alt_and_depth(sample):
     """Flexibly get ALT allele and depth counts, handling FreeBayes, MuTect and other cases.
     """
     if "AD" in sample:
         all_counts = [int(x) for x in sample["AD"]]
         alt_counts = sum(all_counts[1:])
         depth = sum(all_counts)
-    elif "AO" in sample and sample.get("RO"):
+    elif "AO" in sample and sample.get("RO") is not None:
         alts = sample["AO"]
         if not isinstance(alts, (list, tuple)):
-            alts = []
+            alts = [alts]
         alt_counts = sum([int(x) for x in alts])
         depth = alt_counts + int(sample["RO"])
     else:
