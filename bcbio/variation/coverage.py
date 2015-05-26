@@ -7,6 +7,7 @@ stores coverage per regions in a database using Chanjo
 import collections
 import os
 import sys
+import shutil
 
 import toolz as tz
 import yaml
@@ -122,7 +123,8 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
             for line in q:
                 out_handle.write("\t".join([line[0], line[1], line[2],
                                             line[3], line[4], line[5]]) + "\n")
-        bt = BedTool(tx_out_file + ".tmp").sort().saveas(tx_out_file)
+        bt = BedTool(tx_out_file + ".tmp").sort().bgzip()
+        shutil.move(bt, tx_out_file)
     return out_file
 
 def _uniquify_bed_names(bed_file, out_dir, data):
