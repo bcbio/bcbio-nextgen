@@ -10,6 +10,8 @@ import sys
 
 import toolz as tz
 import yaml
+import sqlite3
+from pybedtools import BedTool
 
 from bcbio import utils, bed
 from bcbio.bam import ref
@@ -18,6 +20,9 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils
+
+DEFAULT_COVERAGE_CUTOFF = 4
+DEFAULT_COMPLETENESS_CUTOFF = 0.75
 
 def assign_interval(data):
     """Identify coverage based on percent of genome covered and relation to targets.
@@ -60,7 +65,7 @@ def assign_interval(data):
     return data
 
 def summary(items):
-    cutoff = 4  # coverage for completeness
+    cutoff = DEFAULT_COVERAGE_CUTOFF
     data = items[0]
     work_dir = dd.get_work_dir(data)
     out_dir = utils.safe_makedir(os.path.join(work_dir, "coverage"))
@@ -86,12 +91,39 @@ def summary(items):
                        "{bam_file} {bed_file} | "
                        "{chanjo} --db {tx_out_file} import")
                 do.run(cmd.format(**locals()), "Chanjo coverage", data)
+    incomplete = incomplete_regions(out_file, batch, out_dir)
     out = []
     for data in items:
         if utils.file_exists(out_file):
-            data["coverage"] = {"summary": out_file}
+            data["coverage"] = {"summary": out_file,
+                                "incomplete": incomplete}
         out.append([data])
     return out
+
+def incomplete_regions(chanjo_db, batch_name, out_dir):
+    """
+    flag a set of regions in a Chanjo database as poor coverage based on
+    an average coverage cutoff in the region and a completeness as proportion
+    of bases with at least that coverage
+    """
+    out_file = os.path.join(out_dir, batch_name + "-incomplete-regions.bed.gz")
+    if utils.file_exists(out_file):
+        return out_file
+    conn = sqlite3.connect(chanjo_db)
+    c = conn.cursor()
+    q = c.execute("SELECT contig, start, end, strand, coverage, completeness "
+                  "FROM interval_data "
+                  "JOIN interval ON interval_data.parent_id=interval.id "
+                  "WHERE coverage < %d OR "
+                  "completeness < %d" % (DEFAULT_COVERAGE_CUTOFF,
+                                           DEFAULT_COMPLETENESS_CUTOFF))
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file + ".tmp", "w") as out_handle:
+            for line in q:
+                out_handle.write("\t".join([line[0], line[1], line[2],
+                                            line[3], line[4], line[5]]) + "\n")
+        bt = BedTool(tx_out_file + ".tmp").sort().saveas(tx_out_file)
+    return out_file
 
 def _uniquify_bed_names(bed_file, out_dir, data):
     """Chanjo required unique names in the BED file to map to intervals.

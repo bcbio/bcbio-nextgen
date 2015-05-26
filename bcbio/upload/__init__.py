@@ -336,6 +336,10 @@ def _get_files_project(sample, upload_config):
         cov_db = tz.get_in(["coverage", "summary"], sample)
         if cov_db:
             out.append({"path": cov_db, "type": "sqlite", "ext": "coverage"})
+        incomplete = tz.get_in(["coverage", "incomplete"], sample)
+        if incomplete:
+            out.append({"path": incomplete, "type": "bed", "ext": "coverage"})
+
 
     if dd.get_combined_counts(sample):
         out.append({"path": dd.get_combined_counts(sample)})
