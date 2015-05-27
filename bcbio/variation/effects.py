@@ -86,10 +86,11 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
                 os.path.dirname(os.path.dirname(ref_file)), "vep")))
             out_dir = os.path.join(vep_dir, species, vepv)
             if not os.path.exists(out_dir):
-                cmd = ["vep_install.pl", "-a", "c", "-s", ensembl_name,
+                vep_path = "%s/bin/" % tooldir if tooldir else ""
+                cmd = ["%svep_install.pl" % vep_path, "-a", "c", "-s", ensembl_name,
                        "-c", vep_dir]
                 do.run(cmd, "Prepare VEP directory for %s" % ensembl_name)
-                cmd = ["vep_convert_cache.pl", "-species", species, "-version", vepv,
+                cmd = ["%svep_convert_cache.pl" % vep_path, "-species", species, "-version", vepv,
                        "-d", vep_dir]
                 do.run(cmd, "Convert VEP cache to tabix %s" % ensembl_name)
             tmp_dir = os.path.join(vep_dir, "tmp")
