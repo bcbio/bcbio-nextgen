@@ -206,8 +206,8 @@ def _s3_handle(fname):
                         # set search offset so we do not need to scan this part of the buffer again
                         search_offset = len(buf)
                         break
-                if buf:
-                    yield buf + '\n'
+            if buf:
+                yield buf + '\n'
         def _chunk_iter(self):
             dec = zlib.decompressobj(16 | zlib.MAX_WBITS) if self._key.name.endswith(".gz") else None
             for chunk in self._key:
