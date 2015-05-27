@@ -140,8 +140,14 @@ def _create_input(paired, out_file, ref_file, snp_file, qsnp_file):
                 if value != "":
                     out_handle.write("%s = %s\n" % (opt, value))
 
+def _has_ambiguous_ref_allele(line):
+    if not line.startswith("#"):
+        parts = line.split("\t")
+        return len(parts) > 4 and parts[3].upper() not in set(["C", "A", "T", "G"])
+
 def _filter_vcf(out_file):
-    """Fix sample names, FILTER and FORMAT fields"""
+    """Fix sample names, FILTER and FORMAT fields. Remove lines with ambiguous reference.
+    """
     in_file = out_file.replace(".vcf", "-ori.vcf")
     FILTER_line = ('##FILTER=<ID=SBIAS,Description="Due to bias">\n'
                    '##FILTER=<ID=5BP,Description="Due to 5BP">\n'
@@ -169,7 +175,8 @@ def _filter_vcf(out_file):
                     line = _set_reject(line)
                 if line.find("PASS") > - 1 and line.find("SOMATIC") == -1:
                     line = _set_reject(line)
-                out_handle.write("%s" % line)
+                if not _has_ambiguous_ref_allele(line):
+                    out_handle.write(line)
                 if line.startswith("##FILTER") and FILTER_line:
                     out_handle.write("%s" % FILTER_line)
                     FILTER_line = ""
