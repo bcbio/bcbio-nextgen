@@ -633,7 +633,8 @@ def _count_rRNA_reads(in_bam, out_file, ref_file, rRNA_interval, single_end, con
                       "-I", in_bam,
                       "-log", tx_out_file,
                       "-L", rRNA_coor,
-                      "--filter_reads_with_N_cigar"]
+                      "--filter_reads_with_N_cigar",
+                      "-allowPotentiallyMisencodedQuals"]
             jvm_opts = broad.get_gatk_framework_opts(config)
             cmd = [config_utils.get_program("gatk-framework", config)] + jvm_opts + params
             do.run(cmd, "counts rRNA for %s" % in_bam)
