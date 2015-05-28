@@ -30,8 +30,8 @@ _out_fnames = ["accepted_hits.sam", "junctions.bed",
                "insertions.bed", "deletions.bed"]
 
 
-def _set_quality_flag(options, config):
-    qual_format = config["algorithm"].get("quality_format", None)
+def _set_quality_flag(options, data):
+    qual_format = dd.get_quality_format(data)
     if qual_format.lower() == "illumina":
         options["solexa1.3-quals"] = True
     elif qual_format.lower() == "solexa":
@@ -95,7 +95,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     config = data["config"]
     options = get_in(config, ("resources", "tophat", "options"), {})
     options = _set_fusion_mode(options, config)
-    options = _set_quality_flag(options, config)
+    options = _set_quality_flag(options, data)
     options = _set_transcriptome_option(options, data, ref_file)
     options = _set_cores(options, config)
     options = _set_rg_options(options, names)
