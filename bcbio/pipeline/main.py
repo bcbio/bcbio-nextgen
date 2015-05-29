@@ -309,7 +309,8 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("RNA-seq variant calling", dirs):
                 samples = rnaseq.rnaseq_variant_calling(samples, run_parallel)
 
-        with prun.start(_wres(parallel, ["picard", "fastqc", "qualimap", "kraken"]),
+        with prun.start(_wres(parallel, ["picard", "fastqc", "qualimap", "kraken", "gatk"],
+                              ensure_mem={"qualimap": 4}),
                         samples, config, dirs, "qc") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
