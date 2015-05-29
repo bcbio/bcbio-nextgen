@@ -107,6 +107,8 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
     an average coverage cutoff in the region and a completeness as proportion
     of bases with at least that coverage
     """
+    if os.path.getsize(chanjo_db) == 0:
+        return None
     out_file = os.path.join(out_dir, batch_name + "-incomplete-regions.bed.gz")
     if utils.file_exists(out_file):
         return out_file

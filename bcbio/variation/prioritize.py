@@ -89,8 +89,8 @@ def _prep_priority_filter(gemini_db, data):
                 cheader[0] = "#" + cheader[0]
                 writer.writerow(cheader)
                 for row in gq:
-                    ref_depth = row.gt_ref_depths[sidx]
-                    alt_depth = row.gt_alt_depths[sidx]
+                    ref_depth = tz.get_in(["gt_ref_depths", sidx], row, 0)
+                    alt_depth = tz.get_in(["gt_alt_depths", sidx], row, 0)
                     try:
                         row.row["freq"] = "%.2f" % (float(alt_depth) / float(ref_depth + alt_depth))
                     except ZeroDivisionError:
