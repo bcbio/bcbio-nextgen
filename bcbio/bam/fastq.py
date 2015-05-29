@@ -129,6 +129,13 @@ def combine_pairs(input_files):
                 continue #there is only 1 difference
             if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
                   b[s[0]] in PAIR_FILE_IDENTIFIERS):
+                # if the 1/2 isn't the last digit before a separator, skip
+                # this skips stuff like 2P 2A, often denoting replicates, not
+                # read pairings
+                if len(b) > (s[0] + 1):
+                    if (b[s[0]+1] not in ("_", "-", ".")):
+                        continue
+                # if the 1/2 is not a separator or prefaced with R, skip
                 if b[s[0]- 1] in ("R", "_", "-", "."):
                     used.add(in_file)
                     used.add(comp_file)
