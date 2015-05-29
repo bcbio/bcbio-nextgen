@@ -7,6 +7,7 @@ from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.structural import regions
 
 import pybedtools
 
@@ -15,7 +16,7 @@ def add_genes(in_file, data, max_distance=10000):
 
     max_distance -- only keep annotations within this distance of event
     """
-    gene_file = dd.get_gene_bed(data)
+    gene_file = regions.get_sv_bed(data, "exons", out_dir=os.path.dirname(in_file))
     if gene_file and utils.file_exists(in_file):
         out_file = "%s-annotated.bed" % utils.splitext_plus(in_file)[0]
         if not utils.file_uptodate(out_file, in_file):
@@ -46,7 +47,7 @@ def add_genes(in_file, data, max_distance=10000):
 def subset_by_genes(in_file, data, out_dir, pad):
     """Subset BED file of regions to only those within pad of the final output.
     """
-    gene_file = dd.get_gene_bed(data)
+    gene_file = regions.get_sv_bed(data, "exons", out_dir=os.path.dirname(in_file))
     fai_file = ref.fasta_idx(dd.get_ref_file(data))
     if not gene_file or not utils.file_exists(in_file):
         return in_file

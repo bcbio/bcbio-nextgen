@@ -19,7 +19,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.variation import bedutils, vcfutils
 from bcbio.provenance import do
-from bcbio.structural import annotate, shared, plot
+from bcbio.structural import annotate, shared, regions, plot
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -41,7 +41,7 @@ def export_theta(ckout, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]
             do.run(cmd, "Export CNVkit calls as inputs for TheTA2")
-    #ckout["theta_input"] = _subset_theta_to_calls(out_file, ckout, data)
+    # ckout["theta_input"] = _subset_theta_to_calls(out_file, ckout, data)
     ckout["theta_input"] = out_file
     return ckout
 

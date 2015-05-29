@@ -30,6 +30,18 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None):
         vcfutils.bgzip_and_index(out_file, data.get("config", {}), remove_orig=False)
         return out_file
 
+def sort_merge(in_file, data):
+    """Sort and merge a BED file, collapsing gene names.
+    """
+    out_file = "%s-sort.bed" % os.path.splitext(in_file)[0]
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
+            cmd = ("{cat_cmd} {in_file} | sort -k1,1 -k2,2n | "
+                   "bedtools merge -i - -c 4 -o distinct > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Sort BED file", data)
+    return out_file
+
 def remove_bad(line):
     """Remove non-increasing BED lines which will cause variant callers to choke.
     """
