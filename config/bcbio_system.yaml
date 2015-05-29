@@ -44,6 +44,8 @@ resources:
   qsignature:
     cores: 1
     memory: 2g
+  qualimap:
+    memory: 8g
   qsnp:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
   gatk:

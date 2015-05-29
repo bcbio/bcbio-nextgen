@@ -692,9 +692,9 @@ def _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file=None, single_end=No
     """
     Create command lines for qualimap
     """
-    num_cores = config["algorithm"].get("num_cores", 1)
     qualimap = config_utils.get_program("qualimap", config)
     resources = config_utils.get_resources("qualimap", config)
+    num_cores = resources.get("cores", 1)
     max_mem = config_utils.adjust_memory(resources.get("memory", "4G"),
                                          num_cores)
     cmd = ("unset DISPLAY && {qualimap} rnaseq -outdir {out_dir} -a proportional -bam {bam_file} "
