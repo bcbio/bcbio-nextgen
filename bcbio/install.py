@@ -79,7 +79,7 @@ def upgrade_bcbio(args):
             _symlink_bcbio(args, script="bcbio_prepare_samples.py")
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
-    if args.toolplus:
+    if args.toolplus and (args.tooldir or args.upgrade != "skip"):
         print("Installing additional tools")
         _install_toolplus(args)
     if args.install_data:
