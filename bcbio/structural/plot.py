@@ -101,7 +101,6 @@ def by_regions(items):
     work_dir = os.path.join(dd.get_work_dir(items[0]), "structural", "coverage")
     safe_makedir(work_dir)
     out_file = os.path.join(work_dir, "%s-coverage.pdf" % (dd.get_sample_name(items[0])))
-    merged_file = "%s-inputs.bed" % utils.splitext_plus(out_file)[0]
     if file_exists(out_file):
         items = _add_regional_coverage_plot(items, out_file)
     else:

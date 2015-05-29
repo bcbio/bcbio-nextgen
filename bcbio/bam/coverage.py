@@ -39,7 +39,7 @@ def _calc_regional_coverage(in_bam, chrom, start, end, samplename, work_dir):
     do.run(cmd.format(**locals()), "Plotting coverage for %s %s" % (samplename, coords))
     names = ["chom", "start", "end", "offset", "coverage"]
     df = pd.io.parsers.read_table(tx_tmp_file, sep="\t", header=None,
-                                  names=names)
+                                  names=names).dropna()
     os.remove(tx_tmp_file)
     df["sample"] = samplename
     df["chrom"] = chrom
