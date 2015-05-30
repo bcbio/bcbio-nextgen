@@ -35,7 +35,7 @@ def _calc_regional_coverage(in_bam, chrom, start, end, samplename, work_dir):
     coords = "%s:%s-%s" % (chrom, start, end)
     tx_tmp_file = os.path.join(work_dir, "coverage-%s-%s.txt" % (samplename, coords.replace(":", "_")))
     cmd = ("samtools view -b {in_bam} {coords} | "
-           "bedtools coverage -abam - -b {region_file} -d > {tx_tmp_file}")
+           "bedtools coverage -a {region_file} -b - -d > {tx_tmp_file}")
     do.run(cmd.format(**locals()), "Plotting coverage for %s %s" % (samplename, coords))
     names = ["chom", "start", "end", "offset", "coverage"]
     df = pd.io.parsers.read_table(tx_tmp_file, sep="\t", header=None,
