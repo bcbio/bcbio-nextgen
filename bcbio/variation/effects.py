@@ -194,6 +194,8 @@ def snpeff_effects(vcf_in, data):
     """
     if vcfutils.vcf_has_variants(vcf_in):
         return _run_snpeff(vcf_in, "vcf", data)
+    else:
+        return None, None
 
 def _snpeff_args_from_config(data):
     """Retrieve snpEff arguments supplied through input configuration.
