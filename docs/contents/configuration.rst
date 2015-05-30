@@ -501,9 +501,16 @@ Structural variant calling
 ==========================
 
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, delly,
-  cn.mops]. LUMPY and DELLY require paired end reads. cn.mops works on whole
-  genome data as well as targeted experiments; our usage requires
-  multiple samples grouped into a batch within the :ref:`sample-configuration`.
+  cnvkit]. LUMPY and DELLY require paired end reads.
+- ``sv_regions`` -- A specification of regions to target during structural
+  variant calling. By default, bcbio uses regions specified in
+  ``variant_regions`` but this allows custom specification for structural
+  variant calling. This can be a pointer to a bed file or special inputs:
+  ``exons`` for only exon regions, ``transcripts`` for transcript regions (the
+  min start and max end of exons) or ``transcriptsXXXX`` for transcripts plus a
+  window of XXXX size around it. The size can be an integer (``transcripts1000``)
+  or exponential (``transcripts1e5``). This applies to CNVkit and heterogeneity
+  analysis.
 - ``svvalidate`` -- Dictionary of call types and pointer to BED file of known
   regions. For example: ``DEL: known_deletions.bed`` does deletion based
   validation of outputs against the BED file.
