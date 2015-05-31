@@ -10,6 +10,8 @@ from pysam import VariantFile
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
+from bcbio.provenance import do
+from bcbio.variation import regions
 
 def run(vrn_info, cnv_info, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
@@ -17,6 +19,7 @@ def run(vrn_info, cnv_info, somatic_info):
     work_dir = _cur_workdir(somatic_info.tumor_data)
     input_vcf = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], work_dir, somatic_info)
     print input_vcf
+    print cnv_info
 
 def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
     """Select heterozygous variants in the normal sample with sufficient depth.
@@ -28,12 +31,26 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
     out_file = os.path.join(work_dir, "%s-%s-prep.vcf" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           vcaller))
     if not utils.file_uptodate(out_file, in_file):
+        sub_file = _create_subset_file(in_file, work_dir, data)
         with file_transaction(data, out_file) as tx_out_file:
-            bcf_in = VariantFile(in_file)
+            bcf_in = VariantFile(sub_file)
             bcf_out = VariantFile(tx_out_file, "w", header=bcf_in.header)
             for rec in bcf_in:
                 if _is_possible_loh(rec, params, somatic_info):
                     bcf_out.write(rec)
+    return out_file
+
+def _create_subset_file(in_file, work_dir, data):
+    """Subset the VCF to a set of smaller regions, matching what was used for CNV calling.
+    """
+    out_file = "%s-orig.bcf" % os.path.splitext(in_file)[0]
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            region_bed = regions.get_sv_bed(data)
+            if not region_bed:
+                region_bed = regions.get_sv_bed(data, "transcripts1e4", work_dir)
+            cmd = "vcftools view -R {region_bed} -o {tx_out_file} -O b {in_file}"
+            do.run(cmd.format(**locals()), "Extract SV only regions for BubbleTree")
     return out_file
 
 def _is_possible_loh(rec, params, somatic_info):
