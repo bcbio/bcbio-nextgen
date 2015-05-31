@@ -115,7 +115,7 @@ def _associate_cnvkit_out(ckout, items):
     out = []
     for data in items:
         ckout = _add_bed_to_output(ckout, data)
-#        ckout = _add_coverage_bedgraph_to_output(ckout, data)
+        #  ckout = _add_coverage_bedgraph_to_output(ckout, data)
         ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
         ckout = _add_plots_to_output(ckout, data)
         if "sv" not in data:
@@ -124,12 +124,10 @@ def _associate_cnvkit_out(ckout, items):
         out.append(data)
     return out
 
-def _run_cnvkit_single(data, access_file=None, background=None):
+def _run_cnvkit_single(data, background=None):
     """Process a single input file with BAM or uniform background.
     """
     work_dir = _sv_workdir(data)
-    if not access_file:
-        access_file = _create_access_file(dd.get_ref_file(data), work_dir, data)
     test_bams = [data["align_bam"]]
     if background:
         background_bams = [x["align_bam"] for x in background]
@@ -137,7 +135,7 @@ def _run_cnvkit_single(data, access_file=None, background=None):
     else:
         background_bams = []
         background_name = None
-    ckout = _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
+    ckout = _run_cnvkit_shared(data, test_bams, background_bams, work_dir,
                                background_name=background_name)
     if not ckout:
         return [data]
@@ -149,9 +147,8 @@ def _run_cnvkit_cancer(items, background):
     """
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
     work_dir = _sv_workdir(paired.tumor_data)
-    access_file = _create_access_file(dd.get_ref_file(paired.tumor_data), work_dir, paired.tumor_data)
     ckout = _run_cnvkit_shared(paired.tumor_data, [paired.tumor_bam], [paired.normal_bam],
-                               access_file, work_dir, background_name=paired.normal_name)
+                               work_dir, background_name=paired.normal_name)
     if not ckout:
         return items
 
@@ -167,15 +164,13 @@ def _run_cnvkit_population(items, background):
     """
     assert not background
     inputs, background = shared.find_case_control(items)
-    access_file = _create_access_file(dd.get_ref_file(inputs[0]), _sv_workdir(inputs[0]), inputs[0])
-    return [_run_cnvkit_single(data, access_file, background)[0] for data in inputs] + \
-           [_run_cnvkit_single(data, access_file, inputs)[0] for data in background]
+    return [_run_cnvkit_single(data, background)[0] for data in inputs] + \
+           [_run_cnvkit_single(data, inputs)[0] for data in background]
 
 def _get_cmd():
     return os.path.join(os.path.dirname(sys.executable), "cnvkit.py")
 
-def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
-                       background_name=None):
+def _run_cnvkit_shared(data, test_bams, background_bams, work_dir, background_name=None):
     """Shared functionality to run CNVkit.
     """
     ref_file = dd.get_ref_file(data)
@@ -189,41 +184,25 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
         if os.path.exists(raw_work_dir):
             shutil.rmtree(raw_work_dir)
         with tx_tmpdir(data, work_dir) as tx_work_dir:
-            # pick targets, anti-targets and access files based on analysis type
-            # http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
             cov_interval = dd.get_coverage_interval(data)
-            base_regions = dd.get_variant_regions(data)
-            # For genome calls, subset to regions within 10kb of genes
-            if cov_interval == "genome":
-                base_regions = annotate.subset_by_genes(base_regions, data,
-                                                        work_dir, pad=1e4)
-
-            raw_target_bed = bedutils.merge_overlaps(base_regions, data,
-                                                     out_dir=work_dir)
-            target_bed = annotate.add_genes(raw_target_bed, data)
-
+            raw_target_bed, access_bed = _get_target_access_files(cov_interval, data, work_dir)
             # bail out if we ended up with no regions
-            if not utils.file_exists(target_bed):
+            if not utils.file_exists(raw_target_bed):
                 return {}
-
-            if cov_interval == "amplicon":
-                target_opts = ["--targets", target_bed, "--access", target_bed]
-            elif cov_interval == "genome":
-                target_opts = ["--targets", target_bed, "--access", dd.get_variant_regions(data)]
-            else:
-                target_opts = ["--targets", target_bed, "--access", access_file]
+            target_bed = annotate.add_genes(raw_target_bed, data)
 
             cores = min(tz.get_in(["config", "algorithm", "num_cores"], data, 1),
                         len(test_bams) + len(background_bams))
             cmd = [_get_cmd(), "batch"] + \
                   test_bams + ["-n"] + background_bams + ["-f", ref_file] + \
-                  target_opts + \
+                  ["--targets", target_bed, "--access", access_bed] + \
                   ["-d", tx_work_dir, "--split", "-p", str(cores),
                    "--output-reference", os.path.join(tx_work_dir, background_cnn)]
-            at_avg, at_min, t_avg = _get_antitarget_size(access_file, target_bed)
-            if at_avg:
-                cmd += ["--antitarget-avg-size", str(at_avg), "--antitarget-min-size", str(at_min),
-                        "--target-avg-size", str(t_avg)]
+            if cov_interval not in ["amplicon", "genome"]:
+                at_avg, at_min, t_avg = _get_antitarget_size(access_bed, target_bed)
+                if at_avg:
+                    cmd += ["--antitarget-avg-size", str(at_avg), "--antitarget-min-size", str(at_min),
+                            "--target-avg-size", str(t_avg)]
             local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                          "lib", "R", "site-library")
             cmd += ["--rlibpath", local_sitelib]
@@ -233,6 +212,31 @@ def _run_cnvkit_shared(data, test_bams, background_bams, access_file, work_dir,
         if not os.path.exists(files[ftype]):
             raise IOError("Missing CNVkit %s file: %s" % (ftype, files[ftype]))
     return files
+
+def _get_target_access_files(cov_interval, data, work_dir):
+    """Retrieve target and access files based on the type of data to process.
+
+    pick targets, anti-targets and access files based on analysis type
+    http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
+    """
+    base_regions = regions.get_sv_bed(data)
+    # if we don't have a configured BED or regions to use for SV caling
+    if not base_regions:
+        # For genome calls, subset to regions within 10kb of genes
+        if cov_interval == "genome":
+            base_regions = regions.get_sv_bed(data, "transcripts1e4", work_dir)
+        # Finally, default to the defined variant regions
+        if not base_regions:
+            base_regions = dd.get_variant_regions(data)
+
+    target_bed = bedutils.merge_overlaps(base_regions, data, out_dir=work_dir)
+    if cov_interval == "amplicon":
+        return target_bed, target_bed
+    elif cov_interval == "genome":
+        return target_bed, target_bed
+    else:
+        access_file = _create_access_file(dd.get_ref_file(data), _sv_workdir(data), data)
+        return target_bed, access_file
 
 def _add_seg_to_output(out, data):
     """Export outputs to 'seg' format compatible with IGV and GenePattern.
@@ -307,7 +311,10 @@ def _add_coverage_bedgraph_to_output(out, data):
 def _add_plots_to_output(out, data):
     """Add CNVkit plots summarizing called copy number values.
     """
-    out["plot"] = {"diagram": _add_diagram_plot(out, data)}
+    out["plot"] = {}
+    diagram_plot = _add_diagram_plot(out, data)
+    if diagram_plot:
+        out["plot"]["diagram"] = diagram_plot
     loh_plot = _add_loh_plot(out, data)
     if loh_plot:
         out["plot"]["loh"] = loh_plot
@@ -372,10 +379,21 @@ def _add_scatter_plot(out, data):
         do.run(cmd, "CNVkit scatter plot")
     return out_file
 
+def _cnx_is_empty(in_file):
+    """Check if cnr or cns files are empty (only have a header)
+    """
+    with open(in_file) as in_handle:
+        for i, line in enumerate(in_handle):
+            if i > 0:
+                return False
+    return True
+
 def _add_diagram_plot(out, data):
     out_file = "%s-diagram.pdf" % os.path.splitext(out["cnr"])[0]
     cnr = _remove_haplotype_chroms(out["cnr"], data)
     cns = _remove_haplotype_chroms(out["cns"], data)
+    if _cnx_is_empty(cnr) or _cnx_is_empty(cns):
+        return None
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "diagram", "-s", cns,
