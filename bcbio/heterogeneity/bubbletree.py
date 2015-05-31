@@ -11,7 +11,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import regions
+from bcbio.structural import regions
 
 def run(vrn_info, cnv_info, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
@@ -43,13 +43,13 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
 def _create_subset_file(in_file, work_dir, data):
     """Subset the VCF to a set of smaller regions, matching what was used for CNV calling.
     """
-    out_file = "%s-orig.bcf" % os.path.splitext(in_file)[0]
+    out_file = os.path.join(work_dir, "%s-orig.bcf" % utils.splitext_plus(os.path.basename(in_file))[0])
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             region_bed = regions.get_sv_bed(data)
             if not region_bed:
                 region_bed = regions.get_sv_bed(data, "transcripts1e4", work_dir)
-            cmd = "vcftools view -R {region_bed} -o {tx_out_file} -O b {in_file}"
+            cmd = "bcftools view -R {region_bed} -o {tx_out_file} -O b {in_file}"
             do.run(cmd.format(**locals()), "Extract SV only regions for BubbleTree")
     return out_file
 
