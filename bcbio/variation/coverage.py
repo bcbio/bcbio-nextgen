@@ -123,6 +123,7 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file + ".tmp", "w") as out_handle:
             for line in q:
+		line = map(str, line)
                 out_handle.write("\t".join([line[0], line[1], line[2],
                                             line[3], line[4], line[5]]) + "\n")
         bt = BedTool(tx_out_file + ".tmp").sort().bgzip()
