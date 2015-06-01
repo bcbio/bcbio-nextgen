@@ -110,6 +110,7 @@ if __name__ == "__main__":
         config["algorithm"] = {"num_cores": args.cores_per_job}
         config["resources"].update({'sambamba': res,
                                     'samtools': res})
+        config["log_dir"] = os.path.join(os.path.abspath(os.getcwd()), "log")
     parallel = clargs.to_parallel(args)
     parallel.update({'progs': ['samtools', 'sambamba']})
     parallel = log.create_base_logger(config, parallel)
