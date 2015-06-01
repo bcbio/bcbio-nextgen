@@ -213,7 +213,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
                         samblaster_cl = postalign.samblaster_dedup_sort(data, tx_dedup_file,
                                                                         tx_sr_file, tx_disc_file)
                         out_base = os.path.join(tmpdir,
-                                                "%s-namesort" % os.path.splitext(os.path.dirname(in_bam))[0])
+                                                "%s-namesort" % os.path.splitext(os.path.basename(in_bam))[0])
                         cmd = ("{samtools} sort -n -@ {cores} -m {mem} -O sam -T {out_base} {in_bam} | ")
                         cmd = cmd.format(**locals()) + samblaster_cl
                         do.run(cmd, "samblaster: split and discordant reads", data)
