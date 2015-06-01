@@ -76,10 +76,12 @@ def estimate(items, batch, config):
     variants = _get_variants(paired.tumor_data)
     for hetcaller in _get_hetcallers(items):
         try:
-            out = hetcallers[hetcaller](variants[0], cnvs[0], paired)
-            print out
+            hetfn = hetcallers[hetcaller]
         except KeyError:
+            hetfn = None
             print "%s not yet implemented" % hetcaller
+        if hetfn:
+            hetout = hetfn(variants[0], cnvs[0], paired)
     out = []
     for data in items:
         if batch == _get_batches(data)[0]:

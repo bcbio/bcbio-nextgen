@@ -19,7 +19,7 @@ def run(vrn_info, cnv_info, somatic_info):
     """
     work_dir = _cur_workdir(somatic_info.tumor_data)
     vcf_csv = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], work_dir, somatic_info)
-    cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["svcaller"], work_dir, somatic_info.tumor_data)
+    cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], work_dir, somatic_info.tumor_data)
     _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data)
 
 def _run_bubbletree(vcf_csv, cnv_csv, data):
@@ -27,16 +27,22 @@ def _run_bubbletree(vcf_csv, cnv_csv, data):
     """
     local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                  "lib", "R", "site-library")
-    r_file = "%s-run.R" % utils.splitext_plus(vcf_csv)[0]
+    base = utils.splitext_plus(vcf_csv)[0]
+    r_file = "%s-run.R" % base
+    bubbles_out = "%s-bubbles.pdf" % base
+    prev_model_out = "%s-bubbletree_prev_model.pdf" % base
+    freqs_out = "%s-bubbletree_prevalence.txt" % base
     with open(r_file, "w") as out_handle:
         out_handle.write(_script.format(**locals()))
-    do.run(["Rscript", r_file])
+    if not utils.file_exists(freqs_out):
+        do.run(["Rscript", r_file], "Assess heterogeneity with BubbleTree")
 
 def _prep_cnv_file(in_file, svcaller, work_dir, data):
     """Create a CSV file of CNV calls with log2 and number of marks.
     """
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           svcaller))
+    autosomal_chroms = _get_autosomal_chroms()
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
@@ -46,7 +52,8 @@ def _prep_cnv_file(in_file, svcaller, work_dir, data):
                     writer.writerow(["chrom", "start", "end", "num.mark", "seg.mean"])
                     reader.next()  # header
                     for chrom, start, end, _, log2, probes in reader:
-                        writer.writerow([chrom, start, end, probes, log2])
+                        if chrom in autosomal_chroms:
+                            writer.writerow([_to_ucsc_style(chrom), start, end, probes, log2])
     return out_file
 
 def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
@@ -69,7 +76,7 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
                 for rec in bcf_in:
                     tumor_freq = _is_possible_loh(rec, params, somatic_info)
                     if rec.chrom in autosomal_chroms and tumor_freq is not None:
-                        out_handle.write([rec.chrom, rec.start, rec.stop, tumor_freq])
+                        writer.writerow([_to_ucsc_style(rec.chrom), rec.start, rec.stop, tumor_freq])
     return out_file
 
 def _create_subset_file(in_file, work_dir, data):
@@ -84,6 +91,11 @@ def _create_subset_file(in_file, work_dir, data):
             cmd = "bcftools view -R {region_bed} -o {tx_out_file} -O b {in_file}"
             do.run(cmd.format(**locals()), "Extract SV only regions for BubbleTree")
     return out_file
+
+def _to_ucsc_style(chrom):
+    """BubbleTree assumes hg19 UCSC style chromosome inputs.
+    """
+    return "chr%s" % chrom if not str(chrom).startswith("chr") else chrom
 
 def _get_autosomal_chroms():
     """Hack to only use autosomal chromosomes that should generalize to any species with numeric chroms.
@@ -148,20 +160,27 @@ if __name__ == "__main__":
 _script = """
 .libPaths(c("{local_sitelib}"))
 library(BubbleTree)
-library(GRanges)
+library(GenomicRanges)
 
-vc.df = read.csv("{vrn_csv}", header=T)
-vc.gr = GRanges(vc.df$chrom, IRanges(vc.df$start, vc.df$end), mcols=DataFrame(vc.df[, c('freq')]))
+vc.df = read.csv("{vcf_csv}", header=T)
+vc.gr = GRanges(vc.df$chrom, IRanges(vc.df$start, vc.df$end), freq=vc.df$freq)
 
 cnv.df = read.csv("{cnv_csv}", header=T)
-cnv.gr = GRanges(cnv.df$chrom, IRange(cnv.df$start, cnv.df$end),
-                 mcols=DataFrame(cnv.df[, c('num.mark', 'seg.mean')]))
+cnv.gr = GRanges(cnv.df$chrom, IRanges(cnv.df$start, cnv.df$end),
+                 num.mark=cnv.df$num.mark, seg.mean=cnv.df$seg.mean)
+print(vc.gr)
+print(cnv.gr)
 
-rdb = getRBD(snp.gr=vc.gr, cnv.gr=cnv.gr)
-pur <- calc.prev(rdbx=rdb, heurx=FALSE, modex=3, plotx="prev_model.pdf")
+rbd = getRBD(snp.gr=vc.gr, cnv.gr=cnv.gr)
+pdf(file="{bubbles_out}", width=8, height=6)
+plotBubbles(rbd)
+dev.off()
+pur = calc.prev(rbd, heurx=FALSE, modex=5, plotx="{prev_model_out}")
 
+sink("{freqs_out}")
 # tumor subclone freqencies
 print(pur[[1]]$ploidy_prev)
 # tumor purity
 print(pur[[2]][nrow(pur[[2]]),2])
+sink()
 """
