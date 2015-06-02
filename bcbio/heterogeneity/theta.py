@@ -16,7 +16,6 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.structural import cnvkit
 
 def run(vrn_info, cnv_info, somatic_info):
     """Run THetA analysis given output from CNV caller on a tumor/normal pair.
@@ -26,6 +25,7 @@ def run(vrn_info, cnv_info, somatic_info):
         logger.info("THetA scripts not found in current PATH. Skipping.")
         return cnv_info
     else:
+        from bcbio.structural import cnvkit
         work_dir = _sv_workdir(somatic_info.tumor_data)
         cnv_info = cnvkit.export_theta(cnv_info, somatic_info.tumor_data)
         cnv_info = _run_theta(cnv_info, somatic_info.tumor_data, work_dir)
@@ -151,7 +151,7 @@ def _split_theta_ext(fname):
     return base
 
 def _sv_workdir(data):
-    return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
+    return utils.safe_makedir(os.path.join(data["dirs"]["work"], "heterogeneity",
                                            dd.get_sample_name(data), "theta"))
 
 def _get_cmd(cmd):
