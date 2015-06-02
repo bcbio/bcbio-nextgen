@@ -33,11 +33,6 @@ current implementation:
   calling on the whole genome (``coverage_interval`` is genome) or have more
   than 50 regional or exome samples called concurrently.
 
-- `Validation of structural variant detection`_ using multiple calling
-  methods. This implements a pipeline that works in tandem with SNP and indel
-  calling to detect larger structural variations like deletions, duplications,
-  inversions and copy number variants (CNVs).
-
 - An `evaluation of joint calling`_ with GATK HaplotypeCaller, FreeBayes,
   Platypus and samtools. This validates the joint calling implementation,
   allowing scaling of large population germline experiments. It also
@@ -53,8 +48,7 @@ external annotations in a SQL-based query interface.
 .. _variant evaluation framework: https://bcb.io/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
 .. _FreeBayes and BAM post-alignment processing: https://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 .. _improve variant filtering: http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/
-.. _Validation of structural variant detection: http://bcb.io/2014/08/12/validated-whole-genome-structural-variation-detection-using-multiple-callers/
-
+.. _FreeBayes: https://github.com/ekg/freebayes
 .. _GATK UnifiedGenotyper: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_genotyper_UnifiedGenotyper.html
 .. _GATK HaplotypeCaller: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_haplotypecaller_HaplotypeCaller.html
 .. _samtools mpileup: http://samtools.sourceforge.net/mpileup.shtml
@@ -163,6 +157,52 @@ heterogeneity and structural variability that define cancer genomes.
 .. _full evaluation of cancer calling: http://bcb.io/2015/03/05/cancerval/
 .. _synthetic dataset 3 from the ICGC-TCGA DREAM challenge: https://www.synapse.org/#!Synapse:syn312572/wiki/62018
 
+Structural variant calling
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+bcbio can detect larger structural variants like deletions, insertions, inversions
+and copy number changes for both germline population and cancer variant calling,
+based on validation against existing truth sets:
+
+- `Validation of germline structural variant detection`_ using multiple calling methods
+  to validate against deletions in NA12878. This implements a pipeline that
+  works in tandem with SNP and indel calling to detect larger structural
+  variations like deletions, duplications, inversions and copy number variants
+  (CNVs).
+
+- `Validation of tumor/normal calling <http://bcb.io/2015/03/05/cancerval/>`_
+  using the synthetic DREAM validation set. This includes validation of
+  additional callers against duplications, insertions and inversions.
+
+To enable structural variant calling, specify ``svcaller`` options in the
+algorithm section of your configuration::
+
+    - description: Sample
+      algorithm:
+        svcaller: [lumpy, cnvkit]
+
+The best supported callers are `Lumpy <https://github.com/arq5x/lumpy-sv>`_ for
+paired end and split read calling, `CNVkit
+<http://cnvkit.readthedocs.org/en/latest/>`_ for CNV calling, and `WHAM
+<https://github.com/jewmanchue/wham>`_ for association testing. We also support
+`DELLY <https://github.com/tobiasrausch/delly>`_, another excellent paired end
+and split read calling, although it is slow on large whole genome datasets.
+
+In addition to results from individual callers, bcbio creates a summarized
+ensemble callset. The goal is to have a flat high level representation to
+identify if there are likely to be structural variations within biological
+regions of interest. By linking to evidence from individual callers, this allows
+detailed investigation of support for any events of interest. The ensemble
+method is simple, and combines all calls from larger events (>2kb) and retains
+only events from smaller events with support from two callers.
+
+The ensemble callset also flattens representations to make them easier to
+compare. Deletions (DEL), insertions (INS) and inversions (INV) all have
+standard nomenclatures. The callset reports CNVs as the predicted integer copy
+number, cnv1_cnvkit is a copy number deletion from a diploid reference called by
+cnvkit.
+
+.. _Validation of germline structural variant detection: http://bcb.io/2014/08/12/validated-whole-genome-structural-variation-detection-using-multiple-callers/
+
 RNA-seq
 ~~~~~~~
 
@@ -202,7 +242,11 @@ DESeq2 or voom+limma, etc.
 Standard
 ~~~~~~~~
 
-This pipeline implements `alignment` and `qc` tools. Furthermore, it will run `qsignature`_ to detect possible duplicated samples, or miss-labeling. It uses SNPs signature to create a distance matrix that helps easily to create groups. The project yaml file will show number of total samples analyzed, number of very similar samples, and samples that could be duplicated.
+This pipeline implements ``alignment`` and ``qc`` tools. Furthermore, it will
+run `qsignature`_ to detect possible duplicated samples, or miss-labeling. It
+uses SNPs signature to create a distance matrix that helps easily to create
+groups. The project yaml file will show number of total samples analyzed, number
+of very similar samples, and samples that could be duplicated.
 
 .. _qsignature: http://sourceforge.net/p/adamajava/wiki/qSignature/
 
