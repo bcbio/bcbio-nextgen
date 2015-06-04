@@ -203,6 +203,13 @@ cnvkit. Some complex regions will have multiple overlapping calls and get
 collapsed into a single event with the predictions: 3,5 would be a region with
 two predicted amplifications of 3 and 5.
 
+Finally, the ensemble callset filters input calls to remove potential false
+positives. It remove calls in regions with excessively high depth of more
+than 20x the median coverage, which are typically associated with collapsed
+repeats and likely artifacts. It also removes reads where either end falls into
+a repetitive `low complexity region (LCR)
+<http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/>`_.
+
 .. _Validation of germline structural variant detection: http://bcb.io/2014/08/12/validated-whole-genome-structural-variation-detection-using-multiple-callers/
 
 RNA-seq
