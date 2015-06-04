@@ -3,8 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-bcbio-nextgen
-=============
+.. image:: contents/images/github.png
+   :alt: bcbio banner
+   :align: center
 
 A python toolkit providing best-practice pipelines for fully automated
 high throughput sequencing analysis. You write a high level
