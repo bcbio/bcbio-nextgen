@@ -1,5 +1,6 @@
-bcbio-nextgen
--------------
+.. image:: artwork/github.png
+   :alt: bcbio banner
+   :align: center
 
 Validated, scalable, community developed variant calling and RNA-seq analysis.
 You write a high level configuration file specifying your inputs and analysis
