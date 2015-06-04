@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 
+import pandas as pd
 import lxml.html
 import yaml
 from datetime import datetime
@@ -21,6 +22,7 @@ except ImportError:
 import pysam
 import toolz as tz
 import toolz.dicttoolz as dtz
+from fadapa import Fadapa
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -253,8 +255,9 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
 # ## Run and parse read information from FastQC
 
 class FastQCParser:
-    def __init__(self, base_dir):
+    def __init__(self, base_dir, sample=None):
         self._dir = base_dir
+        self.sample = sample
 
     def get_fastqc_summary(self):
         ignore = set(["Total Sequences", "Filtered Sequences",
@@ -280,6 +283,40 @@ class FastQCParser:
                             break
                         out.append(line.rstrip("\r\n"))
         return out
+
+    def save_sections_into_file(self):
+
+        data_file = os.path.join(self._dir, "fastqc_data.txt")
+        if os.path.exists(data_file):
+            parser = Fadapa(data_file)
+            module = [m[1] for m in parser.summary()][2:9]
+            for m in module:
+                out_file = os.path.join(self._dir, m.replace(" ", "_") + ".tsv")
+                dt = self._get_module(parser, m)
+                dt.to_csv(out_file, sep="\t", index=False)
+
+    def _get_module(self, parser, module):
+        """
+        Get module using fadapa package
+        """
+        dt = []
+        lines = parser.clean_data(module)
+        header = lines[0]
+        for data in lines[1:]:
+            if data[0].startswith("#"): #some modules have two headers
+                header = data
+                continue
+            if data[0].find("-") > -1: # expand positions 1-3 to 1, 2, 3
+                f, s = map(int, data[0].split("-"))
+                for pos in range(f, s):
+                    dt.append([str(pos)] + data[1:])
+            else:
+                dt.append(data)
+        dt = pd.DataFrame(dt)
+        dt.columns = [h.replace(" ", "_") for h in header]
+        dt['sample'] = self.sample
+        return dt
+
 
 def _run_gene_coverage(bam_file, data, out_dir):
     out_file = os.path.join(out_dir, "gene_coverage.pdf")
@@ -412,8 +449,9 @@ def _run_fastqc(bam_file, data, fastqc_out):
                     shutil.move(tx_fastqc_out, fastqc_out)
         if ds_bam and os.path.exists(ds_bam):
             os.remove(ds_bam)
-    parser = FastQCParser(fastqc_out)
+    parser = FastQCParser(fastqc_out, data["name"][-1])
     stats = parser.get_fastqc_summary()
+    parser.save_sections_into_file()
     return stats
 
 
