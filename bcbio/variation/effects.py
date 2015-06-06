@@ -70,7 +70,7 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
     if config is None: config = {}
     resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
     if tooldir:
-        os.environ["PERL5LIB"] = "{t}/lib/perl5:{t}/lib/perl5/site_perl:{l}".format(
+        os.environ["PERL5LIB"] = "{t}/lib/perl5:{l}".format(
             t=tooldir, l=os.environ.get("PERL5LIB", ""))
     if os.path.exists(resource_file):
         with open(resource_file) as in_handle:
