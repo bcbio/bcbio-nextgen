@@ -30,12 +30,13 @@ def breakpoints_by_caller(bed_files):
     merged = concat(bed_files)
     if not merged:
         return []
-    grouped_start = merged.groupby(g=[1, 2, 2], c=4, o=["distinct"])
-    grouped_end = merged.groupby(g=[1, 3, 3], c=4, o=["distinct"])
+    grouped_start = merged.groupby(g=[1, 2, 2], c=4, o=["distinct"]).filter(lambda r: r.end > r.start).saveas()
+    grouped_end = merged.groupby(g=[1, 3, 3], c=4, o=["distinct"]).filter(lambda r: r.end > r.start).saveas()
     together = concat([grouped_start, grouped_end])
-    final = together.expand(c=4)
-    final = final.sort()
-    return final
+    if together:
+        final = together.expand(c=4)
+        final = final.sort()
+        return final
 
 def _get_sv_callers(items):
     """
