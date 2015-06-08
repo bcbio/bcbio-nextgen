@@ -763,6 +763,16 @@ def _parse_bamtools_stats(stats_file):
                         out["%s pct" % metric] = pct
     return out
 
+def _parse_offtargets(bam_file):
+    """
+    Add to metrics off-targets reads if it exitst
+    """
+    off_target = bam_file.replace(".bam", "-offtarget-stats.yaml")
+    if os.path.exists(off_target):
+        res = yaml.load(open(off_target))
+        return res
+    return {}
+
 def _run_bamtools_stats(bam_file, data, out_dir):
     """Run bamtools stats with reports on mapped reads, duplicates and insert sizes.
     """
@@ -776,7 +786,9 @@ def _run_bamtools_stats(bam_file, data, out_dir):
                 cmd += " -insert"
             cmd += " > {tx_out_file}"
             do.run(cmd.format(**locals()), "bamtools stats", data)
-    return _parse_bamtools_stats(stats_file)
+    out = _parse_bamtools_stats(stats_file)
+    out.update(_parse_offtargets(bam_file))
+    return out
 
 ## Variant statistics from gemini
 
