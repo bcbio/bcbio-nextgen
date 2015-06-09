@@ -130,7 +130,7 @@ but having as many duplicate lines for each samples as files to be merged::
 An example of usage is::
 
 
-    python $BCBIO_PATH/scripts/utils/bcbio_prepare_samples.py --out merged --csv project1.csv
+    bcbio_prepare_samples.py --out merged --csv project1.csv
 
 The script will create the ``sample1.fastq,sample2.fastq`` in the ``merged`` folder, and a new CSV file 
 in the same folder than the input CSV :``project1-merged.csv``. Later, it can be used for bcbio::
