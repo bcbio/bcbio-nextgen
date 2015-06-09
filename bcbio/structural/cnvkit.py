@@ -117,7 +117,8 @@ def _associate_cnvkit_out(ckout, items):
         ckout = _add_bed_to_output(ckout, data)
         #  ckout = _add_coverage_bedgraph_to_output(ckout, data)
         ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
-        ckout = _add_plots_to_output(ckout, data)
+        if "svplots" in dd.get_tools_on(data):
+            ckout = _add_plots_to_output(ckout, data)
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append(ckout)

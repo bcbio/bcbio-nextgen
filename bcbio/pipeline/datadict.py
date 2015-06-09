@@ -75,7 +75,9 @@ LOOKUPS = {
     "coverage_interval": {"keys": ["config", "algorithm", "coverage_interval"]},
     "coverage_regions": {"keys": ["config", "algorithm", "coverage"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
-    "align_bam": {"keys": ["align_bam"]}
+    "align_bam": {"keys": ["align_bam"]},
+    "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": []},
+    "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": []},
 }
 
 def get_input_sequence_files(data, default=None):

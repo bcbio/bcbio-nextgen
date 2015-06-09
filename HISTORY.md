@@ -5,6 +5,8 @@
 - Single sample structural variant calling: corectly handle multiple variant
   callers. Thanks to Sven-Eric Schelhorn.
 - VarDict and VarDictJava: annotate outputs with dbSNP.
+- Add `tools_on` configuration with `svplots` option. This turns off structural
+  variant plotting by default, which can be time consuming compared to calling.
 - Fix VEP/GEMINI incompatibility where empty fields are included in VCF output.
 - VarDict: restrict maximum region size within a BED file to 2Mb to avoid high
   memory usage and failures for longer regions.

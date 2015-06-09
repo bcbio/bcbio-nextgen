@@ -555,6 +555,9 @@ Post-processing
   forces use of original bwa aln alignment. Without this, we use bwa mem with
   70bp or longer reads. ``fastqc`` turns off quality control FastQC usage.
   Default: [] -- all tools on.
+- ``tools_on`` Specify functionality to enable that is off by default.
+  ``svplots`` adds additional coverage and summary plots for CNVkit and
+  detected ensemble variants.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini

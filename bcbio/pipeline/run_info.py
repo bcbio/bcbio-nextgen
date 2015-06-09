@@ -264,7 +264,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "min_read_length", "coverage_depth_min",
                       "coverage_depth_max", "min_allele_fraction",
                       "remove_lcr",
-                      "archive", "tools_off", "assemble_transcripts",
+                      "archive", "tools_off", "tools_on", "assemble_transcripts",
                       "mixup_check", "priority_regions"] +
                      # back compatibility
                       ["coverage_depth"])
@@ -572,8 +572,9 @@ def _add_algorithm_defaults(algorithm):
     """
     defaults = {"archive": [],
                 "min_allele_fraction": 10.0,
-                "tools_off": []}
-    convert_to_list = set(["archive", "tools_off", "hetcaller"])
+                "tools_off": [],
+                "tools_on": []}
+    convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller"])
     for k, v in defaults.items():
         if k not in algorithm:
             algorithm[k] = v

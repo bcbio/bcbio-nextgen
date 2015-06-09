@@ -69,7 +69,10 @@ def finalize_sv(samples, config):
                 by_batch[batch] = [final]
     out = []
     for batch, items in by_batch.items():
-        plot_items = plot.by_regions(items)
+        if any("svplots" in dd.get_tools_on(d) for d in items):
+            plot_items = plot.by_regions(items)
+        else:
+            plot_items = items
         for data in plot_items:
             if lead_batches[dd.get_sample_name(data)] == batch:
                 out.append([data])
