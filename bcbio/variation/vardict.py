@@ -14,7 +14,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bamprep, vcfutils
+from bcbio.variation import annotation, bamprep, vcfutils
 
 def _vardict_options_from_config(items, config, out_file, region=None, do_merge=False):
     opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
@@ -137,6 +137,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 vcfutils.merge_variant_files(orig_files=sample_vcf_names,
                                              out_file=tx_out_file, ref_file=ref_file,
                                              config=config, region=bamprep.region_to_gatk(region))
+    out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
+                if assoc_files.get("dbsnp") else out_file)
     return out_file
 
 def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
@@ -186,4 +188,6 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
+    out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
+                if assoc_files.get("dbsnp") else out_file)
     return out_file
