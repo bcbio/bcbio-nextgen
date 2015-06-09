@@ -19,10 +19,13 @@ try:
     plt.ioff()
 except ImportError:
     plt = None
+try:
+    from fadapa import Fadapa
+except ImportError:
+    Fadapa = None
 import pysam
 import toolz as tz
 import toolz.dicttoolz as dtz
-from fadapa import Fadapa
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -287,7 +290,7 @@ class FastQCParser:
     def save_sections_into_file(self):
 
         data_file = os.path.join(self._dir, "fastqc_data.txt")
-        if os.path.exists(data_file):
+        if os.path.exists(data_file) and Fadapa:
             parser = Fadapa(data_file)
             module = [m[1] for m in parser.summary()][2:9]
             for m in module:
