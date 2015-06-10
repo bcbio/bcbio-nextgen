@@ -4,6 +4,9 @@
   option by default.
 - Single sample structural variant calling: corectly handle multiple variant
   callers. Thanks to Sven-Eric Schelhorn.
+- VarDict and VarDictJava: limit regions to 1Mb with overlaps to avoid memory
+  errors. Ignore regions without BED reads which can lead to large genomic
+  sections and memory errors.
 - VarDict and VarDictJava: annotate outputs with dbSNP.
 - Add `tools_on` configuration with `svplots` option. This turns off structural
   variant plotting by default, which can be time consuming compared to calling.
