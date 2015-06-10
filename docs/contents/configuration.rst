@@ -107,6 +107,14 @@ samples, pointing to this custom configuration file::
 
     bcbio_nextgen -w template project1/config/project1-template.yaml project1.csv folder/*
 
+If your sample folder contains additional BAM or fastq files you do not wish to
+include in the sample YAML configuration, you can restrict the output to only
+include samples in the metadata CSV with ``--only-metadata``. The output will
+print warnings about samples not present in the metadata file, then leave these
+out of the final output YAML::
+
+    bcbio_nextgen -w template --only-metadata project1/config/project1-template.yaml project1.csv folder/*
+
     
 .. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
 .. _multi-files-sample-configuration:

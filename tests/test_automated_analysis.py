@@ -319,7 +319,8 @@ class AutomatedAnalysisTest(unittest.TestCase):
         self._install_test_files(self.data_dir)
         fc_dir = os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX")
         with make_workdir() as workdir:
-            cl = ["bcbio_nextgen.py", "-w", "template", "freebayes-variant",
+            cl = ["bcbio_nextgen.py", "-w", "template", "--only-metadata",
+                  "freebayes-variant",
                   os.path.join(fc_dir, "100326.csv"),
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_1_fastq.txt"),
                   os.path.join(fc_dir, "7_100326_FC6107FAAXX_2_fastq.txt"),

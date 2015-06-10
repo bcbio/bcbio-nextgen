@@ -10,6 +10,9 @@
 - VarDict and VarDictJava: annotate outputs with dbSNP.
 - Add `tools_on` configuration with `svplots` option. This turns off structural
   variant plotting by default, which can be time consuming compared to calling.
+- Add a `--only-metadata` argument to template preparation that will only
+  include BAM or fastq files in sample YAML if they are present in the metadata
+  CSV file.
 - Fix VEP/GEMINI incompatibility where empty fields are included in VCF output.
 - VarDict: restrict maximum region size within a BED file to 2Mb to avoid high
   memory usage and failures for longer regions.

@@ -107,6 +107,8 @@ def parse_cl_args(in_args):
                                   "current working directory"))
         parser.add_argument("-v", "--version", help="Print current version",
                             action="store_true")
+        # Hidden arguments passed downstream
+        parser.add_argument("--only-metadata", help=argparse.SUPPRESS, action="store_true", default=False)
     args = parser.parse_args(in_args)
     if hasattr(args, "global_config"):
         error_msg = _sanity_check_args(args)
@@ -175,6 +177,8 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
     elif len(inputs) == 3:
         global_config, fc_dir, run_info_yaml = inputs
     elif kwargs.get("workflow", "") == "template":
+        if args.only_metadata:
+            inputs.append("--only-metadata")
         kwargs["inputs"] = inputs
         return kwargs
     elif args.version:

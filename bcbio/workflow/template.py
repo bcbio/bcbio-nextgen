@@ -37,6 +37,8 @@ def setup_args(parser):
                                           "noalign-variant, illumina-rnaseq, illumina-chipseq"))
     parser.add_argument("metadata", help="CSV file with project metadata. Name of file used as project name.")
     parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
+    parser.add_argument("--only-metadata", help="Ignore samples not present in metadata CSV file",
+                        action="store_true", default=False)
     return parser
 
 # ## Prepare sequence data inputs
@@ -188,7 +190,6 @@ def _set_global_vars(metadata):
     fnames = collections.defaultdict(list)
     for sample in metadata.keys():
         for k, v in metadata[sample].items():
-            print k, v
             if isinstance(v, basestring) and os.path.isfile(v):
                 v = _expand_file(v)
                 metadata[sample][k] = v
@@ -309,7 +310,7 @@ def _add_ped_metadata(name, metadata):
                 break
     return metadata
 
-def _add_metadata(item, metadata, remotes):
+def _add_metadata(item, metadata, remotes, only_metadata=False):
     """Add metadata information from CSV file to current item.
 
     Retrieves metadata based on 'description' parsed from input CSV file.
@@ -325,6 +326,7 @@ def _add_metadata(item, metadata, remotes):
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
     TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_files", "files", "analysis"])
+    keep_sample = True
     if len(item_md) > 0:
         if "metadata" not in item:
             item["metadata"] = {}
@@ -338,11 +340,13 @@ def _add_metadata(item, metadata, remotes):
                 else:
                     item["metadata"][k] = v
     elif len(metadata) > 0:
-        print "Metadata not found for sample %s, %s" % (item["description"],
-                                                        os.path.basename(item["files"][0]))
+        warn = "Dropped sample" if only_metadata else "Added minimal sample information"
+        print "WARNING: %s: metadata not found for %s, %s" % (warn, item["description"],
+                                                              os.path.basename(item["files"][0]))
+        keep_sample = not only_metadata
     if tz.get_in(["metadata", "ped"], item):
         item["metadata"] = _add_ped_metadata(item["description"], item["metadata"])
-    return item
+    return item if keep_sample else None
 
 def _retrieve_remote(fnames):
     """Retrieve remote inputs found in the same bucket as the template or metadata files.
@@ -379,8 +383,9 @@ def setup(args):
     project_name, metadata, global_vars = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
     inputs = args.input_files + remotes.get("inputs", [])
-    items = [_add_metadata(item, metadata, remotes)
-             for item in _prep_items_from_base(base_item, inputs)]
+    raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
+                 for item in _prep_items_from_base(base_item, inputs)]
+    items = [x for x in raw_items if x]
 
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
@@ -388,6 +393,7 @@ def setup(args):
         items = [_convert_to_relpaths(x, work_dir) for x in items]
     if len(items) == 0:
         out_config_file = _write_template_config(template_txt, project_name, out_dir)
+        print
         print "Template configuration file created at: %s" % out_config_file
         print "Edit to finalize custom options, then prepare full sample config with:"
         print "  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
@@ -395,6 +401,7 @@ def setup(args):
     else:
         out_config_file = _write_config_file(items, global_vars, template, project_name, out_dir,
                                              remotes)
+        print
         print "Configuration file created at: %s" % out_config_file
         print "Edit to finalize and run with:"
         print "  cd %s" % work_dir
