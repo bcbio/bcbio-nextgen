@@ -813,12 +813,13 @@ def _run_gemini_stats(bam_file, data, out_dir):
             out["Transition/Transversion"] = tstv.split("\n")[1].split()[-1]
             for line in gt_counts.split("\n"):
                 parts = line.rstrip().split()
-                if len(parts) > 0 and parts[0] == data["name"][-1]:
-                    _, hom_ref, het, hom_var, _, total = parts
+                if len(parts) > 0 and parts[0] != "sample":
+                    name, hom_ref, het, hom_var, _, total = parts
+                    out[name] = {}
+                    out[name]["Variations (heterozygous)"] = int(het)
+                    out[name]["Variations (homozygous)"] = int(hom_var)
+                    # same total variations for all samples, keep that top level as well.
                     out["Variations (total)"] = int(total)
-                    out["Variations (heterozygous)"] = int(het)
-                    out["Variations (homozygous)"] = int(hom_var)
-                    break
             out["Variations (in dbSNP)"] = int(dbsnp_count.strip())
             if out.get("Variations (total)") > 0:
                 out["Variations (in dbSNP) pct"] = "%.1f%%" % (out["Variations (in dbSNP)"] /
