@@ -79,24 +79,24 @@ def prepare_exclude_file(items, base_file, chrom=None):
     centromere regions, both of which contribute to long run times and
     false positive structural variant calls.
     """
-    out_file = "%s-exclude.bed" % utils.splitext_plus(base_file)[0]
-    all_vrs = _get_variant_regions(items)
-    ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
-                    if len(all_vrs) > 0 else chrom)
-    with shared.bedtools_tmpdir(items[0]):
-        # Get a bedtool for the full region if no variant regions
-        if ready_region == chrom:
-            want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
-                                                    items[0]["config"], chrom)
-            lcr_bed = shared.get_lcr_bed(items)
-            if lcr_bed:
-                want_bedtool = want_bedtool.subtract(pybedtools.BedTool(lcr_bed))
-        else:
-            want_bedtool = pybedtools.BedTool(ready_region).saveas()
-        sv_exclude_bed = _get_sv_exclude_file(items)
-        if sv_exclude_bed and len(want_bedtool) > 0:
-            want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
-        if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
+    out_file = "%s-exclude%s.bed" % (utils.splitext_plus(base_file)[0], "-%s" % chrom if chrom else "")
+    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
+        all_vrs = _get_variant_regions(items)
+        ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
+                        if len(all_vrs) > 0 else chrom)
+        with shared.bedtools_tmpdir(items[0]):
+            # Get a bedtool for the full region if no variant regions
+            if ready_region == chrom:
+                want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
+                                                        items[0]["config"], chrom)
+                lcr_bed = shared.get_lcr_bed(items)
+                if lcr_bed:
+                    want_bedtool = want_bedtool.subtract(pybedtools.BedTool(lcr_bed))
+            else:
+                want_bedtool = pybedtools.BedTool(ready_region).saveas()
+            sv_exclude_bed = _get_sv_exclude_file(items)
+            if sv_exclude_bed and len(want_bedtool) > 0:
+                want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
             with file_transaction(items[0], out_file) as tx_out_file:
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
@@ -149,7 +149,6 @@ def _find_to_filter(in_file, exclude_file, params, to_exclude):
     We look for ends with a large percentage in a repeat or where the end contains
     an entire repeat.
     """
-    import pybedtools
     for feat in pybedtools.BedTool(in_file).intersect(pybedtools.BedTool(exclude_file), wao=True, nonamecheck=True):
         us_chrom, us_start, us_end, name, other_chrom, other_start, other_end, overlap = feat.fields
         if float(overlap) > 0:
@@ -179,7 +178,6 @@ def _create_end_file(in_file, coord, params, out_file):
 def get_sv_chroms(items, exclude_file):
     """Retrieve chromosomes to process on, avoiding extra skipped chromosomes.
     """
-    import pybedtools
     exclude_regions = {}
     for region in pybedtools.BedTool(exclude_file):
         if int(region.start) == 0:
