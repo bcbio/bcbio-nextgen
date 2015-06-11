@@ -70,6 +70,8 @@ def zeromq_aware_logging(f):
 def run_multicore(fn, items, config, parallel=None):
     """Run the function using multiple cores on the given items to process.
     """
+    if len(items) == 0:
+        return []
     if parallel is None or "num_jobs" not in parallel:
         if parallel is None:
             parallel = {"type": "local", "cores": config["algorithm"].get("num_cores", 1)}
