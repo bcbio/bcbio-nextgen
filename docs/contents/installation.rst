@@ -38,8 +38,9 @@ for configuring the installation process. Some useful arguments are:
 To bootstrap installation, the machine will need to have some basic
 requirements:
 
-- Python 2.6 or 2.7, with the development libraries
-  installed (the python-dev or python-devel packages).
+- Python 2.7, Python 3.x or Python 2.6 plus the argparse dependency
+  with the development libraries installed (the python-dev or python-devel
+  packages).
 - Compilers: Recent versions of gcc, g++ and gfortran. gcc 4.8.x
   is well tested, although other versions should work.
 - The git version control system (http://git-scm.com/).

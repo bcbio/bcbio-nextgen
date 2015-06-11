@@ -5,8 +5,9 @@ This automates the steps required for installation and setup to make it
 easier to get started with bcbio-nextgen. The defaults provide data files
 for human variant calling.
 
-Requires: git, Python 2.7 or argparse for earlier versions.
+Requires: git, Python 3.x, Python 2.7 or argparse + Python 2.6 and earlier
 """
+from __future__ import print_function
 import collections
 import contextlib
 import datetime
@@ -15,7 +16,10 @@ import platform
 import shutil
 import subprocess
 import sys
-import urllib2
+try:
+    import urllib2 as urllib_request
+except ImportError:
+    import urllib.request as urllib_request
 
 remotes = {"requirements":
            "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
@@ -55,7 +59,7 @@ def _clean_args(sys_argv, args, bcbio):
     # in bcbio_nextgen 0.7.5 and beyond
     process = subprocess.Popen([bcbio["bcbio_nextgen.py"], "--version"], stdout=subprocess.PIPE)
     version, _ = process.communicate()
-    if version.strip() > "0.7.4":
+    if version.decode("utf-8").strip() > "0.7.4":
         if "--nodata" in base:
             base.remove("--nodata")
         else:
@@ -150,11 +154,11 @@ def write_system_config(base_url, datadir, tooldir):
     if tooldir:
         java_basedir = os.path.join(tooldir, "share", "java")
     rewrite_ignore = ("log",)
-    with contextlib.closing(urllib2.urlopen(base_url)) as in_handle:
+    with contextlib.closing(urllib_request.urlopen(base_url)) as in_handle:
         with open(out_file, "w") as out_handle:
             in_resources = False
             in_prog = None
-            for line in in_handle:
+            for line in (l.decode("utf-8") for l in in_handle):
                 if line[0] != " ":
                     in_resources = line.startswith("resources")
                     in_prog = None
