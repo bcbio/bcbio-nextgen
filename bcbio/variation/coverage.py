@@ -116,7 +116,7 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
     c = conn.cursor()
     q = c.execute("SELECT contig, start, end, strand, coverage, completeness "
                   "FROM interval_data "
-                  "JOIN interval ON interval_data a.parent_id=interval.id "
+                  "JOIN interval ON interval_data.parent_id=interval.id "
                   "WHERE coverage < %d OR "
                   "completeness < %d" % (DEFAULT_COVERAGE_CUTOFF,
                                            DEFAULT_COMPLETENESS_CUTOFF))
