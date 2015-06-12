@@ -65,13 +65,13 @@ def calc_callable_loci(data, region=None, out_file=None):
             if calc_callable:
                 _group_by_ctype(_get_coverage_file(data["work_bam"], ref_file, region, region_file, depth,
                                                    tx_out_file, data),
-                                depth, region_file, tx_out_file)
+                                depth, region_file, tx_out_file, data)
             # special case, do not calculate if we are in a chromosome not covered by BED file
             else:
                 os.rename(region_file, tx_out_file)
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
-def _group_by_ctype(bed_file, depth, region_file, out_file):
+def _group_by_ctype(bed_file, depth, region_file, out_file, data):
     """Group adjacent callable/uncallble regions into defined intervals.
 
     Uses tips from bedtools discussion:
@@ -85,7 +85,7 @@ def _group_by_ctype(bed_file, depth, region_file, out_file):
     with open(full_out_file, "w") as out_handle:
         kwargs = {"g": [1, 4], "c": [1, 2, 3, 4], "ops": ["first", "first", "max", "first"]}
         # back compatible precision https://github.com/chapmanb/bcbio-nextgen/issues/664
-        if LooseVersion(programs.get_version_manifest("bedtools", True)) >= LooseVersion("2.22.0"):
+        if LooseVersion(programs.get_version_manifest("bedtools", data=data, required=True)) >= LooseVersion("2.22.0"):
             kwargs["prec"] = 21
         for line in open(pybedtools.BedTool(bed_file).each(assign_coverage).saveas()
                                                      .groupby(**kwargs).fn):

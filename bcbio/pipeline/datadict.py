@@ -62,6 +62,7 @@ LOOKUPS = {
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},
+    "galaxy_dir": {"keys": ["dirs", "galaxy"]},
     "assembled_gtf": {"keys": ["assembled_gtf"]},
     "assemble_transcripts": {"keys": ["config", "algorithm", "assemble_transcripts"],
                              "default": False},

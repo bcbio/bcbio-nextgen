@@ -7,11 +7,12 @@ import os
 import contextlib
 import subprocess
 import sys
-
 import yaml
+import toolz as tz
 
 from bcbio import utils
 from bcbio.pipeline import config_utils, version
+from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
 
 _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
@@ -128,6 +129,7 @@ def _get_cl_version(p, config):
     try:
         prog = config_utils.get_program(p["cmd"], config)
     except config_utils.CmdNotFound:
+
         localpy_cmd = os.path.join(os.path.dirname(sys.executable), p["cmd"])
         if os.path.exists(localpy_cmd):
             prog = localpy_cmd
@@ -176,7 +178,8 @@ def _get_versions(config=None):
     out = [{"program": "bcbio-nextgen",
             "version": ("%s-%s" % (version.__version__, version.__git_revision__)
                         if version.__git_revision__ else version.__version__)}]
-    manifest_vs = _get_versions_manifest()
+    manifest_dir = _get_manifest_dir(config)
+    manifest_vs = _get_versions_manifest(manifest_dir)
     if manifest_vs:
         return out + manifest_vs
     else:
@@ -192,12 +195,36 @@ def _get_versions(config=None):
                                     p["version_fn"](config))})
         return out
 
-def _get_versions_manifest():
+def _get_manifest_dir(data=None):
+    """
+    get manifest directory from the data dictionary, falling back on alternatives
+    it prefers, in order:
+    1. locating it from the bcbio_system.yaml file
+    2. locating it from the galaxy directory
+    3. location it from the python executable. 
+
+    it can accept either the data or config dictionary
+    """
+    manifest_dir = None
+    if data:
+        bcbio_system = tz.get_in(["config", "bcbio_system"], data, None)
+        bcbio_system = bcbio_system if bcbio_system else data.get("bcbio_system", None)
+        if bcbio_system:
+	    sibling_dir = os.path.normpath(os.path.dirname(bcbio_system))
+        else:
+            sibling_dir = dd.get_galaxy_dir(data)
+        if sibling_dir:
+            manifest_dir = os.path.normpath(os.path.join(sibling_dir, os.pardir,
+                                                         "manifest"))
+    if not manifest_dir or not os.path.exists(manifest_dir):
+        manifest_dir = os.path.join(config_utils.get_base_installdir(), "manifest")
+    return manifest_dir
+
+def _get_versions_manifest(manifest_dir):
     """Retrieve versions from a pre-existing manifest of installed software.
     """
     all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant", "gatk-framework"] + \
                [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
-    manifest_dir = os.path.join(config_utils.get_base_installdir(), "manifest")
     if os.path.exists(manifest_dir):
         out = []
         for plist in ["toolplus", "brew", "python", "r", "debian", "custom"]:
@@ -237,10 +264,11 @@ def write_versions(dirs, config=None, is_wrapper=False):
                 out_handle.write("{program},{version}\n".format(**p))
     return out_file
 
-def get_version_manifest(name, required=False):
+def get_version_manifest(name, data=None, required=False):
     """Retrieve a version from the currently installed manifest.
     """
-    manifest_vs = _get_versions_manifest()
+    manifest_dir = _get_manifest_dir(data)
+    manifest_vs = _get_versions_manifest(manifest_dir)
     for x in manifest_vs:
         if x["program"] == name:
             v = x.get("version", "")

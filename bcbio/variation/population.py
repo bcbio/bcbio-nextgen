@@ -61,7 +61,7 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
                     load_opts += " --test-mode"
             # Skip CADD or gerp-bp if neither are loaded
             if gemini_ver and LooseVersion(gemini_ver) >= LooseVersion("0.7.0"):
-                gemini_dir = install.get_gemini_dir()
+                gemini_dir = install.get_gemini_dir(data)
                 for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz")]:
                     if not os.path.exists(os.path.join(gemini_dir, check_file)):
                         load_opts += " %s" % skip_cmd

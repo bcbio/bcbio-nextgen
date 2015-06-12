@@ -180,8 +180,8 @@ def _get_loftee(data):
 
 # ## snpEff variant effects
 
-def snpeff_version(args=None):
-    raw_version = programs.get_version_manifest("snpeff")
+def snpeff_version(args=None, data=None):
+    raw_version = programs.get_version_manifest("snpeff", data=data)
     if not raw_version:
         raw_version = ""
     snpeff_version = "".join([x for x in str(raw_version)
@@ -204,7 +204,7 @@ def _snpeff_args_from_config(data):
     args = []
     # Use older EFF formatting instead of new combined ANN formatting until
     # downstream tools catch up, then remove this.
-    if LooseVersion(snpeff_version()) >= LooseVersion("4.1"):
+    if LooseVersion(snpeff_version(data=data)) >= LooseVersion("4.1"):
         args += ["-formatEff", "-classic"]
     # General supplied arguments
     resources = config_utils.get_resources("snpeff", config)

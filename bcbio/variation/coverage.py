@@ -116,14 +116,14 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
     c = conn.cursor()
     q = c.execute("SELECT contig, start, end, strand, coverage, completeness "
                   "FROM interval_data "
-                  "JOIN interval ON interval_data.parent_id=interval.id "
+                  "JOIN interval ON interval_data a.parent_id=interval.id "
                   "WHERE coverage < %d OR "
                   "completeness < %d" % (DEFAULT_COVERAGE_CUTOFF,
                                            DEFAULT_COMPLETENESS_CUTOFF))
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file + ".tmp", "w") as out_handle:
             for line in q:
-                line = map(str, line)
+                line = [str(x) for x in line]
                 out_handle.write("\t".join([line[0], line[1], line[2],
                                             line[3], line[4], line[5]]) + "\n")
         bt = BedTool(tx_out_file + ".tmp").sort().bgzip()

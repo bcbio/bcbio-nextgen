@@ -66,7 +66,7 @@ def organize(dirs, config, run_info_yaml, sample_names):
     return out
 
 def _add_provenance(items, dirs, config):
-    p = programs.write_versions(dirs, config)
+    p = programs.write_versions(dirs, config=config)
     versioncheck.testall(items)
     p_db = diagnostics.initialize(dirs)
     out = []
