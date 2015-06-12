@@ -7,12 +7,14 @@ import operator
 import toolz as tz
 
 from bcbio.pipeline import datadict as dd
-from bcbio.structural import cn_mops, cnvkit, delly, ensemble, lumpy, plot, validate, wham
+from bcbio.structural import (battenberg, cn_mops, cnvkit, delly, ensemble,
+                              lumpy, plot, validate, wham)
 from bcbio.variation import vcfutils
 
 _CALLERS = {}
 _BATCH_CALLERS = {"cn.mops": cn_mops.run, "cnvkit": cnvkit.run,
-                  "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run}
+                  "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
+                  "battenberg": battenberg.run}
 _NEEDS_BACKGROUND = set(["cn.mops"])
 
 def _get_svcallers(data):
