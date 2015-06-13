@@ -7,6 +7,7 @@ import os
 import toolz as tz
 
 from bcbio import install, utils
+from bcbio.bam import ref
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
@@ -39,6 +40,7 @@ def _do_run(paired):
     if len(_missing_files(out)) > 0:
         ref_file = dd.get_ref_file(paired.tumor_data)
         bat_datadir = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "battenberg"))
+        ignore_file = _make_ignore_file(work_dir, ref_file, os.path.join(bat_datadir, "impute", "impute_info.txt"))
         local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                      "lib", "R", "site-library")
         tumor_bam = paired.tumor_bam
@@ -48,12 +50,28 @@ def _do_run(paired):
         cores = dd.get_num_cores(paired.tumor_data)
         cmd = ("export R_LIBS_USER={local_sitelib} && "
                "battenberg.pl -t {cores} -o {work_dir} -r {ref_file}.fai "
-               "-tb {tumor_bam} -nb {normal_bam} -e {bat_datadir}/impute/imput_info.txt "
+               "-tb {tumor_bam} -nb {normal_bam} -e {bat_datadir}/impute/impute_info.txt "
                "-u {bat_datadir}/1000genomesloci -c {bat_datadir}/probloci.txt "
+               "-ig {ignore_file} "
                "-assembly {genome_build} -species Human -platform {platform}")
         do.run(cmd.format(**locals()), "Battenberg CNV calling")
     assert len(_missing_files(out)) == 0, "Missing Battenberg output: %s" % _missing_files(out)
     return out
+
+def _make_ignore_file(work_dir, ref_file, impute_file):
+    ignore_file = os.path.join(work_dir, "ignore_chromosomes.txt")
+    chroms = set([])
+    with open(impute_file) as in_handle:
+        for line in in_handle:
+            chrom = line.split()[0]
+            chroms.add(chrom)
+            if not chrom.startswith("chr"):
+                chroms.add("chr%s" % chrom)
+    with open(ignore_file, "w") as out_handle:
+        for contig in ref.file_contigs(ref_file):
+            if contig.name not in chroms:
+                out_handle.write("%s\n" % contig.name)
+    return ignore_file
 
 def _missing_files(out):
     missing_files = []
