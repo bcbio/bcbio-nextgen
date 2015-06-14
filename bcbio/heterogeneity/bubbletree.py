@@ -14,11 +14,13 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import regions
 
-def run(vrn_info, cnv_info, somatic_info):
+def run(vrn_info, cnvs_by_name, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
     """
     work_dir = _cur_workdir(somatic_info.tumor_data)
     vcf_csv = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], work_dir, somatic_info)
+    assert "cnvkit" in cnvs_by_name, "BubbleTree only currently support CNVkit"
+    cnv_info = cnvs_by_name["cnvkit"]
     cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], work_dir, somatic_info.tumor_data)
     _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data)
 

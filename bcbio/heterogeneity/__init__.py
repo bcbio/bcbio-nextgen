@@ -7,18 +7,18 @@ especially in complex cancer samples.
 """
 import collections
 
-from bcbio.heterogeneity import bubbletree, theta
+from bcbio.heterogeneity import bubbletree, phylowgs, theta
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 
 def _get_cnvs(data):
     """Retrieve CNV calls to use for heterogeneity analysis.
     """
-    supported = set(["cnvkit"])
-    out = []
+    supported = set(["cnvkit", "battenberg"])
+    out = {}
     for sv in data.get("sv", []):
         if sv["variantcaller"] in supported:
-            out.append(sv)
+            out[sv["variantcaller"]].append(sv)
     return out
 
 def _get_variants(data):
@@ -70,6 +70,7 @@ def estimate(items, batch, config):
     """Estimate heterogeneity for a pair of tumor/normal samples. Run in parallel.
     """
     hetcallers = {"theta": theta.run,
+                  "phylowgs": phylowgs.run,
                   "bubbletree": bubbletree.run}
     paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
     cnvs = _get_cnvs(paired.tumor_data)
@@ -81,7 +82,7 @@ def estimate(items, batch, config):
             hetfn = None
             print "%s not yet implemented" % hetcaller
         if hetfn:
-            hetout = hetfn(variants[0], cnvs[0], paired)
+            hetout = hetfn(variants[0], cnvs, paired)
     out = []
     for data in items:
         if batch == _get_batches(data)[0]:

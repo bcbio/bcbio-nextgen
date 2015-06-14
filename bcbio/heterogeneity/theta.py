@@ -17,28 +17,29 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
-def run(vrn_info, cnv_info, somatic_info):
+def run(vrn_info, cnvs_by_name, somatic_info):
     """Run THetA analysis given output from CNV caller on a tumor/normal pair.
     """
     cmd = _get_cmd("RunTHeTA.py")
     if not cmd:
         logger.info("THetA scripts not found in current PATH. Skipping.")
-        return cnv_info
     else:
         from bcbio.structural import cnvkit
         work_dir = _sv_workdir(somatic_info.tumor_data)
-        cnv_info = cnvkit.export_theta(cnv_info, somatic_info.tumor_data)
-        cnv_info = _run_theta(cnv_info, somatic_info.tumor_data, work_dir)
-        return cnv_info
+        assert "cnvkit" in cnvs_by_name, "THetA requires CNVkit calls"
+        cnv_info = cnvkit.export_theta(cnvs_by_name["cnvkit"], somatic_info.tumor_data)
+        return _run_theta(cnv_info, somatic_info.tumor_data, work_dir)
 
 def _run_theta(cnv_info, data, work_dir):
     """Run theta, calculating subpopulations and normal contamination.
     """
+    out = {"caller": "theta"}
     max_normal = "0.9"
     opts = ["-m", max_normal]
     n2_result = _safe_run_theta(cnv_info["theta_input"], os.path.join(work_dir, "n2"), ".n2.results",
                                 ["-n", "2"] + opts, data)
     if n2_result:
+        out["estimate"] = n2_result
         n2_bounds = "%s.withBounds" % os.path.splitext(n2_result)[0]
         n3_result = _safe_run_theta(n2_bounds, os.path.join(work_dir, "n3"), ".n3.results",
                                     ["-n", "3", "--RESULTS", n2_result] + opts,
@@ -46,8 +47,9 @@ def _run_theta(cnv_info, data, work_dir):
         if n3_result:
             best_result = _select_model(n2_bounds, n2_result, n3_result,
                                         os.path.join(work_dir, "n3"), data)
-            cnv_info["theta"] = _merge_theta_calls(n2_bounds, best_result, cnv_info["vrn_file"], data)
-    return cnv_info
+            out["estimate"] = best_result
+            out["cnvs"] = _merge_theta_calls(n2_bounds, best_result, cnv_info["vrn_file"], data)
+    return out
 
 def _update_with_calls(result_file, cnv_file):
     """Update bounds with calls from CNVkit, inferred copy numbers and p-values from THetA.
