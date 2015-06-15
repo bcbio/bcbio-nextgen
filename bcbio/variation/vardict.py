@@ -161,7 +161,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                                    out_file, do_merge=True)
             paired = vcfutils.get_paired_bams(align_bams, items)
             if not _is_bed_file(target):
-                vcfutils.write_empty_vcf(tx_out_file, config, samples=[paired.tumor_name, paired.normal_name])
+                vcfutils.write_empty_vcf(tx_out_file, config,
+                                         samples=[x for x in [paired.tumor_name, paired.normal_name] if x])
             else:
                 if not paired.normal_bam:
                     ann_file = _run_vardict_caller(align_bams, items, ref_file,

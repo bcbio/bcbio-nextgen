@@ -98,7 +98,7 @@ def write_empty_vcf(out_file, config=None, samples=None):
         needs_bgzip = True
         out_file = out_file.replace(".vcf.gz", ".vcf")
     with open(out_file, "w") as out_handle:
-        format_samples = "\tFORMAT\t" + "\t".join(samples) if samples else ""
+        format_samples = ("\tFORMAT\t" + "\t".join(samples)) if samples else ""
         out_handle.write("##fileformat=VCFv4.1\n"
                          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO%s\n" % (format_samples))
     if needs_bgzip:
