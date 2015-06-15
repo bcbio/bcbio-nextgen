@@ -9,6 +9,8 @@ http://genomebiology.com/2015/16/1/35
 import os
 import sys
 
+from pysam import VariantFile
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -31,7 +33,8 @@ def _prep_inputs(vrn_info, cnv_info, somatic_info, work_dir):
     cnv_file = os.path.join(work_dir, "cnv_data.txt")
     if not utils.file_exists(ssm_file) or not utils.file_exists(cnv_file):
         with file_transaction(somatic_info.tumor_data, ssm_file, cnv_file) as (tx_ssm_file, tx_cnv_file):
-            variant_type, input_vcf_file = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], work_dir)
+            variant_type, input_vcf_file = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"],
+                                                          work_dir, somatic_info)
             cmd = [sys.executable, exe,
                    "--battenberg", cnv_info["subclones"], "--contamination", _read_contam(cnv_info["contamination"]),
                    "--output-cnvs", tx_cnv_file, "--output-variants", tx_ssm_file,
@@ -39,7 +42,7 @@ def _prep_inputs(vrn_info, cnv_info, somatic_info, work_dir):
             do.run(cmd, "Prepare PhyloWGS inputs.")
     return ssm_file, cnv_file
 
-def _prep_vrn_file(in_file, vcaller, work_dir):
+def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
     """Create a variant file to feed into the PhyloWGS prep script, limiting records.
 
     Handles MuTect and VarDict as inputs to PhyloWGS.
@@ -53,8 +56,16 @@ def _prep_vrn_file(in_file, vcaller, work_dir):
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           vcaller))
     if not utils.file_uptodate(out_file, in_file):
-        pass
+        with file_transaction(somatic_info.tumor_data, out_file) as tx_out_file:
+            bcf_in = VariantFile(in_file)
+            bcf_out = VariantFile(tx_out_file, "w", header=bcf_in.header)
+            for rec in bcf_in:
+                if _is_snp(rec) and "PASS" in rec.filter.keys():
+                    bcf_out.write(rec)
     return variant_type, out_file
+
+def _is_snp(rec):
+    return max([len(x) for x in rec.alleles]) == 1
 
 def _read_contam(in_file):
     with open(in_file) as in_handle:

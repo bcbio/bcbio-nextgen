@@ -105,21 +105,27 @@ def _get_autosomal_chroms():
     max_chrom = 1000
     return set([str(x) for x in range(1, max_chrom)] + ["chr%s" % x for x in range(1, max_chrom)])
 
+def _is_snp(rec):
+    return max([len(x) for x in rec.alleles]) == 1
+
 def _is_possible_loh(rec, params, somatic_info):
     """Check if the VCF record is a het in the normal with sufficient support.
+
+    Only returns SNPs, since indels tend to have less precise frequency measurements.
     """
     normal_good, tumor_good = False, False
-    for name, sample in rec.samples.items():
-        alt, depth = sample_alt_and_depth(sample)
-        if alt is not None and depth is not None and depth > 0:
-            freq = float(alt) / float(depth)
-            if name == somatic_info.normal_name:
-                normal_good = (depth >= params["min_depth"] and
-                               (freq >= params["min_freq"] and freq <= params["max_freq"]))
-            elif name == somatic_info.tumor_name:
-                tumor_good = (depth >= params["min_depth"] and
-                              (freq < params["min_freq"] or freq > params["max_freq"]))
-                tumor_freq = freq
+    if _is_snp(rec):
+        for name, sample in rec.samples.items():
+            alt, depth = sample_alt_and_depth(sample)
+            if alt is not None and depth is not None and depth > 0:
+                freq = float(alt) / float(depth)
+                if name == somatic_info.normal_name:
+                    normal_good = (depth >= params["min_depth"] and
+                                   (freq >= params["min_freq"] and freq <= params["max_freq"]))
+                elif name == somatic_info.tumor_name:
+                    tumor_good = (depth >= params["min_depth"] and
+                                  (freq < params["min_freq"] or freq > params["max_freq"]))
+                    tumor_freq = freq
     if normal_good and tumor_good:
         return tumor_freq
 
@@ -157,7 +163,7 @@ if __name__ == "__main__":
               "min_depth": 15}
     for rec in bcf_in:
         if _is_possible_loh(rec, params, somatic(sys.argv[2], sys.argv[3])):
-            print rec
+            print rec.filter.keys(), len(rec.filter)
 
 _script = """
 .libPaths(c("{local_sitelib}"))
