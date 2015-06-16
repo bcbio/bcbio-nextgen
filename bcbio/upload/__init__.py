@@ -14,6 +14,14 @@ _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
                "s3": s3}
 
+def project_from_sample(sample):
+    upload_config = sample.get("upload")
+    if upload_config:
+        approach = _approaches[upload_config.get("method", "filesystem")]
+        for finfo in _get_files_project(sample, upload_config):
+            approach.update_file(finfo, None, upload_config)
+    return [[sample]]
+
 def from_sample(sample):
     """Upload results of processing from an analysis pipeline sample.
     """
@@ -22,8 +30,6 @@ def from_sample(sample):
         approach = _approaches[upload_config.get("method", "filesystem")]
         for finfo in _get_files(sample):
             approach.update_file(finfo, sample, upload_config)
-        for finfo in _get_files_project(sample, upload_config):
-            approach.update_file(finfo, None, upload_config)
     return [[sample]]
 
 # ## File information from sample

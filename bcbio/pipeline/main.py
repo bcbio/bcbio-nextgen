@@ -190,8 +190,9 @@ class Variant2Pipeline(AbstractPipeline):
             with profile.report("archive", dirs):
                 samples = archive.compress(samples, run_parallel)
             with profile.report("upload", dirs):
+                samples = run_parallel("upload_samples", samples)
                 for sample in samples:
-                    run_parallel("upload_samples", [sample])
+                    run_parallel("upload_samples_project", [sample])
         logger.info("Timing: finished")
         return samples
 
@@ -241,8 +242,9 @@ class StandardPipeline(AbstractPipeline):
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
             with profile.report("upload", dirs):
+                samples = run_parallel("upload_samples", samples)
                 for sample in samples:
-                    run_parallel("upload_samples", [sample])
+                    run_parallel("upload_samples_project", [sample])
         logger.info("Timing: finished")
         return samples
 
@@ -267,8 +269,9 @@ class SailfishPipeline(AbstractPipeline):
                 with profile.report("sailfish", dirs):
                     samples = run_parallel("run_sailfish", samples)
                 with profile.report("upload", dirs):
+                    samples = run_parallel("upload_samples", samples)
                     for sample in samples:
-                        run_parallel("upload_samples", [sample])
+                        run_parallel("upload_samples_project", [sample])
         return samples
 
 class RnaseqPipeline(AbstractPipeline):
@@ -315,8 +318,9 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
             with profile.report("upload", dirs):
+                samples = run_parallel("upload_samples", samples)
                 for sample in samples:
-                    run_parallel("upload_samples", [sample])
+                    run_parallel("upload_samples_project", [sample])
         logger.info("Timing: finished")
         return samples
 
@@ -342,8 +346,9 @@ class ChipseqPipeline(AbstractPipeline):
             samples = run_parallel("clean_chipseq_alignment", samples)
             samples = qcsummary.generate_parallel(samples, run_parallel)
             with profile.report("upload", dirs):
+                samples = run_parallel("upload_samples", samples)
                 for sample in samples:
-                    run_parallel("upload_samples", [sample])
+                    run_parallel("upload_samples_project", [sample])
         return samples
 
 def _get_pipeline(item):

@@ -203,6 +203,10 @@ def upload_samples(*args):
     return upload.from_sample(*args)
 
 @utils.map_wrap
+def upload_samples_project(*args):
+    return upload.project_from_sample(*args)
+
+@utils.map_wrap
 def run_main(*args):
     work_dir, ready_config_file, systemconfig, fcdir, parallel, samples = args
     return main.run_main(work_dir, run_info_yaml=ready_config_file,

@@ -341,3 +341,9 @@ def upload_samples(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(upload.from_sample, *args))
+
+@require(upload)
+def upload_samples_project(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(upload.project_from_sample, *args))
