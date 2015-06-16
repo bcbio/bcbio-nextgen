@@ -829,9 +829,14 @@ def _run_gemini_stats(bam_file, data, out_dir):
         else:
             with open(gemini_stat_file) as in_handle:
                 out = yaml.safe_load(in_handle)
-    if data['name'][-1] in out:
-        return out[data['name'][-1]]
-    return out
+
+    res = {}
+    for k, v in out.iteritems():
+        if not isinstance(v, dict):
+            res.update({k: v})
+        if k == data['name'][-1]:
+            res.update(v)
+    return res
 
 ## qsignature
 
