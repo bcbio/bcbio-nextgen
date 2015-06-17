@@ -77,6 +77,3 @@ def setup(args):
     workdir = utils.safe_makedir(os.path.join(args.base_dir, args.sample, "work"))
     return workdir, {"config_file": args.bcbio_config_file,
                      "run_info_yaml": out_config_file}
-
-if __name__ == "__main__":
-    main(*sys.argv[1:])
