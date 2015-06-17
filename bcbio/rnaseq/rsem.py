@@ -1,6 +1,7 @@
+import os
 import subprocess
 from bcbio.distributed.transaction import tx_tmpdir, file_transaction
-from bcbio.utils import chdir, which, safe_makedir
+from bcbio.utils import chdir, which, safe_makedir, file_exists
 from bcbio import bam
 from bcbio.log import logger
 from bcbio.provenance import do
