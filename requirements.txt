@@ -1,3 +1,4 @@
+azure
 biopython>=1.61
 boto>=2.34.0
 Cython>=0.19

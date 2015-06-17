@@ -7,10 +7,14 @@ Amazon Web Services S3.
 import abc
 import collections
 import os
+import re
 import subprocess
 import sys
+import time
 import zlib
 
+import azure
+from azure import storage as azure_storage
 import boto
 import six
 
@@ -128,6 +132,88 @@ class S3Handle(FileHandle):
     def close(self):
         """Close the file handle."""
         self._key.close(fast=True)
+
+
+class BlobHandle(FileHandle):
+
+    """File object for the Azure Blob files."""
+
+    def __init__(self, blob_service, container, blob, chunk_size):
+        super(BlobHandle, self).__init__()
+        self._blob_service = blob_service
+        self._container_name = container
+        self._blob_name = blob
+        self._chunk_size = chunk_size
+        self._blob_properties = {}
+
+        if blob.endswith(".gz"):
+            decompress = zlib.decompressobj(16 | zlib.MAX_WBITS)
+            self._decompress = decompress.decompress
+        else:
+            self._decompress = lambda value: value
+
+    @property
+    def blob_properties(self):
+        """Returns all user-defined metadata, standard HTTP properties,
+        and system properties for the blob.
+        """
+        if not self._blob_properties:
+            self._blob_properties = self._blob_service.get_blob_properties(
+                container_name=self._container_name,
+                blob_name=self._blob_name)
+        return self._blob_properties
+
+    def _chunk_offsets(self):
+        """Iterator over chunk offests."""
+        index = 0
+        blob_size = self.blob_properties.get('content-length')
+        while index < blob_size:
+            yield index
+            index = index + self._chunk_size
+
+    def _chunk_iter(self):
+        """Iterator over the blob file."""
+        for chunk_offset in self._chunk_offsets():
+            yield self._download_chunk(chunk_offset=chunk_offset,
+                                       chunk_size=self._chunk_size)
+
+    def _download_chunk_with_retries(self, chunk_offset, chunk_size,
+                                     retries=3, retry_wait=1):
+        """Reads or downloads the received blob from the system."""
+        while True:
+            try:
+                self._download_chunk(chunk_offset, chunk_size)
+            except azure.WindowsAzureError:
+                if retries > 0:
+                    retries = retries - 1
+                    time.sleep(retry_wait)
+                else:
+                    raise
+
+    def _download_chunk(self, chunk_offset, chunk_size):
+        """Reads or downloads the received blob from the system."""
+        range_id = 'bytes={0}-{1}'.format(
+            chunk_offset, chunk_offset + chunk_size - 1)
+
+        return self._blob_service.get_blob(
+            container_name=self._container_name,
+            blob_name=self._blob_name,
+            x_ms_range=range_id)
+
+    def read(self, size):
+        """Read at most size bytes from the file (less if the read hits EOF
+        before obtaining size bytes).
+        """
+        return self._download_chunk_with_retries(chunk_offset=0,
+                                                 chunk_size=size)
+
+    def next(self):
+        """Return the next item from the container."""
+        return self._iter.next()
+
+    def close(self):
+        """Close the file handle."""
+        pass
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -356,9 +442,98 @@ class AmazonS3(StorageManager):
         return S3Handle(s3_key)
 
 
+class AzureBlob(StorageManager):
+
+    """Azure Blob storage service manager."""
+
+    _BLOB_FILE = ("https://%(storage)s.blob.core.windows.net/"
+                  "%(container)s/%(blob)s")
+    _REMOTE_FILE = collections.namedtuple(
+        "RemoteFile", ["store", "storage", "container", "blob"])
+    _URL_FORMAT = re.compile(r'http.*\/\/(?P<storage>[^.]+)[^/]+\/'
+                             r'(?P<container>[^/]+)\/*(?P<blob>[^/]*)')
+    _BLOB_CHUNK_DATA_SIZE = 4 * 1024 * 1024
+
+    def __init__(self):
+        super(AzureBlob, self).__init__()
+
+    @classmethod
+    def check_resource(cls, resource):
+        """Check if the received resource can be processed by
+        the current storage manager.
+        """
+        return cls._URL_FORMAT.match(resource or "")
+
+    @classmethod
+    def parse_remote(cls, filename):
+        """Parses a remote filename into blob information."""
+        blob_file = cls._URL_FORMAT.search(filename)
+        return cls._REMOTE_FILE("blob",
+                                storage=blob_file.group("storage"),
+                                container=blob_file.group("container"),
+                                blob=blob_file.group("blob"))
+
+    @classmethod
+    def connect(cls, resource):
+        """Returns a connection object pointing to the endpoint
+        associated to the received resource.
+        """
+        file_info = cls.parse_remote(resource)
+        return azure_storage.BlobService(file_info.storage)
+
+    @classmethod
+    def download(cls, filename, input_dir, dl_dir=None):
+        """Download the resource from the storage."""
+        file_info = cls.parse_remote(filename)
+        if not dl_dir:
+            dl_dir = os.path.join(input_dir, file_info.container,
+                                  os.path.dirname(file_info.storage))
+            utils.safe_makedir(dl_dir)
+
+        out_file = os.path.join(dl_dir, os.path.basename(file_info.storage))
+
+        if not utils.file_exists(out_file):
+            with file_transaction({}, out_file) as tx_out_file:
+                blob_service = cls.connect(filename)
+                blob_service.get_blob_to_path(
+                    container_name=file_info.container,
+                    blob_name=file_info.blob,
+                    file_path=tx_out_file)
+        return out_file
+
+    @classmethod
+    def list(cls, path):
+        """Return a list containing the names of the entries in the directory
+        given by path. The list is in arbitrary order.
+        """
+        output = []
+        path_info = cls.parse_remote(path)
+        blob_service = azure_storage.BlobService(path_info.storage)
+        try:
+            blob_enum = blob_service.list_blobs(path_info.container)
+        except azure.WindowsAzureMissingResourceError:
+            return output
+
+        for item in blob_enum:
+            output.append(cls._BLOB_FILE.format(storage=path_info.storage,
+                                                container=path_info.container,
+                                                blob=item.name))
+        return output
+
+    @classmethod
+    def open(cls, filename):
+        """Provide a handle-like object for streaming."""
+        file_info = cls.parse_remote(filename)
+        blob_service = cls.connect(filename)
+        return BlobHandle(blob_service=blob_service,
+                          container=file_info.container,
+                          blob=file_info.blob,
+                          chunk_size=cls._BLOB_CHUNK_DATA_SIZE)
+
+
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, ):
+    for manager in (AmazonS3, AzureBlob):
         if manager.check_resource(resource):
             return manager()
 
