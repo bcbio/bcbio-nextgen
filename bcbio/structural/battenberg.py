@@ -36,18 +36,21 @@ def _do_run(paired):
     since Battenberg does smart restarts.
     """
     work_dir = _sv_workdir(paired.tumor_data)
+    ignore_file = os.path.join(work_dir, "ignore_chromosomes.txt")
     out = _get_battenberg_out(paired, work_dir)
     if len(_missing_files(out)) > 0:
         ref_file = dd.get_ref_file(paired.tumor_data)
         bat_datadir = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "battenberg"))
-        ignore_file = _make_ignore_file(work_dir, ref_file, os.path.join(bat_datadir, "impute", "impute_info.txt"))
+        ignore_file = _make_ignore_file(work_dir, ref_file, os.path.join(bat_datadir, "impute", "impute_info.txt"),
+                                        ignore_file)
         local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                      "lib", "R", "site-library")
         tumor_bam = paired.tumor_bam
         normal_bam = paired.normal_bam
         platform = dd.get_platform(paired.tumor_data)
         genome_build = paired.tumor_data["genome_build"]
-        cores = dd.get_num_cores(paired.tumor_data)
+        # scale cores to avoid over-using memory during imputation
+        cores = max(1, int(dd.get_num_cores(paired.tumor_data) * 0.5))
         cmd = ("export R_LIBS_USER={local_sitelib} && "
                "battenberg.pl -t {cores} -o {work_dir} -r {ref_file}.fai "
                "-tb {tumor_bam} -nb {normal_bam} -e {bat_datadir}/impute/impute_info.txt "
@@ -56,10 +59,10 @@ def _do_run(paired):
                "-assembly {genome_build} -species Human -platform {platform}")
         do.run(cmd.format(**locals()), "Battenberg CNV calling")
     assert len(_missing_files(out)) == 0, "Missing Battenberg output: %s" % _missing_files(out)
+    out["ignore"] = ignore_file
     return out
 
-def _make_ignore_file(work_dir, ref_file, impute_file):
-    ignore_file = os.path.join(work_dir, "ignore_chromosomes.txt")
+def _make_ignore_file(work_dir, ref_file, impute_file, ignore_file):
     chroms = set([])
     with open(impute_file) as in_handle:
         for line in in_handle:

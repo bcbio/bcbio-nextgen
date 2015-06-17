@@ -381,9 +381,12 @@ def _get_sort_stem(in_bam, order):
 def sample_name(in_bam):
     """Get sample name from BAM file.
     """
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
-        if "RG" in in_pysam.header:
-            return in_pysam.header["RG"][0]["SM"]
+    with contextlib.closing(pysam.AlignmentFile(in_bam, "rb", check_sq=False)) as in_pysam:
+        try:
+            if "RG" in in_pysam.header:
+                return in_pysam.header["RG"][0]["SM"]
+        except ValueError:
+            return None
 
 def estimate_read_length(bam_file, nreads=1000):
     """

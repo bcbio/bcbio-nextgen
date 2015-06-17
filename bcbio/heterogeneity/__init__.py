@@ -18,7 +18,7 @@ def _get_cnvs(data):
     out = {}
     for sv in data.get("sv", []):
         if sv["variantcaller"] in supported:
-            out[sv["variantcaller"]].append(sv)
+            out[sv["variantcaller"]] = sv
     return out
 
 def _get_variants(data):
