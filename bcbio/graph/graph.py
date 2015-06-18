@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import collections
 from datetime import datetime
 import functools
 import os
@@ -229,37 +230,63 @@ def graph_disk_io(df, steps, disks):
     return plot
 
 
-def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
-    """Generate all graphs for a bcbio run."""
-    if verbose:
-        print('Reading timings from bcbio log...')
-    steps = get_bcbio_timings(bcbio_log_path)
-    start_time = min(steps.keys())
-    end_time = max(steps.keys())
+def _time_frame(bcbio_log):
+    """The bcbio running time frame.
 
-    if verbose:
-        print('Parsing performance data...')
+    :return:    an instance of :class collections.namedtuple:
+                with the following fields: start and end
+    """
+    output = collections.namedtuple("Time", ["start", "end", "steps"])
+    bcbio_timings = get_bcbio_timings(bcbio_log)
+    steps = bcbio_timings.keys()
+    return output(min(steps), max(steps), steps)
 
-    dfs = {}
+
+def resource_usage(bcbio_log, rawdir, verbose):
+    """Generate system statistics from bcbio runs.
+
+    Parse the obtained files and put the information in
+    a :class pandas.DataFrame:.
+
+    :param bcbio_log:   local path to bcbio log file written by the run
+    :param rawdir:      directory to put raw data files
+    :param verbose:     increase verbosity
+
+    :return: a tuple with three dictionaries, the first one contains
+             an instance of :pandas.DataFrame: for each host, the second one
+             contains information regarding the hardware configuration and
+             the last one contains information regarding timing.
+    :type return: tuple
+    """
+    data_frames = {}
     hardware_info = {}
-    for item in sorted(os.listdir(collectl_datadir)):
-        if not item.endswith('.raw.gz'):
+    time_frame = _time_frame(bcbio_log)
+
+    for collectl_file in sorted(os.listdir(rawdir)):
+        if not collectl_file.endswith('.raw.gz'):
             continue
 
-        df, hardware = load_collectl(
-            os.path.join(collectl_datadir, item), start_time, end_time)
-        if len(df) == 0:
+        collectl_path = os.path.join(rawdir, collectl_file)
+        data, hardware = load_collectl(
+            collectl_path, time_frame.start, time_frame.end)
+
+        if len(data) == 0:
             continue
 
-        host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', item)
+        host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
         hardware_info[host] = hardware
-        if host not in dfs:
-            dfs[host] = df
+        if host not in data_frames:
+            data_frames[host] = data
         else:
-            old_df = dfs[host]
-            dfs[host] = pd.concat([old_df, df])
+            data_frames[host] = pd.concat([data_frames[host], data])
 
-    for host, df in dfs.iteritems():
+    return (data_frames, hardware_info, time_frame.steps)
+
+
+def generate_graphs(data_frames, hardware_info, steps, outdir,
+                    verbose=False):
+    """Generate all graphs for a bcbio run."""
+    for host, df in data_frames.iteritems():
         if verbose:
             print('Generating CPU graph for {}...'.format(host))
         graph = graph_cpu(df, steps, hardware_info[host]['num_cpus'])
@@ -330,5 +357,11 @@ def add_subparser(subparsers):
 
 
 def bootstrap(args):
-    generate_graphs(args.rawdir, args.log, utils.safe_makedir(args.outdir),
-        verbose=args.verbose)
+    data, hardware, steps = resource_usage(bcbio_log=args.log,
+                                           rawdir=args.rawdir,
+                                           verbose=args.verbose)
+    generate_graphs(data_frames=data,
+                    hardware_info=hardware,
+                    steps=steps,
+                    outdir=utils.safe_makedir(args.outdir),
+                    verbose=args.verbose)
