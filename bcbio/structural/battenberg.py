@@ -8,6 +8,7 @@ import toolz as tz
 
 from bcbio import install, utils
 from bcbio.bam import ref
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
@@ -16,16 +17,23 @@ def run(items, background=None):
     """Detect copy number variations from tumor/normal samples using Battenberg.
     """
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
-    assert paired and paired.normal_bam, "Battenberg only works on paired tumor/normal inputs"
-    assert tz.get_in(["genome_resources", "aliases", "human"], paired.tumor_data), \
-        "Battenberg only works on human data"
-    batout = _do_run(paired)
-    batout["variantcaller"] = "battenberg"
+    if not paired or not paired.normal_bam:
+        logger.warn("Battenberg only works on paired tumor/normal inputs, skipping %s"
+                    % dd.get_sample_name(items[0]))
+        batout = None
+    elif not tz.get_in(["genome_resources", "aliases", "human"], paired.tumor_data):
+        logger.warn("Battenberg only works on human data, skipping %s"
+                    % dd.get_sample_name(items[0]))
+        batout = None
+    else:
+        batout = _do_run(paired)
+        batout["variantcaller"] = "battenberg"
     out = []
     for data in items:
-        if "sv" not in data:
-            data["sv"] = []
-        data["sv"].append(batout)
+        if batout:
+            if "sv" not in data:
+                data["sv"] = []
+            data["sv"].append(batout)
         out.append(data)
     return out
 

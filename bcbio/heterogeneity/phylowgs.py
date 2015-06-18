@@ -13,6 +13,7 @@ from pysam import VariantFile
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
@@ -21,9 +22,12 @@ def run(vrn_info, cnvs_by_name, somatic_info):
     """
     config = {"sample_size": 5000}
     work_dir = _cur_workdir(somatic_info.tumor_data)
-    assert "battenberg" in cnvs_by_name, "PhyloWGS requires Battenberg CNV calls"
-    ssm_file, cnv_file = _prep_inputs(vrn_info, cnvs_by_name["battenberg"], somatic_info, work_dir, config)
-    print ssm_file, cnv_file
+    if "battenberg" not in cnvs_by_name:
+        logger.warn("PhyloWGS requires Battenberg CNV calls, skipping %s"
+                    % dd.get_sample_name(somatic_info.tumor_data))
+    else:
+        ssm_file, cnv_file = _prep_inputs(vrn_info, cnvs_by_name["battenberg"], somatic_info, work_dir, config)
+        print ssm_file, cnv_file
 
 def _prep_inputs(vrn_info, cnv_info, somatic_info, work_dir, config):
     """Prepare inputs for running PhyloWGS from variant and CNV calls.
