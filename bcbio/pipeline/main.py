@@ -26,6 +26,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
     """Run variant analysis, handling command line options.
     """
+    workdir = utils.safe_makedir(os.path.abspath(workdir))
     os.chdir(workdir)
     config, config_file = config_utils.load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:

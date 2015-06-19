@@ -30,7 +30,7 @@ import os
 import argparse
 import sys
 
-from bcbio import install, workflow
+from bcbio import install, utils, workflow
 from bcbio.illumina import machine
 from bcbio.distributed import runfn, clargs
 from bcbio.pipeline.main import run_main
@@ -110,6 +110,7 @@ def parse_cl_args(in_args):
         # Hidden arguments passed downstream
         parser.add_argument("--only-metadata", help=argparse.SUPPRESS, action="store_true", default=False)
     args = parser.parse_args(in_args)
+    args.workdir = utils.safe_makedir(os.path.abspath(args.workdir))
     if hasattr(args, "global_config"):
         error_msg = _sanity_check_args(args)
         if error_msg:
