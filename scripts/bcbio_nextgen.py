@@ -110,7 +110,8 @@ def parse_cl_args(in_args):
         # Hidden arguments passed downstream
         parser.add_argument("--only-metadata", help=argparse.SUPPRESS, action="store_true", default=False)
     args = parser.parse_args(in_args)
-    args.workdir = utils.safe_makedir(os.path.abspath(args.workdir))
+    if hasattr(args, "workdir"):
+        args.workdir = utils.safe_makedir(os.path.abspath(args.workdir))
     if hasattr(args, "global_config"):
         error_msg = _sanity_check_args(args)
         if error_msg:
