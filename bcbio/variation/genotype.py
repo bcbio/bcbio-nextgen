@@ -227,6 +227,7 @@ def get_variantcallers():
             "scalpel": scalpel.run_scalpel,
             "vardict": vardict.run_vardict,
             "vardict-java": vardict.run_vardict,
+            "vardict-perl": vardict.run_vardict,
             "qsnp": qsnp.run_qsnp}
 
 def variantcall_sample(data, region=None, align_bams=None, out_file=None):

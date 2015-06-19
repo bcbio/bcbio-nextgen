@@ -15,7 +15,7 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict-java, mutect, freebayes, varscan]
+      variantcaller: [vardict, mutect, freebayes, varscan]
       indelcaller: sid
       ensemble:
         numpass: 2
@@ -35,7 +35,7 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict-java, mutect, freebayes, varscan]
+      variantcaller: [vardict, mutect, freebayes, varscan]
       indelcaller: sid
       ensemble:
         numpass: 2
@@ -57,7 +57,7 @@ details:
       mark_duplicates: True
       recalibrate: false
       realign: false
-      variantcaller: [vardict-java, mutect, freebayes, varscan]
+      variantcaller: [vardict, mutect, freebayes, varscan]
       indelcaller: sid
       ensemble:
         numpass: 2

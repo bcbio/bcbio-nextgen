@@ -1,5 +1,15 @@
 """Sensitive variant calling using VarDict.
 
+Defaults to using the faster, equally sensitive Java port:
+
+https://github.com/AstraZeneca-NGS/VarDictJava
+
+if 'vardict' or 'vardict-java' is specified in the configuration. To use the
+VarDict perl version:
+
+https://github.com/AstraZeneca-NGS/VarDict
+
+specify 'vardict-perl'.
 """
 import os
 import itertools
@@ -75,7 +85,7 @@ def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
 def _get_jvm_opts(data, out_file):
     """Retrieve JVM options when running the Java version of VarDict.
     """
-    if dd.get_variantcaller(data).endswith("-java"):
+    if not dd.get_variantcaller(data).endswith("-perl"):
         resources = config_utils.get_resources("vardict", data["config"])
         jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx4g"])
         jvm_opts += broad.get_default_jvm_opts(os.path.dirname(out_file))
@@ -102,6 +112,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 # prepare commands
                 sample = dd.get_sample_name(item)
                 vardict = dd.get_variantcaller(items[0])
+                vardict = "vardict-java" if not vardict.endswith("-perl") else "vardict"
                 strandbias = "teststrandbias.R"
                 var2vcf = "var2vcf_valid.pl"
                 opts = (" ".join(_vardict_options_from_config(items, config, out_file, target))
@@ -170,6 +181,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                     return ann_file
                 vcffilter = config_utils.get_program("vcffilter", config)
                 vardict = dd.get_variantcaller(items[0])
+                vardict = "vardict-java" if not vardict.endswith("-perl") else "vardict"
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 strandbias = "testsomatic.R"
                 var2vcf = "var2vcf_paired.pl"

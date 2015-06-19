@@ -4,6 +4,8 @@
   option by default.
 - Single sample structural variant calling: corectly handle multiple variant
   callers. Thanks to Sven-Eric Schelhorn.
+- Make VarDictJava the default caller when `vardict` specified. `vardict-perl`
+  is now required to specifically use the Perl version.
 - VarDict and VarDictJava: limit regions to 1Mb with overlaps to avoid memory
   errors. Ignore regions without BED reads which can lead to large genomic
   sections and memory errors.
