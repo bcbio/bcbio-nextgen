@@ -13,6 +13,7 @@
 - Add a `--only-metadata` argument to template preparation that will only
   include BAM or fastq files in sample YAML if they are present in the metadata
   CSV file.
+- samblaster: support -M flag in 0.1.22 release
 - Fix VEP/GEMINI incompatibility where empty fields are included in VCF output.
 - VarDict: restrict maximum region size within a BED file to 2Mb to avoid high
   memory usage and failures for longer regions.

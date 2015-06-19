@@ -8,13 +8,14 @@ samblaster: http://arxiv.org/pdf/1403.7486v1.pdf
 biobambam bammarkduplicates: http://arxiv.org/abs/1306.0836
 """
 import contextlib
+from distutils.version import LooseVersion
 import os
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 
 @contextlib.contextmanager
 def tobam_cl(data, out_file, is_paired=False):
@@ -78,10 +79,16 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
                           "--tmpdir {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
     tobam_cmd = ("{samtools} sort -@ {cores} -m {mem} "
                  "-T {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
+    # samblaster 0.1.22 and better require the -M flag for compatibility with bwa-mem
+    # https://github.com/GregoryFaust/samblaster/releases/tag/v.0.1.22
+    if LooseVersion(programs.get_version_manifest("samblaster", data=data, required=True)) >= LooseVersion("0.1.22"):
+        opts = "-M"
+    else:
+        opts = ""
     splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, dext="spl", **locals())
     discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, dext="disc", **locals())
     dedup_cmd = full_tobam_cmd.format(out_file=tx_out_file, dext="full", **locals())
-    cmd = ("{samblaster} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
+    cmd = ("{samblaster} {opts} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
            "| {dedup_cmd}")
     return cmd.format(**locals())
 

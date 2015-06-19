@@ -53,7 +53,6 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
         if not utils.file_exists(out_file):
             sambamba = config_utils.get_program("sambamba", config)
             samtools = config_utils.get_program("samtools", config)
-            samblaster = config_utils.get_program("samblaster", config)
             resources = config_utils.get_resources("samtools", config)
             num_cores = config["algorithm"].get("num_cores", 1)
             max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),

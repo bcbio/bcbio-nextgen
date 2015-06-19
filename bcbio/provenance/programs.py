@@ -223,7 +223,7 @@ def _get_manifest_dir(data=None):
 def _get_versions_manifest(manifest_dir):
     """Retrieve versions from a pre-existing manifest of installed software.
     """
-    all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant", "gatk-framework"] + \
+    all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant", "gatk-framework", "samblaster"] + \
                [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
     if os.path.exists(manifest_dir):
         out = []
