@@ -1,4 +1,4 @@
-## 0.9.0 (in progress)
+## 0.9.0 (20 June 2015)
 
 - GATK 3.4: support HaplotypeCaller by avoiding setting downsampling (-dcov)
   option by default.
