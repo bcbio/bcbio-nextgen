@@ -1,3 +1,9 @@
+## 0.9.1 (in progress)
+
+- Generalize support for interaction with blob storage and graphing to support
+  alternative cloud providers. Initial support for interacting with Azure.
+  Thanks to Alexandru Coman.
+
 ## 0.9.0 (20 June 2015)
 
 - GATK 3.4: support HaplotypeCaller by avoiding setting downsampling (-dcov)

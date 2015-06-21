@@ -13,8 +13,11 @@ import sys
 import time
 import zlib
 
-import azure
-from azure import storage as azure_storage
+try:
+    import azure
+    from azure import storage as azure_storage
+except ImportError:
+    azure, azure_storage = None, None
 import boto
 import six
 
@@ -537,8 +540,8 @@ def _get_storage_manager(resource):
         if manager.check_resource(resource):
             return manager()
 
-    raise NotImplementedError("Unexpected object store  %(resource)s" %
-                              {"resource": resource})
+    raise ValueError("Unexpected object store  %(resource)s" %
+                     {"resource": resource})
 
 
 def is_remote(fname):
@@ -584,7 +587,10 @@ def connect(filename):
 
 def download(fname, input_dir, dl_dir=None):
     """Download the resource from the storage."""
-    manager = _get_storage_manager(fname)
+    try:
+        manager = _get_storage_manager(fname)
+    except ValueError:
+        return fname
     return manager.download(fname, input_dir, dl_dir)
 
 
