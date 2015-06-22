@@ -52,6 +52,7 @@ def gatk_rnaseq_calling(data):
     ref_file = dd.get_ref_file(data)
     split_bam = dd.get_split_bam(data)
     out_file = os.path.splitext(split_bam)[0] + ".gvcf"
+    num_cores = dd.get_num_cores(data)
     if file_exists(out_file):
         data = dd.set_vrn_file(data, out_file)
         return data
@@ -60,6 +61,7 @@ def gatk_rnaseq_calling(data):
                   "-R", ref_file,
                   "-I", split_bam,
                   "-o", tx_out_file,
+                  "-nct", str(num_cores),
                   "--emitRefConfidence", "GVCF",
                   "--variant_index_type", "LINEAR",
                   "--variant_index_parameter", "128000",
