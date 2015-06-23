@@ -27,7 +27,22 @@ def run(vrn_info, cnvs_by_name, somatic_info):
                     % dd.get_sample_name(somatic_info.tumor_data))
     else:
         ssm_file, cnv_file = _prep_inputs(vrn_info, cnvs_by_name["battenberg"], somatic_info, work_dir, config)
-        print ssm_file, cnv_file
+        evolve_file = _run_evolve(ssm_file, cnv_file, work_dir, somatic_info.tumor_data)
+        print evolve_file, ssm_file, cnv_file
+
+def _run_evolve(ssm_file, cnv_file, work_dir, data):
+    """Run evolve.py to infer subclonal composition.
+    """
+    exe = os.path.join(os.path.dirname(sys.executable), "evolve.py")
+    assert os.path.exists(exe), "Could not find evolve script for PhyloWGS runs."
+    out_dir = os.path.join(work_dir, "evolve")
+    out_file = os.path.join(out_dir, "clonalFrequencies")
+    if not utils.file_uptodate(out_file, cnv_file):
+        with file_transaction(data, out_dir) as tx_out_dir:
+            with utils.chdir(tx_out_dir):
+                cmd = [sys.executable, exe, "-r", "42", ssm_file, cnv_file]
+                do.run(cmd, "Run PhyloWGS evolution")
+    return out_file
 
 def _prep_inputs(vrn_info, cnv_info, somatic_info, work_dir, config):
     """Prepare inputs for running PhyloWGS from variant and CNV calls.
