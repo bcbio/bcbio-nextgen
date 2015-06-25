@@ -151,6 +151,8 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = region.clean_sample_data(samples)
             with profile.report("coverage", dirs):
                 samples = coverage.summarize_samples(samples, run_parallel)
+            with profile.report("structural variation initial", dirs):
+                samples = structural.run(samples, run_parallel, initial_only=True)
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
@@ -180,7 +182,7 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = ensemble.combine_calls_parallel(samples, run_parallel)
             with profile.report("validation summary", dirs):
                 samples = validate.summarize_grading(samples)
-            with profile.report("structural variation", dirs):
+            with profile.report("structural variation final", dirs):
                 samples = structural.run(samples, run_parallel)
             with profile.report("heterogeneity", dirs):
                 samples = heterogeneity.run(samples, run_parallel)

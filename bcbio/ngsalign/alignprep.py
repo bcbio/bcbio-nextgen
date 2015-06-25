@@ -121,7 +121,13 @@ def merge_split_alignments(samples, run_parallel):
             cur_data["combine"][file_key]["extras"].append(x[file_key])
         ready_merge.append([cur_data])
     merged = run_parallel("delayed_bam_merge", ready_merge)
-    return merged + ready
+    # Add stable 'align_bam' target to use for retrieving raw alignment
+    out = []
+    for data in [x[0] for x in merged + ready]:
+        if data.get("work_bam"):
+            data["align_bam"] = data["work_bam"]
+        out.append([data])
+    return out
 
 # ## determine file sections
 

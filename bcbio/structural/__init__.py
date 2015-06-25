@@ -16,6 +16,7 @@ _BATCH_CALLERS = {"cn.mops": cn_mops.run, "cnvkit": cnvkit.run,
                   "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
                   "battenberg": battenberg.run}
 _NEEDS_BACKGROUND = set(["cn.mops"])
+_INITIAL_CALLERS = set(["battenberg", "cnvkit"])
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
@@ -80,8 +81,11 @@ def finalize_sv(samples, config):
                 out.append([data])
     return out
 
-def run(samples, run_parallel):
-    """Run structural variation detection using configured methods.
+def run(samples, run_parallel, initial_only=False):
+    """Run structural variation detection.
+
+    initial_only indicates we should run structural variation inputs, like
+    CNV calling, we can use to inform low frequency variant calling.
     """
     to_process = collections.OrderedDict()
     extras = []
@@ -104,17 +108,18 @@ def run(samples, run_parallel):
                     to_process[(svcaller, dd.get_sample_name(x))] = [x]
         else:
             extras.append([data])
-    processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"]] for xs in to_process.values()))
+    processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"], initial_only]
+                                           for xs in to_process.values()))
     finalized = (run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"])])
                  if len(processed) > 0 else [])
     return extras + finalized
 
-def detect_sv(items, all_items, config):
+def detect_sv(items, all_items, config, initial_only=False):
     """Top level parallel target for examining structural variation.
     """
     svcaller = config["algorithm"].get("svcaller_active")
     out = []
-    if svcaller:
+    if svcaller and (not initial_only or svcaller in _INITIAL_CALLERS):
         if svcaller in _CALLERS:
             assert len(items) == 1
             data = items[0]
