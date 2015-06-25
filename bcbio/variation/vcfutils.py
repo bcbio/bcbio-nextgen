@@ -81,6 +81,11 @@ def fix_ambiguous_cl():
     """
     return r"""awk -F$'\t' -v OFS='\t' '{if ($0 !~ /^#/) gsub(/[KMRYSWBVHDX]/, "N", $4) } {print}'"""
 
+def remove_dup_cl():
+    """awk command line to remove duplicate alleles where the ref and alt are the same.
+    """
+    return r""" awk -F$'\t' -v OFS='\t' '$1!~/^#/ && $4 == $5 {next} {print}'"""
+
 def get_indelcaller(d_or_c):
     """Retrieve string for indelcaller to use, or empty string if not specified.
     """

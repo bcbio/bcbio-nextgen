@@ -124,12 +124,13 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 # for deep targeted panels, require 50 worth of coverage
                 var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
+                remove_dup = vcfutils.remove_dup_cl()
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 cmd = ("{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                         "-N {sample} -b {bamfile} {opts} "
                         "| {strandbias}"
                         "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
-                        "| {fix_ambig} | {vcfstreamsort} {compress_cmd}")
+                        "| {fix_ambig} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
@@ -193,6 +194,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 # for deep targeted panels, require 50 worth of coverage
                 var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
+                remove_dup = vcfutils.remove_dup_cl()
                 if any("vardict_somatic_filter" in tz.get_in(("config", "algorithm", "tools_off"), data, [])
                        for data in items):
                     somatic_filter = ""
@@ -207,7 +209,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                        "| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
                        "| sed 's/\\\\.*Somatic\\\\/Somatic/' "
                        "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
-                       "{somatic_filter} | {fix_ambig} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
+                       "{somatic_filter} | {fix_ambig} | {remove_dup} | {vcfstreamsort} "
+                       "{compress_cmd} > {tx_out_file}")
                 bam.index(paired.tumor_bam, config)
                 bam.index(paired.normal_bam, config)
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
