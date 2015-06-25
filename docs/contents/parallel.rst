@@ -120,6 +120,7 @@ There are also special ``-r`` resources parameters to support pipeline configura
 
 Troubleshooting
 ===============
+**IPython parallelization problems**:
 Networking problems on clusters can prevent the IPython parallelization
 framework from working properly. Be sure that the compute nodes on your
 cluster are aware of IP addresses that they can use to communicate
@@ -139,6 +140,17 @@ and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
 on each compute node. This will probably involve contacting your local
 cluster administrator.
 
+**No parallelization where expected**: This may occure if the current execution 
+is a re-run of a previous project:
+
+- There will be a file in `checkpoints_parallel/full.done` that tells bcbio not
+  to parallelize at certain tasks of already executed tasks of the pipeline. 
+  That tries to avoid re-starting a cluster (when using distributed runs) for 
+  stages that have finished. If that behaviour is not desired for a task, removing 
+  the checkpoint file will get things parallelizing again.
+- If the processing is of a task is nearly finished the last jobs of this task will be 
+  running and bcbio will wait for those to finish.
+
 .. _memory-management:
 
 Memory management
@@ -146,7 +158,8 @@ Memory management
 
 The memory information specified in the system configuration
 :ref:`config-resources` enables scheduling of memory intensive
-processes. bcbio-nextgen handles memory scheduling by:
+processes. The values are specified on a *memory-per-core* basis and
+thus bcbio-nextgen handles memory scheduling by:
 
 - Determining available cores and memory per machine. It uses the
   local machine for multicore runs. For parallel runs, it spawns a job
