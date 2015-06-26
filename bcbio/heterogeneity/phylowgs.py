@@ -112,18 +112,28 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info, ignore_file, config
     if not utils.file_uptodate(out_file, in_file):
         check_fn = _min_sample_pass(ignore_file)
         with file_transaction(somatic_info.tumor_data, out_file) as tx_out_file:
+            tx_out_file_raw = "%s-raw%s" % utils.splitext_plus(tx_out_file)
+            # Filter inputs
             with VariantFile(in_file) as bcf_in:
                 depths = [_sample_depth(rec, somatic_info.tumor_name) for rec in
                           filter(check_fn, bcf_in)]
                 depths.sort(reverse=True)
                 depth_thresh = depths[:config["sample_size"]][-1] if depths else 0
             with VariantFile(in_file) as bcf_in:
-                with VariantFile(tx_out_file, "w", header=bcf_in.header) as bcf_out:
+                with VariantFile(tx_out_file_raw, "w", header=bcf_in.header) as bcf_out:
                     for rec in bcf_in:
                         if (check_fn(rec) and
                               (depth_thresh < 5 or _sample_depth(rec, somatic_info.tumor_name) >= depth_thresh)):
-                            rec.chrom = _phylowgs_compatible_chroms(rec.chrom)
                             bcf_out.write(rec)
+            # Fix potential chromosome issues
+            with open(tx_out_file_raw) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    for line in in_handle:
+                        if not line.startswith("#"):
+                            parts = line.split("\t")
+                            parts[0] = _phylowgs_compatible_chroms(parts[0])
+                            line = "\t".join(parts)
+                        out_handle.write(line)
     return variant_type, out_file
 
 def _min_sample_pass(ignore_file):
