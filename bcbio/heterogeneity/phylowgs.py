@@ -55,13 +55,38 @@ def _prep_inputs(vrn_info, cnv_info, somatic_info, work_dir, config):
         with file_transaction(somatic_info.tumor_data, ssm_file, cnv_file) as (tx_ssm_file, tx_cnv_file):
             variant_type, input_vcf_file = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"],
                                                           work_dir, somatic_info, cnv_info["ignore"], config)
+            input_cnv_file = _prep_cnv_file(cnv_info["subclones"], work_dir, somatic_info)
             cmd = [sys.executable, exe,
                    "--sample-size", str(config["sample_size"]), "--tumor-sample", somatic_info.tumor_name,
-                   "--battenberg", cnv_info["subclones"], "--cellularity", _read_contam(cnv_info["contamination"]),
+                   "--battenberg", input_cnv_file, "--cellularity", _read_contam(cnv_info["contamination"]),
                    "--output-cnvs", tx_cnv_file, "--output-variants", tx_ssm_file,
                    "--variant-type", variant_type, input_vcf_file]
             do.run(cmd, "Prepare PhyloWGS inputs.")
     return ssm_file, cnv_file
+
+def _prep_cnv_file(in_file, work_dir, somatic_info):
+    """Prepare Battenberg CNV file for ingest by PhyloWGS.
+
+    The PhyloWGS preparation script does not handle 'chr' prefixed chromosomes (hg19 style)
+    correctly. This converts them over to GRCh37 (no 'chr') style to match preparation
+    work in _prep_vrn_file.
+    """
+    out_file = os.path.join(work_dir, "%s-prep%s" % utils.splitext_plus(os.path.basename(in_file)))
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(somatic_info.tumor_data, out_file) as tx_out_file:
+            with open(in_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    out_handle.write(in_handle.readline())  # header
+                    for line in in_handle:
+                        parts = line.split("\t")
+                        parts[1] = _phylowgs_compatible_chroms(parts[1])
+                        out_handle.write("\t".join(parts))
+    return out_file
+
+def _phylowgs_compatible_chroms(chrom):
+    """PhyloWGS prep scripts to not correctly support chr-prefixed contigs, so we remove them.
+    """
+    return chrom if not chrom.startswith("chr") else chrom.replace("chr", "")
 
 def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info, ignore_file, config):
     """Create a variant file to feed into the PhyloWGS prep script, limiting records.
@@ -73,6 +98,8 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info, ignore_file, config
     heterogeneity.
 
     Handles MuTect and VarDict as inputs to PhyloWGS.
+
+    Fixes chromosome naming to use non chr-prefixed contigs, to match _prep_cnv_file.
     """
     if vcaller.startswith("vardict"):
         variant_type = "vardict"
@@ -95,6 +122,7 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info, ignore_file, config
                     for rec in bcf_in:
                         if (check_fn(rec) and
                               (depth_thresh < 5 or _sample_depth(rec, somatic_info.tumor_name) >= depth_thresh)):
+                            rec.chrom = _phylowgs_compatible_chroms(rec.chrom)
                             bcf_out.write(rec)
     return variant_type, out_file
 
