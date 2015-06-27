@@ -247,9 +247,8 @@ def _strip_and_convert_lists(field):
 def _pname_and_metadata(in_file):
     """Retrieve metadata and project name from the input metadata CSV file.
 
-    Uses the input file name for the project name and
-
-    For back compatibility, accepts the project name as an input, providing no metadata.
+    Uses the input file name for the project name and for back compatibility,
+    accepts the project name as an input, providing no metadata.
     """
     if os.path.isfile(in_file):
         with open(in_file) as in_handle:
@@ -260,7 +259,9 @@ def _pname_and_metadata(in_file):
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
     else:
-        base, md, global_vars = _safe_name(in_file), {}, {}
+        if in_file.endswith(".csv"):
+            raise ValueError("Did not find input metadata file: %s" % in_file)
+        base, md, global_vars = _safe_name(os.path.splitext(os.path.basename(in_file))[0]), {}, {}
     return _safe_name(base), md, global_vars
 
 def _handle_special_yaml_cases(v):
