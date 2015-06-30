@@ -679,6 +679,11 @@ and memory and compute resources to devote to them::
   the third party software tool. Include the path to a GATK supplied key file
   to disable the `GATK phone home`_ feature.
 
+For GATK you can individually control memory for variant calling (which uses the
+``gatk`` memory target) and for framework usage like merging and variant file
+preparation (which can optionally use the the ``gatk-framework`` target). If
+you only set ``gatk``, that specification gets used for framework calls as well.
+
 Temporary directory
 ===================
 
