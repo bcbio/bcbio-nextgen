@@ -1,4 +1,4 @@
-version: 17
+version: 18
 
 aliases:
   human: true
@@ -14,7 +14,7 @@ variation:
   cosmic: ../variation/cosmic-v68-hg19.vcf.gz
   lcr: ../variation/LCR.bed.gz
   sv_repeat: ../variation/sv_repeat_telomere_centromere.bed
-  dbnsfp: ../variation/dbNSFP_v2.7.gz
+  dbnsfp: ../variation/dbNSFP_v3.0b2c.gz
   ancestral: ../variation/human_ancestor.fa.gz
 
 rnaseq:
