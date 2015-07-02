@@ -6,16 +6,19 @@ along with variant frequencies.
 https://github.com/morrislab/phylowgs
 http://genomebiology.com/2015/16/1/35
 """
+import collections
 import os
 import sys
 
+import pybedtools
 from pysam import VariantFile
 
 from bcbio import utils
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.structural import annotate
 
 def run(vrn_info, cnvs_by_name, somatic_info):
     """Run PhyloWGS given variant calls, CNVs and tumor/normal information.
@@ -28,7 +31,107 @@ def run(vrn_info, cnvs_by_name, somatic_info):
     else:
         ssm_file, cnv_file = _prep_inputs(vrn_info, cnvs_by_name["battenberg"], somatic_info, work_dir, config)
         evolve_file = _run_evolve(ssm_file, cnv_file, work_dir, somatic_info.tumor_data)
-        print evolve_file, ssm_file, cnv_file
+        summary_file = _prepare_summary(evolve_file, ssm_file, cnv_file, work_dir, somatic_info)
+        print summary_file
+
+def _prepare_summary(evolve_file, ssm_file, cnv_file, work_dir, somatic_info):
+    """Prepare a summary with gene-labelled heterogeneity from PhyloWGS predictions.
+    """
+    out_file = os.path.join(work_dir, "%s-phylowgs.txt" % somatic_info.tumor_name)
+    if not utils.file_uptodate(out_file, evolve_file):
+        with file_transaction(somatic_info.tumor_data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                ssm_locs = _read_ssm_locs(ssm_file)
+                cnv_ssms = _read_cnv_ssms(cnv_file)
+                for i, (ids, tree) in enumerate(_evolve_reader(evolve_file)):
+                    out_handle.write("* Tree %s\n" % (i + 1))
+                    out_handle.write("\n" + "\n".join(tree) + "\n\n")
+                    for nid, freq, gids in ids:
+                        genes = _gids_to_genes(gids, ssm_locs, cnv_ssms, somatic_info.tumor_data)
+                        out_handle.write("%s\t%s\t%s\n" % (nid, freq, ",".join(genes)))
+                    out_handle.write("\n")
+    return out_file
+
+def _gids_to_genes(gids, ssm_locs, cnv_ssms, data):
+    """Convert support ids for SNPs and SSMs into associated genes.
+    """
+    locs = collections.defaultdict(set)
+    for gid in gids:
+        cur_locs = []
+        try:
+            cur_locs.append(ssm_locs[gid])
+        except KeyError:
+            for ssm_loc in cnv_ssms.get(gid, []):
+                cur_locs.append(ssm_locs[ssm_loc])
+        for chrom, pos in cur_locs:
+            locs[chrom].add(pos)
+    genes = set([])
+    with tx_tmpdir(data) as tmpdir:
+        loc_file = os.path.join(tmpdir, "battenberg_find_genes.bed")
+        with open(loc_file, "w") as out_handle:
+            for chrom in sorted(locs.keys()):
+                for loc in sorted(list(locs[chrom])):
+                    out_handle.write("%s\t%s\t%s\n" % (chrom, loc - 1, loc))
+        ann_file = annotate.add_genes(loc_file, data, max_distance=10000)
+        for r in pybedtools.BedTool(ann_file):
+            for gene in r.name.split(","):
+                if gene != ".":
+                    genes.add(gene)
+    return sorted(list(genes))
+
+def _evolve_reader(in_file):
+    """Generate a list of region IDs and trees from a top_k_trees evolve.py file.
+    """
+    cur_id_list = None
+    cur_tree = None
+    with open(in_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("id,"):
+                if cur_id_list:
+                    yield cur_id_list, cur_tree
+                cur_id_list = []
+                cur_tree = None
+            elif cur_tree is not None:
+                if line.strip() and not line.startswith("Number of non-empty"):
+                    cur_tree.append(line.rstrip())
+            elif not line.strip() and cur_id_list and len(cur_id_list) > 0:
+                cur_tree = []
+            elif line.strip():
+                parts = []
+                for part in line.strip().split("\t"):
+                    if part.endswith(","):
+                        part = part[:-1]
+                    parts.append(part)
+                if len(parts) > 4:
+                    nid, freq, _, _, support = parts
+                    cur_id_list.append((nid, freq, support.split("; ")))
+    if cur_id_list:
+        yield cur_id_list, cur_tree
+
+def _read_cnv_ssms(in_file):
+    """Map CNVs to associated SSMs
+    """
+    out = {}
+    with open(in_file) as in_handle:
+        in_handle.readline()  # header
+        for line in in_handle:
+            parts = line.strip().split()
+            if len(parts) > 3:
+                cnvid, _, _, ssms = parts
+                out[cnvid] = [x.split(",")[0] for x in ssms.split(";")]
+    return out
+
+def _read_ssm_locs(in_file):
+    """Map SSMs to chromosomal locations.
+    """
+    out = {}
+    with open(in_file) as in_handle:
+        in_handle.readline()  # header
+        for line in in_handle:
+            sid, loc = line.split()[:2]
+            chrom, pos = loc.split("_")
+            out[sid] = (chrom, int(pos))
+    return out
 
 def _run_evolve(ssm_file, cnv_file, work_dir, data):
     """Run evolve.py to infer subclonal composition.
@@ -36,7 +139,7 @@ def _run_evolve(ssm_file, cnv_file, work_dir, data):
     exe = os.path.join(os.path.dirname(sys.executable), "evolve.py")
     assert os.path.exists(exe), "Could not find evolve script for PhyloWGS runs."
     out_dir = os.path.join(work_dir, "evolve")
-    out_file = os.path.join(out_dir, "clonalFrequencies")
+    out_file = os.path.join(out_dir, "top_k_trees")
     if not utils.file_uptodate(out_file, cnv_file):
         with file_transaction(data, out_dir) as tx_out_dir:
             with utils.chdir(tx_out_dir):
