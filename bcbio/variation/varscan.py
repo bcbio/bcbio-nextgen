@@ -75,7 +75,10 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
     paired = get_paired_bams(align_bams, items)
     if not paired.normal_bam:
-        raise ValueError("Require both tumor and normal BAM files for VarScan cancer calling")
+        affected_batch = items[0]["metadata"]["batch"]
+        message = ("Batch {} requires both tumor and normal BAM files for"
+            " VarScan cancer calling").format(affected_batch)
+        raise ValueError(message)
 
     if not file_exists(out_file):
         orig_out_file = out_file
