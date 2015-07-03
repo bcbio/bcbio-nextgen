@@ -94,7 +94,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "ipython", "joblib", "lxml",
+    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "gffutils", "ipython", "joblib", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
             "pip", "progressbar", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",
             "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",
@@ -201,10 +201,13 @@ def check_dependencies():
     """Ensure required tools for installation are present.
     """
     print("Checking required dependencies")
-    try:
-        subprocess.check_call(["git", "--version"])
-    except OSError:
-        raise OSError("bcbio-nextgen installer requires Git (http://git-scm.com/)")
+    for dep, msg in [(["git", "--version"], "Git (http://git-scm.com/)"),
+                     (["wget", "--version"], "wget"),
+                     (["bzip2", "-h"], "bzip2")]:
+        try:
+            subprocess.check_output(dep, stderr=subprocess.STDOUT)
+        except OSError:
+            raise OSError("bcbio-nextgen installer requires %s" % msg)
 
 def _check_toolplus(x):
     """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
