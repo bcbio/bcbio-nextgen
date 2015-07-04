@@ -124,6 +124,8 @@ def process_alignment(data):
     elif fastq1 is None and "vrn_file" in data:
         data["config"]["algorithm"]["variantcaller"] = False
         data["work_bam"] = None
+    elif not fastq1:
+        raise ValueError("No 'files' specified for input sample: %s" % dd.get_sample_name(data))
     else:
         raise ValueError("Could not process input file from sample configuration. \n" +
                          fastq1 +

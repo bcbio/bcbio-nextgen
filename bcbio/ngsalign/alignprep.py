@@ -27,11 +27,11 @@ def create_inputs(data):
     aligner = tz.get_in(("config", "algorithm", "aligner"), data)
     # CRAM files must be converted to bgzipped fastq, unless not aligning.
     # Also need to prep and download remote files.
-    if not ("files" in data and aligner and (_is_cram_input(data["files"]) or
-                                             objectstore.is_remote(data["files"][0]))):
+    if not ("files" in data and data["files"] and aligner and (_is_cram_input(data["files"]) or
+                                                               objectstore.is_remote(data["files"][0]))):
         # skip indexing on samples without input files or not doing alignment
         # skip if we're not BAM and not doing alignment splitting
-        if ("files" not in data or data["files"][0] is None or not aligner
+        if ("files" not in data or not data["files"] or data["files"][0] is None or not aligner
               or _no_index_needed(data)):
             return [[data]]
     ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data)
@@ -154,10 +154,10 @@ def _find_read_splits(in_file, split_size):
 # ## bgzip and grabix
 
 def _is_bam_input(in_files):
-    return in_files[0].endswith(".bam") and (len(in_files) == 1 or in_files[1] is None)
+    return in_files and in_files[0].endswith(".bam") and (len(in_files) == 1 or in_files[1] is None)
 
 def _is_cram_input(in_files):
-    return in_files[0].endswith(".cram") and (len(in_files) == 1 or in_files[1] is None)
+    return in_files and in_files[0].endswith(".cram") and (len(in_files) == 1 or in_files[1] is None)
 
 def _prep_grabix_indexes(in_files, dirs, data):
     if _is_bam_input(in_files):
