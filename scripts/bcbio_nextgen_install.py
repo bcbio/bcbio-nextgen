@@ -30,6 +30,7 @@ remotes = {"requirements":
            "http://repo.continuum.io/miniconda/Miniconda-3.5.5-%s-x86_64.sh"}
 
 def main(args, sys_argv):
+    check_arguments(args)
     check_dependencies()
     with bcbio_tmpdir():
         setup_data_dir(args)
@@ -196,6 +197,12 @@ def bcbio_tmpdir():
     yield work_dir
     os.chdir(orig_dir)
     shutil.rmtree(work_dir)
+
+def check_arguments(args):
+    """Ensure argruments are consistent and correct.
+    """
+    if args.toolplus and not args.tooldir:
+        raise argparse.ArgumentTypeError("Cannot specify --toolplus without --tooldir")
 
 def check_dependencies():
     """Ensure required tools for installation are present.
