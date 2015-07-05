@@ -247,3 +247,5 @@ def open_fastq(in_file):
         return gzip.open(in_file, 'rb')
     if ext in [".fastq", ".fq"]:
         return open(in_file, 'r')
+    # default to just opening it
+    return open(in_file, "r")

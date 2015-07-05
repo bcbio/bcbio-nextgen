@@ -103,7 +103,8 @@ def _biobambam_dedup_sort(data, tx_out_file):
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
-        return _nosort_tobam_cmd()
+        out_file = tx_out_file
+        return _nosort_tobam_cmd().format(**locals())
     else:
         return ("{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort - | "
                 "{bammarkduplicates} tmpfile={tmp_file}-markdup "
