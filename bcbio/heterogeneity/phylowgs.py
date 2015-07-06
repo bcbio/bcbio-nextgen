@@ -68,7 +68,7 @@ def _gids_to_genes(gids, ssm_locs, cnv_ssms, data):
             locs[chrom].add(pos)
     genes = set([])
     with tx_tmpdir(data) as tmpdir:
-        chrom_prefix = "chr" if next(ref.file_contigs(dd.get_ref_file(data))).startswith("chr") else ""
+        chrom_prefix = "chr" if next(ref.file_contigs(dd.get_ref_file(data))).name.startswith("chr") else ""
         loc_file = os.path.join(tmpdir, "battenberg_find_genes.bed")
         with open(loc_file, "w") as out_handle:
             for chrom in sorted(locs.keys()):
