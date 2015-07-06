@@ -14,6 +14,7 @@ import pybedtools
 from pysam import VariantFile
 
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
@@ -67,11 +68,12 @@ def _gids_to_genes(gids, ssm_locs, cnv_ssms, data):
             locs[chrom].add(pos)
     genes = set([])
     with tx_tmpdir(data) as tmpdir:
+        chrom_prefix = "chr" if next(ref.file_contigs(dd.get_ref_file(data))).startswith("chr") else ""
         loc_file = os.path.join(tmpdir, "battenberg_find_genes.bed")
         with open(loc_file, "w") as out_handle:
             for chrom in sorted(locs.keys()):
                 for loc in sorted(list(locs[chrom])):
-                    out_handle.write("%s\t%s\t%s\n" % (chrom, loc - 1, loc))
+                    out_handle.write("%s\t%s\t%s\n" % (chrom_prefix, chrom, loc - 1, loc))
         ann_file = annotate.add_genes(loc_file, data, max_distance=10000)
         for r in pybedtools.BedTool(ann_file):
             for gene in r.name.split(","):
