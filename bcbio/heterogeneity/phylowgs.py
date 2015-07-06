@@ -73,7 +73,7 @@ def _gids_to_genes(gids, ssm_locs, cnv_ssms, data):
         with open(loc_file, "w") as out_handle:
             for chrom in sorted(locs.keys()):
                 for loc in sorted(list(locs[chrom])):
-                    out_handle.write("%s\t%s\t%s\n" % (chrom_prefix, chrom, loc - 1, loc))
+                    out_handle.write("%s%s\t%s\t%s\n" % (chrom_prefix, chrom, loc - 1, loc))
         ann_file = annotate.add_genes(loc_file, data, max_distance=10000)
         for r in pybedtools.BedTool(ann_file):
             for gene in r.name.split(","):
