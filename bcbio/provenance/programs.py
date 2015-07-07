@@ -33,7 +33,6 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "samtools", "stdout_flag": "Version:"},
              {"cmd": "sambamba", "stdout_flag": "sambamba"},
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
-             {"cmd": "tophat", "args": "--version", "stdout_flag": "TopHat"},
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
 
