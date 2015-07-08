@@ -1,0 +1,4 @@
+{
+    "system_config" : {"class": "File", "path": "../tests/test_automated_output/bcbio_system.yaml"},
+    "run_config": {"class": "File", "path": "../tests/data/automated/run_info-bam.yaml"}
+}
