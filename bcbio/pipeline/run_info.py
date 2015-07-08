@@ -534,7 +534,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names):
                 upload["fc_name"] = fc_name
                 upload["fc_date"] = fc_date
             upload["run_id"] = ""
-            upload["dir"] = _file_to_abs(upload["dir"], [dirs.get("work")], makedir=True)
+            if upload.get("dir"):
+                upload["dir"] = _file_to_abs(upload["dir"], [dirs.get("work")], makedir=True)
             item["upload"] = upload
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
