@@ -26,7 +26,7 @@ from bcbio.bam.fastq import open_fastq
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
                          "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
 
-def organize(dirs, config, run_info_yaml, sample_names):
+def organize(dirs, config, run_info_yaml, sample_names=None):
     """Organize run information from a passed YAML file or the Galaxy API.
 
     Creates the high level structure used for subsequent processing.
@@ -82,6 +82,11 @@ def setup_directories(work_dir, fc_dir, config, config_file):
     fastq_dir, galaxy_dir, config_dir = _get_full_paths(flowcell.get_fastq_dir(fc_dir)
                                                         if fc_dir else None,
                                                         config, config_file)
+    # check default install for tool data if not found locally
+    if not os.path.exists(os.path.join(galaxy_dir, "tool-data")):
+        _, config_file = config_utils.load_system_config()
+        if os.path.exists(os.path.join(os.path.dirname(config_file), "tool-data")):
+            galaxy_dir = os.path.dirname(config_file)
     return {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
 
@@ -488,7 +493,7 @@ def _sanity_check_files(item, files):
     if msg:
         raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
-def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names):
+def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
     """Read run information from a passed YAML file.
     """
     with open(run_info_yaml) as in_handle:
@@ -511,7 +516,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names):
         global_vars = global_config.pop("globals", {})
         resources = global_config.pop("resources", {})
         loaded = loaded["details"]
-    loaded = [x for x in loaded if x["description"] in sample_names]
+    if sample_names:
+        loaded = [x for x in loaded if x["description"] in sample_names]
 
     run_details = []
     for i, item in enumerate(loaded):
@@ -618,3 +624,15 @@ def clean_name(xs):
     if final[-1] == safec:
         final = final[:-1]
     return "".join(final)
+
+def prep_system(run_info_yaml, bcbio_system=None):
+    """Prepare system configuration information from an input configuration file.
+
+    This does the work of parsing the system input file and setting up directories
+    for use in 'organize'.
+    """
+    work_dir = os.getcwd()
+    config, config_file = config_utils.load_system_config(bcbio_system, work_dir)
+    dirs = setup_directories(work_dir, os.path.normpath(os.path.dirname(os.path.dirname(run_info_yaml))),
+                             config, config_file)
+    return [dirs, config, run_info_yaml]

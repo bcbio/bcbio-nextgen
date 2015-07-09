@@ -199,6 +199,10 @@ def organize_samples(*args):
     return run_info.organize(*args)
 
 @utils.map_wrap
+def prep_system(*args):
+    return run_info.prep_system(*args)
+
+@utils.map_wrap
 def upload_samples(*args):
     return upload.from_sample(*args)
 

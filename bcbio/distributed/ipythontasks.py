@@ -336,6 +336,12 @@ def organize_samples(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(run_info.organize, *args))
 
+@require(run_info)
+def prep_system(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(run_info.prep_system, *args))
+
 @require(upload)
 def upload_samples(*args):
     args = ipython.unzip_args(args)

@@ -8,7 +8,6 @@ inputs:
       - "null"
       - File
     description: bcbio system configuration file. Can be null to use the default.
-
   - id: "#run_config"
     type: File
     description: bcbio run configuration file in YAML format.
@@ -24,17 +23,18 @@ outputs:
     source: "#organize_samples.world"
 
 steps:
-  - id: "#bcbioprep"
-    run: {import: bcbioprep-tool.cwl}
+  - id: "#prep_system"
+    run: {import: prep_system-tool.cwl}
     inputs:
-      - {id: "#bcbioprep.system_config", source: "#system_config"}
+      - {id: "#prep_system.run_config", source: "#run_config"}
+      - {id: "#prep_system.system_config", source: "#system_config"}
     outputs:
-      - {id: "#bcbioprep.system_config_prep"}
+      - {id: "#prep_system.system_config_prep"}
 
   - id: "#organize_samples"
     run: {import: organize_samples-tool.cwl}
     inputs:
       - {id: "#organize_samples.run_config", source: "#run_config"}
-      - {id: "#organize_samples.system_config_prep", source: "#bcbioprep.system_config_prep"}
+      - {id: "#organize_samples.system_config_prep", source: "#prep_system.system_config_prep"}
     outputs:
       - { id: "#organize_samples.world" }

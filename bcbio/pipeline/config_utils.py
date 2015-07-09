@@ -43,7 +43,7 @@ def update_w_custom(config, lane_info):
 
 # ## Retrieval functions
 
-def load_system_config(config_file, work_dir=None):
+def load_system_config(config_file=None, work_dir=None):
     """Load bcbio_system.yaml configuration file, handling standard defaults.
 
     Looks for configuration file in default location within
