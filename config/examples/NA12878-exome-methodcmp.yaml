@@ -21,8 +21,8 @@ details:
       recalibrate: gatk
       realign: gatk
       merge_bamprep: true
-      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
-      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
+      validate: ../input/GiaB_v2_19.vcf.gz
+      validate_regions: ../input/GiaB_v2_19_regions.bed
       variant_regions: ../input/NGv3.bed
       ensemble:
         numpass: 2
@@ -40,8 +40,8 @@ details:
       realign: false
       variantcaller: [freebayes, gatk-haplotype, samtools]
       merge_bamprep: false
-      validate: ../input/GiaB_NIST_RTG_v0_2.vcf.gz
-      validate_regions: ../input/GiaB_NIST_RTG_v0_2_regions.bed
+      validate: ../input/GiaB_v2_19.vcf.gz
+      validate_regions: ../input/GiaB_v2_19_regions.bed
       variant_regions: ../input/NGv3.bed
       ensemble:
         numpass: 2
