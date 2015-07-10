@@ -4,13 +4,18 @@ class: Workflow
 
 inputs:
   - id: "#system_config"
-    type:
-      - "null"
-      - File
+    default: null
+    type: File
     description: bcbio system configuration file. Can be null to use the default.
   - id: "#run_config"
     type: File
     description: bcbio run configuration file in YAML format.
+
+requirements:
+  - class: EnvVarRequirement
+    envDef:
+      - envName: "MPLCONFIGDIR"
+        envValue: '.'
 
 hints:
   - class: DockerRequirement

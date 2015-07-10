@@ -25,7 +25,7 @@ def process(args):
         with open(args.argfile) as in_handle:
             fnargs = yaml.safe_load(in_handle)
         work_dir = os.path.dirname(args.argfile)
-    fnargs = config_utils.merge_resources(fnargs)
+        fnargs = config_utils.merge_resources(fnargs)
     if not work_dir:
         work_dir = os.getcwd()
     with utils.chdir(work_dir):

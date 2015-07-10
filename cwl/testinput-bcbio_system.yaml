@@ -1,0 +1,15 @@
+galaxy_config: ../tests/data/automated/universe_wsgi.ini
+resources:
+  bwa: {cores: 4}
+  default: {cores: 4, memory: 1G}
+  gatk:
+    jvm_opts: [-Xms750m, -Xmx1000m]
+  gemini: {cores: 4}
+  log: {dir: log}
+  picard: {dir: /usr/local/share/java/picard}
+  rnaseqc: {dir: /usr/local/share/java/RNA-SeQC}
+  samtools: {cores: 4, memory: 768M}
+  snpeff:
+    dir: /usr/local/share/java/snpeff
+    jvm_opts: [-Xms750m, -Xmx6g]
+  star: {cores: 4, memory: 2g}

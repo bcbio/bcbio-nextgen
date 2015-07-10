@@ -10,6 +10,7 @@ inputs:
     inputBinding:
       position: 0
   - id: "#system_config"
+    default: null
     type: File
     description:
       bcbio system YAML file.
