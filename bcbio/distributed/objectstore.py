@@ -109,7 +109,7 @@ class S3Handle(FileHandle):
     """File object for the Amazon S3 files."""
 
     def __init__(self, key):
-        super(S3Handle, self).__init__(key)
+        super(S3Handle, self).__init__()
         self._key = key
         if self._key.name.endswith(".gz"):
             decompress = zlib.decompressobj(16 | zlib.MAX_WBITS)
