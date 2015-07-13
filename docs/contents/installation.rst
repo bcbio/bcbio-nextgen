@@ -253,17 +253,6 @@ for commercial usage.
 Troubleshooting
 ===============
 
-Old bcbio version support
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The upgrade approach changed slightly as of 0.7.5 to be more
-consistent.  In earlier versions, to get a full upgrade leave out the
-``--data`` argument since that was the default. The best approach if
-you find the arguments are out of date is to do a ``bcbio_nextgen.py
-upgrade -u stable`` to get the latest version, then proceed
-again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
-``bcbio_nextgen.py -u stable`` to get up to date.
-
 Proxy or firewall problems
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -273,6 +262,16 @@ use ``https://`` globally instead of ``git://``::
 
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
+GATK or Java Errors
+~~~~~~~~~~~~~~~~~~~
+GATK and other software tools used by bcbio currently require Java 1.7. If you
+have a different version, you'll see errors like::
+
+    Unsupported major.minor version 51.0
+
+To fix this make sure you have Java 1.7 first in your ``PATH`` and that
+``JAVA_HOME`` is either set to point to the same version, or not set.
+(``unset JAVA_HOME``).
 
 ImportErrors
 ~~~~~~~~~~~~
@@ -292,6 +291,18 @@ Finally, having a .pydistutils.cfg file in your home directory can mess with
 where the libraries get installed. If you have this file in your
 home directory, temporarily renaming it to something else may fix
 your installation issue.
+
+Old bcbio version support
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The upgrade approach changed slightly as of 0.7.5 to be more
+consistent.  In earlier versions, to get a full upgrade leave out the
+``--data`` argument since that was the default. The best approach if
+you find the arguments are out of date is to do a ``bcbio_nextgen.py
+upgrade -u stable`` to get the latest version, then proceed
+again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
+``bcbio_nextgen.py -u stable`` to get up to date.
+
 
 Manual process
 ==============
