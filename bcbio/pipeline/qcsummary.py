@@ -124,9 +124,10 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     ratio = bam.get_aligned_reads(bam_file, data)
-    if (ratio < 0.60 and data['config']["algorithm"].get("kraken", None) and
-          (data["analysis"].lower().startswith("rna-seq") or
-           data["analysis"].lower().startswith("standard"))):
+    # if (ratio < 0.60 and data['config']["algorithm"].get("kraken", None) and
+        # (data["analysis"].lower().startswith("rna-seq") or
+        #  data["analysis"].lower().startswith("standard"))):
+    if data['config']["algorithm"].get("kraken", None):
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
     metrics["Name"] = data["name"][-1]
