@@ -38,12 +38,13 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     star_path = config_utils.get_program("STAR", config)
     fastq = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = config["algorithm"].get("num_cores", 1)
+    qual_shift = _get_quality_shift(config)
 
     safe_makedir(align_dir)
     cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq} "
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
            "--outReadsUnmapped Fastx --outFilterMultimapNmax 10 "
-           "--outStd SAM "
+           "--outStd SAM --outQSconversionAdd {qual_shift}"
            "--outSAMunmapped Within --outSAMattributes %s" % " ".join(ALIGN_TAGS))
     cmd = cmd + " --readFilesCommand zcat " if is_gzipped(fastq_file) else cmd
     cmd += _read_group_option(names)
@@ -91,14 +92,12 @@ def _read_group_option(names):
     return (" --outSAMattrRGline ID:{rg_id} PL:{rg_library} "
             "PU:{rg_platform_unit} SM:{rg_sample} ").format(**locals())
 
-def _get_quality_format(config):
-    qual_format = config["algorithm"].get("quality_format", None)
-    if qual_format.lower() == "illumina":
-        return "fastq-illumina"
-    elif qual_format.lower() == "solexa":
-        return "fastq-solexa"
+def _get_quality_shift(config):
+    qual_format = config["algorithm"].get("quality_format", "")
+    if qual_format.lower() == "illumina" or qual_format.lower() == "solexa":
+        return -31
     else:
-        return "fastq-sanger"
+        return 0
 
 def remap_index_fn(ref_file):
     """Map sequence references to equivalent star indexes
