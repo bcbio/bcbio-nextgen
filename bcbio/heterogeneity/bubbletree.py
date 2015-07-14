@@ -5,11 +5,13 @@ http://www.bioconductor.org/packages/release/bioc/vignettes/BubbleTree/inst/doc/
 """
 import csv
 import os
+import subprocess
 
 from pysam import VariantFile
 
 from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import regions
@@ -37,7 +39,19 @@ def _run_bubbletree(vcf_csv, cnv_csv, data):
     with open(r_file, "w") as out_handle:
         out_handle.write(_script.format(**locals()))
     if not utils.file_exists(freqs_out):
-        do.run(["Rscript", r_file], "Assess heterogeneity with BubbleTree")
+        try:
+            do.run(["Rscript", r_file], "Assess heterogeneity with BubbleTree")
+        except subprocess.CalledProcessError, msg:
+            if _allowed_bubbletree_errorstates(str(msg)):
+                with open(freqs_out, "w") as out_handle:
+                    out_handle.write('bubbletree failed:\n %s"\n' % (str(msg)))
+            else:
+                logger.exception()
+                raise
+
+def _allowed_bubbletree_errorstates(msg):
+    allowed = ["Error in p[i, ] : subscript out of bounds"]
+    return any([msg.find(m) >= 0 for m in allowed])
 
 def _prep_cnv_file(in_file, svcaller, work_dir, data):
     """Create a CSV file of CNV calls with log2 and number of marks.
