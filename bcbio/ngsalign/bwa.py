@@ -174,9 +174,7 @@ def _align_backtrack(fastq_file, pair_file, ref_file, out_file, names, rg_info, 
 def _bwa_args_from_config(config):
     num_cores = config["algorithm"].get("num_cores", 1)
     core_flags = ["-t", str(num_cores)] if num_cores > 1 else []
-    qual_format = config["algorithm"].get("quality_format", "").lower()
-    qual_flags = ["-I"] if qual_format == "illumina" else []
-    return core_flags + qual_flags
+    return core_flags
 
 def _run_bwa_align(fastq_file, ref_file, out_file, config):
     aln_cl = [config_utils.get_program("bwa", config), "aln",
