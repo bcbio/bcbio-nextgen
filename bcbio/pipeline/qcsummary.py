@@ -117,6 +117,7 @@ def _run_qc_tools(bam_file, data):
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     if data["analysis"].lower().startswith(("standard", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
+        to_run.append(("qualimap", _run_qualimap))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     for program_name, qc_fn in to_run:
@@ -130,6 +131,9 @@ def _run_qc_tools(bam_file, data):
     if data['config']["algorithm"].get("kraken", None):
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
+
+    bam.remove("%s-downsample%s" % os.path.splitext(bam_file))
+
     metrics["Name"] = data["name"][-1]
     metrics["Quality format"] = utils.get_in(data,
                                              ("config", "algorithm",
@@ -451,8 +455,6 @@ def _run_fastqc(bam_file, data, fastqc_out):
                     if os.path.exists(fastqc_out):
                         shutil.rmtree(fastqc_out)
                     shutil.move(tx_fastqc_out, fastqc_out)
-        if ds_bam and os.path.exists(ds_bam):
-            os.remove(ds_bam)
     parser = FastQCParser(fastqc_out, data["name"][-1])
     stats = parser.get_fastqc_summary()
     parser.save_sections_into_file()
@@ -565,6 +567,8 @@ def _run_qualimap(bam_file, data, out_dir):
     """
     report_file = os.path.join(out_dir, "qualimapReport.html")
     if not os.path.exists(report_file):
+        ds_bam = bam.downsample(bam_file, data, 1e7)
+        bam_file = ds_bam if ds_bam else bam_file
         utils.safe_makedir(out_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         qualimap = config_utils.get_program("qualimap", data["config"])

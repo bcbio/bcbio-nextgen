@@ -55,6 +55,15 @@ def index(in_bam, config):
             do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam))
     return index_file if utils.file_uptodate(index_file, in_bam) else alt_index_file
 
+def remove(in_bam):
+    """
+    remove bam file and the index if exists
+    """
+    if utils.file_exists(in_bam):
+        utils.remove_safe(in_bam)
+    if utils.file_exists(in_bam + ".bai"):
+        utils.remove_safe(in_bma + ".bai")
+
 def idxstats(in_bam, data):
     """Return BAM index stats for the given file, using samtools idxstats.
     """
