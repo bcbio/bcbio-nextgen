@@ -179,7 +179,7 @@ def calculate_offtarget(bam_file, ref_file, data):
             with file_transaction(data, out_file) as tx_out_file:
                 offtarget_regions = "%s-regions.bed" % utils.splitext_plus(out_file)[0]
                 ref_bed = get_ref_bedtool(ref_file, data["config"])
-                ref_bed.subtract(pybedtools.BedTool(vrs_file)).saveas(offtarget_regions)
+                ref_bed.subtract(pybedtools.BedTool(vrs_file), nonamecheck=True).saveas(offtarget_regions)
                 cmd = ("samtools view -u {bam_file} -L {offtarget_regions} | "
                        "bedtools intersect -abam - -b {offtarget_regions} -f 1.0 -bed | wc -l")
                 offtarget_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
@@ -249,7 +249,7 @@ def _add_config_regions(nblock_regions, ref_regions, config):
             str_regions = str(input_regions[0]).strip()
             input_regions = pybedtools.BedTool("%s\n%s" % (str_regions, str_regions),
                                                from_string=True)
-        input_nblock = ref_regions.subtract(input_regions)
+        input_nblock = ref_regions.subtract(input_regions, nonamecheck=True)
         if input_nblock == ref_regions:
             raise ValueError("Input variant_region file (%s) "
                              "excludes all genomic regions. Do the chromosome names "
@@ -326,8 +326,8 @@ def block_regions(in_bam, ref_file, data):
             nblock_regions = _get_nblock_regions(callable_bed, min_n_size, ref_regions)
             nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
             nblock_regions.saveas(nblock_bed)
-            if len(ref_regions.subtract(nblock_regions)) > 0:
-                ref_regions.subtract(nblock_bed).merge(d=min_n_size).saveas(callblock_bed)
+            if len(ref_regions.subtract(nblock_regions, nonamecheck=True)) > 0:
+                ref_regions.subtract(nblock_bed, nonamecheck=True).merge(d=min_n_size).saveas(callblock_bed)
             else:
                 raise ValueError("No callable regions found from BAM file. Alignment regions might "
                                  "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
@@ -336,7 +336,7 @@ def block_regions(in_bam, ref_file, data):
 def _write_bed_regions(data, final_regions, out_file, out_file_ref):
     ref_file = tz.get_in(["reference", "fasta", "base"], data)
     ref_regions = get_ref_bedtool(ref_file, data["config"])
-    noanalysis_regions = ref_regions.subtract(final_regions)
+    noanalysis_regions = ref_regions.subtract(final_regions, nonamecheck=True)
     final_regions.saveas(out_file)
     noanalysis_regions.saveas(out_file_ref)
 
@@ -460,7 +460,7 @@ def _combine_sample_regions_batch(batch, items):
                 final_nblock_regions = nblock_regions.filter(
                     block_filter.include_block).saveas().each(block_filter.expand_block).saveas(
                         "%s-nblockfinal%s" % utils.splitext_plus(tx_afile))
-                final_regions = ref_regions.subtract(final_nblock_regions).merge(d=min_n_size)
+                final_regions = ref_regions.subtract(final_nblock_regions, nonamecheck=True).merge(d=min_n_size)
                 _write_bed_regions(items[0], final_regions, tx_afile, tx_noafile)
     if analysis_file and utils.file_exists(analysis_file):
         return analysis_file, no_analysis_file
