@@ -81,9 +81,7 @@ def prepare_exclude_file(items, base_file, chrom=None):
     """
     out_file = "%s-exclude%s.bed" % (utils.splitext_plus(base_file)[0], "-%s" % chrom if chrom else "")
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-        all_vrs = _get_variant_regions(items)
-        ready_region = (shared.subset_variant_regions(tz.first(all_vrs), chrom, base_file, items)
-                        if len(all_vrs) > 0 else chrom)
+        ready_region = chrom
         with shared.bedtools_tmpdir(items[0]):
             # Get a bedtool for the full region if no variant regions
             if ready_region == chrom:
