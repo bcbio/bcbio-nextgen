@@ -147,16 +147,10 @@ def _maybe_add_sv(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("sv"):
         for svcall in sample["sv"]:
             out.extend(_get_variant_file(svcall, ("vrn_file",)))
-            out.extend(_get_variant_file(svcall, ("bedpe_file",)))
             out.extend(_get_variant_file(svcall, ("cnr",)))
             out.extend(_get_variant_file(svcall, ("cns",)))
             out.extend(_get_variant_file(svcall, ("cnr_bed",)))
             out.extend(_get_variant_file(svcall, ("cnr_bedgraph",)))
-            if "sample_bed" in svcall:
-                out.append({"path": svcall["sample_bed"],
-                            "type": "bed",
-                            "ext": "%s-sample" % svcall["variantcaller"],
-                            "variantcaller": svcall["variantcaller"]})
             if "validate" in svcall:
                 for vkey in ["csv", "plot", "df"]:
                     vfile = tz.get_in(["validate", vkey], svcall)

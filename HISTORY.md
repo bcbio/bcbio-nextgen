@@ -1,5 +1,6 @@
 ## 0.9.1 (in progress)
 
+- Move lumpy-sv to latest version which uses lumpyexpress instead of speedseq.
 - Move some structural variant calling, like CNV detection, prior to variant
   calling. Allows use of CNV calls as inputs for variant detection tools.
 - Generalize support for interaction with blob storage and graphing to support
