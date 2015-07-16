@@ -188,8 +188,7 @@ if __name__ == "__main__":
     if args.gtf:
         "Preparing transcriptome."
         with chdir(os.path.join(build_dir, os.pardir)):
-            cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {env.picard_home} "
-                "{args.build}")
+            cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {args.build}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
 
     base_dir = os.path.normpath(os.path.dirname(fasta_file))
