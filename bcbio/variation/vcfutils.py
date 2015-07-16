@@ -375,7 +375,7 @@ def sort_by_ref(vcf_file, data):
         resources = config_utils.get_resources("bcbio_variation", data["config"])
         jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
         cmd = ["java"] + jvm_opts + ["-jar", bv_jar, "variant-utils", "sort-vcf",
-                                     vcf_file, tz.get_in(["reference", "fasta", "base"], data), "--sortpos"]
+                                     vcf_file, dd.get_ref_file(data), "--sortpos"]
         do.run(cmd, "Sort VCF by reference")
     return out_file
 

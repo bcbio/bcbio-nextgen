@@ -38,7 +38,8 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                        "lumpyexpress -v -B {full_bams} -S {sr_bams} -D {disc_bams} "
                        "{exclude} -T {tmpdir} -o {tx_out_file}")
                 do.run(cmd.format(**locals()), "lumpyexpress", items[0])
-    return vcfutils.bgzip_and_index(out_file, items[0]["config"]), sv_exclude_bed
+    sort_file = vcfutils.sort_by_ref(out_file, items[0])
+    return vcfutils.bgzip_and_index(sort_file, items[0]["config"]), sv_exclude_bed
 
 def _filter_by_support(in_file, data):
     """Filter call file based on supporting evidence, adding FILTER annotations to VCF.
