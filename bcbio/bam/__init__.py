@@ -62,7 +62,7 @@ def remove(in_bam):
     if utils.file_exists(in_bam):
         utils.remove_safe(in_bam)
     if utils.file_exists(in_bam + ".bai"):
-        utils.remove_safe(in_bma + ".bai")
+        utils.remove_safe(in_bam + ".bai")
 
 def idxstats(in_bam, data):
     """Return BAM index stats for the given file, using samtools idxstats.
