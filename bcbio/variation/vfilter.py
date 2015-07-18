@@ -19,7 +19,7 @@ from bcbio.variation import vcfutils
 # ## General functionality
 
 def hard_w_expression(vcf_file, expression, data, name="+", filterext="",
-                      extra_cmd=""):
+                      extra_cmd="", limit_regions="variant_regions"):
     """Perform hard filtering using bcftools expressions like %QUAL < 20 || DP < 4.
     """
     base, ext = utils.splitext_plus(vcf_file)
@@ -29,7 +29,8 @@ def hard_w_expression(vcf_file, expression, data, name="+", filterext="",
             if vcfutils.vcf_has_variants(vcf_file):
                 bcftools = config_utils.get_program("bcftools", data["config"])
                 bgzip_cmd = "| bgzip -c" if out_file.endswith(".gz") else ""
-                variant_regions = utils.get_in(data, ("config", "algorithm", "variant_regions"))
+                variant_regions = (utils.get_in(data, ("config", "algorithm", "variant_regions"))
+                                   if limit_regions == "variant_regions" else None)
                 intervals = ("-T %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
                              if variant_regions else "")
                 cmd = ("{bcftools} filter -O v {intervals} --soft-filter '{name}' "

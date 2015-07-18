@@ -51,7 +51,8 @@ def _filter_by_support(in_file, data):
     """
     rc_filter = "FORMAT/SU < 4"
     # approach_filter = "FORMAT/SR == 0 || FORMAT/PE == 0"
-    return vfilter.hard_w_expression(in_file, rc_filter, data, name="ReadCountSupport")
+    return vfilter.hard_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
+                                     limit_regions=None)
 
 def run(items):
     """Perform detection of structural variations with lumpy, using bwa-mem alignment.
