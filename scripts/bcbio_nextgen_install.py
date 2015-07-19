@@ -212,7 +212,7 @@ def check_dependencies():
                      (["wget", "--version"], "wget"),
                      (["bzip2", "-h"], "bzip2")]:
         try:
-            subprocess.check_output(dep, stderr=subprocess.STDOUT)
+            subprocess.check_call(dep, stderr=subprocess.STDOUT)
         except OSError:
             raise OSError("bcbio-nextgen installer requires %s" % msg)
 
