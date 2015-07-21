@@ -15,6 +15,7 @@ from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
 
 @contextlib.contextmanager
@@ -72,7 +73,7 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     for ext in ["spl", "disc", "full"]:
         utils.safe_makedir("%s-%s" % (tmp_prefix, ext))
     if data.get("align_split"):
-        full_tobam_cmd = _nosort_tobam_cmd()
+        full_tobam_cmd = _nosort_tobam_cmd(data)
     else:
         full_tobam_cmd = ("samtools view -b -u - | "
                           "sambamba sort -t {cores} -m {mem} "
@@ -92,8 +93,14 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
            "| {dedup_cmd}")
     return cmd.format(**locals())
 
-def _nosort_tobam_cmd():
-    return "(echo '@HD	VN:1.3	SO:queryname' && cat) | {samtools} view -b - -o {out_file}"
+def _nosort_tobam_cmd(data):
+    """Handle converting to BAM for queryname sorted inputs, correcting HD headers.
+    """
+    if dd.get_aligner(data).startswith("bwa"):
+        fix_hd = "(echo '@HD	VN:1.3	SO:queryname' && cat) | "
+    else:
+        fix_hd = "sed 's/SO:unsorted/SO:queryname/g' | "
+    return fix_hd + "{samtools} view -b - -o {out_file}"
 
 def _biobambam_dedup_sort(data, tx_out_file):
     """Perform streaming deduplication and sorting with biobambam's bammarkduplicates2.
@@ -104,7 +111,7 @@ def _biobambam_dedup_sort(data, tx_out_file):
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
         out_file = tx_out_file
-        return _nosort_tobam_cmd().format(**locals())
+        return _nosort_tobam_cmd(data).format(**locals())
     else:
         return ("{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort - | "
                 "{bammarkduplicates} tmpfile={tmp_file}-markdup "

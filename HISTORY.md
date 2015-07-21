@@ -1,5 +1,6 @@
 ## 0.9.1 (in progress)
 
+- Fix novoalign to work with parallel split alignments. Thanks to Tyler Funnell.
 - Move lumpy-sv to latest version which uses lumpyexpress instead of speedseq.
 - Move some structural variant calling, like CNV detection, prior to variant
   calling. Allows use of CNV calls as inputs for variant detection tools.
