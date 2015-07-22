@@ -114,7 +114,8 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
         return out_file
     conn = sqlite3.connect(chanjo_db)
     c = conn.cursor()
-    q = c.execute("SELECT contig, start, end, strand, coverage, completeness "
+    q = c.execute("SELECT contig, start, end, strand, coverage, completeness, "
+                  "sample_id "
                   "FROM interval_data "
                   "JOIN interval ON interval_data.parent_id=interval.id "
                   "WHERE coverage < %d OR "
@@ -124,7 +125,7 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
         with open(tx_out_file + ".tmp", "w") as out_handle:
             for line in q:
                 line = [str(x) for x in line]
-                out_handle.write("\t".join([line[0], line[1], line[2],
+                out_handle.write("\t".join([line[0], line[1], line[2], line[6],
                                             line[3], line[4], line[5]]) + "\n")
         bt = BedTool(tx_out_file + ".tmp").sort().bgzip()
         shutil.move(bt, tx_out_file)
