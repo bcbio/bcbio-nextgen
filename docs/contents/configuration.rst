@@ -115,18 +115,18 @@ out of the final output YAML::
 
     bcbio_nextgen -w template --only-metadata project1/config/project1-template.yaml project1.csv folder/*
 
-    
+
 .. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
 .. _multi-files-sample-configuration:
 
 Multiple files per sample
 ~~~~~~~~~~~~~~~~~~
 
-In case you have multiple FASTQ or BAM files for each sample you can use ``bcbio_prepare_samples.py``. 
+In case you have multiple FASTQ or BAM files for each sample you can use ``bcbio_prepare_samples.py``.
 The main parameters are:
 
 - ``--out``: the folder where the merged files will be
-- ``--csv``: the CSV file that is exactly the same than described previously, 
+- ``--csv``: the CSV file that is exactly the same than described previously,
 but having as many duplicate lines for each samples as files to be merged::
 
 
@@ -140,10 +140,10 @@ An example of usage is::
 
     bcbio_prepare_samples.py --out merged --csv project1.csv
 
-The script will create the ``sample1.fastq,sample2.fastq`` in the ``merged`` folder, and a new CSV file 
+The script will create the ``sample1.fastq,sample2.fastq`` in the ``merged`` folder, and a new CSV file
 in the same folder than the input CSV :``project1-merged.csv``. Later, it can be used for bcbio::
 
-    
+
     bcbio_nextgen -w template project1/config/project1-template.yaml project1-merged.csv merged/*fastq
 
 The new CSV file will look like::
@@ -155,7 +155,7 @@ The new CSV file will look like::
 It supports parallelization the same way ``bcbio_nextgen.py`` does::
 
 
-    python $BCBIO_PATH/scripts/utils/bcbio_prepare_samples.py --out merged --csv project1.csv -t ipython -q queue_name -s lsf -n 1 
+    python $BCBIO_PATH/scripts/utils/bcbio_prepare_samples.py --out merged --csv project1.csv -t ipython -q queue_name -s lsf -n 1
 
 See more examples at `parallelize pipeline`_.
 
@@ -497,7 +497,12 @@ Variant calling
 - ``background`` Provide a VCF file with variants to use as a background
   reference during variant calling. For tumor/normal paired calling use this to
   supply a panel of normal individuals.
+- ``coverage`` A BED file of regions to check for coverage. A `Chanjo`_
+  database of coverage and completeness is calculated over these regions and
+  regions with poor coverage are compiled in an incomplete regions file for
+  each batch.
 
+.. _Chanjo: http://www.chanjo.co/en/latest/
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html
 .. _dbNSFP: https://sites.google.com/site/jpopgen/dbNSFP
@@ -814,9 +819,9 @@ key names used (like ``GRCh37`` and ``mm10``) should match those used in the
 
 Adding custom genomes
 ~~~~~~~~~~~~~~~~~~~~~~
-``bcbio_setup_genome.py`` will help you to install a custom genome and apply all changes needed 
+``bcbio_setup_genome.py`` will help you to install a custom genome and apply all changes needed
 to the configuration files. It needs the genome in FASTA format, and the annotation file
-in GTF or GFF3 format. It can create index for all aligners used by bcbio. Moreover, it will create 
+in GTF or GFF3 format. It can create index for all aligners used by bcbio. Moreover, it will create
 the folder `rnaseq` to allow you run the RNAseq pipeline without further configuration.
 
 ::
