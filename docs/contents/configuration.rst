@@ -418,6 +418,12 @@ Experimental information
    will not get called. Defaults to 4. Setting lower than 4 will trigger
    low-depth calling options for GATK.
 -  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
+- ``coverage`` A BED file of regions to check for coverage. A `Chanjo`_
+  database of coverage and completeness is calculated over these regions and
+  regions with poor coverage are compiled in an incomplete regions file for
+  each batch.
+
+.. _Chanjo: http://www.chanjo.co/en/latest/
 
 .. _variant-config:
 
@@ -497,12 +503,7 @@ Variant calling
 - ``background`` Provide a VCF file with variants to use as a background
   reference during variant calling. For tumor/normal paired calling use this to
   supply a panel of normal individuals.
-- ``coverage`` A BED file of regions to check for coverage. A `Chanjo`_
-  database of coverage and completeness is calculated over these regions and
-  regions with poor coverage are compiled in an incomplete regions file for
-  each batch.
 
-.. _Chanjo: http://www.chanjo.co/en/latest/
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html
 .. _dbNSFP: https://sites.google.com/site/jpopgen/dbNSFP
