@@ -2,6 +2,8 @@
 
 - Fix novoalign to work with parallel split alignments. Thanks to Tyler Funnell.
 - Move lumpy-sv to latest version which uses lumpyexpress instead of speedseq.
+- Remove high depth regions from structural variant calling exclusion file
+  to avoid false positives with lumpy. Thanks to Miika Ahdesmaki.
 - Move some structural variant calling, like CNV detection, prior to variant
   calling. Allows use of CNV calls as inputs for variant detection tools.
 - Generalize support for interaction with blob storage and graphing to support

@@ -81,20 +81,20 @@ def prepare_exclude_file(items, base_file, chrom=None):
     """
     out_file = "%s-exclude%s.bed" % (utils.splitext_plus(base_file)[0], "-%s" % chrom if chrom else "")
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-        ready_region = chrom
         with shared.bedtools_tmpdir(items[0]):
             # Get a bedtool for the full region if no variant regions
-            if ready_region == chrom:
+            if not chrom:
                 want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"], chrom)
                 lcr_bed = shared.get_lcr_bed(items)
                 if lcr_bed:
                     want_bedtool = want_bedtool.subtract(pybedtools.BedTool(lcr_bed))
             else:
-                want_bedtool = pybedtools.BedTool(ready_region).saveas()
+                want_bedtool = pybedtools.BedTool(chrom).saveas()
             sv_exclude_bed = _get_sv_exclude_file(items)
             if sv_exclude_bed and len(want_bedtool) > 0:
                 want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
+            want_bedtool = pybedtools.BedTool(shared.remove_highdepth_regions(want_bedtool.saveas().fn, items))
             with file_transaction(items[0], out_file) as tx_out_file:
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])

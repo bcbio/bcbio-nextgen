@@ -187,7 +187,7 @@ def remove_highdepth_regions(in_file, items):
                 if utils.file_exists(all_file):
                     to_remove = pybedtools.BedTool(all_file).sort(stream=True)\
                                                             .merge(c=4, o="distinct", delim=",").saveas()
-                    pybedtools.BedTool(in_file).intersect(to_remove, v=True, nonamecheck=True).saveas(tx_out_file)
+                    pybedtools.BedTool(in_file).subtract(to_remove, nonamecheck=True).saveas(tx_out_file)
                 else:
                     utils.symlink_plus(in_file, out_file)
     return out_file
