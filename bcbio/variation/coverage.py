@@ -8,11 +8,13 @@ import collections
 import os
 import sys
 import shutil
+import glob
 
 import toolz as tz
 import yaml
 import sqlite3
 from pybedtools import BedTool
+import pybedtools
 
 from bcbio import utils, bed
 from bcbio.bam import ref
@@ -35,7 +37,6 @@ def assign_interval(data):
     """
     genome_cov_thresh = 0.40  # percent of genome covered for whole genome analysis
     offtarget_thresh = 0.10  # percent of offtarget reads required to be capture (not amplification) based
-    import pybedtools
     if not dd.get_coverage_interval(data):
         vrs = dd.get_variant_regions(data)
         callable_file = dd.get_sample_callable(data)
@@ -75,6 +76,7 @@ def summary(items):
     combined_bed = bed.concat([coverage_bed, priority_bed])
     clean_bed = bedutils.clean_file(combined_bed.fn, data) if len(combined_bed) > 0 else combined_bed.fn
     bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
+    logger.info("THE BED FILE %s" % bed_file)
     batch = _get_group_batch(items)
     assert batch, ("Did not find batch for samples: %s" %
                    ",".join([dd.get_sample_name(x) for x in items]))
@@ -93,12 +95,16 @@ def summary(items):
                        "{chanjo} --db {tx_out_file} import")
                 do.run(cmd.format(**locals()), "Chanjo coverage", data)
     incomplete = incomplete_regions(out_file, batch, out_dir)
+    problem_regions = dd.get_problem_region_dir(data)
+    if problem_regions:
+        incomplete = decorate_problem_regions(incomplete, problem_regions)
     out = []
     for data in items:
         if utils.file_exists(out_file):
             data["coverage"] = {"summary": out_file,
                                 "incomplete": incomplete}
         out.append([data])
+    os.remove(bed_file)
     return out
 
 def incomplete_regions(chanjo_db, batch_name, out_dir):
@@ -218,3 +224,27 @@ def summarize_samples(samples, run_parallel):
     out = _handle_multi_batches(out, multi_batches)
     assert len(out + extras) == len(samples), (len(out + extras), len(samples))
     return out + extras
+
+def decorate_problem_regions(query_bed, problem_bed_dir):
+    """
+    decorate query_bed with percentage covered by BED files of regions specified
+    in the problem_bed_dir
+    """
+    if utils.is_gzipped(query_bed):
+        stem, _ = os.path.splitext(query_bed)
+        stem, ext = os.path.splitext(stem)
+    else:
+        stem, ext = os.path.splitext(query_bed)
+    out_file = stem + ".problem_annotated" + ext + ".gz"
+    if utils.file_exists(out_file):
+        return out_file
+    bed_files = glob.glob(os.path.join(problem_bed_dir, "*.bed"))
+    bed_file_string = " ".join(bed_files)
+    names = [os.path.splitext(os.path.basename(x))[0] for x in bed_files]
+    names_string = ",".join(names)
+    cmd = ("bedtools annotate -i {query_bed} -files {bed_file_string} "
+           "-names {names_string} | bgzip -c > {tx_out_file}")
+    with file_transaction(out_file) as tx_out_file:
+        message = "Annotate %s with problem regions." % query_bed
+        do.run(cmd.format(**locals()), message)
+    return out_file

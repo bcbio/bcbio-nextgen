@@ -13,6 +13,7 @@ LOOKUPS = {
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
                   "default": 1},
     "priority_regions": {"keys": ['config', 'algorithm', 'priority_regions']},
+    "problem_region_dir": {"keys": ["config", "algorithm", "problem_region_dir"]},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
     "gene_bed": {"keys": ['genome_resources', 'rnaseq', 'gene_bed'],
