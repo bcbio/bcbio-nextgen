@@ -1,0 +1,5 @@
+version: 0
+
+aliases:
+  ensembl: rattus_norvegicus_vep_81_Rnor_6.0
+  # not yet available in snpEff/Ensembl 79

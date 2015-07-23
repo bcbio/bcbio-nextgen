@@ -225,7 +225,10 @@ during a data installation::
 Add configuration information to bcbio-nextgen by creating a
 ``config/genomes/DBKEY-resources.yaml`` file. Copy an existing minimal
 template like ``canFam3`` and edit with pointers to snpEff and other genome
-resources.
+resources. The `VEP database directory <ftp://ftp.ensembl.org/pub/current_variation/VEP/>`_
+has Ensembl names. SnpEff has a command to list available databases::
+
+    snpEff databases
 
 Finally, send pull requests for CloudBioLinux and bcbio-nextgen and we'll
 happily integrate the new genome.
