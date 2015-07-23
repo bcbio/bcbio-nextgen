@@ -8,10 +8,11 @@ import toolz as tz
 
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import (battenberg, cn_mops, cnvkit, delly, ensemble,
-                              lumpy, plot, validate, wham)
+                              lumpy, manta, plot, validate, wham)
 from bcbio.variation import vcfutils
 
 _CALLERS = {}
+_SOMATIC_CALLERS = {"manta": manta.run}
 _BATCH_CALLERS = {"cn.mops": cn_mops.run, "cnvkit": cnvkit.run,
                   "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
                   "battenberg": battenberg.run}
@@ -97,7 +98,9 @@ def run(samples, run_parallel, initial_only=False):
             for x in ready_data:
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
                 batch = dd.get_batch(x)
-                if svcaller in _BATCH_CALLERS and batch:
+                paired = vcfutils.get_paired_phenotype(x)
+                if ((svcaller in _BATCH_CALLERS and batch) or
+                      (svcaller in _SOMATIC_CALLERS and paired and batch)):
                     batches = batch if isinstance(batch, (list, tuple)) else [batch]
                     for b in batches:
                         try:
@@ -125,7 +128,7 @@ def detect_sv(items, all_items, config, initial_only=False):
             data = items[0]
             data["sv"] = _CALLERS[svcaller](data)
             out.append([data])
-        elif svcaller in _BATCH_CALLERS:
+        elif svcaller in _BATCH_CALLERS or svcaller in _SOMATIC_CALLERS:
             if (svcaller in _NEEDS_BACKGROUND and
                   not vcfutils.is_paired_analysis([x.get("align_bam") for x in items], items)):
                 names = set([tz.get_in(["rgnames", "sample"], x) for x in items])
@@ -133,7 +136,7 @@ def detect_sv(items, all_items, config, initial_only=False):
                 for svdata in _BATCH_CALLERS[svcaller](items, background):
                     out.append([svdata])
             else:
-                for svdata in _BATCH_CALLERS[svcaller](items):
+                for svdata in _BATCH_CALLERS.get(svcaller, _SOMATIC_CALLERS.get(svcaller))(items):
                     out.append([svdata])
         else:
             raise ValueError("Unexpected structural variant caller: %s" % svcaller)

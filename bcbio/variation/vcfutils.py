@@ -33,6 +33,9 @@ def is_paired_analysis(align_bams, items):
     """
     return get_paired_bams(align_bams, items) is not None
 
+def get_paired(items):
+    return get_paired_bams([dd.get_align_bam(d) for d in items], items)
+
 def get_paired_bams(align_bams, items):
     """Split aligned bams into tumor / normal pairs if this is a paired analysis.
     Allows cases with only tumor BAMs to handle callers that can work without
