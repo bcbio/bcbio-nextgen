@@ -88,7 +88,7 @@ def _torque_info(queue):
             if line.strip().startswith("np = "):
                 info["cores"] = int(line.replace("np = ", "").strip())
             elif line.strip().startswith("status = "):
-                mem = [x for x in pbs_out.split(",") if x.startswith("totmem=")][0]
+                mem = [x for x in pbs_out.split(",") if x.startswith("physmem=")][0]
                 info["memory"] = float(mem.split("=")[1].rstrip("kb")) / 1048576.0
                 return [info]
 
