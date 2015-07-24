@@ -38,7 +38,7 @@ def _handle_multiple_svcallers(data):
         out.append(base)
     return out
 
-def finalize_sv(samples, config):
+def finalize_sv(samples, config, initial_only=False):
     """Combine results from multiple sv callers into a single ordered 'sv' key.
 
     Handles ensemble calling and plotting of results.
@@ -59,8 +59,9 @@ def finalize_sv(samples, config):
         final = grouped_calls[0]
         if len(sorted_svcalls) > 0:
             final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
-            final_calls = ensemble.summarize(final_calls, final, grouped_calls)
-            final_calls = validate.evaluate(final, final_calls)
+            if not initial_only:
+                final_calls = ensemble.summarize(final_calls, final, grouped_calls)
+                final_calls = validate.evaluate(final, final_calls)
             final["sv"] = final_calls
         del final["config"]["algorithm"]["svcaller_active"]
         batch = dd.get_batch(final) or dd.get_sample_name(final)
@@ -113,7 +114,8 @@ def run(samples, run_parallel, initial_only=False):
             extras.append([data])
     processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"], initial_only]
                                            for xs in to_process.values()))
-    finalized = (run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"])])
+    finalized = (run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"],
+                                               initial_only)])
                  if len(processed) > 0 else [])
     return extras + finalized
 
