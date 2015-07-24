@@ -1,5 +1,5 @@
-version: 5
+version: 6
 
 aliases:
-  ensembl: saccharomyces_cerevisiae_vep_79_R64-1-1
+  ensembl: saccharomyces_cerevisiae_vep_81_R64-1-1
   snpeff: EF4.74
