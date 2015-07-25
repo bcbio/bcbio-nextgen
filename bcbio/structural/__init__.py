@@ -98,6 +98,9 @@ def run(samples, run_parallel, initial_only=False):
             background.append(data)
             for x in ready_data:
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
+                # reset SV information if we're running a second pass SV call
+                if "sv" in x:
+                    del x["sv"]
                 batch = dd.get_batch(x)
                 paired = vcfutils.get_paired_phenotype(x)
                 if ((svcaller in _BATCH_CALLERS and batch) or

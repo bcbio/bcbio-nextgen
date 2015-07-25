@@ -168,9 +168,10 @@ def _create_end_file(in_file, coord, params, out_file):
                     start, end = curpos, curpos + params["end_buffer"]
                 else:
                     start, end = curpos - params["end_buffer"], curpos
-                out_handle.write("\t".join([parts[0], str(start),
-                                            str(end), name])
-                                 + "\n")
+                if start > 0:
+                    out_handle.write("\t".join([parts[0], str(start),
+                                                str(end), name])
+                                     + "\n")
     return out_file
 
 def get_sv_chroms(items, exclude_file):

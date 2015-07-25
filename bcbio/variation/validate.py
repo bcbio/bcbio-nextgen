@@ -138,7 +138,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
         rm_genome = utils.get_in(data, ("reference", "fasta", "base"))
         eval_genome = None
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
-                "preclean": True, "prep": True, "remove-refcalls": True}
+                "fix-sample-header": True, "remove-refcalls": True}
     a_intervals = get_analysis_intervals(data)
     if a_intervals:
         a_intervals = shared.remove_lcr_regions(a_intervals, [data])

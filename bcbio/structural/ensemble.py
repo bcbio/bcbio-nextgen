@@ -8,6 +8,7 @@ import fileinput
 import os
 import shutil
 
+import pybedtools
 import toolz as tz
 import vcf
 
@@ -21,7 +22,7 @@ from bcbio.variation import bedutils
 # ## Conversions to simplified BED files
 
 MAX_SVSIZE = 1e6  # 1Mb maximum size from callers to avoid huge calls collapsing all structural variants
-N_FILTER_CALLERS = 2  # Minimum number of callers for doing filtering of ensemble calls
+N_FILTER_CALLERS = 4  # Minimum number of callers for doing filtering of ensemble calls
 
 def _vcf_to_bed(in_file, caller, out_file):
     if in_file and in_file.endswith((".vcf", "vcf.gz")):
@@ -47,7 +48,6 @@ def _get_svtype(rec):
 def _cnvbed_to_bed(in_file, caller, out_file):
     """Convert cn_mops CNV based bed files into flattened BED
     """
-    import pybedtools
     with open(out_file, "w") as out_handle:
         for feat in pybedtools.BedTool(in_file):
             out_handle.write("\t".join([feat.chrom, str(feat.start), str(feat.end),
@@ -71,6 +71,7 @@ def _copy_file(in_file, caller, out_file):
 
 CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "delly": _vcf_to_bed,
+                 "manta": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed,
                  "wham": _copy_file,
                  "cnvkit": _cnvkit_to_bed}
@@ -92,7 +93,6 @@ def _create_bed(call, sample, work_dir, data):
 def combine_bed_by_size(input_beds, sample, work_dir, data, delim=","):
     """Combine a set of BED files, breaking into individual size chunks.
     """
-    import pybedtools
     out_file = os.path.join(work_dir, "%s-ensemble.bed" % sample)
     if len(input_beds) > 0:
         size_beds = []

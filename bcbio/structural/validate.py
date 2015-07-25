@@ -27,7 +27,7 @@ from bcbio import utils
 from bcbio.pipeline import datadict as dd
 
 EVENT_SIZES = [(1, 450), (450, 2000), (2000, 4000), (4000, 20000), (20000, 60000),
-               (60000, int(1e5)), (int(1e5), int(1e6))]
+               (60000, int(1e6))]
 
 def _stat_str(x, n):
     if n > 0:
