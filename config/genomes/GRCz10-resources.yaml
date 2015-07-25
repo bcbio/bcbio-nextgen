@@ -1,0 +1,5 @@
+version: 0
+
+aliases:
+  ensembl: danio_rerio_vep_81_GRCz10
+  #snpeff: GRCz10.81

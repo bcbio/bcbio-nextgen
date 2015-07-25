@@ -1,5 +1,5 @@
-version: 4
+version: 5
 
 aliases:
-  ensembl: xenopus_tropicalis_vep_81_Xipmac4.4.2
+  ensembl: xenopus_tropicalis_vep_81_JGI_4.2
   snpeff: JGI_4.2.78

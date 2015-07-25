@@ -1,7 +1,6 @@
-version: 8
+version: 9
 
 aliases:
-  ensembl: rattus_norvegicus_vep_81_Rnor_5.0
   snpeff: Rnor_5.0.78
 
 rnaseq:
