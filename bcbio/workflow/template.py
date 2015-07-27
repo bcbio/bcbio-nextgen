@@ -254,15 +254,18 @@ def _pname_and_metadata(in_file):
         with open(in_file) as in_handle:
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
+        md_file = in_file
     elif objectstore.is_remote(in_file):
         with objectstore.open(in_file) as in_handle:
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
+        md_file = None
     else:
         if in_file.endswith(".csv"):
             raise ValueError("Did not find input metadata file: %s" % in_file)
         base, md, global_vars = _safe_name(os.path.splitext(os.path.basename(in_file))[0]), {}, {}
-    return _safe_name(base), md, global_vars
+        md_file = None
+    return _safe_name(base), md, global_vars, md_file
 
 def _handle_special_yaml_cases(v):
     """Handle values that pass integer, boolean or list values.
@@ -333,12 +336,13 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
             item["metadata"] = {}
         for k, v in item_md.iteritems():
             if v:
-                v = _handle_special_yaml_cases(v)
                 if k in TOP_LEVEL:
                     item[k] = v
                 elif k in run_info.ALGORITHM_KEYS:
+                    v = _handle_special_yaml_cases(v)
                     item["algorithm"][k] = v
                 else:
+                    v = _handle_special_yaml_cases(v)
                     item["metadata"][k] = v
     elif len(metadata) > 0:
         warn = "Dropped sample" if only_metadata else "Added minimal sample information"
@@ -381,7 +385,7 @@ def _convert_to_relpaths(data, work_dir):
 def setup(args):
     template, template_txt = name_to_config(args.template)
     base_item = template["details"][0]
-    project_name, metadata, global_vars = _pname_and_metadata(args.metadata)
+    project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
     inputs = args.input_files + remotes.get("inputs", [])
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
@@ -392,8 +396,10 @@ def setup(args):
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     if hasattr(args, "relpaths") and args.relpaths:
         items = [_convert_to_relpaths(x, work_dir) for x in items]
+    out_config_file = _write_template_config(template_txt, project_name, out_dir)
+    if md_file:
+        shutil.copyfile(md_file, os.path.join(out_dir, "config", os.path.basename(md_file)))
     if len(items) == 0:
-        out_config_file = _write_template_config(template_txt, project_name, out_dir)
         print
         print "Template configuration file created at: %s" % out_config_file
         print "Edit to finalize custom options, then prepare full sample config with:"
