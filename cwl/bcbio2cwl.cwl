@@ -23,9 +23,9 @@ hints:
     dockerImageId: chapmanb/bcbio-nextgen-devel
 
 outputs:
-  - id: "#world"
+  - id: "#workflow"
     type: File
-    source: "#organize_samples.world"
+    source: "#create_cwl.workflow"
 
 steps:
   - id: "#prep_system"
@@ -43,3 +43,11 @@ steps:
       - {id: "#organize_samples.system_config_prep", source: "#prep_system.system_config_prep"}
     outputs:
       - { id: "#organize_samples.world" }
+
+  - id: "#create_cwl"
+    run: {import: create_cwl-tool.cwl}
+    inputs:
+      - {id: "#create_cwl.world", source: "#organize_samples.world"}
+      - {id: "#create_cwl.run_config", source: "#run_config"}
+    outputs:
+      - {id: "#create_cwl.workflow"}

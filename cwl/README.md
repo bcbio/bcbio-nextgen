@@ -25,6 +25,12 @@ Then run locally with:
 ```
 cwl-runner --verbose --no-container bcbio2cwl.cwl testinput-args.json
 ```
+or
+```
+cwl-runner --verbose --no-container bcbio2cwl.cwl \
+  --run_config ../tests/data/automated/run_info-bam.yaml \
+  --system_config testinput-bcbio_system.yaml
+```
 The runner should report success and you'll see a `world.yaml` output file that
 contains the parsed and prepped reference data along with the input sample
 information.`
