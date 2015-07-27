@@ -23,6 +23,7 @@ try:
     from fadapa import Fadapa
 except ImportError:
     Fadapa = None
+import pybedtools
 import pysam
 import toolz as tz
 import toolz.dicttoolz as dtz
@@ -36,6 +37,7 @@ from bcbio.provenance import do
 import bcbio.rnaseq.qc
 from bcbio.rnaseq.coverage import plot_gene_coverage
 import bcbio.pipeline.datadict as dd
+from bcbio.variation import bedutils
 from bcbio import broad
 
 # ## High level functions to generate summary
@@ -552,11 +554,11 @@ def _parse_qualimap_metrics(report_file):
 def _bed_to_bed6(orig_file, out_dir):
     """Convert bed to required bed6 inputs.
     """
-    import pybedtools
     bed6_file = os.path.join(out_dir, "%s-bed6%s" % os.path.splitext(os.path.basename(orig_file)))
     if not utils.file_exists(bed6_file):
         with open(bed6_file, "w") as out_handle:
             for i, region in enumerate(list(x) for x in pybedtools.BedTool(orig_file)):
+                region = [x for x in list(region) if x]
                 fillers = [str(i), "1.0", "+"]
                 full = region + fillers[:6 - len(region)]
                 out_handle.write("\t".join(full) + "\n")
@@ -580,7 +582,7 @@ def _run_qualimap(bam_file, data, out_dir):
         species = data["genome_resources"]["aliases"].get("ensembl", "").upper()
         if species in ["HUMAN", "MOUSE"]:
             cmd += " -gd {species}"
-        regions = data["config"]["algorithm"].get("variant_regions")
+        regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
         if regions:
             bed6_regions = _bed_to_bed6(regions, out_dir)
             cmd += " -gff {bed6_regions}"
