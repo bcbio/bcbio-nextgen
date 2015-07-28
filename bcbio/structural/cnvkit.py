@@ -2,6 +2,7 @@
 
 http://cnvkit.readthedocs.org
 """
+import copy
 import os
 import shutil
 import sys
@@ -31,72 +32,6 @@ def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                            dd.get_sample_name(data), "cnvkit"))
 
-def export_theta(ckout, data):
-    """Provide updated set of data with export information for TheTA2 input.
-    """
-    cns_file = chromhacks.bed_to_standardonly(ckout["cns"], data, headers="chromosome")
-    cnr_file = chromhacks.bed_to_standardonly(ckout["cnr"], data, headers="chromosome")
-    out_file = "%s-theta.input" % utils.splitext_plus(cns_file)[0]
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]
-            do.run(cmd, "Export CNVkit calls as inputs for TheTA2")
-    # ckout["theta_input"] = _subset_theta_to_calls(out_file, ckout, data)
-    ckout["theta_input"] = out_file
-    return ckout
-
-def _subset_theta_to_calls(in_file, ckout, data):
-    """Subset CNVkit regions to provide additional signal for THetA.
-
-    THetA has default assumptions about lengths of calls and finding
-    useful signal in longer regions. We adjust for this by subsetting
-    calls to a range around the most useful signal.
-    """
-    tn_ratio = 0.9
-    keep_background = False
-    out_file = "%s-cnvsize%s" % utils.splitext_plus(in_file)
-    if not utils.file_uptodate(out_file, in_file):
-        call_sizes = []
-        calls = set([])
-        with open(ckout["vrn_file"]) as in_handle:
-            for line in in_handle:
-                chrom, start, end, _, count = line.split()[:5]
-                if max([int(x) for x in count.split(",")]) < 6:
-                    call_sizes.append((int(end) - int(start)))
-                    calls.add((chrom, start, end))
-        keep_min = np.percentile(call_sizes, 10)
-        keep_max = np.percentile(call_sizes, 90)
-        with file_transaction(data, out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                # Pull out calls that have tumor/normal differences
-                tn_count = 0
-                with open(in_file) as in_handle:
-                    for line in in_handle:
-                        if line.startswith("#"):
-                            out_handle.write(line)
-                        else:
-                            key = tuple(line.split()[1:4])
-                            sizes = [float(x) for x in line.split()[4:6]]
-                            size = int(key[2]) - int(key[1])
-                            if size >= keep_min and size <= keep_max:
-                                if (min(sizes) / max(sizes)) < tn_ratio:
-                                    tn_count += 1
-                                    out_handle.write(line)
-                if keep_background:
-                    # Pull out equal number of background calls
-                    no_tn_count = 0
-                    with open(in_file) as in_handle:
-                        for line in in_handle:
-                            if not line.startswith("#"):
-                                key = tuple(line.split()[1:4])
-                                sizes = [float(x) for x in line.split()[4:6]]
-                                size = int(key[2]) - int(key[1])
-                                if size >= keep_min and size <= keep_max:
-                                    if no_tn_count < tn_count and (min(sizes) / max(sizes)) > tn_ratio:
-                                        no_tn_count += 1
-                                        out_handle.write(line)
-    return out_file
-
 def _cnvkit_by_type(items, background):
     """Dispatch to specific CNVkit functionality based on input type.
     """
@@ -110,12 +45,15 @@ def _cnvkit_by_type(items, background):
 def _associate_cnvkit_out(ckout, items):
     """Associate cnvkit output with individual items.
     """
-    ckout = _add_seg_to_output(ckout, items[0])
     ckout["variantcaller"] = "cnvkit"
+    ckout = _add_seg_to_output(ckout, items[0])
+    ckout = _add_gainloss_to_output(ckout, items[0])
+    ckout = _add_segmetrics_to_output(ckout, items[0])
     out = []
     for data in items:
+        ckout = copy.deepcopy(ckout)
         ckout = _add_bed_to_output(ckout, data)
-        #  ckout = _add_coverage_bedgraph_to_output(ckout, data)
+        # ckout = _add_coverage_bedgraph_to_output(ckout, data)
         ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
         if "svplots" in dd.get_tools_on(data):
             ckout = _add_plots_to_output(ckout, data)
@@ -192,8 +130,10 @@ def _run_cnvkit_shared(data, test_bams, background_bams, work_dir, background_na
                 return {}
             target_bed = annotate.add_genes(raw_target_bed, data)
 
-            cores = min(tz.get_in(["config", "algorithm", "num_cores"], data, 1),
-                        len(test_bams) + len(background_bams))
+            # Do not paralleize cnvkit due to current issues with multi-processing
+            cores = 1
+            # cores = min(tz.get_in(["config", "algorithm", "num_cores"], data, 1),
+            #             len(test_bams) + len(background_bams))
             cmd = [_get_cmd(), "batch"] + \
                   test_bams + ["-n"] + background_bams + ["-f", ref_file] + \
                   ["--targets", target_bed, "--access", access_bed] + \
@@ -269,22 +209,57 @@ def _add_cnr_bedgraph_and_bed_to_output(out, data):
     return out
 
 def _add_bed_to_output(out, data):
-    """Add FreeBayes cnvmap BED-like representation to the output.
+    """Call ploidy and convert into BED representation.
     """
-    out_file = "%s.bed" % os.path.splitext(out["cns"])[0]
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
-                   "freebayes", "--sample-id", dd.get_sample_name(data),
+    call_file = "%s-call%s" % os.path.splitext(out["cns"])
+    gender = dd.get_gender(data)
+    if not utils.file_exists(call_file):
+        with file_transaction(data, call_file) as tx_call_file:
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call",
                    "--ploidy", str(dd.get_ploidy(data)),
-                   "-o", tx_out_file, out["cns"]]
-            gender = dd.get_gender(data)
+                   "-o", tx_call_file, out["cns"]]
             if gender:
                 cmd += ["--gender", gender]
                 if gender.lower() == "male":
                     cmd += ["--male-reference"]
-            do.run(cmd, "CNVkit export FreeBayes BED cnvmap")
+            do.run(cmd, "CNVkit call ploidy")
+    out_file = "%s.bed" % os.path.splitext(call_file)[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
+                   "bed", "--sample-id", dd.get_sample_name(data),
+                   "--ploidy", str(dd.get_ploidy(data)),
+                   "-o", tx_out_file, call_file]
+            if gender and gender.lower() == "male":
+                cmd += ["--male-reference"]
+            do.run(cmd, "CNVkit export BED")
+    out["call_file"] = call_file
     out["vrn_file"] = annotate.add_genes(out_file, data)
+    return out
+
+def _add_segmetrics_to_output(out, data):
+    """Add metrics for measuring reliability of CNV estimates.
+    """
+    out_file = "%s-segmetrics.txt" % os.path.splitext(out["cns"])[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "segmetrics",
+                   "--iqr", "--ci", "--pi",
+                   "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
+            do.run(cmd, "CNVkit segmetrics")
+    out["segmetrics"] = out_file
+    return out
+
+def _add_gainloss_to_output(out, data):
+    """Add gainloss based on genes, helpful for identifying changes in smaller genes.
+    """
+    out_file = "%s-gainloss.txt" % os.path.splitext(out["cns"])[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "gainloss",
+                   "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
+            do.run(cmd, "CNVkit gainloss")
+    out["gainloss"] = out_file
     return out
 
 def _add_coverage_bedgraph_to_output(out, data):
@@ -447,4 +422,72 @@ def _create_access_file(ref_file, out_dir, data):
             cmd = [os.path.join(os.path.dirname(sys.executable), "genome2access.py"),
                    ref_file, "-s", "10000", "-o", tx_out_file]
             do.run(cmd, "Create CNVkit access file")
+    return out_file
+
+# ## Theta support
+
+def export_theta(ckout, data):
+    """Provide updated set of data with export information for TheTA2 input.
+    """
+    cns_file = chromhacks.bed_to_standardonly(ckout["cns"], data, headers="chromosome")
+    cnr_file = chromhacks.bed_to_standardonly(ckout["cnr"], data, headers="chromosome")
+    out_file = "%s-theta.input" % utils.splitext_plus(cns_file)[0]
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]
+            do.run(cmd, "Export CNVkit calls as inputs for TheTA2")
+    # ckout["theta_input"] = _subset_theta_to_calls(out_file, ckout, data)
+    ckout["theta_input"] = out_file
+    return ckout
+
+def _subset_theta_to_calls(in_file, ckout, data):
+    """Subset CNVkit regions to provide additional signal for THetA.
+
+    THetA has default assumptions about lengths of calls and finding
+    useful signal in longer regions. We adjust for this by subsetting
+    calls to a range around the most useful signal.
+    """
+    tn_ratio = 0.9
+    keep_background = False
+    out_file = "%s-cnvsize%s" % utils.splitext_plus(in_file)
+    if not utils.file_uptodate(out_file, in_file):
+        call_sizes = []
+        calls = set([])
+        with open(ckout["vrn_file"]) as in_handle:
+            for line in in_handle:
+                chrom, start, end, _, count = line.split()[:5]
+                if max([int(x) for x in count.split(",")]) < 6:
+                    call_sizes.append((int(end) - int(start)))
+                    calls.add((chrom, start, end))
+        keep_min = np.percentile(call_sizes, 10)
+        keep_max = np.percentile(call_sizes, 90)
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                # Pull out calls that have tumor/normal differences
+                tn_count = 0
+                with open(in_file) as in_handle:
+                    for line in in_handle:
+                        if line.startswith("#"):
+                            out_handle.write(line)
+                        else:
+                            key = tuple(line.split()[1:4])
+                            sizes = [float(x) for x in line.split()[4:6]]
+                            size = int(key[2]) - int(key[1])
+                            if size >= keep_min and size <= keep_max:
+                                if (min(sizes) / max(sizes)) < tn_ratio:
+                                    tn_count += 1
+                                    out_handle.write(line)
+                if keep_background:
+                    # Pull out equal number of background calls
+                    no_tn_count = 0
+                    with open(in_file) as in_handle:
+                        for line in in_handle:
+                            if not line.startswith("#"):
+                                key = tuple(line.split()[1:4])
+                                sizes = [float(x) for x in line.split()[4:6]]
+                                size = int(key[2]) - int(key[1])
+                                if size >= keep_min and size <= keep_max:
+                                    if no_tn_count < tn_count and (min(sizes) / max(sizes)) > tn_ratio:
+                                        no_tn_count += 1
+                                        out_handle.write(line)
     return out_file
