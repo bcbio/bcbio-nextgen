@@ -571,7 +571,8 @@ Post-processing
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
   ``svplots`` adds additional coverage and summary plots for CNVkit and
-  detected ensemble variants.
+  detected ensemble variants. ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_
+  quality control, which can be slow.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini

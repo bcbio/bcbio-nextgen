@@ -119,7 +119,8 @@ def _run_qc_tools(bam_file, data):
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     if data["analysis"].lower().startswith(("standard", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
-        to_run.append(("qualimap", _run_qualimap))
+        if "qualimap" in tz.get_in(("config", "algorithm", "tools_on"), data, []):
+            to_run.append(("qualimap", _run_qualimap))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     for program_name, qc_fn in to_run:
