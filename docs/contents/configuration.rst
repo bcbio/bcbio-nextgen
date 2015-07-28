@@ -53,7 +53,13 @@ multiple samples using the template workflow command::
   The first column links the metadata to a specific input file. The
   template command tries to identify the ``samplename`` from read group
   information in a BAM file, or uses the base filename if no read group
-  information is present.  The remaining columns can contain:
+  information is present. For BAM files, this would the filename without the
+  extension and path (``/path/to/yourfile.bam => yourfile``). For fastq
+  files, the template functionality will identify pairs using standard
+  conventions (``_1`` and ``_2``, including Illumina extensions like ``_R1``),
+  so use the base filename without these (``/path/to/yourfile_R1.fastq => yourfile``).
+
+    The remaining columns can contain:
 
    - ``description`` Changes the sample description, originally
      supplied by the file name or BAM read group, to this value. You can also
