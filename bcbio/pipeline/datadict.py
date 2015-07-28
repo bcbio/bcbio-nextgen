@@ -31,6 +31,7 @@ LOOKUPS = {
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
     "gender": {"keys": ["metadata", "sex"], "default": ""},
     "batch": {"keys": ["metadata", "batch"]},
+    "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "work_bam": {"keys": ["work_bam"]},
@@ -83,6 +84,13 @@ LOOKUPS = {
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": []},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": []},
 }
+
+def get_batches(data):
+    batches = get_batch(data)
+    if batches:
+        if not isinstance(batches, (list, tuple)):
+            batches = [batches]
+        return batches
 
 def get_input_sequence_files(data, default=None):
     """

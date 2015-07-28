@@ -3,6 +3,7 @@
 This handles two methods of getting processing information: from a Galaxy
 next gen LIMS system or an on-file YAML configuration.
 """
+import collections
 from contextlib import closing
 import copy
 import itertools
@@ -239,6 +240,32 @@ def _check_for_batch_clashes(xs):
         raise ValueError("Batch names must be unique from sample descriptions.\n"
                          "Clashing batch names: %s" % sorted(list(dups)))
 
+def _check_for_problem_somatic_batches(items, config):
+    """Identify problem batch setups for somatic calling.
+
+    We do not support multiple tumors in a single batch and VarDict(Java) does not
+    handle pooled calling, only tumor/normal.
+    """
+    to_check = []
+    for data in items:
+        data = copy.deepcopy(data)
+        data["config"] = config_utils.update_w_custom(config, data)
+        to_check.append(data)
+    data_by_batches = collections.defaultdict(list)
+    for data in to_check:
+        batches = dd.get_batches(data)
+        if batches:
+            for batch in batches:
+                data_by_batches[batch].append(data)
+    for batch, items in data_by_batches.items():
+        if vcfutils.get_paired(items):
+            vcfutils.check_paired_problems(items)
+        elif len(items) > 1:
+            vcs = list(set(tz.concat([dd.get_variantcaller(data) or [] for data in items])))
+            if any(x.lower().startswith("vardict") for x in vcs):
+                raise ValueError("VarDict does not support pooled non-tumor/normal calling, in batch %s: %s"
+                                % (batch, [dd.get_sample_name(data) for data in items]))
+
 def _check_for_misplaced(xs, subkey, other_keys):
     """Ensure configuration keys are not incorrectly nested under other keys.
     """
@@ -419,7 +446,7 @@ def _check_jointcaller(data):
         raise ValueError("Unexpected algorithm 'jointcaller' parameter: %s\n"
                          "Supported options: %s\n" % (problem, sorted(list(allowed))))
 
-def _check_sample_config(items, in_file):
+def _check_sample_config(items, in_file, config):
     """Identify common problems in input sample configuration files.
     """
     logger.info("Checking sample YAML configuration: %s" % in_file)
@@ -427,6 +454,7 @@ def _check_sample_config(items, in_file):
     _check_for_duplicates(items, "lane")
     _check_for_duplicates(items, "description")
     _check_for_batch_clashes(items)
+    _check_for_problem_somatic_batches(items, config)
     _check_for_misplaced(items, "algorithm",
                          ["resources", "metadata", "analysis",
                           "description", "genome_build", "lane", "files"])
@@ -568,7 +596,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
             for key, val in pkvs.iteritems():
                 item["resources"][prog][key] = val
         run_details.append(item)
-    _check_sample_config(run_details, run_info_yaml)
+    _check_sample_config(run_details, run_info_yaml, config)
     return run_details
 
 def _item_is_bam(item):

@@ -41,7 +41,7 @@ def get_paired_bams(align_bams, items):
     Allows cases with only tumor BAMs to handle callers that can work without
     normal BAMs or with normal VCF panels.
     """
-    tumor_bam, normal_bam, normal_name, normal_panel, tumor_config = None, None, None, None, None
+    tumor_bam, tumor_name, normal_bam, normal_name, normal_panel, tumor_config = None, None, None, None, None, None
     for bamfile, item in itertools.izip(align_bams, items):
         phenotype = get_paired_phenotype(item)
         if phenotype == "normal":
@@ -53,16 +53,23 @@ def get_paired_bams(align_bams, items):
             tumor_data = item
             tumor_config = item["config"]
             normal_panel = item["config"]["algorithm"].get("background")
-    if tumor_bam:
+    if tumor_bam or tumor_name:
         return PairedData(tumor_bam, tumor_name, normal_bam,
                           normal_name, normal_panel, tumor_config,
                           tumor_data)
 
 def check_paired_problems(items):
-    """Check for incorrectly paired tumor/normal samples
+    """Check for incorrectly paired tumor/normal samples in a batch.
     """
-    if any(tz.get_in(["metadata", "phenotype"], data, "").lower() == "normal"
-           for data in items):
+    # ensure we're in a paired batch
+    if not get_paired(items):
+        return
+    num_tumor = len([x for x in items if dd.get_phenotype(x).lower() == "tumor"])
+    if num_tumor > 1:
+        raise ValueError("Unsupported configuration: found multiple tumor samples in batch %s: %s" %
+                         (tz.get_in(["metadata", "batch"], items[0]),
+                          [dd.get_sample_name(data) for data in items]))
+    elif num_tumor == 0 and any(dd.get_phenotype(data).lower() == "normal" for data in items):
         raise ValueError("Found normal sample without tumor in batch %s: %s" %
                          (tz.get_in(["metadata", "batch"], items[0]),
                           [dd.get_sample_name(data) for data in items]))
