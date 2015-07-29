@@ -76,7 +76,6 @@ def summary(items):
     combined_bed = bed.concat([coverage_bed, priority_bed])
     clean_bed = bedutils.clean_file(combined_bed.fn, data) if len(combined_bed) > 0 else combined_bed.fn
     bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
-    logger.info("THE BED FILE %s" % bed_file)
     batch = _get_group_batch(items)
     assert batch, ("Did not find batch for samples: %s" %
                    ",".join([dd.get_sample_name(x) for x in items]))
@@ -95,14 +94,17 @@ def summary(items):
                        "{chanjo} --db {tx_out_file} import")
                 do.run(cmd.format(**locals()), "Chanjo coverage", data)
     incomplete = incomplete_regions(out_file, batch, out_dir)
+    coverage = regions_coverage(out_file, batch, out_dir)
     problem_regions = dd.get_problem_region_dir(data)
     if problem_regions:
         incomplete = decorate_problem_regions(incomplete, problem_regions)
+        coverage = decorate_problem_regions(coverage, problem_regions)
     out = []
     for data in items:
         if utils.file_exists(out_file):
             data["coverage"] = {"summary": out_file,
-                                "incomplete": incomplete}
+                                "incomplete": incomplete,
+                                "all": coverage}
         out.append([data])
     os.remove(bed_file)
     return out
@@ -127,6 +129,33 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
                   "WHERE coverage < %d OR "
                   "completeness < %d" % (DEFAULT_COVERAGE_CUTOFF,
                                            DEFAULT_COMPLETENESS_CUTOFF))
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file + ".tmp", "w") as out_handle:
+            out_handle.write("\t".join(["#chr", "start", "end", "name",
+                                       "coverage", "completeness"]) + "\n")
+            for line in q:
+                line = [str(x) for x in line]
+                out_handle.write("\t".join([line[0], line[1], line[2], line[6],
+                                            line[3], line[4], line[5]]) + "\n")
+        bt = BedTool(tx_out_file + ".tmp").sort().bgzip()
+        shutil.move(bt, tx_out_file)
+    return out_file
+
+def regions_coverage(chanjo_db, batch_name, out_dir):
+    """
+    create BED file of coverage of all regions from a Chanjo database
+    """
+    if not utils.file_exists(chanjo_db):
+        return None
+    out_file = os.path.join(out_dir, batch_name + "-all-regions.bed.gz")
+    if utils.file_exists(out_file):
+        return out_file
+    conn = sqlite3.connect(chanjo_db)
+    c = conn.cursor()
+    q = c.execute("SELECT contig, start, end, strand, coverage, completeness, "
+                  "sample_id "
+                  "FROM interval_data "
+                  "JOIN interval ON interval_data.parent_id=interval.id ")
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file + ".tmp", "w") as out_handle:
             out_handle.write("\t".join(["#chr", "start", "end", "name",

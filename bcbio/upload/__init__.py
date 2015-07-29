@@ -339,7 +339,9 @@ def _get_files_project(sample, upload_config):
         incomplete = tz.get_in(["coverage", "incomplete"], sample)
         if incomplete:
             out.append({"path": incomplete, "type": "bed", "ext": "coverage"})
-
+        all_coverage = tz.get_in(["coverage", "all"], sample)
+        if all_coverage:
+            out.append({"path": all_coverage, "type": "bed", "ext": "coverage"})
 
     if dd.get_combined_counts(sample):
         out.append({"path": dd.get_combined_counts(sample)})
