@@ -129,6 +129,8 @@ def incomplete_regions(chanjo_db, batch_name, out_dir):
                                            DEFAULT_COMPLETENESS_CUTOFF))
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file + ".tmp", "w") as out_handle:
+            out_handle.write("\t".join(["#chr", "start", "end", "name",
+                                       "coverage", "completeness"]) + "\n")
             for line in q:
                 line = [str(x) for x in line]
                 out_handle.write("\t".join([line[0], line[1], line[2], line[6],
@@ -241,9 +243,11 @@ def decorate_problem_regions(query_bed, problem_bed_dir):
     bed_files = glob.glob(os.path.join(problem_bed_dir, "*.bed"))
     bed_file_string = " ".join(bed_files)
     names = [os.path.splitext(os.path.basename(x))[0] for x in bed_files]
-    names_string = ",".join(names)
+    names_string = " ".join(names)
+    header = "\t".join(["chr", "start", "end", "name", "coverage",
+                        "completeness"] + names)
     cmd = ("bedtools annotate -i {query_bed} -files {bed_file_string} "
-           "-names {names_string} | bgzip -c > {tx_out_file}")
+           "-names {names_string} | sed -s 's/^#.*$/#{header}/' | bgzip -c > {tx_out_file}")
     with file_transaction(out_file) as tx_out_file:
         message = "Annotate %s with problem regions." % query_bed
         do.run(cmd.format(**locals()), message)
