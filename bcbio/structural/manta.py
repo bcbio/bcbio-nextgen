@@ -6,6 +6,7 @@ import os
 import sys
 
 from bcbio import utils
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do
@@ -17,12 +18,13 @@ def run(items):
     work_dir = _sv_workdir(paired.tumor_data if paired else items[0])
     workflow_file = _prep_config(items, paired, work_dir)
     variant_file = _run_workflow(items, paired, workflow_file, work_dir)
+    sample_file = _select_sample(items, paired, variant_file, work_dir)
     out = []
     for data in items:
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append({"variantcaller": "manta",
-                           "vrn_file": variant_file})
+                           "vrn_file": sample_file})
         out.append(data)
     return out
 
@@ -37,6 +39,24 @@ def _run_workflow(items, paired, workflow_file, work_dir):
                "--quiet"]
         do.run(cmd, "Run manta SV analysis")
     return out_file
+
+def _select_sample(items, paired, variant_file, work_dir):
+    """Fix VCF to have the correct sample name and select tumor samples from paired analyses.
+    """
+    sample_name = paired.tumor_name if paired else dd.get_sample_name(items[0])
+    out_file = os.path.join(work_dir, "%s-%s.vcf.gz" % (utils.splitext_plus(os.path.basename(variant_file))[0],
+                                                        sample_name))
+    if not utils.file_uptodate(out_file, variant_file):
+        with file_transaction(items[0], out_file) as tx_out_file:
+            if paired:
+                cmd = "zcat {variant_file} | "
+                if paired:
+                    cmd += "sed 's/\tTUMOR/\t{sample_name}/' | bcftools view -s {sample_name}"
+                else:
+                    cmd += "sed 's/\tSAMPLE/\t{sample_name}/' | bcftools view -s {sample_name}"
+            cmd += " | bgzip -c > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Run manta SV analysis")
+    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _prep_config(items, paired, work_dir):
     """Run initial configuration, generating a run directory for Manta.
