@@ -132,6 +132,18 @@ def subset_bam_by_region(in_file, region, config, out_file_base=None):
                             out_bam.write(read)
     return out_file
 
+def subset_bed_by_chrom(in_file, chrom, data, out_dir=None):
+    """Subset a BED file to only have items from the specified chromosome.
+    """
+    if out_dir is None:
+        out_dir = os.path.dirname(in_file)
+    base, ext = os.path.splitext(os.path.basename(in_file))
+    out_file = os.path.join(out_dir, "%s-%s%s" % (base, chrom, ext))
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            _rewrite_bed_with_chrom(in_file, tx_out_file, chrom)
+    return out_file
+
 def _rewrite_bed_with_chrom(in_file, out_file, chrom):
     with open(in_file) as in_handle:
         with open(out_file, "w") as out_handle:
