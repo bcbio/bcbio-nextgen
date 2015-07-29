@@ -133,17 +133,12 @@ def _filter_ensemble(in_bed, data):
     support_events = set(["BND", "UKN"])
     max_size = max([xs[1] for xs in validate.EVENT_SIZES[:2]])
     out_file = "%s-filter%s" % utils.splitext_plus(in_bed)
-    total_callers = collections.defaultdict(set)
-    with open(in_bed) as in_handle:
-        for line in in_handle:
-            caller_strs = line.strip().split()[3]
-            for event, caller in [x.split("_", 1) for x in caller_strs.split(",")]:
-                total_callers[validate.cnv_to_event(event, data)].add(caller)
 
     if not utils.file_uptodate(out_file, in_bed):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 with open(in_bed) as in_handle:
+                    total_callers = validate.callers_by_event(in_bed, data)
                     for line in in_handle:
                         chrom, start, end, caller_strs = line.strip().split()[:4]
                         size = int(end) - int(start)

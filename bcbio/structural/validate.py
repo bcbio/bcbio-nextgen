@@ -5,6 +5,7 @@ a set of known regions.  Requires any overlap between ensemble set and
 known regions, and removes regions from analysis that overlap with
 exclusion regions.
 """
+import collections
 import csv
 import os
 
@@ -50,6 +51,17 @@ def cnv_to_event(name, data):
             return name
     else:
         return name
+
+def callers_by_event(in_bed, data):
+    """Retrieve callers with calls for each event type.
+    """
+    total_callers = collections.defaultdict(set)
+    with open(in_bed) as in_handle:
+        for line in in_handle:
+            caller_strs = line.strip().split()[3]
+            for event, caller in [x.split("_", 1) for x in caller_strs.split(",")]:
+                total_callers[cnv_to_event(event, data)].add(caller)
+    return total_callers
 
 def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     """Compare a ensemble results for a caller against a specific caller and SV type.
@@ -100,12 +112,13 @@ def _evaluate_multi(callers, truth_svtypes, ensemble, data):
             with open(df_file, "w") as df_out_handle:
                 writer = csv.writer(out_handle)
                 dfwriter = csv.writer(df_out_handle)
+                total_callers = callers_by_event(ensemble, data)
                 writer.writerow(["svtype", "size", "caller", "sensitivity", "precision"])
                 dfwriter.writerow(["svtype", "size", "caller", "metric", "value", "label"])
                 for svtype, truth in truth_svtypes.items():
                     for size in EVENT_SIZES:
                         str_size = "%s-%s" % size
-                        for caller in callers:
+                        for caller in (x for x in callers if x in total_callers[svtype] or x == "sv-ensemble"):
                             evalout = _evaluate_one(caller, svtype, size, ensemble, truth, data)
                             writer.writerow([svtype, str_size, caller,
                                              evalout["sensitivity"]["label"], evalout["precision"]["label"]])
@@ -163,7 +176,7 @@ def _plot_evaluation_event(df_csv, svtype):
                     ax.tick_params(axis='y', which='major', labelsize=8)
                     ax.locator_params(nbins=len(callers) + 2, axis="y", tight=True)
                     ax.set_yticklabels(callers, va="bottom")
-                    ax.text(100, 4.0, size_label, fontsize=10)
+                    ax.text(100, len(callers), size_label, fontsize=10)
                 else:
                     ax.get_yaxis().set_ticks([])
                 for ai, (val, label) in enumerate(zip(vals, labels)):
