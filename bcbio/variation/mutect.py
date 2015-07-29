@@ -2,11 +2,11 @@
 
 from distutils.version import LooseVersion
 import os
-import re
-import shutil
+
+import toolz as tz
 
 from bcbio import bam, broad, utils
-from bcbio.utils import file_exists, get_in, open_gzipsafe, remove_safe
+from bcbio.utils import file_exists, get_in, open_gzipsafe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.pipeline import config_utils
@@ -47,8 +47,6 @@ def _config_params(base_config, assoc_files, region, out_file):
     """Add parameters based on configuration variables, associated files and genomic regions.
     """
     params = []
-    contamination = base_config["algorithm"].get("fraction_contamination", 0)
-    params += ["--fraction_contamination", contamination]
     dbsnp = assoc_files.get("dbsnp")
     if dbsnp:
         params += ["--dbsnp", dbsnp]
@@ -60,6 +58,12 @@ def _config_params(base_config, assoc_files, region, out_file):
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
                    "INTERSECTION"]
+    # set low frequency calling parameter if adjusted
+    # to set other MuTect parameters on contamination, pass options to resources for mutect
+    # --fraction_contamination --minimum_normal_allele_fraction
+    min_af = tz.get_in(["algorithm", "min_allele_fraction"], base_config)
+    if min_af:
+        params += ["--minimum_mutation_cell_fraction", "%.2f" % (min_af / 100.0)]
     resources = config_utils.get_resources("mutect", base_config)
     if resources.get("options") is not None:
         params += [str(x) for x in resources.get("options", [])]
