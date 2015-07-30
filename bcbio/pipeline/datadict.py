@@ -63,6 +63,8 @@ LOOKUPS = {
                     "default": False},
     "cufflinks_dir": {"keys": ['cufflinks_dir']},
     "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
+    "transcriptome_align": {"keys": ["config", "algorithm", "transcriptome_align"],
+                            "default": False},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},

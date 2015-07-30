@@ -1,7 +1,7 @@
 import os
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, gtf, stringtie)
-from bcbio.ngsalign import bwa, bowtie2
+from bcbio.ngsalign import bwa, bowtie2, alignprep
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
 from bcbio.log import logger
@@ -56,21 +56,29 @@ def quantitate_expression_noparallel(samples, run_parallel):
 def generate_transcript_counts(data):
     """Generate counts per transcript and per exon from an alignment"""
     data["count_file"] = featureCounts.count(data)
+
     if dd.get_fusion_mode(data, False):
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
-    # if RSEM set to run, but the aligner didn't create the transcriptome BAM
-    # file, make one with bwa
-    if dd.get_disambiguate(data):
-        logger.info("RSEM is not supported yet for disambiguation protocols. "
-                    "See https://github.com/chapmanb/bcbio-nextgen/issues/859")
-        return [[data]]
-    if dd.get_rsem(data) and not dd.get_transcriptome_bam(data):
-        file1, file2 = dd.get_input_sequence_files(data)
+
+    if dd.get_transcriptome_align(data) and not dd.get_transcriptome_bam(data):
+        file1, file2 = None, None
+
+        if dd.get_disambiguate(data):
+            bam_path = data["work_bam"]
+            fastq_paths = alignprep._bgzip_from_bam(bam_path, data["dirs"], data["config"], is_retry=False, output_infix='-transcriptome')
+            if len(fastq_paths) == 2:
+                file1, file2 = fastq_paths
+            else:
+                file1, file2 = fastq_paths[0], None
+        else:
+            file1, file2 = dd.get_input_sequence_files(data)
+
         ref_file = dd.get_ref_file(data)
-        logger.info("RSEM was flagged to run, but the transcriptome BAM file "
-                    "was not found. Aligning to the transcriptome with bowtie2.")
+        logger.info("Transcriptome alignment was flagged to run, but the "
+                    "transcriptome BAM file was not found. Aligning to the "
+                    "transcriptome with bowtie2.")
         data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
     return [[data]]
 

@@ -55,7 +55,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if strandedness == "unstranded":
         cmd += " --outSAMstrandField intronMotif "
 
-    if dd.get_rsem(data) and not is_transcriptome_broken():
+    if dd.get_transcriptome_align(data) and not is_transcriptome_broken():
         cmd += " --quantMode TranscriptomeSAM "
 
     with file_transaction(data, final_out) as tx_final_out:
@@ -69,7 +69,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
 def _update_data(align_file, out_dir, names, data):
     data = dd.set_work_bam(data, align_file)
     data = dd.set_align_bam(data, align_file)
-    if dd.get_rsem(data) and not is_transcriptome_broken():
+    if dd.get_transcriptome_align(data) and not is_transcriptome_broken():
         transcriptome_file = _move_transcriptome_file(out_dir, names)
         data = dd.set_transcriptome_bam(data, transcriptome_file)
     return data
