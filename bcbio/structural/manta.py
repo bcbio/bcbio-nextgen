@@ -48,12 +48,11 @@ def _select_sample(items, paired, variant_file, work_dir):
                                                         sample_name))
     if not utils.file_uptodate(out_file, variant_file):
         with file_transaction(items[0], out_file) as tx_out_file:
-            if paired:
-                cmd = "zcat {variant_file} | "
-                if paired:
-                    cmd += "sed 's/\tTUMOR/\t{sample_name}/' | bcftools view -s {sample_name}"
-                else:
-                    cmd += "sed 's/\tSAMPLE/\t{sample_name}/' | bcftools view -s {sample_name}"
+            cmd = "zcat {variant_file} | "
+            if paired and paired.normal_bam:
+                cmd += "sed 's/\tTUMOR/\t{sample_name}/' | bcftools view -s {sample_name}"
+            else:
+                cmd += "sed 's/\tSAMPLE/\t{sample_name}/' | bcftools view -s {sample_name}"
             cmd += " | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "Run manta SV analysis")
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
