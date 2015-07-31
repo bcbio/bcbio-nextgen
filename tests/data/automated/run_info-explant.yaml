@@ -5,8 +5,8 @@ details:
   - analysis: RNA-seq
     files: ['Hsapiens_Mmusculus_1.fq.gz']
     algorithm:
-      rsem: True
-      aligner: star
+      transcriptome_align: True
+      aligner: tophat2
       quality_format: standard
       trim_reads: read_through
       adapters: [truseq, polya]
@@ -19,8 +19,8 @@ details:
   - analysis: RNA-seq
     files: ['Hsapiens_Mmusculus_rep2.fq.gz']
     algorithm:
-      rsem: True
-      aligner: star
+      transcriptome_align: True
+      aligner: tophat2
       quality_format: standard
       trim_reads: read_through
       adapters: [truseq, polya]

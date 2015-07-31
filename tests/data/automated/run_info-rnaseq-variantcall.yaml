@@ -6,7 +6,7 @@ details:
   - analysis: RNA-seq
     algorithm:
       variantcaller: gatk
-      rsem: True
+      transcriptome_align: True
       aligner: star
       quality_format: Standard
       trim_reads: read_through

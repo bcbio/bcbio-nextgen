@@ -283,7 +283,7 @@ def _check_for_misplaced(xs, subkey, other_keys):
 
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "trim_reads", "adapters", "custom_trim", "kraken",
-                      "align_split_size", "quality_bin", "rsem",
+                      "align_split_size", "quality_bin", "transcriptome_align",
                       "quality_format", "write_summary", "merge_bamprep",
                       "coverage", "coverage_interval", "ploidy", "indelcaller",
                       "variantcaller", "jointcaller", "variant_regions",
@@ -301,11 +301,13 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "mixup_check", "priority_regions"] +
                      # back compatibility
                       ["coverage_depth"])
-ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr", "clinical_reporting",
-                          "fusion_mode", "rsem", "assemble_transcripts", "trim_reads",
+ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
+                          "clinical_reporting", "transcriptome_align",
+                          "fusion_mode", "assemble_transcripts", "trim_reads",
                           "recalibrate", "realign"])
 ALG_ALLOW_FALSE = set(["aligner", "bam_clean", "bam_sort",
-                       "effects", "phasing", "mixup_check", "indelcaller", "variantcaller"])
+                       "effects", "phasing", "mixup_check", "indelcaller",
+                       "variantcaller"])
 
 ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
 

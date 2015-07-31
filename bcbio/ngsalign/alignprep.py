@@ -302,7 +302,7 @@ def _is_gzip_empty(fname):
                                     stderr=open("/dev/null", "w"))
     return int(count) < 1
 
-def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
+def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
     """Create bgzipped fastq files from an input BAM file.
     """
     # tools
@@ -313,7 +313,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False):
     bgzip = tools.get_bgzip_cmd(config, is_retry)
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
-    out_file_1 = os.path.join(work_dir, "%s-1.fq.gz" % os.path.splitext(os.path.basename(bam_file))[0])
+    out_file_1 = os.path.join(work_dir, "%s%s-1.fq.gz" % (os.path.splitext(os.path.basename(bam_file))[0], output_infix))
     if bam.is_paired(bam_file):
         out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
     else:
