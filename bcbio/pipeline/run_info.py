@@ -609,7 +609,6 @@ def _add_algorithm_defaults(algorithm):
     Converts allowed multiple inputs into lists if specified as a single item.
     """
     defaults = {"archive": [],
-                "min_allele_fraction": 10.0,
                 "tools_off": [],
                 "tools_on": []}
     convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller"])
