@@ -40,7 +40,7 @@ def identify(data):
             cmd = ("sambamba depth window -t {cores} -c {min_coverage} "
                    "--window-size {window_size} {work_bam} "
                    "| head -n {sample_size} "
-                   "| cut -f 5 | {py_cl} -l 'numpy.median([float(x) for x in l])'")
+                   """| cut -f 5 | {py_cl} -l 'numpy.median([float(x) for x in l if not x.startswith("mean")])'""")
             median_cov = float(subprocess.check_output(cmd.format(**locals()), shell=True))
             if not numpy.isnan(median_cov):
                 high_thresh = int(high_multiplier * median_cov)
