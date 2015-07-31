@@ -24,7 +24,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils
 
-DEFAULT_COVERAGE_CUTOFF = 4
+DEFAULT_COVERAGE_CUTOFF = 12
 
 def assign_interval(data):
     """Identify coverage based on percent of genome covered and relation to targets.
