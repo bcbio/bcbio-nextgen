@@ -85,7 +85,7 @@ def setup_directories(work_dir, fc_dir, config, config_file):
                                                         config, config_file)
     # check default install for tool data if not found locally
     if not os.path.exists(os.path.join(galaxy_dir, "tool-data")):
-        _, config_file = config_utils.load_system_config()
+        _, config_file = config_utils.load_system_config(work_dir=work_dir)
         if os.path.exists(os.path.join(os.path.dirname(config_file), "tool-data")):
             galaxy_dir = os.path.dirname(config_file)
     return {"fastq": fastq_dir, "galaxy": galaxy_dir,

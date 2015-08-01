@@ -34,7 +34,7 @@ ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}
 ENV PERL5LIB /usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}
 RUN echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile.d/bcbio.sh && \
     echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/profile.d/bcbio.sh && \
-    echo 'export PERL5LIB=/usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}' >> /etc/profile.d/bcbio.sh && \
+    echo 'export PERL5LIB=/usr/local/lib/perl5:${PERL5LIB}' >> /etc/profile.d/bcbio.sh && \
     echo '/usr/local/lib' >> /etc/ld.so.conf.d/bcbio.conf && ldconfig && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/tmp/* && \
@@ -42,6 +42,7 @@ RUN echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile.d/bcbio.sh && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda clean --yes --tarballs && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/qt* && \
     rm -rf $(brew --cache) && \
+    rm -rf /usr/local/.git && \
     rm -rf /.cpanm && \
     rm -rf /tmp/bcbio-nextgen-install
 RUN wget --no-check-certificate -O createsetuser \
