@@ -5,7 +5,7 @@ fc_name: ERP000591
 details:
   - analysis: RNA-seq
     algorithm:
-      rsem: True
+      transcriptome_align: True
       aligner: tophat2
       trim_reads: read_through
       adapters: [truseq, polya]
