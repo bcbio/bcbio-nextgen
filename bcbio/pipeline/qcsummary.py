@@ -550,6 +550,10 @@ def _parse_qualimap_metrics(report_file):
         header = table.xpath("h3")[0].text
         if header in parsers:
             out.update(parsers[header](table))
+    new_names = []
+    for metric in out:
+        new_names.append(metric + "_qualimap_1e7reads_est")
+    out = dict(zip(new_names, out.values()))
     return out
 
 def _bed_to_bed6(orig_file, out_dir):
