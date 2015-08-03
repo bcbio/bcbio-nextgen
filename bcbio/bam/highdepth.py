@@ -46,7 +46,8 @@ def identify(data):
                 high_thresh = int(high_multiplier * median_cov)
                 cmd = ("sambamba depth window -t {cores} -c {median_cov} "
                        "--window-size {window_size} -T {high_thresh} {work_bam} "
-                       "| {py_cl} -fx 'float(x.split()[5]) >= {high_percentage}' "
+                       "| {py_cl} -fx 'float(x.split()[5]) >= {high_percentage} "
+                       """if not x.startswith("#") else None' """
                        "| cut -f 1-3,7 > {tx_raw_file} ")
                 do.run(cmd.format(**locals()), "Identify high coverage regions")
                 with open(stats_file, "w") as out_handle:
