@@ -11,8 +11,9 @@ def copy_finfo(finfo, storage_dir, pass_uptodate=False):
     """Copy a file into the output storage directory.
     """
     if "sample" in finfo:
-        out_file = os.path.join(storage_dir, "%s-%s.%s" % (finfo["sample"], finfo["ext"],
-                                                           finfo["type"]))
+        out_file = os.path.join(storage_dir, "%s-%s%s%s" % (finfo["sample"], finfo["ext"],
+                                                            "-" if "." in finfo["type"] else ".",
+                                                            finfo["type"]))
     else:
         out_file = os.path.join(storage_dir, os.path.basename(finfo["path"]))
     out_file = os.path.abspath(out_file)

@@ -52,7 +52,7 @@ def _associate_cnvkit_out(ckout, items):
     out = []
     for data in items:
         ckout = copy.deepcopy(ckout)
-        ckout = _add_bed_to_output(ckout, data)
+        ckout = _add_variantcalls_to_output(ckout, data)
         # ckout = _add_coverage_bedgraph_to_output(ckout, data)
         ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
         if "svplots" in dd.get_tools_on(data):
@@ -115,6 +115,7 @@ def _run_cnvkit_shared(data, test_bams, background_bams, work_dir, background_na
     ref_file = dd.get_ref_file(data)
     raw_work_dir = os.path.join(work_dir, "raw")
     out_base = os.path.splitext(os.path.basename(test_bams[0]))[0].split(".")[0]
+
     background_cnn = "%s_background.cnn" % (background_name if background_name else "flat")
     files = {"cnr": os.path.join(raw_work_dir, "%s.cnr" % out_base),
              "cns": os.path.join(raw_work_dir, "%s.cns" % out_base),
@@ -208,8 +209,8 @@ def _add_cnr_bedgraph_and_bed_to_output(out, data):
     out["cnr_bed"] = bed_file
     return out
 
-def _add_bed_to_output(out, data):
-    """Call ploidy and convert into BED representation.
+def _add_variantcalls_to_output(out, data):
+    """Call ploidy and convert into VCF and BED representations.
     """
     call_file = "%s-call%s" % os.path.splitext(out["cns"])
     gender = dd.get_gender(data)
@@ -223,18 +224,22 @@ def _add_bed_to_output(out, data):
                 if gender.lower() == "male":
                     cmd += ["--male-reference"]
             do.run(cmd, "CNVkit call ploidy")
-    out_file = "%s.bed" % os.path.splitext(call_file)[0]
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
-                   "bed", "--sample-id", dd.get_sample_name(data),
-                   "--ploidy", str(dd.get_ploidy(data)),
-                   "-o", tx_out_file, call_file]
-            if gender and gender.lower() == "male":
-                cmd += ["--male-reference"]
-            do.run(cmd, "CNVkit export BED")
+    calls = {}
+    for outformat in ["bed", "vcf"]:
+        out_file = "%s.%s" % (os.path.splitext(call_file)[0], outformat)
+        calls[outformat] = out_file
+        if not utils.file_exists(out_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
+                       outformat, "--sample-id", dd.get_sample_name(data),
+                       "--ploidy", str(dd.get_ploidy(data)),
+                       "-o", tx_out_file, call_file]
+                if gender and gender.lower() == "male":
+                    cmd += ["--male-reference"]
+                do.run(cmd, "CNVkit export %s" % outformat)
     out["call_file"] = call_file
-    out["vrn_file"] = annotate.add_genes(out_file, data)
+    out["vcf_file"] = calls["vcf"]
+    out["vrn_file"] = annotate.add_genes(calls["bed"], data)
     return out
 
 def _add_segmetrics_to_output(out, data):

@@ -146,11 +146,9 @@ def _maybe_add_variant_file(algorithm, sample, out):
 def _maybe_add_sv(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("sv"):
         for svcall in sample["sv"]:
-            out.extend(_get_variant_file(svcall, ("vrn_file",)))
-            out.extend(_get_variant_file(svcall, ("cnr",)))
-            out.extend(_get_variant_file(svcall, ("cns",)))
-            out.extend(_get_variant_file(svcall, ("cnr_bed",)))
-            out.extend(_get_variant_file(svcall, ("cnr_bedgraph",)))
+            for key in ["vrn_file", "cnr", "cns", "cnr_bed", "cnr_bedgraph", "seg",
+                        "gainloss", "segmetrics"]:
+                out.extend(_get_variant_file(svcall, (key,)))
             if "validate" in svcall:
                 for vkey in ["csv", "plot", "df"]:
                     vfile = tz.get_in(["validate", vkey], svcall)
@@ -196,8 +194,10 @@ def _get_variant_file(x, key):
                             "index": True,
                             "ext": x["variantcaller"],
                             "variantcaller": x["variantcaller"]})
-        elif fname.endswith((".vcf", ".bed", ".bedpe", ".bedgraph", ".cnr", ".cns", ".cnn")):
+        elif fname.endswith((".vcf", ".bed", ".bedpe", ".bedgraph", ".cnr", ".cns", ".cnn", ".txt")):
             ftype = utils.splitext_plus(fname)[-1][1:]
+            if ftype == "txt":
+                ftype = fname.split("-")[-1]
             out.append({"path": fname,
                         "type": ftype,
                         "ext": x["variantcaller"],
