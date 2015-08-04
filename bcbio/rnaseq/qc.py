@@ -8,13 +8,13 @@ from itertools import ifilter
 import shutil
 import uuid
 import tempfile
+import pandas as pd
 
 # Provide transition period to install via upgrade with conda
 try:
-    import pandas as pd
     import statsmodels.formula.api as sm
 except ImportError:
-    pd, sm = None, None
+    sm = None
 
 from bcbio import bam
 from bcbio import utils
@@ -113,32 +113,26 @@ def _parse_rnaseqc_metrics(metrics_file, sample_name):
     return out
 
 
-def starts_by_depth(bam_file, config, sample_size=None):
+def starts_by_depth(bam_file, data, sample_size=10000000):
     """
     Return a set of x, y points where x is the number of reads sequenced and
     y is the number of unique start sites identified
     If sample size < total reads in a file the file will be downsampled.
     """
-    binsize = (bam.count(bam_file, config) / 100) + 1
+    config = dd.get_config(data)
+    binsize = (sample_size / 100) + 1
     seen_starts = set()
     counted = 0
     num_reads = []
     starts = []
     buffer = []
-    with bam.open_samfile(bam_file) as samfile:
-        # unmapped reads should not be counted
-        filtered = ifilter(lambda x: not x.is_unmapped, samfile)
-        def read_parser(read):
-            return ":".join([str(read.tid), str(read.pos)])
-        # if no sample size is set, use the whole file
-        if not sample_size:
-            samples = map(read_parser, filtered)
-        else:
-            samples = utils.reservoir_sample(filtered, sample_size, read_parser)
-        shuffle(samples)
-        for read in samples:
+    downsampled = bam.downsample(bam_file, data, sample_size)
+    with bam.open_samfile(downsampled) as samfile:
+        for read in samfile:
+            if read.is_unmapped:
+                continue
             counted += 1
-            buffer.append(read)
+            buffer.append(str(read.tid) + ":" + str(read.pos))
             if counted % binsize == 0:
                 seen_starts.update(buffer)
                 buffer = []
@@ -175,4 +169,3 @@ def estimate_library_complexity(df, algorithm="RNA-seq"):
     return {"Unique Starts Per Read": float(slope)}
     # return {"unique_start_per_read": float(slope),
     #         "complexity": complexity}
-

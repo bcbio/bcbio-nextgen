@@ -210,17 +210,17 @@ def _save_fields(sample):
                 saved["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return saved
 
-
 def _parse_disambiguate(disambiguatestatsfilename):
     """Parse disambiguation stats from given file.
     """
-    disambig_stats = [-1, -1, -1]
+    disambig_stats = [0, 0, 0]
     with open(disambiguatestatsfilename, "r") as in_handle:
-        header = in_handle.readline().strip().split("\t")
-        if header == ['sample', 'unique species A pairs', 'unique species B pairs', 'ambiguous pairs']:
-            disambig_stats_tmp = in_handle.readline().strip().split("\t")[1:]
-            if len(disambig_stats_tmp) == 3:
-                disambig_stats = [int(x) for x in disambig_stats_tmp]
+        for i, line in enumerate(in_handle):
+            fields = line.strip().split("\t")
+            if i == 0:
+                assert fields == ['sample', 'unique species A pairs', 'unique species B pairs', 'ambiguous pairs']
+            else:
+                disambig_stats = [x + int(y) for x, y in zip(disambig_stats, fields[1:])]
     return disambig_stats
 
 # ## Generate researcher specific summaries
@@ -550,6 +550,10 @@ def _parse_qualimap_metrics(report_file):
         header = table.xpath("h3")[0].text
         if header in parsers:
             out.update(parsers[header](table))
+    new_names = []
+    for metric in out:
+        new_names.append(metric + "_qualimap_1e7reads_est")
+    out = dict(zip(new_names, out.values()))
     return out
 
 def _bed_to_bed6(orig_file, out_dir):

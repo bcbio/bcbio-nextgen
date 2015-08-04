@@ -93,8 +93,8 @@ This requires the following additional system requirements to be in place:
   ``perl, libperl-devel`` On RedHat or other rpm systems:
   ``perl perl-devel perl-core``)
 - bzip2 (with development libraries)
-- curl (with development libraries; On Ubuntu: ``libcurl4-openssl-dev``, On
-  RedHat: ``libcurl4-openssl-dev``)
+- curl and SSL (with development libraries; On Ubuntu: ``libssl-dev libcurl4-openssl-dev``, On
+  RedHat: ``openssl-devel libcurl-devel``)
 - XML development libraries (On Ubuntu: ``libxml2-dev``, on RedHat: ``libxml2-devel``)
 - curses with development libraries (On Ubuntu: ``libncurses5-dev``, on RedHat ``ncurses-devel``)
 
