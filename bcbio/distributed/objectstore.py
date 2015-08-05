@@ -308,8 +308,9 @@ class AmazonS3(StorageManager):
         """Command line required for download using gof3r."""
         command = ["gof3r", "get", "--no-md5",
                    "-k", file_info.key,
-                   "-b", file_info.bucket,
-                   "--endpoint=s3-%s.amazonaws.com" % region]
+                   "-b", file_info.bucket]
+        if region != "us-east-1":
+            command += ["--endpoint=s3-%s.amazonaws.com" % region]
         return (command, "gof3r")
 
     @classmethod
@@ -326,11 +327,10 @@ class AmazonS3(StorageManager):
         """
         file_info = cls.parse_remote(filename)
         region = cls.get_region(filename)
-        if region != "us-east-1":
-            if region in REGIONS_NEWPERMS["s3"]:
-                return cls._cl_aws_cli(file_info, region)
-
-        return cls._cl_gof3r(file_info, region)
+        if region in REGIONS_NEWPERMS["s3"]:
+            return cls._cl_aws_cli(file_info, region)
+        else:
+            return cls._cl_gof3r(file_info, region)
 
     @classmethod
     def get_region(cls, resource=None):
