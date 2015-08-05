@@ -227,7 +227,7 @@ class StandardPipeline(AbstractPipeline):
     @classmethod
     def run(self, config, run_info_yaml, parallel, dirs, samples):
         ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with prun.start(_wres(parallel, ["aligner"]),
+        with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"]),
                         samples, config, dirs, "multicore") as run_parallel:
             with profile.report("organize samples", dirs):
                 samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
