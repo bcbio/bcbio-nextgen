@@ -83,7 +83,7 @@ LOOKUPS = {
     "coverage_depth_min": {"keys": ["config", "algorithm", "coverage_depth_min"],
                            "default": 4},
     "coverage_depth_max": {"keys": ["config", "algorithm", "coverage_depth_max"],
-                           "default": 10000},
+                           "default": None},
     "coverage_regions": {"keys": ["config", "algorithm", "coverage"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
     "align_bam": {"keys": ["align_bam"]},
@@ -150,6 +150,15 @@ def setter(keys, checker):
         return tz.update_in(config, keys, lambda x: value, default=value)
     return update
 
+def is_setter(keys):
+    def present(config):
+        try:
+            value = tz.get_in(keys, config, no_default=True)
+        except:
+            value = False
+        return True if value else False
+    return present
+
 """
 generate the getter and setter functions but don't override any explicitly
 defined
@@ -163,6 +172,9 @@ for k, v in LOOKUPS.items():
     setter_fn = 'set_' + k
     if setter_fn not in _g:
         _g["set_" + k] = setter(keys, v.get('checker', None))
+    is_setter_fn = "is_set" + k
+    if is_setter_fn not in _g:
+        _g["is_set_" + k] = is_setter(keys)
 
 def sample_data_iterator(samples):
     """
