@@ -55,9 +55,9 @@ def calc_callable_loci(data, region=None, out_file=None):
     """
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
-    max_depth = utils.get_in(data, ("config", "algorithm", "coverage_depth_max"), 10000)
+    max_depth = dd.get_coverage_depth_max(data)
     depth = {"max": max_depth * 7 if max_depth > 0 else sys.maxint - 1,
-             "min": utils.get_in(data, ("config", "algorithm", "coverage_depth_min"), 4)}
+             "min": dd.get_coverage_depth_min(data)}
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             ref_file = tz.get_in(["reference", "fasta", "base"], data)

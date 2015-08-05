@@ -20,8 +20,8 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     for x in align_bams:
         bam.index(x, config)
     params = ["-R", ref_file]
-    coverage_depth_max = tz.get_in(["algorithm", "coverage_depth_max"], config)
-    if coverage_depth_max:
+    coverage_depth_max = dd.get_coverage_depth_max(items[0])
+    if coverage_depth_max > 0:
         # GATK can only downsample to a minimum of 200
         coverage_depth_max = max([200, coverage_depth_max])
         params += ["--downsample_to_coverage", str(coverage_depth_max),
