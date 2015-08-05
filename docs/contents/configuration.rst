@@ -419,7 +419,8 @@ Experimental information
    GATK can also downsample to exactly this coverage per position. We avoid
    calling entirely in super high depth regions with more than 7 times coverage
    for this parameter. This controls memory usage in highly repetitive regions
-   like centromeres. Defaults to 10000. Set to 0 to perform no downsampling.
+   like centromeres. Defaults to 10000, except for the GATK which is set to
+   500, the GATK default. Set to 0 to perform no downsampling.
 -  ``coverage_depth_min`` Minimum depth of coverage. Regions will less reads
    will not get called. Defaults to 4. Setting lower than 4 will trigger
    low-depth calling options for GATK.
