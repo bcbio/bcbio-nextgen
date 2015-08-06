@@ -83,7 +83,7 @@ LOOKUPS = {
     "coverage_depth_min": {"keys": ["config", "algorithm", "coverage_depth_min"],
                            "default": 4},
     "coverage_depth_max": {"keys": ["config", "algorithm", "coverage_depth_max"],
-                           "default": None},
+                           "default": 10000},
     "coverage_regions": {"keys": ["config", "algorithm", "coverage"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
     "align_bam": {"keys": ["align_bam"]},
