@@ -1,0 +1,29 @@
+# Evaluate structural variant calling on NA12878 whole genome data,
+# using validated deletions and insertions from the Genome in a Bottle svclassify project
+# https://groups.google.com/d/msg/genome-in-a-bottle/v3EDUgZT0Xo/eGYsQlJk2JMJ
+#
+# See the bcbio-nextgen documentation for full instructions to
+# run this analysis:
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#example-pipelines
+---
+details:
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    recalibrate: false
+    realign: false
+    variantcaller: false
+    remove_lcr: true
+    svcaller: [lumpy, manta, cnvkit]
+    svvalidate:
+      DEL: ../input/giab-svclassify-deletions-2015-05-22.bed
+      INS: ../input/giab-svclassify-insertions-2015-05-22.bed
+  analysis: variant2
+  description: NA12878
+  files:
+  - ../input/NA12878_1.fastq.gz
+  - ../input/NA12878_2.fastq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: ceu
+    sex: female

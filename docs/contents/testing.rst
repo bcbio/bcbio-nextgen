@@ -183,24 +183,22 @@ analyses. It enables exome by default, but you can use the larger whole genome
 evaluation by uncommenting the relevant parts of the configuration and retrieval
 script.
 
-Structural variant calling -- whole genome trio (50x)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Structural variant calling -- whole genome NA12878 (50x)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This example runs structural variant calling with multiple callers (Lumpy, Delly
-and cn.mops), providing a combined output summary file and validation metrics
-against NA12878 deletions. It uses the same NA12878 family starting material as
-the whole genome trio example.
+This example runs structural variant calling with multiple callers (Lumpy, Manta
+and CNVkit), providing a combined output summary file and validation metrics
+against NA12878 deletions. It uses the same NA12878 input as the whole genome 
+trio example.
 
 To run the analysis do::
 
-  mkdir -p NA12878-sv-eval/config NA12878-sv-eval/input NA12878-sv-eval/work
-  cd NA12878-sv-eval/config
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv.yaml
-  cd ../input
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-sv-getdata.sh
-  bash NA12878-trio-sv-getdata.sh
-  cd ../work
-  bcbio_nextgen.py ../config/NA12878-trio-sv.yaml -n 16
+  mkdir -p NA12878-sv-eval
+  cd NA12878-sv-eval
+  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-sv-getdata.sh
+  bash NA12878-sv-getdata.sh
+  cd work
+  bcbio_nextgen.py ../config/NA12878-sv.yaml -n 16
 
 This is large whole genome analysis and the timing and disk space requirements
 for the NA12878 trio analysis above apply here as well.
