@@ -178,14 +178,15 @@ algorithm section of your configuration::
 
     - description: Sample
       algorithm:
-        svcaller: [lumpy, cnvkit]
+        svcaller: [lumpy, manta, cnvkit]
 
-The best supported callers are `Lumpy <https://github.com/arq5x/lumpy-sv>`_ for
-paired end and split read calling, `CNVkit
-<http://cnvkit.readthedocs.org/en/latest/>`_ for CNV calling, and `WHAM
-<https://github.com/jewmanchue/wham>`_ for association testing. We also support
-`DELLY <https://github.com/tobiasrausch/delly>`_, another excellent paired end
-and split read calling, although it is slow on large whole genome datasets.
+The best supported callers are `Lumpy <https://github.com/arq5x/lumpy-sv>`_ and
+`Manta <https://github.com/Illumina/manta>`_, for paired end and split read
+calling, `CNVkit <http://cnvkit.readthedocs.org/en/latest/>`_ for read-depth
+based CNV calling, and `WHAM <https://github.com/jewmanchue/wham>`_ for
+association testing. We also support `DELLY
+<https://github.com/tobiasrausch/delly>`_, another excellent paired end and
+split read calling, although it is slow on large whole genome datasets.
 
 In addition to results from individual callers, bcbio creates a summarized
 ensemble callset. The goal is to have a flat high level representation to

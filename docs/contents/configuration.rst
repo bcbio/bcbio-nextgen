@@ -521,8 +521,8 @@ Variant calling
 Structural variant calling
 ==========================
 
-- ``svcaller`` -- List of structural variant callers to use. [lumpy, delly,
-  cnvkit]. LUMPY and DELLY require paired end reads.
+- ``svcaller`` -- List of structural variant callers to use. [lumpy, manta,
+  cnvkit]. LUMPY, Manta and DELLY require paired end reads.
 - ``sv_regions`` -- A specification of regions to target during structural
   variant calling. By default, bcbio uses regions specified in
   ``variant_regions`` but this allows custom specification for structural
