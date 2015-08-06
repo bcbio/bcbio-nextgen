@@ -1,4 +1,4 @@
-version: 21
+version: 22
 
 aliases:
   human: true
@@ -26,3 +26,7 @@ rnaseq:
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
+
+coverage:
+  coverage_problem_dir: ../coverage/problem_regions
+  MIG: ../prioritization/MIG.bed
