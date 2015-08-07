@@ -20,8 +20,8 @@ def runner(parallel, config):
         if len(items) == 0:
             return []
         items = diagnostics.track_parallel(items, fn_name)
+        fn, fn_name = (fn_name, fn_name.__name__) if callable(fn_name) else (get_fn(fn_name, parallel), fn_name)
         logger.info("multiprocessing: %s" % fn_name)
-        fn = get_fn(fn_name, parallel)
         if "wrapper" in parallel:
             wrap_parallel = {k: v for k, v in parallel.items() if k in set(["fresources", "checkpointed"])}
             items = [[fn_name] + parallel.get("wrapper_args", []) + [wrap_parallel] + list(x) for x in items]
