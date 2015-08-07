@@ -30,7 +30,7 @@ details:
       #recalibrate: gatk
       variantcaller: freebayes
       #effects: vep
-      #svcaller: [lumpy, cnvkit]
+      #svcaller: [lumpy, cnvkit, manta, metasv]
       #svcaller: cnvkit
       #remove_lcr: true
       #tools_off: [gemini]

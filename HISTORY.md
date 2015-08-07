@@ -1,3 +1,7 @@
+## 0.9.2 (in progress)
+
+- Support for MetaSV to prepare combined structural variant calls.
+
 ## 0.9.1 (6 August 2015)
 
 - Fix novoalign to work with parallel split alignments. Thanks to Tyler Funnell.

@@ -8,7 +8,7 @@ import toolz as tz
 
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import (battenberg, cn_mops, cnvkit, delly, ensemble,
-                              lumpy, manta, plot, validate, wham)
+                              lumpy, manta, metasv, plot, validate, wham)
 from bcbio.variation import vcfutils
 
 _CALLERS = {}
@@ -16,6 +16,7 @@ _SOMATIC_CALLERS = {"manta": manta.run}
 _BATCH_CALLERS = {"cn.mops": cn_mops.run, "cnvkit": cnvkit.run,
                   "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
                   "battenberg": battenberg.run}
+_ENSEMBLE_CALLERS = {"metasv": metasv.run}
 _NEEDS_BACKGROUND = set(["cn.mops"])
 _INITIAL_CALLERS = set(["battenberg", "cnvkit"])
 
@@ -33,9 +34,10 @@ def _handle_multiple_svcallers(data):
     svs = _get_svcallers(data)
     out = []
     for svcaller in svs:
-        base = copy.deepcopy(data)
-        base["config"]["algorithm"]["svcaller_active"] = svcaller
-        out.append(base)
+        if svcaller not in _ENSEMBLE_CALLERS:
+            base = copy.deepcopy(data)
+            base["config"]["algorithm"]["svcaller_active"] = svcaller
+            out.append(base)
     return out
 
 def finalize_sv(samples, config, initial_only=False):
@@ -60,6 +62,8 @@ def finalize_sv(samples, config, initial_only=False):
         if len(sorted_svcalls) > 0:
             final_calls = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
             if not initial_only:
+                for caller in (c for c in _get_svcallers(final) if c in _ENSEMBLE_CALLERS):
+                    final_calls = _ENSEMBLE_CALLERS[caller](final_calls, final)
                 final_calls = ensemble.summarize(final_calls, final, grouped_calls)
                 final_calls = validate.evaluate(final, final_calls)
             final["sv"] = final_calls
