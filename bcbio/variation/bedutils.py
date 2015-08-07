@@ -24,6 +24,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None):
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
                 cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
+                       "grep -v ^# | "
                        "{py_cl} -x 'bcbio.variation.bedutils.remove_bad(x)' | "
                        "sort -k1,1 -k2,2n > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
