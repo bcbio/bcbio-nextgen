@@ -8,6 +8,7 @@ import sys
 
 from bcbio import utils
 from bcbio.provenance import do
+from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.pipeline import datadict as dd
 
 MIN_CALLERS = 2
@@ -27,8 +28,10 @@ def run(calls, data):
             cmd += ["--%s_vcf" % call["variantcaller"], call.get("vcf_file", call["vrn_file"])]
     if available_callers >= MIN_CALLERS:
         if not utils.file_exists(out_file):
-            cmd += ["--spades", utils.which("spades.py"), "--age", utils.which("age_align")]
-            do.run(cmd, "Combine variant calls with MetaSV")
+            with tx_tmpdir(data, work_dir) as tx_work_dir:
+                cmd += ["--workdir", tx_work_dir, "--num_threads", str(dd.get_num_cores(data))]
+                cmd += ["--spades", utils.which("spades.py"), "--age", utils.which("age_align")]
+                do.run(cmd, "Combine variant calls with MetaSV")
         calls.append({"variantcaller": "metasv",
                       "vrn_file": out_file})
     return calls

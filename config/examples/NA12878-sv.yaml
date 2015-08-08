@@ -14,7 +14,7 @@ details:
     realign: false
     variantcaller: false
     remove_lcr: true
-    svcaller: [lumpy, manta, cnvkit]
+    svcaller: [lumpy, manta, cnvkit, metasv]
     svvalidate:
       DEL: ../input/giab-svclassify-deletions-2015-05-22.bed
       INS: ../input/giab-svclassify-insertions-2015-05-22.bed
