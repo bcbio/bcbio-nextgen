@@ -104,7 +104,7 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     return {"sensitivity": _stat_str(match, ttotal),
             "precision": _stat_str(match, etotal)}
 
-def _evaluate_multi(callers, truth_svtypes, ensemble, data):
+def _evaluate_multi(callers, truth_svtypes, ensemble, call_beds, data):
     out_file = "%s-validate.csv" % utils.splitext_plus(ensemble)[0]
     df_file = "%s-validate-df.csv" % utils.splitext_plus(ensemble)[0]
     if not utils.file_uptodate(out_file, ensemble) or not utils.file_uptodate(df_file, ensemble):
@@ -119,7 +119,12 @@ def _evaluate_multi(callers, truth_svtypes, ensemble, data):
                     for size in EVENT_SIZES:
                         str_size = "%s-%s" % size
                         for caller in (x for x in callers if x in total_callers[svtype] or x == "sv-ensemble"):
-                            evalout = _evaluate_one(caller, svtype, size, ensemble, truth, data)
+                            try:
+                                call_bed = call_beds[caller]
+                            except KeyError:
+                                assert caller == "sv-ensemble", caller
+                                call_bed = ensemble
+                            evalout = _evaluate_one(caller, svtype, size, call_bed, truth, data)
                             writer.writerow([svtype, str_size, caller,
                                              evalout["sensitivity"]["label"], evalout["precision"]["label"]])
                             for metric in ["sensitivity", "precision"]:
@@ -216,9 +221,11 @@ def evaluate(data, sv_calls):
     truth_sets = tz.get_in(["config", "algorithm", "svvalidate"], data)
     ensemble_callsets = [(i, x) for (i, x) in enumerate(sv_calls) if x["variantcaller"] == "sv-ensemble"]
     if truth_sets and len(ensemble_callsets) > 0:
-        callers = [x["variantcaller"] for x in sv_calls]
-        ensemble_bed = ensemble_callsets[0][-1]["vrn_file"]
-        val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, data)
+        ensemble = ensemble_callsets[0][-1]
+        call_beds = {c: f for (c, f) in ensemble["input_beds"]}
+        ensemble_bed = ensemble["vrn_file"]
+        callers = ["sv-ensemble"] + sorted(call_beds.keys())
+        val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, call_beds, data)
         summary_plots = _plot_evaluation(df_csv)
         ensemble_i, ensemble = ensemble_callsets[0]
         ensemble["validate"] = {"csv": val_summary, "plot": summary_plots, "df": df_csv}

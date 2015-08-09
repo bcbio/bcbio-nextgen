@@ -72,6 +72,7 @@ def _copy_file(in_file, caller, out_file):
 CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "delly": _vcf_to_bed,
                  "manta": _vcf_to_bed,
+                 "metasv": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed,
                  "wham": _copy_file,
                  "cnvkit": _cnvkit_to_bed}
@@ -168,10 +169,10 @@ def summarize(calls, data, items):
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                                sample, "ensemble"))
     with shared.bedtools_tmpdir(data):
-        input_beds = filter(lambda x: x is not None and utils.file_exists(x),
-                            [_create_bed(c, sample, work_dir, data) for c in calls])
+        input_beds = filter(lambda xs: xs[1] is not None and utils.file_exists(xs[1]),
+                            [(c["variantcaller"], _create_bed(c, sample, work_dir, data)) for c in calls])
     if len(input_beds) > 0:
-        out_file = combine_bed_by_size(input_beds, sample, work_dir, data)
+        out_file = combine_bed_by_size([xs[1] for xs in input_beds], sample, work_dir, data)
         if utils.file_exists(out_file):
             if len(input_beds) > N_FILTER_CALLERS:
                 filter_file = _filter_ensemble(out_file, data)
@@ -187,5 +188,6 @@ def summarize(calls, data, items):
             bedprep_dir = utils.safe_makedir(os.path.join(os.path.dirname(noexclude_file), "bedprep"))
             if utils.file_exists(noexclude_file):
                 calls.append({"variantcaller": "sv-ensemble",
+                              "input_beds": input_beds,
                               "vrn_file": bedutils.clean_file(noexclude_file, data, bedprep_dir=bedprep_dir)})
     return calls
