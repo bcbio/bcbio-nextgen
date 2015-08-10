@@ -91,19 +91,19 @@ def seqbuster(*args):
 def seqcluster_prepare(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(seqclsuter.run_prepare, *args))
+        return ipython.zip_args(apply(seqcluster.run_prepare, *args))
 
 @require(seqcluster)
 def seqcluster_cluster(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(seqclsuter.run_cluster, *args))
+        return ipython.zip_args(apply(seqcluster.run_cluster, *args))
 
 @require(seqcluster)
-def srna_alignment(*args):
+def srna_alignment(* args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(seqclsuter.run_align, *args))
+        return ipython.zip_args(apply(seqcluster.run_align, *args))
 
 @require(sailfish)
 def run_sailfish(*args):
