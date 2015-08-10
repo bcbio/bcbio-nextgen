@@ -107,7 +107,7 @@ def combine_express(samples, combined):
     isoform_to_gene_file = express.isoform_to_gene_name(gtf_file, isoform_to_gene_file)
     if len(to_combine) > 0:
         eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
-        eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file)
+        eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file, ext=".counts")
         to_combine = [dd.get_express_tpm(x) for x in
                       dd.sample_data_iterator(samples) if dd.get_express_tpm(x)]
         tpm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_tpm"
@@ -115,7 +115,7 @@ def combine_express(samples, combined):
         to_combine = [dd.get_express_fpkm(x) for x in dd.sample_data_iterator(samples)
                       if dd.get_express_fpkm(x)]
         fpkm_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_fpkm"
-        fpkm_counts_combined = count.combine_count_files(to_combine, fpkm_counts_combined_file)
+        fpkm_counts_combined = count.combine_count_files(to_combine, fpkm_counts_combined_file, ext=".fpkm")
         return {'counts': eff_counts_combined, 'tpm': tpm_counts_combined,
                 'fpkm': fpkm_counts_combined, 'isoform_to_gene': isoform_to_gene_file}
     return {}
@@ -176,7 +176,7 @@ def combine_files(samples):
     gtf_file = dd.get_gtf_file(samples[0][0], None)
     # combine featureCount files
     count_files = filter_missing([dd.get_count_file(x[0]) for x in samples])
-    combined = count.combine_count_files(count_files)
+    combined = count.combine_count_files(count_files, ext=".counts")
     annotated = count.annotate_combined_count_file(combined, gtf_file)
 
     # combine eXpress files
