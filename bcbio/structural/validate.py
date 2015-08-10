@@ -79,10 +79,13 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
         return curcaller == "wham" and svtype in allowed and curtype in allowed[svtype]
     def is_breakend(name):
         return name.startswith("BND")
-    def in_size_range(feat):
-        minf, maxf = size_range
-        size = feat.end - feat.start
-        return size >= minf and size < maxf
+    def in_size_range(max_buffer=0):
+        def _work(feat):
+            minf, maxf = size_range
+            buffer = min(max_buffer, int(((maxf + minf) / 2.0) / 10.0))
+            size = feat.end - feat.start
+            return size >= max([0, minf - buffer]) and size < maxf + buffer
+        return _work
     def is_caller_svtype(feat):
         for name in feat.name.split(","):
             if ((name.startswith(svtype) or cnv_matches(name) or wham_matches(name) or is_breakend(name))
@@ -96,8 +99,8 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
         overlap = 0.5
     else:
         overlap = 0.8
-    efeats = pybedtools.BedTool(ensemble).filter(in_size_range).filter(is_caller_svtype).saveas().sort().merge()
-    tfeats = pybedtools.BedTool(truth).filter(in_size_range).sort().merge().saveas()
+    efeats = pybedtools.BedTool(ensemble).filter(in_size_range(0)).filter(is_caller_svtype).saveas().sort().merge()
+    tfeats = pybedtools.BedTool(truth).filter(in_size_range(0)).sort().merge().saveas()
     etotal = efeats.count()
     ttotal = tfeats.count()
     match = efeats.intersect(tfeats, u=True).sort().merge().saveas().count()
@@ -224,7 +227,7 @@ def evaluate(data, sv_calls):
         ensemble = ensemble_callsets[0][-1]
         call_beds = {c: f for (c, f) in ensemble["input_beds"]}
         ensemble_bed = ensemble["vrn_file"]
-        callers = ["sv-ensemble"] + sorted(call_beds.keys())
+        callers = sorted(call_beds.keys())
         val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, call_beds, data)
         summary_plots = _plot_evaluation(df_csv)
         ensemble_i, ensemble = ensemble_callsets[0]

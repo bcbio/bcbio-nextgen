@@ -29,6 +29,7 @@ def run(calls, data):
     if available_callers >= MIN_CALLERS:
         if not utils.file_exists(out_file):
             with tx_tmpdir(data, work_dir) as tx_work_dir:
+                tx_work_dir = utils.safe_makedir(os.path.join(work_dir, "raw"))
                 cmd += ["--workdir", tx_work_dir, "--num_threads", str(dd.get_num_cores(data))]
                 cmd += ["--spades", utils.which("spades.py"), "--age", utils.which("age_align")]
                 do.run(cmd, "Combine variant calls with MetaSV")
