@@ -1,4 +1,4 @@
-version: 20
+version: 21
 
 aliases:
   human: true
@@ -25,6 +25,10 @@ rnaseq:
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
+
+srnaseq:
+    srna-trasncripts: ../srnaseq/srna-transcripts.gtf
+    mirbase: ../srnaseq/hairpin.fa
 
 coverage:
   coverage_problem_dir: ../coverage/problem_regions

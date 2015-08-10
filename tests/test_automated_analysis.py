@@ -85,7 +85,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-                         DlInfo("genomes_automated_test.tar.gz", "genomes", 24),
+                         DlInfo("genomes_automated_test.tar.gz", "genomes", 23),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 8),
                          DlInfo("tcga_benchmark.tar.gz", None, 3)]
@@ -235,6 +235,18 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, os.pardir, "1_explant"),
                   os.path.join(self.data_dir, "run_info-explant.yaml")]
             subprocess.check_call(cl)
+
+    @attr(srnaseq=True)
+    def test_srnaseq(self):
+        """Run an sRNA-seq analysis.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, "run_info-srnaseq.yaml")]
+            subprocess.check_call(cl)
+
 
     @attr(chipseq=True)
     def test_chipseq(self):

@@ -2,6 +2,8 @@
 """
 from bcbio import heterogeneity, structural, utils, chipseq, upload
 from bcbio.bam import callable
+from bcbio.srna import sample as srna
+from bcbio.srna import group as seqcluster
 from bcbio.cwl import create as cwl_create
 from bcbio.rnaseq import (sailfish)
 from bcbio.ngsalign import alignprep
@@ -28,6 +30,10 @@ def trim_sample(*args):
     return sample.trim_sample(*args)
 
 @utils.map_wrap
+def trim_srna_sample(*args):
+    return srna.trim_srna_sample(*args)
+
+@utils.map_wrap
 def process_alignment(*args):
     return sample.process_alignment(*args)
 
@@ -38,6 +44,22 @@ def postprocess_alignment(*args):
 @utils.map_wrap
 def prep_samples(*args):
     return sample.prep_samples(*args)
+
+@utils.map_wrap
+def seqbuster(*args):
+    return srna.mirbase(*args)
+
+@utils.map_wrap
+def seqcluster_prepare(*args):
+    return seqcluster.run_prepare(*args)
+
+@utils.map_wrap
+def seqcluster_cluster(*args):
+    return seqcluster.run_cluster(*args)
+
+@utils.map_wrap
+def srna_alignment(*args):
+    return seqcluster.run_align(*args)
 
 @utils.map_wrap
 def prep_align_inputs(*args):

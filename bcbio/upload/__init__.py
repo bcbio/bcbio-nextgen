@@ -45,6 +45,8 @@ def _get_files(sample):
         return _get_files_variantcall(sample)
     elif analysis in ["RNA-seq"]:
         return _get_files_rnaseq(sample)
+    elif analysis.lower() in ["smallrna-seq"]:
+        return _get_files_srnaseq(sample)
     elif analysis.lower() in ["chip-seq"]:
         return _get_files_chipseq(sample)
     elif analysis.lower() in ["sailfish"]:
@@ -69,6 +71,14 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_cufflinks(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
     out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
+    return _add_meta(out, sample)
+
+def _get_files_srnaseq(sample):
+    out = []
+    algorithm = sample["config"]["algorithm"]
+    out = _maybe_add_summary(algorithm, sample, out)
+    out = _maybe_add_trimming(algorithm, sample, out)
+    out = _maybe_add_seqbuster(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_chipseq(sample):
@@ -289,6 +299,22 @@ def _maybe_add_cufflinks(algorithm, sample, out):
                     "ext": "cufflinks"})
     return out
 
+def _maybe_add_trimming(algorithm, sample, out):
+    fn = sample["collapse"] + "_size_stats"
+    if utils.file_exists(fn):
+        out.append({"path": fn,
+                    "type": "trimming_stats",
+                    "ext": "ready"})
+        return out
+
+def _maybe_add_seqbuster(algorithm, sample, out):
+    fn = sample["seqbuster"]
+    if utils.file_exists(fn):
+        out.append({"path": fn,
+                    "type": "counts",
+                    "ext": "ready"})
+        return out
+
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
               or algorithm.get("recalibrate") or algorithm.get("bam_clean")
@@ -314,6 +340,10 @@ def _get_files_project(sample, upload_config):
     if mixup_check:
         out.append({"path": sample["summary"]["mixup_check"],
                     "type": "directory", "ext": "mixup_check"})
+
+    if sample.get("seqcluster", None):
+        out.append({"path": sample["seqcluster"],
+                    "type": "directory", "ext": "seqcluster"})
 
     for x in sample.get("variants", []):
         if "pop_db" in x:

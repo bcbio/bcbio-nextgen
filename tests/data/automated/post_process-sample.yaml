@@ -45,6 +45,8 @@ resources:
   novoalign:
     cores: 4
     memory: 4G
+  miraligner:
+    jvm_opts: ["-Xms750m", "-Xmx8000m"]
   gemini:
     cores: 4
   gatk:

@@ -18,6 +18,12 @@ CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
+    max_hits = 10
+    srna = True if data["analysis"].lower().startswith("smallrna-seq") else False
+    srna_opts = ""
+    if srna:
+        max_hits = 1000
+        srna_opts = "--alignIntronMax 1"
     config = data["config"]
     out_prefix = os.path.join(align_dir, dd.get_lane(data))
     out_file = out_prefix + "Aligned.out.sam"
@@ -42,8 +48,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     safe_makedir(align_dir)
     cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq} "
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
-           "--outReadsUnmapped Fastx --outFilterMultimapNmax 10 "
-           "--outStd SAM "
+           "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
+           "--outStd SAM {srna_opts} "
            "--outSAMunmapped Within --outSAMattributes %s" % " ".join(ALIGN_TAGS))
     cmd = cmd + " --readFilesCommand zcat " if is_gzipped(fastq_file) else cmd
     cmd += _read_group_option(names)
@@ -52,7 +58,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += " --chimSegmentMin 15 --chimJunctionOverhangMin 15"
     strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                 "unstranded").lower()
-    if strandedness == "unstranded":
+    if strandedness == "unstranded" and not srna:
         cmd += " --outSAMstrandField intronMotif "
 
     if dd.get_transcriptome_align(data) and not is_transcriptome_broken():

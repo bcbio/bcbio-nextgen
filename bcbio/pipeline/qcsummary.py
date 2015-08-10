@@ -68,6 +68,10 @@ def pipeline_summary(data):
     if data["sam_ref"] is not None and work_bam and work_bam.endswith(".bam"):
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = _run_qc_tools(work_bam, data)
+    elif data["analysis"].lower().startswith("smallrna-seq"):
+        work_bam = data["clean_fasta"]
+        data["summary"] = _run_qc_tools(work_bam, data)
+
     return [[data]]
 
 
@@ -115,7 +119,7 @@ def _run_qc_tools(bam_file, data):
         to_run.append(("qualimap", _rnaseq_qualimap))
     elif data["analysis"].lower().startswith("chip-seq"):
         to_run.append(["bamtools", _run_bamtools_stats])
-    else:
+    elif not data["analysis"].lower().startswith("smallrna-seq"):
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     if data["analysis"].lower().startswith(("standard", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])

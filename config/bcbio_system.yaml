@@ -71,6 +71,8 @@ resources:
   mutect:
     jvm_opts: ["-Xms750m", "-Xmx2500m"]
     dir: /usr/local/share/java/mutect
+  miraligner:
+    jvm_opts: ["-Xms750m", "-Xmx4500m"]
   varscan:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/varscan
@@ -80,6 +82,8 @@ resources:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/oncofuse
   express:
+    memory: 8g
+  seqcluster:
     memory: 8g
 
 # Location of galaxy configuration file, which has pointers to reference data

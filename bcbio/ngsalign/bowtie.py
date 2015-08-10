@@ -28,6 +28,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
           extra_args=None):
     """Do standard or paired end alignment with bowtie.
     """
+    num_hits = 1
+    if data["analysis"].lower().startswith("smallrna-seq"):
+        num_hits = 1000
     config = data['config']
     out_file = os.path.join(align_dir, "%s.sam" % names["lane"])
     if not file_exists(out_file):
@@ -37,7 +40,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
             cl += extra_args if extra_args is not None else []
             cl += ["-q",
                    "-v", 2,
-                   "-k", 1,
+                   "-k", num_hits,
                    "-X", 2000, # default is too selective for most data
                    "--best",
                    "--strata",

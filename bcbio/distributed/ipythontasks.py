@@ -10,6 +10,8 @@ from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio import rnaseq
+from bcbio.srna import sample as srna
+from bcbio.srna import group as seqcluster
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
@@ -72,6 +74,36 @@ def trim_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(sample.trim_sample, *args))
+
+@require(srna)
+def trim_srna_sample(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(srna.trim_srna_sample, *args))
+
+@require(srna)
+def seqbuster(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(srna.mirbase, *args))
+
+@require(seqcluster)
+def seqcluster_prepare(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(seqclsuter.run_prepare, *args))
+
+@require(seqcluster)
+def seqcluster_cluster(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(seqclsuter.run_cluster, *args))
+
+@require(seqcluster)
+def srna_alignment(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(seqclsuter.run_align, *args))
 
 @require(sailfish)
 def run_sailfish(*args):

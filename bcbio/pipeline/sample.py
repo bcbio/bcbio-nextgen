@@ -89,10 +89,12 @@ def _add_supplemental_bams(data):
                 data[sup_key][supext] = test_file
     return data
 
-def process_alignment(data):
+def process_alignment(data, alt_input=None):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
     fastq1, fastq2 = dd.get_input_sequence_files(data)
+    if alt_input:
+        fastq1, fastq2 = alt_input
     config = data["config"]
     aligner = config["algorithm"].get("aligner", None)
     if fastq1 and objectstore.file_exists_or_remote(fastq1) and aligner:
