@@ -31,7 +31,7 @@ RUN git config --global url.https://github.com/.insteadOf git://github.com/ && \
 RUN /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data
 ENV PATH /usr/local/bin:/usr/local/share/bcbio-nextgen/anaconda/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}
-ENV PERL5LIB /usr/local/lib/perl5:/usr/local/lib/perl5/site_perl:${PERL5LIB}
+ENV PERL5LIB /usr/local/lib/perl5:${PERL5LIB}
 RUN echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile.d/bcbio.sh && \
     echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> /etc/profile.d/bcbio.sh && \
     echo 'export PERL5LIB=/usr/local/lib/perl5:${PERL5LIB}' >> /etc/profile.d/bcbio.sh && \

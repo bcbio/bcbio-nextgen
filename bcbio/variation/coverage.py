@@ -78,17 +78,18 @@ def summary(items):
         combined_bed = bed.concat([coverage_bed, priority_bed])
         clean_bed = bedutils.clean_file(combined_bed.fn, data) if len(combined_bed) > 0 else combined_bed.fn
         bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
-        with file_transaction(data, out_file) as tx_out_file:
-            chanjo = os.path.join(os.path.dirname(sys.executable), "chanjo")
-            cmd = ("{chanjo} --db {tx_out_file} build {bed_file}")
-            do.run(cmd.format(**locals()), "Prep chanjo database")
-            for data in items:
-                sample = dd.get_sample_name(data)
-                bam_file = data["work_bam"]
-                cmd = ("{chanjo} annotate -s {sample} -g {batch} -c {cutoff} "
-                       "{bam_file} {bed_file} | "
-                       "{chanjo} --db {tx_out_file} import")
-                do.run(cmd.format(**locals()), "Chanjo coverage", data)
+        if utils.file_exists(bed_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                chanjo = os.path.join(os.path.dirname(sys.executable), "chanjo")
+                cmd = ("{chanjo} --db {tx_out_file} build {bed_file}")
+                do.run(cmd.format(**locals()), "Prep chanjo database")
+                for data in items:
+                    sample = dd.get_sample_name(data)
+                    bam_file = data["work_bam"]
+                    cmd = ("{chanjo} annotate -s {sample} -g {batch} -c {cutoff} "
+                           "{bam_file} {bed_file} | "
+                           "{chanjo} --db {tx_out_file} import")
+                    do.run(cmd.format(**locals()), "Chanjo coverage", data)
         os.remove(bed_file)
     coverage = regions_coverage(out_file, batch, out_dir)
     problem_regions = dd.get_problem_region_dir(data)
