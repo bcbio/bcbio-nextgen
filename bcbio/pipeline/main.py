@@ -344,11 +344,15 @@ class smallRnaseqPipeline(AbstractPipeline):
 
         with prun.start(_wres(parallel, ["aligner", "picard"],
                               ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
-                        samples, config, dirs, "alignment") as run_parallel:
+                        [samples[0]], config, dirs, "alignment") as run_parallel:
             with profile.report("prepare", dirs):
                 samples = run_parallel("seqcluster_prepare", [samples])
             with profile.report("alignment", dirs):
                 samples = run_parallel("srna_alignment", [samples])
+
+        with prun.start(_wres(parallel, ["seqcluster"],
+                              ensure_mem={"seqcluster": 8}),
+                        [samples[0]], config, dirs, "cluster") as run_parallel:
             with profile.report("cluster", dirs):
                 samples = run_parallel("seqcluster_cluster", [samples])
 

@@ -5,6 +5,7 @@ import shutil
 from collections import namedtuple
 
 import pysam
+
 try:
     from seqcluster import prepare_data as prepare
     from seqcluster import make_clusters as main_cluster
@@ -78,6 +79,13 @@ def run_cluster(data):
         sample["seqcluster"] = out_dir
     return [data]
 
+def _get_arguments(cl):
+    p = argparse.ArgumentParser()
+    sbp = p.add_subparsers()
+    parse.add_subparser_cluster(sbp)
+    args = p.parse_args(cl)
+    return args
+
 def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
     """
     Connect to seqcluster to run cluster with python directly
@@ -86,10 +94,8 @@ def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
     cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
         cl = cl + ["-g", annotation_file]
-    p = argparse.ArgumentParser()
-    sbp = p.add_subparsers()
-    parse.add_subparser_cluster(sbp)
-    args = p.parse_args(cl)
+
+    args = _get_arguments(cl)
     if not file_exists(op.join(out_dir, "counts.tsv")):
         main_cluster.cluster(args)
     return out_dir

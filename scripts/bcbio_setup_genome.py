@@ -10,6 +10,7 @@ import toolz as tz
 from bcbio.utils import safe_makedir, file_exists, chdir
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance import do
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
                            _get_data_dir)
 from bcbio.galaxy import loc
@@ -24,6 +25,7 @@ import tempfile
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
+SRNASEQ_DIR = "srnaseq"
 
 ERCC_BUCKET = "bcbio-data.s3.amazonaws.com/"
 
@@ -94,6 +96,24 @@ def install_gtf_file(build_dir, gtf, build):
         shutil.copyfile(gtf, out_file)
     return out_file
 
+def install_srna(species, gtf):
+    out_file = os.path.join(SRNASEQ_DIR, "srna-transcripts.gtf")
+    safe_makedir(SRNASEQ_DIR)
+    if not os.path.exists(out_file):
+        shutil.copyfile(gtf, out_file)
+    try:
+        from seqcluster import install
+    except ImportError:
+        raise ImportError("install seqcluster first, please.")
+    with chdir(SRNASEQ_DIR):
+        hairpin, miRNA = install._install_mirbase()
+        cmd = ("grep -A 2 {species} {hairpin} | grep -v '\-\-$' | tr U T  > hairpin.fa")
+        do.run(cmd.format(**locals()), "set precursor.")
+        cmd = ("grep -A 1 {species} {miRNA} > miRNA.str")
+        do.run(cmd.format(**locals()), "set miRNA.")
+        shutil.rmtree("mirbase")
+    return out_file
+
 def append_ercc(gtf_file, fasta_file):
     ercc_fa = ERCC_BUCKET + "ERCC92.fasta.gz"
     tmp_fa = tempfile.NamedTemporaryFile(delete=False, suffix=".gz").name
@@ -127,8 +147,13 @@ if __name__ == "__main__":
                         default=["seq"], help="Space separated list of indexes to make")
     parser.add_argument("--ercc", action='store_true', default=False,
                         help="Add ERCC spike-ins.")
+    parser.add_argument("--mirbase", help="species in mirbase for smallRNAseq data.")
+    parser.add_argument("--srna_gtf", help="gtf to use for smallRNAseq data.")
 
     args = parser.parse_args()
+    if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
+        raise ValueError("--mirbase and --srna_gtf both need a value.")
+
     env.hosts = ["localhost"]
     cbl = get_cloudbiolinux(REMOTES)
     sys.path.insert(0, cbl["dir"])
@@ -190,6 +215,10 @@ if __name__ == "__main__":
         with chdir(os.path.join(build_dir, os.pardir)):
             cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {args.build}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
+    if args.mirbase:
+        "Preparing smallRNA data."
+        with chdir(os.path.join(build_dir)):
+            install_srna(args.mirbase, args.srna_gtf)
 
     base_dir = os.path.normpath(os.path.dirname(fasta_file))
     resource_file = os.path.join(base_dir, "%s-resources.yaml" % args.build)
@@ -215,7 +244,14 @@ if __name__ == "__main__":
                                      lambda x: "../rnaseq/ref-transcripts.dexseq.gff3")
         resource_dict = tz.update_in(resource_dict, rRNA_fa,
                                      lambda x: "../rnaseq/rRNA.fa")
-    # write out resource dictionary
+    if args.mirbase:
+        srna_gtf = ["srnaseq", "srna-transcripts"]
+        srna_mirbase = ["srnaseq", "mirbase"]
+        resource_dict = tz.update_in(resource_dict, srna_gtf,
+                                     lambda x: "../srnaseq/srna-transcripts.gtf")
+        resource_dict = tz.update_in(resource_dict, srna_mirbase,
+                                     lambda x: "../srnaseq/hairpin.fa")
+    # write out resource dictionarry
     with file_transaction(resource_file) as tx_resource_file:
         with open(tx_resource_file, "w") as out_handle:
             out_handle.write(yaml.dump(resource_dict, default_flow_style=False))

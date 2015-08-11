@@ -3,6 +3,7 @@ import sys
 import os.path as op
 import shutil
 from collections import Counter
+
 try:
     from seqcluster.libs.fastq import collapse, write_output
 except ImportError:
@@ -20,7 +21,8 @@ from bcbio.install import _get_data_dir
 def trim_srna_sample(data):
     adapter = dd.get_adapters(data)[0]
     names = data["rgnames"]['sample']
-    out_dir = os.path.join(dd.get_work_dir(data), names, "trimmed")
+    work_dir = os.path.join(dd.get_work_dir(data), "trimmed")
+    out_dir = os.path.join(work_dir, names)
     in_file = data["files"][0]
     utils.safe_makedir(out_dir)
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
@@ -38,9 +40,12 @@ def trim_srna_sample(data):
 
 def mirbase(data):
     names = data["rgnames"]['sample']
-    out_dir = os.path.join(dd.get_work_dir(data), names, "mirbase")
+    work_dir = os.path.join(dd.get_work_dir(data), "mirbase")
+    out_dir = os.path.join(work_dir, names)
     utils.safe_makedir(out_dir)
     out_file = op.join(out_dir, names)
+    mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
+
     mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
     data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
     return [[data]]
