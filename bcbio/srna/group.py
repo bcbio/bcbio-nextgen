@@ -5,10 +5,13 @@ import shutil
 from collections import namedtuple
 
 import pysam
-from seqcluster import prepare_data as prepare
-from seqcluster import make_clusters as main_cluster
-from seqcluster.libs.inputs import parse_ma_file
-from seqcluster.libs import parse
+try:
+    from seqcluster import prepare_data as prepare
+    from seqcluster import make_clusters as main_cluster
+    from seqcluster.libs.inputs import parse_ma_file
+    from seqcluster.libs import parse
+except ImportError:
+    pass
 
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.provenance import do

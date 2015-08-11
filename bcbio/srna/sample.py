@@ -3,7 +3,10 @@ import sys
 import os.path as op
 import shutil
 from collections import Counter
-from seqcluster.libs.fastq import collapse, write_output
+try:
+    from seqcluster.libs.fastq import collapse, write_output
+except ImportError:
+    pass
 
 from bcbio.utils import (splitext_plus, file_exists, append_stem, replace_directory)
 from bcbio.provenance import do
