@@ -130,8 +130,9 @@ def _check_sample(in_bam, rgnames):
     with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
         rg = bamfile.header.get("RG", [{}])
     msgs = []
+    warnings = []
     if len(rg) > 1:
-        msgs.append("Multiple read groups found in input BAM. Expect single RG per BAM.")
+        warnings.append("Multiple read groups found in input BAM. Expect single RG per BAM.")
     elif len(rg) == 0:
         msgs.append("No read groups found in input BAM. Expect single RG per BAM.")
     elif rg[0].get("SM") != rgnames["sample"]:
@@ -141,6 +142,9 @@ def _check_sample(in_bam, rgnames):
         raise ValueError("Problems with pre-aligned input BAM file: %s\n" % (in_bam)
                          + "\n".join(msgs) +
                          "\nSetting `bam_clean: picard` in the configuration can often fix this issue.")
+    if warnings:
+        print("*** Potential problems in input BAM compared to reference:\n%s\n" %
+              "\n".join(warnings))
 
 def _check_bam_contigs(in_bam, ref_file, config):
     """Ensure a pre-aligned BAM file matches the expected reference genome.
@@ -155,7 +159,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
             if bc and rc:
                 problems.append("Reference mismatch. BAM: %s Reference: %s" % (bc, rc))
             elif bc:
-                problems.append("Extra BAM chromosomes: %s" % bc)
+                warnings.append("Extra BAM chromosomes: %s" % bc)
             elif rc:
                 warnings.append("Extra reference chromosomes: %s" % rc)
     if problems:
