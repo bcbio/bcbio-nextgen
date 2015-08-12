@@ -9,6 +9,7 @@ import os
 import toolz as tz
 
 from bcbio.distributed.split import parallel_split_combine
+from bcbio.pipeline import datadict as dd
 
 def get_max_counts(samples):
     """Retrieve number of regions that can be processed in parallel from current samples.
@@ -40,7 +41,12 @@ def _split_by_regions(dirname, out_ext, in_key):
     def _do_work(data):
         # XXX Need to move retrieval of regions into preparation to avoid
         # need for files when running in non-shared filesystems
-        with open(data["config"]["algorithm"]["callable_regions"]) as in_handle:
+        callable_regions = tz.get_in(["config", "algorithm", "callable_regions"], data)
+        if not callable_regions:
+            raise ValueError("Did not find any callable regions for sample: %s\n"
+                             "Check 'align/%s/*-callableblocks.bed' and 'regions' to examine callable regions"
+                             % (dd.get_sample_name(data), dd.get_sample_name(data)))
+        with open(callable_regions) as in_handle:
             regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
                        (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
                                                                        not xs[0].startswith(("track", "browser",)))]
