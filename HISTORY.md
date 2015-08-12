@@ -1,5 +1,8 @@
 ## 0.9.2 (in progress)
 
+- Fix bug in writing BAM and VCF indexes to final directory. Correctly add
+  indexes as bam.bai and vcf.gz.tbi.
+- Initial support for small RNA pipeline. Thanks to Lorena Pantano.
 - Support for MetaSV to prepare combined structural variant calls.
 
 ## 0.9.1 (6 August 2015)
