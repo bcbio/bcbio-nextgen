@@ -106,6 +106,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             fix_ambig = vcfutils.fix_ambiguous_cl()
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
                    "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
+                   "bcftools view -a - 2> /dev/null | "
                    "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
                    "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                    "{compress_cmd} > {tx_out_file}")
@@ -145,7 +146,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                   "{paired.tumor_bam} {paired.normal_bam} "
                   "| vcffilter -f 'QUAL > 5' -s "
                   "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
-                  "| {fix_ambig} | "
+                  "| {fix_ambig} | bcftools view -a - 2> /dev/null | "
                   "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
                   "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                   "{compress_cmd} > {tx_out_file}")

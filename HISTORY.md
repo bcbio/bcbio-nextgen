@@ -2,6 +2,9 @@
 
 - Fix bug in writing BAM and VCF indexes to final directory. Correctly add
   indexes as bam.bai and vcf.gz.tbi.
+- Ensure extra FreeBayes alleles get removed prior to vcfallelicprimatives,
+  avoiding leaving incorrect genotype allele fields. Thanks to Michael
+  Schroeder.
 - Initial support for small RNA pipeline. Thanks to Lorena Pantano.
 - Support for MetaSV to prepare combined structural variant calls.
 
