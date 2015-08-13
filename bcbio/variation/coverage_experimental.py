@@ -126,9 +126,9 @@ def coverage(data):
         return data
 
 def variants(data):
-    in_vcf = data['vrn_file']
-    if not in_vcf:
+    if not "vrn_file" in  data:
         return data
+    in_vcf = data['vrn_file']
     work_dir = os.path.join(dd.get_work_dir(data), "report", "variants")
     with chdir(work_dir):
         in_bam = data['work_bam']
