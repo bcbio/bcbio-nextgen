@@ -8,8 +8,8 @@ import sys
 
 from bcbio import utils
 from bcbio.provenance import do
-from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.pipeline import datadict as dd
+from bcbio.structural import shared
 
 MIN_CALLERS = 2
 SUPPORTED = set(["manta", "lumpy", "cnvkit"])
@@ -28,11 +28,13 @@ def run(calls, data):
             cmd += ["--%s_vcf" % call["variantcaller"], call.get("vcf_file", call["vrn_file"])]
     if available_callers >= MIN_CALLERS:
         if not utils.file_exists(out_file):
-            with tx_tmpdir(data, work_dir) as tx_work_dir:
-                tx_work_dir = utils.safe_makedir(os.path.join(work_dir, "raw"))
-                cmd += ["--workdir", tx_work_dir, "--num_threads", str(dd.get_num_cores(data))]
-                cmd += ["--spades", utils.which("spades.py"), "--age", utils.which("age_align")]
-                do.run(cmd, "Combine variant calls with MetaSV")
+            tx_work_dir = utils.safe_makedir(os.path.join(work_dir, "raw"))
+            ins_stats = shared.calc_paired_insert_stats_save(dd.get_align_bam(data),
+                                                            os.path.join(tx_work_dir, "insert-stats.yaml"))
+            cmd += ["--workdir", tx_work_dir, "--num_threads", str(dd.get_num_cores(data))]
+            cmd += ["--spades", utils.which("spades.py"), "--age", utils.which("age_align")]
+            cmd += ["--boost_ins", "--isize_mean", ins_stats["mean"], "--isize_sd", ins_stats["std"]]
+            do.run(cmd, "Combine variant calls with MetaSV")
         calls.append({"variantcaller": "metasv",
                       "vrn_file": out_file})
     return calls

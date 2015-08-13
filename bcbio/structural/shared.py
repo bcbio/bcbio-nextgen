@@ -6,9 +6,11 @@ import collections
 from contextlib import closing
 import os
 
+import numpy
 import pybedtools
 import pysam
 import toolz as tz
+import yaml
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -260,3 +262,43 @@ def outname_from_inputs(in_files):
     while base.endswith(("-", "_", ".")):
         base = base[:-1]
     return base
+
+# -- Insert size calculation
+
+def insert_size_stats(dists):
+    """Calcualtes mean/median and MAD from distances, avoiding outliers.
+
+    MAD is the Median Absolute Deviation: http://en.wikipedia.org/wiki/Median_absolute_deviation
+    """
+    med = numpy.median(dists)
+    filter_dists = filter(lambda x: x < med + 10 * med, dists)
+    median = numpy.median(filter_dists)
+    return {"mean": float(numpy.mean(filter_dists)), "std": float(numpy.std(filter_dists)),
+            "median": float(median),
+            "mad": float(numpy.median([abs(x - median) for x in filter_dists]))}
+
+def calc_paired_insert_stats(in_bam, nsample=1000000):
+    """Retrieve statistics for paired end read insert distances.
+    """
+    dists = []
+    n = 0
+    with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
+        for read in in_pysam:
+            if read.is_proper_pair and read.is_read1:
+                n += 1
+                dists.append(abs(read.isize))
+                if n >= nsample:
+                    break
+    return insert_size_stats(dists)
+
+def calc_paired_insert_stats_save(in_bam, stat_file, nsample=1000000):
+    """Calculate paired stats, saving to a file for re-runs.
+    """
+    if utils.file_exists(stat_file):
+        with open(stat_file) as in_handle:
+            return yaml.safe_load(in_handle)
+    else:
+        stats = calc_paired_insert_stats(in_bam, nsample)
+        with open(stat_file, "w") as out_handle:
+            yaml.safe_dump(stats, out_handle, default_flow_style=False, allow_unicode=False)
+        return stats

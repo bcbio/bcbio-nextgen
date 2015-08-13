@@ -27,3 +27,5 @@ details:
   metadata:
     batch: ceu
     sex: female
+upload:
+  dir: ../final

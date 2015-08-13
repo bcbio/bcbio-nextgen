@@ -10,13 +10,13 @@ import collections
 import subprocess
 from contextlib import closing
 
-import numpy
 import pysam
 
 from bcbio import utils, broad
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import lane
 from bcbio.distributed.transaction import file_transaction
+from bcbio.structural import shared
 
 ## Prepare alignments to identify discordant pair mappings
 
@@ -66,27 +66,6 @@ def remove_nopairs(in_bam, out_dir, config):
                             out_pysam.write(read)
     return runner.run_fn("picard_sort", out_bam, "queryname")
 
-def insert_size_stats(dists):
-    """Calcualtes mean/median and MAD from distances, avoiding outliers.
-
-    MAD is the Median Absolute Deviation: http://en.wikipedia.org/wiki/Median_absolute_deviation
-    """
-    med = numpy.median(dists)
-    filter_dists = filter(lambda x: x < med + 10 * med, dists)
-    median = numpy.median(filter_dists)
-    return {"mean": numpy.mean(filter_dists), "std": numpy.std(filter_dists),
-            "median": median,
-            "mad": numpy.median([abs(x - median) for x in filter_dists])}
-
-def calc_paired_insert_stats(in_bam):
-    """Retrieve statistics for paired end read insert distances.
-    """
-    dists = []
-    with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
-        for read in in_pysam:
-            if read.is_proper_pair and read.is_read1:
-                dists.append(abs(read.isize))
-    return insert_size_stats(dists)
 
 def tiered_alignment(in_bam, tier_num, multi_mappers, extra_args,
                      genome_build, pair_stats,
@@ -172,7 +151,7 @@ def detect_sv(align_bam, genome_build, dirs, config):
     """Detect structural variation from discordant aligned pairs.
     """
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "structural"))
-    pair_stats = calc_paired_insert_stats(align_bam)
+    pair_stats = shared.calc_paired_insert_stats(align_bam)
     fix_bam = remove_nopairs(align_bam, work_dir, config)
     tier2_align = tiered_alignment(fix_bam, "2", True, [],
                                    genome_build, pair_stats,
