@@ -41,8 +41,8 @@ resources:
     cores: 16
     memory: 4G
   kraken:
-    cores: 6
-    memory: 4g
+    cores: 4
+    memory: 2g
   qsignature:
     cores: 1
     memory: 2g

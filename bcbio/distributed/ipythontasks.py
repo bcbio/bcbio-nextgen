@@ -184,6 +184,12 @@ def pipeline_summary(*args):
         return ipython.zip_args(apply(qcsummary.pipeline_summary, *args))
 
 @require(qcsummary)
+def coverage_report(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(qcsummary.coverage_report, *args))
+
+@require(qcsummary)
 def qsignature_summary(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:

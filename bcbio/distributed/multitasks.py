@@ -94,6 +94,10 @@ def pipeline_summary(*args):
     return qcsummary.pipeline_summary(*args)
 
 @utils.map_wrap
+def coverage_report(*args):
+    return qcsummary.coverage_report(*args)
+
+@utils.map_wrap
 def qsignature_summary(*args):
     return qcsummary.qsignature_summary(*args)
 

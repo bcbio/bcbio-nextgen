@@ -285,6 +285,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "trim_reads", "adapters", "custom_trim", "species", "kraken",
                       "align_split_size", "quality_bin", "transcriptome_align",
                       "quality_format", "write_summary", "merge_bamprep",
+                      "coverage_experimental", "report",
                       "coverage", "coverage_interval", "ploidy", "indelcaller",
                       "variantcaller", "jointcaller", "variant_regions",
                       "effects", "mark_duplicates", "svcaller", "svvalidate",
@@ -304,7 +305,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
-                          "recalibrate", "realign"])
+                          "recalibrate", "realign", "report"])
 ALG_ALLOW_FALSE = set(["aligner", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
                        "variantcaller"])
