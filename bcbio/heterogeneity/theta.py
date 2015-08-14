@@ -28,9 +28,9 @@ def run(vrn_info, cnvs_by_name, somatic_info):
         work_dir = _sv_workdir(somatic_info.tumor_data)
         assert "cnvkit" in cnvs_by_name, "THetA requires CNVkit calls"
         cnv_info = cnvkit.export_theta(cnvs_by_name["cnvkit"], somatic_info.tumor_data)
-        return _run_theta(cnv_info, somatic_info.tumor_data, work_dir)
+        return _run_theta(cnv_info, somatic_info.tumor_data, work_dir, run_n3=False)
 
-def _run_theta(cnv_info, data, work_dir):
+def _run_theta(cnv_info, data, work_dir, run_n3=True):
     """Run theta, calculating subpopulations and normal contamination.
     """
     out = {"caller": "theta"}
@@ -40,15 +40,16 @@ def _run_theta(cnv_info, data, work_dir):
                                 ["-n", "2"] + opts, data)
     if n2_result:
         out["estimate"] = n2_result
-        n2_bounds = "%s.withBounds" % os.path.splitext(n2_result)[0]
-        n3_result = _safe_run_theta(n2_bounds, os.path.join(work_dir, "n3"), ".n3.results",
-                                    ["-n", "3", "--RESULTS", n2_result] + opts,
-                                    data)
-        if n3_result:
-            best_result = _select_model(n2_bounds, n2_result, n3_result,
-                                        os.path.join(work_dir, "n3"), data)
-            out["estimate"] = best_result
-            out["cnvs"] = _merge_theta_calls(n2_bounds, best_result, cnv_info["vrn_file"], data)
+        if run_n3:
+            n2_bounds = "%s.withBounds" % os.path.splitext(n2_result)[0]
+            n3_result = _safe_run_theta(n2_bounds, os.path.join(work_dir, "n3"), ".n3.results",
+                                        ["-n", "3", "--RESULTS", n2_result] + opts,
+                                        data)
+            if n3_result:
+                best_result = _select_model(n2_bounds, n2_result, n3_result,
+                                            os.path.join(work_dir, "n3"), data)
+                out["estimate"] = best_result
+                out["cnvs"] = _merge_theta_calls(n2_bounds, best_result, cnv_info["vrn_file"], data)
     return out
 
 def _update_with_calls(result_file, cnv_file):
