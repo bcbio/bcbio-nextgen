@@ -12,10 +12,15 @@ import collections
 import math
 import os
 import time
+from distutils.version import LooseVersion
 
 try:
     import msgpack
 except ImportError:
+    msgpack = None
+
+import IPython
+if LooseVersion(IPython.__version__) >= LooseVersion("4.0"):
     msgpack = None
 
 from bcbio import utils

@@ -1,8 +1,13 @@
 """Ipython parallel ready entry points for parallel execution
 """
 import contextlib
+import IPython
+from distutils.version import LooseVersion
 
-from IPython.parallel import require
+if LooseVersion(IPython.__version__) >= LooseVersion("4.0"):
+    from ipyparallel import require
+else:
+    from IPython.parallel import require
 
 from bcbio import heterogeneity, chipseq, structural, upload
 from bcbio.bam import callable
