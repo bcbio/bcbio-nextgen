@@ -95,7 +95,7 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
     return out
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "gffutils", "ipython", "joblib", "lxml",
+    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "gffutils", "ipyparallel", "joblib", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
             "pip", "progressbar", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",
             "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",

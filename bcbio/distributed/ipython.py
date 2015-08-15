@@ -12,16 +12,16 @@ import collections
 import math
 import os
 import time
-from distutils.version import LooseVersion
 
 try:
-    import msgpack
+    import ipyparallel
+    # msgpack not working with IPython 4.0 ipyparallel
+    msgpack = None
 except ImportError:
-    msgpack = None
-
-import IPython
-if LooseVersion(IPython.__version__) >= LooseVersion("4.0"):
-    msgpack = None
+    try:
+        import msgpack
+    except ImportError:
+        msgpack = None
 
 from bcbio import utils
 from bcbio.log import logger, get_log_dir

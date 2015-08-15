@@ -1,5 +1,6 @@
 ## 0.9.2 (in progress)
 
+- Support IPython 4.0 with ipyparallel
 - Fix bug in writing BAM and VCF indexes to final directory. Correctly add
   indexes as bam.bai and vcf.gz.tbi.
 - Ensure extra FreeBayes alleles get removed prior to vcfallelicprimatives,
