@@ -6,6 +6,7 @@
 - Ensure extra FreeBayes alleles get removed prior to vcfallelicprimatives,
   avoiding leaving incorrect genotype allele fields. Thanks to Michael
   Schroeder.
+- Genotype Lumpy structural variant calls with SVtyper.
 - Initial support for small RNA pipeline. Thanks to Lorena Pantano.
 - Support for MetaSV to prepare combined structural variant calls.
 - Add smallRNA-seq pipeline

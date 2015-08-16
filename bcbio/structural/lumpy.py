@@ -6,6 +6,7 @@ https://github.com/arq5x/lumpy-sv
 """
 import os
 import sys
+import shutil
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -73,12 +74,31 @@ def run(items):
         if "sv" not in data:
             data["sv"] = []
         sample = dd.get_sample_name(data)
+        dedup_bam, sr_bam, _ = sshared.get_split_discordants(data, work_dir)
         sample_vcf = _filter_by_support(vcfutils.select_sample(lumpy_vcf, sample,
                                                                utils.append_stem(lumpy_vcf, "-%s" % sample),
                                                                data["config"]),
                                         data)
+        gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, data)
         data["sv"].append({"variantcaller": "lumpy",
-                           "vrn_file": sample_vcf,
+                           "vrn_file": gt_vcf,
                            "exclude_file": exclude_file})
         out.append(data)
     return out
+
+def _run_svtyper(in_file, full_bam, sr_bam, data):
+    """Genotype structural variant calls with SVtyper.
+    """
+    out_file = "%s-wgts%s" % utils.splitext_plus(in_file)
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            if not vcfutils.vcf_has_variants(in_file):
+                shutil.copy(in_file, out_file)
+            else:
+                python = sys.executable
+                svtyper = os.path.join(os.path.dirname(sys.executable), "svtyper")
+                cmd = ("gunzip -c {in_file} | "
+                    "{python} {svtyper} -B {full_bam} -S {sr_bam} | "
+                    "bgzip -c > {tx_out_file}")
+                do.run(cmd.format(**locals()), "SV genotyping with svtyper")
+    return vcfutils.bgzip_and_index(out_file, data["config"])
