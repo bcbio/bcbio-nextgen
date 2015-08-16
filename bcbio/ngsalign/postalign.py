@@ -89,7 +89,7 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, dext="spl", **locals())
     discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, dext="disc", **locals())
     dedup_cmd = full_tobam_cmd.format(out_file=tx_out_file, dext="full", **locals())
-    cmd = ("{samblaster} {opts} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
+    cmd = ("{samblaster} --addMateTags {opts} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
            "| {dedup_cmd}")
     return cmd.format(**locals())
 
