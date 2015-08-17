@@ -346,7 +346,10 @@ Alignment
 - ``platform`` Sequencing platform used. Corresponds to the ``PL``
   parameter in BAM read groups. Default 'Illumina'.
 -  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, novoalign, snap, star,
-   false]
+   false] To use pre-aligned BAM files as inputs to the pipeline, set to
+   ``false``. Using pre-aligned inputs requires proper assignment of BAM read
+   groups and sorting. The ``bam_clean`` argument can often resolve issues with
+   problematic input BAMs.
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
    handles adding read groups, sorting to a reference genome and
    filtering problem records that cause problems with GATK. Set to
