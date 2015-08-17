@@ -115,7 +115,7 @@ def get_mutect_version(mutect_jar):
         version = version.replace(to_remove, "")
     if version.startswith(("-", ".")):
         version = version[1:]
-    if version is "":
+    if not version:
         raise ValueError("Unable to determine MuTect version from jar file. "
                          "Need to have version contained in jar (ie. muTect-1.1.5.jar): %s" % mutect_jar)
     _check_for_bad_version(version, "MuTect")

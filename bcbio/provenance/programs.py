@@ -71,7 +71,7 @@ def jar_versioner(program_name, jar_name):
             jar = jar.replace(to_remove, "")
         if jar.startswith(("-", ".")):
             jar = jar[1:]
-        if jar is "":
+        if not jar:
             logger.warn("Unable to determine version for program '{}' from jar file {}".format(
                 program_name, config_utils.get_jar(jar_name, pdir)))
         return jar
