@@ -3,6 +3,8 @@
 - Support IPython 4.0 with ipyparallel
 - Fix bug in writing BAM and VCF indexes to final directory. Correctly add
   indexes as bam.bai and vcf.gz.tbi.
+- Fix bug in queryname sorting on split files for feeding into diambiguation.
+  Ensure proper sorting with explicity sambamba sort. Thanks to Sven-Eric Schelhorn.
 - Ensure extra FreeBayes alleles get removed prior to vcfallelicprimatives,
   avoiding leaving incorrect genotype allele fields. Thanks to Michael
   Schroeder.

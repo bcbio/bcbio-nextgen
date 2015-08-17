@@ -72,12 +72,10 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     tmp_prefix = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     for ext in ["spl", "disc", "full"]:
         utils.safe_makedir("%s-%s" % (tmp_prefix, ext))
-    if data.get("align_split"):
-        full_tobam_cmd = _nosort_tobam_cmd(data)
-    else:
-        full_tobam_cmd = ("samtools view -b -u - | "
-                          "sambamba sort -t {cores} -m {mem} "
-                          "--tmpdir {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
+    sort_opt = "-N" if data.get("align_split") else ""
+    full_tobam_cmd = ("samtools view -b -S -u - | "
+                      "sambamba sort {sort_opt} -t {cores} -m {mem} "
+                      "--tmpdir {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
     tobam_cmd = ("{samtools} sort -@ {cores} -m {mem} "
                  "-T {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
     # samblaster 0.1.22 and better require the -M flag for compatibility with bwa-mem
@@ -93,15 +91,6 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
            "| {dedup_cmd}")
     return cmd.format(**locals())
 
-def _nosort_tobam_cmd(data):
-    """Handle converting to BAM for queryname sorted inputs, correcting HD headers.
-    """
-    if dd.get_aligner(data).startswith("bwa"):
-        fix_hd = "(echo '@HD	VN:1.3	SO:queryname' && cat) | "
-    else:
-        fix_hd = "sed 's/SO:unsorted/SO:queryname/g' | "
-    return fix_hd + "{samtools} view -b - -o {out_file}"
-
 def _biobambam_dedup_sort(data, tx_out_file):
     """Perform streaming deduplication and sorting with biobambam's bammarkduplicates2.
     """
@@ -110,14 +99,14 @@ def _biobambam_dedup_sort(data, tx_out_file):
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
-        out_file = tx_out_file
-        return _nosort_tobam_cmd(data).format(**locals())
+        cmd = "{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -"
     else:
-        return ("{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort - | "
-                "{bammarkduplicates} tmpfile={tmp_file}-markdup "
-                "markthreads={cores} level=0 | "
-                "{samtools} sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
-                "-o {tx_out_file} /dev/stdin").format(**locals())
+        cmd = ("{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort - | "
+               "{bammarkduplicates} tmpfile={tmp_file}-markdup "
+               "markthreads={cores} level=0 | "
+               "{samtools} sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
+               "-o {tx_out_file} /dev/stdin")
+    return cmd.format(**locals())
 
 def _check_dedup(data):
     """Check configuration for de-duplication, handling back compatibility.
