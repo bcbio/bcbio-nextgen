@@ -62,23 +62,23 @@ def has_variant_regions(items, base_file, chrom=None):
                 return False
     return True
 
-def remove_exclude_regions(orig_bed, base_file, items):
+def remove_exclude_regions(orig_bed, base_file, items, remove_entire_feature=False):
     """Remove centromere and short end regions from an existing BED file of regions to target.
     """
     out_bed = os.path.join("%s-noexclude.bed" % (utils.splitext_plus(base_file)[0]))
     exclude_bed = prepare_exclude_file(items, base_file)
     with file_transaction(items[0], out_bed) as tx_out_bed:
-        pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(exclude_bed)).saveas(tx_out_bed)
+        pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(exclude_bed),
+                                              A=remove_entire_feature).saveas(tx_out_bed)
     if utils.file_exists(out_bed):
         return out_bed
     else:
         return orig_bed
 
 def prepare_exclude_file(items, base_file, chrom=None):
-    """Prepare a BED file for exclusion, incorporating variant regions and chromosome.
+    """Prepare a BED file for exclusion.
 
-    Excludes locally repetitive regions (if `remove_lcr` is set) and
-    centromere regions, both of which contribute to long run times and
+    Excludes high depth and centromere regions which contribute to long run times and
     false positive structural variant calls.
     """
     out_file = "%s-exclude%s.bed" % (utils.splitext_plus(base_file)[0], "-%s" % chrom if chrom else "")
@@ -90,9 +90,6 @@ def prepare_exclude_file(items, base_file, chrom=None):
             if chrom:
                 want_bedtool = pybedtools.BedTool(shared.subset_bed_by_chrom(want_bedtool.saveas().fn,
                                                                              chrom, items[0]))
-            lcr_bed = shared.get_lcr_bed(items)
-            if lcr_bed:
-                want_bedtool = want_bedtool.subtract(pybedtools.BedTool(lcr_bed))
             sv_exclude_bed = _get_sv_exclude_file(items)
             if sv_exclude_bed and len(want_bedtool) > 0:
                 want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
