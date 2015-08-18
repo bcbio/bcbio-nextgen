@@ -39,8 +39,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                        "lumpyexpress -v -B {full_bams} -S {sr_bams} -D {disc_bams} "
                        "{exclude} -T {tmpdir} -o {tx_out_file}")
                 do.run(cmd.format(**locals()), "lumpyexpress", items[0])
-    sort_file = vcfutils.sort_by_ref(out_file, items[0])
-    return vcfutils.bgzip_and_index(sort_file, items[0]["config"]), sv_exclude_bed
+    return vcfutils.sort_by_ref(out_file, items[0]), sv_exclude_bed
 
 def _filter_by_support(in_file, data):
     """Filter call file based on supporting evidence, adding FILTER annotations to VCF.
@@ -89,7 +88,7 @@ def run(items):
 def _run_svtyper(in_file, full_bam, sr_bam, data):
     """Genotype structural variant calls with SVtyper.
     """
-    out_file = "%s-wgts.vcf" % utils.splitext_plus(in_file)[0]
+    out_file = "%s-wgts.vcf.gz" % utils.splitext_plus(in_file)[0]
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             if not vcfutils.vcf_has_variants(in_file):
@@ -98,7 +97,7 @@ def _run_svtyper(in_file, full_bam, sr_bam, data):
                 python = sys.executable
                 svtyper = os.path.join(os.path.dirname(sys.executable), "svtyper")
                 cmd = ("gunzip -c {in_file} | "
-                       "{python} {svtyper} -B {full_bam} -S {sr_bam} > {tx_out_file}")
+                       "{python} {svtyper} -B {full_bam} -S {sr_bam} | "
+                       "bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "SV genotyping with svtyper")
-    sort_file = vcfutils.sort_by_ref(out_file, data)
-    return vcfutils.bgzip_and_index(sort_file, data["config"])
+    return vcfutils.sort_by_ref(out_file, data)

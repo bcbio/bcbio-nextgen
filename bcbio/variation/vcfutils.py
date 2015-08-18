@@ -376,18 +376,21 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
         return out_file
 
 def sort_by_ref(vcf_file, data):
-    """Sort a VCF file by genome reference and position.
+    """Sort a VCF file by genome reference and position, adding contig information.
     """
-    out_file = "%s-prep%s" % utils.splitext_plus(vcf_file)
-    if not utils.file_exists(out_file):
-        bv_jar = config_utils.get_jar("bcbio.variation",
-                                      config_utils.get_program("bcbio_variation", data["config"], "dir"))
-        resources = config_utils.get_resources("bcbio_variation", data["config"])
-        jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
-        cmd = ["java"] + jvm_opts + ["-jar", bv_jar, "variant-utils", "sort-vcf",
-                                     vcf_file, dd.get_ref_file(data), "--sortpos"]
-        do.run(cmd, "Sort VCF by reference")
-    return out_file
+    out_file = "%s-prep.vcf.gz" % utils.splitext_plus(vcf_file)[0]
+    if not utils.file_uptodate(out_file, vcf_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            header_file = "%s-header.txt" % utils.splitext_plus(tx_out_file)[0]
+            with open(header_file, "w") as out_handle:
+                for region in ref.file_contigs(dd.get_ref_file(data), data["config"]):
+                    out_handle.write("##contig=<ID=%s,length=%s>\n" % (region.name, region.size))
+            cat_cmd = "zcat" if vcf_file.endswith("vcf.gz") else "cat"
+            cmd = ("{cat_cmd} {vcf_file} | grep -v ^##contig | bcftools annotate -h {header_file} | "
+                   "vt sort -m full -o {tx_out_file} -")
+            with utils.chdir(os.path.dirname(tx_out_file)):
+                do.run(cmd.format(**locals()), "Sort VCF by reference")
+    return bgzip_and_index(out_file, data["config"])
 
 # ## Parallel VCF file combining
 
