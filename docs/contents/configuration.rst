@@ -553,6 +553,12 @@ Cancer variant calling
   resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
   in the tumor sample of a tumor/normal pair.
 
+RNA sequencing
+======================
+
+- ``asssemble_transcripts`` If set to True, will assemble and filter novel
+  isoforms using Cufflinks.
+
 Quality control
 ===============
 
