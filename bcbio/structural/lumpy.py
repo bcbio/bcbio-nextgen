@@ -54,13 +54,17 @@ def _filter_by_support(in_file, data):
     return vfilter.hard_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
                                      limit_regions=None)
 
+def _sv_workdir(data):
+    return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
+                                           dd.get_sample_name(data), "lumpy"))
+
 def run(items):
     """Perform detection of structural variations with lumpy, using bwa-mem alignment.
     """
     if not all(utils.get_in(data, ("config", "algorithm", "aligner")) in ["bwa", False, None] for data in items):
         raise ValueError("Require bwa-mem alignment input for lumpy structural variation detection")
-    work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "structural", items[0]["name"][-1],
-                                               "lumpy"))
+    paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
+    work_dir = _sv_workdir(paired.tumor_data if paired and paired.tumor_data else items[0])
     full_bams, sr_bams, disc_bams = [], [], []
     for data in items:
         dedup_bam, sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
@@ -74,13 +78,13 @@ def run(items):
             data["sv"] = []
         sample = dd.get_sample_name(data)
         dedup_bam, sr_bam, _ = sshared.get_split_discordants(data, work_dir)
-        sample_vcf = _filter_by_support(vcfutils.select_sample(lumpy_vcf, sample,
-                                                               utils.append_stem(lumpy_vcf, "-%s" % sample),
-                                                               data["config"]),
-                                        data)
+        sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
+                                            utils.append_stem(lumpy_vcf, "-%s" % sample),
+                                            data["config"])
         gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, data)
+        filter_vcf = _filter_by_support(gt_vcf, data)
         data["sv"].append({"variantcaller": "lumpy",
-                           "vrn_file": gt_vcf,
+                           "vrn_file": filter_vcf,
                            "exclude_file": exclude_file})
         out.append(data)
     return out
