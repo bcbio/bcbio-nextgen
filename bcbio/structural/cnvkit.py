@@ -317,8 +317,8 @@ def _add_variantcalls_to_output(out, data):
                     cmd += ["--male-reference"]
                 do.run(cmd, "CNVkit export %s" % outformat)
     out["call_file"] = call_file
-    out["vcf_file"] = calls["vcf"]
-    out["vrn_file"] = annotate.add_genes(calls["bed"], data)
+    out["vrn_bed"] = annotate.add_genes(calls["bed"], data)
+    out["vrn_file"] = calls["vcf"]
     return out
 
 def _add_segmetrics_to_output(out, data):

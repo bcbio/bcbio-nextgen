@@ -12,6 +12,7 @@ import os
 import toolz as tz
 import numpy as np
 import pandas as pd
+import pybedtools
 try:
     import matplotlib as mpl
     mpl.use('Agg', force=True)
@@ -66,7 +67,6 @@ def callers_by_event(in_bed, data):
 def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     """Compare a ensemble results for a caller against a specific caller and SV type.
     """
-    import pybedtools
     def cnv_matches(name):
         return cnv_to_event(name, data) == svtype
     def wham_matches(name):
@@ -93,12 +93,6 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
                 return True
         return False
     minf, maxf = size_range
-    if minf < 600:
-        overlap = 0.2
-    elif minf < 2500:
-        overlap = 0.5
-    else:
-        overlap = 0.8
     efeats = pybedtools.BedTool(ensemble).filter(in_size_range(0)).filter(is_caller_svtype).saveas().sort().merge()
     tfeats = pybedtools.BedTool(truth).filter(in_size_range(0)).sort().merge().saveas()
     etotal = efeats.count()

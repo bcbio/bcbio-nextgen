@@ -15,9 +15,10 @@ import vcf
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
+from bcbio.provenance import do
 from bcbio.structural import annotate, validate
 from bcbio.structural import shared as sshared
-from bcbio.variation import bedutils
+from bcbio.variation import bedutils, vcfutils
 
 # ## Conversions to simplified BED files
 
@@ -54,18 +55,6 @@ def _cnvbed_to_bed(in_file, caller, out_file):
                                         "cnv%s_%s" % (feat.score, caller)])
                              + "\n")
 
-def _cnvkit_to_bed(in_file, caller, out_file):
-    if not utils.file_uptodate(out_file, in_file):
-        with file_transaction({}, out_file) as tx_out_file:
-            with open(in_file) as in_handle:
-                with open(tx_out_file, "w") as out_handle:
-                    for line in in_handle:
-                        chrom, start, end, sample, copyn = line.strip().split("\t")[:5]
-                        out_handle.write("\t".join([chrom, start, end,
-                                                    "cnv%s_%s" % (copyn.replace(",", ";"), caller)])
-                                         + "\n")
-    return out_file
-
 def _copy_file(in_file, caller, out_file):
     shutil.copy(in_file, out_file)
 
@@ -73,11 +62,12 @@ CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "delly": _vcf_to_bed,
                  "manta": _vcf_to_bed,
                  "metasv": _vcf_to_bed,
+                 "cnvkit": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed,
-                 "wham": _copy_file,
-                 "cnvkit": _cnvkit_to_bed}
+                 "wham": _copy_file}
+SUBSET_BY_ENSEMBLE = {"cnvkit": ["metasv"]}
 
-def _create_bed(call, sample, work_dir, data):
+def _create_bed(call, sample, work_dir, calls, data):
     """Create a simplified BED file from caller specific input.
     """
     out_file = os.path.join(work_dir, "%s-ensemble-%s.bed" % (sample, call["variantcaller"]))
@@ -85,9 +75,26 @@ def _create_bed(call, sample, work_dir, data):
         with file_transaction(data, out_file) as tx_out_file:
             convert_fn = CALLER_TO_BED.get(call["variantcaller"])
             if convert_fn:
-                convert_fn(call["vrn_file"], call["variantcaller"], tx_out_file)
+                vrn_file = call["vrn_file"]
+                if call["variantcaller"] in SUBSET_BY_ENSEMBLE:
+                    ecalls = [x for x in calls if x["variantcaller"] in SUBSET_BY_ENSEMBLE[call["variantcaller"]]]
+                    if len(ecalls) > 0:
+                        vrn_file = _subset_by_ensemble(call["vrn_file"], ecalls[0]["vrn_file"], data)
+                convert_fn(vrn_file, call["variantcaller"], tx_out_file)
     if utils.file_exists(out_file):
         return out_file
+
+def _subset_by_ensemble(orig_vcf, ens_vcf, data):
+    """Subset orig_vcf to calls also present in ens_vcf.
+    """
+    out_file = "%s-inensemble.vcf.gz" % utils.splitext_plus(orig_vcf)[0]
+    if not utils.file_uptodate(out_file, orig_vcf):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = ("bcftools view -f 'PASS,.' {ens_vcf} | "
+                   "bedtools intersect -header -wa -a {orig_vcf} -b - | "
+                   "bgzip -c > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Subset calls by those present in Ensemble output")
+    return vcfutils.bgzip_and_index(out_file, data["config"])
 
 # ## Top level
 
@@ -170,7 +177,7 @@ def summarize(calls, data, items):
                                                sample, "ensemble"))
     with shared.bedtools_tmpdir(data):
         input_beds = filter(lambda xs: xs[1] is not None and utils.file_exists(xs[1]),
-                            [(c["variantcaller"], _create_bed(c, sample, work_dir, data)) for c in calls])
+                            [(c["variantcaller"], _create_bed(c, sample, work_dir, calls, data)) for c in calls])
     if len(input_beds) > 0:
         out_file = combine_bed_by_size([xs[1] for xs in input_beds], sample, work_dir, data)
         if utils.file_exists(out_file):
