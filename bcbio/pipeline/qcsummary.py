@@ -69,7 +69,7 @@ def pipeline_summary(data):
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = _run_qc_tools(work_bam, data)
     elif data["analysis"].lower().startswith("smallrna-seq"):
-        work_bam = data["clean_fasta"]
+        work_bam = data["clean_fastq"]
         data["summary"] = _run_qc_tools(work_bam, data)
 
     return [[data]]
@@ -129,11 +129,11 @@ def _run_qc_tools(bam_file, data):
         cur_qc_dir = os.path.join(qc_dir, program_name)
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
-    ratio = bam.get_aligned_reads(bam_file, data)
     # if (ratio < 0.60 and data['config']["algorithm"].get("kraken", None) and
         # (data["analysis"].lower().startswith("rna-seq") or
         #  data["analysis"].lower().startswith("standard"))):
     if data['config']["algorithm"].get("kraken", None):
+        ratio = bam.get_aligned_reads(bam_file, data)
         cur_metrics = _run_kraken(data, ratio)
         metrics.update(cur_metrics)
 
@@ -419,7 +419,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
     """Run fastqc, generating report in specified directory and parsing metrics.
 
     Downsamples to 10 million reads to avoid excessive processing times with large
-    files, unless we're running a Standard/QC pipeline.
+    files, unless we're running a Standard/smallRNA-seq/QC pipeline.
 
     Handles fastqc 0.11+, which use a single HTML file and older versions that use
     a directory of files + images. The goal is to eventually move to only 0.11+
@@ -429,15 +429,16 @@ def _run_fastqc(bam_file, data, fastqc_out):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
         ds_bam = (bam.downsample(bam_file, data, 1e7)
-                  if data.get("analysis", "").lower() not in ["standard"]
+                  if data.get("analysis", "").lower() not in ["standard", "smallrna-seq"]
                   else None)
         bam_file = ds_bam if ds_bam else bam_file
-        fastqc_name = os.path.splitext(os.path.basename(bam_file))[0]
+        frmt = "bam" if bam_file.endswith("bam") else "fastq"
+        fastqc_name = utils.splitext_plus(os.path.basename(bam_file))[0]
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         with tx_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 cl = [config_utils.get_program("fastqc", data["config"]),
-                      "-t", str(num_cores), "--extract", "-o", tx_tmp_dir, "-f", "bam", bam_file]
+                      "-t", str(num_cores), "--extract", "-o", tx_tmp_dir, "-f", frmt, bam_file]
                 do.run(cl, "FastQC: %s" % data["name"][-1])
                 tx_fastqc_out = os.path.join(tx_tmp_dir, "%s_fastqc" % fastqc_name)
                 tx_combo_file = os.path.join(tx_tmp_dir, "%s_fastqc.html" % fastqc_name)
