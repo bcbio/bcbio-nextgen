@@ -69,14 +69,6 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     """
     def cnv_matches(name):
         return cnv_to_event(name, data) == svtype
-    def wham_matches(name):
-        """Flexibly handle WHAM comparisons, allowing DUP/DEL matches during comparisons.
-        """
-        allowed = {"DEL": set(["DEL", "UKN"]),
-                   "DUP": set(["DUP"]),
-                   "INV": set(["INV"])}
-        curtype, curcaller = name.split("_")[:2]
-        return curcaller == "wham" and svtype in allowed and curtype in allowed[svtype]
     def is_breakend(name):
         return name.startswith("BND")
     def in_size_range(max_buffer=0):
@@ -88,7 +80,7 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
         return _work
     def is_caller_svtype(feat):
         for name in feat.name.split(","):
-            if ((name.startswith(svtype) or cnv_matches(name) or wham_matches(name) or is_breakend(name))
+            if ((name.startswith(svtype) or cnv_matches(name) or is_breakend(name))
                   and (caller == "sv-ensemble" or name.endswith(caller))):
                 return True
         return False
