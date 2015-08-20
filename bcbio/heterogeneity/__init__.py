@@ -11,13 +11,13 @@ from bcbio.heterogeneity import bubbletree, phylowgs, theta
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 
-def _get_cnvs(data):
-    """Retrieve CNV calls to use for heterogeneity analysis.
+def _get_calls(data, cnv_only=False):
+    """Retrieve calls, organized by name, to use for heterogeneity analysis.
     """
-    supported = set(["cnvkit", "battenberg"])
+    cnvs_supported = set(["cnvkit", "battenberg"])
     out = {}
     for sv in data.get("sv", []):
-        if sv["variantcaller"] in supported:
+        if not cnv_only or sv["variantcaller"] in cnvs_supported:
             out[sv["variantcaller"]] = sv
     return out
 
@@ -40,7 +40,7 @@ def _ready_for_het_analysis(items):
     paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
     has_het = any(dd.get_hetcaller(d) for d in items)
     if has_het and paired and paired.normal_bam:
-        return _get_variants(paired.tumor_data) and _get_cnvs(paired.tumor_data)
+        return _get_variants(paired.tumor_data) and _get_calls(paired.tumor_data, cnv_only=True)
 
 def _get_batches(data):
     batches = dd.get_batch(data) or dd.get_sample_name(data)
@@ -73,7 +73,7 @@ def estimate(items, batch, config):
                   "phylowgs": phylowgs.run,
                   "bubbletree": bubbletree.run}
     paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
-    cnvs = _get_cnvs(paired.tumor_data)
+    calls = _get_calls(paired.tumor_data)
     variants = _get_variants(paired.tumor_data)
     for hetcaller in _get_hetcallers(items):
         try:
@@ -82,7 +82,7 @@ def estimate(items, batch, config):
             hetfn = None
             print "%s not yet implemented" % hetcaller
         if hetfn:
-            hetout = hetfn(variants[0], cnvs, paired)
+            hetout = hetfn(variants[0], calls, paired)
     out = []
     for data in items:
         if batch == _get_batches(data)[0]:

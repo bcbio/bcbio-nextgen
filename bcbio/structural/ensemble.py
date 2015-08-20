@@ -65,7 +65,7 @@ CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "cnvkit": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed,
                  "wham": _copy_file}
-SUBSET_BY_ENSEMBLE = {"cnvkit": ["metasv"]}
+SUBSET_BY_SUPPORT = {"cnvkit": ["metasv", "lumpy", "manta"]}
 
 def _create_bed(call, sample, work_dir, calls, data):
     """Create a simplified BED file from caller specific input.
@@ -76,23 +76,25 @@ def _create_bed(call, sample, work_dir, calls, data):
             convert_fn = CALLER_TO_BED.get(call["variantcaller"])
             if convert_fn:
                 vrn_file = call["vrn_file"]
-                if call["variantcaller"] in SUBSET_BY_ENSEMBLE:
-                    ecalls = [x for x in calls if x["variantcaller"] in SUBSET_BY_ENSEMBLE[call["variantcaller"]]]
+                if call["variantcaller"] in SUBSET_BY_SUPPORT:
+                    ecalls = [x for x in calls if x["variantcaller"] in SUBSET_BY_SUPPORT[call["variantcaller"]]]
                     if len(ecalls) > 0:
-                        vrn_file = _subset_by_ensemble(call["vrn_file"], ecalls[0]["vrn_file"], data)
+                        vrn_file = _subset_by_support(call["vrn_file"], ecalls, data)
                 convert_fn(vrn_file, call["variantcaller"], tx_out_file)
     if utils.file_exists(out_file):
         return out_file
 
-def _subset_by_ensemble(orig_vcf, ens_vcf, data):
-    """Subset orig_vcf to calls also present in ens_vcf.
+def _subset_by_support(orig_vcf, cmp_calls, data):
+    """Subset orig_vcf to calls also present in any of the comparison callers.
     """
+    cmp_vcfs = [x["vrn_file"] for x in cmp_calls]
     out_file = "%s-inensemble.vcf.gz" % utils.splitext_plus(orig_vcf)[0]
     if not utils.file_uptodate(out_file, orig_vcf):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = ("bcftools view -f 'PASS,.' {ens_vcf} | "
-                   "bedtools intersect -header -wa -a {orig_vcf} -b - | "
-                   "bgzip -c > {tx_out_file}")
+            cmd = "bedtools intersect -header -wa -f 0.5 -r -a {orig_vcf} -b "
+            for cmp_vcf in cmp_vcfs:
+                cmd += "<(bcftools view -f 'PASS,.' %s) " % cmp_vcf
+            cmd += "| bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "Subset calls by those present in Ensemble output")
     return vcfutils.bgzip_and_index(out_file, data["config"])
 

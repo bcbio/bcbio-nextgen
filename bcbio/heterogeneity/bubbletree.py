@@ -15,15 +15,17 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import regions
+from bcbio.heterogeneity import chromhacks, theta
 
-def run(vrn_info, cnvs_by_name, somatic_info):
+def run(vrn_info, calls_by_name, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
     """
     work_dir = _cur_workdir(somatic_info.tumor_data)
     vcf_csv = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], work_dir, somatic_info)
-    assert "cnvkit" in cnvs_by_name, "BubbleTree only currently support CNVkit"
-    cnv_info = cnvs_by_name["cnvkit"]
-    cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], work_dir, somatic_info.tumor_data)
+    assert "cnvkit" in calls_by_name, "BubbleTree only currently support CNVkit"
+    cnv_info = calls_by_name["cnvkit"]
+    cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], calls_by_name, work_dir,
+                             somatic_info.tumor_data)
     _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data)
 
 def _run_bubbletree(vcf_csv, cnv_csv, data):
@@ -53,12 +55,17 @@ def _allowed_bubbletree_errorstates(msg):
     allowed = ["Error in p[i, ] : subscript out of bounds"]
     return any([msg.find(m) >= 0 for m in allowed])
 
-def _prep_cnv_file(in_file, svcaller, work_dir, data):
+def _cns_to_coords(line):
+    chrom, start, end = line.split()[:3]
+    return (chrom, start, end)
+
+def _prep_cnv_file(cns_file, svcaller, calls_by_name, work_dir, data):
     """Create a CSV file of CNV calls with log2 and number of marks.
     """
+    in_file = theta.subset_by_supported(cns_file, _cns_to_coords, calls_by_name, work_dir, data,
+                                        headers=("chromosome", "#"))
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           svcaller))
-    autosomal_chroms = _get_autosomal_chroms()
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
@@ -68,7 +75,7 @@ def _prep_cnv_file(in_file, svcaller, work_dir, data):
                     writer.writerow(["chrom", "start", "end", "num.mark", "seg.mean"])
                     reader.next()  # header
                     for chrom, start, end, _, log2, probes in reader:
-                        if chrom in autosomal_chroms:
+                        if chromhacks.is_autosomal(chrom):
                             writer.writerow([_to_ucsc_style(chrom), start, end, probes, log2])
     return out_file
 
@@ -79,7 +86,6 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
     params = {"min_freq": 0.4,
               "max_freq": 0.6,
               "min_depth": 15}
-    autosomal_chroms = _get_autosomal_chroms()
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           vcaller))
     if not utils.file_uptodate(out_file, in_file):
@@ -91,7 +97,7 @@ def _prep_vrn_file(in_file, vcaller, work_dir, somatic_info):
                 bcf_in = VariantFile(sub_file)
                 for rec in bcf_in:
                     tumor_freq = _is_possible_loh(rec, params, somatic_info)
-                    if rec.chrom in autosomal_chroms and tumor_freq is not None:
+                    if chromhacks.is_autosomal(rec.chrom) and tumor_freq is not None:
                         writer.writerow([_to_ucsc_style(rec.chrom), rec.start, rec.stop, tumor_freq])
     return out_file
 
@@ -112,12 +118,6 @@ def _to_ucsc_style(chrom):
     """BubbleTree assumes hg19 UCSC style chromosome inputs.
     """
     return "chr%s" % chrom if not str(chrom).startswith("chr") else chrom
-
-def _get_autosomal_chroms():
-    """Hack to only use autosomal chromosomes that should generalize to any species with numeric chroms.
-    """
-    max_chrom = 1000
-    return set([str(x) for x in range(1, max_chrom)] + ["chr%s" % x for x in range(1, max_chrom)])
 
 def _is_snp(rec):
     return max([len(x) for x in rec.alleles]) == 1
