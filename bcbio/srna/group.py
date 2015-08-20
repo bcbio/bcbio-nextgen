@@ -22,62 +22,63 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.sample import process_alignment
 
 
-def run_prepare(data):
+def run_prepare(*data):
     """
     Run seqcluster prepare to merge all samples in one file
     """
-    out_dir = os.path.join(dd.get_work_dir(data[0]), "seqcluster", "prepare")
+    out_dir = os.path.join(dd.get_work_dir(data[0][0]), "seqcluster", "prepare")
     out_dir = os.path.abspath(safe_makedir(out_dir))
-    config_file = os.path.join(out_dir, "prepare.conf")
     prepare_dir = os.path.join(out_dir, "prepare")
     fn = []
     for sample in data:
-        name = sample["rgnames"]['sample']
-        fn.append("%s\t%s" % (sample['collapse'], name))
+        name = sample[0]["rgnames"]['sample']
+        fn.append("%s\t%s" % (sample[0]['collapse'], name))
     args = namedtuple('args', 'debug print_debug minc minl maxl out')
     args = args(False, False, 1, 17, 40, out_dir)
-    seq_l, sample_l = prepare._read_fastq_files(fn, args)
     ma_out = op.join(out_dir, "seqs.ma")
     seq_out = op.join(out_dir, "seqs.fastq")
     min_shared = max(int(len(fn) / 10.0), 1)
     if not file_exists(ma_out):
+        seq_l, sample_l = prepare._read_fastq_files(fn, args)
         with file_transaction(ma_out) as ma_tx:
             with open(ma_tx, 'w') as ma_handle:
                 with open(seq_out, 'w') as seq_handle:
                     prepare._create_matrix_uniq_seq(sample_l, seq_l, ma_handle, seq_handle, min_shared)
 
-    return [data]
+    return data
 
-def run_align(data):
+def run_align(*data):
     """
     Prepare data to run alignment step, only once for each project
     """
-    out_dir = os.path.join(dd.get_work_dir(data[0]), "seqcluster", "prepare")
+    work_dir = dd.get_work_dir(data[0][0])
+    out_dir = os.path.join(work_dir, "seqcluster", "prepare")
     seq_out = op.join(out_dir, "seqs.fastq")
-    data[0] = process_alignment(data[0], [seq_out, None])
-    data = data[0][0]
-    bam_file = dd.get_work_bam(data[0])
-    bam_dir = os.path.join(dd.get_work_dir(data[0]), "align")
+    bam_dir = os.path.join(work_dir, "align")
     new_bam_file = op.join(bam_dir, "seqs.bam")
     if not file_exists(new_bam_file):
+        sample = process_alignment(data[0][0], [seq_out, None])
+        # data = data[0][0]
+        bam_file = dd.get_work_bam(sample[0][0])
         shutil.move(bam_file, new_bam_file)
         shutil.move(bam_file + ".bai", new_bam_file + ".bai")
-        shutil.rmtree(op.join(bam_dir, data[0]["rgnames"]['sample']))
-    data[0]['work_bam'] = new_bam_file
-    return [data]
+        shutil.rmtree(op.join(bam_dir, sample[0][0]["rgnames"]['sample']))
+    return data
 
-def run_cluster(data):
+def run_cluster(*data):
     """
     Run seqcluster cluster to detect smallRNA clusters
     """
-    out_dir = os.path.join(dd.get_work_dir(data[0]), "seqcluster", "cluster")
+    work_dir = dd.get_work_dir(data[0][0])
+    out_dir = os.path.join(work_dir, "seqcluster", "cluster")
     out_dir = os.path.abspath(safe_makedir(out_dir))
-    prepare_dir = op.join(dd.get_work_dir(data[0]), "seqcluster", "prepare")
-    bam_file = op.join(dd.get_work_dir(data[0]), "align", "seqs.bam")
-    cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(data[0]), dd.get_srna_gtf_file(data[0]))
+    out_file = os.path.join(out_dir, "seqcluster.json")
+    prepare_dir = op.join(work_dir, "seqcluster", "prepare")
+    bam_file = op.join(work_dir, "align", "seqs.bam")
+    cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(data[0][0]), dd.get_srna_gtf_file(data[0][0]))
     for sample in data:
-        sample["seqcluster"] = out_dir
-    return [data]
+        sample[0]["seqcluster"] = out_dir
+    return data
 
 def _get_arguments(cl):
     p = argparse.ArgumentParser()
@@ -99,10 +100,4 @@ def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
     if not file_exists(op.join(out_dir, "counts.tsv")):
         main_cluster.cluster(args)
     return out_dir
-
-    for s in data:
-        s["seqs_ma"] = os.path.join(prepare_dir, "seqs.ma")
-        s["seqs_bam"] = bam_file
-        s["clusters"] = os.path.join(cluster_dir, "counts.tsv")
-    return data
 
