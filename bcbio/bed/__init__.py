@@ -39,3 +39,9 @@ def merge(bedfiles):
         return concat(bedfiles).sort().merge()
     else:
         return catted
+
+def minimize(bed_file):
+    """
+    strip a BED file down to its three necessary columns: chrom start end
+    """
+    return bt.BedTool(bed_file).cut(range(3))

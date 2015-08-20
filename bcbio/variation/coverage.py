@@ -75,8 +75,10 @@ def summary(items):
                    ",".join([dd.get_sample_name(x) for x in items]))
     out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
     if not utils.file_exists(out_file):
-        combined_bed = bed.concat([coverage_bed, priority_bed])
-        clean_bed = bedutils.clean_file(combined_bed.fn, data) if len(combined_bed) > 0 else combined_bed.fn
+        mini_coverage = bed.minimize(coverage_bed).fn
+        mini_priority = bed.minimize(priority_bed).fn
+        combined_bed = bed.concat([mini_coverage, mini_priority]).fn
+        clean_bed = bedutils.clean_file(combined_bed, data) if len(combined_bed) > 0 else combined_bed.fn
         bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
         if utils.file_exists(bed_file):
             with file_transaction(data, out_file) as tx_out_file:
@@ -124,7 +126,9 @@ def regions_coverage(chanjo_db, batch_name, out_dir):
                                        "coverage", "completeness"]) + "\n")
             for line in q:
                 line = [str(x) for x in line]
-                out_handle.write("\t".join([line[0], line[1], line[2], line[6],
+                # chanjo reports coordinates as 1 based instead of 0 based
+                start = str(int(line[1]) - 1)
+                out_handle.write("\t".join([line[0], start, line[2], line[6],
                                             line[3], line[4], line[5]]) + "\n")
         bt = BedTool(tx_out_file + ".tmp").sort().bgzip()
         shutil.move(bt, tx_out_file)
