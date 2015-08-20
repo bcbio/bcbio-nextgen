@@ -44,6 +44,9 @@ def mirbase(data):
     out_dir = os.path.join(work_dir, names)
     utils.safe_makedir(out_dir)
     out_file = op.join(out_dir, names)
+    if not dd.get_mirbase_ref(data):
+        raise ValueError("There is no smallRNA genome data."
+                         "Please, run bcbio_nextgen.py upgrade -u skip --genome build_name.")
     mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
 
     mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
@@ -55,8 +58,10 @@ def _cmd_cutadapt():
     return cmd
 
 def _collapse(in_file):
-    seqs = collapse(in_file)
     out_file = append_stem(in_file, ".trimming").replace(".gz", "")
+    if file_exists(out_file):
+        return out_file
+    seqs = collapse(in_file)
     write_output(out_file, seqs)
     return out_file
 
