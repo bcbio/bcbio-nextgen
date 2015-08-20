@@ -1,0 +1,9 @@
+upload:
+  dir: ../final
+details:
+  - analysis: smallRNA-seq
+    algorithm:
+      aligner: star
+      adapters: ["TGGAATTCTCGGGTGC"]
+      species: hsa
+    genome_build: hg19

@@ -227,7 +227,7 @@ quality control, adapter trimming, alignment and post-alignment quantitation
   - `STAR`_
 
 - Quality control:
-  - `RNA-SeQC`_
+  - `qualimap`_
   - `FastQC`_
 
 - Quantitation:
@@ -248,6 +248,26 @@ about each sample and some provenance data. In that directory is also a
 ``combined.counts`` file which can be used as a starting point for performing
 differential expression calling using any count-based method such as EdgeR,
 DESeq2 or voom+limma, etc.
+
+smallRNA-seq
+~~~~~~~~~~~~
+
+bcbio-nextgen also implements a configurable best-practices pipeline for smallRNA-seq
+quality controls, adapter trimming, miRNA/isomiR quantification and other small RNA
+detection.
+
+- Adapter trimming:
+  - `cutadapt`_
+
+- Sequence alignment:
+  - `STAR`_ for genome annotation
+  - `seqbuster <https://github.com/lpantano/seqbuster>`_ for miRNA annotation
+
+- Quality control:
+  - `FastQC`_
+
+- Other small RNAs:
+  - `seqcluster <https://github.com/lpantano/seqcluster>`_
 
 Standard
 ~~~~~~~~
@@ -390,6 +410,7 @@ templating system.
 .. _STAR: http://code.google.com/p/rna-star/
 .. _cutadapt: http://code.google.com/p/cutadapt/
 .. _RNA-SeQC: https://www.broadinstitute.org/cancer/cga/rna-seqc
+.. _qualimap: http://qualimap.bioinfo.cipf.es
 .. _FastQC: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _HTSeq: http://www-huber.embl.de/users/anders/HTSeq/doc/index.html
 .. _TruSeq: http://www.illumina.com/products/truseq_rna_sample_prep_kit_v2.ilmn

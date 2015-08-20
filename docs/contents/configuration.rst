@@ -202,7 +202,7 @@ The sample configuration file defines ``details`` of each sample to process::
           batch: Batch1
           sex: female
 
-- ``analysis`` Analysis method to use [variant2, RNA-seq]
+- ``analysis`` Analysis method to use [variant2, RNA-seq, smallRNA-seq]
 - ``lane`` A unique number within the project. Corresponds to the
   ``ID`` parameter in the BAM read group.
 - ``description`` Unique name for this sample, corresponding to the
@@ -559,6 +559,13 @@ RNA sequencing
 - ``asssemble_transcripts`` If set to True, will assemble and filter novel
   isoforms using Cufflinks.
 
+smallRNA sequencing
+=====================
+
+- ``adapter`` The 3' end adapter that needs to be remove.
+- ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
+- ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
+
 Quality control
 ===============
 
@@ -786,6 +793,10 @@ The major sections of the file are:
   automated installer and updater handles retrieval and installation
   of these resources for supported genome builds.
 
+- `srnaseq` -- Supporting data files for smallRNA-seq analysis. Same as in
+  rnaseq, the automated installer and updater handle this for supported genome
+  builds.
+
 By default, we place the ``buildname-resources.yaml`` files next to
 the genome FASTA files in the reference directory. For custom setups,
 you specify an alternative directory in the ref:`config-resources`
@@ -843,7 +854,16 @@ in GTF or GFF3 format. It can create index for all aligners used by bcbio. Moreo
 the folder `rnaseq` to allow you run the RNAseq pipeline without further configuration.
 
 ::
+
     bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135
+
+If you want to add smallRNA-seq data files, you will need to add the 3 letters code of mirbase
+for your genome (i.e hsa for human) and the GTF file for the annotation of smallRNA data. 
+Here you can use the same file than the transcriptome if no other available. 
+
+::
+
+    bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135 --species cel --srna_gtf another_annotation.gtf
 
 To use that genome just need to configure your YAML files as::
 
