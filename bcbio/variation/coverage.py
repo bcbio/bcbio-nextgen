@@ -239,10 +239,11 @@ def decorate_problem_regions(query_bed, problem_bed_dir):
     bed_file_string = " ".join(bed_files)
     names = [os.path.splitext(os.path.basename(x))[0] for x in bed_files]
     names_string = " ".join(names)
-    header = "\t".join(["chr", "start", "end", "name", "coverage",
-                        "completeness"] + names)
+    with utils.open_gzipsafe(query_bed) as in_handle:
+        header = map(str, in_handle.next().strip().split())
+    header = "\t".join(header + names)
     cmd = ("bedtools annotate -i {query_bed} -files {bed_file_string} "
-           "-names {names_string} | sed -s 's/^#.*$/#{header}/' | bgzip -c > {tx_out_file}")
+           "-names {names_string} | sed -s 's/^#.*$/{header}/' | bgzip -c > {tx_out_file}")
     with file_transaction(out_file) as tx_out_file:
         message = "Annotate %s with problem regions." % query_bed
         do.run(cmd.format(**locals()), message)
