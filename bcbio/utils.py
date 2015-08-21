@@ -604,3 +604,15 @@ def rbind(dfs):
     for d in dfs[1:]:
         df = df.append(d)
     return df
+
+def max_command_length():
+    """
+    get the maximum length of the command line, in bytes, defaulting
+    to a conservative number if not set
+    """
+    DEFAULT_MAX_LENGTH = 150000 # lowest seen so far is 200k
+    try:
+        arg_length = os.sysconf('SC_ARG_MAX')
+    except ValueError:
+        arg_length = DEFAULT_MAX_LENGTH
+    return arg_length if arg_length > 0 else DEFAULT_MAX_LENGTH
