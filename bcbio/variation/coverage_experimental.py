@@ -75,7 +75,7 @@ def _get_exome_coverage_stats(fn, sample, out_file, total_cov):
             if line.startswith("all"):
                 continue
             cols = line.strip().split()
-            cur_region = "_".join(cols[0:3]) if not isinstance(cols[3], str) else cols[3]
+            cur_region = "_".join(cols[0:3]) if not isinstance(cols[3], str) else "_".join(cols[0:4])
             if cur_region != tmp_region:
                 if tmp_region != "":
                     stats.write_regions(out_file)
@@ -99,6 +99,7 @@ def coverage(data):
 
     work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
     batch_size = max_command_length() / AVERAGE_REGION_STRING_LENGTH
+#    batch_size = 1
 
     with chdir(work_dir):
         in_bam = data['work_bam']
@@ -128,6 +129,8 @@ def coverage(data):
                             coords = "%s:%s-%s" % (chrom, start, end)
                             coord_batch.append(coords)
                             line_batch += str(line)
+                        if not coord_batch:
+                            continue
                         region_file = pybedtools.BedTool(line_batch,
                                                         from_string=True).saveas().fn
                         coord_string = " ".join(coord_batch)
