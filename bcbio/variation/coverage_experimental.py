@@ -8,7 +8,8 @@ import math
 import pysam
 import pybedtools
 
-from bcbio.utils import file_exists, tmpfile, chdir, splitext_plus
+from bcbio.utils import (file_exists, tmpfile, chdir, splitext_plus,
+                         max_command_length, partition_all)
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -91,11 +92,14 @@ def _silence_run(cmd):
     do._do_run(cmd, False)
 
 def coverage(data):
+    AVERAGE_REGION_STRING_LENGTH = 100
     bed_file = dd.get_coverage_experimental(data)
     if not bed_file:
         return data
 
     work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
+    batch_size = max_command_length() / AVERAGE_REGION_STRING_LENGTH
+
     with chdir(work_dir):
         in_bam = data['work_bam']
         sample = os.path.splitext(os.path.basename(in_bam))[0]
@@ -108,19 +112,32 @@ def coverage(data):
             bam_api = pysam.AlignmentFile(in_bam)
             with file_transaction(parse_file) as out_tx:
                 with open(out_tx, 'w') as out_handle:
-                    print >>out_handle, "#chrom\tstart\tend\tregion\treads\tstrand\tsize\tsample\tmean\tsdt\tq10\tq20\tq4\tq50"
+                    HEADER = ["#chrom", "start", "end", "region", "reads",
+                              "strand", "size", "sample", "mean", "sd", "q10",
+                              "q20", "q4", "q50"]
+                    out_handle.write("\t".join(HEADER) + "\n")
                 with tmpfile() as tx_tmp_file:
-                    # tx_tmp_file = "tmpintersect"
-                    for line in region_bed:
-                        chrom = line.chrom
-                        start = max(line.start, 0)
-                        end = line.end
-                        region_file = pybedtools.BedTool(str(line), from_string=True).saveas().fn
-                        coords = "%s:%s-%s" % (chrom, start, end)
-                        cmd = ("samtools view -b {in_bam} {coords} | "
-                               "bedtools coverage -a {region_file} -b - -hist > {tx_tmp_file}")
+                    lcount = 0
+                    for chunk in partition_all(batch_size, region_bed):
+                        coord_batch = []
+                        line_batch = ""
+                        for line in chunk:
+                            lcount += 1
+                            chrom = line.chrom
+                            start = max(line.start, 0)
+                            end = line.end
+                            coords = "%s:%s-%s" % (chrom, start, end)
+                            coord_batch.append(coords)
+                            line_batch += str(line)
+                        region_file = pybedtools.BedTool(line_batch,
+                                                        from_string=True).saveas().fn
+                        coord_string = " ".join(coord_batch)
+                        cmd = ("samtools view -b {in_bam} {coord_string} | "
+                                "bedtools coverage -a {region_file} -b - "
+                                "-hist > {tx_tmp_file}")
                         _silence_run(cmd.format(**locals()))
                         total_cov = _get_exome_coverage_stats(os.path.abspath(tx_tmp_file), sample, out_tx, total_cov)
+                        logger.debug("Processed %d regions." % lcount)
             total_cov.write_coverage(parse_total_file)
         data['coverage'] = os.path.abspath(parse_file)
         return data
@@ -157,4 +174,3 @@ def variants(data):
                 logger.debug('parsing coverage: %s' % sample)
         # return df
         return data
-
