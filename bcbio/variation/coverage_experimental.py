@@ -9,7 +9,7 @@ import pysam
 import pybedtools
 
 from bcbio.utils import (file_exists, tmpfile, chdir, splitext_plus,
-                         max_command_length, partition_all)
+                         max_command_length, robust_partition_all)
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -109,7 +109,6 @@ def coverage(data):
         parse_total_file = os.path.join(sample + "_cov_total.tsv")
         if not file_exists(parse_file):
             total_cov = cov_class(0, None, sample)
-            bam_api = pysam.AlignmentFile(in_bam)
             with file_transaction(parse_file) as out_tx:
                 with open(out_tx, 'w') as out_handle:
                     HEADER = ["#chrom", "start", "end", "region", "reads",
@@ -118,7 +117,7 @@ def coverage(data):
                     out_handle.write("\t".join(HEADER) + "\n")
                 with tmpfile() as tx_tmp_file:
                     lcount = 0
-                    for chunk in partition_all(batch_size, region_bed):
+                    for chunk in robust_partition_all(batch_size, region_bed):
                         coord_batch = []
                         line_batch = ""
                         for line in chunk:
