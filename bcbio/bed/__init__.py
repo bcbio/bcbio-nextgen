@@ -44,4 +44,7 @@ def minimize(bed_file):
     """
     strip a BED file down to its three necessary columns: chrom start end
     """
-    return bt.BedTool(bed_file).cut(range(3))
+    if not bed_file:
+        return bed_file
+    else:
+        return bt.BedTool(bed_file).cut(range(3))
