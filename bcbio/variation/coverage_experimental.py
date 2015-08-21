@@ -99,7 +99,6 @@ def coverage(data):
 
     work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
     batch_size = max_command_length() / AVERAGE_REGION_STRING_LENGTH
-#    batch_size = 1
 
     with chdir(work_dir):
         in_bam = data['work_bam']
