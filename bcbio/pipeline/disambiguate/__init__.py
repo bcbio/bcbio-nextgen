@@ -57,12 +57,14 @@ def resolve(items, run_parallel):
     if len(to_process) > 0:
         dis1 = run_parallel("run_disambiguate",
                             [(xs, xs[0]["config"]) for xs in to_process.itervalues()])
-        disambigs = []
+        disambigs_by_name = collections.defaultdict(list)
+        print len(dis1)
         for xs in dis1:
             assert len(xs) == 1
-            disambigs.append(xs[0])
+            data = xs[0]
+            disambigs_by_name[dd.get_sample_name(data)].append(data)
         dis2 = run_parallel("disambiguate_merge_extras",
-                            [[disambigs, disambigs[0]["config"]]])
+                            [(xs, xs[0]["config"]) for xs in disambigs_by_name.itervalues()])
     else:
         dis2 = []
     return out + dis2
@@ -72,26 +74,21 @@ def merge_extras(items, config):
     """
     final = {}
     for extra_name in items[0]["disambiguate"].keys():
-        items_by_name = collections.defaultdict(list)
+        in_files = []
         for data in items:
-            items_by_name[dd.get_sample_name(data)].append(data)
-        for sname, name_items in items_by_name.items():
-            if sname not in final:
-                final[sname] = {}
-            in_files = []
-            for data in name_items:
-                in_files.append(data["disambiguate"][extra_name])
-            out_file = "%s-allmerged%s" % os.path.splitext(in_files[0])
-            if in_files[0].endswith(".bam"):
-                merged_file = merge.merge_bam_files(in_files, os.path.dirname(out_file), config,
-                                                    out_file=out_file)
-            else:
-                assert extra_name == "summary", extra_name
-                merged_file = _merge_summary(in_files, out_file, name_items[0])
-            final[sname][extra_name] = merged_file
+            in_files.append(data["disambiguate"][extra_name])
+        out_file = "%s-allmerged%s" % os.path.splitext(in_files[0])
+        if in_files[0].endswith(".bam"):
+            print out_file, in_files
+            merged_file = merge.merge_bam_files(in_files, os.path.dirname(out_file), config,
+                                                out_file=out_file)
+        else:
+            assert extra_name == "summary", extra_name
+            merged_file = _merge_summary(in_files, out_file, items[0])
+        final[extra_name] = merged_file
     out = []
     for data in items:
-        data["disambiguate"] = final[dd.get_sample_name(data)]
+        data["disambiguate"] = final
         out.append([data])
     return out
 
