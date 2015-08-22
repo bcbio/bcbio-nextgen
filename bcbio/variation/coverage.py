@@ -75,12 +75,15 @@ def summary(items):
                    ",".join([dd.get_sample_name(x) for x in items]))
     out_file = os.path.join(out_dir, "%s-coverage.db" % batch)
     if not utils.file_exists(out_file):
-        mini_coverage = bed.minimize(coverage_bed).fn
-        mini_priority = bed.minimize(priority_bed).fn
-        combined_bed = bed.concat([mini_coverage, mini_priority]).fn
-        clean_bed = bedutils.clean_file(combined_bed, data) if len(combined_bed) > 0 else combined_bed.fn
-        bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
-        if utils.file_exists(bed_file):
+        if coverage_bed and priority_bed:
+            mini_coverage = bed.minimize(coverage_bed).fn
+            mini_priority = bed.minimize(priority_bed).fn
+            combined_bed = bed.concat([mini_coverage, mini_priority]).fn
+            clean_bed = bedutils.clean_file(combined_bed, data) if len(combined_bed) > 0 else combined_bed.fn
+            bed_file = _uniquify_bed_names(clean_bed, out_dir, data)
+        else:
+            bed_file = None
+        if bed_file and utils.file_exists(bed_file):
             with file_transaction(data, out_file) as tx_out_file:
                 chanjo = os.path.join(os.path.dirname(sys.executable), "chanjo")
                 cmd = ("{chanjo} --db {tx_out_file} build {bed_file}")
@@ -92,7 +95,8 @@ def summary(items):
                            "{bam_file} {bed_file} | "
                            "{chanjo} --db {tx_out_file} import")
                     do.run(cmd.format(**locals()), "Chanjo coverage", data)
-        os.remove(bed_file)
+        if bed_file:
+            os.remove(bed_file)
     coverage = regions_coverage(out_file, batch, out_dir)
     problem_regions = dd.get_problem_region_dir(data)
     if problem_regions:
