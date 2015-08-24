@@ -19,6 +19,10 @@ from bcbio.install import _get_data_dir
 
 
 def trim_srna_sample(data):
+    """
+    Remove 3' adapter for smallRNA-seq
+    Uses cutadapt but with different parameters than for other pipelines.
+    """
     adapter = dd.get_adapters(data)[0]
     names = data["rgnames"]['sample']
     work_dir = os.path.join(dd.get_work_dir(data), "trimmed")
@@ -39,6 +43,9 @@ def trim_srna_sample(data):
     return [[data]]
 
 def mirbase(data):
+    """
+    Annotate miRNAs using miRBase database with seqbuster tool
+    """
     names = data["rgnames"]['sample']
     work_dir = os.path.join(dd.get_work_dir(data), "mirbase")
     out_dir = os.path.join(work_dir, names)

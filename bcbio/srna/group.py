@@ -34,7 +34,7 @@ def run_prepare(*data):
         name = sample[0]["rgnames"]['sample']
         fn.append("%s\t%s" % (sample[0]['collapse'], name))
     args = namedtuple('args', 'debug print_debug minc minl maxl out')
-    args = args(False, False, 1, 17, 40, out_dir)
+    args = args(False, False, 2, 17, 40, out_dir)
     ma_out = op.join(out_dir, "seqs.ma")
     seq_out = op.join(out_dir, "seqs.fastq")
     min_shared = max(int(len(fn) / 10.0), 1)
