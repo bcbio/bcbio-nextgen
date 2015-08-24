@@ -31,8 +31,11 @@ def run(items, background=None):
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
     if paired:
         inputs = [paired.tumor_data]
-        background_bams = [paired.normal_bam]
-        background_names = [paired.normal_name]
+        if paired.normal_bam:
+            background_bams = [paired.normal_bam]
+            background_names = [paired.normal_name]
+        else:
+            background_bams, background_names = [], []
     else:
         assert not background
         inputs, background = shared.find_case_control(items)

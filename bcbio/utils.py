@@ -249,7 +249,10 @@ def splitext_plus(f):
 
 def remove_safe(f):
     try:
-        os.remove(f)
+        if os.path.isdir(f):
+            shutil.rmtree(f)
+        else:
+            os.remove(f)
     except OSError:
         pass
 
