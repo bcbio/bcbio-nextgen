@@ -17,6 +17,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
+from bcbio.variation import vcfutils
 from bcbio.provenance import do
 from bcbio.structural import cnvkit, ensemble
 
@@ -47,7 +48,7 @@ def subset_by_supported(input_file, get_coords, calls_by_name, work_dir, data,
     """
     support_files = [(c, tz.get_in([c, "vrn_file"], calls_by_name))
                      for c in ensemble.SUBSET_BY_SUPPORT["cnvkit"]]
-    support_files = [(c, f) for (c, f) in support_files if f]
+    support_files = [(c, f) for (c, f) in support_files if f and vcfutils.vcf_has_variants(f)]
     if len(support_files) == 0:
         return input_file
     else:
