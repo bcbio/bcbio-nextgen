@@ -1047,6 +1047,8 @@ def report_summary(samples, run_parallel):
 
     return samples
 
+## report and coverage
+
 def coverage_report(data):
     """
     Run heavy coverage and variants process in parallel

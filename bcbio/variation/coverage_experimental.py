@@ -102,7 +102,7 @@ def coverage(data):
 
     with chdir(work_dir):
         in_bam = data['work_bam']
-        sample = os.path.splitext(os.path.basename(in_bam))[0]
+        sample = dd.get_sample_name(data)
         logger.debug("doing coverage for %s" % sample)
         region_bed = pybedtools.BedTool(bed_file)
         parse_file = os.path.join(sample + "_coverage.bed")
@@ -155,7 +155,7 @@ def variants(data):
         jvm_opts = broad.get_gatk_framework_opts(data['config'])
         gatk_jar = config_utils.get_program("gatk", data['config'], "dir")
         bed_file = dd.get_variant_regions(data)
-        sample = splitext_plus(os.path.basename(in_vcf))[0]
+        sample = dd.get_sample_name(data)
         in_bam = data["work_bam"]
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
         parse_file = os.path.join(sample + "_cg-depth-parse.tsv")
