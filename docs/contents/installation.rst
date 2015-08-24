@@ -250,6 +250,16 @@ for commercial usage.
 .. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
 .. _FreeBayes and GATK comparison: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 
+kraken
+~~~~~~
+
+``-- toolplus`` is also used to install data rich supplemental software which is
+not installed by default such as kraken database::
+
+    bcbio_nextgen.py upgrade --tools --toolplus kraken
+
+
+
 Troubleshooting
 ===============
 

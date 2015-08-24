@@ -340,7 +340,7 @@ def _run_kraken(data, ratio):
     """Run kraken, generating report in specified directory and parsing metrics.
        Using only first paired reads.
     """
-    logger.info("Number of aligned reads < than 0.60 in %s: %s" % (str(data["name"]), ratio))
+    # logger.info("Number of aligned reads < than 0.60 in %s: %s" % (str(data["name"]), ratio))
     logger.info("Running kraken to determine contaminant: %s" % str(data["name"]))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     kraken_out = os.path.join(qc_dir, "kraken")
@@ -349,10 +349,11 @@ def _run_kraken(data, ratio):
     kraken_cmd = config_utils.get_program("kraken", data["config"])
     if db == "minikraken":
         db = os.path.join(_get_data_dir(), "genomes", "kraken", "minikraken")
-    else:
-        if not os.path.exists(db):
-            logger.info("kraken: no database found %s, skipping" % db)
-            return {"kraken_report": "null"}
+
+    if not os.path.exists(db):
+        logger.info("kraken: no database found %s, skipping" % db)
+        return {"kraken_report": "null"}
+
     if not os.path.exists(os.path.join(kraken_out, "kraken_out")):
         work_dir = os.path.dirname(kraken_out)
         utils.safe_makedir(work_dir)
