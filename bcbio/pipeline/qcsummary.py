@@ -616,10 +616,14 @@ def _parse_metrics(metrics):
     for name in to_change:
         if not to_change[name]:
             continue
-        if to_change[name] == 1:
-            out.update({name: float(metrics[name])})
-        else:
-            out.update({to_change[name]: float(metrics[name])})
+        try:
+            if to_change[name] == 1:
+                out.update({name: float(metrics[name])})
+            else:
+                out.update({to_change[name]: float(metrics[name])})
+        # if we can't convert metrics[name] to float (?'s or other non-floats)
+        except ValueError:
+            continue
     return out
 
 def _detect_duplicates(bam_file, out_dir, config):
