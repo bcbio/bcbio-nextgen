@@ -64,7 +64,7 @@ CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "metasv": _vcf_to_bed,
                  "cnvkit": _vcf_to_bed,
                  "cn_mops": _cnvbed_to_bed,
-                 "wham": _copy_file}
+                 "wham": _vcf_to_bed}
 SUBSET_BY_SUPPORT = {"cnvkit": ["metasv", "lumpy", "manta"]}
 
 def _create_bed(call, sample, work_dir, calls, data):
