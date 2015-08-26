@@ -3,6 +3,7 @@
 Abstracts out
 """
 import subprocess
+import toolz as tz
 from bcbio.pipeline import config_utils
 
 def get_tabix_cmd(config):
@@ -31,7 +32,8 @@ def get_bgzip_cmd(config, is_retry=False):
     Allows for retries which force single core bgzip mode.
     """
     num_cores = config.get("algorithm", {}).get("num_cores", 1) // 2) - 1
-    if not is_retry and num_cores > 1:
+    if not is_retry and num_cores > 1 and \ 
+            "pbgzip" in tz.get_in(["algorithm", "tools_on"], config, []):
         try:
             pbgzip = config_utils.get_program("pbgzip", config)
             return "%s -n %s " % (pbgzip, num_cores)
