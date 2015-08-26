@@ -4,7 +4,6 @@
 from collections import namedtuple, defaultdict
 import copy
 import gzip
-import heapq
 import itertools
 import os
 import shutil
