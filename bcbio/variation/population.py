@@ -74,7 +74,7 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
             resources = config_utils.get_resources("gemini", data["config"])
             gemini_opts = " ".join([str(x) for x in resources["options"]]) if resources.get("options") else ""
             cmd = ("{gemini} {gemini_opts} load {load_opts} -v {gemini_vcf} {eanns} --cores {num_cores} "
-                   "--tempdir {tmpdir} {tx_gemini_db}")
+                   "--tempdir {tmpdir} --no-bcolz {tx_gemini_db}")
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % gemini_vcf, data)
             if ped_file:
