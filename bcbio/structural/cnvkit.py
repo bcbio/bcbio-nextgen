@@ -139,17 +139,18 @@ def _run_cnvkit_shared(items, test_bams, background_bams, work_dir, background_n
         target_bed, antitarget_bed = _cnvkit_targets(raw_target_bed, access_bed, cov_interval, raw_work_dir, data)
         def _bam_to_itype(bam):
             return "background" if bam in background_bams else "evaluate"
-        coverage_cnns = run_multicore(_cnvkit_coverage,
-                                      [(bam, bed, _bam_to_itype(bam), raw_work_dir, data)
-                                       for bam in test_bams + background_bams
-                                       for bed in [target_bed, antitarget_bed]],
-                                      data["config"], parallel)
+        split_cnns = run_multicore(_cnvkit_coverage,
+                                   [(bam, bed, _bam_to_itype(bam), raw_work_dir, data)
+                                    for bam in test_bams + background_bams
+                                    for bed in _split_bed(target_bed, data) + _split_bed(antitarget_bed, data)],
+                                   data["config"], parallel)
+        coverage_cnns = _merge_coverage(split_cnns, data)
         background_cnn = _cnvkit_background([x["file"] for x in coverage_cnns if x["itype"] == "background"],
                                             background_cnn, target_bed, antitarget_bed, data)
         fixed_cnrs = run_multicore(_cnvkit_fix,
                                    [(cnns, background_cnn, data) for cnns in
-                                    tz.groupby(lambda x: x["bam"], [x for x in coverage_cnns
-                                                                    if x["itype"] == "evaluate"]).values()],
+                                    tz.groupby("bam", [x for x in coverage_cnns
+                                                       if x["itype"] == "evaluate"]).values()],
                                       data["config"], parallel)
         called_segs = run_multicore(_cnvkit_segment,
                                     [(cnr, cov_interval, data) for cnr in fixed_cnrs],
@@ -168,7 +169,7 @@ def _cnvkit_segment(cnr_file, cov_interval, data):
                                             "lib", "R", "site-library")
             cmd = [_get_cmd(), "segment", "-o", tx_out_file, "--rlibpath", local_sitelib, cnr_file]
             if cov_interval == "genome":
-                cmd += ["--threshold", "0.005"]
+                cmd += ["--threshold", "0.00001"]
             do.run(cmd, "CNVkit segment")
     return out_file
 
@@ -200,23 +201,69 @@ def _cnvkit_background(background_cnns, out_file, target_bed, antitarget_bed, da
             do.run(cmd, "CNVkit background")
     return out_file
 
+def _split_bed(bed_input, data):
+    """Split BED file into sections for processing, allowing better multicore usage.
+    """
+    split_lines = 100000
+    split_info = []
+    base, ext = os.path.splitext(bed_input)
+    base, ext2 = os.path.splitext(base)
+    ext = ext2 + ext
+    with open(bed_input) as in_handle:
+        for cur_index, line_group in enumerate(tz.partition_all(split_lines, in_handle)):
+            cur_file = "%s-%s%s" % (base, cur_index, ext)
+            if not utils.file_uptodate(cur_file, bed_input):
+                with file_transaction(data, cur_file) as tx_out_file:
+                    with open(tx_out_file, "w") as out_handle:
+                        for line in line_group:
+                            out_handle.write(line)
+            split_info.append({"i": cur_index, "orig": bed_input, "file": cur_file})
+    if not split_info:  # empty input file
+        split_info.append({"file": bed_input, "orig": bed_input})
+    return split_info
+
+def _merge_coverage(cnns, data):
+    """Merge split CNN outputs into final consolidated output.
+    """
+    out = []
+    for (out_file, _), members in tz.groupby(lambda x: (x["final_out"], x["bed_orig"]), cnns).items():
+        if not utils.file_exists(out_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                with open(tx_out_file, "w") as out_handle:
+                    for i, in_file in enumerate([x["file"] for x in sorted(members, key=lambda x: x["bed_i"])]):
+                        with open(in_file) as in_handle:
+                            header = in_handle.readline()
+                            if i == 0:
+                                out_handle.write(header)
+                            for line in in_handle:
+                                out_handle.write(line)
+        base = copy.deepcopy(members[0])
+        base = tz.dissoc(base, "final_out", "bed_i", "bed_orig")
+        base["file"] = out_file
+        out.append(base)
+    return out
+
 @utils.map_wrap
 @zeromq_aware_logging
-def _cnvkit_coverage(bam_file, bed_file, input_type, work_dir, data):
+def _cnvkit_coverage(bam_file, bed_info, input_type, work_dir, data):
     """Calculate coverage in a BED file for CNVkit.
     """
+    bed_file = bed_info["file"]
     exts = {".target.bed": ("target", "targetcoverage.cnn"),
             ".antitarget.bed": ("antitarget", "antitargetcoverage.cnn")}
     assert bed_file.endswith(tuple(exts.keys())), "Unexpected BED file extension for coverage %s" % bed_file
     for orig, (cnntype, ext) in exts.items():
         if bed_file.endswith(orig):
             break
-    out_file = os.path.join(work_dir, "%s.%s" % (os.path.splitext(os.path.basename(bam_file))[0], ext))
+    base = os.path.join(work_dir, (os.path.splitext(os.path.basename(bam_file))[0]))
+    merged_out_file = "%s.%s" % (base, ext)
+    out_file = "%s-%s.%s" % (base, bed_info["i"], ext) if "i" in bed_info else merged_out_file
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "coverage", bam_file, bed_file, "-o", tx_out_file]
             do.run(cmd, "CNVkit coverage")
-    return [{"itype": input_type, "file": out_file, "bam": bam_file, "cnntype": cnntype}]
+    return [{"itype": input_type, "file": out_file, "bam": bam_file, "cnntype": cnntype,
+             "final_out": merged_out_file, "bed_i": bed_info.get("i"), "bed_orig": bed_info["orig"]}]
 
 def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     """Create target and antitarget regions from target and access files.
@@ -225,9 +272,11 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     if not utils.file_uptodate(target_bed, raw_target_bed):
         with file_transaction(data, target_bed) as tx_out_file:
             cmd = [_get_cmd(), "target", raw_target_bed, "--split", "-o", tx_out_file]
+            if cov_interval == "genome":
+                cmd += ["--avg-size", "500"]
             do.run(cmd, "CNVkit target")
     antitarget_bed = os.path.join(work_dir, "%s.antitarget.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
-    if not utils.file_uptodate(antitarget_bed, target_bed):
+    if not os.path.exists(antitarget_bed):
         with file_transaction(data, antitarget_bed) as tx_out_file:
             cmd = [_get_cmd(), "antitarget", "-g", access_bed, target_bed, "-o", tx_out_file]
             do.run(cmd, "CNVkit antitarget")
