@@ -16,6 +16,7 @@
 - Support for MetaSV to prepare combined structural variant calls.
 - Add smallRNA-seq pipeline
 - Test automatic report for variants calling and standard pipeline.
+- Allow Cufflinks to be turned off via tools_off.
 
 ## 0.9.1 (6 August 2015)
 
