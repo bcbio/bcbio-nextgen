@@ -264,7 +264,10 @@ def _check_for_problem_somatic_batches(items, config):
             vcs = list(set(tz.concat([dd.get_variantcaller(data) or [] for data in items])))
             if any(x.lower().startswith("vardict") for x in vcs):
                 raise ValueError("VarDict does not support pooled non-tumor/normal calling, in batch %s: %s"
-                                % (batch, [dd.get_sample_name(data) for data in items]))
+                                 % (batch, [dd.get_sample_name(data) for data in items]))
+            elif any(x.lower() == "mutect" for x in vcs):
+                raise ValueError("Mutect requires a 'phenotype: tumor' sample for calling, in batch %s: %s"
+                                 % (batch, [dd.get_sample_name(data) for data in items]))
 
 def _check_for_misplaced(xs, subkey, other_keys):
     """Ensure configuration keys are not incorrectly nested under other keys.
