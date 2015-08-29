@@ -160,7 +160,7 @@ def _predict_states(freqs):
     from hmmlearn import hmm
     freqs = np.column_stack([np.array(freqs)])
     model = hmm.GaussianHMM(2, covariance_type="full")
-    model.fit([freqs])
+    model.fit(freqs)
     states = model.predict(freqs)
     freqs_by_state = collections.defaultdict(list)
     for i, state in enumerate(states):
@@ -196,7 +196,8 @@ def _create_subset_file(in_file, region_bed, work_dir, data):
     out_file = os.path.join(work_dir, "%s-origsubset.bcf" % utils.splitext_plus(os.path.basename(in_file))[0])
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = "bcftools view -R {region_bed} -o {tx_out_file} -O b {in_file}"
+            regions = ("-R %s" % region_bed) if utils.file_exists(region_bed) else ""
+            cmd = "bcftools view {regions} -o {tx_out_file} -O b {in_file}"
             do.run(cmd.format(**locals()), "Extract regions for BubbleTree frequency determination")
     return out_file
 
