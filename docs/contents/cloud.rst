@@ -79,12 +79,15 @@ manual download from the `GATK download`_ site for academic users.  Commercial
 users `need a license`_ for GTAK and for somatic calling with muTect. To make these jars available,
 upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
 include the correct GATK and muTect directives during your run.  Alternatively,
-you can also manually specify the path to the jars using the global
+you can also manually specify the path to the jars using a global
 ``resources`` section of your input sample YAML file::
 
     resources:
       gatk:
         jar: s3://bcbio-syn3-eval/jars/GenomeAnalysisTK.jar
+
+As with sample YAML scripts, specify a different region with an ``@`` in the
+bucket name: ``s3://your-project@us-west-2/jars/GenomeAnalysisTK.jar``
 
 .. _GATK download: http://www.broadinstitute.org/gatk/download
 .. _need a license: https://www.broadinstitute.org/gatk/about/#licensing
