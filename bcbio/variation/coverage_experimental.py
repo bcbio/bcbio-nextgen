@@ -112,8 +112,8 @@ def coverage(data):
             with file_transaction(parse_file) as out_tx:
                 with open(out_tx, 'w') as out_handle:
                     HEADER = ["#chrom", "start", "end", "region", "reads",
-                              "strand", "size", "sample", "mean", "sd", "q10",
-                              "q20", "q4", "q50"]
+                              "strand", "size", "sample", "mean", "sd", "cutoff10",
+                              "cutoff20", "cutoff4", "cutoff50"]
                     out_handle.write("\t".join(HEADER) + "\n")
                 with tmpfile() as tx_tmp_file:
                     lcount = 0
@@ -158,7 +158,7 @@ def variants(data):
         sample = dd.get_sample_name(data)
         in_bam = data["work_bam"]
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
-        parse_file = os.path.join(sample + "_cg-depth-parse.tsv")
+        parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
         if not file_exists(cg_file):
             with file_transaction(cg_file) as tx_out:
                 cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator -R {ref_file} "
