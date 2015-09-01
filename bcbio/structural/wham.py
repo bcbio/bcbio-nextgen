@@ -132,9 +132,8 @@ def filter_by_background(in_vcf, full_vcf, background, data):
                 writer = vcf.VCFWriter(out_handle, template=reader)
                 for out_rec, rec in zip(reader, full_reader):
                     rec_type = rec.genotype(dd.get_sample_name(data)).gt_type
-                    if not rec.INFO.get("SVTYPE") == "INV":
-                        if rec_type == 0 or any(rec_type == rec.genotype(dd.get_sample_name(x)).gt_type
-                                                for x in background):
-                            out_rec.add_filter("InBackground")
+                    if rec_type == 0 or any(rec_type == rec.genotype(dd.get_sample_name(x)).gt_type
+                                            for x in background):
+                        out_rec.add_filter("InBackground")
                     writer.write_record(out_rec)
     return vcfutils.bgzip_and_index(out_file, data["config"])
