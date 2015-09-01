@@ -1,4 +1,4 @@
-## 0.9.2 (in progress)
+## 0.9.2 (1 September 2015)
 
 - Support IPython 4.0 with ipyparallel
 - Fix bug in writing BAM and VCF indexes to final directory. Correctly add
