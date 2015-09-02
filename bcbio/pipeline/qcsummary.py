@@ -443,12 +443,12 @@ def _run_fastqc(bam_file, data, fastqc_out):
                 do.run(cl, "FastQC: %s" % data["name"][-1])
                 tx_fastqc_out = os.path.join(tx_tmp_dir, "%s_fastqc" % fastqc_name)
                 tx_combo_file = os.path.join(tx_tmp_dir, "%s_fastqc.html" % fastqc_name)
-                if os.path.exists("%s.zip" % tx_fastqc_out):
-                    os.remove("%s.zip" % tx_fastqc_out)
                 if not os.path.exists(sentry_file) and os.path.exists(tx_combo_file):
                     utils.safe_makedir(fastqc_out)
                     shutil.move(os.path.join(tx_fastqc_out, "fastqc_data.txt"), fastqc_out)
                     shutil.move(tx_combo_file, sentry_file)
+                    if os.path.exists("%s.zip" % tx_fastqc_out):
+                        shutil.move("%s.zip" % tx_fastqc_out, fastqc_out)
                 elif not os.path.exists(sentry_file):
                     if os.path.exists(fastqc_out):
                         shutil.rmtree(fastqc_out)
