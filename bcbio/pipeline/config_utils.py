@@ -381,7 +381,9 @@ def use_vqsr(algs):
         callers = alg.get("variantcaller", "gatk")
         if isinstance(callers, basestring):
             callers = [callers]
-        elif not callers:  # no variant calling, no VQSR
+        if not callers:  # no variant calling, no VQSR
+            continue
+        if "vqsr" in alg.get("tools_off", []):  # VQSR turned off
             continue
         for c in callers:
             if c in vqsr_callers:

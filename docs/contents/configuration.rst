@@ -593,6 +593,7 @@ Post-processing
   a post calling filter to remove variants found in normal samples. ``bwa-mem``
   forces use of original bwa aln alignment. Without this, we use bwa mem with
   70bp or longer reads. ``fastqc`` turns off quality control FastQC usage.
+  ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
   ``svplots`` adds additional coverage and summary plots for CNVkit and

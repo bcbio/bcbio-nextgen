@@ -1,3 +1,7 @@
+## 0.9.3 (in progress)
+
+- Allow turning off variant quality score recalibration with `tools_off: [vqsr]`
+
 ## 0.9.2 (1 September 2015)
 
 - Support IPython 4.0 with ipyparallel

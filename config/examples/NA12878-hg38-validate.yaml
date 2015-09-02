@@ -26,6 +26,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_remap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_remap-regions.bed
@@ -42,6 +43,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_remap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_remap-regions.bed
@@ -58,6 +60,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19.vcf.gz
       validate_regions: ../input/GiaB_v2_19-37_prep_regions.bed
@@ -74,6 +77,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_crossmap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_crossmap-regions.bed
@@ -90,6 +94,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_crossmap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_crossmap-regions.bed
@@ -106,6 +111,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/platgene_NA12878-hg19-8_0_1.vcf.gz
       validate_regions: ../input/platgene_NA12878-hg19-8_0_1-regions.bed
@@ -122,6 +128,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/platgene_NA12878-hg38-2_0_1.vcf.gz
       validate_regions: ../input/platgene_NA12878-hg38-2_0_1-regions.bed
@@ -138,6 +145,7 @@ details:
       recalibrate: false
       realign: false
       remove_lcr: true
+      tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/platgene_NA12878-hg38-2_0_1.vcf.gz
       validate_regions: ../input/platgene_NA12878-hg38-2_0_1-regions.bed
