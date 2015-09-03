@@ -277,8 +277,7 @@ def resource_usage(bcbio_log, rawdir, verbose):
             collectl_path, time_frame.start, time_frame.end)
 
         if len(data) == 0:
-#	    continue
-	    raise ValueError("No data present in collectl file %s", collectl_path)
+	    raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
 
         host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
         hardware_info[host] = hardware
