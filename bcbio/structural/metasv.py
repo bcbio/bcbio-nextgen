@@ -12,7 +12,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.structural import shared
 
 MIN_CALLERS = 2
-SUPPORTED = set(["manta", "lumpy", "cnvkit"])
+SUPPORTED = set(["manta", "lumpy", "cnvkit", "wham"])
 
 def run(calls, data):
     """Run MetaSV if we have enough supported callers, adding output to the set of calls.

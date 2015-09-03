@@ -20,7 +20,7 @@ azure>=0.11.1
 arrow>=0.4.4
 awscli>=1.7.14
 bioblend>=0.4.3
-bcbreport>=0.99.9
+bcbreport>=0.99.11
 chanjo>=2.0.2
 click>=3.3
 cnvkit>=0.3.4
@@ -40,4 +40,4 @@ sh>=1.07
 tabulate>=0.7.3
 scikit-learn>=0.15.2
 seaborn>=0.5.0
-bcbio-nextgen==0.9.1
+bcbio-nextgen==0.9.2

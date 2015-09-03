@@ -558,6 +558,8 @@ RNA sequencing
 
 - ``asssemble_transcripts`` If set to True, will assemble and filter novel
   isoforms using Cufflinks.
+- ``transcriptome_align`` If set to True, will also align reads to just the
+  transcriptome, for use with EBSeq and others.
 
 smallRNA sequencing
 =====================
@@ -591,6 +593,7 @@ Post-processing
   a post calling filter to remove variants found in normal samples. ``bwa-mem``
   forces use of original bwa aln alignment. Without this, we use bwa mem with
   70bp or longer reads. ``fastqc`` turns off quality control FastQC usage.
+  ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
   ``svplots`` adds additional coverage and summary plots for CNVkit and
@@ -858,8 +861,8 @@ the folder `rnaseq` to allow you run the RNAseq pipeline without further configu
     bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135
 
 If you want to add smallRNA-seq data files, you will need to add the 3 letters code of mirbase
-for your genome (i.e hsa for human) and the GTF file for the annotation of smallRNA data. 
-Here you can use the same file than the transcriptome if no other available. 
+for your genome (i.e hsa for human) and the GTF file for the annotation of smallRNA data.
+Here you can use the same file than the transcriptome if no other available.
 
 ::
 

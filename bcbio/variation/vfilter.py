@@ -209,8 +209,12 @@ def samtools(in_file, data):
 
 def gatk_snp_hard(in_file, data):
     """Perform hard filtering on GATK SNPs using best-practice recommendations.
+
+    We have a more lenient mapping quality (MQ) filter compared to GATK defaults.
+    The recommended filter (MQ < 40) is too stringent, so we adjust to 30: 
+    http://imgur.com/a/oHRVB
     """
-    filters = ["QD < 2.0", "MQ < 40.0", "FS > 60.0",
+    filters = ["QD < 2.0", "MQ < 30.0", "FS > 60.0",
                "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric

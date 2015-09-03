@@ -1,4 +1,10 @@
-## 0.9.2 (in progress)
+## 0.9.3 (in progress)
+
+- Adjust mapping quality (MQ) filter for GATK SNP hard filters to improve sensitivity
+  http://imgur.com/a/oHRVB
+- Allow turning off variant quality score recalibration with `tools_off: [vqsr]`
+
+## 0.9.2 (1 September 2015)
 
 - Support IPython 4.0 with ipyparallel
 - Fix bug in writing BAM and VCF indexes to final directory. Correctly add
