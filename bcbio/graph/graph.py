@@ -119,18 +119,19 @@ def add_common_plot_features(plot, steps):
 
     ymax = plot.get_ylim()[1]
     ticks = {}
-    for tstamp, step in steps.iteritems():
-        if step == 'finished':
-            continue
-        plot.vlines(tstamp, 0, ymax, linestyles='dashed')
-        ticks[tstamp] = step
-    tick_kvs = sorted(ticks.iteritems())
-    top_axis = plot.twiny()
-    top_axis.set_xlim(*plot.get_xlim())
-    top_axis.set_xticks([k for k, v in tick_kvs])
-    top_axis.set_xticklabels([v for k, v in tick_kvs],
-                             rotation=45, ha='left', size=16)
-    plot.set_ylim(0)
+    if not isinstance(steps, list):
+	for tstamp, step in steps.iteritems():
+	    if step == 'finished':
+		continue
+	    plot.vlines(tstamp, 0, ymax, linestyles='dashed')
+	    ticks[tstamp] = step
+	tick_kvs = sorted(ticks.iteritems())
+	top_axis = plot.twiny()
+	top_axis.set_xlim(*plot.get_xlim())
+	top_axis.set_xticks([k for k, v in tick_kvs])
+	top_axis.set_xticklabels([v for k, v in tick_kvs],
+				 rotation=45, ha='left', size=16)
+	plot.set_ylim(0)
 
     return plot
 
@@ -276,6 +277,7 @@ def resource_usage(bcbio_log, rawdir, verbose):
             collectl_path, time_frame.start, time_frame.end)
 
         if len(data) == 0:
+#	    continue
 	    raise ValueError("No data present in collectl file %s", collectl_path)
 
         host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
