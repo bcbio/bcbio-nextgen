@@ -3,6 +3,7 @@
 - Fix bug when using tumors with multiple normals and no CNV calling. Additional
   tumor sample would get lost due to lack of early (CNV-based) calling. Thanks
   to Miika Ahdesmaki.
+- Fix bug when using CNVkit on disambiguated inputs. Thanks to Miika Ahdesmaki.
 - Adjust mapping quality (MQ) filter for GATK SNP hard filters to improve sensitivity
   http://imgur.com/a/oHRVB
 - Allow turning off variant quality score recalibration with `tools_off: [vqsr]`
