@@ -1,4 +1,5 @@
 import os
+import string
 import argparse
 import os.path as op
 import shutil
@@ -9,8 +10,8 @@ import pysam
 try:
     from seqcluster import prepare_data as prepare
     from seqcluster import make_clusters as main_cluster
-    from seqcluster.libs.inputs import parse_ma_file
     from seqcluster.libs import parse
+    from seqcluster import templates as template_seqcluster
 except ImportError:
     pass
 
@@ -101,3 +102,54 @@ def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
         main_cluster.cluster(args)
     return out_dir
 
+def report(data):
+    """Create a Rmd report for small RNAseq analysis"""
+    work_dir = dd.get_work_dir(data[0][0])
+    out_dir = os.path.join(work_dir, "report")
+    safe_makedir(out_dir)
+    summary_file = os.path.join(out_dir, "summary.csv")
+    with file_transaction(summary_file) as out_tx:
+        with open(out_tx, 'w') as out_handle:
+            print >>out_handle, "sample_id,size_stats,miraligner,group"
+            for sample in data:
+                info = sample[0]
+                group = _guess_group(info)
+                print >>out_handle, ",".join([dd.get_sample_name(info),
+                                              info['size_stats'],
+                                              info['seqbuster'], group])
+    _create_rmd(summary_file)
+    return summary_file
+
+def _guess_group(info):
+    """Add the first group to get report working"""
+    value = "fake"
+    if info['metadata']:
+        key, value = info['metadata'].popitem()
+    return value
+
+def _create_rmd(summary_fn):
+    """Create relatie path files for Rmd report"""
+    root_path, fn = os.path.split(os.path.abspath(summary_fn))
+    out_file = os.path.join(root_path, fn.replace(".csv", "_re.csv"))
+    with open(summary_fn) as in_handle:
+        with open(out_file, 'w') as out_handle:
+            for line in in_handle:
+                cols = line.strip().split(",")
+                fix_line = ",".join([os.path.relpath(c, root_path) if os.path.exists(c) else c for c in cols])
+                print >>out_handle, fix_line
+    report_file = _modify_report(root_path, out_file)
+
+    return out_file, report_file
+
+def _modify_report(summary_path, summary_fn):
+    """Read Rmd template and dump with project path."""
+    summary_path = os.path.abspath(summary_path)
+    template = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(template_seqcluster.__file__)), "report.rmd"))
+    content = open(template).read()
+    out_content = string.Template(content).safe_substitute({'path_abs': summary_path,
+                                                            'path_summary': os.path.join(summary_path, summary_fn)})
+    out_file = os.path.join(os.path.dirname(summary_fn), "ready_report.rmd")
+    with open(out_file, 'w') as out_handle:
+        print >>out_handle, out_content
+
+    return out_file
