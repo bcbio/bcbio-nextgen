@@ -18,6 +18,23 @@ from bcbio.graph.collectl import load_collectl
 # from bcbiovm.graph.elasticluster import fetch_collectl
 
 
+def get_bcbio_nodes(path):
+    """Fetch the nodes that contain collectl files from
+       the bcbio log file.
+
+       :returns: A keys-only dict with (non-FQDN) local hostnames.
+    """
+    with open(path, 'r') as file_handle:
+        hosts = collections.defaultdict()
+        for line in file_handle:
+            matches = re.search(r'\] ([^:]+):', line)
+            if not matches:
+                continue
+
+            hosts[matches.group(1)]
+
+    return hosts
+
 def get_bcbio_timings(path):
     """Fetch timing information from a bcbio log file."""
     with open(path, 'r') as file_handle:
@@ -236,6 +253,16 @@ def graph_disk_io(data_frame, steps, disks):
     return plot
 
 
+def _get_nodes(bcbio_log):
+    """The nodes where local collectl files were generated.
+
+    :return:	a list of nodes where collectl raw logs can be found
+	        (typically under /var/log/collectl).
+    """
+    output = collections.defaultdict(dict)
+    bcbio_nodes = get_bcbio_nodes(bcbio_log)
+    return output[bcbio_nodes.keys()]
+
 def _time_frame(bcbio_log):
     """The bcbio running time frame.
 
@@ -266,6 +293,7 @@ def resource_usage(bcbio_log, rawdir, verbose):
     """
     data_frames = {}
     hardware_info = {}
+    nodes = _get_nodes(bcbio_log)
     time_frame = _time_frame(bcbio_log)
 
     for collectl_file in sorted(os.listdir(rawdir)):
