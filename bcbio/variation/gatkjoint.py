@@ -44,16 +44,16 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
 
 # ## gVCF batching
 
-MAX_BATCH = 200  # Recommended sample count from GATK team where we should use CombineGVCFs
-
 def _batch_gvcfs(data, region, vrn_files, ref_file, out_file=None):
     """Perform batching of gVCF files if above recommended input count.
     """
     if out_file is None:
         out_file = vrn_files[0]
-    if len(vrn_files) >= MAX_BATCH:
+    max_batch = int(dd.get_joint_group_size(data))
+    if len(vrn_files) > max_batch:
         out = []
-        for i, batch_vrn_files in enumerate(tz.partition_all(MAX_BATCH, vrn_files)):
+        # group to get below the maximum batch size, using 200 as the baseline
+        for i, batch_vrn_files in enumerate(tz.partition_all(max(max_batch, 200), vrn_files)):
             base, ext = utils.splitext_plus(out_file)
             batch_out_file = "%s-b%s%s" % (base, i, ext)
             out.append(_run_combine_gvcfs(batch_vrn_files, region, ref_file, batch_out_file, data))

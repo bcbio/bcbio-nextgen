@@ -15,6 +15,7 @@ details:
       mark_duplicates: true
       variantcaller: [gatk-haplotype, freebayes]
       jointcaller: [gatk-haplotype-joint, freebayes-joint]
+      joint_group_size: 1
       coverage_interval: genome
       #aligner: false
       #mark_duplicates: false
@@ -25,7 +26,7 @@ details:
       #svcaller: cnvkit
       variant_regions: ../data/automated/variant_regions-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
-      effects: vep
+      #effects: vep
   - algorithm:
       aligner: bwa
       recalibrate: false
@@ -34,7 +35,8 @@ details:
       #jointcaller: freebayes-joint
       variantcaller: [gatk-haplotype, freebayes]
       jointcaller: [gatk-haplotype-joint, freebayes-joint]
-      effects: vep
+      joint_group_size: 1
+      #effects: vep
       coverage_interval: genome
       quality_format: Standard
       nomap_split_size: 50
