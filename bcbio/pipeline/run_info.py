@@ -302,7 +302,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "coverage_depth_max", "min_allele_fraction",
                       "remove_lcr", "joint_group_size",
                       "archive", "tools_off", "tools_on", "assemble_transcripts",
-                      "mixup_check", "priority_regions"] +
+                      "mixup_check", "priority_regions", "expression_caller"] +
                      # back compatibility
                       ["coverage_depth"])
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
