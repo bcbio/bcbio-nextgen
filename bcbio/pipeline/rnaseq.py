@@ -49,9 +49,10 @@ def quantitate_expression_noparallel(samples, run_parallel):
     """
     run transcript quantitation for algorithms that don't run in parallel
     """
+    data = samples[0][0]
     samples = run_parallel("run_express", samples)
     samples = run_parallel("run_dexseq", samples)
-    if "sailfish" in dd.get_expression_caller(samples[0]):
+    if "sailfish" in dd.get_expression_caller(data):
         samples = run_parallel("run_sailfish", samples)
     return samples
 
