@@ -71,6 +71,8 @@ LOOKUPS = {
     "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
     "transcriptome_align": {"keys": ["config", "algorithm", "transcriptome_align"],
                             "default": False},
+    "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
+                          "default": []},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},

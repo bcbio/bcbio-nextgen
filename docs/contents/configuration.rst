@@ -432,6 +432,8 @@ Experimental information
   database of coverage and completeness is calculated over these regions and
   regions with poor coverage are compiled in an incomplete regions file for
   each batch.
+- ``expression_caller`` A list of optional, experimental callers to turn on.
+  Supports ['sailfish'].
 
 .. _Chanjo: http://www.chanjo.co/en/latest/
 
