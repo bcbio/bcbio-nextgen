@@ -51,6 +51,8 @@ def quantitate_expression_noparallel(samples, run_parallel):
     """
     samples = run_parallel("run_express", samples)
     samples = run_parallel("run_dexseq", samples)
+    if "sailfish" in dd.get_expression_caller(samples[0]):
+        samples = run_parallel("run_sailfish", samples)
     return samples
 
 def generate_transcript_counts(data):

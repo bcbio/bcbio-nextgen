@@ -2,7 +2,8 @@ import tempfile
 import os
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.utils import file_exists, get_in, safe_makedir
+from bcbio.utils import file_exists, get_in, safe_makedir, is_gzipped
+from bcbio.pipeline import config_utils
 
 def run_sailfish(sample):
     names = sample["rgnames"]
@@ -25,45 +26,45 @@ def run_sailfish(sample):
 
 def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
     sailfish_idx = sailfish_index(gtf_file, ref_file, data)
-    cmd = "sailfish.sh quant -i {sailfish_idx} "
+    sailfish = config_utils.get_program("sailfish", data["config"])
+    cmd = "{sailfish} quant -i {sailfish_idx} "
     cmd += _libtype_string(fq1, fq2, strandedness)
+    fq1_cmd = "{fq1}" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
+    fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
-        cmd += " -r {fq1} "
+        cmd = " -r {fq1_cmd} "
     else:
-        cmd += " -1 {fq1} -2 {fq2} "
-    cmd += " --polya -o {tx_out_dir}"
+        fq2_cmd = "{fq2}" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
+        fq2_cmd = fq2_cmd.format(fq2=fq2)
+        cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
+    cmd += "-o {tx_out_dir}"
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, align_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return align_dir
 
 def sailfish_index(gtf_file, ref_file, data):
+    sailfish = config_utils.get_program("sailfish", data["config"])
     gtf_fa_dirty = _gtf_to_fasta(gtf_file, ref_file, data)
     gtf_fa = _clean_gtf_fa(gtf_fa_dirty, data)
     out_dir = tempfile.mkdtemp(prefix="sailfish_index")
-    cmd = "sailfish.sh index -t {gtf_fa} -o {out_dir} -k 25"
+    cmd = "{sailfish} index -t {gtf_fa} -o {out_dir} -k 25"
     message = "Creating sailfish index for {gtf_fa}."
     do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
 
 def _libtype_string(fq1, fq2, strandedness):
-    type = "PE" if fq2 else "SE"
-    # XXX: both orientation and the strand flag could be incorrect for
-    # stranded protocols. The Sailfish manual has mode details.
-    # this is my best guess for what might work for everything we see
+    """
+    supports just the Tophat unstranded/firstrand/secondstrand
+    """
+    libtype = "-l I" if fq2 else "-l "
     strand = _sailfish_strand_string(strandedness)
-    lstring = "-l \"TYPE={type}:STRAND={strand}"
-    if fq2:
-        orientation = "><"
-        lstring += ":ORIENTATION={orientation}"
-    lstring += "\""
-    return lstring.format(**locals())
-
+    return libtype + strand
 
 def _sailfish_strand_string(strandedness):
     return {'unstranded': "U",
-            'firststrand': "S",
-            'secondstrand': "A"}.get(strandedness, "U")
+            'firststrand': "SR",
+            'secondstrand': "SF"}.get(strandedness, "U")
 
 
 def _gtf_to_fasta(gtf_file, ref_file, data):
