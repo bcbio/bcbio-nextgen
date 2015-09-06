@@ -24,6 +24,28 @@ from bcbio.log import logger
 from bcbio import utils
 from bcbio.variation import bamprep
 
+def classifyplot_from_plotfiles(plot_files, out_csv, outtype="png", title=None, size=None):
+    """Create a plot from individual summary csv files with classification metrics.
+
+    Does new-style plotting of summarized metrics of
+    false negative rate and false discovery rate.
+    https://en.wikipedia.org/wiki/Sensitivity_and_specificity
+    """
+    df = pd.concat([pd.read_csv(x) for x in plot_files])
+    df.to_csv(out_csv, index=False)
+    grouped = df.groupby(["sample", "caller", "vtype"])
+    df = grouped.apply(_calculate_fnr_fdr)
+    print df
+
+def _calculate_fnr_fdr(group):
+    """Calculate the false negative rate (1 - sensitivity) and false discovery rate (1 - precision).
+    """
+    data = {k: d["value"] for k, d in group.set_index("metric").T.to_dict().items()}
+    return pd.DataFrame([{"fnr": data["fn"] / float(data["tp"] + data["fn"]) * 100.0 if data["tp"] > 0 else 0.0,
+                          "fdr": data["fp"] / float(data["tp"] + data["fp"]) * 100.0 if data["tp"] > 0 else 0.0,
+                          "tpr": "%s / %s" % (data["tp"], data["tp"] + data["fn"]),
+                          "spc": "%s / %s" % (data["tp"], data["tp"] + data["fp"])}])
+
 def create_from_csv(in_csv, config=None, outtype="png", title=None, size=None):
     df = pd.read_csv(in_csv)
     create(df, None, 0, config or {}, os.path.splitext(in_csv)[0], outtype, title,
