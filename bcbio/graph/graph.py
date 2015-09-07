@@ -19,15 +19,16 @@ from bcbio.graph.collectl import load_collectl
 
 
 def get_bcbio_nodes(path):
-    """Fetch the nodes that contain collectl files from
+    """Fetch the local nodes (-c local) that contain collectl files from
        the bcbio log file.
 
-       :returns: A keys-only dict with (non-FQDN) local hostnames.
+       :returns: A list with unique (non-FQDN) local hostnames 
+                 where collectl raw logs can be found.
     """
     with open(path, 'r') as file_handle:
-        hosts = collections.defaultdict()
+        hosts = collections.defaultdict(dict)
         for line in file_handle:
-            matches = re.search(r'\] ([^:]+):', line)
+            matches = re.search(r'\] ([^:]):', line)
             if not matches:
                 continue
 
@@ -253,16 +254,6 @@ def graph_disk_io(data_frame, steps, disks):
     return plot
 
 
-def _get_nodes(bcbio_log):
-    """The nodes where local collectl files were generated.
-
-    :return:	a list of nodes where collectl raw logs can be found
-	        (typically under /var/log/collectl).
-    """
-    output = collections.defaultdict(dict)
-    bcbio_nodes = get_bcbio_nodes(bcbio_log)
-    return output[bcbio_nodes.keys()]
-
 def _time_frame(bcbio_log):
     """The bcbio running time frame.
 
@@ -271,8 +262,7 @@ def _time_frame(bcbio_log):
     """
     output = collections.namedtuple("Time", ["start", "end", "steps"])
     bcbio_timings = get_bcbio_timings(bcbio_log)
-    steps = bcbio_timings.keys()
-    return output(min(steps), max(steps), steps)
+    return output(min(bcbio_timings), max(bcbio_timings), bcbio_timings)
 
 
 def resource_usage(bcbio_log, rawdir, verbose):
@@ -293,7 +283,7 @@ def resource_usage(bcbio_log, rawdir, verbose):
     """
     data_frames = {}
     hardware_info = {}
-    nodes = _get_nodes(bcbio_log)
+    nodes = get_bcbio_nodes(bcbio_log)
     time_frame = _time_frame(bcbio_log)
 
     for collectl_file in sorted(os.listdir(rawdir)):
@@ -305,7 +295,8 @@ def resource_usage(bcbio_log, rawdir, verbose):
             collectl_path, time_frame.start, time_frame.end)
 
         if len(data) == 0:
-	    raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
+	    #raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
+            continue
 
         host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
         hardware_info[host] = hardware
