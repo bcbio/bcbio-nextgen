@@ -26,16 +26,25 @@ from bcbio.variation import bamprep
 
 def classifyplot_from_plotfiles(plot_files, out_csv, outtype="png", title=None, size=None):
     """Create a plot from individual summary csv files with classification metrics.
+    """
+    df = pd.concat([pd.read_csv(x) for x in plot_files])
+    df.to_csv(out_csv, index=False)
+    return classifyplot_from_valfile(out_csv, outtype, title, size)
+
+def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None):
+    """Create a plot from a summarized validation file.
 
     Does new-style plotting of summarized metrics of
     false negative rate and false discovery rate.
     https://en.wikipedia.org/wiki/Sensitivity_and_specificity
     """
-    df = pd.concat([pd.read_csv(x) for x in plot_files])
-    df.to_csv(out_csv, index=False)
+    df = pd.read_csv(val_file)
     grouped = df.groupby(["sample", "caller", "vtype"])
     df = grouped.apply(_calculate_fnr_fdr)
-    print df
+    df = df.reset_index()
+    out_file = "%s.%s" % (os.path.splitext(val_file)[0], outtype)
+    _do_classifyplot(df, out_file, title, size)
+    return out_file
 
 def _calculate_fnr_fdr(group):
     """Calculate the false negative rate (1 - sensitivity) and false discovery rate (1 - precision).
@@ -43,8 +52,60 @@ def _calculate_fnr_fdr(group):
     data = {k: d["value"] for k, d in group.set_index("metric").T.to_dict().items()}
     return pd.DataFrame([{"fnr": data["fn"] / float(data["tp"] + data["fn"]) * 100.0 if data["tp"] > 0 else 0.0,
                           "fdr": data["fp"] / float(data["tp"] + data["fp"]) * 100.0 if data["tp"] > 0 else 0.0,
-                          "tpr": "%s / %s" % (data["tp"], data["tp"] + data["fn"]),
-                          "spc": "%s / %s" % (data["tp"], data["tp"] + data["fp"])}])
+                          "tpr": "TP: %s FN: %s" % (data["tp"], data["fn"]),
+                          "spc": "FP: %s" % (data["fp"])}])
+
+def _do_classifyplot(df, out_file, title=None, size=None):
+    """Plot using classification-based plot using seaborn.
+    """
+    metric_labels = {"fdr": "False discovery rate",
+                     "fnr": "False negative rate"}
+    data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
+    plt.ioff()
+    sns.set(style='white')
+    sns.set_palette(sns.xkcd_palette(["light grey"]))
+    vtypes = df["vtype"].unique()
+    callers = sorted(df["caller"].unique())
+    samples = sorted(df["sample"].unique())
+    num_rows = len(vtypes) * len(callers)
+    fig, axs = plt.subplots(num_rows, 2)
+    for i1, caller in enumerate(callers):
+        for i2, vtype in enumerate(vtypes):
+            i = (i1 * len(callers)) + i2
+            cur_row = axs[num_rows - i - 1]
+            for j, (metric, label) in enumerate([("fnr", "tpr"), ("fdr", "spc")]):
+                cur_plot = cur_row[j]
+                vals, labels = [], []
+                for sample in samples:
+                    cur_data = data_dict[(sample, caller, vtype)]
+                    vals.append(cur_data[metric])
+                    labels.append(cur_data[label])
+                cur_plot.barh(np.arange(len(samples)), vals)
+                metric_max = max([d[metric] for d in data_dict.values()]) + 0.1
+                cur_plot.set_xlim(0, metric_max)
+                pad = 0.1 * metric_max
+                for ai, (val, label) in enumerate(zip(vals, labels)):
+                    cur_plot.annotate(label, (pad + (0 if max(vals) > metric_max / 2.0 else max(vals)),
+                                              ai + 0.35), va='center', size=7)
+                if j == 0:
+                    cur_plot.tick_params(axis='y', which='major', labelsize=8)
+                    cur_plot.locator_params(nbins=len(samples) + 2, axis="y", tight=True)
+                    cur_plot.set_yticklabels(samples, size=8, va="bottom")
+                    cur_plot.text(-0.5, len(samples), "%s: %s" % (caller, vtype), fontsize=10)
+                else:
+                    cur_plot.get_yaxis().set_ticks([])
+                if i != 0:
+                    cur_plot.get_xaxis().set_ticks([])
+                    cur_plot.spines['bottom'].set_visible(False)
+                else:
+                    cur_plot.get_xaxis().set_label_text(metric_labels[metric], size=12)
+                cur_plot.spines['left'].set_visible(False)
+                cur_plot.spines['top'].set_visible(False)
+                cur_plot.spines['right'].set_visible(False)
+    fig.text(.5, .95, title if title else "", horizontalalignment='center', size=14)
+    x, y = (7, num_rows + 1) if size is None else size
+    fig.set_size_inches(x, y)
+    fig.savefig(out_file)
 
 def create_from_csv(in_csv, config=None, outtype="png", title=None, size=None):
     df = pd.read_csv(in_csv)
