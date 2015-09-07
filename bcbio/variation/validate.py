@@ -9,9 +9,9 @@ import csv
 import os
 import shutil
 import subprocess
+import time
 
 from pysam import VariantFile
-import pybedtools
 import toolz as tz
 import yaml
 
@@ -88,18 +88,22 @@ def compare_to_rm(data):
                                                         toval_data),
                                    toval_data)
         caller = _get_caller(toval_data)
-        sample = dd.get_sample_name(toval_data).replace(" ", "_")
+        sample = dd.get_sample_name(toval_data)
         base_dir = utils.safe_makedir(os.path.join(toval_data["dirs"]["work"], "validate", sample, caller))
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "bcbio.variation")
         if vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
-            data["validate"] = _rtg_add_summary_file(eval_files, caller, base_dir, toval_data)
+            data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "bcbio.variation":
             data["validate"] = _run_bcbio_variation(vrn_file, rm_file, rm_interval_file, base_dir,
                                                     sample, caller, toval_data)
     return [[data]]
 
-def _rtg_add_summary_file(eval_files, caller, base_dir, data):
+def _get_sample_and_caller(data):
+    return [tz.get_in(["metadata", "validate_sample"], data) or dd.get_sample_name(data),
+            _get_caller(data)]
+
+def _rtg_add_summary_file(eval_files, base_dir, data):
     """Parse output TP FP and FN files to generate metrics for plotting.
     """
     out_file = os.path.join(base_dir, "validate-summary.csv")
@@ -108,7 +112,7 @@ def _rtg_add_summary_file(eval_files, caller, base_dir, data):
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle)
                 writer.writerow(["sample", "caller", "vtype", "metric", "value"])
-                base = [tz.get_in(["metadata", "validate_sample"], data) or dd.get_sample_name(data), caller]
+                base = _get_sample_and_caller(data)
                 for metric in ["tp", "fp", "fn"]:
                     for vtype, bcftools_types in [("SNPs", "snps"), ("Indels", "indels,mnps,other")]:
                         in_file = eval_files[metric]
@@ -154,11 +158,30 @@ def _get_merged_intervals(rm_interval_file, base_dir, data):
     if a_intervals:
         final_intervals = shared.remove_lcr_regions(a_intervals, [data])
         if rm_interval_file:
-            combo_intervals = os.path.join(base_dir, "%s-wrm.bed" %
-                                           utils.splitext_plus(os.path.basename(final_intervals))[0])
+            sample, caller = _get_sample_and_caller(data)
+            combo_intervals = os.path.join(base_dir, "%s-%s-%s-wrm.bed" %
+                                           (utils.splitext_plus(os.path.basename(final_intervals))[0],
+                                            sample, caller))
             if not utils.file_uptodate(combo_intervals, final_intervals):
                 with file_transaction(data, combo_intervals) as tx_out_file:
-                    pybedtools.BedTool(final_intervals).intersect(rm_interval_file).saveas(tx_out_file)
+                    with utils.chdir(os.path.dirname(tx_out_file)):
+                        # Copy files locally to avoid issues on shared filesystems
+                        # where BEDtools has trouble accessing the same base
+                        # files from multiple locations
+                        a = os.path.basename(final_intervals)
+                        b = os.path.basename(rm_interval_file)
+                        try:
+                            shutil.copyfile(final_intervals, a)
+                        except IOError:
+                            time.sleep(60)
+                            shutil.copyfile(final_intervals, a)
+                        try:
+                            shutil.copyfile(rm_interval_file, b)
+                        except IOError:
+                            time.sleep(60)
+                            shutil.copyfile(rm_interval_file, b)
+                        cmd = ("bedtools intersect -nonamecheck -a {a} -b {b} > {tx_out_file}")
+                        do.run(cmd.format(**locals()), "Intersect callable intervals for rtg vcfeval")
             final_intervals = combo_intervals
     else:
         assert rm_interval_file, "No intervals to subset analysis with"
