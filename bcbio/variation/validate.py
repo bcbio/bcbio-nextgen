@@ -154,14 +154,15 @@ def _get_merged_intervals(rm_interval_file, base_dir, data):
     if a_intervals:
         final_intervals = shared.remove_lcr_regions(a_intervals, [data])
         if rm_interval_file:
-            final_intervals = os.path.join(base_dir, "%s-wrm.bed" %
-                                           utils.splitext_plus(os.path.basename(a_intervals))[0])
-            if not utils.file_uptodate(final_intervals, a_intervals):
-                with file_transaction(data, final_intervals) as tx_out_file:
-                    pybedtools.BedTool(a_intervals).intersect(rm_interval_file).saveas(tx_out_file)
+            combo_intervals = os.path.join(base_dir, "%s-wrm.bed" %
+                                           utils.splitext_plus(os.path.basename(final_intervals))[0])
+            if not utils.file_uptodate(combo_intervals, final_intervals):
+                with file_transaction(data, combo_intervals) as tx_out_file:
+                    pybedtools.BedTool(final_intervals).intersect(rm_interval_file).saveas(tx_out_file)
+            final_intervals = combo_intervals
     else:
         assert rm_interval_file, "No intervals to subset analysis with"
-        final_intervals = rm_interval_file
+        final_intervals = shared.remove_lcr_regions(rm_interval_file, [data])
     return final_intervals
 
 def _run_bcbio_variation(vrn_file, rm_file, rm_interval_file, base_dir, sample, caller, data):
