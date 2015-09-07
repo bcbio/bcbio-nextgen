@@ -427,20 +427,23 @@ def move_vcf(orig_file, new_file):
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
 
-def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd="", tabix_args=None):
+def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd="", tabix_args=None, out_dir=None):
     """bgzip and tabix index an input file, handling VCF and BED.
     """
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
+    if out_dir:
+        remove_orig = False
+        out_file = os.path.join(out_dir, os.path.basename(out_file))
     if not utils.file_exists(out_file) or not os.path.lexists(out_file):
         assert not in_file == out_file, "Input file is bgzipped but not found: %s" % in_file
         assert os.path.exists(in_file), "Input file %s not found" % in_file
         if not utils.file_uptodate(out_file, in_file):
             with file_transaction(config, out_file) as tx_out_file:
                 bgzip = tools.get_bgzip_cmd(config)
+                cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
                 if prep_cmd:
-                    cmd = "cat {in_file} | {prep_cmd} | {bgzip} -c > {tx_out_file}"
-                else:
-                    cmd = "{bgzip} -c {in_file} > {tx_out_file}"
+                    prep_cmd = "| %s " % prep_cmd
+                cmd = "{cat_cmd} {in_file} {prep_cmd} | {bgzip} -c > {tx_out_file}"
                 try:
                     do.run(cmd.format(**locals()), "bgzip %s" % os.path.basename(in_file))
                 except subprocess.CalledProcessError:
