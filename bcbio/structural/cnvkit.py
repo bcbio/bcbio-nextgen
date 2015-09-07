@@ -114,6 +114,12 @@ def _run_cnvkit_population(items, background):
 def _get_cmd():
     return os.path.join(os.path.dirname(sys.executable), "cnvkit.py")
 
+def _bam_to_outbase(bam_file, work_dir):
+    """Convert an input BAM file into CNVkit expected output.
+    """
+    out_base = os.path.splitext(os.path.basename(bam_file))[0].split(".")[0]
+    return os.path.join(work_dir, out_base)
+
 def _run_cnvkit_shared(items, test_bams, background_bams, work_dir, background_name=None):
     """Shared functionality to run CNVkit, parallelizing over multiple BAM files.
     """
@@ -123,9 +129,9 @@ def _run_cnvkit_shared(items, test_bams, background_bams, work_dir, background_n
                                   "%s_background.cnn" % (background_name if background_name else "flat"))
     ckouts = []
     for test_bam in test_bams:
-        out_base = os.path.splitext(os.path.basename(test_bam))[0].split(".")[0]
-        ckouts.append({"cnr": os.path.join(raw_work_dir, "%s.cns" % out_base),
-                       "cns": os.path.join(raw_work_dir, "%s.cns" % out_base),
+        out_base = _bam_to_outbase(test_bam, raw_work_dir)
+        ckouts.append({"cnr": "%s.cns" % out_base,
+                       "cns": "%s.cns" % out_base,
                        "back_cnn": background_cnn})
     if not utils.file_exists(ckouts[0]["cnr"]):
         data = items[0]
@@ -255,7 +261,7 @@ def _cnvkit_coverage(bam_file, bed_info, input_type, work_dir, data):
     for orig, (cnntype, ext) in exts.items():
         if bed_file.endswith(orig):
             break
-    base = os.path.join(work_dir, (os.path.splitext(os.path.basename(bam_file))[0]))
+    base = _bam_to_outbase(bam_file, work_dir)
     merged_out_file = "%s.%s" % (base, ext)
     out_file = "%s-%s.%s" % (base, bed_info["i"], ext) if "i" in bed_info else merged_out_file
     if not utils.file_exists(out_file):

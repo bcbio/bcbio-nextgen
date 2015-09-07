@@ -432,6 +432,8 @@ Experimental information
   database of coverage and completeness is calculated over these regions and
   regions with poor coverage are compiled in an incomplete regions file for
   each batch.
+- ``expression_caller`` A list of optional, experimental callers to turn on.
+  Supports ['sailfish'].
 
 .. _Chanjo: http://www.chanjo.co/en/latest/
 
@@ -507,6 +509,10 @@ Variant calling
 - ``validate_genome_build``: Genome build of the validation file, if
   different than the samples genome build. Helps manage hg19/GRCh37
   chromosome naming differences.
+- ``joint_group_size`` Specify the maximum number of gVCF samples to feed into
+  joint calling. Currently applies to GATK HaplotypeCaller joint calling and
+  defaults to the GATK recommendation of 200. Larger numbers of samples will
+  first get combined prior to genotyping.
 - ``clinical_reporting`` Tune output for clinical reporting.
   Modifies snpEff parameters to use HGVS notational on canonical
   transcripts [false, true].

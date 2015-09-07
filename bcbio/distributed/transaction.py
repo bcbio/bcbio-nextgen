@@ -88,6 +88,10 @@ def file_transaction(*data_and_files):
             for safe, orig in zip(safe_names, orig_names):
                 if os.path.exists(safe):
                     utils.safe_makedir(os.path.dirname(orig))
+                    # if we are rolling back a directory and it already exists
+                    # this will avoid making a nested set of directories
+                    if os.path.isdir(orig) and os.path.isdir(safe):
+                        shutil.rmtree(orig)
                     shutil.move(safe, orig)
                     for check_ext, check_idx in exts.iteritems():
                         if safe.endswith(check_ext):

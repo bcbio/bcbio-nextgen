@@ -150,5 +150,6 @@ def detect_sv(items, all_items, config, initial_only=False):
         else:
             raise ValueError("Unexpected structural variant caller: %s" % svcaller)
     else:
-        out.append(items)
+        for data in items:
+            out.append([data])
     return out

@@ -258,7 +258,7 @@ if __name__ == "__main__":
                                  "sacCer3", "TAIR10", "WBcel235", "xenTro3", "Zv9", "GRCz10"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
-                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "snap", "star", "ucsc"])
+                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "rtg", "snap", "star", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
     parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",

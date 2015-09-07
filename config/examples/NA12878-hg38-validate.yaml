@@ -17,6 +17,8 @@ details:
     description: NA12878-1
     metadata:
       sex: female
+      validate_batch: giab
+      validate_sample: remap-hg38
     analysis: variant2
     genome_build: hg38
     algorithm:
@@ -30,10 +32,13 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_remap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_remap-regions.bed
+      validate_method: rtg
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-2
     metadata:
       sex: female
+      validate_batch: giab
+      validate_sample: remap-hg38-noalt
     analysis: variant2
     genome_build: hg38-noalt
     algorithm:
@@ -47,10 +52,13 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_remap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_remap-regions.bed
+      validate_method: rtg
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-3
     metadata:
       sex: female
+      validate_batch: giab
+      validate_sample: GRCh37
     analysis: variant2
     genome_build: GRCh37
     algorithm:
@@ -64,10 +72,13 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19.vcf.gz
       validate_regions: ../input/GiaB_v2_19-37_prep_regions.bed
+      validate_method: rtg
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-4
     metadata:
       sex: female
+      validate_batch: giab
+      validate_sample: crossmap-hg38
     analysis: variant2
     genome_build: hg38
     algorithm:
@@ -81,10 +92,13 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_crossmap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_crossmap-regions.bed
+      validate_method: rtg
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-5
     metadata:
       sex: female
+      validate_batch: giab
+      validate_sample: crossmap-hg38-noalt
     analysis: variant2
     genome_build: hg38-noalt
     algorithm:
@@ -98,10 +112,13 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/GiaB_v2_19-38_crossmap.vcf.gz
       validate_regions: ../input/GiaB_v2_19-38_crossmap-regions.bed
+      validate_method: rtg
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-6
     metadata:
       sex: female
+      validate_batch: platinum
+      validate_sample: hg19
     analysis: variant2
     genome_build: hg19
     algorithm:
@@ -115,10 +132,13 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/platgene_NA12878-hg19-8_0_1.vcf.gz
       validate_regions: ../input/platgene_NA12878-hg19-8_0_1-regions.bed
+      validate_method: rtg
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-7
     metadata:
       sex: female
+      validate_batch: platinum
+      validate_sample: hg38
     analysis: variant2
     genome_build: hg38
     algorithm:
@@ -132,10 +152,13 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/platgene_NA12878-hg38-2_0_1.vcf.gz
       validate_regions: ../input/platgene_NA12878-hg38-2_0_1-regions.bed
+      validate_method: rtg
   - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
     description: NA12878-8
     metadata:
       sex: female
+      validate_batch: platinum
+      validate_sample: hg38-noalt
     analysis: variant2
     genome_build: hg38-noalt
     algorithm:
@@ -149,3 +172,4 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       validate: ../input/platgene_NA12878-hg38-2_0_1.vcf.gz
       validate_regions: ../input/platgene_NA12878-hg38-2_0_1-regions.bed
+      validate_method: rtg

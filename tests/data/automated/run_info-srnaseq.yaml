@@ -12,3 +12,5 @@ details:
     files:
       - ../data/test_srnaseq/mirqca.fastq
     genome_build: hg19
+    metadata:
+      type: mirqc
