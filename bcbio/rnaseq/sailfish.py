@@ -1,5 +1,6 @@
 import tempfile
 import os
+import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.utils import file_exists, get_in, safe_makedir, is_gzipped
@@ -26,8 +27,9 @@ def run_sailfish(sample):
 
 def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
     sailfish_idx = sailfish_index(gtf_file, ref_file, data)
+    num_cores = dd.get_num_cores(data)
     sailfish = config_utils.get_program("sailfish", data["config"])
-    cmd = "{sailfish} quant -i {sailfish_idx} "
+    cmd = "{sailfish} quant -i {sailfish_idx} -p {num_cores} "
     cmd += _libtype_string(fq1, fq2, strandedness)
     fq1_cmd = "{fq1}" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
