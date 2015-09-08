@@ -283,7 +283,6 @@ def resource_usage(bcbio_log, rawdir, verbose):
     """
     data_frames = {}
     hardware_info = {}
-    nodes = get_bcbio_nodes(bcbio_log)
     time_frame = _time_frame(bcbio_log)
 
     for collectl_file in sorted(os.listdir(rawdir)):
@@ -300,6 +299,10 @@ def resource_usage(bcbio_log, rawdir, verbose):
 
         host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
         hardware_info[host] = hardware
+        if "local" in args.cluster:
+            nodes = get_bcbio_nodes(bcbio_log)
+            for host in nodes:
+                hardware_info[host] = hardware
         if host not in data_frames:
             data_frames[host] = data
         else:
