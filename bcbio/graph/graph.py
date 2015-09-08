@@ -137,19 +137,18 @@ def add_common_plot_features(plot, steps):
 
     ymax = plot.get_ylim()[1]
     ticks = {}
-    if not isinstance(steps, list):
-	for tstamp, step in steps.iteritems():
-	    if step == 'finished':
-		continue
-	    plot.vlines(tstamp, 0, ymax, linestyles='dashed')
-	    ticks[tstamp] = step
-	tick_kvs = sorted(ticks.iteritems())
-	top_axis = plot.twiny()
-	top_axis.set_xlim(*plot.get_xlim())
-	top_axis.set_xticks([k for k, v in tick_kvs])
-	top_axis.set_xticklabels([v for k, v in tick_kvs],
-				 rotation=45, ha='left', size=16)
-	plot.set_ylim(0)
+    for tstamp, step in steps.iteritems():
+        if step == 'finished':
+            continue
+        plot.vlines(tstamp, 0, ymax, linestyles='dashed')
+        ticks[tstamp] = step
+    tick_kvs = sorted(ticks.iteritems())
+    top_axis = plot.twiny()
+    top_axis.set_xlim(*plot.get_xlim())
+    top_axis.set_xticks([k for k, v in tick_kvs])
+    top_axis.set_xticklabels([v for k, v in tick_kvs],
+                             rotation=45, ha='left', size=16)
+    plot.set_ylim(0)
 
     return plot
 
