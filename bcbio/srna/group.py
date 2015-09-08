@@ -121,10 +121,11 @@ def report(data):
     return summary_file
 
 def _guess_group(info):
-    """Add the first group to get report working"""
+    """Add the first group to get report with some factor"""
     value = "fake"
-    if info['metadata']:
-        key, value = info['metadata'].popitem()
+    if "metadata" in info:
+        if info["metadata"]:
+            key, value = info['metadata'].popitem()
     return value
 
 def _create_rmd(summary_fn):
