@@ -9,6 +9,8 @@
 - Allow turning off variant quality score recalibration with `tools_off: [vqsr]`
 - Generalize group size for batching gVCFs prior to joint calling with
   `joint_group_size`. Thanks to Severine Catreux.
+- Support GEMINI 0.17.0, which does not have a --no-bcolz option since that is
+  the default.
 
 ## 0.9.2 (1 September 2015)
 
