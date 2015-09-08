@@ -13,6 +13,7 @@ try:
     import matplotlib as mpl
     mpl.use('Agg', force=True)
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
 except ImportError:
     mpl, plt = None, None
 try:
@@ -44,7 +45,7 @@ def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None):
     df = df.reset_index()
     out_file = "%s.%s" % (os.path.splitext(val_file)[0], outtype)
     _do_classifyplot(df, out_file, title, size)
-    return out_file
+    return [out_file]
 
 def _calculate_fnr_fdr(group):
     """Calculate the false negative rate (1 - sensitivity) and false discovery rate (1 - precision).
@@ -60,28 +61,27 @@ def _do_classifyplot(df, out_file, title=None, size=None):
     """
     metric_labels = {"fdr": "False discovery rate",
                      "fnr": "False negative rate"}
+    metrics = [("fnr", "tpr"), ("fdr", "spc")]
     data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
     plt.ioff()
     sns.set(style='white')
     sns.set_palette(sns.xkcd_palette(["light grey"]))
-    vtypes = df["vtype"].unique()
+    vtypes = sorted(df["vtype"].unique(), reverse=True)
     callers = sorted(df["caller"].unique())
     samples = sorted(df["sample"].unique())
-    num_rows = len(vtypes) * len(callers)
-    fig, axs = plt.subplots(num_rows, 2)
-    for i1, caller in enumerate(callers):
-        for i2, vtype in enumerate(vtypes):
-            i = (i1 * len(callers)) + i2
-            cur_row = axs[num_rows - i - 1]
-            for j, (metric, label) in enumerate([("fnr", "tpr"), ("fdr", "spc")]):
-                cur_plot = cur_row[j]
+    fig, axs = plt.subplots(len(vtypes) * len(callers), len(metrics))
+    fig.text(.5, .95, title if title else "", horizontalalignment='center', size=14)
+    for vi, vtype in enumerate(vtypes):
+        for ci, caller in enumerate(callers):
+            for j, (metric, label) in enumerate(metrics):
+                cur_plot = axs[vi * len(vtypes) + ci][j]
                 vals, labels = [], []
                 for sample in samples:
                     cur_data = data_dict[(sample, caller, vtype)]
                     vals.append(cur_data[metric])
                     labels.append(cur_data[label])
                 cur_plot.barh(np.arange(len(samples)), vals)
-                metric_max = max([d[metric] for d in data_dict.values()]) + 0.1
+                metric_max = max([d[metric] if k[-1] == vtype else 0 for k, d in data_dict.items()]) + 0.1
                 cur_plot.set_xlim(0, metric_max)
                 pad = 0.1 * metric_max
                 for ai, (val, label) in enumerate(zip(vals, labels)):
@@ -91,20 +91,25 @@ def _do_classifyplot(df, out_file, title=None, size=None):
                     cur_plot.tick_params(axis='y', which='major', labelsize=8)
                     cur_plot.locator_params(nbins=len(samples) + 2, axis="y", tight=True)
                     cur_plot.set_yticklabels(samples, size=8, va="bottom")
-                    cur_plot.text(-0.5, len(samples), "%s: %s" % (caller, vtype), fontsize=10)
+                    cur_plot.set_title("%s: %s" % (caller, vtype), fontsize=12, loc="left")
                 else:
                     cur_plot.get_yaxis().set_ticks([])
-                if i != 0:
+                if ci == len(callers) - 1:
+                    cur_plot.tick_params(axis='x', which='major', labelsize=8)
+                    cur_plot.get_xaxis().set_major_formatter(
+                        FuncFormatter(lambda v, p: "%s%%" % (int(v) if round(v) == v else v)))
+                    if vi == len(vtypes) - 1:
+                        cur_plot.get_xaxis().set_label_text(metric_labels[metric], size=12)
+                else:
                     cur_plot.get_xaxis().set_ticks([])
                     cur_plot.spines['bottom'].set_visible(False)
-                else:
-                    cur_plot.get_xaxis().set_label_text(metric_labels[metric], size=12)
                 cur_plot.spines['left'].set_visible(False)
                 cur_plot.spines['top'].set_visible(False)
                 cur_plot.spines['right'].set_visible(False)
-    fig.text(.5, .95, title if title else "", horizontalalignment='center', size=14)
-    x, y = (7, num_rows + 1) if size is None else size
+    x, y = (6, len(vtypes) * len(callers) + 1 * 0.5 * len(samples)) if size is None else size
     fig.set_size_inches(x, y)
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    plt.subplots_adjust(hspace=0.6)
     fig.savefig(out_file)
 
 def create_from_csv(in_csv, config=None, outtype="png", title=None, size=None):
