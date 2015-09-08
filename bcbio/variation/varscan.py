@@ -25,7 +25,8 @@ import vcf
 
 def run_varscan(align_bams, items, ref_file, assoc_files,
                 region=None, out_file=None):
-    if is_paired_analysis(align_bams, items):
+    paired = get_paired_bams(align_bams, items)
+    if paired and paired.normal_bam and paired.tumor_bam:
         call_file = samtools.shared_variantcall(_varscan_paired, "varscan",
                                                 align_bams, ref_file, items,
                                                 assoc_files, region, out_file)
