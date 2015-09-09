@@ -18,6 +18,24 @@ from bcbio.graph.collectl import load_collectl
 # from bcbiovm.graph.elasticluster import fetch_collectl
 
 
+def get_bcbio_nodes(path):
+    """Fetch the local nodes (-c local) that contain collectl files from
+       the bcbio log file.
+
+       :returns: A list with unique (non-FQDN) local hostnames 
+                 where collectl raw logs can be found.
+    """
+    with open(path, 'r') as file_handle:
+        hosts = collections.defaultdict(dict)
+        for line in file_handle:
+            matches = re.search(r'\] ([^:]):', line)
+            if not matches:
+                continue
+
+            hosts[matches.group(1)]
+
+    return hosts
+
 def get_bcbio_timings(path):
     """Fetch timing information from a bcbio log file."""
     with open(path, 'r') as file_handle:
@@ -243,8 +261,7 @@ def _time_frame(bcbio_log):
     """
     output = collections.namedtuple("Time", ["start", "end", "steps"])
     bcbio_timings = get_bcbio_timings(bcbio_log)
-    steps = bcbio_timings.keys()
-    return output(min(steps), max(steps), steps)
+    return output(min(bcbio_timings), max(bcbio_timings), bcbio_timings)
 
 
 def resource_usage(bcbio_log, rawdir, verbose):
@@ -276,10 +293,15 @@ def resource_usage(bcbio_log, rawdir, verbose):
             collectl_path, time_frame.start, time_frame.end)
 
         if len(data) == 0:
+	    #raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
             continue
 
         host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
         hardware_info[host] = hardware
+        if "local" in args.cluster:
+            nodes = get_bcbio_nodes(bcbio_log)
+            for host in nodes:
+                hardware_info[host] = hardware
         if host not in data_frames:
             data_frames[host] = data
         else:
