@@ -428,9 +428,13 @@ def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_conv
 
 def _check_gzipped_input(in_file, grabix, needs_convert):
     """Determine if a gzipped input file is blocked gzip or standard.
+
     """
-    is_bgzip = subprocess.check_output([grabix, "check", in_file])
-    if is_bgzip.strip() == "yes" and not needs_convert:
-        return False, False
-    else:
-        return True, True
+    # grabix is not parsing bgzip output from FASTQ correctly and will hang
+    # indexing indefinitely. Until we can identify the issue, we re-bgzip everyting
+    return True, True
+    # is_bgzip = subprocess.check_output([grabix, "check", in_file])
+    # if is_bgzip.strip() == "yes" and not needs_convert:
+    #     return False, False
+    # else:
+    #     return True, True

@@ -21,7 +21,6 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, region,
                             run_info, qcsummary, rnaseq)
 from bcbio.provenance import profile, system
 from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
-from bcbio.srna.group import report as srna_report
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -340,6 +339,9 @@ class smallRnaseqPipeline(AbstractPipeline):
 
     @classmethod
     def run(self, config, run_info_yaml, parallel, dirs, samples):
+        # causes a circular import at the top level
+        from bcbio.srna.group import report as srna_report
+
         with prun.start(_wres(parallel, ["picard", "cutadapt", "miraligner"]),
                         samples, config, dirs, "trimming") as run_parallel:
             with profile.report("organize samples", dirs):
