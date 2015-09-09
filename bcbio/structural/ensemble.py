@@ -33,8 +33,8 @@ def _vcf_to_bed(in_file, caller, out_file):
                     if not rec.FILTER:
                         if (rec.samples[0].gt_type != 0 and
                               not (hasattr(rec.samples[0].data, "FT") and rec.samples[0].data.FT)):
-                            start = rec.start - 1
-                            end = int(rec.INFO.get("END", rec.start))
+                            start = max(0, rec.start - 1)
+                            end = int(rec.INFO.get("END", start + 1))
                             if end - start < MAX_SVSIZE:
                                 out_handle.write("\t".join([rec.CHROM, str(start), str(end),
                                                             "%s_%s" % (_get_svtype(rec), caller)])
