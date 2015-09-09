@@ -350,7 +350,7 @@ class smallRnaseqPipeline(AbstractPipeline):
                 samples = run_parallel("trim_srna_sample", samples)
                 samples = run_parallel("seqbuster", samples)
 
-        with prun.start(_wres(parallel, ["aligner", "picard"],
+        with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
                               ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
                         [samples[0]], config, dirs, "alignment") as run_parallel:
             with profile.report("prepare", dirs):
