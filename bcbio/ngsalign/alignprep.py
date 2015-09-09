@@ -166,7 +166,8 @@ def _prep_grabix_indexes(in_files, dirs, data):
         out = _bgzip_from_cram(in_files[0], dirs, data)
     else:
         out = run_multicore(_bgzip_from_fastq,
-                            [[{"in_file": x, "dirs": dirs, "config": data["config"]}] for x in in_files if x],
+                            [[{"in_file": x, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}]
+                             for x in in_files if x],
                             data["config"])
     items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in out if x]
     run_multicore(_grabix_index, items, data["config"])
@@ -387,17 +388,18 @@ def _bgzip_from_fastq(data):
         needs_bgzip, needs_gunzip = False, False
     else:
         needs_bgzip, needs_gunzip = True, False
+    work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align_prep"))
     if needs_bgzip or needs_gunzip or needs_convert or objectstore.is_remote(in_file):
-        out_file = _bgzip_file(in_file, data["dirs"], config, needs_bgzip, needs_gunzip,
-                               needs_convert)
+        out_file = _bgzip_file(in_file, config, work_dir,
+                               needs_bgzip, needs_gunzip, needs_convert)
     else:
-        out_file = in_file
+        out_file = os.path.join(work_dir, "%s_%s" % (dd.get_sample_name(data), os.path.basename(in_file)))
+        utils.symlink_plus(in_file, out_file)
     return [out_file]
 
-def _bgzip_file(in_file, dirs, config, needs_bgzip, needs_gunzip, needs_convert):
+def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert):
     """Handle bgzip of input file, potentially gunzipping an existing file.
     """
-    work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
     out_file = os.path.join(work_dir, os.path.basename(in_file) +
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
