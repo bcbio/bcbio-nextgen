@@ -122,7 +122,7 @@ def combine_bed_by_size(input_beds, sample, work_dir, data, delim=","):
                                 if size >= e_start and size < e_end or event == "BND":
                                     out_handle.write(line)
                                     has_regions = True
-                        if has_regions:
+                        if has_regions and utils.file_exists(all_file):
                             pybedtools.BedTool(all_file).sort(stream=True)\
                               .merge(c=4, o="distinct", delim=delim).saveas(tx_out_file)
             if utils.file_exists(size_out_file):
