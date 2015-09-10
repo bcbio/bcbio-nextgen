@@ -42,6 +42,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     """
     samples = run_parallel("generate_transcript_counts", samples)
     samples = run_parallel("run_cufflinks", samples)
+    data = samples[0][0]
     if "sailfish" in dd.get_expression_caller(data):
         samples = run_parallel("run_sailfish", samples)
     #samples = run_parallel("run_stringtie_expression", samples)
