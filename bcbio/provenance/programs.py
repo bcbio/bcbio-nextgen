@@ -23,7 +23,6 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "bowtie2", "args": "--version", "stdout_flag": "bowtie2-align version"},
              {"cmd": "bwa", "stdout_flag": "Version:"},
              {"cmd": "chanjo"},
-             {"cmd": "cufflinks", "stdout_flag": "cufflinks"},
              {"cmd": "cutadapt", "args": "--version"},
              {"cmd": "fastqc", "args": "--version", "stdout_flag": "FastQC"},
              {"cmd": "freebayes", "stdout_flag": "version:"},
@@ -31,10 +30,13 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "novosort", "paren_flag": "novosort"},
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
              {"cmd": "samtools", "stdout_flag": "Version:"},
-             {"cmd": "sambamba", "stdout_flag": "sambamba"},
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
+_manifest_progs = ["BubbleTree", "cufflinks-binary", "cnvkit", "gatk-framework", "grabix", "htseq",
+                   "lumpy-sv", "manta", "metasv", "phylowgs", "platypus-variant", "rna-star",
+                   "rtg-tools","sambamba-binary", "samblaster", "scalpel", "vardict",
+                   "vardict-java", "vep", "vt", "wham"]
 
 def _broad_versioner(type):
     def get_version(config):
@@ -180,7 +182,7 @@ def _get_versions(config=None):
     manifest_dir = _get_manifest_dir(config)
     manifest_vs = _get_versions_manifest(manifest_dir)
     if manifest_vs:
-        return out + manifest_vs
+        out += manifest_vs
     else:
         assert config is not None, "Need configuration to retrieve from non-manifest installs"
         brew_vs = _get_brew_versions()
@@ -192,7 +194,8 @@ def _get_versions(config=None):
             out.append({"program": p["name"],
                         "version": (brew_vs[p["name"]] if p["name"] in brew_vs else
                                     p["version_fn"](config))})
-        return out
+    out.sort(key=lambda x: x["program"])
+    return out
 
 def _get_manifest_dir(data=None):
     """
@@ -209,7 +212,7 @@ def _get_manifest_dir(data=None):
         bcbio_system = tz.get_in(["config", "bcbio_system"], data, None)
         bcbio_system = bcbio_system if bcbio_system else data.get("bcbio_system", None)
         if bcbio_system:
-	    sibling_dir = os.path.normpath(os.path.dirname(bcbio_system))
+            sibling_dir = os.path.normpath(os.path.dirname(bcbio_system))
         else:
             sibling_dir = dd.get_galaxy_dir(data)
         if sibling_dir:
@@ -222,8 +225,7 @@ def _get_manifest_dir(data=None):
 def _get_versions_manifest(manifest_dir):
     """Retrieve versions from a pre-existing manifest of installed software.
     """
-    all_pkgs = ["htseq", "cn.mops", "vt", "platypus-variant", "gatk-framework", "samblaster"] + \
-               [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
+    all_pkgs = _manifest_progs + [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
     if os.path.exists(manifest_dir):
         out = []
         for plist in ["toolplus", "brew", "python", "r", "debian", "custom"]:
