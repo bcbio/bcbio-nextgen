@@ -246,7 +246,7 @@ def decorate_problem_regions(query_bed, problem_bed_dir):
     out_file = stem + ".problem_annotated" + ext + ".gz"
     if utils.file_exists(out_file):
         return out_file
-    bed_files = glob.glob(os.path.join(problem_bed_dir, "*.bed"))
+    bed_files = _find_bed_files(problem_bed_dir)
     bed_file_string = " ".join(bed_files)
     names = [os.path.splitext(os.path.basename(x))[0] for x in bed_files]
     names_string = " ".join(names)
@@ -259,3 +259,15 @@ def decorate_problem_regions(query_bed, problem_bed_dir):
         message = "Annotate %s with problem regions." % query_bed
         do.run(cmd.format(**locals()), message)
     return out_file
+
+def _find_bed_files(path):
+    """
+    recursively walk directories to find all of the BED files in the
+    problem regions directory
+    """
+    bed_files = []
+    for dirpath, subdirs, files in os.walk(path):
+        for x in files:
+            if x.endswith(".bed") or x.endswith(".bed.gz"):
+                bed_files.append(os.path.join(dirpath, x))
+    return bed_files
