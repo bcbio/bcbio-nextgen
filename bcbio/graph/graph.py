@@ -15,7 +15,6 @@ import pandas as pd
 
 from bcbio import utils
 from bcbio.graph.collectl import load_collectl
-# from bcbiovm.graph.elasticluster import fetch_collectl
 
 
 def get_bcbio_nodes(path):
@@ -28,7 +27,7 @@ def get_bcbio_nodes(path):
     with open(path, 'r') as file_handle:
         hosts = collections.defaultdict(dict)
         for line in file_handle:
-            matches = re.search(r'\] ([^:]):', line)
+            matches = re.search(r'\]\s([^:]+):', line)
             if not matches:
                 continue
 
