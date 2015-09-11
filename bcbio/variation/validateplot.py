@@ -62,16 +62,17 @@ def _do_classifyplot(df, out_file, title=None, size=None):
     metric_labels = {"fdr": "False discovery rate",
                      "fnr": "False negative rate"}
     metrics = [("fnr", "tpr"), ("fdr", "spc")]
+    colors = ["light grey", "greyish"]
     data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
     plt.ioff()
     sns.set(style='white')
-    sns.set_palette(sns.xkcd_palette(["light grey"]))
     vtypes = sorted(df["vtype"].unique(), reverse=True)
     callers = sorted(df["caller"].unique())
     samples = sorted(df["sample"].unique())
     fig, axs = plt.subplots(len(vtypes) * len(callers), len(metrics))
     fig.text(.5, .95, title if title else "", horizontalalignment='center', size=14)
     for vi, vtype in enumerate(vtypes):
+        sns.set_palette(sns.xkcd_palette([colors[vi]]))
         for ci, caller in enumerate(callers):
             for j, (metric, label) in enumerate(metrics):
                 cur_plot = axs[vi * len(vtypes) + ci][j]
@@ -81,7 +82,12 @@ def _do_classifyplot(df, out_file, title=None, size=None):
                     vals.append(cur_data[metric])
                     labels.append(cur_data[label])
                 cur_plot.barh(np.arange(len(samples)), vals)
-                metric_max = max([d[metric] if k[-1] == vtype else 0 for k, d in data_dict.items()]) + 0.1
+                all_vals = []
+                for k, d in data_dict.items():
+                    if k[-1] == vtype:
+                        for m in metrics:
+                            all_vals.append(d[m[0]])
+                metric_max = max(all_vals)
                 cur_plot.set_xlim(0, metric_max)
                 pad = 0.1 * metric_max
                 for ai, (val, label) in enumerate(zip(vals, labels)):
@@ -91,7 +97,7 @@ def _do_classifyplot(df, out_file, title=None, size=None):
                     cur_plot.tick_params(axis='y', which='major', labelsize=8)
                     cur_plot.locator_params(nbins=len(samples) + 2, axis="y", tight=True)
                     cur_plot.set_yticklabels(samples, size=8, va="bottom")
-                    cur_plot.set_title("%s: %s" % (caller, vtype), fontsize=12, loc="left")
+                    cur_plot.set_title("%s: %s" % (vtype, caller), fontsize=12, loc="left")
                 else:
                     cur_plot.get_yaxis().set_ticks([])
                 if ci == len(callers) - 1:
