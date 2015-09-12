@@ -106,7 +106,9 @@ def calc_deltas(data_frame, series=None):
 
 def remove_outliers(series, stddev):
     """Remove the outliers from a series."""
-    return series[(series - series.mean()).abs() < stddev * series.std()]
+    #XXX: cannot reindex from duplicate axis
+    series_nodup = series.drop_duplicates(take_last=True)
+    return series_nodup[(series_nodup - series_nodup.mean()).abs() < stddev * series_nodup.std()]
 
 
 def prep_for_graph(data_frame, series=None, delta_series=None, smoothing=None,
@@ -263,7 +265,7 @@ def _time_frame(bcbio_log):
     return output(min(bcbio_timings), max(bcbio_timings), bcbio_timings)
 
 
-def resource_usage(bcbio_log, rawdir, verbose):
+def resource_usage(bcbio_log, cluster, rawdir, verbose):
     """Generate system statistics from bcbio runs.
 
     Parse the obtained files and put the information in
@@ -297,7 +299,7 @@ def resource_usage(bcbio_log, rawdir, verbose):
 
         host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
         hardware_info[host] = hardware
-        if "local" in args.cluster:
+        if "local" in cluster:
             nodes = get_bcbio_nodes(bcbio_log)
             for host in nodes:
                 hardware_info[host] = hardware
