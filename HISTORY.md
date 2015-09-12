@@ -6,6 +6,8 @@
 - Fix bug when using CNVkit on disambiguated inputs. Thanks to Miika Ahdesmaki.
 - Adjust mapping quality (MQ) filter for GATK SNP hard filters to improve sensitivity
   http://imgur.com/a/oHRVB
+- Ensure memory specification passed to sambamba and samtools sort during
+  disambiguation and RNA-seq. Thanks to Sven-Eric Schelhorn.
 - Allow turning off variant quality score recalibration with `tools_off: [vqsr]`
 - Generalize group size for batching gVCFs prior to joint calling with
   `joint_group_size`. Thanks to Severine Catreux.

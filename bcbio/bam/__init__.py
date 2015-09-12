@@ -327,18 +327,25 @@ def sort(in_bam, config, order="coordinate"):
     if not utils.file_exists(sort_file):
         sambamba = _get_sambamba(config)
         samtools = config_utils.get_program("samtools", config)
-        num_cores = config["algorithm"].get("num_cores", 1)
+        cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(config, sort_file) as tx_sort_file:
             tx_sort_stem = os.path.splitext(tx_sort_file)[0]
             tx_dir = utils.safe_makedir(os.path.dirname(tx_sort_file))
             order_flag = "-n" if order == "queryname" else ""
-            samtools_cmd = ("{samtools} sort {order_flag} "
+            resources = config_utils.get_resources("samtools", config)
+            mem = resources.get("memory", "2G")
+            samtools_cmd = ("{samtools} sort -@ {cores} -m {mem} {order_flag} "
                             "{in_bam} {tx_sort_stem}")
             if sambamba:
+                if tz.get_in(["resources", "sambamba"], config):
+                    sm_resources = config_utils.get_resources("sambamba", config)
+                    mem = sm_resources.get("memory", "2G")
+                # sambamba uses total memory, not memory per core
+                mem = config_utils.adjust_memory(mem, cores, "increase").upper()
                 # Use samtools compatible natural sorting
                 # https://github.com/lomereiter/sambamba/issues/132
                 order_flag = "--natural-sort" if order == "queryname" else ""
-                cmd = ("{sambamba} sort -t {num_cores} {order_flag} "
+                cmd = ("{sambamba} sort -t {cores} -m {mem} {order_flag} "
                        "-o {tx_sort_file} --tmpdir={tx_dir} {in_bam}")
             else:
                 cmd = samtools_cmd
