@@ -45,12 +45,13 @@ def _filter_by_support(in_file, data):
     """Filter call file based on supporting evidence, adding FILTER annotations to VCF.
 
     Filters based on the following criteria:
-      - Minimum read support for the call.
-    Other filters not currently applied due to being too restrictive:
-      - Multiple forms of evidence in any sample (split and paired end)
+      - Minimum read support for the call (SU = total support)
+      - Small calls need split read evidence.
+      - Large calls need split read evidence.
     """
-    rc_filter = "FORMAT/SU < 4"
-    # approach_filter = "FORMAT/SR == 0 || FORMAT/PE == 0"
+    rc_filter = ("FORMAT/SU < 4 || "
+                 "(FORMAT/SR == 0 && ABS(SVLEN)<2000) || "
+                 "(FORMAT/SR == 0 && ABS(SVLEN)>20000)")
     return vfilter.hard_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
                                      limit_regions=None)
 
