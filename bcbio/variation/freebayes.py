@@ -104,9 +104,11 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                 opts = _add_somatic_opts(opts, somatic)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
+            py_cl = os.path.join(os.path.dirname(sys.executable), "py")
             cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
                    "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
                    "bcftools view -a - 2> /dev/null | "
+                   "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                    "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
                    "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                    "{compress_cmd} > {tx_out_file}")
@@ -147,6 +149,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                   "| vcffilter -f 'QUAL > 5' -s "
                   "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
                   "| {fix_ambig} | bcftools view -a - 2> /dev/null | "
+                  "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                   "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
                   "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                   "{compress_cmd} > {tx_out_file}")
@@ -214,6 +217,19 @@ def _check_freqs(parts):
         return freq
     tumor_freq, normal_freq = _calc_freq(parts[9]), _calc_freq(parts[10])
     return normal_freq <= 0.001 or normal_freq <= tumor_freq / thresh_ratio
+
+def remove_missingalt(line):
+    """Remove lines that are missing an alternative allele.
+
+    During cleanup of extra alleles, bcftools has an issue in complicated cases
+    with duplicate alleles and will end up stripping all alternative alleles.
+    This removes those lines to avoid issues downstream.
+    """
+    if not line.startswith("#"):
+        parts = line.split("\t")
+        if parts[4] == ".":
+            return None
+    return line
 
 def call_somatic(line):
     """Call SOMATIC variants from tumor/normal calls, adding REJECT filters and SOMATIC flag.
