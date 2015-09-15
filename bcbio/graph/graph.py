@@ -4,6 +4,7 @@ import collections
 from datetime import datetime
 import functools
 import os
+import sys
 import pytz
 import re
 
@@ -107,6 +108,9 @@ def calc_deltas(data_frame, series=None):
 def remove_outliers(series, stddev):
     """Remove the outliers from a series."""
     #XXX: cannot reindex from duplicate axis
+
+    print("SERIES: ")
+    print(series)
     series_nodup = series.drop_duplicates(take_last=True)
     return series_nodup[(series_nodup - series_nodup.mean()).abs() < stddev * series_nodup.std()]
 
@@ -272,6 +276,7 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
     a :class pandas.DataFrame:.
 
     :param bcbio_log:   local path to bcbio log file written by the run
+    :param cluster:     
     :param rawdir:      directory to put raw data files
     :param verbose:     increase verbosity
 
@@ -289,24 +294,34 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
         if not collectl_file.endswith('.raw.gz'):
             continue
 
-        collectl_path = os.path.join(rawdir, collectl_file)
-        data, hardware = load_collectl(
-            collectl_path, time_frame.start, time_frame.end)
+        # only load filenames within sampling timerange (gathered from bcbio_log time_frame)
+        matches = re.search(r'-(\d{8})-', collectl_file)
+        if matches:
+            ftime = datetime.strptime(matches.group(1), "%Y%m%d")
+            ftime = pytz.utc.localize(ftime)
 
-        if len(data) == 0:
-	    #raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
-            continue
+        print("{} {} {}".format(time_frame[0], ftime, time_frame[1]))
 
-        host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
-        hardware_info[host] = hardware
-        if "local" in cluster:
-            nodes = get_bcbio_nodes(bcbio_log)
-            for host in nodes:
-                hardware_info[host] = hardware
-        if host not in data_frames:
-            data_frames[host] = data
-        else:
-            data_frames[host] = pd.concat([data_frames[host], data])
+        if ftime >= time_frame[0] and ftime <= time_frame[1]:
+
+            collectl_path = os.path.join(rawdir, collectl_file)
+            data, hardware = load_collectl(
+                collectl_path, time_frame.start, time_frame.end)
+
+            if len(data) == 0:
+                #raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
+                continue
+
+            host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
+            hardware_info[host] = hardware
+            if "local" in cluster:
+                nodes = get_bcbio_nodes(bcbio_log)
+                for host in nodes:
+                    hardware_info[host] = hardware
+            if host not in data_frames:
+                data_frames[host] = data
+            else:
+                data_frames[host] = pd.concat([data_frames[host], data])
 
     return (data_frames, hardware_info, time_frame.steps)
 
@@ -382,14 +397,3 @@ def add_subparser(subparsers):
         help="Emit verbose output")
 
     return parser
-
-
-def bootstrap(args):
-    data, hardware, steps = resource_usage(bcbio_log=args.log,
-                                           rawdir=args.rawdir,
-                                           verbose=args.verbose)
-    generate_graphs(data_frames=data,
-                    hardware_info=hardware,
-                    steps=steps,
-                    outdir=utils.safe_makedir(args.outdir),
-                    verbose=args.verbose)

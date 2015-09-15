@@ -181,6 +181,8 @@ def load_collectl(pattern, start_time, end_time):
 
     cols = []
     rows = []
+
+    # XXX: prefilter here those rawfiles that need to be processed
     for path in glob.glob(pattern):
         hardware, raw = _parse_raw(
             _CollectlGunzip(path, 'r'), start_tstamp, end_tstamp)
