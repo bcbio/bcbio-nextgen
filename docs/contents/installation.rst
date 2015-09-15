@@ -115,6 +115,43 @@ installation.
 
 .. _Docker: http://www.docker.io/
 
+
+.. _private-install:
+
+## local/private bcbio installation
+This is for if you have a previously installed version of bcbio-nextgen and you
+want to make changes to the code and test them without disrupting your
+installation.
+
+Install `Miniconda`_::
+
+  wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+  bash Miniconda-latest-Linux-x86_64.sh
+
+With MinoConda installed create a (private) conda environment to be used for
+this bcbio installation::
+
+  conda create -n bcbio pip distribute
+
+The environment can then be switched on with `source activate bcbio` and off
+with `source deactivate`. Activate the environment and install bcbio within it::
+
+  source activate bcbio
+  conda install -c bcbio pysam cyvcf2 pybedtools
+  conda install setuptools ipython jupyter scipy numpy matplotlib seaborn psutil scikit-learn lxml SQLAlchemy mock msgpack-python cython
+  pip install pythonpy
+  git clone https://github.com/chapmanb/bcbio-nextgen.git
+  cd bcbio-nextgen
+  python setup.py install
+
+If you want to use a different (e.g., system-wide) bcbio installation for
+genomes, indices and the various tools point to that
+installation's `bcbio_system.yaml`::
+
+  bcbio_nextgen.py /cm/shared/apps/bcbio/20150720-devel/data/galaxy/bcbio_system.yaml ../config/NA12878-exome-methodcmp.yaml -n 16 ...
+
+.. _Miniconda: http://conda.pydata.org/miniconda.html
+
 .. _upgrade-install:
 
 Upgrade
