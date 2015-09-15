@@ -146,9 +146,9 @@ with `source deactivate`. Activate the environment and install bcbio within it::
 
 If you want to use a different (e.g., system-wide) bcbio installation for
 genomes, indices and the various tools point to that
-installation's `bcbio_system.yaml`::
+installation's `bcbio_system.yaml`, for example::
 
-  bcbio_nextgen.py /cm/shared/apps/bcbio/20150720-devel/data/galaxy/bcbio_system.yaml ../config/NA12878-exome-methodcmp.yaml -n 16 ...
+  bcbio_nextgen.py /path-to-your-system-wide/bcbio_system.yaml ../config/NA12878-exome-methodcmp.yaml -n 16 ...
 
 .. _Miniconda: http://conda.pydata.org/miniconda.html
 
