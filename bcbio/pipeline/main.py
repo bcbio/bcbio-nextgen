@@ -166,7 +166,8 @@ class Variant2Pipeline(AbstractPipeline):
         ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
         with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
                                          "gemini", "samtools", "fastqc", "bamtools",
-                                         "bcbio-variation-recall", "qsignature"]),
+                                         "bcbio-variation-recall", "qsignature",
+                                         "svcaller"]),
                         samples, config, dirs, "multicore2") as run_parallel:
             with profile.report("joint squaring off/backfilling", dirs):
                 samples = joint.square_off(samples, run_parallel)

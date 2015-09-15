@@ -85,6 +85,8 @@ resources:
     memory: 8g
   seqcluster:
     memory: 8g
+  wham:
+    memory: 3500m
 
 # Location of galaxy configuration file, which has pointers to reference data
 # https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#reference-genome-files

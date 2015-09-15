@@ -24,18 +24,19 @@ def _get_resource_programs(progs, algs):
                 aligner = alg.get("aligner")
                 if aligner:
                     out.add(aligner)
-        elif p == "variantcaller":
-            for key, fn in parent_child.items():
-                if fn(algs):
-                    out.add(key)
+        elif p in ["variantcaller", "svcaller"]:
+            if p == "variantcaller": 
+                for key, fn in parent_child.items():
+                    if fn(algs):
+                        out.add(key)
             for alg in algs:
-                vc = alg.get("variantcaller")
-                if vc:
-                    if isinstance(vc, (list, tuple)):
-                        for x in vc:
+                callers = alg.get(p)
+                if callers:
+                    if isinstance(callers, (list, tuple)):
+                        for x in callers:
                             out.add(x)
                     else:
-                        out.add(vc)
+                        out.add(callers)
         elif p in checks:
             if checks[p](algs):
                 out.add(p)

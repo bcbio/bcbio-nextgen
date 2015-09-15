@@ -57,7 +57,7 @@ def _run_wham(inputs, background_bams):
     if not utils.file_exists(out_file):
         with file_transaction(inputs[0], out_file) as tx_out_file:
             coords = chromhacks.autosomal_or_x_coords(dd.get_ref_file(inputs[0]))
-            parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["wham"]}
+            parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": []}
             rs = run_multicore(_run_wham_coords,
                                 [(inputs, background_bams, coord, out_file)
                                  for coord in coords],
