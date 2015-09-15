@@ -83,7 +83,7 @@ def _group_by_ctype(bed_file, depth, region_file, out_file, data):
         return feat
     full_out_file = "%s-full%s" % utils.splitext_plus(out_file)
     with open(full_out_file, "w") as out_handle:
-        kwargs = {"g": [1, 4], "c": [1, 2, 3, 4], "ops": ["first", "first", "max", "first"]}
+        kwargs = {"g": [1, 4], "c": [1, 2, 3, 4], "o": ["first", "first", "max", "first"]}
         # back compatible precision https://github.com/chapmanb/bcbio-nextgen/issues/664
         if LooseVersion(programs.get_version_manifest("bedtools", data=data, required=True)) >= LooseVersion("2.22.0"):
             kwargs["prec"] = 21
