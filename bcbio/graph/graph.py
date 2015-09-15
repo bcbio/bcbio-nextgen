@@ -108,9 +108,6 @@ def calc_deltas(data_frame, series=None):
 def remove_outliers(series, stddev):
     """Remove the outliers from a series."""
     #XXX: cannot reindex from duplicate axis
-
-    print("SERIES: ")
-    print(series)
     series_nodup = series.drop_duplicates(take_last=True)
     return series_nodup[(series_nodup - series_nodup.mean()).abs() < stddev * series_nodup.std()]
 
@@ -258,7 +255,7 @@ def graph_disk_io(data_frame, steps, disks):
     return plot
 
 
-def _time_frame(bcbio_log):
+def log_time_frame(bcbio_log):
     """The bcbio running time frame.
 
     :return:    an instance of :class collections.namedtuple:
@@ -288,22 +285,19 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
     """
     data_frames = {}
     hardware_info = {}
-    time_frame = _time_frame(bcbio_log)
+    time_frame = log_time_frame(bcbio_log)
 
     for collectl_file in sorted(os.listdir(rawdir)):
         if not collectl_file.endswith('.raw.gz'):
             continue
 
-        # only load filenames within sampling timerange (gathered from bcbio_log time_frame)
+        # Only load filenames within sampling timerange (gathered from bcbio_log time_frame)
         matches = re.search(r'-(\d{8})-', collectl_file)
         if matches:
             ftime = datetime.strptime(matches.group(1), "%Y%m%d")
             ftime = pytz.utc.localize(ftime)
 
-        print("{} {} {}".format(time_frame[0], ftime, time_frame[1]))
-
         if ftime >= time_frame[0] and ftime <= time_frame[1]:
-
             collectl_path = os.path.join(rawdir, collectl_file)
             data, hardware = load_collectl(
                 collectl_path, time_frame.start, time_frame.end)
@@ -314,10 +308,6 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
 
             host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
             hardware_info[host] = hardware
-            if "local" in cluster:
-                nodes = get_bcbio_nodes(bcbio_log)
-                for host in nodes:
-                    hardware_info[host] = hardware
             if host not in data_frames:
                 data_frames[host] = data
             else:

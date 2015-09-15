@@ -257,8 +257,10 @@ Collectl stats will be in ``monitoring/collectl`` and plots are in
 ``monitoring/graphs``. If you need to re-run plots later after shutting the
 cluster down, you can use the local collectl stats instead of retrieving from
 the server by running ``bcbio_vm.py graph bcbio-nextgen.log --cluster none``.
-If you'd like to run graphing from a local non-AWS run, manually place collectl
-files from each node to analyze in ``monitoring/collectl/yournodename-timestamp.raw.gz``.
+
+If you'd like to run graphing from a local non-AWS run, such as a local HPC cluster,
+run ``bcbio_vm.py graph bcbio-nextgen.log --cluster local`` instead.
+
 In addition to plots, the
 `summarize_timing.py <https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/utils/summarize_timing.py>`_
 utility script prepares a summary table of run times per step.
