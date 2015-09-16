@@ -107,9 +107,7 @@ def calc_deltas(data_frame, series=None):
 
 def remove_outliers(series, stddev):
     """Remove the outliers from a series."""
-    #XXX: cannot reindex from duplicate axis
-    series_nodup = series.drop_duplicates(take_last=True)
-    return series_nodup[(series_nodup - series_nodup.mean()).abs() < stddev * series_nodup.std()]
+    return series[(series - series.mean()).abs() < stddev * series.std()]
 
 
 def prep_for_graph(data_frame, series=None, delta_series=None, smoothing=None,
@@ -265,6 +263,16 @@ def log_time_frame(bcbio_log):
     bcbio_timings = get_bcbio_timings(bcbio_log)
     return output(min(bcbio_timings), max(bcbio_timings), bcbio_timings)
 
+def rawfile_within_timeframe(rawfile, timeframe):
+    """ Checks whether the given raw filename timestamp falls within [start, end] timeframe.
+    """
+    matches = re.search(r'-(\d{8})-', rawfile)
+    if matches:
+        ftime = datetime.strptime(matches.group(1), "%Y%m%d")
+        ftime = pytz.utc.localize(ftime)
+
+    return ftime >= timeframe[0] and ftime <= timeframe[1]
+
 
 def resource_usage(bcbio_log, cluster, rawdir, verbose):
     """Generate system statistics from bcbio runs.
@@ -292,12 +300,8 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
             continue
 
         # Only load filenames within sampling timerange (gathered from bcbio_log time_frame)
-        matches = re.search(r'-(\d{8})-', collectl_file)
-        if matches:
-            ftime = datetime.strptime(matches.group(1), "%Y%m%d")
-            ftime = pytz.utc.localize(ftime)
+        if rawfile_within_timeframe(collectl_file, time_frame):
 
-        if ftime >= time_frame[0] and ftime <= time_frame[1]:
             collectl_path = os.path.join(rawdir, collectl_file)
             data, hardware = load_collectl(
                 collectl_path, time_frame.start, time_frame.end)
