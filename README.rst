@@ -43,8 +43,8 @@ Features
 .. _users page: https://bcbio-nextgen.readthedocs.org/en/latest/contents/introduction.html#users
 .. _developer documentation: https://bcbio-nextgen.readthedocs.org/en/latest/contents/code.html
 .. _variant calling and RNA-seq pipelines: https://bcbio-nextgen.readthedocs.org/en/latest/contents/pipelines.html
-.. _parallel analysis and scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
-.. _Automated validation: http://bcbio.wordpress.com/2014/05/12/wgs-trio-variant-evaluation/
+.. _parallel analysis and scaling: http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _Automated validation: http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/
 
 Quick start
 -----------

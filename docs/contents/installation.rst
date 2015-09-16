@@ -286,7 +286,7 @@ for commercial usage.
 .. _VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
 .. _GATK download: http://www.broadinstitute.org/gatk/download
 .. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
-.. _FreeBayes and GATK comparison: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+.. _FreeBayes and GATK comparison: http://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 
 kraken
 ~~~~~~

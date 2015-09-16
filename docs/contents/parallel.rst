@@ -252,6 +252,6 @@ contribute your tips and thoughts.
   We found the biggest initial factor limiting scaling was network
   bandwidth between compute and storage nodes.
 
-.. _post on scaling bcbio-nextgen: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _post on scaling bcbio-nextgen: http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 .. _Harvard FAS Research Computing: http://rc.fas.harvard.edu/
 .. _Dell's Active Infrastructure for Life Sciences: http://dell.com/ai-hpc-lifesciences

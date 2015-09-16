@@ -64,7 +64,7 @@ These are roughly ordered by current priority and we welcome contributors.
   speed ups and parallelization. Integrate development work on
   [bcbio.variation.recall] using recalling with local realignment.
 
-[ensemble]: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+[ensemble]: http://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 [bcbio.variation.recall]: https://github.com/chapmanb/bcbio.variation.recall
 
 - Add in methylation analysis approaches. See

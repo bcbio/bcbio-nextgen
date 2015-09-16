@@ -147,7 +147,7 @@ Finally run the analysis, distributed on 8 local cores, with::
 The ``grading-summary.csv`` contains detailed comparisons of the results
 to the NIST reference materials, enabling rapid comparisons of methods.
 
-.. _combined ensemble callset: http://bcbio.wordpress.com/2013/02/06/an-automated-ensemble-method-for-combining-and-evaluating-genomic-variants-from-multiple-callers/
+.. _combined ensemble callset: http://bcb.io/2013/02/06/an-automated-ensemble-method-for-combining-and-evaluating-genomic-variants-from-multiple-callers/
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
 .. _EdgeBio's: http://www.edgebio.com/
 
@@ -292,7 +292,7 @@ information about the pipeline. To run the analysis:
 
 .. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
 .. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
-.. _blog post on whole genome scaling: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _blog post on whole genome scaling: http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 
 
 Test suite

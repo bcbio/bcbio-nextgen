@@ -145,9 +145,9 @@ Links from the presentation
 .. _Conda: http://www.continuum.io/blog/conda
 .. _documentation: bcbio-nextgen.readthedocs.org
 .. _Arvados framework: https://arvados.org/
-.. _improved scaling for NGS workflows: http://bcbio.wordpress.com/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
-.. _aligners and callers: http://bcbio.wordpress.com/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
-.. _minimal BAM preparation workflows: http://bcbio.wordpress.com/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+.. _improved scaling for NGS workflows: http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
+.. _aligners and callers: http://bcb.io/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
+.. _minimal BAM preparation workflows: http://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 .. _Coverage assessment: https://github.com/chapmanb/bcbio.coverage
 .. _Mt Sinai workshop website: http://www.hpcwire.com/event/strategies-accelerating-genomic-sequencing-pipeline/
 .. _Mt Sinai workshop slides: https://github.com/chapmanb/bcbb/raw/master/talks/mtsinai2013_bcbio_nextgen/chapman_mtsinai_bcbio.pdf
