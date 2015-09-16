@@ -32,8 +32,10 @@ def count(data):
     paired_flag = _paired_flag(in_bam)
     strand_flag = _strand_flag(data)
 
+    filtered_bam = bam.filter_primary(sorted_bam, data)
+
     cmd = ("{featureCounts} -a {gtf_file} -o {tx_count_file} -s {strand_flag} "
-           "{paired_flag} {sorted_bam}")
+           "{paired_flag} {filtered_bam}")
 
     message = ("Count reads in {tx_count_file} mapping to {gtf_file} using "
                "featureCounts")
