@@ -4,6 +4,7 @@ import collections
 from datetime import datetime
 import functools
 import os
+import sys
 import pytz
 import re
 
@@ -15,7 +16,6 @@ import pandas as pd
 
 from bcbio import utils
 from bcbio.graph.collectl import load_collectl
-# from bcbiovm.graph.elasticluster import fetch_collectl
 
 
 def get_bcbio_nodes(path):
@@ -28,7 +28,7 @@ def get_bcbio_nodes(path):
     with open(path, 'r') as file_handle:
         hosts = collections.defaultdict(dict)
         for line in file_handle:
-            matches = re.search(r'\] ([^:]):', line)
+            matches = re.search(r'\]\s([^:]+):', line)
             if not matches:
                 continue
 
@@ -253,7 +253,7 @@ def graph_disk_io(data_frame, steps, disks):
     return plot
 
 
-def _time_frame(bcbio_log):
+def log_time_frame(bcbio_log):
     """The bcbio running time frame.
 
     :return:    an instance of :class collections.namedtuple:
@@ -263,14 +263,25 @@ def _time_frame(bcbio_log):
     bcbio_timings = get_bcbio_timings(bcbio_log)
     return output(min(bcbio_timings), max(bcbio_timings), bcbio_timings)
 
+def rawfile_within_timeframe(rawfile, timeframe):
+    """ Checks whether the given raw filename timestamp falls within [start, end] timeframe.
+    """
+    matches = re.search(r'-(\d{8})-', rawfile)
+    if matches:
+        ftime = datetime.strptime(matches.group(1), "%Y%m%d")
+        ftime = pytz.utc.localize(ftime)
 
-def resource_usage(bcbio_log, rawdir, verbose):
+    return ftime >= timeframe[0] and ftime <= timeframe[1]
+
+
+def resource_usage(bcbio_log, cluster, rawdir, verbose):
     """Generate system statistics from bcbio runs.
 
     Parse the obtained files and put the information in
     a :class pandas.DataFrame:.
 
     :param bcbio_log:   local path to bcbio log file written by the run
+    :param cluster:     
     :param rawdir:      directory to put raw data files
     :param verbose:     increase verbosity
 
@@ -282,30 +293,29 @@ def resource_usage(bcbio_log, rawdir, verbose):
     """
     data_frames = {}
     hardware_info = {}
-    time_frame = _time_frame(bcbio_log)
+    time_frame = log_time_frame(bcbio_log)
 
     for collectl_file in sorted(os.listdir(rawdir)):
         if not collectl_file.endswith('.raw.gz'):
             continue
 
-        collectl_path = os.path.join(rawdir, collectl_file)
-        data, hardware = load_collectl(
-            collectl_path, time_frame.start, time_frame.end)
+        # Only load filenames within sampling timerange (gathered from bcbio_log time_frame)
+        if rawfile_within_timeframe(collectl_file, time_frame):
 
-        if len(data) == 0:
-	    #raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
-            continue
+            collectl_path = os.path.join(rawdir, collectl_file)
+            data, hardware = load_collectl(
+                collectl_path, time_frame.start, time_frame.end)
 
-        host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
-        hardware_info[host] = hardware
-        if "local" in args.cluster:
-            nodes = get_bcbio_nodes(bcbio_log)
-            for host in nodes:
-                hardware_info[host] = hardware
-        if host not in data_frames:
-            data_frames[host] = data
-        else:
-            data_frames[host] = pd.concat([data_frames[host], data])
+            if len(data) == 0:
+                #raise ValueError("No data present in collectl file %s, mismatch in timestamps between raw collectl and log file?", collectl_path)
+                continue
+
+            host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', collectl_file)
+            hardware_info[host] = hardware
+            if host not in data_frames:
+                data_frames[host] = data
+            else:
+                data_frames[host] = pd.concat([data_frames[host], data])
 
     return (data_frames, hardware_info, time_frame.steps)
 
@@ -381,14 +391,3 @@ def add_subparser(subparsers):
         help="Emit verbose output")
 
     return parser
-
-
-def bootstrap(args):
-    data, hardware, steps = resource_usage(bcbio_log=args.log,
-                                           rawdir=args.rawdir,
-                                           verbose=args.verbose)
-    generate_graphs(data_frames=data,
-                    hardware_info=hardware,
-                    steps=steps,
-                    outdir=utils.safe_makedir(args.outdir),
-                    verbose=args.verbose)
