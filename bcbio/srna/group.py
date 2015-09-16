@@ -90,7 +90,7 @@ def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
     ma_file = op.join(prepare_dir, "seqs.ma")
     # cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
-        annotation_file = "-g" + annotation_file
+        annotation_file = "-g " + annotation_file
     else:
         annotation_file = ""
 
