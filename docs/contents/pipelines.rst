@@ -408,7 +408,7 @@ templating system.
 .. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 .. _tophat2: http://tophat.cbcb.umd.edu/
 .. _STAR: http://code.google.com/p/rna-star/
-.. _cutadapt: http://code.google.com/p/cutadapt/
+.. _cutadapt: http://cutadapt.readthedocs.org/en/latest/guide.html
 .. _RNA-SeQC: https://www.broadinstitute.org/cancer/cga/rna-seqc
 .. _qualimap: http://qualimap.bioinfo.cipf.es
 .. _FastQC: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
