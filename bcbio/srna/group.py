@@ -2,6 +2,7 @@ import os
 import string
 import argparse
 import os.path as op
+import sys
 import shutil
 from collections import namedtuple
 
@@ -81,25 +82,21 @@ def run_cluster(*data):
         sample[0]["seqcluster"] = out_dir
     return data
 
-def _get_arguments(cl):
-    p = argparse.ArgumentParser()
-    sbp = p.add_subparsers()
-    parse.add_subparser_cluster(sbp)
-    args = p.parse_args(cl)
-    return args
-
 def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
     """
     Connect to seqcluster to run cluster with python directly
     """
+    seqcluster = os.path.join(os.path.dirname(sys.executable), "seqcluster")
     ma_file = op.join(prepare_dir, "seqs.ma")
-    cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
+    # cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
-        cl = cl + ["-g", annotation_file]
+        annotation_file = "-g" + annotation_file
+    else:
+        annotation_file = ""
 
-    args = _get_arguments(cl)
     if not file_exists(op.join(out_dir, "counts.tsv")):
-        main_cluster.cluster(args)
+        cmd = ("{seqcluster} cluster -o {out_dir} -m {ma_file} -a {bam_file} -r {reference} {annotation_file}")
+        do.run(cmd.format(**locals()), "Running seqcluster.")
     return out_dir
 
 def report(data):
