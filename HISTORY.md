@@ -14,7 +14,10 @@
 - Generalize group size for batching gVCFs prior to joint calling with
   `joint_group_size`. Thanks to Severine Catreux.
 - Support GEMINI 0.17.0, which does not have a --no-bcolz option since that is
-  the default.
+the default.
+- Remove test_run parameter since it was poorly supported and not used much.
+- Fix issue with featureCounts sorting not working in parallel by pre-sorting
+and filtering the BAM file.
 
 ## 0.9.2 (1 September 2015)
 
