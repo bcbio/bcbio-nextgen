@@ -4,9 +4,12 @@ Uses lumpyexpress for lumpy integration and samblaster for read preparation:
 https://github.com/GregoryFaust/samblaster
 https://github.com/arq5x/lumpy-sv
 """
+import contextlib
 import os
 import sys
 import shutil
+
+import vcf
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -46,14 +49,56 @@ def _filter_by_support(in_file, data):
 
     Filters based on the following criteria:
       - Minimum read support for the call (SU = total support)
-      - Small calls need split read evidence.
       - Large calls need split read evidence.
     """
     rc_filter = ("FORMAT/SU < 4 || "
-                 "(FORMAT/SR == 0 && ABS(SVLEN)<2000) || "
                  "(FORMAT/SR == 0 && ABS(SVLEN)>20000)")
     return vfilter.hard_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
                                      limit_regions=None)
+
+def _filter_by_background(base_samples, back_samples, gt_vcfs, data):
+    """Filter base samples, marking any also present in the background.
+    """
+    filtname = "InBackground"
+    filtdoc = "Variant also present in background samples with same genotype"
+    for base_name in base_samples:
+        orig_vcf = gt_vcfs[base_name]
+        out_file = "%s-backfilter.vcf" % (utils.splitext_plus(orig_vcf)[0])
+        if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
+            with file_transaction(data, out_file) as tx_out_file:
+                with utils.open_gzipsafe(orig_vcf) as in_handle:
+                    with _vcf_readers([gt_vcfs[n] for n in back_samples]) as back_readers:
+                        inp = vcf.Reader(in_handle, orig_vcf)
+                        inp.filters[filtname] = vcf.parser._Filter(filtname, filtdoc)
+                        with open(tx_out_file, "w") as out_handle:
+                            outp = vcf.Writer(out_handle, inp)
+                            for rec in inp:
+                                back_recs = [r.next() for r in back_readers]
+                                if _genotype_in_background(rec, back_recs):
+                                    rec.add_filter(filtname)
+                                outp.write_record(rec)
+        gt_vcfs[base_name] = vcfutils.bgzip_and_index(out_file, data["config"])
+    return gt_vcfs
+
+def _genotype_in_background(rec, back_recs):
+    """Check if the genotype in the record of interest is present in the background records.
+    """
+    def passes(rec):
+        return not rec.FILTER or len(rec.FILTER) == 0
+    return any([passes(brec) and passes(rec) and rec.samples[0].gt_alleles == brec.samples[0].gt_alleles
+                for brec in back_recs])
+
+@contextlib.contextmanager
+def _vcf_readers(vcf_files):
+    handles = []
+    readers = []
+    for vcf_file in vcf_files:
+        in_handle = utils.open_gzipsafe(vcf_file)
+        handles.append(in_handle)
+        readers.append(vcf.Reader(in_handle, vcf_file))
+    yield readers
+    for handle in handles:
+        handle.close()
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
@@ -73,19 +118,23 @@ def run(items):
         sr_bams.append(sr_bam)
         disc_bams.append(disc_bam)
     lumpy_vcf, exclude_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
-    out = []
-    for i, data in enumerate(items):
-        if "sv" not in data:
-            data["sv"] = []
+    gt_vcfs = {}
+    for data in items:
         sample = dd.get_sample_name(data)
         dedup_bam, sr_bam, _ = sshared.get_split_discordants(data, work_dir)
         sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
                                             utils.append_stem(lumpy_vcf, "-%s" % sample),
                                             data["config"])
         gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, data)
-        filter_vcf = _filter_by_support(gt_vcf, data)
+        gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
+    if paired:
+        gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
+    out = []
+    for data in items:
+        if "sv" not in data:
+            data["sv"] = []
         data["sv"].append({"variantcaller": "lumpy",
-                           "vrn_file": filter_vcf,
+                           "vrn_file": gt_vcfs[dd.get_sample_name(data)],
                            "exclude_file": exclude_file})
         out.append(data)
     return out
