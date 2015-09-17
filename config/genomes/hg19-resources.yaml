@@ -1,4 +1,4 @@
-version: 21
+version: 22
 
 aliases:
   human: true
@@ -27,7 +27,7 @@ rnaseq:
   rRNA_fa: ../rnaseq/rRNA.fa
 
 srnaseq:
-    srna-trasncripts: ../srnaseq/srna-transcripts.gtf
+    srna-transcripts: ../srnaseq/srna-transcripts.gtf
     mirbase: ../srnaseq/hairpin.fa
 
 coverage:
