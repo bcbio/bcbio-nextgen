@@ -584,7 +584,6 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
         item["genome_build"] = str(item.get("genome_build", ""))
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
-        item["test_run"] = global_config.get("test_run", False)
         if item.get("files"):
             item["files"] = [genome.abs_file_paths(f) for f in item["files"]]
         elif "files" in item:

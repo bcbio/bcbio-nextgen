@@ -28,16 +28,8 @@ def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
     FASTQ and/or downsampling the number of reads for a test run
     """
-    NUM_DOWNSAMPLE = 10000
     logger.debug("Preparing %s" % data["rgnames"]["sample"])
     file1, file2 = get_fastq_files(data)
-    if data.get("test_run", False):
-        if bam.is_bam(file1):
-            file1 = bam.downsample(file1, data, NUM_DOWNSAMPLE)
-            file2 = None
-        else:
-            file1, file2 = fastq.downsample(file1, file2, data,
-                                            NUM_DOWNSAMPLE, quick=True)
     data["files"] = [file1, file2]
     return [[data]]
 

@@ -159,15 +159,11 @@ def write_project_summary(samples, qsign_info=None):
     out_file = os.path.join(work_dir, "project-summary.yaml")
     upload_dir = (os.path.join(work_dir, samples[0][0]["upload"]["dir"])
                   if "dir" in samples[0][0]["upload"] else "")
-    test_run = samples[0][0].get("test_run", False)
     date = str(datetime.now())
     prev_samples = _other_pipeline_samples(out_file, samples)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump({"date": date}, out_handle,
                        default_flow_style=False, allow_unicode=False)
-        if test_run:
-            yaml.safe_dump({"test_run": True}, out_handle, default_flow_style=False,
-                           allow_unicode=False)
         if qsign_info:
             qsign_out = utils.deepish_copy(qsign_info[0])
             qsign_out.pop("out_dir", None)

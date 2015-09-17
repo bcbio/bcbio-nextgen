@@ -235,16 +235,6 @@ The sample configuration file defines ``details`` of each sample to process::
       this to extract ``sex`` and ``phenotype`` information. GEMINI database
       creation uses the PED file.
 
-Setting up a test run
-~~~~~~~~~~~~~~~~~~~~~
-If you set the ``test_run`` option to ``True`` at the top of your sample
-configuration file like this::
-
-  test_run: True
-
-bcbio-nextgen will downsample your input files to 500,000 entries before
-running the pipeline.
-
 .. _upload-configuration:
 
 Upload
