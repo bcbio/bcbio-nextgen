@@ -47,6 +47,8 @@ def expected_failure(test):
     return inner
 
 def get_post_process_yaml(data_dir, workdir):
+    """Prepare a bcbio_system YAML file pointing to test data.
+    """
     try:
         from bcbiovm.docker.defaults import get_datadir
         datadir = get_datadir()
@@ -58,21 +60,17 @@ def get_post_process_yaml(data_dir, workdir):
             _, system = load_system_config("bcbio_system.yaml")
         except ValueError:
             system = None
-    sample = os.path.join(data_dir, "post_process-sample.yaml")
-    std = os.path.join(data_dir, "post_process.yaml")
-    if os.path.exists(std):
-        return std
-    elif system and os.path.exists(system):
-        # create local config pointing to reduced genomes
-        test_system = os.path.join(workdir, os.path.basename(system))
-        with open(system) as in_handle:
-            config = yaml.load(in_handle)
-            config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
-            with open(test_system, "w") as out_handle:
-                yaml.dump(config, out_handle)
-        return test_system
-    else:
-        return sample
+    #if system is None or not os.path.exists(system):
+    if True:
+        system = os.path.join(data_dir, "post_process-sample.yaml")
+    # create local config pointing to reduced genomes
+    test_system = os.path.join(workdir, "bcbio_system.yaml")
+    with open(system) as in_handle:
+        config = yaml.load(in_handle)
+        config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
+        with open(test_system, "w") as out_handle:
+            yaml.dump(config, out_handle)
+    return test_system
 
 class AutomatedAnalysisTest(unittest.TestCase):
     """Setup a full automated analysis and run the pipeline.
@@ -358,7 +356,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
-            cl = ["bcbio_vm.py", "run",
+            cl = ["bcbio_vm.py",
+                  "--datadir=%s" % self.data_dir,
+                  "run",
                   "--systemconfig=%s" % get_post_process_yaml(self.data_dir, workdir),
                   "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml")]

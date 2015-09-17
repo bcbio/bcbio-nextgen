@@ -1,24 +1,15 @@
 galaxy_config: universe_wsgi.ini
-algorithm:
-  platform: illumina
 
-# configuration algorithm changes for custom post-processing steps
-custom_algorithms:
-  variant:
-    aligner: bwa
-    recalibrate: gatk
-    snpcall: true
-  'RNA-seq':
-    aligner: tophat2
-    transcript_assemble: true
-  'Minimal':
-    aligner: ""
 # Define resources to be used for individual programs on multicore machines.
 # These can be defined specifically for memory and processor availability.
 # Distributed systems
 # - Specify usage for memory intensive programs
 # - Define cores that can be used for multicore programs.
 resources:
+  default:
+    memory: 2G
+    cores: 4
+    jvm_opts: ["-Xms750m", "-Xmx2000m"]
   bcbio_variation:
     dir: /usr/local/share/java/bcbio_variation
   bcbio_coverage:
