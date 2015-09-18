@@ -78,10 +78,11 @@ def _do_classifyplot(df, out_file, title=None, size=None):
                 cur_plot = axs[vi * len(vtypes) + ci][j]
                 vals, labels = [], []
                 for sample in samples:
-                    cur_data = data_dict[(sample, caller, vtype)]
-                    vals.append(cur_data[metric])
-                    labels.append(cur_data[label])
-                cur_plot.barh(np.arange(len(samples)), vals)
+                    cur_data = data_dict.get((sample, caller, vtype))
+                    if cur_data:
+                        vals.append(cur_data[metric])
+                        labels.append(cur_data[label])
+                cur_plot.barh(np.arange(len(vals)), vals)
                 all_vals = []
                 for k, d in data_dict.items():
                     if k[-1] == vtype:
