@@ -84,10 +84,10 @@ def _get_prog_memory(resources, cores_per_job):
     memory = resources.get("memory")
     if memory:
         out = _str_memory_to_gb(memory)
-    prog_cores = resources.get("cores", 1)
+    prog_cores = resources.get("cores")
     # if a single core with memory is requested for the job
     # and we run multiple cores, scale down to avoid overscheduling
-    if out and prog_cores == 1 and cores_per_job > prog_cores:
+    if out and prog_cores and int(prog_cores) == 1 and cores_per_job > int(prog_cores):
         out = out / float(cores_per_job)
     return out
 
