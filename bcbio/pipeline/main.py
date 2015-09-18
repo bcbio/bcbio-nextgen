@@ -168,7 +168,8 @@ class Variant2Pipeline(AbstractPipeline):
                                          "gemini", "samtools", "fastqc", "bamtools",
                                          "bcbio-variation-recall", "qsignature",
                                          "svcaller"]),
-                        samples, config, dirs, "multicore2") as run_parallel:
+                        samples, config, dirs, "multicore2",
+                        multiplier=structural.parallel_multiplier(samples)) as run_parallel:
             with profile.report("joint squaring off/backfilling", dirs):
                 samples = joint.square_off(samples, run_parallel)
             with profile.report("variant post-processing", dirs):

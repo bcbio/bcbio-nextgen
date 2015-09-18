@@ -153,3 +153,10 @@ def detect_sv(items, all_items, config, initial_only=False):
         for data in items:
             out.append([data])
     return out
+
+# ## configuration
+
+def parallel_multiplier(items):
+    """Use more resources (up to available limits) if we have multiple SV callers.
+    """
+    return max([1] + [len(_get_svcallers(xs[0])) for xs in items])
