@@ -269,6 +269,21 @@ detection.
 - Other small RNAs:
   - `seqcluster <https://github.com/lpantano/seqcluster>`_
 
+ChIP-seq
+~~~~~~~~
+bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning
+bowtie2. It doesn't do anything other than get the samples into a state
+where a peak caller like MACS2 can be used.
+
+- Adapter trimming:
+  - `cutadapt`_
+
+- Sequence alignment:
+ - bowtie2
+
+- Quality control:
+ - `FastQC`_
+
 Standard
 ~~~~~~~~
 
