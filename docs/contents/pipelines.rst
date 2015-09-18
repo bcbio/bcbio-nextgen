@@ -269,6 +269,9 @@ detection.
 - Other small RNAs:
   - `seqcluster <https://github.com/lpantano/seqcluster>`_
 
+The pipeline generates a RMD template file that can be rendered with knitr.
+An example of the report can be seen `here <https://github.com/lpantano/mypubs/blob/master/srnaseq/mirqc/ready_report.md>`_.
+
 ChIP-seq
 ~~~~~~~~
 bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning
