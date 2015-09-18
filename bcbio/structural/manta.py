@@ -18,9 +18,9 @@ def run(items):
     work_dir = _sv_workdir(paired.tumor_data if paired else items[0])
     workflow_file = _prep_config(items, paired, work_dir)
     variant_file = _run_workflow(items, paired, workflow_file, work_dir)
-    sample_file = _select_sample(items, paired, variant_file, work_dir)
     out = []
     for data in items:
+        sample_file = _select_sample(data, variant_file, work_dir)
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append({"variantcaller": "manta",
@@ -32,8 +32,14 @@ def _run_workflow(items, paired, workflow_file, work_dir):
     """Run manta analysis inside prepared workflow directory.
     """
     data = paired.tumor_data if paired else items[0]
-    out_file = os.path.join(work_dir, "results", "variants",
-                            "somaticSV.vcf.gz" if paired and paired.normal_bam else "diploidSV.vcf.gz")
+    if paired:
+        if paired.normal_bam:
+            base_file = "somaticSV.vcf.gz"
+        else:
+            base_file = "tumorSV.vcf.gz"
+    else:
+        base_file = "diploidSV.vcf.gz"
+    out_file = os.path.join(work_dir, "results", "variants", base_file)
     if not utils.file_exists(out_file):
         utils.remove_safe(os.path.join(work_dir, "workspace"))
         cmd = [sys.executable, workflow_file, "-m", "local", "-j", dd.get_num_cores(data),
@@ -42,22 +48,17 @@ def _run_workflow(items, paired, workflow_file, work_dir):
     utils.remove_safe(os.path.join(work_dir, "workspace"))
     return out_file
 
-def _select_sample(items, paired, variant_file, work_dir):
-    """Fix VCF to have the correct sample name and select tumor samples from paired analyses.
+def _select_sample(data, variant_file, work_dir):
+    """Select current sample from original call file.
     """
-    sample_name = paired.tumor_name if paired else dd.get_sample_name(items[0])
+    sample_name = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, "%s-%s.vcf.gz" % (utils.splitext_plus(os.path.basename(variant_file))[0],
                                                         sample_name))
     if not utils.file_uptodate(out_file, variant_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
-            cmd = "zcat {variant_file} | "
-            if paired and paired.normal_bam:
-                cmd += "sed 's/\tTUMOR/\t{sample_name}/' | bcftools view -s {sample_name}"
-            else:
-                cmd += "sed 's/\tSAMPLE/\t{sample_name}/' | bcftools view -s {sample_name}"
-            cmd += " | bgzip -c > {tx_out_file}"
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = "bcftools view -s {sample_name} -O z -o {tx_out_file} {variant_file}"
             do.run(cmd.format(**locals()), "Run manta SV analysis")
-    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
+    return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def _prep_config(items, paired, work_dir):
     """Run initial configuration, generating a run directory for Manta.
@@ -70,11 +71,9 @@ def _prep_config(items, paired, work_dir):
             if paired.normal_bam:
                 cmd += ["--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
             else:
-                cmd += ["--normalBam=%s" % paired.tumor_bam]
+                cmd += ["--tumorBam=%s" % paired.tumor_bam]
         else:
-            assert len(items) == 1, "Expect a single item if non-paired for manta: %s" % \
-                ([dd.get_sample_name(d) for d in items])
-            cmd += ["--normalBam=%s" % dd.get_align_bam(items[0])]
+            cmd += ["--bam=%s" % dd.get_align_bam(data) for data in items]
         data = paired.tumor_data if paired else items[0]
         cmd += ["--referenceFasta=%s" % dd.get_ref_file(data), "--runDir=%s" % work_dir]
         if dd.get_coverage_interval(data) not in ["genome"]:
