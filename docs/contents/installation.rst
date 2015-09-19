@@ -82,13 +82,6 @@ This requires the following additional system requirements to be in place:
 - Ruby (including libraries and irb. On recent CentOS and other rpm systems
   these are separate packages:
   ``ruby-libs`` and ``ruby-irb``)
-- R with Rscript. We test libraries with the most recent R releases as most of
-  the Bioconductor tools track this version. If installing from system packages,
-  also install the development packages. Some packages used by bcbio require R >
-  3.0.3. On Ubuntu or other deb systems you should get the latest R version from
-  the CRAN repository by updating your apt sources
-  (http://cran.r-project.org/bin/linux/ubuntu/README) and installing ``r-base r-base-dev``.
-  On RedHat or other rpm systems install ``R-core R-core-devel R-java libRmath libRmath-devel``.
 - Perl with development libraries (On Ubuntu or other deb systems:
   ``perl, libperl-devel`` On RedHat or other rpm systems:
   ``perl perl-devel perl-core``)

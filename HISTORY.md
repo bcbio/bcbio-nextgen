@@ -3,6 +3,9 @@
 - Fix bug when using tumors with multiple normals and no CNV calling. Additional
   tumor sample would get lost due to lack of early (CNV-based) calling. Thanks
   to Miika Ahdesmaki.
+- Include R and Rscript in the installation with conda packages and use for
+  installing and running R-based tools. Avoids issues with alternative R
+  versions and need for a separate installation.
 - Fix bug when using CNVkit on disambiguated inputs. Thanks to Miika Ahdesmaki.
 - Adjust mapping quality (MQ) filter for GATK SNP hard filters to improve sensitivity
   http://imgur.com/a/oHRVB

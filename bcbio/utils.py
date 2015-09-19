@@ -13,6 +13,7 @@ import ConfigParser
 import collections
 import fnmatch
 import subprocess
+import sys
 
 import toolz as tz
 import yaml
@@ -568,6 +569,17 @@ def dictapply(d, fn):
             d[k] = fn(v)
     return d
 
+def Rscript_cmd():
+    """Retrieve path to locally installed Rscript or first in PATH.
+
+    Prefers Rscript version installed via conda to a system version.
+    """
+    rscript = which(os.path.join(os.path.dirname(sys.executable), "Rscript"))
+    if rscript:
+        return rscript
+    else:
+        return which("Rscript")
+
 def R_sitelib():
     """Retrieve the R site-library installed with the bcbio installer.
     """
@@ -580,7 +592,8 @@ def R_package_path(package):
     return the path to an installed R package
     """
     local_sitelib = R_sitelib()
-    cmd = """Rscript -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
+    rscript = Rscript_cmd()
+    cmd = """{rscript} -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError, e:

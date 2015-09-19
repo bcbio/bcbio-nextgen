@@ -105,7 +105,7 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
                 out_handle.write(_script.format(prep_str=_prep_load_script(work_bams, names, chrom, items),
                                                 out_file=tx_out_file,
                                                 local_sitelib=local_sitelib))
-            rscript = config_utils.get_program("Rscript", items[0]["config"])
+            rscript = utils.Rscript_cmd()
             try:
                 do.run([rscript, rcode], "cn.mops CNV detection", items[0], log_error=False)
             except subprocess.CalledProcessError, msg:
