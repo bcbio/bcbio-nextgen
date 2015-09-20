@@ -154,6 +154,10 @@ def detect_sv(*args):
     return structural.detect_sv(*args)
 
 @utils.map_wrap
+def validate_sv(*args):
+    return structural.validate_sv(*args)
+
+@utils.map_wrap
 def heterogeneity_estimate(*args):
     return heterogeneity.estimate(*args)
 

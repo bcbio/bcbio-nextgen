@@ -7,6 +7,9 @@
   installing and running R-based tools. Avoids issues with alternative R
   versions and need for a separate installation.
 - Fix bug when using CNVkit on disambiguated inputs. Thanks to Miika Ahdesmaki.
+- Re-work structural variant infrastructure to provide plug-in parallel ensemble calling,
+  removing the previous overlap-based ensemble calls. Currently supports MetaSV for
+  ensemble calls. Also re-works validation to not rely on ensemble-overlap calls.
 - Adjust mapping quality (MQ) filter for GATK SNP hard filters to improve sensitivity
   http://imgur.com/a/oHRVB
 - Ensure memory specification passed to sambamba and samtools sort during

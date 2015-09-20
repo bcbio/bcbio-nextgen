@@ -159,22 +159,6 @@ def _maybe_add_sv(algorithm, sample, out):
             for key in ["vrn_file", "cnr", "cns", "cnr_bed", "cnr_bedgraph", "seg",
                         "gainloss", "segmetrics", "vrn_bed", "vrn_bedpe"]:
                 out.extend(_get_variant_file(svcall, (key,)))
-            if "validate" in svcall:
-                for vkey in ["csv", "plot", "df"]:
-                    vfile = tz.get_in(["validate", vkey], svcall)
-                    if vfile:
-                        to_u = []
-                        if isinstance(vfile, dict):
-                            for svtype, fname in vfile.items():
-                                to_u.append((fname, "-%s" % svtype))
-                        else:
-                            to_u.append((vfile, "-%s" % vkey if vkey in ["df"] else ""))
-                        for vfile, ext in to_u:
-                            vext = os.path.splitext(vfile)[-1].replace(".", "")
-                            out.append({"path": vfile,
-                                        "type": vext,
-                                        "ext": "%s-sv-validate%s" % (svcall["variantcaller"], ext),
-                                        "variantcaller": svcall["variantcaller"]})
             if "plot" in svcall:
                 for plot_name, fname in svcall["plot"].items():
                     ext = os.path.splitext(fname)[-1].replace(".", "")
@@ -182,6 +166,21 @@ def _maybe_add_sv(algorithm, sample, out):
                                 "type": ext,
                                 "ext": "%s-%s" % (svcall["variantcaller"], plot_name),
                                 "variantcaller": svcall["variantcaller"]})
+        if "sv-validate" in sample:
+            for vkey in ["csv", "plot", "df"]:
+                vfile = tz.get_in(["sv-validate", vkey], sample)
+                if vfile:
+                    to_u = []
+                    if isinstance(vfile, dict):
+                        for svtype, fname in vfile.items():
+                            to_u.append((fname, "-%s" % svtype))
+                    else:
+                        to_u.append((vfile, "-%s" % vkey if vkey in ["df"] else ""))
+                    for vfile, ext in to_u:
+                        vext = os.path.splitext(vfile)[-1].replace(".", "")
+                        out.append({"path": vfile,
+                                    "type": vext,
+                                    "ext": "sv-validate%s" % ext})
     return out
 
 def _get_variant_file(x, key):

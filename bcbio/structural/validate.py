@@ -5,7 +5,6 @@ a set of known regions.  Requires any overlap between ensemble set and
 known regions, and removes regions from analysis that overlap with
 exclusion regions.
 """
-import collections
 import csv
 import os
 
@@ -17,16 +16,15 @@ try:
     import matplotlib as mpl
     mpl.use('Agg', force=True)
     import matplotlib.pyplot as plt
-except ImportError:
-    mpl, plt = None, None
-try:
     import seaborn as sns
 except ImportError:
-    sns = None
+    mpl, plt, sns = None, None, None
 
 from bcbio.log import logger
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
+from bcbio.structural import convert
+from bcbio.distributed.transaction import file_transaction
 
 EVENT_SIZES = [(100, 450), (450, 2000), (2000, 4000), (4000, 20000), (20000, 60000),
                (60000, int(1e6))]
@@ -52,17 +50,6 @@ def cnv_to_event(name, data):
             return name
     else:
         return name
-
-def callers_by_event(in_bed, data):
-    """Retrieve callers with calls for each event type.
-    """
-    total_callers = collections.defaultdict(set)
-    with open(in_bed) as in_handle:
-        for line in in_handle:
-            caller_strs = line.strip().split()[3]
-            for event, caller in [x.split("_", 1) for x in caller_strs.split(",")]:
-                total_callers[cnv_to_event(event, data)].add(caller)
-    return total_callers
 
 def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     """Compare a ensemble results for a caller against a specific caller and SV type.
@@ -93,32 +80,30 @@ def _evaluate_one(caller, svtype, size_range, ensemble, truth, data):
     return {"sensitivity": _stat_str(match, ttotal),
             "precision": _stat_str(match, etotal)}
 
-def _evaluate_multi(callers, truth_svtypes, ensemble, call_beds, data):
-    out_file = "%s-validate.csv" % utils.splitext_plus(ensemble)[0]
-    df_file = "%s-validate-df.csv" % utils.splitext_plus(ensemble)[0]
-    if not utils.file_uptodate(out_file, ensemble) or not utils.file_uptodate(df_file, ensemble):
-        with open(out_file, "w") as out_handle:
-            with open(df_file, "w") as df_out_handle:
-                writer = csv.writer(out_handle)
-                dfwriter = csv.writer(df_out_handle)
-                total_callers = callers_by_event(ensemble, data)
-                writer.writerow(["svtype", "size", "caller", "sensitivity", "precision"])
-                dfwriter.writerow(["svtype", "size", "caller", "metric", "value", "label"])
-                for svtype, truth in truth_svtypes.items():
-                    for size in EVENT_SIZES:
-                        str_size = "%s-%s" % size
-                        for caller in (x for x in callers if x in total_callers[svtype] or x == "sv-ensemble"):
-                            try:
-                                call_bed = call_beds[caller]
-                            except KeyError:
-                                assert caller == "sv-ensemble", caller
-                                call_bed = ensemble
-                            evalout = _evaluate_one(caller, svtype, size, call_bed, truth, data)
-                            writer.writerow([svtype, str_size, caller,
-                                             evalout["sensitivity"]["label"], evalout["precision"]["label"]])
-                            for metric in ["sensitivity", "precision"]:
-                                dfwriter.writerow([svtype, str_size, caller, metric,
-                                                   evalout[metric]["val"], evalout[metric]["label"]])
+def _evaluate_multi(calls, truth_svtypes, work_dir, data):
+    base = os.path.join(work_dir, "%s-sv-validate" % (dd.get_sample_name(data)))
+    out_file = base + ".csv"
+    df_file = base + "-df.csv"
+    if any((not utils.file_uptodate(out_file, x["vrn_file"])
+            or not utils.file_uptodate(df_file, x["vrn_file"])) for x in calls):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                with open(df_file, "w") as df_out_handle:
+                    writer = csv.writer(out_handle)
+                    dfwriter = csv.writer(df_out_handle)
+                    writer.writerow(["svtype", "size", "caller", "sensitivity", "precision"])
+                    dfwriter.writerow(["svtype", "size", "caller", "metric", "value", "label"])
+                    for svtype, truth in truth_svtypes.items():
+                        for size in EVENT_SIZES:
+                            str_size = "%s-%s" % size
+                            for call in calls:
+                                call_bed = convert.to_bed(call, dd.get_sample_name(data), work_dir, calls, data)
+                                evalout = _evaluate_one(call["variantcaller"], svtype, size, call_bed, truth, data)
+                                writer.writerow([svtype, str_size, call["variantcaller"],
+                                                 evalout["sensitivity"]["label"], evalout["precision"]["label"]])
+                                for metric in ["sensitivity", "precision"]:
+                                    dfwriter.writerow([svtype, str_size, call["variantcaller"], metric,
+                                                       evalout[metric]["val"], evalout[metric]["label"]])
     return out_file, df_file
 
 def _plot_evaluation(df_csv):
@@ -204,22 +189,17 @@ def _get_plot_val_labels(df, size, metric, callers):
         labels.append(list(row["label"])[0])
     return vals, labels
 
-def evaluate(data, sv_calls):
+def evaluate(data):
     """Provide evaluations for multiple callers split by structural variant type.
     """
+    work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
+                                               dd.get_sample_name(data), "validate"))
     truth_sets = tz.get_in(["config", "algorithm", "svvalidate"], data)
-    ensemble_callsets = [(i, x) for (i, x) in enumerate(sv_calls) if x["variantcaller"] == "sv-ensemble"]
-    if truth_sets and len(ensemble_callsets) > 0:
-        ensemble = ensemble_callsets[0][-1]
-        call_beds = {c: f for (c, f) in ensemble["input_beds"]}
-        ensemble_bed = ensemble["vrn_file"]
-        callers = sorted(call_beds.keys())
-        val_summary, df_csv = _evaluate_multi(callers, truth_sets, ensemble_bed, call_beds, data)
+    if truth_sets and data.get("sv"):
+        val_summary, df_csv = _evaluate_multi(data["sv"], truth_sets, work_dir, data)
         summary_plots = _plot_evaluation(df_csv)
-        ensemble_i, ensemble = ensemble_callsets[0]
-        ensemble["validate"] = {"csv": val_summary, "plot": summary_plots, "df": df_csv}
-        sv_calls[ensemble_i] = ensemble
-    return sv_calls
+        data["sv-validate"] = {"csv": val_summary, "plot": summary_plots, "df": df_csv}
+    return data
 
 if __name__ == "__main__":
     #_, df_csv = _evaluate_multi(["lumpy", "delly", "wham", "sv-ensemble"],
