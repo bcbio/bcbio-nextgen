@@ -3,6 +3,7 @@
 import os
 import shutil
 import sys
+import subprocess
 
 import toolz as tz
 
@@ -11,6 +12,23 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+
+def get_sort_cmd():
+    """Retrieve GNU coreutils sort command, using version-sort if available.
+
+    Recent versions of sort have alpha-numeric sorting, which provides
+    more natural sorting of chromosomes (chr1, chr2) instead of (chr1, chr10).
+    This also fixes versions of sort, like 8.22 in CentOS 7.1, that have broken
+    sorting without version sorting specified.
+
+    https://github.com/chapmanb/bcbio-nextgen/issues/624
+    https://github.com/chapmanb/bcbio-nextgen/issues/1017
+    """
+    has_versionsort = subprocess.check_output("sort --help | grep version-sort; exit 0", shell=True).strip()
+    if has_versionsort:
+        return "sort -V"
+    else:
+        return "sort"
 
 def clean_file(in_file, data, prefix="", bedprep_dir=None):
     """Prepare a clean sorted input BED file without headers
@@ -23,10 +41,11 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None):
             with file_transaction(data, out_file) as tx_out_file:
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
+                sort_cmd = get_sort_cmd()
                 cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
                        "grep -v ^# | "
                        "{py_cl} -x 'bcbio.variation.bedutils.remove_bad(x)' | "
-                       "sort -k1,1 -k2,2n > {tx_out_file}")
+                       "{sort_cmd} -k1,1 -k2,2n > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
         vcfutils.bgzip_and_index(out_file, data.get("config", {}), remove_orig=False)
         return out_file
@@ -38,7 +57,8 @@ def sort_merge(in_file, data):
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
-            cmd = ("{cat_cmd} {in_file} | sort -k1,1 -k2,2n | "
+            sort_cmd = get_sort_cmd()
+            cmd = ("{cat_cmd} {in_file} | {sort_cmd} -k1,1 -k2,2n | "
                    "bedtools merge -i - -c 4 -o distinct > {tx_out_file}")
             do.run(cmd.format(**locals()), "Sort BED file", data)
     return out_file

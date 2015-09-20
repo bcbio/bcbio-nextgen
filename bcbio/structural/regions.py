@@ -56,7 +56,8 @@ def _collapse_transcripts(in_file, window, data, out_dir):
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             prep_file = "%s-sortprep%s" % os.path.splitext(tx_out_file)
-            cmd = "sort -k4,4 -k1,1 {in_file} > {prep_file}"
+            sort_cmd = bedutils.get_sort_cmd()
+            cmd = "{sort_cmd} -k4,4 -k1,1 {in_file} > {prep_file}"
             do.run(cmd.format(**locals()), "Sort BED file by transcript name")
             with open(tx_out_file, "w") as out_handle:
                 # Work around for segmentation fault issue with groupby

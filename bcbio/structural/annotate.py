@@ -6,6 +6,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.structural import regions
+from bcbio.variation import bedutils
 
 import pybedtools
 
@@ -33,7 +34,8 @@ def add_genes(in_file, data, max_distance=10000):
                 # with bedtools merge: 'ERROR: illegal character '.' found in integer conversion of string'
                 distance_filter = (r"""awk -F$'\t' -v OFS='\t' '{if ($NF > %s) $%s = "."} {print}'""" %
                                    (max_distance, gene_index))
-                cmd = ("sort -k1,1 -k2,2n {in_file} | "
+                sort_cmd = bedutils.get_sort_cmd()
+                cmd = ("{sort_cmd} -k1,1 -k2,2n {in_file} | "
                        "bedtools closest -d -t all -a - -b {gene_file} | "
                        "{distance_filter} | cut -f 1-{max_column} | "
                        "bedtools merge -i - -c {columns} -o {ops} -delim ',' > {tx_out_file}")
