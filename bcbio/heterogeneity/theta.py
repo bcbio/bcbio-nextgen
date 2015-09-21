@@ -19,7 +19,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do
-from bcbio.structural import cnvkit, ensemble
+from bcbio.structural import cnvkit, convert
 
 def run(vrn_info, cnvs_by_name, somatic_info):
     """Run THetA analysis given output from CNV caller on a tumor/normal pair.
@@ -47,7 +47,7 @@ def subset_by_supported(input_file, get_coords, calls_by_name, work_dir, data,
     input_file, allowing handling of multiple input file types.
     """
     support_files = [(c, tz.get_in([c, "vrn_file"], calls_by_name))
-                     for c in ensemble.SUBSET_BY_SUPPORT["cnvkit"]]
+                     for c in convert.SUBSET_BY_SUPPORT["cnvkit"]]
     support_files = [(c, f) for (c, f) in support_files if f and vcfutils.vcf_has_variants(f)]
     if len(support_files) == 0:
         return input_file
