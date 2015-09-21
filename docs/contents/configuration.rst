@@ -496,9 +496,6 @@ Variant calling
     array data or reference materials.
 - ``validate_regions`` A BED file of regions to evaluate in. This
   defines specific regions covered by the ``validate`` VCF  file.
-- ``validate_genome_build``: Genome build of the validation file, if
-  different than the samples genome build. Helps manage hg19/GRCh37
-  chromosome naming differences.
 - ``joint_group_size`` Specify the maximum number of gVCF samples to feed into
   joint calling. Currently applies to GATK HaplotypeCaller joint calling and
   defaults to the GATK recommendation of 200. Larger numbers of samples will

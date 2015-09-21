@@ -139,10 +139,6 @@ def add_reference_resources(data):
     data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc, data)
     if effects.get_type(data) == "snpeff":
         data["reference"]["snpeff"] = effects.get_snpeff_files(data)
-    alt_genome = utils.get_in(data, ("config", "algorithm", "validate_genome_build"))
-    if alt_genome:
-        data["reference"]["alt"] = {alt_genome:
-                                    genome.get_refs(alt_genome, None, data["dirs"]["galaxy"], data)["fasta"]}
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
         if population.do_db_build([data], check_gemini=False, need_bam=False):

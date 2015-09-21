@@ -22,7 +22,7 @@ from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import validateplot, vcfutils, multi
+from bcbio.variation import validateplot, vcfutils, multi, naming
 
 # ## Individual sample comparisons
 
@@ -90,6 +90,10 @@ def compare_to_rm(data):
         caller = _get_caller(toval_data)
         sample = dd.get_sample_name(toval_data)
         base_dir = utils.safe_makedir(os.path.join(toval_data["dirs"]["work"], "validate", sample, caller))
+        rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data["genome_build"], base_dir, data)
+        rm_interval_file = (naming.handle_synonyms(rm_interval_file, dd.get_ref_file(data),
+                                                   data["genome_build"], base_dir, data)
+                            if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "bcbio.variation")
         if vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
@@ -98,6 +102,8 @@ def compare_to_rm(data):
             data["validate"] = _run_bcbio_variation(vrn_file, rm_file, rm_interval_file, base_dir,
                                                     sample, caller, toval_data)
     return [[data]]
+
+# ## Real Time Genomics vcfeval
 
 def _get_sample_and_caller(data):
     return [tz.get_in(["metadata", "validate_sample"], data) or dd.get_sample_name(data),
@@ -188,12 +194,31 @@ def _get_merged_intervals(rm_interval_file, base_dir, data):
         final_intervals = shared.remove_lcr_regions(rm_interval_file, [data])
     return final_intervals
 
+def get_analysis_intervals(data):
+    """Retrieve analysis regions for the current variant calling pipeline.
+    """
+    if data.get("ensemble_bed"):
+        return data["ensemble_bed"]
+    elif data.get("align_bam"):
+        return callable.sample_callable_bed(data["align_bam"], dd.get_ref_file(data), data)
+    elif data.get("work_bam"):
+        return callable.sample_callable_bed(data["work_bam"], dd.get_ref_file(data), data)
+    elif data.get("work_bam_callable"):
+        return callable.sample_callable_bed(data["work_bam_callable"], dd.get_ref_file(data), data)
+    else:
+        for key in ["callable_regions", "variant_regions"]:
+            intervals = data["config"]["algorithm"].get(key)
+            if intervals:
+                return intervals
+
+
+# ## bcbio.variation comparison -- deprecated approach
+
 def _run_bcbio_variation(vrn_file, rm_file, rm_interval_file, base_dir, sample, caller, data):
     """Run validation of a caller against the truth set using bcbio.variation.
     """
-    rm_genome = data["config"]["algorithm"].get("validate_genome_build")
     val_config_file = _create_validate_config_file(vrn_file, rm_file, rm_interval_file,
-                                                   rm_genome, base_dir, data)
+                                                   base_dir, data)
     work_dir = os.path.join(base_dir, "work")
     out = {"summary": os.path.join(work_dir, "validate-summary.csv"),
            "grading": os.path.join(work_dir, "validate-grading.yaml"),
@@ -218,29 +243,21 @@ def bcbio_variation_comparison(config_file, base_dir, data):
           ["-jar", bv_jar, "variant-compare", config_file]
     do.run(cmd, "Comparing variant calls using bcbio.variation", data)
 
-def _create_validate_config_file(vrn_file, rm_file, rm_interval_file, rm_genome,
+def _create_validate_config_file(vrn_file, rm_file, rm_interval_file,
                                  base_dir, data):
     config_dir = utils.safe_makedir(os.path.join(base_dir, "config"))
     config_file = os.path.join(config_dir, "validate.yaml")
     if not utils.file_uptodate(config_file, vrn_file):
         with file_transaction(data, config_file) as tx_config_file:
             with open(tx_config_file, "w") as out_handle:
-                out = _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
+                out = _create_validate_config(vrn_file, rm_file, rm_interval_file,
                                               base_dir, data)
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return config_file
 
-def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
-                            base_dir, data):
+def _create_validate_config(vrn_file, rm_file, rm_interval_file, base_dir, data):
     """Create a bcbio.variation configuration input for validation.
     """
-    if rm_genome:
-        rm_genome = utils.get_in(data, ("reference", "alt", rm_genome, "base"))
-    if rm_genome and rm_genome != utils.get_in(data, ("reference", "fasta", "base")):
-        eval_genome = utils.get_in(data, ("reference", "fasta", "base"))
-    else:
-        rm_genome = utils.get_in(data, ("reference", "fasta", "base"))
-        eval_genome = None
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
                 "fix-sample-header": True, "remove-refcalls": True}
     a_intervals = get_analysis_intervals(data)
@@ -249,44 +266,18 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, rm_genome,
     if rm_interval_file:
         ref_call["intervals"] = rm_interval_file
     eval_call = {"file": vrn_file, "name": "eval", "remove-refcalls": True}
-    if eval_genome:
-        eval_call["ref"] = eval_genome
-        eval_call["preclean"] = True
-        eval_call["prep"] = True
-    if a_intervals and eval_genome:
-        eval_call["intervals"] = os.path.abspath(a_intervals)
     exp = {"sample": data["name"][-1],
-           "ref": rm_genome,
+           "ref": dd.get_ref_file(data),
            "approach": "grade",
            "calls": [ref_call, eval_call]}
-    if a_intervals and not eval_genome:
+    if a_intervals:
         exp["intervals"] = os.path.abspath(a_intervals)
-    if data.get("align_bam") and not eval_genome:
+    if data.get("align_bam"):
         exp["align"] = data["align_bam"]
-    elif data.get("work_bam") and not eval_genome:
+    elif data.get("work_bam"):
         exp["align"] = data["work_bam"]
     return {"dir": {"base": base_dir, "out": "work", "prep": "work/prep"},
             "experiments": [exp]}
-
-def get_analysis_intervals(data):
-    """Retrieve analysis regions for the current variant calling pipeline.
-    """
-    if data.get("ensemble_bed"):
-        return data["ensemble_bed"]
-    elif data.get("align_bam"):
-        return callable.sample_callable_bed(data["align_bam"],
-                                            utils.get_in(data, ("reference", "fasta", "base")), data)
-    elif data.get("work_bam"):
-        return callable.sample_callable_bed(data["work_bam"],
-                                            utils.get_in(data, ("reference", "fasta", "base")), data)
-    elif data.get("work_bam_callable"):
-        return callable.sample_callable_bed(data["work_bam_callable"],
-                                            utils.get_in(data, ("reference", "fasta", "base")), data)
-    else:
-        for key in ["callable_regions", "variant_regions"]:
-            intervals = data["config"]["algorithm"].get(key)
-            if intervals:
-                return intervals
 
 # ## Summarize comparisons
 
