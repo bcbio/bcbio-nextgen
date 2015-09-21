@@ -98,12 +98,14 @@ def _evaluate_multi(calls, truth_svtypes, work_dir, data):
                             str_size = "%s-%s" % size
                             for call in calls:
                                 call_bed = convert.to_bed(call, dd.get_sample_name(data), work_dir, calls, data)
-                                evalout = _evaluate_one(call["variantcaller"], svtype, size, call_bed, truth, data)
-                                writer.writerow([svtype, str_size, call["variantcaller"],
-                                                 evalout["sensitivity"]["label"], evalout["precision"]["label"]])
-                                for metric in ["sensitivity", "precision"]:
-                                    dfwriter.writerow([svtype, str_size, call["variantcaller"], metric,
-                                                       evalout[metric]["val"], evalout[metric]["label"]])
+                                if utils.file_exists(call_bed):
+                                    evalout = _evaluate_one(call["variantcaller"], svtype, size, call_bed,
+                                                            truth, data)
+                                    writer.writerow([svtype, str_size, call["variantcaller"],
+                                                     evalout["sensitivity"]["label"], evalout["precision"]["label"]])
+                                    for metric in ["sensitivity", "precision"]:
+                                        dfwriter.writerow([svtype, str_size, call["variantcaller"], metric,
+                                                           evalout[metric]["val"], evalout[metric]["label"]])
     return out_file, df_file
 
 def _plot_evaluation(df_csv):
