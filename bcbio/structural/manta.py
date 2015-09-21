@@ -9,7 +9,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
 
 def run(items):
     """Perform detection of structural variations with Manta.
@@ -65,7 +65,7 @@ def _prep_config(items, paired, work_dir):
     """
     assert utils.which("configManta.py"), "Could not find installed configManta.py"
     out_file = os.path.join(work_dir, "runWorkflow.py")
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) or _out_of_date(out_file):
         cmd = [sys.executable, utils.which("configManta.py")]
         if paired:
             if paired.normal_bam:
@@ -84,3 +84,14 @@ def _prep_config(items, paired, work_dir):
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                            dd.get_sample_name(data), "manta"))
+
+def _out_of_date(rw_file):
+    """Check if a run workflow file points to an older version of manta and needs a refresh.
+    """
+    with open(rw_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("sys.path.append"):
+                file_version = line.split("/lib/python")[0].split("Cellar/manta/")[-1]
+                if file_version != programs.get_version_manifest("manta"):
+                    return True
+    return False
