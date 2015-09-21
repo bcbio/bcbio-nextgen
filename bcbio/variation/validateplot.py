@@ -69,16 +69,22 @@ def _do_classifyplot(df, out_file, title=None, size=None):
     vtypes = sorted(df["vtype"].unique(), reverse=True)
     callers = sorted(df["caller"].unique())
     samples = sorted(df["sample"].unique())
-    fig, axs = plt.subplots(len(vtypes) * len(callers), len(metrics))
+    if len(samples) >= len(callers):
+        cats, groups = (samples, callers)
+        data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
+    else:
+        cats, groups = (callers, samples)
+        data_dict = df.set_index(["caller", "sample", "vtype"]).T.to_dict()
+    fig, axs = plt.subplots(len(vtypes) * len(groups), len(metrics))
     fig.text(.5, .95, title if title else "", horizontalalignment='center', size=14)
     for vi, vtype in enumerate(vtypes):
         sns.set_palette(sns.xkcd_palette([colors[vi]]))
-        for ci, caller in enumerate(callers):
-            for j, (metric, label) in enumerate(metrics):
-                cur_plot = axs[vi * len(vtypes) + ci][j]
+        for gi, group in enumerate(groups):
+            for mi, (metric, label) in enumerate(metrics):
+                cur_plot = axs[vi * len(groups) + gi][mi]
                 vals, labels = [], []
-                for sample in samples:
-                    cur_data = data_dict.get((sample, caller, vtype))
+                for cat in cats:
+                    cur_data = data_dict.get((cat, group, vtype))
                     if cur_data:
                         vals.append(cur_data[metric])
                         labels.append(cur_data[label])
@@ -94,14 +100,14 @@ def _do_classifyplot(df, out_file, title=None, size=None):
                 for ai, (val, label) in enumerate(zip(vals, labels)):
                     cur_plot.annotate(label, (pad + (0 if max(vals) > metric_max / 2.0 else max(vals)),
                                               ai + 0.35), va='center', size=7)
-                if j == 0:
+                cur_plot.locator_params(nbins=len(cats) + 2, axis="y", tight=True)
+                if mi == 0:
                     cur_plot.tick_params(axis='y', which='major', labelsize=8)
-                    cur_plot.locator_params(nbins=len(samples) + 2, axis="y", tight=True)
-                    cur_plot.set_yticklabels(samples, size=8, va="bottom")
-                    cur_plot.set_title("%s: %s" % (vtype, caller), fontsize=12, loc="left")
+                    cur_plot.set_yticklabels(cats, size=8, va="bottom")
+                    cur_plot.set_title("%s: %s" % (vtype, group), fontsize=12, loc="left")
                 else:
                     cur_plot.get_yaxis().set_ticks([])
-                if ci == len(callers) - 1:
+                if gi == len(groups) - 1:
                     cur_plot.tick_params(axis='x', which='major', labelsize=8)
                     cur_plot.get_xaxis().set_major_formatter(
                         FuncFormatter(lambda v, p: "%s%%" % (int(v) if round(v) == v else v)))
@@ -113,7 +119,7 @@ def _do_classifyplot(df, out_file, title=None, size=None):
                 cur_plot.spines['left'].set_visible(False)
                 cur_plot.spines['top'].set_visible(False)
                 cur_plot.spines['right'].set_visible(False)
-    x, y = (6, len(vtypes) * len(callers) + 1 * 0.5 * len(samples)) if size is None else size
+    x, y = (6, len(vtypes) * len(groups) + 1 * 0.5 * len(cats)) if size is None else size
     fig.set_size_inches(x, y)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     plt.subplots_adjust(hspace=0.6)
