@@ -11,10 +11,12 @@ details:
     vrn_file: [../data/reference_material/7_100326_FC6107FAAXX-grade.vcf]
     genome_build: hg19
     algorithm:
-      validate_genome_build: hg19
+      tools_off: [gemini]
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     metadata:
       batch: TestBatch1
+      validate_batch: b1
+      validate_sample: test-val
   - algorithm:
       #aligner: false
       #bam_clean: picard
@@ -33,7 +35,7 @@ details:
       #svcaller: [lumpy, cnvkit, manta, metasv]
       #svcaller: cnvkit
       #remove_lcr: true
-      #tools_off: [gemini]
+      tools_off: [gemini]
       mixup_check: qsignature
       #variantcaller: [gatk, gatk-haplotype]
       quality_format: standard
@@ -53,6 +55,8 @@ details:
       #  dir: /usr/share/java/gatk-1.6-13-g91f02df
     metadata:
       batch: TestBatch1
+      validate_batch: b1
+      validate_sample: test-val-2
     analysis: variant2
     description: Test1
     genome_build: hg19

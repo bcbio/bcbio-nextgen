@@ -37,6 +37,7 @@ SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9", "rn6
                      "canFam3", "dm3", "galGal4", "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
                      "sacCer3", "TAIR10", "WBcel235", "xenTro3", "Zv9", "GRCz10"]
 SUPPORTED_INDEXES = ["bowtie", "bowtie2", "bwa", "novoalign", "rtg", "snap", "star", "ucsc", "seq"]
+DEFAULT_INDEXES = ["rtg"]
 
 Tool = collections.namedtuple("Tool", ["name", "fname"])
 
@@ -84,6 +85,9 @@ def upgrade_bcbio(args):
         print("Installing additional tools")
         _install_toolplus(args)
     if args.install_data:
+        for default in DEFAULT_INDEXES:
+            if default not in args.aligners:
+                args.aligners.append(default)
         if len(args.aligners) == 0:
             print("Warning: no aligners provided with `--aligners` flag")
         if len(args.genomes) == 0:
