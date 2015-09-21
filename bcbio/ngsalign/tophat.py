@@ -149,7 +149,6 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             tophat_ready = tophat_runner.bake(**ready_options)
             cmd = "%s %s" % (sys.executable, str(tophat_ready.bake(*files)))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
-        _fix_empty_readnames(out_file, data)
     if pair_file and _has_alignments(out_file):
         fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.sam" % out_base),
                            ref_file, config)
@@ -182,22 +181,6 @@ def _has_alignments(sam_file):
             elif not line.startswith("@"):
                 return True
     return False
-
-def _fix_empty_readnames(orig_file, data):
-    """ Fix SAMfile reads with empty read names
-
-    Tophat 2.0.9 sometimes outputs empty read names, making the
-    FLAG field be the read name. This throws those reads away.
-    """
-    with file_transaction(data, orig_file) as tx_out_file:
-        logger.info("Removing reads with empty read names from Tophat output.")
-        with open(orig_file) as orig, open(tx_out_file, "w") as out:
-            for line in orig:
-                if line.split()[0].isdigit():
-                    continue
-                out.write(line)
-    return orig_file
-
 
 def _fix_mates(orig_file, out_file, ref_file, config):
     """Fix problematic unmapped mate pairs in TopHat output.
