@@ -127,7 +127,7 @@ def run(items):
                                             data["config"])
         gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, data)
         gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
-    if paired:
+    if paired and paired.normal_name:
         gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
     out = []
     for data in items:
