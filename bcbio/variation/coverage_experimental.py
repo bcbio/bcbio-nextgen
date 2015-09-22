@@ -9,7 +9,7 @@ import pysam
 import pybedtools
 
 from bcbio.utils import (file_exists, tmpfile, chdir, splitext_plus,
-                         max_command_length, robust_partition_all)
+                         max_command_length, robust_partition_all, append_stem)
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -52,7 +52,7 @@ class cov_class:
         df = pd.DataFrame({'depth': self.total.keys(), 'nt': self.total.values()})
         df["size"] = self.size
         df["sample"] = self.sample
-        df.to_csv(out_file, mode='a', header=False, index=False, sep="\t")
+        df.to_csv(out_file, mode='w', header=False, index=False, sep="\t")
 
     def _noise(self):
         m = np.average(map(int, self.total.keys()), weights=self.total.values())
@@ -90,6 +90,38 @@ def _get_exome_coverage_stats(fn, sample, out_file, total_cov):
 
 def _silence_run(cmd):
     do._do_run(cmd, False)
+
+def checkpoint(stem):
+    def check_file(f):
+        def wrapper(*args, **kwargs):
+            out_file = append_stem(args[0], "_summary")
+            if file_exists(out_file):
+                logger.debug("Skipping %s" % out_file)
+                return None
+            return f(*args, **kwargs)
+        return wrapper
+    return check_file
+
+@checkpoint("_summary")
+def _calculate_percentiles(in_file, sample):
+    """
+    Parse pct bases per region to summarize it in
+    7 different pct of regions points with pct bases covered
+    higher than a completeness cutoff (4, 10, 20, 50)
+    """
+    out_file = append_stem(in_file, "_summary")
+    dt = pd.read_csv(in_file, sep="\t")
+    pct = dict()
+    for cutoff in ["cutoff4", "cutoff10", "cutoff20", "cutoff50"]:
+        a = np.array(dt[cutoff])
+        for p_point in [0.01, 10, 25, 50, 75, 90, 99.9]:
+            q = np.percentile(a, p_point)
+            pct[(cutoff, p_point)] = q
+
+    with file_transaction(out_file) as tx_file:
+        with open(tx_file, 'w') as out_handle:
+            for k in pct:
+                print >>out_handle, "\t".join(map(str, [k[0], k[1], pct[k], sample]))
 
 def coverage(data):
     AVERAGE_REGION_STRING_LENGTH = 100
@@ -140,6 +172,7 @@ def coverage(data):
                         total_cov = _get_exome_coverage_stats(os.path.abspath(tx_tmp_file), sample, out_tx, total_cov)
                         logger.debug("Processed %d regions." % lcount)
             total_cov.write_coverage(parse_total_file)
+        _calculate_percentiles(parse_file, sample)
         data['coverage'] = os.path.abspath(parse_file)
         return data
 
