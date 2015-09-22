@@ -3,7 +3,7 @@ upload:
 details:
   # ## RNA-seq
   - analysis: RNA-seq
-    files: ['Hsapiens_Mmusculus_1.fq.gz']
+    files: ['../data/1_explant/Hsapiens_Mmusculus_1.fq.gz']
     algorithm:
       transcriptome_align: True
       aligner: tophat2
@@ -17,7 +17,7 @@ details:
     genome_build: mm9
     lane: 1
   - analysis: RNA-seq
-    files: ['Hsapiens_Mmusculus_rep2.fq.gz']
+    files: ['../data/1_explant/Hsapiens_Mmusculus_rep2.fq.gz']
     algorithm:
       transcriptome_align: True
       aligner: tophat2

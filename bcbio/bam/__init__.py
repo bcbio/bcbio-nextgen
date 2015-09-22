@@ -14,6 +14,7 @@ from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 import bcbio.pipeline.datadict as dd
 from bcbio.provenance import do
@@ -355,10 +356,12 @@ def sort(in_bam, config, order="coordinate"):
                 do.run(cmd.format(**locals()),
                        "Sort BAM file (multi core, %s): %s to %s" %
                        (order, os.path.basename(in_bam),
-                        os.path.basename(sort_file)), log_error=False)
+                        os.path.basename(sort_file)))
             except:
+                logger.exception("Multi-core sorting failed, reverting to single core")
+                order_flag = "-n" if order == "queryname" else ""
                 do.run(samtools_cmd.format(**locals()),
-                       "Sort BAM file (single core, %s): %s" %
+                       "Sort BAM file (single core, %s): %s to %s" %
                        (order, os.path.basename(in_bam),
                         os.path.basename(sort_file)))
     return sort_file
