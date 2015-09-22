@@ -52,7 +52,7 @@ def _filter_by_support(in_file, data):
       - Large calls need split read evidence.
     """
     rc_filter = ("FORMAT/SU < 4 || "
-                 "(FORMAT/SR == 0 && ABS(SVLEN)>20000)")
+                 "(FORMAT/SR == 0 && ABS(SVLEN)>50000)")
     return vfilter.hard_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
                                      limit_regions=None)
 
