@@ -61,10 +61,16 @@ def mirbase(data):
     return [[data]]
 
 def _cmd_cutadapt():
+    """
+    Run cutadapt for smallRNA data that needs some specific values.
+    """
     cmd = "{cutadapt} --adapter={adapter} --minimum-length=8 --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file}"
     return cmd
 
 def _collapse(in_file):
+    """
+    Collpase reads into unique sequences with seqcluster
+    """
     out_file = append_stem(in_file, ".trimming").replace(".gz", "")
     if file_exists(out_file):
         return out_file
@@ -73,6 +79,9 @@ def _collapse(in_file):
     return out_file
 
 def _summary(in_file):
+    """
+    Calculate size distribution after adapter removal
+    """
     data = Counter()
     out_file = in_file + "_size_stats"
     if file_exists(out_file):
@@ -92,6 +101,10 @@ def _summary(in_file):
     return out_file
 
 def _miraligner(fastq_file, out_file, species, db_folder, config):
+    """
+    Run miraligner tool (from seqcluster suit) with default
+    parameters.
+    """
     resources = config_utils.get_resources("miraligner", config)
     jvm_opts =  "-Xms750m -Xmx4g"
     if resources and resources.get("jvm_opts"):
@@ -100,6 +113,6 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
     cmd = ("miraligner {jvm_opts} -freq -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
     if not file_exists(out_file + ".mirna"):
         with file_transaction(out_file) as tx_out_file:
-            do.run(cmd.format(**locals()), "Do miRNA annotation")
+            do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % fastq_file)
             shutil.move(tx_out_file + ".mirna", out_file + ".mirna")
     return out_file + ".mirna"
