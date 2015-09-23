@@ -23,7 +23,7 @@ import pysam
 import toolz as tz
 import yaml
 
-from bcbio import bam, broad, utils
+from bcbio import broad, utils
 from bcbio.bam import ref
 from bcbio.log import logger
 from bcbio.distributed import multi, prun
@@ -100,7 +100,6 @@ def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, 
     out_file = "%s-genomecov.bed" % utils.splitext_plus(base_file)[0]
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            bam.index(in_bam, data["config"])
             fai_file = ref.fasta_idx(ref_file, data["config"])
             sambamba = config_utils.get_program("sambamba", data["config"])
             bedtools = config_utils.get_program("bedtools", data["config"])
