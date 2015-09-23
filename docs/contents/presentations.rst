@@ -1,8 +1,17 @@
 Presentations
 =============
 
-- Overview of variant calling for `NGS Data Analysis Course at Harvard Medical School <https://wiki.harvard.edu/confluence/display/hbctraining/NGS+Data+Analysis+Course+Application%2C+Spring+2015>`
-  (19 May 2015): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2015_teaching/variant_ngscourse.pdf>`
+- Presentation on Research Scientist Careers for `Iowa State Bioinformatics
+  Course <https://bcbio.las.iastate.edu/>`_ (23 September 2015): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/2015_iowast_career/chapman_career.pdf>`_
+
+- Prioritization of structural variants based on known biological information at
+  `BOSC 2015 <http://www.open-bio.org/wiki/BOSC_2015>`_:
+`slides <https://github.com/chapmanb/bcbb/blob/master/talks/bosc2015_bcbio_prioritize/bosc2015_bcbio_prioritize.pdf>`_;
+`video <https://www.youtube.com/watch?v=JZnF_6UnajY&feature=youtu.be>`_
+
+- Overview of variant calling for `NGS Data Analysis Course at Harvard Medical School <https://wiki.harvard.edu/confluence/display/hbctraining/NGS+Data+Analysis+Course+Application%2C+Spring+2015>`_
+  (19 May 2015): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2015_teaching/variant_ngscourse.pdf>`_
 
 - `NGS Glasgow <http://biotexcel.com/event/ngs-2015-glasgow/>`_ (23 April 2015):
   `slides <https://dl.dropboxusercontent.com/u/407047/Work/Presentations/20150420%20NGS%20Glasgow.pdf>`_
