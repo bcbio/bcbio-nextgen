@@ -36,7 +36,7 @@ def add_genes(in_file, data, max_distance=10000):
                                    (max_distance, gene_index))
                 sort_cmd = bedutils.get_sort_cmd()
                 cmd = ("{sort_cmd} -k1,1 -k2,2n {in_file} | "
-                       "bedtools closest -d -t all -a - -b {gene_file} | "
+                       "bedtools closest -d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {gene_file}) | "
                        "{distance_filter} | cut -f 1-{max_column} | "
                        "bedtools merge -i - -c {columns} -o {ops} -delim ',' > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Annotate BED file with gene info")
