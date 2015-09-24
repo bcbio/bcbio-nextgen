@@ -14,6 +14,9 @@
   for validation instead of bcbio.variation. Improves speed and resolution of
   closely spaced variants. The old funtionality is still available with
   `validate_method: bcbio.variation`.
+- Correctly apply BQSR when using recalibration with PrintReads by using GATK
+  full instead of the open source GATK framework which silently ignores BQSR
+  option. Thanks to Severine Catreux.
 - Require larger blocks (250bp, moved from 100bp) to find regions for splitting analysis
   to avoid too tight splitting around small homozygous deletions.
 - Adjust mapping quality (MQ) filter for GATK SNP hard filters to improve sensitivity
