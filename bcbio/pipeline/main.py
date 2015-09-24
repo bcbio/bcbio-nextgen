@@ -149,8 +149,6 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = run_parallel("postprocess_alignment", samples)
                 samples = run_parallel("combine_sample_regions", [samples])
                 samples = region.clean_sample_data(samples)
-            with profile.report("coverage", dirs):
-                samples = coverage.summarize_samples(samples, run_parallel)
             with profile.report("structural variation initial", dirs):
                 samples = structural.run(samples, run_parallel, "initial")
 

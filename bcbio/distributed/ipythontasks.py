@@ -319,12 +319,6 @@ def compare_to_rm(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(validate.compare_to_rm, *args))
 
-@require(coverage)
-def coverage_summary(*args):
-    args = ipython.unzip_args(args)
-    with _setup_logging(args) as config:
-        return ipython.zip_args(apply(coverage.summary, *args))
-
 @require(disambiguate)
 def run_disambiguate(*args):
     args = ipython.unzip_args(args)

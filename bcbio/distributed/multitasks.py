@@ -190,10 +190,6 @@ def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
 
 @utils.map_wrap
-def coverage_summary(*args):
-    return coverage.summary(*args)
-
-@utils.map_wrap
 def run_disambiguate(*args):
     return disambiguate.run(*args)
 
