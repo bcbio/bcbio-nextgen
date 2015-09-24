@@ -78,8 +78,10 @@ def merge_overlaps(in_file, data, distance=None, out_dir=None):
     Overlapping regions (1:1-100, 1:90-100) cause issues with callers like FreeBayes
     that don't collapse BEDs prior to using them.
     """
+    config = data["config"]
     if in_file:
-        bedtools = config_utils.get_program("bedtools", data["config"])
+        bedtools = config_utils.get_program("bedtools", config,
+                                            default="bedtools")
         work_dir = tz.get_in(["dirs", "work"], data)
         if out_dir:
             bedprep_dir = out_dir
