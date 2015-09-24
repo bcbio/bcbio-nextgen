@@ -78,6 +78,7 @@ def run_cluster(*data):
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = op.join(work_dir, "align", "seqs.bam")
     cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(data[0][0]), dd.get_srna_gtf_file(data[0][0]))
+    report_file = _report(data[0][0], dd.get_ref_file(data[0][0]))
     for sample in data:
         sample[0]["seqcluster"] = out_dir
     return data
@@ -98,6 +99,20 @@ def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
         cmd = ("{seqcluster} cluster -o {out_dir} -m {ma_file} -a {bam_file} -r {reference} {annotation_file}")
         do.run(cmd.format(**locals()), "Running seqcluster.")
     return out_dir
+
+def _report(data, reference):
+    """
+    Run report of seqcluster to get browser options for results
+    """
+    seqcluster = os.path.join(os.path.dirname(sys.executable), "seqcluster")
+    work_dir = dd.get_work_dir(data)
+    out_dir = safe_makedir(os.path.join(work_dir, "seqcluster", "report"))
+    out_file = op.join(out_dir, "seqcluster.db")
+    json = op.join(work_dir, "seqcluster", "cluster", "seqcluster.json")
+    cmd = ("{seqcluster} report -o {out_dir} -r {reference} -j {json}")
+    if not file_exists(out_file):
+        do.run(cmd.format(**locals()), "Run report on clusters")
+    return out_file
 
 def report(data):
     """Create a Rmd report for small RNAseq analysis"""
