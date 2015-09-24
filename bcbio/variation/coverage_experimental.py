@@ -125,7 +125,7 @@ def _calculate_percentiles(in_file, sample):
 
 def coverage(data):
     AVERAGE_REGION_STRING_LENGTH = 100
-    bed_file = dd.get_coverage_experimental(data)
+    bed_file = dd.get_coverage(data)
     if not bed_file:
         return data
 
@@ -192,10 +192,13 @@ def variants(data):
         in_bam = data["work_bam"]
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
         parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
+        num_cores = dd.get_num_cores(data)
         if not file_exists(cg_file):
             with file_transaction(cg_file) as tx_out:
-                cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator -R {ref_file} "
+                cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator "
+                       "-R {ref_file} "
                        "-L {bed_file} -I {in_bam} "
+                       "--num_threads {num_cores} "
                        "-A GCContent --variant {in_vcf} --out {tx_out}")
                 do.run(cmd.format(**locals()), " GC bias for %s" % in_vcf)
 
@@ -203,8 +206,9 @@ def variants(data):
             with file_transaction(parse_file) as out_tx:
                 with open(out_tx, 'w') as out_handle:
                     print >>out_handle, "CG\tdepth\tsample"
-                cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R  {bed_file} {cg_file} >> {out_tx}")
-                do.run(cmd.format(**locals()), " query for %s" % in_vcf)
+                cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
+                       "{bed_file} {cg_file} >> {out_tx}")
+                do.run(cmd.format(**locals()),
+                       "Calculating GC content and depth for %s" % in_vcf)
                 logger.debug('parsing coverage: %s' % sample)
-        # return df
         return data

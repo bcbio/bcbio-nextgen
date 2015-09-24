@@ -1,8 +1,6 @@
 """Examine and query coverage in sequencing experiments.
 
-Provides estimates of coverage intervals based on callable regions and
-stores coverage per regions in a database using Chanjo
-(https://github.com/robinandeer/chanjo)
+Provides estimates of coverage intervals based on callable regions
 """
 import collections
 import os

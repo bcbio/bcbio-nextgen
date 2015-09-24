@@ -1011,14 +1011,10 @@ def _slice_chr22(in_bam, data):
 
 def report_summary(samples, run_parallel):
     """
-    Run coverage report for exome data
-    with bcbiocov package
+    Run coverage report with bcbiocov package
     """
     work_dir = dd.get_work_dir(samples[0][0])
     yaml_file = os.path.join(work_dir, "project-summary.yaml")
-
-    if not dd.get_report(samples[0][0]):
-        return samples
 
     parent_dir = utils.safe_makedir(os.path.join(work_dir,"report"))
     qsignature_fn = os.path.join(work_dir, "qc", "qsignature", "qsignature.ma")

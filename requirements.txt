@@ -21,7 +21,6 @@ arrow>=0.4.4
 awscli>=1.7.14
 bioblend>=0.4.3
 bcbreport>=0.99.12
-chanjo>=2.0.2
 click>=3.3
 cnvkit>=0.3.4
 cutadapt==1.4.2

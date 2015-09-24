@@ -195,7 +195,7 @@ class Variant2Pipeline(AbstractPipeline):
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
 
-        with prun.start(_wres(parallel, ["gatk"], ensure_mem = {"gatk": 8}),
+        with prun.start(_wres(parallel, ["gatk", "samtools"], ensure_mem = {"gatk": 8}),
                         samples, config, dirs, "coverage") as run_parallel:
             with profile.report("report", dirs):
                 samples = qcsummary.report_summary(samples, run_parallel)

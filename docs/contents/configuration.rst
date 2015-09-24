@@ -418,10 +418,9 @@ Experimental information
    will not get called. Defaults to 4. Setting lower than 4 will trigger
    low-depth calling options for GATK.
 -  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
-- ``coverage`` A BED file of regions to check for coverage. A `Chanjo`_
-  database of coverage and completeness is calculated over these regions and
-  regions with poor coverage are compiled in an incomplete regions file for
-  each batch.
+- ``coverage`` A BED file of regions to check for coverage. Coverage
+  and completeness are calculated over these regions and a Rmarkdown
+  report is generated in the `report` directory.
 - ``expression_caller`` A list of optional, experimental callers to turn on.
   Supports ['sailfish'].
 

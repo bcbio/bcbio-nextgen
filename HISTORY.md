@@ -28,6 +28,8 @@ the default.
 - Remove test_run parameter since it was poorly supported and not used much.
 - Fix issue with featureCounts sorting not working in parallel by pre-sorting
 and filtering the BAM file.
+- Unified stock coverage and experimental coverage reporting.
+- Deprecated `report` and `coverage_experimental` as algorithm keys.
 
 ## 0.9.2 (1 September 2015)
 
