@@ -16,6 +16,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio import broad
 from bcbio.pipeline import config_utils
+from bcbio.variation import vcfutils
 
 
 class cov_class:
@@ -189,26 +190,28 @@ def variants(data):
         gatk_jar = config_utils.get_program("gatk", data['config'], "dir")
         bed_file = dd.get_variant_regions(data)
         sample = dd.get_sample_name(data)
-        in_bam = data["work_bam"]
+        in_bam = data.get("work_bam")
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
         parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
         num_cores = dd.get_num_cores(data)
-        if not file_exists(cg_file):
-            with file_transaction(cg_file) as tx_out:
-                cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator "
-                       "-R {ref_file} "
-                       "-L {bed_file} -I {in_bam} "
-                       "--num_threads {num_cores} "
-                       "-A GCContent --variant {in_vcf} --out {tx_out}")
-                do.run(cmd.format(**locals()), " GC bias for %s" % in_vcf)
+        if in_bam:
+            if not file_exists(cg_file):
+                with file_transaction(cg_file) as tx_out:
+                    cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator "
+                           "-R {ref_file} "
+                           "-L {bed_file} -I {in_bam} "
+                           "--num_threads {num_cores} "
+                           "-A GCContent --variant {in_vcf} --out {tx_out}")
+                    do.run(cmd.format(**locals()), " GC bias for %s" % in_vcf)
+            cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
-        if not file_exists(parse_file):
-            with file_transaction(parse_file) as out_tx:
-                with open(out_tx, 'w') as out_handle:
-                    print >>out_handle, "CG\tdepth\tsample"
-                cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
-                       "{bed_file} {cg_file} >> {out_tx}")
-                do.run(cmd.format(**locals()),
-                       "Calculating GC content and depth for %s" % in_vcf)
-                logger.debug('parsing coverage: %s' % sample)
+            if not file_exists(parse_file):
+                with file_transaction(parse_file) as out_tx:
+                    with open(out_tx, 'w') as out_handle:
+                        print >>out_handle, "CG\tdepth\tsample"
+                    cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
+                           "{bed_file} {cg_file} >> {out_tx}")
+                    do.run(cmd.format(**locals()),
+                           "Calculating GC content and depth for %s" % in_vcf)
+                    logger.debug('parsing coverage: %s' % sample)
         return data

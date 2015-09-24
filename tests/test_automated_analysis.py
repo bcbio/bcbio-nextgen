@@ -60,8 +60,7 @@ def get_post_process_yaml(data_dir, workdir):
             _, system = load_system_config("bcbio_system.yaml")
         except ValueError:
             system = None
-    #if system is None or not os.path.exists(system):
-    if True:
+    if system is None or not os.path.exists(system):
         system = os.path.join(data_dir, "post_process-sample.yaml")
     # create local config pointing to reduced genomes
     test_system = os.path.join(workdir, "bcbio_system.yaml")

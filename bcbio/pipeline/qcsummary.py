@@ -1073,15 +1073,16 @@ def _merge_metrics(yaml_data):
     dt_together = []
     with file_transaction(out_file) as out_tx:
         for s in project['samples']:
-            m = s['summary']['metrics']
-            for me in m:
-                if isinstance(m[me], list):
-                    m[me] = ":".join(m[me])
-            dt = pd.DataFrame(m, index=['1'])
-            # dt = pd.DataFrame.from_dict(m)
-            dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
-            dt['sample'] = s['description']
-            dt_together.append(dt)
+            m = tz.get_in(['summary', 'metrics'], s)
+            if m:
+                for me in m:
+                    if isinstance(m[me], list):
+                        m[me] = ":".join(m[me])
+                dt = pd.DataFrame(m, index=['1'])
+                # dt = pd.DataFrame.from_dict(m)
+                dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
+                dt['sample'] = s['description']
+                dt_together.append(dt)
         dt_together = utils.rbind(dt_together)
         dt_together.to_csv(out_tx, index=False, sep="\t")
 
