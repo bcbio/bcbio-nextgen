@@ -302,7 +302,8 @@ def _get_target_access_files(cov_interval, data, work_dir):
         # For genome calls, subset to regions within 10kb of genes
         if cov_interval == "genome":
             base_regions = regions.get_sv_bed(data, "transcripts1e4", work_dir)
-            base_regions = shared.remove_exclude_regions(base_regions, base_regions, [data])
+            if base_regions:
+                base_regions = shared.remove_exclude_regions(base_regions, base_regions, [data])
         # Finally, default to the defined variant regions
         if not base_regions:
             base_regions = dd.get_variant_regions(data)

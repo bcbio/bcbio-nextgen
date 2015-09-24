@@ -601,7 +601,7 @@ parallelization
 - ``nomap_split_size`` Unmapped base pair regions required to split
   analysis into blocks. Creates islands of mapped reads surrounded by
   unmapped (or N) regions, allowing each mapped region to run in
-  parallel. (default: 100)
+  parallel. (default: 250)
 
 - ``nomap_split_targets`` Number of target intervals to attempt to
   split processing into. This picks unmapped regions evenly spaced
