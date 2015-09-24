@@ -37,7 +37,6 @@ from bcbio.pipeline import config_utils, run_info
 from bcbio.install import _get_data_dir
 from bcbio.provenance import do
 import bcbio.rnaseq.qc
-from bcbio.rnaseq.coverage import plot_gene_coverage
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import bedutils
 from bcbio import broad
@@ -113,9 +112,6 @@ def _run_qc_tools(bam_file, data):
     if "fastqc" not in tz.get_in(("config", "algorithm", "tools_off"), data, []):
         to_run.append(("fastqc", _run_fastqc))
     if data["analysis"].lower().startswith("rna-seq"):
-        # to_run.append(("rnaseqc", bcbio.rnaseq.qc.sample_summary))
-        # to_run.append(("coverage", _run_gene_coverage))
-        # to_run.append(("complexity", _run_complexity))
         to_run.append(("qualimap", _rnaseq_qualimap))
     elif data["analysis"].lower().startswith("chip-seq"):
         to_run.append(["bamtools", _run_bamtools_stats])
@@ -131,9 +127,6 @@ def _run_qc_tools(bam_file, data):
         cur_qc_dir = os.path.join(qc_dir, program_name)
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
-    # if (ratio < 0.60 and data['config']["algorithm"].get("kraken", None) and
-        # (data["analysis"].lower().startswith("rna-seq") or
-        #  data["analysis"].lower().startswith("standard"))):
     if data['config']["algorithm"].get("kraken", None):
         ratio = bam.get_aligned_reads(bam_file, data)
         cur_metrics = _run_kraken(data, ratio)
