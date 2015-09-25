@@ -3,8 +3,6 @@
 http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 """
 import os
-from itertools import ifilter
-import pysam
 
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists
