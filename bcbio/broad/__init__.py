@@ -410,3 +410,14 @@ def runner_from_config(config, program="gatk"):
     return BroadRunner(_get_picard_ref(config),
                        config_utils.get_program(program, config, "dir"),
                        config)
+
+def runner_from_config_safe(config):
+    """Retrieve a runner, returning None if GATK is not available.
+    """
+    try:
+        return runner_from_config(config)
+    except ValueError, msg:
+        if str(msg).find("Could not find directory in config for gatk") >= 0:
+            return None
+        else:
+            raise

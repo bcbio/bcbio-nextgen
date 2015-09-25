@@ -44,13 +44,7 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
     """Annotate a VCF file with dbSNP and standard GATK called annotations.
     """
     orig_file = vcfutils.bgzip_and_index(orig_file, config)
-    try:
-        broad_runner = broad.runner_from_config(config)
-    except ValueError, msg:
-        if str(msg).find("Could not find directory in config for gatk") >= 0:
-            broad_runner = None
-        else:
-            raise
+    broad_runner = broad.runner_from_config_safe(config)
     if not broad_runner or not broad_runner.has_gatk():
         return orig_file
     else:
