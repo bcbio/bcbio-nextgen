@@ -215,3 +215,47 @@ def variants(data):
                            "Calculating GC content and depth for %s" % in_vcf)
                     logger.debug('parsing coverage: %s' % sample)
         return data
+
+def priority_coverage(data):
+    AVERAGE_REGION_STRING_LENGTH = 100
+    bed_file = dd.get_priority_regions(data)
+    if not bed_file:
+        return data
+
+    work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
+    batch_size = max_command_length() / AVERAGE_REGION_STRING_LENGTH
+
+    sample = dd.get_sample_name(data)
+    out_file = os.path.join(sample + "_priority_depth.bed")
+    if file_exists(out_file):
+        data['priority_coverage'] = os.path.abspath(out_file)
+        return data
+    with chdir(work_dir):
+        in_bam = data['work_bam']
+        logger.debug("Calculating priority coverage for %s" % sample)
+        region_bed = pybedtools.BedTool(bed_file)
+        with file_transaction(out_file) as tx_out_file:
+            lcount = 0
+            for chunk in robust_partition_all(batch_size, region_bed):
+                coord_batch = []
+                line_batch = ""
+                for line in chunk:
+                    lcount += 1
+                    chrom = line.chrom
+                    start = max(line.start, 0)
+                    end = line.end
+                    coords = "%s:%s-%s" % (chrom, start, end)
+                    coord_batch.append(coords)
+                    line_batch += str(line)
+                if not coord_batch:
+                    continue
+                region_file = pybedtools.BedTool(line_batch,
+                                                from_string=True).saveas().fn
+                coord_string = " ".join(coord_batch)
+                awk_string = r"""'BEGIN {OFS="\t"} {print $1,$2+$5,$2+$5,$4,$6"\t%s"}'""" % sample
+                cmd = ("samtools view -b {in_bam} {coord_string} | "
+                        "bedtools coverage -d -a {region_file} -b - | "
+                        "awk {awk_string} >> {tx_out_file}")
+                _silence_run(cmd.format(**locals()))
+        data['priority_coverage'] = os.path.abspath(out_file)
+    return data
