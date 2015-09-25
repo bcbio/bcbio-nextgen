@@ -110,7 +110,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                    "bcftools view -a - 2> /dev/null | "
                    "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                    "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
-                   "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
+                   "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -151,7 +151,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                   "| {fix_ambig} | bcftools view -a - 2> /dev/null | "
                   "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                   "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
-                  "vt normalize -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
+                  "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                   "{compress_cmd} > {tx_out_file}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)

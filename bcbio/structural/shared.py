@@ -69,7 +69,7 @@ def remove_exclude_regions(orig_bed, base_file, items, remove_entire_feature=Fal
     exclude_bed = prepare_exclude_file(items, base_file)
     with file_transaction(items[0], out_bed) as tx_out_bed:
         pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(exclude_bed),
-                                              A=remove_entire_feature).saveas(tx_out_bed)
+                                              A=remove_entire_feature, nonamecheck=True).saveas(tx_out_bed)
     if utils.file_exists(out_bed):
         return out_bed
     else:
@@ -92,13 +92,13 @@ def prepare_exclude_file(items, base_file, chrom=None):
                                                                              chrom, items[0]))
             sv_exclude_bed = _get_sv_exclude_file(items)
             if sv_exclude_bed and len(want_bedtool) > 0:
-                want_bedtool = want_bedtool.subtract(sv_exclude_bed).saveas()
+                want_bedtool = want_bedtool.subtract(sv_exclude_bed, nonamecheck=True).saveas()
             want_bedtool = pybedtools.BedTool(shared.remove_highdepth_regions(want_bedtool.saveas().fn, items))
             with file_transaction(items[0], out_file) as tx_out_file:
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
                 if len(want_bedtool) > 0:
-                    full_bedtool.subtract(want_bedtool).saveas(tx_out_file)
+                    full_bedtool.subtract(want_bedtool, nonamecheck=True).saveas(tx_out_file)
                 else:
                     full_bedtool.saveas(tx_out_file)
     return out_file
