@@ -65,40 +65,37 @@ def remap_index_fn(ref_file):
     """
     return os.path.splitext(ref_file)[0].replace("/seq/", "/bowtie2/")
 
-
-def filter_multimappers(align_file):
+def filter_multimappers(align_file, data):
     """
     It does not seem like bowtie2 has a corollary to the -m 1 flag in bowtie,
     there are some options that are close but don't do the same thing. Bowtie2
     sets the XS flag for reads mapping in more than one place, so we can just
     filter on that. This will not work for other aligners.
     """
-    type_flag = "b" if bam.is_bam(align_file) else ""
+    config = dd.get_config(data)
+    type_flag = "" if bam.is_bam(align_file) else "S"
     base, ext = os.path.splitext(align_file)
-    align_handle = pysam.Samfile(align_file, "r" + type_flag)
-    tmp_out_file = os.path.splitext(align_file)[0] + ".tmp"
-    def keep_fn(read):
-        return _is_properly_mapped(read) and _is_unique(read)
-    keep = ifilter(keep_fn, align_handle)
-    with pysam.Samfile(tmp_out_file, "w" + type_flag, template=align_handle) as out_handle:
-        for read in keep:
-            out_handle.write(read)
-    align_handle.close()
-    out_handle.close()
-    os.rename(tmp_out_file, align_file)
-    return align_file
-
-def _is_properly_mapped(read):
-    if read.is_paired and not read.is_proper_pair:
-        return False
-    if read.is_unmapped:
-        return False
-    return True
-
-def _is_unique(read):
-    tags = [x[0] for x in read.tags]
-    return "XS" not in tags
-
+    out_file = base + ".unique" + ext
+    if file_exists(out_file):
+        return out_file
+    base_filter = '-F "[XS] == null and not unmapped {paired_filter}"'
+    if bam.is_paired(align_file):
+        paired_filter = "and paired and proper_pair"
+    else:
+        paired_filter = ""
+    filter_string = base_filter.format(paired_filter=paired_filter)
+    sambamba = config_utils.get_program("sambamba", config)
+    num_cores = dd.get_num_cores(data)
+    with file_transaction(out_file) as tx_out_file:
+        cmd = ('{sambamba} view -h{type_flag} '
+               '--nthreads {num_cores} '
+               '-f bam '
+               '{filter_string} '
+               '{align_file} '
+               '> {tx_out_file}')
+        message = "Removing multimapped reads from %s." % align_file
+        do.run(cmd.format(**locals()), message)
+    return out_file
 
 ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
             "variant2": {"params": ["-X", 2000]},
