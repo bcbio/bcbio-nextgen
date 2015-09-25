@@ -204,7 +204,7 @@ def variants(data):
                            "-R {ref_file} "
                            "-L {bed_file} -I {in_bam} "
                            "--num_threads {num_cores} "
-                           "-A GCContent --variant {in_vcf} --out {tx_out}")
+                           "-A GCContent -A Coverage --variant {in_vcf} --out {tx_out}")
                     do.run(cmd.format(**locals()), " GC bias for %s" % in_vcf)
             cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
