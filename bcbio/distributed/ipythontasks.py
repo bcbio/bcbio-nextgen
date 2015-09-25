@@ -345,7 +345,7 @@ def machine_info(*args):
 @require(chipseq)
 def clean_chipseq_alignment(*args):
     args = ipython.unzip_args(args)
-    return ipython.zip_args(chipseq.machine_info())
+    return ipython.zip_args(apply(chipseq.clean_chipseq_alignment, *args))
 
 @require(archive)
 def archive_to_cram(*args):
