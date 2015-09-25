@@ -1,0 +1,29 @@
+sudo: required
+
+language: python
+
+services:
+  - docker
+
+env:
+  - BCBIO_DOCKER_PRIVILEGED=True
+
+before_install:
+  # Temporal fix for networking problem: https://github.com/travis-ci/travis-ci/issues/1484
+  - echo "127.0.0.1 "`hostname` | sudo tee /etc/hosts
+  # Get and install anaconda for custom Python installation
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+  - bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+
+install:
+  # Install bcbio-nextgen and bcbio-nextgen-vm
+  - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
+  - conda install --yes -c bcbio bcbio-nextgen-vm -q
+  # Get docker container
+  - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
+
+script:
+  - cd tests && bash run_tests.sh docker
+
+notifications:
+    email: false

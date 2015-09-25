@@ -371,7 +371,9 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
-            cl = ["bcbio_vm.py", "ipython",
+            cl = ["bcbio_vm.py",
+                  "--datadir=%s" % self.data_dir,
+                  "ipython",
                   "--systemconfig=%s" % get_post_process_yaml(self.data_dir, workdir),
                   "--fcdir=%s" % os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
                   os.path.join(self.data_dir, "run_info-bam.yaml"),
