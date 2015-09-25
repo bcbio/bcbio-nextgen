@@ -21,6 +21,8 @@ install:
   - conda install --yes -c bcbio bcbio-nextgen-vm -q
   # Get docker container
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
+  # Update to bcbio-nextgen latest code within the container
+  - bcbio_vm.py devel setup_install
 
 script:
   - cd tests && bash run_tests.sh docker
