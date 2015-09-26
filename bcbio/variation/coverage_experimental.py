@@ -180,29 +180,34 @@ def coverage(data):
 def variants(data):
     if not "vrn_file" in  data:
         return data
+    if not dd.get_coverage(data):
+        return data
+
     in_vcf = data['vrn_file']
     work_dir = os.path.join(dd.get_work_dir(data), "report", "variants")
     with chdir(work_dir):
         in_bam = data['work_bam']
         ref_file = dd.get_ref_file(data)
         assert ref_file, "Need the reference genome fasta file."
-        jvm_opts = broad.get_gatk_framework_opts(data['config'])
-        gatk_jar = config_utils.get_program("gatk", data['config'], "dir")
         bed_file = dd.get_variant_regions(data)
         sample = dd.get_sample_name(data)
         in_bam = data.get("work_bam")
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
         parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
         num_cores = dd.get_num_cores(data)
-        if in_bam:
+        broad_runner = broad.runner_from_config_safe(data["config"])
+        if in_bam and broad_runner and broad_runner.has_gatk():
             if not file_exists(cg_file):
                 with file_transaction(cg_file) as tx_out:
-                    cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator "
-                           "-R {ref_file} "
-                           "-L {bed_file} -I {in_bam} "
-                           "--num_threads {num_cores} "
-                           "-A GCContent --variant {in_vcf} --out {tx_out}")
-                    do.run(cmd.format(**locals()), " GC bias for %s" % in_vcf)
+                    params = ["-T", "VariantAnnotator",
+                              "-R", ref_file,
+                              "-L", bed_file,
+                              "-I", in_bam,
+                              "-A", "GCContent",
+                              "-A", "Coverage",
+                              "--variant", in_vcf,
+                              "--out", tx_out]
+                    broad_runner.run_gatk(params)
             cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
             if not file_exists(parse_file):
@@ -210,8 +215,52 @@ def variants(data):
                     with open(out_tx, 'w') as out_handle:
                         print >>out_handle, "CG\tdepth\tsample"
                     cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
-                           "{bed_file} {cg_file} >> {out_tx}")
+                            "{bed_file} {cg_file} >> {out_tx}")
                     do.run(cmd.format(**locals()),
-                           "Calculating GC content and depth for %s" % in_vcf)
+                            "Calculating GC content and depth for %s" % in_vcf)
                     logger.debug('parsing coverage: %s' % sample)
         return data
+
+def priority_coverage(data):
+    AVERAGE_REGION_STRING_LENGTH = 100
+    bed_file = dd.get_priority_regions(data)
+    if not bed_file:
+        return data
+
+    work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
+    batch_size = max_command_length() / AVERAGE_REGION_STRING_LENGTH
+
+    sample = dd.get_sample_name(data)
+    out_file = os.path.join(sample + "_priority_depth.bed")
+    if file_exists(out_file):
+        data['priority_coverage'] = os.path.abspath(out_file)
+        return data
+    with chdir(work_dir):
+        in_bam = data['work_bam']
+        logger.debug("Calculating priority coverage for %s" % sample)
+        region_bed = pybedtools.BedTool(bed_file)
+        with file_transaction(out_file) as tx_out_file:
+            lcount = 0
+            for chunk in robust_partition_all(batch_size, region_bed):
+                coord_batch = []
+                line_batch = ""
+                for line in chunk:
+                    lcount += 1
+                    chrom = line.chrom
+                    start = max(line.start, 0)
+                    end = line.end
+                    coords = "%s:%s-%s" % (chrom, start, end)
+                    coord_batch.append(coords)
+                    line_batch += str(line)
+                if not coord_batch:
+                    continue
+                region_file = pybedtools.BedTool(line_batch,
+                                                from_string=True).saveas().fn
+                coord_string = " ".join(coord_batch)
+                awk_string = r"""'BEGIN {OFS="\t"} {print $1,$2+$5,$2+$5,$4,$6"\t%s"}'""" % sample
+                cmd = ("samtools view -b {in_bam} {coord_string} | "
+                        "bedtools coverage -d -a {region_file} -b - | "
+                        "awk {awk_string} >> {tx_out_file}")
+                _silence_run(cmd.format(**locals()))
+        data['priority_coverage'] = os.path.abspath(out_file)
+    return data
