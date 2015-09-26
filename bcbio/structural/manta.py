@@ -6,6 +6,7 @@ import os
 import sys
 
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
@@ -78,8 +79,28 @@ def _prep_config(items, paired, work_dir):
         cmd += ["--referenceFasta=%s" % dd.get_ref_file(data), "--runDir=%s" % work_dir]
         if dd.get_coverage_interval(data) not in ["genome"]:
             cmd += ["--exome"]
+        for region in _maybe_limit_chromosomes(data):
+            cmd += ["--region", region]
         do.run(cmd, "Configure manta SV analysis")
     return out_file
+
+def _maybe_limit_chromosomes(data):
+    """Potentially limit chromosomes to avoid problematically named HLA contigs.
+
+    HLAs have ':' characters in them which confuse downstream processing. If
+    we have no problematic chromosomes we don't limit anything.
+    """
+    std_chroms = []
+    prob_chroms = []
+    for contig in ref.file_contigs(dd.get_ref_file(data)):
+        if contig.name.find(":") > 0:
+            prob_chroms.append(contig.name)
+        else:
+            std_chroms.append(contig.name)
+    if len(prob_chroms) > 0:
+        return std_chroms
+    else:
+        return []
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
