@@ -10,7 +10,8 @@ provides a shared community resource that handles the data processing component
 of sequencing analysis, providing researchers with more time to focus on the
 downstream biology.
 
-[![Build Status](https://travis-ci.org/chapmanb/bcbio-nextgen.svg)](https://travis-ci.org/chapmanb/bcbio-nextgen)
+.. image:: https://travis-ci.org/chapmanb/bcbio-nextgen.png
+    :target: https://travis-ci.org/chapmanb/bcbio-nextgen
 
 Features
 --------
