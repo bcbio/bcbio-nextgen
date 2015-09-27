@@ -1047,6 +1047,7 @@ def coverage_report(data):
     data = cov.coverage(data)
     data = cov.variants(data)
     data = cov.priority_coverage(data)
+    data = cov.priority_total_coverage(data)
     problem_regions = dd.get_problem_region_dir(data)
     name = dd.get_sample_name(data)
     if "coverage" in data:

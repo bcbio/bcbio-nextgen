@@ -111,7 +111,7 @@ def _calculate_percentiles(in_file, sample):
     higher than a completeness cutoff (4, 10, 20, 50)
     """
     out_file = append_stem(in_file, "_summary")
-    dt = pd.read_csv(in_file, sep="\t")
+    dt = pd.read_cv(in_file, sep="\t")
     pct = dict()
     for cutoff in ["cutoff4", "cutoff10", "cutoff20", "cutoff50"]:
         a = np.array(dt[cutoff])
@@ -180,34 +180,29 @@ def coverage(data):
 def variants(data):
     if not "vrn_file" in  data:
         return data
-    if not dd.get_coverage(data):
-        return data
-
     in_vcf = data['vrn_file']
     work_dir = os.path.join(dd.get_work_dir(data), "report", "variants")
     with chdir(work_dir):
         in_bam = data['work_bam']
         ref_file = dd.get_ref_file(data)
         assert ref_file, "Need the reference genome fasta file."
+        jvm_opts = broad.get_gatk_framework_opts(data['config'])
+        gatk_jar = config_utils.get_program("gatk", data['config'], "dir")
         bed_file = dd.get_variant_regions(data)
         sample = dd.get_sample_name(data)
         in_bam = data.get("work_bam")
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
         parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
         num_cores = dd.get_num_cores(data)
-        broad_runner = broad.runner_from_config_safe(data["config"])
-        if in_bam and broad_runner and broad_runner.has_gatk():
+        if in_bam:
             if not file_exists(cg_file):
                 with file_transaction(cg_file) as tx_out:
-                    params = ["-T", "VariantAnnotator",
-                              "-R", ref_file,
-                              "-L", bed_file,
-                              "-I", in_bam,
-                              "-A", "GCContent",
-                              "-A", "Coverage",
-                              "--variant", in_vcf,
-                              "--out", tx_out]
-                    broad_runner.run_gatk(params)
+                    cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator "
+                           "-R {ref_file} "
+                           "-L {bed_file} -I {in_bam} "
+                           "--num_threads {num_cores} "
+                           "-A GCContent --variant {in_vcf} --out {tx_out}")
+                    do.run(cmd.format(**locals()), " GC bias for %s" % in_vcf)
             cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
             if not file_exists(parse_file):
@@ -215,9 +210,9 @@ def variants(data):
                     with open(out_tx, 'w') as out_handle:
                         print >>out_handle, "CG\tdepth\tsample"
                     cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
-                            "{bed_file} {cg_file} >> {out_tx}")
+                           "{bed_file} {cg_file} >> {out_tx}")
                     do.run(cmd.format(**locals()),
-                            "Calculating GC content and depth for %s" % in_vcf)
+                           "Calculating GC content and depth for %s" % in_vcf)
                     logger.debug('parsing coverage: %s' % sample)
         return data
 
@@ -263,4 +258,30 @@ def priority_coverage(data):
                         "awk {awk_string} >> {tx_out_file}")
                 _silence_run(cmd.format(**locals()))
         data['priority_coverage'] = os.path.abspath(out_file)
+    return data
+
+def priority_total_coverage(data):
+    """
+    calculate coverage at depth 20 in the priority regions
+    """
+    bed_file = dd.get_priority_regions(data)
+    if not bed_file:
+        return data
+    work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
+    sample = dd.get_sample_name(data)
+    out_file = os.path.join(work_dir, sample + "_priority_total_coverage.bed")
+    if file_exists(out_file):
+        data['priority_total_coverage'] = os.path.abspath(out_file)
+        return data
+
+    nthreads = dd.get_num_cores(data)
+    in_bam = dd.get_work_bam(data)
+    sambamba = config_utils.get_program("sambamba", data, default="sambamba")
+    with file_transaction(out_file) as tx_out_file:
+        cmd = ("{sambamba} depth region -t {nthreads} -L {bed_file} "
+               "-F \"not unmapped\" "
+               "-T 20 {in_bam} -o {tx_out_file}")
+        message = "Calculating coverage of {bed_file} regions in {in_bam}"
+        do.run(cmd.format(**locals()), message.format(**locals()))
+    data['priority_total_coverage'] = os.path.abspath(out_file)
     return data
