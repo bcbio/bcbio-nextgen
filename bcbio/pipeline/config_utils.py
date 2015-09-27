@@ -167,6 +167,8 @@ def get_program(name, config, ptype="cmd", default=None):
     YAML. The preferred location for program information is in
     `resources` but the older `program` tag is also supported.
     """
+    # support taking in the data dictionary
+    config = config.get("config", config)
     try:
         pconfig = config.get("resources", {})[name]
         # If have leftover old
