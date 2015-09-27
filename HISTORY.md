@@ -1,4 +1,4 @@
-## 0.9.3 (in progress)
+## 0.9.3 (27 September 2015)
 
 - Fix bug when using tumors with multiple normals and no CNV calling. Additional
   tumor sample would get lost due to lack of early (CNV-based) calling. Thanks
