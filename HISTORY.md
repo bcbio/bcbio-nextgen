@@ -1,3 +1,7 @@
+## 0.9.4 (in progress)
+
+- Fix missing BAM index when running with `align: false`. Thanks to Stephan Pabinger.
+
 ## 0.9.3 (27 September 2015)
 
 - Fix bug when using tumors with multiple normals and no CNV calling. Additional

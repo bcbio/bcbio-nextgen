@@ -49,4 +49,5 @@ def _filter_bad_reads(in_bam, ref_file, data):
                 jvm_opts = broad.get_gatk_framework_opts(data["config"], tmp_dir)
                 cmd = [config_utils.get_program("gatk-framework", data["config"])] + jvm_opts + params
                 do.run(cmd, "Filter problem reads")
+    bam.index(out_file, data["config"])
     return out_file
