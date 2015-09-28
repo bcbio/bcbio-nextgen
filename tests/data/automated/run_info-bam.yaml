@@ -18,13 +18,13 @@ details:
       validate_batch: b1
       validate_sample: test-val
   - algorithm:
-      #aligner: false
-      #bam_clean: picard
-      #bam_sort: coordinate
       #quality_bin: [prealignment, postrecal]
       #archive: cram
       align_split_size: 15000
       aligner: bwa
+      #aligner: false
+      #bam_clean: picard
+      #bam_sort: coordinate
       #mark_duplicates: false
       recalibrate: false
       realign: false

@@ -10,6 +10,7 @@ import re
 
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import pylab
 pylab.rcParams['figure.figsize'] = (35.0, 12.0)
 import pandas as pd
@@ -22,7 +23,7 @@ def get_bcbio_nodes(path):
     """Fetch the local nodes (-c local) that contain collectl files from
        the bcbio log file.
 
-       :returns: A list with unique (non-FQDN) local hostnames 
+       :returns: A list with unique (non-FQDN) local hostnames
                  where collectl raw logs can be found.
     """
     with open(path, 'r') as file_handle:
@@ -58,6 +59,15 @@ def get_bcbio_timings(path):
 
         return steps
 
+def plot_inline_jupyter(plot):
+    """ Plots inside the output cell of a jupyter notebook if %matplotlib magic
+        is defined.
+    """
+    try:
+        get_ipython()
+        plt.show(plot)
+    except NameError:
+        pass
 
 def this_and_prev(iterable):
     """Walk an iterable, returning the current and previous items
@@ -166,7 +176,9 @@ def graph_cpu(data_frame, steps, num_cpus):
     plot.set_ylim(0, num_cpus)
     add_common_plot_features(plot, steps)
 
-    return plot
+    plot_inline_jupyter(plot)
+
+    return plot, graph
 
 
 def graph_net_bytes(data_frame, steps, ifaces):
@@ -191,7 +203,9 @@ def graph_net_bytes(data_frame, steps, ifaces):
     plot.set_ylabel('mbits/s')
     add_common_plot_features(plot, steps)
 
-    return plot
+    plot_inline_jupyter(plot)
+
+    return plot, graph
 
 
 def graph_net_pkts(data_frame, steps, ifaces):
@@ -205,7 +219,9 @@ def graph_net_pkts(data_frame, steps, ifaces):
     plot.set_ylabel('packets/s')
     add_common_plot_features(plot, steps)
 
-    return plot
+    plot_inline_jupyter(plot)
+
+    return plot, graph
 
 
 def graph_memory(data_frame, steps, total_mem):
@@ -222,7 +238,9 @@ def graph_memory(data_frame, steps, total_mem):
     plot.set_ylim(0, total_mem)
     add_common_plot_features(plot, steps)
 
-    return plot
+    plot_inline_jupyter(plot)
+
+    return plot, graph
 
 
 def graph_disk_io(data_frame, steps, disks):
@@ -250,7 +268,9 @@ def graph_disk_io(data_frame, steps, disks):
     plot.set_ylabel('mbytes/s')
     add_common_plot_features(plot, steps)
 
-    return plot
+    plot_inline_jupyter(plot)
+
+    return plot, graph
 
 
 def log_time_frame(bcbio_log):
@@ -281,7 +301,7 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
     a :class pandas.DataFrame:.
 
     :param bcbio_log:   local path to bcbio log file written by the run
-    :param cluster:     
+    :param cluster:
     :param rawdir:      directory to put raw data files
     :param verbose:     increase verbosity
 
@@ -323,10 +343,13 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
 def generate_graphs(data_frames, hardware_info, steps, outdir,
                     verbose=False):
     """Generate all graphs for a bcbio run."""
+    collectl_info = None
+
     for host, data_frame in data_frames.iteritems():
         if verbose:
             print('Generating CPU graph for {}...'.format(host))
-        graph = graph_cpu(data_frame, steps, hardware_info[host]['num_cpus'])
+        graph, data_cpu = graph_cpu(data_frame, steps, hardware_info[host]['num_cpus'])
+
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_cpu.png'.format(host)),
             bbox_inches='tight', pad_inches=0.25)
@@ -338,13 +361,13 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
 
         if verbose:
             print('Generating network graphs for {}...'.format(host))
-        graph = graph_net_bytes(data_frame, steps, ifaces)
+        graph, data_net_bytes = graph_net_bytes(data_frame, steps, ifaces)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_net_bytes.png'.format(host)),
             bbox_inches='tight', pad_inches=0.25)
         pylab.close()
 
-        graph = graph_net_pkts(data_frame, steps, ifaces)
+        graph, data_net_pkts = graph_net_pkts(data_frame, steps, ifaces)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_net_pkts.png'.format(host)),
             bbox_inches='tight', pad_inches=0.25)
@@ -352,7 +375,7 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
 
         if verbose:
             print('Generating memory graph for {}...'.format(host))
-        graph = graph_memory(data_frame, steps, hardware_info[host]["memory"])
+        graph, data_mem = graph_memory(data_frame, steps, hardware_info[host]["memory"])
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_memory.png'.format(host)),
             bbox_inches='tight', pad_inches=0.25)
@@ -365,11 +388,23 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
             for series in data_frame.keys()
             if series.startswith(('sd', 'vd', 'hd', 'xvd'))
         ])
-        graph = graph_disk_io(data_frame, steps, drives)
+        graph, data_disk = graph_disk_io(data_frame, steps, drives)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_disk_io.png'.format(host)),
             bbox_inches='tight', pad_inches=0.25)
         pylab.close()
+
+        # "Clean" dataframes ready to be plotted
+        collectl_raw_data = (data_cpu, data_mem, data_disk, data_net_bytes, data_net_pkts)
+
+        return collectl_raw_data
+
+def serialize_plot_data(collectl_info, fname="collectl_info.pickle.gz"):
+        # Useful to regenerate and slice graphs quickly and/or inspect locally
+        collectl_info = (data, hardware, steps)
+
+        with gzip.open(os.path.join(args.outdir, fname), "wb") as f:
+            f.write(pickle.dump(collectl_info))
 
 
 def add_subparser(subparsers):

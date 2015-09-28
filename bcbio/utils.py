@@ -268,6 +268,13 @@ def file_plus_index(fname):
     else:
         return [fname]
 
+def copy_plus(orig, new):
+    """Copy a fils, including biological index files.
+    """
+    for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
+        if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):
+            shutil.copyfile(orig + ext, new + ext)
+
 def symlink_plus(orig, new):
     """Create relative symlinks and handle associated biological index files.
     """
