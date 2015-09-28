@@ -65,7 +65,7 @@ def plot_inline_jupyter(plot):
     """
     try:
         get_ipython()
-        #plt.show(plot)
+        plt.show(plot)
     except NameError:
         pass
 
