@@ -343,7 +343,8 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
 def generate_graphs(data_frames, hardware_info, steps, outdir,
                     verbose=False):
     """Generate all graphs for a bcbio run."""
-    collectl_info = None
+    # Hash of hosts containing (data, hardware, steps) tuple
+    collectl_info = defaultdict(dict)
 
     for host, data_frame in data_frames.iteritems():
         if verbose:
@@ -395,9 +396,13 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
         pylab.close()
 
         # "Clean" dataframes ready to be plotted
-        collectl_raw_data = (data_cpu, data_mem, data_disk, data_net_bytes, data_net_pkts)
+        collectl_raw_data["host"] = { "hardware": hardware_info, 
+                                      "steps": steps, "cpu": data_cpu, "mem": data_mem, 
+                                      "disk": data_disk, "net_bytes": data_net_bytes, 
+                                      "net_pkts": data_net_pkts
+                                    }
 
-        return collectl_raw_data
+    return collectl_raw_data
 
 def serialize_plot_data(collectl_info, fname="collectl_info.pickle.gz"):
         # Useful to regenerate and slice graphs quickly and/or inspect locally
