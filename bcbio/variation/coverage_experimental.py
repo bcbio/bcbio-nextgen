@@ -111,7 +111,7 @@ def _calculate_percentiles(in_file, sample):
     higher than a completeness cutoff (4, 10, 20, 50)
     """
     out_file = append_stem(in_file, "_summary")
-    dt = pd.read_cv(in_file, sep="\t")
+    dt = pd.read_csv(in_file, sep="\t")
     pct = dict()
     for cutoff in ["cutoff4", "cutoff10", "cutoff20", "cutoff50"]:
         a = np.array(dt[cutoff])
