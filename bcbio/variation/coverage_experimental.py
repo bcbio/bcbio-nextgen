@@ -180,14 +180,15 @@ def coverage(data):
 def variants(data):
     if not "vrn_file" in  data:
         return data
+    if not dd.get_coverage(data):
+        return data
+
     in_vcf = data['vrn_file']
     work_dir = os.path.join(dd.get_work_dir(data), "report", "variants")
     with chdir(work_dir):
         in_bam = data['work_bam']
         ref_file = dd.get_ref_file(data)
         assert ref_file, "Need the reference genome fasta file."
-        jvm_opts = broad.get_gatk_framework_opts(data['config'])
-        gatk_jar = config_utils.get_program("gatk", data['config'], "dir")
         bed_file = dd.get_variant_regions(data)
         sample = dd.get_sample_name(data)
         in_bam = data.get("work_bam")
@@ -197,12 +198,16 @@ def variants(data):
         if in_bam:
             if not file_exists(cg_file):
                 with file_transaction(cg_file) as tx_out:
-                    cmd = ("java -jar {gatk_jar}/GenomeAnalysisTK.jar -T VariantAnnotator "
-                           "-R {ref_file} "
-                           "-L {bed_file} -I {in_bam} "
-                           "--num_threads {num_cores} "
-                           "-A GCContent --variant {in_vcf} --out {tx_out}")
-                    do.run(cmd.format(**locals()), " GC bias for %s" % in_vcf)
+                    params = ["-T", "VariantAnnotator",
+                           "-R", ref_file,
+                           "-L", bed_file,
+                           "-I", in_bam,
+                           "-A", "GCContent",
+                           "-A", "Coverage",
+                           "--variant", in_vcf,
+                           "--out", tx_out]
+                    broad_runner = broad.runner_from_config(data["config"])
+                    broad_runner.run_gatk(params)
             cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
             if not file_exists(parse_file):
