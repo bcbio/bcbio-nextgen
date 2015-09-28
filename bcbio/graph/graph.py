@@ -409,7 +409,7 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
 def serialize_plot_data(collectl_info, outdir, fname="collectl_info.pickle.gz"):
         # Useful to regenerate and slice graphs quickly and/or inspect locally
         with gzip.open(os.path.join(outdir, fname), "wb") as f:
-            f.write(pickle.dump(collectl_info))
+            pickle.dump(collectl_info, f)
 
 
 def add_subparser(subparsers):
