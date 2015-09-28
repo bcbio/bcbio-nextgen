@@ -195,18 +195,18 @@ def variants(data):
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
         parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
         num_cores = dd.get_num_cores(data)
-        if in_bam:
+        broad_runner = broad.runner_from_config_safe(data["config"])
+        if in_bam and broad_runner and broad_runner.has_gatk():
             if not file_exists(cg_file):
                 with file_transaction(cg_file) as tx_out:
                     params = ["-T", "VariantAnnotator",
-                           "-R", ref_file,
-                           "-L", bed_file,
-                           "-I", in_bam,
-                           "-A", "GCContent",
-                           "-A", "Coverage",
-                           "--variant", in_vcf,
-                           "--out", tx_out]
-                    broad_runner = broad.runner_from_config(data["config"])
+                              "-R", ref_file,
+                              "-L", bed_file,
+                              "-I", in_bam,
+                              "-A", "GCContent",
+                              "-A", "Coverage",
+                              "--variant", in_vcf,
+                              "--out", tx_out]
                     broad_runner.run_gatk(params)
             cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
@@ -215,9 +215,9 @@ def variants(data):
                     with open(out_tx, 'w') as out_handle:
                         print >>out_handle, "CG\tdepth\tsample"
                     cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
-                           "{bed_file} {cg_file} >> {out_tx}")
+                            "{bed_file} {cg_file} >> {out_tx}")
                     do.run(cmd.format(**locals()),
-                           "Calculating GC content and depth for %s" % in_vcf)
+                            "Calculating GC content and depth for %s" % in_vcf)
                     logger.debug('parsing coverage: %s' % sample)
         return data
 
