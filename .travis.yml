@@ -10,7 +10,7 @@ env:
 
 before_install:
   # Temporal fix for networking problem: https://github.com/travis-ci/travis-ci/issues/1484
-  - echo "127.0.0.1 "`hostname` | sudo tee /etc/hosts
+  - echo "127.0.1.1 "`hostname` | sudo tee /etc/hosts
   # Get and install anaconda for custom Python installation
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
   - bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
