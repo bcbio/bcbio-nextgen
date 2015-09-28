@@ -1,5 +1,7 @@
 ## 0.9.4 (in progress)
 
+- Ensure genome data sort order is identical to BED files when annotating
+  structural variant calls. Thanks To Miika Ahdesmaki.
 - Fix missing BAM index when running with `align: false`. Thanks to Stephan Pabinger.
 
 ## 0.9.3 (27 September 2015)

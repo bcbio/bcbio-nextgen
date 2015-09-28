@@ -3,7 +3,9 @@
 import os
 
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import regions
 from bcbio.variation import bedutils
@@ -28,6 +30,7 @@ def add_genes(in_file, data, max_distance=10000):
             columns = ",".join([str(x) for x in extra_fields])
             max_column = max(extra_fields) + 1
             ops = ",".join(["distinct"] * len(extra_fields))
+            fai_file = ref.fasta_idx(dd.get_ref_file(data))
             with file_transaction(data, out_file) as tx_out_file:
                 # swap over gene name to '.' if beyond maximum distance
                 # cut removes the last distance column which can cause issues
@@ -36,7 +39,8 @@ def add_genes(in_file, data, max_distance=10000):
                                    (max_distance, gene_index))
                 sort_cmd = bedutils.get_sort_cmd()
                 cmd = ("{sort_cmd} -k1,1 -k2,2n {in_file} | "
-                       "bedtools closest -d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {gene_file}) | "
+                       "bedtools closest -g <(cut -f1,2 {fai_file} | {sort_cmd} -k1,1 -k2,2n) "
+                       "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {gene_file}) | "
                        "{distance_filter} | cut -f 1-{max_column} | "
                        "bedtools merge -i - -c {columns} -o {ops} -delim ',' > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Annotate BED file with gene info")
