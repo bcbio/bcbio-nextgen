@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import pybedtools
 
 import numpy as np
 
@@ -13,6 +14,8 @@ from bcbio import broad
 from bcbio.pipeline import config_utils
 from bcbio.variation import vcfutils
 
+def _silence_run(cmd):
+    do._do_run(cmd, False)
 
 def checkpoint(stem):
     def check_file(f):
