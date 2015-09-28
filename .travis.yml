@@ -25,7 +25,9 @@ install:
   - bcbio_vm.py devel setup_install
 
 script:
-  - cd tests && bash run_tests.sh docker
+  - cd tests
+  - bash run_tests.sh docker
+  - bash run_tests.sh docker_ipython
 
 notifications:
     email: false
