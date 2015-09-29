@@ -47,8 +47,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
             cl += ["-S", tx_out_file]
             if names and "rg" in names:
                 cl += ["--rg-id", names["rg"]]
-                for key, tag in [("sample", "SM"), ("pl", "PL"), ("pu", "PU")]:
-                    if key in names:
+                for key, tag in [("sample", "SM"), ("pl", "PL"), ("pu", "PU"), ("lb", "LB")]:
+                    if names.get(key):
                         cl += ["--rg", "%s:%s" % (tag, names[key])]
             cl = [str(i) for i in cl]
             do.run(cl, "Aligning %s and %s with Bowtie2." % (fastq_file, pair_file),

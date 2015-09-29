@@ -197,43 +197,59 @@ The sample configuration file defines ``details`` of each sample to process::
         files: [in_pair_1.fq, in_pair_2.fq]
         genome_build: hg19
         algorithm:
-          platform:illumina
+          platform: illumina
         metadata:
           batch: Batch1
           sex: female
+          platform_unit: flowcell-barcode.lane
+          library: library_type
+          
 
 - ``analysis`` Analysis method to use [variant2, RNA-seq, smallRNA-seq]
+
 - ``lane`` A unique number within the project. Corresponds to the
   ``ID`` parameter in the BAM read group.
+
 - ``description`` Unique name for this sample, corresponding to the
   ``SM`` parameter in the BAM read group. Required.
+
 - ``files`` A list of files to process. This currently supports either a single
   end or two paired end fastq files, or a single BAM file. It does not yet
   handle merging BAM files or more complicated inputs.
+
 - ``genome_build`` Genome build to align to, which references a genome
   keyword in Galaxy to find location build files.
 
 - ``algorithm`` Parameters to configure algorithm inputs. Options
-  described in more detail below.
+  described in more detail below:
+
+  - ``platform`` Sequencing platform used. Corresponds to the ``PL``
+    parameter in BAM read groups. Optional, defaults to ``illumina``.
+
 - ``metadata`` Additional descriptive metadata about the sample:
 
-    - ``batch`` defines a group that the sample falls in. We perform
-       multi-sample variant calling on all samples with the same batch
-       name. This can also be a list, allowing specification of a single normal
-       sample to pair with multiple tumor samples in paired cancer variant
-       calling (``batch: [MatchWithTumor1, MatchWithTumor2]``).
+   - ``batch`` defines a group that the sample falls in. We perform
+      multi-sample variant calling on all samples with the same batch
+      name. This can also be a list, allowing specification of a single normal
+      sample to pair with multiple tumor samples in paired cancer variant
+      calling (``batch: [MatchWithTumor1, MatchWithTumor2]``).
 
-    - ``sex`` specifies the sample gender used to correctly prepare X/Y
-      chromosomes.
+   - ``sex`` specifies the sample gender used to correctly prepare X/Y
+     chromosomes.
 
-    -  ``phenotype`` stratifies cancer samples into ``tumor`` and ``normal`` or
-       case/controls into ``affected`` and ``unaffected``.
+   -  ``phenotype`` stratifies cancer samples into ``tumor`` and ``normal`` or
+      case/controls into ``affected`` and ``unaffected``.
 
-    - ``ped`` provides a `PED phenotype file
-      <http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped>`_
-      containing sample phenotype and family information. Template creation uses
-      this to extract ``sex`` and ``phenotype`` information. GEMINI database
-      creation uses the PED file.
+   - ``ped`` provides a `PED phenotype file
+     <http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped>`_
+     containing sample phenotype and family information. Template creation uses
+     this to extract ``sex`` and ``phenotype`` information. GEMINI database
+     creation uses the PED file.
+
+   - ``platform_unit`` -- Unique identifier for sample. Optional, defaults to
+     ``lane`` if not specified.
+
+   - ``library`` -- Name of library preparation used. Optional, empty if not present.
 
 .. _upload-configuration:
 

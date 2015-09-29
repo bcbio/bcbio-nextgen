@@ -93,9 +93,10 @@ def _read_group_option(names):
     rg_sample = names["sample"]
     rg_library = names["pl"]
     rg_platform_unit = names["pu"]
+    rg_lb = ("LB:%s " % names.get("lb")) if names.get("lb") else ""
 
     return (" --outSAMattrRGline ID:{rg_id} PL:{rg_library} "
-            "PU:{rg_platform_unit} SM:{rg_sample} ").format(**locals())
+            "PU:{rg_platform_unit} SM:{rg_sample} {rg_lb}").format(**locals())
 
 def _get_quality_format(config):
     qual_format = config["algorithm"].get("quality_format", None)

@@ -120,7 +120,7 @@ def picard_fix_rgs(picard, in_bam, names):
                         ("OUTPUT", tx_out_file),
                         ("SORT_ORDER", "coordinate"),
                         ("RGID", names["rg"]),
-                        ("RGLB", names.get("library", "unknown")),
+                        ("RGLB", names.get("lb", "unknown")),
                         ("RGPL", names["pl"]),
                         ("RGPU", names["pu"]),
                         ("RGSM", names["sample"]),

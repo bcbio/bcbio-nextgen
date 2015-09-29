@@ -2,7 +2,10 @@
 
 - Ensure genome data sort order is identical to BED files when annotating
   structural variant calls. Thanks To Miika Ahdesmaki.
-- Fix missing BAM index when running with `align: false`. Thanks to Stephan Pabinger.
+- Fix missing BAM index when running with `align: false`. Thanks to Stephan
+  Pabinger.
+- Add ability to specify platform unit (PU) and library (LB) in BAM header.
+  Thanks to Brad Wubbenhorst.
 
 ## 0.9.3 (27 September 2015)
 

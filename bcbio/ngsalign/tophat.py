@@ -67,7 +67,7 @@ def _set_rg_options(options, names):
         return options
     options["rg-id"] = names["rg"]
     options["rg-sample"] = names["sample"]
-    options["rg-library"] = names["pl"]
+    options["rg-library"] = names["lb"] or names["pl"]
     options["rg-platform-unit"] = names["pu"]
     return options
 

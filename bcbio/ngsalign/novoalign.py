@@ -17,7 +17,10 @@ from bcbio.utils import (memoize_outfile, file_exists)
 # ## BAM realignment
 
 def get_rg_info(names):
-    return r"@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}".format(**names)
+    out = r"@RG\tID:{rg}\tPL:{pl}\tPU:{pu}\tSM:{sample}".format(**names)
+    if names.get("lb"):
+        out += r"\tLB:{lb}".format(**names)
+    return out
 
 def align_bam(in_bam, ref_file, names, align_dir, data):
     """Perform realignment of input BAM file; uses unix pipes for avoid IO.

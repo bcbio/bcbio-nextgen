@@ -193,9 +193,10 @@ def prep_rg_names(item, config, fc_name, fc_date):
     return {"rg": item["lane"],
             "sample": item["description"],
             "lane": lane_name,
-            "pl": item.get("algorithm", {}).get("platform",
-                                                config.get("algorithm", {}).get("platform", "illumina")).lower(),
-            "pu": lane_name}
+            "pl": (tz.get_in(["algorithm", "platform"], item)
+                   or tz.get_in(["algorithm", "platform"], item, "illumina")).lower(),
+            "lb": tz.get_in(["metadata", "library"], item),
+            "pu": tz.get_in(["metadata", "platform_unit"], item) or lane_name}
 
 # ## Configuration file validation
 
