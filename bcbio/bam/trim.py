@@ -3,13 +3,13 @@
 import os
 import sys
 
-from bcbio import utils
 from bcbio.utils import (file_exists, append_stem, replace_directory)
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.provenance import do
 from Bio.Seq import Seq
 from bcbio.distributed.transaction import file_transaction
+import bcbio.pipeline.datadict as dd
 
 MINIMUM_LENGTH = 25
 
@@ -19,7 +19,15 @@ SUPPORTED_ADAPTERS = {
     "polya": ["AAAAAAAAAAAAA"],
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
-def trim_adapters(fastq_files, out_dir, config):
+def trim_adapters(data):
+    to_trim = [x for x in data["files"] if x is not None]
+    logger.info("Trimming low quality ends and read through adapter "
+                "sequence from %s." % (", ".join(to_trim)))
+    out_dir = os.path.join(dd.get_work_dir(data), "trimmed")
+    config = dd.get_config(data)
+    return _trim_adapters(to_trim, out_dir, config)
+
+def _trim_adapters(fastq_files, out_dir, config):
     """
     for small insert sizes, the read length can be longer than the insert
     resulting in the reverse complement of the 3' adapter being sequenced.

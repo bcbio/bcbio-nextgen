@@ -12,8 +12,7 @@ from bcbio import utils, bam, broad
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.pipeline.merge import merge_bam_files
-from bcbio.bam import fastq, callable, highdepth
-from bcbio.bam.trim import trim_adapters
+from bcbio.bam import fastq, callable, highdepth, trim
 from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
@@ -23,6 +22,7 @@ from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline.fastq import merge as fq_merge
 from bcbio.bam import merge as bam_merge
+from bcbio.bam import skewer
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -37,7 +37,6 @@ def trim_sample(data):
     """Trim from a sample with the provided trimming method.
     Support methods: read_through.
     """
-    to_trim = [x for x in data["files"] if x is not None]
     config = data["config"]
     # this block is to maintain legacy configuration files
     trim_reads = config["algorithm"].get("trim_reads", False)
@@ -45,13 +44,12 @@ def trim_sample(data):
         logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
         return [[data]]
 
-    out_dir = os.path.join(dd.get_work_dir(data), "trimmed")
-    utils.safe_makedir(out_dir)
-
     if trim_reads == "read_through":
-        logger.info("Trimming low quality ends and read through adapter "
-                    "sequence from %s." % (", ".join(to_trim)))
-        out_files = trim_adapters(to_trim, out_dir, config)
+        if "skewer" in dd.get_tools_on(data):
+            trim_adapters = skewer.trim_adapters
+        else:
+            trim_adapters = trim.trim_adapters
+        out_files = trim_adapters(data)
         data["files"] = out_files
     return [[data]]
 
