@@ -18,12 +18,12 @@ def run(data):
     if not in_bam:
         logger.info("Transcriptome-mapped BAM file not found, skipping eXpress.")
         return data
-    gtf_fasta = gtf.gtf_to_fasta(dd.get_gtf_file(data), dd.get_ref_file(data))
     out_dir = os.path.join(dd.get_work_dir(data), "express", name)
     out_file = os.path.join(out_dir, name + ".xprs")
     express = config_utils.get_program("express", data['config'])
     strand = _set_stranded_flag(in_bam, data)
     if not file_exists(out_file):
+        gtf_fasta = gtf.gtf_to_fasta(dd.get_gtf_file(data), dd.get_ref_file(data))
         with tx_tmpdir(data) as tmp_dir:
             with file_transaction(out_dir) as tx_out_dir:
                 bam_file = _prepare_bam_file(in_bam, tmp_dir, config)
