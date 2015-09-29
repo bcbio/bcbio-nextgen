@@ -398,11 +398,11 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
         pylab.close()
 
         # "Clean" dataframes ready to be plotted
-        collectl_info["host"] = { "hardware": hardware_info, 
-                                      "steps": steps, "cpu": data_cpu, "mem": data_mem, 
-                                      "disk": data_disk, "net_bytes": data_net_bytes, 
-                                      "net_pkts": data_net_pkts
-                                    }
+        collectl_info[host] = { "hardware": hardware_info, 
+                                "steps": steps, "cpu": data_cpu, "mem": data_mem, 
+                                "disk": data_disk, "net_bytes": data_net_bytes, 
+                                "net_pkts": data_net_pkts
+                              }
 
     return collectl_info
 
