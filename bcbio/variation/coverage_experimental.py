@@ -35,6 +35,14 @@ def _calculate_percentiles(in_file, sample):
     7 different pct of regions points with pct bases covered
     higher than a completeness cutoff (5, 10, 20, 50 ...)
     """
+    has_data = False
+    with open(in_file) as in_handle:
+        for i, line in enumerate(in_handle):
+            if i > 0:
+                has_data = True
+                break
+    if not has_data:
+        return in_file
     out_file = append_stem(in_file, "_summary")
     out_total_file = append_stem(in_file, "_total_summary")
     dt = pd.read_csv(in_file, sep="\t", index_col=False)
@@ -58,6 +66,7 @@ def _calculate_percentiles(in_file, sample):
             print >>out_handle, "cutoff_reads\tregion_pct\tbases_pct\tsample"
             for k in pct:
                 print >>out_handle, "\t".join(map(str, [k[0], k[1], pct[k], sample]))
+    return out_file
 
 def coverage(data):
     """
