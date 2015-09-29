@@ -11,6 +11,7 @@ from bcbio.provenance import do
 from bcbio import bam
 from bcbio.pipeline import datadict as dd
 from bcbio.rnaseq import gtf
+from bcbio.ngsalign import postalign
 
 def _bowtie2_args_from_config(config):
     """Configurable high level options for bowtie2.
@@ -129,9 +130,10 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     fastq_cmd = "-1 %s" % fastq_file if pair_file else "-U %s" % fastq_file
     pair_cmd = "-2 %s " % pair_file if pair_file else ""
-    cmd = ("{bowtie2} -p {num_cores} -a -X 600 --rdg 6,5 --rfg 6,5 --score-min L,-.6,-.4 --no-discordant --no-mixed -x {gtf_index} {fastq_cmd} {pair_cmd} | samtools view -hbS - > {tx_out_file}")
+    cmd = ("{bowtie2} -p {num_cores} -a -X 600 --rdg 6,5 --rfg 6,5 --score-min L,-.6,-.4 --no-discordant --no-mixed -x {gtf_index} {fastq_cmd} {pair_cmd} ")
     with file_transaction(out_file) as tx_out_file:
         message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
+        cmd += "| " + postalign.sam_to_sortbam_cl(data, tx_out_file, name_sort=True)
         do.run(cmd.format(**locals()), message)
     data = dd.set_transcriptome_bam(data, out_file)
     return data
