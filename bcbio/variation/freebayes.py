@@ -105,7 +105,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             fix_ambig = vcfutils.fix_ambiguous_cl()
             py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-            cmd = ("{freebayes} -f {ref_file} {input_bams} {opts} | "
+            cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} | "
                    "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
                    "bcftools view -a - 2> /dev/null | "
                    "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
