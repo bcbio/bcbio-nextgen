@@ -87,7 +87,7 @@ See the `full documentation`_ and `longer analysis-based articles
 <http://bcb.io>`_. We welcome enhancements or problem reports using `GitHub`_
 and discussion on the `biovalidation mailing list`_.
 
-.. _full documentation at ReadTheDocs: https://bcbio-nextgen.readthedocs.org
+.. _full documentation: https://bcbio-nextgen.readthedocs.org
 .. _GitHub: https://github.com/chapmanb/bcbio-nextgen/issues
 .. _biovalidation mailing list: https://groups.google.com/d/forum/biovalidation
 
