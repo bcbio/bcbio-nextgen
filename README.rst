@@ -38,7 +38,7 @@ Features
   details.
 
 - Multiple analysis algorithms: bcbio-nextgen provides configurable
-  `variant calling, RNA-seq and small RNA pipelines`_.
+  `variant calling, RNA-seq and small RNA pipelines`.
 
 .. _IPython parallel: http://ipython.org/ipython-doc/dev/index.html
 .. _parallel documentation: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
