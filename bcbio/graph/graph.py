@@ -293,7 +293,7 @@ def rawfile_within_timeframe(rawfile, timeframe):
         ftime = datetime.strptime(matches.group(1), "%Y%m%d")
         ftime = pytz.utc.localize(ftime)
 
-    return ftime >= timeframe[0] and ftime <= timeframe[1]
+    return ftime > timeframe[0] and ftime <= timeframe[1]
 
 
 def resource_usage(bcbio_log, cluster, rawdir, verbose):
@@ -397,20 +397,21 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
             bbox_inches='tight', pad_inches=0.25)
         pylab.close()
 
+        print('Serializing output to pickle object for node {}...'.format(host))
         # "Clean" dataframes ready to be plotted
         collectl_info[host] = { "hardware": hardware_info, 
                                 "steps": steps, "cpu": data_cpu, "mem": data_mem, 
                                 "disk": data_disk, "net_bytes": data_net_bytes, 
                                 "net_pkts": data_net_pkts
                               }
-
     return collectl_info
 
-def serialize_plot_data(collectl_info, outdir, fname="collectl_info.pickle.gz"):
+def serialize_plot_data(collectl_info, pre_graph_info, outdir, fname="collectl_info.pickle.gz"):
         # Useful to regenerate and slice graphs quickly and/or inspect locally
-        with gzip.open(os.path.join(outdir, fname), "wb") as f:
-            pickle.dump(collectl_info, f)
-
+        collectl_pickle = os.path.join(outdir, fname)
+        print("Saving plot pickle file with all hosts on: {}".format(collectl_pickle))
+        with gzip.open(collectl_pickle, "wb") as f:
+            pickle.dump((collectl_info, pre_graph_info), f)
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser(
