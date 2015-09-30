@@ -6,6 +6,8 @@
   Pabinger.
 - Add ability to specify platform unit (PU) and library (LB) in BAM header.
   Thanks to Brad Wubbenhorst.
+- Set java.io.tmpdir to avoid filling up global temporary space with snpEff.
+  Thanks to Oliver Hofmann.
 
 ## 0.9.3 (27 September 2015)
 

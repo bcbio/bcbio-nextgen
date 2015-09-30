@@ -245,13 +245,14 @@ def get_snpeff_files(data):
     else:
         return {}
 
-def get_cmd(cmd_name, datadir, config):
+def get_cmd(cmd_name, datadir, config, out_file):
     """Retrieve snpEff base command line.
     """
     resources = config_utils.get_resources("snpeff", config)
     memory = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"]))
     snpeff = config_utils.get_program("snpEff", config)
-    cmd = "{snpeff} {memory} {cmd_name} -dataDir {datadir}"
+    java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
+    cmd = "{snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
     return cmd.format(**locals())
 
 def _run_snpeff(snp_in, out_format, data):
@@ -263,7 +264,6 @@ def _run_snpeff(snp_in, out_format, data):
 
     assert os.path.exists(os.path.join(datadir, snpeff_db)), \
         "Did not find %s snpEff genome data in %s" % (snpeff_db, datadir)
-    snpeff_cmd = get_cmd("eff", datadir, data["config"])
     ext = utils.splitext_plus(snp_in)[1] if out_format == "vcf" else ".tsv"
     out_file = "%s-effects%s" % (utils.splitext_plus(snp_in)[0], ext)
     stats_file = "%s-stats.html" % utils.splitext_plus(out_file)[0]
@@ -274,6 +274,7 @@ def _run_snpeff(snp_in, out_format, data):
         else:
             bgzip_cmd = ""
         with file_transaction(data, out_file) as tx_out_file:
+            snpeff_cmd = get_cmd("eff", datadir, data["config"], tx_out_file)
             cmd = ("{snpeff_cmd} {config_args} -noLog -i vcf -o {out_format} "
                    "-s {stats_file} {snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)
