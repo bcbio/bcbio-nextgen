@@ -177,7 +177,7 @@ def _cnvkit_segment(cnr_file, cov_interval, data):
             if cov_interval == "genome":
                 cmd += ["--threshold", "0.00001"]
             # preferentially use conda installed Rscript
-            export_cmd = "export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+            export_cmd = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
             do.run(export_cmd + " ".join(cmd), "CNVkit segment")
     return out_file
 
