@@ -300,7 +300,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "archive", "tools_off", "tools_on", "assemble_transcripts",
                       "mixup_check", "priority_regions", "expression_caller"] +
                      # back compatibility
-                      ["coverage_depth"])
+                      ["coverage_depth_max", "coverage_depth"])
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
