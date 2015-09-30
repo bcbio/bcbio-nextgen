@@ -295,7 +295,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "nomap_split_targets", "ensemble", "background",
                       "disambiguate", "strandedness", "fusion_mode",
                       "min_read_length", "coverage_depth_min",
-                      "coverage_depth_max", "min_allele_fraction",
+                      "min_allele_fraction",
                       "remove_lcr", "joint_group_size",
                       "archive", "tools_off", "tools_on", "assemble_transcripts",
                       "mixup_check", "priority_regions", "expression_caller"] +

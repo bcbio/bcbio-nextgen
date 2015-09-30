@@ -30,8 +30,6 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
             "-L", region_to_gatk(region),
             "-R", data["sam_ref"],
             "-I", data["work_bam"]]
-    if prep_params.get("max_depth"):
-        args += ["--downsample_to_coverage", str(prep_params["max_depth"])]
     if prep_params["recal"] == "gatk":
         if "prep_recal" in data and _recal_has_reads(data["prep_recal"]):
             requires_gatkfull = True
@@ -115,9 +113,7 @@ def _get_prep_params(data):
     recal_param = "gatk" if recal_param is True else recal_param
     realign_param = algorithm.get("realign", True)
     realign_param = "gatk" if realign_param is True else realign_param
-    max_depth = algorithm.get("coverage_depth_max", 10000)
-    return {"recal": recal_param, "realign": realign_param,
-            "max_depth": max_depth}
+    return {"recal": recal_param, "realign": realign_param}
 
 def _need_prep(data):
     prep_params = _get_prep_params(data)

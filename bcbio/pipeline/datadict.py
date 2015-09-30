@@ -94,8 +94,6 @@ LOOKUPS = {
     "report": {"keys": ["config", "algorithm", "report"]},
     "coverage_depth_min": {"keys": ["config", "algorithm", "coverage_depth_min"],
                            "default": 4},
-    "coverage_depth_max": {"keys": ["config", "algorithm", "coverage_depth_max"],
-                           "default": 10000},
     "joint_group_size": {"keys": ["config", "algorithm", "joint_group_size"],
                          "default": 200},
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
