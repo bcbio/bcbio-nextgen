@@ -1,24 +1,19 @@
 import os
 import string
-import argparse
 import os.path as op
 import sys
 import shutil
 from collections import namedtuple
 
-import pysam
-
 try:
     from seqcluster import prepare_data as prepare
-    from seqcluster import make_clusters as main_cluster
-    from seqcluster.libs import parse
     from seqcluster import templates as template_seqcluster
 except ImportError:
     pass
 
 from bcbio.utils import file_exists, safe_makedir
 from bcbio.provenance import do
-from bcbio.distributed.transaction import tx_tmpdir, file_transaction
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.sample import process_alignment
@@ -60,7 +55,6 @@ def run_align(*data):
     new_bam_file = op.join(bam_dir, "seqs.bam")
     if not file_exists(new_bam_file):
         sample = process_alignment(data[0][0], [seq_out, None])
-        # data = data[0][0]
         bam_file = dd.get_work_bam(sample[0][0])
         shutil.move(bam_file, new_bam_file)
         shutil.move(bam_file + ".bai", new_bam_file + ".bai")
@@ -74,7 +68,6 @@ def run_cluster(*data):
     work_dir = dd.get_work_dir(data[0][0])
     out_dir = os.path.join(work_dir, "seqcluster", "cluster")
     out_dir = os.path.abspath(safe_makedir(out_dir))
-    out_file = os.path.join(out_dir, "seqcluster.json")
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = op.join(work_dir, "align", "seqs.bam")
     cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(data[0][0]), dd.get_srna_gtf_file(data[0][0]))

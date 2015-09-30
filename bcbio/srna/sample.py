@@ -9,13 +9,12 @@ try:
 except ImportError:
     pass
 
-from bcbio.utils import (splitext_plus, file_exists, append_stem, replace_directory)
+from bcbio.utils import (file_exists, append_stem, replace_directory)
 from bcbio.provenance import do
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
-from bcbio.install import _get_data_dir
 
 
 def trim_srna_sample(data):
