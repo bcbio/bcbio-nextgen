@@ -24,7 +24,6 @@ bcbreport>=0.99.14
 click>=3.3
 cnvkit>=0.3.4
 cutadapt==1.8.3
-cyvcf>=0.1.11
 fadapa>=0.3.1
 fabric>=1.7.0
 gffutils>=0.8.4rc1
