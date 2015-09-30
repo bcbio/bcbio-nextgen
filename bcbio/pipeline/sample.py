@@ -108,8 +108,10 @@ def process_alignment(data, alt_input=None):
         else:
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))
+        bam.index(out_bam, data["config"])
         bam.check_header(out_bam, data["rgnames"], data["sam_ref"], data["config"])
         dedup_bam = postalign.dedup_bam(out_bam, data)
+        bam.index(dedup_bam, data["config"])
         data["work_bam"] = dedup_bam
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".cram"):
         data["work_bam"] = fastq1

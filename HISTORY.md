@@ -5,7 +5,7 @@
 - Drop `coverage_depth_max` for downsampling, which no longer works in GATK 3.4.
   The option wasn't supported by other callers so was more confusing than useful.
 - Fix missing BAM index when running with `align: false`. Thanks to Stephan
-  Pabinger.
+  Pabinger and Severine Catreux.
 - Add ability to specify platform unit (PU) and library (LB) in BAM header.
   Thanks to Brad Wubbenhorst.
 - Set java.io.tmpdir to avoid filling up global temporary space with snpEff.
