@@ -293,7 +293,7 @@ def rawfile_within_timeframe(rawfile, timeframe):
         ftime = datetime.strptime(matches.group(1), "%Y%m%d")
         ftime = pytz.utc.localize(ftime)
 
-    return ftime > timeframe[0] and ftime <= timeframe[1]
+    return ftime.date() >= timeframe[0].date() and ftime.date() <= timeframe[1].date()
 
 
 def resource_usage(bcbio_log, cluster, rawdir, verbose):
@@ -399,9 +399,9 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
 
         print('Serializing output to pickle object for node {}...'.format(host))
         # "Clean" dataframes ready to be plotted
-        collectl_info[host] = { "hardware": hardware_info, 
-                                "steps": steps, "cpu": data_cpu, "mem": data_mem, 
-                                "disk": data_disk, "net_bytes": data_net_bytes, 
+        collectl_info[host] = { "hardware": hardware_info,
+                                "steps": steps, "cpu": data_cpu, "mem": data_mem,
+                                "disk": data_disk, "net_bytes": data_net_bytes,
                                 "net_pkts": data_net_pkts
                               }
     return collectl_info
