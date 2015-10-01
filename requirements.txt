@@ -22,8 +22,6 @@ awscli>=1.7.14
 bioblend>=0.4.3
 bcbreport>=0.99.14
 click>=3.3
-cnvkit>=0.3.4
-cutadapt==1.8.3
 fadapa>=0.3.1
 fabric>=1.7.0
 gffutils>=0.8.4rc1
@@ -31,7 +29,6 @@ joblib>=0.8.4
 openpyxl>=1.6.1,<2.0.0
 path.py>=7.0
 psutil>=1.2.0
-pythonpy>=0.3.6
 python-dateutil>=2.1
 PyVCF>=0.6.7
 sh>=1.07
