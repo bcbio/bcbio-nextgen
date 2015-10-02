@@ -83,7 +83,7 @@ This requires the following additional system requirements to be in place:
   these are separate packages:
   ``ruby-libs`` and ``ruby-irb``)
 - Perl with development libraries (On Ubuntu or other deb systems:
-  ``perl, libperl-devel`` On RedHat or other rpm systems:
+  ``perl, libperl-dev`` On RedHat or other rpm systems:
   ``perl perl-devel perl-core``)
 - bzip2 (with development libraries)
 - curl and SSL (with development libraries; On Ubuntu: ``libssl-dev libcurl4-openssl-dev``, On
@@ -121,7 +121,7 @@ Install `Miniconda`_::
   wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
   bash Miniconda-latest-Linux-x86_64.sh
 
-With MinoConda installed create a (private) conda environment to be used for
+With Miniconda installed create a (private) conda environment to be used for
 this bcbio installation::
 
   conda create -n bcbio pip distribute
