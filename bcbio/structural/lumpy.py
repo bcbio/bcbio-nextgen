@@ -16,7 +16,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
-from bcbio.variation import vcfutils, vfilter
+from bcbio.variation import effects, vcfutils, vfilter
 
 # ## Lumpy main
 
@@ -133,8 +133,10 @@ def run(items):
     for data in items:
         if "sv" not in data:
             data["sv"] = []
+        vcf_file = gt_vcfs[dd.get_sample_name(data)]
+        effects_vcf, _ = effects.add_to_vcf(vcf_file, data, "snpeff")
         data["sv"].append({"variantcaller": "lumpy",
-                           "vrn_file": gt_vcfs[dd.get_sample_name(data)],
+                           "vrn_file": effects_vcf or vcf_file,
                            "exclude_file": exclude_file})
         out.append(data)
     return out

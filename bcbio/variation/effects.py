@@ -21,8 +21,9 @@ from bcbio.variation import vcfutils
 
 # ## High level
 
-def add_to_vcf(in_file, data):
-    effect_todo = get_type(data)
+def add_to_vcf(in_file, data, effect_todo=None):
+    if effect_todo is None:
+        effect_todo = get_type(data)
     if effect_todo:
         stats = None
         if effect_todo == "snpeff":
@@ -203,8 +204,9 @@ def _snpeff_args_from_config(data):
     config = data["config"]
     args = []
     # Use older EFF formatting instead of new combined ANN formatting until
-    # downstream tools catch up, then remove this.
-    if LooseVersion(snpeff_version(data=data)) >= LooseVersion("4.1"):
+    # GEMINI supports ANN. Only used for small variants, not SVs.
+    svcaller = tz.get_in(["config", "algorithm", "svcaller_active"], data)
+    if not svcaller and LooseVersion(snpeff_version(data=data)) >= LooseVersion("4.1"):
         args += ["-formatEff", "-classic"]
     # General supplied arguments
     resources = config_utils.get_resources("snpeff", config)

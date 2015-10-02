@@ -14,7 +14,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region
 from bcbio.structural import shared
-from bcbio.variation import bamprep, vcfutils
+from bcbio.variation import bamprep, effects, vcfutils
 from bcbio.provenance import do
 
 def run(items, background=None):
@@ -41,8 +41,9 @@ def run(items, background=None):
         sample_vcf = vcfutils.select_sample(orig_vcf, dd.get_sample_name(data), sample_vcf, data["config"])
         if background:
             sample_vcf = filter_by_background(sample_vcf, orig_vcf, background, data)
+        effects_vcf, _ = effects.add_to_vcf(sample_vcf, data, "snpeff")
         data["sv"].append({"variantcaller": "wham",
-                           "vrn_file": sample_vcf})
+                           "vrn_file": effects_vcf or sample_vcf})
         out.append(data)
     return out
 

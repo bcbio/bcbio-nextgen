@@ -10,7 +10,7 @@ from bcbio import utils
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import shared
-from bcbio.variation import vfilter
+from bcbio.variation import effects, vfilter
 
 MIN_CALLERS = 2
 SUPPORTED = set(["manta", "lumpy", "cnvkit", "wham"])
@@ -45,8 +45,9 @@ def run(items):
                    "(ABS(SVLEN)<4000 && BA_NUM_GOOD_REC>2)")
         filter_file = vfilter.hard_w_expression(out_file, filters,
                                                 data, name="ReassemblyStats", limit_regions=None)
+        effects_vcf, _ = effects.add_to_vcf(filter_file, data, "snpeff")
         data["sv"].append({"variantcaller": "metasv",
-                           "vrn_file": filter_file})
+                           "vrn_file": effects_vcf or filter_file})
     return [data]
 
 def _sv_workdir(data):

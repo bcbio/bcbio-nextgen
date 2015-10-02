@@ -9,7 +9,7 @@ from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import vcfutils
+from bcbio.variation import effects, vcfutils
 from bcbio.provenance import do, programs
 
 def run(items):
@@ -24,8 +24,9 @@ def run(items):
         sample_file = _select_sample(data, variant_file, work_dir)
         if "sv" not in data:
             data["sv"] = []
+        effects_vcf, _ = effects.add_to_vcf(sample_file, data, "snpeff")
         data["sv"].append({"variantcaller": "manta",
-                           "vrn_file": sample_file})
+                           "vrn_file": effects_vcf or sample_file})
         out.append(data)
     return out
 
