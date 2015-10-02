@@ -8,6 +8,7 @@ import sys
 import gzip
 import pytz
 import re
+import socket
 
 import matplotlib
 matplotlib.use('Agg')
@@ -34,6 +35,11 @@ def get_bcbio_nodes(path):
             matches = re.search(r'\]\s([^:]+):', line)
             if not matches:
                 continue
+            # Format of the record will be "[Date] host: Timing: Step" if distributed,
+            # otherwise the host will be missing and it means its a local run, we can stop
+            elif 'Timing: ' in line and line.split(': ')[1] != 'Timing':
+                hosts = collections.defaultdict(dict, {socket.gethostname() : {}})
+                break
 
             hosts[matches.group(1)]
 
