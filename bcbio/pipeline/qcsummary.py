@@ -1079,8 +1079,9 @@ def _merge_metrics(yaml_data):
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = s['description']
                 dt_together.append(dt)
-        dt_together = utils.rbind(dt_together)
-        dt_together.to_csv(out_tx, index=False, sep="\t")
+        if len(dt_together) > 0:
+            dt_together = utils.rbind(dt_together)
+            dt_together.to_csv(out_tx, index=False, sep="\t")
 
 def _merge_fastqc(data):
     """
