@@ -158,7 +158,12 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
     inputs = [x for x in [args.global_config, args.fc_dir] + args.run_config
               if x is not None]
     global_config = "bcbio_system.yaml"  # default configuration if not specified
-    if len(inputs) == 1:
+    if kwargs.get("workflow", "") == "template":
+        if args.only_metadata:
+            inputs.append("--only-metadata")
+        kwargs["inputs"] = inputs
+        return kwargs
+    elif len(inputs) == 1:
         if os.path.isfile(inputs[0]):
             fc_dir = None
             run_info_yaml = inputs[0]
@@ -178,11 +183,6 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
             fc_dir, run_info_yaml = inputs
     elif len(inputs) == 3:
         global_config, fc_dir, run_info_yaml = inputs
-    elif kwargs.get("workflow", "") == "template":
-        if args.only_metadata:
-            inputs.append("--only-metadata")
-        kwargs["inputs"] = inputs
-        return kwargs
     elif args.version:
         print version.__version__
         sys.exit()
