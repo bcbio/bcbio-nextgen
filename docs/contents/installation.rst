@@ -121,7 +121,7 @@ Install `Miniconda`_::
   wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
   bash Miniconda-latest-Linux-x86_64.sh
 
-With MinoConda installed create a (private) conda environment to be used for
+With Miniconda installed create a (private) conda environment to be used for
 this bcbio installation::
 
   conda create -n bcbio pip distribute
