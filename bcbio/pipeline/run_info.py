@@ -351,11 +351,10 @@ def _check_toplevel_misplaced(item):
 
 
 def _detect_fastq_format(in_file, MAX_RECORDS=1000):
-    ranges = {"sanger": (33, 73),
-              "solexa": (59, 104),
-              "illumina_1.3+": (64, 104),
-              "illumina_1.5+": (66, 104),
-              "illumina_1.8+": (35, 74)}
+    ranges = {"sanger": (33, 126),
+              "solexa": (59, 126),
+              "illumina_1.3+": (64, 126),
+              "illumina_1.5+": (66, 126)}
 
     gmin, gmax = 99, 0
     possible = set(ranges.keys())
