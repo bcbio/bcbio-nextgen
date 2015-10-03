@@ -322,7 +322,7 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                         subprocess.check_call(["unzip", dl_file])
                         os.remove(dl_file)
                     dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
-                    os.rename(dl_dir, snpeff_db_dir)
+                    shutil.move(dl_dir, snpeff_db_dir)
                     os.rmdir(os.path.join(snpeff_base_dir, "data"))
 
 def _is_old_database(db_dir, args):

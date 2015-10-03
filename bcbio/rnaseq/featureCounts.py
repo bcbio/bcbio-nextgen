@@ -1,5 +1,4 @@
-import os
-
+import shutil
 import bcbio.bam as bam
 from bcbio.utils import (file_exists, safe_makedir)
 from bcbio.pipeline import config_utils
@@ -42,7 +41,7 @@ def count(data):
     with file_transaction(data, count_file) as tx_count_file:
         do.run(cmd.format(**locals()), message.format(**locals()))
     fixed_count_file = _format_count_file(count_file, data)
-    os.rename(fixed_count_file, count_file)
+    shutil.move(fixed_count_file, count_file)
 
     return count_file
 
