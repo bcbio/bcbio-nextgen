@@ -42,6 +42,7 @@ from bcbio.variation import bedutils
 from bcbio import broad
 from bcbio.variation import coverage_experimental as cov
 from bcbio.variation.coverage import decorate_problem_regions
+from bcbio.ngsalign.postalign import dedup_bam
 # ## High level functions to generate summary
 
 
@@ -618,23 +619,30 @@ def _parse_metrics(metrics):
             continue
     return out
 
-def _detect_duplicates(bam_file, out_dir, config):
+def _detect_duplicates(bam_file, out_dir, data):
     """
-    Detect duplicates metrics with Picard
+    count duplicate percentage
     """
-    out_file = os.path.join(out_dir, "dup_metrics")
+    out_file = os.path.join(out_dir, "dup_metrics.txt")
     if not utils.file_exists(out_file):
-        broad_runner = broad.runner_from_config(config)
-        (dup_align_bam, metrics_file) = broad_runner.run_fn("picard_mark_duplicates", bam_file, remove_dups=True)
-        shutil.move(metrics_file, out_file)
-    metrics = []
+        dup_align_bam = dedup_bam(bam_file, data)
+        num_cores = dd.get_num_cores(data)
+        with file_transaction(out_file) as tx_out_file:
+            sambamba = config_utils.get_program("sambamba", data, default="sambamba")
+            dup_count = ("{sambamba} view --nthreads {num_cores} --count "
+                         "-F 'duplicate and not unmapped' "
+                         "{bam_file} >> {tx_out_file}")
+            message = "Counting duplicates in {bam_file}.".format(bam_file=bam_file)
+            do.run(dup_count.format(**locals()), message)
+            tot_count = ("{sambamba} view --nthreads {num_cores} --count "
+                         "-F 'not unmapped' "
+                         "{bam_file} >> {tx_out_file}")
+            message = "Counting reads in {bam_file}.".format(bam_file=bam_file)
+            do.run(tot_count.format(**locals()), message)
     with open(out_file) as in_handle:
-        reader = csv.reader(in_handle, dialect="excel-tab")
-        for line in reader:
-            if line and not line[0].startswith("#"):
-                metrics.append(line)
-    metrics = dict(zip(metrics[0], metrics[1]))
-    return {"Duplication Rate of Mapped": metrics["PERCENT_DUPLICATION"]}
+        dupes = float(in_handle.next().strip())
+        total = float(in_handle.next().strip())
+    return {"Duplication Rate of Mapped": dupes / total}
 
 def _transform_browser_coor(rRNA_interval, rRNA_coor):
     """
@@ -725,7 +733,7 @@ def _rnaseq_qualimap(bam_file, data, out_dir):
         cmd = _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file, single_end)
         do.run(cmd, "Qualimap for {}".format(data["name"][-1]))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
-    metrics.update(_detect_duplicates(bam_file, out_dir, config))
+    metrics.update(_detect_duplicates(bam_file, out_dir, data))
     metrics.update(_detect_rRNA(config, bam_file, gtf_file, ref_file, out_dir, single_end))
     metrics.update({"Fragment Length Mean": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
