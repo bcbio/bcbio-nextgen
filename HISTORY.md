@@ -6,8 +6,6 @@
   The option wasn't supported by other callers so was more confusing than useful.
 - Fix missing BAM index when running with `align: false`. Thanks to Stephan
   Pabinger and Severine Catreux.
-- Annotate structural variant files with snpEff. Initial steps towards
-  summarized structural variant reporting.
 - Add ability to specify platform unit (PU) and library (LB) in BAM header.
   Thanks to Brad Wubbenhorst.
 - Set java.io.tmpdir to avoid filling up global temporary space with snpEff.
