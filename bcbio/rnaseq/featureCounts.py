@@ -1,3 +1,4 @@
+import os
 import shutil
 import bcbio.bam as bam
 from bcbio.utils import (file_exists, safe_makedir)
