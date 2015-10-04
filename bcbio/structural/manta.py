@@ -24,8 +24,7 @@ def run(items):
         sample_file = _select_sample(data, variant_file, work_dir)
         if "sv" not in data:
             data["sv"] = []
-        #effects_vcf, _ = effects.add_to_vcf(sample_file, data, "snpeff")
-        effects_vcf = None
+        effects_vcf, _ = effects.add_to_vcf(sample_file, data, "snpeff")
         data["sv"].append({"variantcaller": "manta",
                            "vrn_file": effects_vcf or sample_file})
         out.append(data)

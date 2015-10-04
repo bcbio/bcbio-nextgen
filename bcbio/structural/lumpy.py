@@ -134,8 +134,7 @@ def run(items):
         if "sv" not in data:
             data["sv"] = []
         vcf_file = gt_vcfs[dd.get_sample_name(data)]
-        #effects_vcf, _ = effects.add_to_vcf(vcf_file, data, "snpeff")
-        effects_vcf = None
+        effects_vcf, _ = effects.add_to_vcf(vcf_file, data, "snpeff")
         data["sv"].append({"variantcaller": "lumpy",
                            "vrn_file": effects_vcf or vcf_file,
                            "exclude_file": exclude_file})

@@ -376,8 +376,7 @@ def _add_variantcalls_to_output(out, data):
                 do.run(cmd, "CNVkit export %s" % outformat)
     out["call_file"] = call_file
     out["vrn_bed"] = annotate.add_genes(calls["bed"], data)
-    #effects_vcf, _ = effects.add_to_vcf(calls["vcf"], data, "snpeff")
-    effects_vcf = None
+    effects_vcf, _ = effects.add_to_vcf(calls["vcf"], data, "snpeff")
     out["vrn_file"] = effects_vcf or calls["vcf"]
     return out
 
