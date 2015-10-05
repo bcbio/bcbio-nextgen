@@ -23,11 +23,13 @@ install:
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
   # Update to bcbio-nextgen latest code within the container
   - bcbio_vm.py devel setup_install
+  - pip install cwltool
 
 script:
   - cd tests
   - bash run_tests.sh docker
   - bash run_tests.sh docker_ipython
+  - bash run_tests.sh cwl
 
 notifications:
     email: false
