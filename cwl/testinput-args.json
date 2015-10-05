@@ -1,4 +1,5 @@
 {
     "system_config" : {"class": "File", "path": "testinput-bcbio_system.yaml"},
-    "run_config": {"class": "File", "path": "../tests/data/automated/run_info-bam.yaml"}
+    "system_config_prep" : {"class": "File", "path": "system_config_prep.yaml"},
+    "run_config": {"class": "File", "path": "run_info-bam.yaml"}
 }
