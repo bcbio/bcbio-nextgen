@@ -4,12 +4,13 @@ Pipelines
 Germline variant calling
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-bcbio implements configurable SNP, indel and structural variant calling. We
-include whole genome and exome evaluations against reference calls from
-the `Genome in a Bottle`_ consortium, enabling continuous assessment of new
-alignment and variant calling algorithms. We regularly report on these
-comparisons and continue to improve approaches as the community makes new
-tools available. Here is some of the research that contributes to the
+bcbio implements configurable SNP, indel and structural variant calling for
+germline populations. We include whole genome and exome evaluations against
+reference calls from the `Genome in a Bottle`_ consortium and `Illumina Platinum
+Genomes <http://www.illumina.com/platinumgenomes/>`_ project, enabling continuous
+assessment of new alignment and variant calling algorithms. We regularly report
+on these comparisons and continue to improve approaches as the community makes
+new tools available. Here is some of the research that contributes to the
 current implementation:
 
 - An introduction to the `variant evaluation framework`_. This includes a
@@ -37,6 +38,10 @@ current implementation:
   Platypus and samtools. This validates the joint calling implementation,
   allowing scaling of large population germline experiments. It also
   demonstrates improved performance of new callers: samtools 1.0 and Platypus.
+
+- Support for `build 38 of the human genome
+  <http://bcb.io/2015/09/17/hg38-validation/>`_, improving precision of
+  detection thanks to the improved genome representation.
 
 bcbio automates post-variant calling annotation to make
 the outputs easier to feed directly into your biological analysis. We annotate
@@ -78,9 +83,14 @@ the :ref:`automated-sample-config` with one of the default templates:
   Broad for commercial use. You need to manually install GATK along with bcbio
   using downloads from the GATK Broad site or Appistry (see :ref:`extra-install`).
 
-Another good source of inspiration are the configuration files from the
-:ref:`example-pipelines`, which may help identify other configuration variables
-of interest.
+You may also want to enable :ref:`svs-pipeline` for detection of larger events,
+which work with either caller. Another good source of inspiration are the
+configuration files from the :ref:`example-pipelines`, which may help identify
+other configuration variables of interest. A more complex setup with multiple
+callers and resolution of ensemble calls is generally only useful with a small
+population where you are especially concerned about sensitivity. Single
+caller detection with FreeBayes or GATK HaplotypeCaller provide good resolution
+of events.
 
 Population calling
 ==================
@@ -108,19 +118,21 @@ all merged sample calls. bcbio has two methods to call samples together:
 - Joint calling -- This calls samples independently, then combines them together
   into a single callset by integrating the individual calls. This scales to
   larger population sizes by avoiding the computational bottlenecks of pooled
-  calling. Specifying a ``jointcaller`` along with the appropriate
+  calling. We recommend joint calling with HaplotypeCaller if you have a
+  license for GATK usage, but also support joint calling with FreeBayes using a
+  custom implementation. Specifying a ``jointcaller`` along with the appropriate
   ``variantcaller`` in the :ref:`variant-config` configuration enables this::
 
     - description: Sample1
       algorithm:
-        variantcaller: freebayes
-        jointcaller: freebayes-joint
+        variantcaller: gatk-haplotype
+        jointcaller: gatk-haplotype-joint
       metadata:
         batch: Batch1
     - description: Sample2
       algorithm:
-        variantcaller: freebayes
-        jointcaller: freebayes-joint
+        variantcaller: gatk-haplotype
+        jointcaller: gatk-haplotype-joint
       metadata:
         batch: Batch1
 
@@ -157,6 +169,8 @@ heterogeneity and structural variability that define cancer genomes.
 .. _full evaluation of cancer calling: http://bcb.io/2015/03/05/cancerval/
 .. _synthetic dataset 3 from the ICGC-TCGA DREAM challenge: https://www.synapse.org/#!Synapse:syn312572/wiki/62018
 
+.. _svs-pipeline:
+
 Structural variant calling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 bcbio can detect larger structural variants like deletions, insertions, inversions
@@ -188,28 +202,10 @@ association testing. We also support `DELLY
 <https://github.com/tobiasrausch/delly>`_, another excellent paired end and
 split read calling, although it is slow on large whole genome datasets.
 
-In addition to results from individual callers, bcbio creates a summarized
-ensemble callset. The goal is to have a flat high level representation to
-identify if there are likely to be structural variations within biological
-regions of interest. By linking to evidence from individual callers, this allows
-detailed investigation of support for any events of interest. The ensemble
-method is simple, and combines all calls from larger events (>2kb) and retains
-only events from smaller events with support from two callers.
-
-The ensemble callset also flattens representations to make them easier to
-compare. Deletions (DEL), insertions (INS) and inversions (INV) all have
-standard nomenclatures. The callset reports CNVs as the predicted integer copy
-number: cnv1_cnvkit is a copy number deletion from a diploid reference called by
-cnvkit. Some complex regions will have multiple overlapping calls and get
-collapsed into a single event with the predictions: 3,5 would be a region with
-two predicted amplifications of 3 and 5.
-
-Finally, the ensemble callset filters input calls to remove potential false
-positives. It remove calls in regions with excessively high depth of more
-than 20x the median coverage, which are typically associated with collapsed
-repeats and likely artifacts. It also removes reads where either end falls into
-a repetitive `low complexity region (LCR)
-<http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/>`_.
+In addition to results from individual callers, bcbio can create a summarized
+ensemble callset using `MetaSV <https://github.com/bioinform/metasv>`_. We're
+actively working on improved structural variant reporting to highlight potential
+variants of interest.
 
 .. _Validation of germline structural variant detection: http://bcb.io/2014/08/12/validated-whole-genome-structural-variation-detection-using-multiple-callers/
 
