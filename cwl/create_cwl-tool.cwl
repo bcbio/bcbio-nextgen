@@ -20,4 +20,4 @@ outputs:
     outputBinding:
       glob: "*-workflow/*.cwl"
 
-baseCommand: ["/usr/local/bin/bcbio_nextgen.py", "runfn", "create_cwl"]
+baseCommand: ["bcbio_nextgen.py", "runfn", "create_cwl"]

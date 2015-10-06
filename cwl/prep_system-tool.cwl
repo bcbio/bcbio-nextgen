@@ -23,4 +23,4 @@ outputs:
     outputBinding:
       glob: "system_config_prep.yaml"
 
-baseCommand: ["/usr/local/bin/bcbio_nextgen.py", "runfn", "--raw", "-o", "system_config_prep.yaml", "prep_system"]
+baseCommand: ["bcbio_nextgen.py", "runfn", "--raw", "-o", "system_config_prep.yaml", "prep_system"]
