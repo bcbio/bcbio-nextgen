@@ -208,14 +208,12 @@ Create your project directory and link the global bcbio configuration file in th
 
     mkdir /encrypted/your-project
     cd !$ && mkdir work && cd work
-    ln -s ~install/bcbio-vm/data/galaxy/bcbio_system.yaml .
 
 - Lustre file system::
 
     sudo mkdir /scratch/cancer-dream-syn3-exome
     sudo chown ubuntu !$
     cd !$ && mkdir work && cd work
-    ln -s ~install/bcbio-vm/data/galaxy/bcbio_system.yaml .
 
 If you started a single machine, run with::
 
