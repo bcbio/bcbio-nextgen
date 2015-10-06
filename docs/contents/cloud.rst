@@ -75,7 +75,7 @@ Extra software
 
 We're not able to automatically install some useful tools in pre-built docker
 containers due to licensing restrictions. Variant calling with GATK requires a
-manual download from the `GATK download`_ site for academic users.  Commercial 
+manual download from the `GATK download`_ site for academic users.  Commercial
 users `need a license`_ for GTAK and for somatic calling with muTect. To make these jars available,
 upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
 include the correct GATK and muTect directives during your run.  Alternatively,
@@ -158,7 +158,7 @@ When happy with your setup, start the cluster with::
 
     bcbio_vm.py aws cluster start
 
-The cluster will take five to ten minutes to start. If you encounter any
+The cluster will take five to ten minutes to start and be provisioned. If you encounter any
 intermittent failures, you can rerun the cluster configuration step with
 ``bcbio_vm.py aws cluster setup`` or the bcbio-specific installation with
 ``bcbio_vm.py aws cluster bootstrap``.
@@ -186,7 +186,7 @@ to set up a Lustre scratch filesystem on AWS.
   means lustre server is created successfully, you can rerun the lustre configuration step
   with ``bcbio_vm.py aws icel create --setup``. If you had any failure creating the lustre
   server before the collectl plugin installation, you should stop it, and try again.
-  
+
 
 - Once the ICEL stack and elasticluster cluster are both running, mount the
   filesystem on the cluster::
@@ -202,19 +202,27 @@ To run the analysis, connect to the head node with::
 
     bcbio_vm.py aws cluster ssh
 
-If you started a single machine, or a cluster using encrypted NFS, run with::
+Create your project directory and link the global bcbio configuration file in there with:
+
+- NFS file system (no Lustre)::
 
     mkdir /encrypted/your-project
     cd !$ && mkdir work && cd work
-    bcbio_vm.py run -n 8 s3://your-project/your-analysis/name.yaml
 
-Where the ``-n`` argument should be the number of cores on the machine.
-
-To run on a full cluster with a Lustre filesystem::
+- Lustre file system::
 
     sudo mkdir /scratch/cancer-dream-syn3-exome
     sudo chown ubuntu !$
     cd !$ && mkdir work && cd work
+
+If you started a single machine, run with::
+
+    bcbio_vm.py run -n 8 s3://your-project/your-analysis/name.yaml
+
+Where the ``-n`` argument should be the number of cores on the machine.
+
+To run on a full cluster::
+
     bcbio_vm.py ipythonprep s3://your-project/your-analysis/name.yaml slurm cloud -n 60
     sbatch bcbio_submit.sh
 
@@ -254,8 +262,8 @@ usage graphs with::
     bcbio_vm.py graph bcbio-nextgen.log
 
 By default the collectl stats will be in ``monitoring/collectl`` and plots in
-``monitoring/graphs`` based on the above log timeframe. If you need to re-run 
-plots later after shutting the cluster down, you can use the `none` cluster flag 
+``monitoring/graphs`` based on the above log timeframe. If you need to re-run
+plots later after shutting the cluster down, you can use the `none` cluster flag
 by running ``bcbio_vm.py graph bcbio-nextgen.log --cluster none``.
 
 If you'd like to run graphing from a local non-AWS run, such as a local HPC cluster,
