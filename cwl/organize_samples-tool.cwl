@@ -18,4 +18,4 @@ outputs:
     outputBinding:
       glob: "world.yaml"
 
-baseCommand: ["/usr/local/bin/bcbio_nextgen.py", "runfn", "organize_samples", "--out", "world.yaml"]
+baseCommand: ["bcbio_nextgen.py", "runfn", "organize_samples", "--out", "world.yaml"]
