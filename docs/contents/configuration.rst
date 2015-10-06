@@ -53,7 +53,7 @@ multiple samples using the template workflow command::
   The first column links the metadata to a specific input file. The
   template command tries to identify the ``samplename`` from read group
   information in a BAM file, or uses the base filename if no read group
-  information is present. For BAM files, this would the filename without the
+  information is present. For BAM files, this would be the filename without the
   extension and path (``/path/to/yourfile.bam => yourfile``). For fastq
   files, the template functionality will identify pairs using standard
   conventions (``_1`` and ``_2``, including Illumina extensions like ``_R1``),
@@ -126,14 +126,13 @@ out of the final output YAML::
 .. _multi-files-sample-configuration:
 
 Multiple files per sample
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In case you have multiple FASTQ or BAM files for each sample you can use ``bcbio_prepare_samples.py``.
 The main parameters are:
 
 - ``--out``: the folder where the merged files will be
-- ``--csv``: the CSV file that is exactly the same than described previously,
-but having as many duplicate lines for each samples as files to be merged::
+- ``--csv``: the CSV file that is exactly the same than described previously, but having as many duplicate lines for each samples as files to be merged::
 
 
         samplename,description,batch,phenotype,sex,variant_regions
@@ -177,7 +176,8 @@ In case of paired reads, the CSV file should contain all files::
         file1_R2.fastq,sample1,batch1,normal,femela,/path/to/regions.bed
         file2_R2.fastq,sample1,batch1,normal,female,/path/to/regions.bed
 
-The script will try to guess the paired files the same way than ``bcbio_nextgen.py -w template`` does. It would detect paired files if the difference among two files is only _R1/_R2 or -1/-2 or _1/_2 or .1/.2
+The script will try to guess the paired files the same way than ``bcbio_nextgen.py -w template`` does. It would detect paired files if the difference among two files is only
+``_R1/_R2`` or ``-1/-2`` or ``_1/_2`` or ``.1/.2``
 
 The output CSV will look like and is compatible with bcbio::
 
@@ -203,7 +203,7 @@ The sample configuration file defines ``details`` of each sample to process::
           sex: female
           platform_unit: flowcell-barcode.lane
           library: library_type
-          
+
 
 - ``analysis`` Analysis method to use [variant2, RNA-seq, smallRNA-seq]
 
@@ -229,10 +229,10 @@ The sample configuration file defines ``details`` of each sample to process::
 - ``metadata`` Additional descriptive metadata about the sample:
 
    - ``batch`` defines a group that the sample falls in. We perform
-      multi-sample variant calling on all samples with the same batch
-      name. This can also be a list, allowing specification of a single normal
-      sample to pair with multiple tumor samples in paired cancer variant
-      calling (``batch: [MatchWithTumor1, MatchWithTumor2]``).
+     multi-sample variant calling on all samples with the same batch
+     name. This can also be a list, allowing specification of a single normal
+     sample to pair with multiple tumor samples in paired cancer variant
+     calling (``batch: [MatchWithTumor1, MatchWithTumor2]``).
 
    - ``sex`` specifies the sample gender used to correctly prepare X/Y
      chromosomes.
@@ -372,10 +372,10 @@ Alignment
   and ``disambiguate: [mm10]``, it will align to hg19 and mm10, run
   disambiguation and continue with reads confidently aligned to hg19. Affects
   fusion detection when ``star`` is chosen as the aligner.
--  ``trim_reads`` Can be set to trim low quality ends or to also trim off,
-    in conjunction with the ``adapters`` field a set of adapter sequences or
-    poly-A tails that could appear on the ends of reads. Only used in RNA-seq
-    pipelines, not variant calling. [False, read_through]
+- ``trim_reads`` Can be set to trim low quality ends or to also trim off,
+  in conjunction with the ``adapters`` field a set of adapter sequences or
+  poly-A tails that could appear on the ends of reads. Only used in RNA-seq
+  pipelines, not variant calling. [False, read_through]
 - ``min_read_length`` Minimum read length to maintain when
   ``read_through`` trimming set in ``trim_reads``. Defaults to 20.
 -  ``adapters`` If trimming adapter read through, trim a set of stock
@@ -385,15 +385,15 @@ Alignment
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
 - ``align_split_size``: Increase parallelization of alignment. This defines the
-   number of records to feed into each independent parallel step (for example,
-   5000000 = 5 million reads per chunk). It converts the original inputs into
-   bgzip grabix indexed FASTQ files, and then retrieves chunks for parallel
-   alignment. Following alignment, it combines all chunks back into the final
-   merged alignment file. This allows parallelization at the cost of additional
-   work of preparing inputs and combining split outputs. The tradeoff makes
-   sense when you have large files and lots of distributed compute. When you
-   have fewer large multicore machines this parameter may not help speed up
-   processing.
+  number of records to feed into each independent parallel step (for example,
+  5000000 = 5 million reads per chunk). It converts the original inputs into
+  bgzip grabix indexed FASTQ files, and then retrieves chunks for parallel
+  alignment. Following alignment, it combines all chunks back into the final
+  merged alignment file. This allows parallelization at the cost of additional
+  work of preparing inputs and combining split outputs. The tradeoff makes
+  sense when you have large files and lots of distributed compute. When you
+  have fewer large multicore machines this parameter may not help speed up
+  processing.
 -  ``quality_bin``: Perform binning of quality scores with CRAM to
    reduce file sizes. Uses the Illumina 8-bin approach. Supply a list
    of times to perform binning: [prealignment, postrecal]
@@ -410,18 +410,18 @@ Experimental information
 ========================
 
 - ``coverage_interval`` Regions covered by sequencing. bcbio calculates this
-   automatically from alignment coverage information, so you only need to
-   specify it in the input configuration if you have specific needs or bcbio
-   does not determine coverage correctly. ``genome`` specifies full genome
-   sequencing, ``regional`` identifies partial-genome pull down sequencing like
-   exome analyses, and ``amplicon`` is partial-genome sequencing from
-   PCR amplicon sequencing. This influences GATK options for filtering: we use
-   Variant Quality Score Recalibration when set to ``genome``, otherwise we
-   apply hard filters. Also affects copy number calling with CNVkit, structural
-   variant calling and deep panel calling in cancer samples, where we tune
-   regional/amplicon analyses to maximize sensitivity.
-   [genome, regional, amplicon]
--  ``coverage_depth_min`` Minimum depth of coverage. Regions will less reads
+  automatically from alignment coverage information, so you only need to
+  specify it in the input configuration if you have specific needs or bcbio
+  does not determine coverage correctly. ``genome`` specifies full genome
+  sequencing, ``regional`` identifies partial-genome pull down sequencing like
+  exome analyses, and ``amplicon`` is partial-genome sequencing from
+  PCR amplicon sequencing. This influences GATK options for filtering: we use
+  Variant Quality Score Recalibration when set to ``genome``, otherwise we
+  apply hard filters. Also affects copy number calling with CNVkit, structural
+  variant calling and deep panel calling in cancer samples, where we tune
+  regional/amplicon analyses to maximize sensitivity.
+  [genome, regional, amplicon]
+-  ``coverage_depth_min`` Minimum depth of coverage. Regions with less reads
    will not get called. Defaults to 4. Setting lower than 4 will trigger
    low-depth calling options for GATK.
 -  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
@@ -496,10 +496,10 @@ Variant calling
    methods and reduce false positives if you don't need calls in LCRs for your
    biological analysis. [false, true]
 -  ``validate`` A VCF file of expected variant calls to perform
-    validation and grading of output variants from the pipeline.
-    This provides a mechanism to ensure consistency of calls against
-    a known set of variants, supporting comparisons to genotyping
-    array data or reference materials.
+   validation and grading of output variants from the pipeline.
+   This provides a mechanism to ensure consistency of calls against
+   a known set of variants, supporting comparisons to genotyping
+   array data or reference materials.
 - ``validate_regions`` A BED file of regions to evaluate in. This
   defines specific regions covered by the ``validate`` VCF  file.
 - ``joint_group_size`` Specify the maximum number of gVCF samples to feed into
@@ -590,7 +590,7 @@ Post-processing
   needed. ``gemini`` provides a `GEMINI database`_ of variants for downstream
   query during variant calling pipelines. ``vardict_somatic_filter`` runs
   a post calling filter to remove variants found in normal samples. ``bwa-mem``
-  forces use of original bwa aln alignment. Without this, we use bwa mem with
+  forces use of original ``bwa aln`` alignment. Without this, we use bwa mem with
   70bp or longer reads. ``fastqc`` turns off quality control FastQC usage.
   ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
@@ -780,22 +780,22 @@ by hand to support additional organisms or builds.
 
 The major sections of the file are:
 
-- `aliases` -- Names for third-party programs used as part of the
+- ``aliases`` -- Names for third-party programs used as part of the
   analysis, since naming expectations can differ between software
   programs.
 
-- `variation` -- Supporting data files for variant analysis. For human
+- ``variation`` -- Supporting data files for variant analysis. For human
   analyses, the dbSNP and training files are from the `GATK resource bundle`_.
   These are inputs into the training models for
   recalibration. The automated `CloudBioLinux`_ data scripts will
   download and install these in the variation subdirectory relative to
   the genome files.
 
-- `rnaseq` -- Supporting data files for RNA-seq analysis. The
+- ``rnaseq`` -- Supporting data files for RNA-seq analysis. The
   automated installer and updater handles retrieval and installation
   of these resources for supported genome builds.
 
-- `srnaseq` -- Supporting data files for smallRNA-seq analysis. Same as in
+- ``srnaseq`` -- Supporting data files for smallRNA-seq analysis. Same as in
   rnaseq, the automated installer and updater handle this for supported genome
   builds.
 

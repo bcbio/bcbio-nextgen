@@ -64,8 +64,10 @@ the documentation.
 - `Calculate and plot coverage`_ with matplolib, from Luca Beltrame.
 - `Another way`_ to visualize coverage for targeted NGS (exome) experiments with bedtools and R, from Stephen Turner
 - assess the efficiency of targeted enrichment sequencing with `ngscat`_
+- `MultiQC`_: Run MultiQC on the top of the final directory to get a general summary with information collected from some of
+the executed QC tools. List of supported QC tools can be found `here <https://github.com/ewels/MultiQC>`_.
 
 .. _ngscat: http://www.bioinfomgp.org/ngscat
 .. _Calculate and plot coverage:  https://github.com/chapmanb/bcbio-nextgen/issues/195#issuecomment-39071048
 .. _Another way: http://gettinggeneticsdone.blogspot.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html
-
+.. _MultiQC: http://multiqc.info/

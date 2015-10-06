@@ -108,7 +108,7 @@ We also have a more extensive evaluation that includes 2 additional variant
 callers, Platypus and samtools, and 3 different methods of calling variants:
 single sample, pooled, and incremental joint calling. This uses the same input
 data as above but a different input configuration file::
-  
+
   mkdir -p NA12878-trio-eval/work_joint
   cd NA12878-trio-eval/config
   wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-joint.yaml
@@ -188,7 +188,7 @@ Structural variant calling -- whole genome NA12878 (50x)
 
 This example runs structural variant calling with multiple callers (Lumpy, Manta
 and CNVkit), providing a combined output summary file and validation metrics
-against NA12878 deletions. It uses the same NA12878 input as the whole genome 
+against NA12878 deletions. It uses the same NA12878 input as the whole genome
 trio example.
 
 To run the analysis do::
@@ -239,7 +239,7 @@ A nice looking standalone `report`_ of the bcbio-nextgen run can be generated us
 
 Human genome build 38
 ~~~~~~~~~~~~~~~~~~~~~
-Validate variant calling on human genome build 38, using two different builds 
+Validate variant calling on human genome build 38, using two different builds
 (with and without alternative alleles)  and three different validation datasets
 (Genome in a Bottle prepared with two methods and Illumina platinum genomes).
 To run::
@@ -315,6 +315,8 @@ To run specific subsets of the tests::
      $ ./run_tests.sh rnaseq
      $ ./run_tests.sh speed=2
      $ ./run_tests.sh devel
+     $ ./run_tests.sh docker
+     $ ./run_tests.sh devel_ipython
 
 By default the test suite will use your installed system configuration
 for running tests, substituting the test genome information instead of

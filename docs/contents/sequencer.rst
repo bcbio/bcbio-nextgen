@@ -38,7 +38,7 @@ Sequencer output machine
 ************************
 
 The sequencer output machine is a Linux-based machine where Illumina writes
-output directories containing bcel files. Our current experience is on HiSeq
+output directories containing bcl files. Our current experience is on HiSeq
 machines output and we welcome contributions from users working with different
 machines or output setups. Post-sequencing processing, including demultiplexing,
 initiate via a cronjob run on the Illumina output machine::

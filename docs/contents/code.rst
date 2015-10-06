@@ -49,6 +49,10 @@ conflict, it's useful to understand the design approaches:
   isolates debugging to individual functions rather than globally
   mutable state.
 
+- Make sure your changes integrate correctly by running the test suite before submitting a pull request.
+  the pipeline is automatically tested in `Travis-CI`_, and a red label will appear in the pull request if
+  the former causes any issue.
+
 Overview
 ========
 
@@ -477,3 +481,4 @@ implementations.
 .. _pipeline.main: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/main.py
 .. _ipython wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/ipython.py
 .. _multicore wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/multi.py
+.. _Travis-CI: https://travis-ci.org/chapmanb/bcbio-nextgen
