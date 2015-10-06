@@ -12,6 +12,9 @@
   Thanks to Brad Wubbenhorst.
 - Set java.io.tmpdir to avoid filling up global temporary space with snpEff.
   Thanks to Oliver Hofmann.
+- Speed up transcriptome-only processing. Thanks to Sven-Eric Schelhorn.
+- Add bamtools output to RNA-seq quality metrics. Thanks to Sven-Eric Schelhorn.
+- Expand input quality format detection to detect full range of possible Sanger values.
 
 ## 0.9.3 (27 September 2015)
 

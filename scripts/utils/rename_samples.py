@@ -12,9 +12,8 @@ Requires:
       % cd pysam-0.3
       % python setup.py build && sudo python setup.py install
 """
-import os
 import sys
-
+import shutil
 import pysam
 
 def main(in_files):
@@ -29,8 +28,8 @@ def main(in_files):
             new.write(read)
         orig.close()
         new.close()
-        os.rename(in_file, backup_file)
-        os.rename(out_file, in_file)
+        shutil.move(in_file, backup_file)
+        shutil.move(out_file, in_file)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

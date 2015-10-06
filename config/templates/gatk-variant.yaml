@@ -8,7 +8,7 @@ details:
     #   batch: your-arbitrary-batch-name
     algorithm:
       aligner: bwa
-      mark_duplicates: picard
+      mark_duplicates: true
       recalibrate: gatk
       realign: gatk
       variantcaller: gatk-haplotype

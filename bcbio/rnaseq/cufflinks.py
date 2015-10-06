@@ -3,6 +3,7 @@
 http://cufflinks.cbcb.umd.edu/manual.html
 """
 import os
+import shutil
 import tempfile
 
 from bcbio.utils import get_in, file_exists, safe_makedir
@@ -236,5 +237,5 @@ def merge(assembled_gtfs, ref_file, gtf_file, num_cores, data):
     fixed = fix_cufflinks_attributes(gtf_file, clean, data)
     classified = annotate_gtf.annotate_novel_coding(fixed, gtf_file, ref_file)
     filtered = annotate_gtf.cleanup_transcripts(classified, gtf_file, ref_file)
-    os.rename(filtered, out_file)
+    shutil.move(filtered, out_file)
     return out_file

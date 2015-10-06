@@ -109,7 +109,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         subprocess.check_call(cl)
         cl = ["tar", "-xzvpf", os.path.basename(url)]
         subprocess.check_call(cl)
-        os.rename(os.path.basename(dirname), dirname)
+        shutil.move(os.path.basename(dirname), dirname)
         os.remove(os.path.basename(url))
 
     @attr(speed=3)
