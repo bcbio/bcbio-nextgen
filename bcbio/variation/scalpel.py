@@ -57,7 +57,7 @@ def is_installed(config):
     """Check for scalpel installation on machine.
     """
     try:
-        config_utils.get_program("scalpel-discovery", config)
+        config_utils.get_program("scalpel", config)
         return True
     except config_utils.CmdNotFound:
         return False
@@ -90,6 +90,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
         with file_transaction(config, out_file) as tx_out_file:
             for align_bam in align_bams:
                 bam.index(align_bam, config)
+            scalpel = config_utils.get_program("scalpel", config)
             if len(align_bams) > 1:
                 message = ("Scalpel does not currently support batch calling!")
                 raise ValueError(message)
@@ -99,7 +100,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             opts += " --dir %s" % tmp_path
             min_cov = "3"  # minimum coverage
             opts += " --mincov %s" % min_cov
-            cmd = ("scalpel-discovery --single {opts} --ref {ref_file} --bam {input_bams} ")
+            cmd = ("{scalpel} --single {opts} --ref {ref_file} --bam {input_bams} ")
             # first run into temp folder
             do.run(cmd.format(**locals()), "Genotyping with Scalpel", {})
             # parse produced variant file further
@@ -133,19 +134,22 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                                                assoc_files, region, out_file)
                 return ann_file
             vcffilter = config_utils.get_program("vcffilter", config)
+            scalpel = config_utils.get_program("scalpel", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             tmp_path = os.path.dirname(tx_out_file)
             opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
             opts += " --ref {}".format(ref_file)
             opts += " --dir %s" % tmp_path
-            cl = ("scalpel-discovery --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
+            min_cov = "3"  # minimum coverage
+            opts += " --mincov %s" % min_cov
+            cl = ("{scalpel} --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
             bam.index(paired.tumor_bam, config)
             bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
             # somatic
-            scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "main/somatic.indel.vcf"), config)
+            scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "main/somatic." + min_cov + "x.indel.vcf"), config)
             # common
-            scalpel_tmp_file_common = bgzip_and_index(os.path.join(tmp_path, "main/common.indel.vcf"), config)
+            scalpel_tmp_file_common = bgzip_and_index(os.path.join(tmp_path, "main/common." + min_cov + "x.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             bcftools_cmd_common = get_scalpel_bcftools_filter_expression("reject", config)
@@ -154,7 +158,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                    " sed 's/sample_name/{paired.tumor_name}/g' | "
                    "{vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
-
+            
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"), ref_file,
                                                config)
