@@ -270,7 +270,7 @@ An example of the report can be seen `here <https://github.com/lpantano/mypubs/b
 
 ChIP-seq
 ~~~~~~~~
-bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning
+bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning with
 bowtie2. It doesn't do anything other than get the samples into a state
 where a peak caller like MACS2 can be used.
 
@@ -278,10 +278,10 @@ where a peak caller like MACS2 can be used.
   - `cutadapt`_
 
 - Sequence alignment:
- - bowtie2
+  - `bowtie2`_
 
 - Quality control:
- - `FastQC`_
+  - `FastQC`_
 
 Standard
 ~~~~~~~~
@@ -298,7 +298,7 @@ Configuration
 =============
 We will assume that you installed bcbio-nextgen with the automated installer,
 and so your default `bcbio_system.yaml`_ file is configured correctly with all
-of the tools pointing to the right places. If that is the case to run
+of the tools pointing to the right places. If that is the case, to run
 bcbio-nextgen on a set of samples you just need to set up a YAML file that
 describes your samples and what you would like to do to them. Let's say that you
 have a single paired-end control lane, prepared with the Illumina `TruSeq`_ Kit
@@ -326,7 +326,7 @@ intermediate files, you can set them to whatever you like.  ``upload`` is
 explained pretty well in the `configuration documentation`_ and the above will
 direct bcbio-nextgen to put the output files from the pipeine into the ``final``
 directory.  Under ``details`` is a list of sections each describing a sample to
-process.  You can set a great many `parameters`_ under each section but most of
+process.  You can set many `parameters`_ under each section but most of
 the time just setting a few like the above is all that is necessary.
 ``analysis`` tells bcbio-nextgen to run the best-practice RNA-seq pipeline on
 this sample.
@@ -413,7 +413,7 @@ you can set up the sample file using the templating system::
 
 
 If you had paired-end samples instead of single-end samples, you can still use
-the template system as long as you the forward and reverse read filenames are
+the template system as long as the forward and reverse read filenames are
 the same, barring a _1 and _2. For example: control_1.fastq and control_2.fastq
 will be detected as paired and combined in the YAML file output by the
 templating system.
@@ -435,3 +435,4 @@ templating system.
 .. _illumina-rnaseq: http://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml
 .. _eXpress: http://bio.math.berkeley.edu/eXpress/overview.html
 .. _featureCounts: http://bioinf.wehi.edu.au/featureCounts/
+.. _DEXSeq: https://bioconductor.org/packages/release/bioc/html/DEXSeq.html

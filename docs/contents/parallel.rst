@@ -36,7 +36,7 @@ Run an analysis using ipython for parallel execution::
 
     bcbio_nextgen.py bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
-The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque)``.
+The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque, slurm)``.
 
 The ``-q`` flag specifies the queue to submit jobs to.
 
@@ -68,7 +68,7 @@ resubmitting jobs that may have failed for reproducible reasons.
 
 Finally, the ``-r resources`` flag specifies resource options to pass along
 to the underlying queue scheduler. This currently supports SGE's
-``-l`` parameter, Torque's ``-l`` parameter, LSF and SLURM native flags. This allows specification
+``-l`` parameter, Torque's ``-l`` parameter and LSF and SLURM native flags. This allows specification
 or resources to the scheduler (see the `qsub man page`_). You may specify multiple
 resources, so ``-r mem=4g -r ct=01:40:00``
 translates to ``-l mem=4g -l ct=01:40:00`` when passed to ``qsub`` or
@@ -127,28 +127,28 @@ cluster are aware of IP addresses that they can use to communicate
 with each other (usually these will be local IP addresses). Running::
 
     python -c 'import socket; print socket.gethostbyname(socket.gethostname())'
-    
+
 Should return such an IP address (as opposed to localhost). This can be
 fixed by adding an entry to the hosts file.
 
 The line::
 
     host-ip hostname
-    
+
 where ``host-ip`` is replaced by the actual IP address of the machine
 and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
 on each compute node. This will probably involve contacting your local
 cluster administrator.
 
-**No parallelization where expected**: This may occure if the current execution 
+**No parallelization where expected**: This may occure if the current execution
 is a re-run of a previous project:
 
 - There will be a file in `checkpoints_parallel/full.done` that tells bcbio not
-  to parallelize at certain tasks of already executed tasks of the pipeline. 
-  That tries to avoid re-starting a cluster (when using distributed runs) for 
-  stages that have finished. If that behaviour is not desired for a task, removing 
+  to parallelize at certain tasks of already executed tasks of the pipeline.
+  That tries to avoid re-starting a cluster (when using distributed runs) for
+  stages that have finished. If that behaviour is not desired for a task, removing
   the checkpoint file will get things parallelizing again.
-- If the processing is of a task is nearly finished the last jobs of this task will be 
+- If the processing of a task is nearly finished the last jobs of this task will be
   running and bcbio will wait for those to finish.
 
 .. _memory-management:
@@ -244,7 +244,7 @@ major IO component. To help manage IO and network bottlenecks, this
 section contains pointers on deployments and benchmarking. Please
 contribute your tips and thoughts.
 
-- Harvard and Dell: See the 'Distributed File Systems` section of our
+- Harvard and Dell: See the 'Distributed File Systems' section of our
   `post on scaling bcbio-nextgen`_ for details about the setup within
   `Harvard FAS Research Computing`_ and thoughts on scaling and
   hardware. We also collaborate with Dell to

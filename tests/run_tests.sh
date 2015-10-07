@@ -4,6 +4,8 @@
 # ./run_tests.sh rnaseq
 # ./run_tests.sh speed=1
 # ./run_tests.sh devel
+# ./run_tests.sh docker
+# ./run_tests.sh docker_ipython
 
 # Portable resolution of symlinks http://stackoverflow.com/a/24572274/252589
 # readlink -f does not work on Macs
