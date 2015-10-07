@@ -6,7 +6,7 @@ https://github.com/ekg/freebayes
 import os
 import sys
 
-from bcbio import bam, utils
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
@@ -91,8 +91,6 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
-            for align_bam in align_bams:
-                bam.index(align_bam, config)
             freebayes = config_utils.get_program("freebayes", config)
             vcffilter = config_utils.get_program("vcffilter", config)
             input_bams = " ".join("-b %s" % x for x in align_bams)
@@ -153,8 +151,6 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                   "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
                   "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                   "{compress_cmd} > {tx_out_file}")
-            bam.index(paired.tumor_bam, config)
-            bam.index(paired.normal_bam, config)
             do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"), ref_file,

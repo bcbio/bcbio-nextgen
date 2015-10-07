@@ -30,7 +30,7 @@ def is_paired(bam_file):
                                   stderr=open("/dev/null", "w"))
     return int(out) > 0
 
-def index(in_bam, config):
+def index(in_bam, config, check_timestamp=True):
     """Index a BAM file, skipping if index present.
 
     Centralizes BAM indexing providing ability to switch indexing approaches.
@@ -38,8 +38,11 @@ def index(in_bam, config):
     assert is_bam(in_bam), "%s in not a BAM file" % in_bam
     index_file = "%s.bai" % in_bam
     alt_index_file = "%s.bai" % os.path.splitext(in_bam)[0]
-    if (not utils.file_uptodate(index_file, in_bam) and
-          not utils.file_uptodate(alt_index_file, in_bam)):
+    if check_timestamp:
+        bai_exists = utils.file_uptodate(index_file, in_bam) or utils.file_uptodate(alt_index_file, in_bam)
+    else:
+        bai_exists = utils.file_exists(index_file) or utils.file_exists(alt_index_file)
+    if not bai_exists:
         # Remove old index files and re-run to prevent linking into tx directory
         for fname in [index_file, alt_index_file]:
             utils.remove_safe(fname)
@@ -55,7 +58,7 @@ def index(in_bam, config):
             else:
                 cmd = "{samtools} index {tx_bam_file}"
             do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam))
-    return index_file if utils.file_uptodate(index_file, in_bam) else alt_index_file
+    return index_file if utils.file_exists(index_file) else alt_index_file
 
 def remove(in_bam):
     """

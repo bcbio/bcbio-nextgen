@@ -7,7 +7,6 @@ from distutils.version import LooseVersion
 
 import toolz as tz
 
-from bcbio import bam
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -29,8 +28,6 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
     if not file_exists(out_file):
         logger.debug("Genotyping with {name}: {region} {fname}".format(
               name=name, region=region, fname=os.path.basename(align_bams[0])))
-        for x in align_bams:
-            bam.index(x, config)
         variant_regions = bedutils.merge_overlaps(tz.get_in(["config", "algorithm", "variant_regions"], items[0]),
                                                   items[0])
         target_regions = subset_variant_regions(variant_regions, region, out_file)
