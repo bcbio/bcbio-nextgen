@@ -13,7 +13,6 @@ inputs:
 
 requirements:
   - class: EnvVarRequirement
-    envDef: ["PATH", "HOME"]
     envDef:
       - envName: "MPLCONFIGDIR"
         envValue: '.'
