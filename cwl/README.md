@@ -23,7 +23,7 @@ party dependencies and reference data:
 
 Then run locally with:
 ```
-cwl-runner --verbose --no-container bcbio2cwl.cwl testinput-args.json
+cwl-runner --verbose --preserve-env HOME PATH --no-container bcbio2cwl.cwl testinput-args.json
 ```
 or
 ```
