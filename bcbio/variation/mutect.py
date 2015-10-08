@@ -67,6 +67,9 @@ def _config_params(base_config, assoc_files, region, out_file):
     resources = config_utils.get_resources("mutect", base_config)
     if resources.get("options") is not None:
         params += [str(x) for x in resources.get("options", [])]
+    # Output quality scores
+    if "--enable_qscore_output" not in params:
+        params.append("--enable_qscore_output")
     return params
 
 def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
