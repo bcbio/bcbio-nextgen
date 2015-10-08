@@ -1,4 +1,4 @@
-version: 11
+version: 12
 
 aliases:
   snpeff: GRCm38.78
@@ -16,3 +16,7 @@ rnaseq:
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
+
+srnaseq:
+    srna-transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase: ../srnaseq/hairpin.fa
