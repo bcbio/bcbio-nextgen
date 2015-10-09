@@ -374,7 +374,7 @@ class BroadRunner:
         for check_cmd in [command] + alts:
             for dir_check in dirs:
                 try:
-                    check_file = config_utils.get_jar(command, dir_check)
+                    check_file = config_utils.get_jar(check_cmd, dir_check)
                     return check_file
                 except ValueError, msg:
                     if str(msg).find("multiple") > 0:

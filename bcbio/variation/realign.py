@@ -91,10 +91,10 @@ def has_aligned_reads(align_bam, region=None):
         if region is not None:
             for region in regions:
                 if isinstance(region, basestring):
-                    for item in cur_bam.fetch(region):
+                    for item in cur_bam.fetch(str(region)):
                         return True
                 else:
-                    for item in cur_bam.fetch(region[0], int(region[1]), int(region[2])):
+                    for item in cur_bam.fetch(str(region[0]), int(region[1]), int(region[2])):
                         return True
         else:
             for item in cur_bam:
