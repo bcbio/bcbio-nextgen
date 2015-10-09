@@ -9,7 +9,7 @@ try:
 except ImportError:
     pass
 
-from bcbio.utils import (file_exists, append_stem, replace_directory)
+from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
@@ -22,20 +22,24 @@ def trim_srna_sample(data):
     Remove 3' adapter for smallRNA-seq
     Uses cutadapt but with different parameters than for other pipelines.
     """
-    adapter = dd.get_adapters(data)[0]
+    in_file = data["files"][0]
     names = data["rgnames"]['sample']
     work_dir = os.path.join(dd.get_work_dir(data), "trimmed")
     out_dir = os.path.join(work_dir, names)
-    in_file = data["files"][0]
     utils.safe_makedir(out_dir)
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
-    out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
-    out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
-    cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
-    cmd = _cmd_cutadapt()
-    if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            do.run(cmd.format(**locals()), "remove adapter")
+    trim_reads = config["algorithm"].get("trim_reads", True)
+    if trim_reads:
+        adapter = dd.get_adapters(data)[0]
+        out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
+        out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
+        cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
+        cmd = _cmd_cutadapt()
+        if not utils.file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                do.run(cmd.format(**locals()), "remove adapter")
+    else:
+        symlink_plus(in_file, out_file)
     data["clean_fastq"] = out_file
     data["collapse"] = _collapse(data["clean_fastq"])
     data["size_stats"] = _summary(data['collapse'])
