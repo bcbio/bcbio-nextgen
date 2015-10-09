@@ -28,7 +28,7 @@ def trim_srna_sample(data):
     out_dir = os.path.join(work_dir, names)
     utils.safe_makedir(out_dir)
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
-    trim_reads = config["algorithm"].get("trim_reads", True)
+    trim_reads = data["config"]["algorithm"].get("trim_reads", True)
     if trim_reads:
         adapter = dd.get_adapters(data)[0]
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
