@@ -126,7 +126,7 @@ def handle_synonyms(in_file, ref_file, genome_build, work_dir, data):
 def _write_newname_file(in_file, out_file, mappings):
     """Re-write an input file with contigs matching the correct reference.
     """
-    with open(in_file) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         with open(out_file, "w") as out_handle:
             for line in in_handle:
                 if line.startswith("#"):

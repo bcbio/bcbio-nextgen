@@ -155,12 +155,10 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
         caller = _get_caller(data)
         # flexible quality scores for building ROC curves, handle multiple cases
-        # default of GQ works for gatk
-        if caller.startswith("gatk"):
-            pass
-        elif caller == "mutect":
+        # MuTect has no quality scores
+        if caller == "mutect":
             cmd +=  ["--vcf-score-field=BQ"]
-        # otherwise use quality score
+        # otherwise use quality score as a standarde
         else:
             cmd +=  ["--vcf-score-field=QUAL"]
         do.run(cmd, "Validate calls using rtg vcfeval", data)

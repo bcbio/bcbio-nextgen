@@ -20,7 +20,7 @@ details:
       align_split_size: 9000
       variant_regions: ../data/automated/variant_regions-variantcall.bed
       coverage: ../data/automated/variant_regions-variantcall.bed
-      validate: ../reference_material/7_100326_FC6107FAAXX-grade.vcf
+      validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     description: Test1
     metadata:
       batch: TestBatch1

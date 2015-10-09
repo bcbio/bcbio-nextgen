@@ -13,14 +13,14 @@ class CWLTest(unittest.TestCase):
     #@attr(speed=1)
     #@attr(cwl=True)
     #def test_1_cwl_docker(self):
-    #    cl = ["cwl-runner", "--verbose", "../cwl/bcbio2cwl.cwl", "../cwl/testinput-args.json"]
+    #    cl = ["cwltool", "--verbose", "../cwl/bcbio2cwl.cwl", "../cwl/testinput-args.json"]
     #
     #    subprocess.check_call(cl)
 
-    @attr(speed=1)
+    @attr(speed=2)
     @attr(cwl=True)
     def test_2_cwl_nocontainer(self):
-        cl = ["cwl-runner", "--verbose", "--preserve-environment", "PATH", "HOME", "--no-container",
+        cl = ["cwltool", "--verbose", "--preserve-environment", "PATH", "HOME", "--no-container",
               "../cwl/bcbio2cwl.cwl", "../cwl/testinput-args.json"]
 
         subprocess.check_call(cl)

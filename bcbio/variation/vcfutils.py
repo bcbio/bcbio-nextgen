@@ -354,6 +354,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
                 params.extend(["--variant:{name}".format(name=name), ready_file])
                 priority_order.append(name)
             params.extend(["--rod_priority_list", ",".join(priority_order)])
+            params.extend(["--genotypemergeoption", "PRIORITIZE"])
             if quiet_out:
                 params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
             variant_regions = config["algorithm"].get("variant_regions", None)
