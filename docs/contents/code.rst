@@ -118,6 +118,26 @@ methods.
 .. _virtualenv-burrito: https://github.com/brainsik/virtualenv-burrito
 .. _Python Env Wrapper: https://github.com/berdario/invewrapper
 
+Building the documentation locally
+==================================
+If you have added or modified this documentation, to build it locally and see how it looks like you can do so by running::
+
+    cd docs
+    make html
+
+The documentation will be built under ``docs/_build/html``, open ``index.html`` with your browser to
+load your local build.
+
+If you want to use the same theme that Read The Docs uses, you can do so by installing ``sphinx_rtd_theme`` via
+``pip``. You will also need to add this in the ``docs/conf.py`` file to use the theme only locally::
+
+  html_theme = 'default'
+  on_rtd = os.environ.get('READTHEDOCS', False)
+  if not on_rtd:  # only import and set the theme if we're building docs locally
+      import sphinx_rtd_theme
+      html_theme = 'sphinx_rtd_theme'
+      html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
 Adding tools
 ============
 
