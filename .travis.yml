@@ -23,6 +23,7 @@ install:
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
   # Update to bcbio-nextgen latest code within the container
   - bcbio_vm.py devel setup_install
+  - pip install cwl_runner
 
 script:
   - cd tests
@@ -31,3 +32,5 @@ script:
 
 notifications:
     email: false
+    slack:
+        secure: LztOFaO6HFB2Pu+zMOhB42MUMdP+AwjHr2l3fDZtQk8uMsKZ/XcpDhnGJii39VbkPUyN5yT2r42hJzL/s+2MX6g8zS3wsYh7lJN9XC7483tmzlO66yo/OTQ3xC9r0TmR/O3whDEKVj+kroOc7MMltLNwIyEIpFXe5Od8WFrd2Sg=
