@@ -495,13 +495,6 @@ Variant calling
    in repetitive regions. Removal can help facilitate comparisons between
    methods and reduce false positives if you don't need calls in LCRs for your
    biological analysis. [false, true]
--  ``validate`` A VCF file of expected variant calls to perform
-   validation and grading of output variants from the pipeline.
-   This provides a mechanism to ensure consistency of calls against
-   a known set of variants, supporting comparisons to genotyping
-   array data or reference materials.
-- ``validate_regions`` A BED file of regions to evaluate in. This
-  defines specific regions covered by the ``validate`` VCF  file.
 - ``joint_group_size`` Specify the maximum number of gVCF samples to feed into
   joint calling. Currently applies to GATK HaplotypeCaller joint calling and
   defaults to the GATK recommendation of 200. Larger numbers of samples will
@@ -534,13 +527,73 @@ Structural variant calling
   window of XXXX size around it. The size can be an integer (``transcripts1000``)
   or exponential (``transcripts1e5``). This applies to CNVkit and heterogeneity
   analysis.
-- ``svvalidate`` -- Dictionary of call types and pointer to BED file of known
-  regions. For example: ``DEL: known_deletions.bed`` does deletion based
-  validation of outputs against the BED file.
 - ``fusion_mode`` Enable fusion detection in RNA-seq when using STAR (recommended)
   or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
   ``disambiguate`` enables disambiguation of ``STAR`` output [false, true].
+
+Validation
+===========
+
+bcbio pre-installs standard truth sets for performing validation,
+and also allows use of custom local files for assessing reliability of your
+runs:
+
+-  ``validate`` A VCF file of expected variant calls to perform
+   validation and grading of small variants (SNPs and indels) from the pipeline.
+   This provides a mechanism to ensure consistency of calls against
+   a known set of variants, supporting comparisons to genotyping
+   array data or reference materials.
+- ``validate_regions`` A BED file of regions to evaluate small variant calls in. This
+  defines specific regions covered by the ``validate`` VCF  file.
+- ``svvalidate`` -- Dictionary of call types and pointer to BED file of known
+  regions. For example: ``DEL: known_deletions.bed`` does deletion based
+  validation of outputs against the BED file.
+
+Each option can be either the path to a local file, or a partial path to a file
+in the pre-installed truth sets. For instance, to validate an NA12878 run
+against the `Genome in a Bottle <https://github.com/genome-in-a-bottle>`_ truth set::
+
+    validate: giab-NA12878/truth_small_variants.vcf.gz
+    validate_regions: giab-NA12878/truth_regions.bed
+    svvalidate:
+      DEL: giab-NA12878/truth_DEL.bed
+
+follow the same naming schemes for small variants, regions and
+different structural variant types. bcbio has the following validation materials
+for germline validations:
+
+- ``giab-NA12878`` --  `Genome in a Bottle
+  <https://github.com/genome-in-a-bottle>`_ for NA12878. Truth sets: small_variants,
+  regions, DEL; Builds: GRCh37, hg19.
+- ``giab-NA12878-crossmap`` --  `Genome in a Bottle
+  <https://github.com/genome-in-a-bottle>`_ for NA12878 converted to hg38 with CrossMap. Truth sets: small_variants,
+  regions, DEL; Builds: hg38.
+- ``giab-NA12878-remap`` --  `Genome in a Bottle
+  <https://github.com/genome-in-a-bottle>`_ for NA12878 converted to hg38 with Remap. Truth sets: small_variants,
+  regions, DEL; Builds: hg38.
+- ``platinum-genome-NA12878`` -- `Illumina Platinum Genome
+  <http://www.illumina.com/platinumgenomes/>`_ for NA12878. Truth sets:
+  small_variants, regions; Builds: hg19, hg38.
+
+and for cancer validations:
+
+- ``dream-syn3`` -- Synthetic dataset 3 from the `ICGC-TCGA DREAM mutation
+  calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_.
+  Truth sets: small_variants, regions, DEL, DUP, INV. Builds: GRCh37.
+- ``dream-syn4`` -- Synthetic dataset 4 from the `ICGC-TCGA DREAM mutation
+  calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_.
+  Truth sets: small_variants, regions, DEL, DUP, INV. Builds: GRCh37.
+- ``dream-syn4-crossmap`` -- Synthetic dataset 4 from the `ICGC-TCGA DREAM mutation
+  calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_
+  converted to human build 38 coordinates with CrossMap.
+  Truth sets: small_variants, regions, DEL, DUP, INV. Builds: hg38.
+
+For more information on the hg38 truth set preparation see the work on `validation on build
+38 and converstion of human build 37 truth sets to build 38
+<http://bcb.io/2015/09/17/hg38-validation/>`_. The `installation recipes
+<https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes>`_ contain
+provenance details about the origins of the installed files.
 
 .. _config-cancer:
 

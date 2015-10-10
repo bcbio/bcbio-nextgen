@@ -139,10 +139,26 @@ def add_reference_resources(data):
     data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc, data)
     if effects.get_type(data) == "snpeff":
         data["reference"]["snpeff"] = effects.get_snpeff_files(data)
+    data = _fill_validation_targets(data)
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
         if population.do_db_build([data], check_gemini=False, need_bam=False):
             data["reference"]["gemini"] = population.get_gemini_files(data)
+    return data
+
+def _fill_validation_targets(data):
+    """Fill validation targets pointing to globally installed truth sets.
+    """
+    ref_file = dd.get_ref_file(data)
+    for vtarget in ["validate", "validate_regions"]:
+        val = tz.get_in(["config", "algorithm", vtarget], data)
+        if val and not os.path.exists(val):
+            installed_val = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "validation", val))
+            if os.path.exists(installed_val):
+                data["config"]["algorithm"][vtarget] = installed_val
+            else:
+                raise ValueError("Configuration problem. Validation file not found for %s: %s" %
+                                 (vtarget, val))
     return data
 
 # ## Sample and BAM read group naming
