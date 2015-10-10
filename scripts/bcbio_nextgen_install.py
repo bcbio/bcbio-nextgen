@@ -101,8 +101,7 @@ def install_conda_pkgs(anaconda):
             "pip", "progressbar", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",
             "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",
             "sqlalchemy", "statsmodels", "toolz", "tornado", "seqcluster_lite"]
-    channels = ["-c", "bcbio"]
-    subprocess.check_call([anaconda["conda"], "install", "--yes", "numpy"])
+    channels = ["-c", "bcbio", "-c", "bioconda"]
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels + pkgs)
 
 def _guess_distribution():

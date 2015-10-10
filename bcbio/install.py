@@ -214,10 +214,9 @@ def _update_conda_packages():
             "pip", "progressbar", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",
             "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",
             "sqlalchemy", "statsmodels", "toolz", "tornado", "seqcluster_lite"]
-    channels = ["-c", "bcbio"]
+    channels = ["-c", "bcbio", "-c", "bioconda"]
     conda_bin = _get_conda_bin()
     if conda_bin:
-        subprocess.check_call([conda_bin, "install", "--yes", "numpy"])
         subprocess.check_call([conda_bin, "install", "--yes"] + channels + pkgs)
         return os.path.dirname(os.path.dirname(conda_bin))
 
