@@ -98,9 +98,8 @@ def upgrade_bcbio(args):
                 upgrade_bcbio_data(args, REMOTES)
                 print("bcbio-nextgen data upgrade complete.")
     if args.isolate and args.tooldir:
-        print("Installation directory not added to current PATH")
-        print(" Add:\n  {t}/bin to PATH\n  {t}/lib to LD_LIBRARY_PATH\n"
-              "  {t}/lib/perl5 to PERL5LIB".format(t=args.tooldir))
+        print("Isolated tool installation not automatically added to environmental variables")
+        print(" Add:\n  {t}/bin to PATH".format(t=args.tooldir))
     save_install_defaults(args)
     args.datadir = _get_data_dir()
     _install_container_bcbio_system(args.datadir)

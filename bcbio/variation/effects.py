@@ -65,14 +65,18 @@ def _special_dbkey_maps(dbkey, ref_file):
     else:
         return None
 
+def _get_perllib(tooldir=None):
+    from bcbio import install
+    if tooldir is None:
+        tooldir = install.get_defaults().get("tooldir", "/usr/local")
+    return "%s/lib/perl5" % tooldir
+
 def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
     """Ensure correct installation of VEP cache file.
     """
     if config is None: config = {}
     resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
-    if tooldir:
-        os.environ["PERL5LIB"] = "{t}/lib/perl5:{l}".format(
-            t=tooldir, l=os.environ.get("PERL5LIB", ""))
+    os.environ["PERL5LIB"] = "%s:%s" % (_get_perllib(tooldir), os.environ.get("PERL5LIB", ""))
     if os.path.exists(resource_file):
         with open(resource_file) as in_handle:
             resources = yaml.load(in_handle)
@@ -146,8 +150,9 @@ def run_vep(in_file, data):
 
                     # TODO investigate hgvs reporting but requires indexing the reference file
                     # cmd += ["--hgvs", "--shift-hgvs", "--fasta", dd.get_ref_file(data)]
+                perllib = "export PERL5LIB=%s:$PERL5LIB" % _get_perllib()
                 # Remove empty fields (';;') which can cause parsing errors downstream
-                cmd = "%s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (" ".join(cmd), tx_out_file)
+                cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perllib, " ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
         vcfutils.bgzip_and_index(out_file, data["config"])

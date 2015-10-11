@@ -53,6 +53,8 @@ def _do_run(paired):
                                         ignore_file)
         local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                      "lib", "R", "site-library")
+        perllib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
+                               "lib", "perl5")
         tumor_bam = paired.tumor_bam
         normal_bam = paired.normal_bam
         platform = dd.get_platform(paired.tumor_data)
@@ -60,6 +62,7 @@ def _do_run(paired):
         # scale cores to avoid over-using memory during imputation
         cores = max(1, int(dd.get_num_cores(paired.tumor_data) * 0.5))
         cmd = ("export R_LIBS_USER={local_sitelib} && "
+               "export PERL5LIB={perllib}:$PERL5LIB "
                "battenberg.pl -t {cores} -o {work_dir} -r {ref_file}.fai "
                "-tb {tumor_bam} -nb {normal_bam} -e {bat_datadir}/impute/impute_info.txt "
                "-u {bat_datadir}/1000genomesloci -c {bat_datadir}/probloci.txt "

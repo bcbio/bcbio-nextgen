@@ -5,7 +5,9 @@
 - Improve low frequency calling for VarDict using vaidation against DREAM
   synthetic dataset 4.
 - Install truth sets for germline and cancer calling automatically as part of
-  bcbio and make it easy to include them in the configuration files for validation.
+  bcbio and make it easy to include them in the configuration files for
+  validation.
+- Avoid need to set LD_LIBRARY_PATH and PERL5LIB on installations.
 - Drop `coverage_depth_max` for downsampling, which no longer works in GATK 3.4.
   The option wasn't supported by other callers so was more confusing than useful.
 - Fix missing BAM index when running with `align: false`. Thanks to Stephan
