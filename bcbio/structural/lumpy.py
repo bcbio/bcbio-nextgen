@@ -77,6 +77,8 @@ def _filter_by_background(base_samples, back_samples, gt_vcfs, data):
                                 if _genotype_in_background(rec, back_recs):
                                     rec.add_filter(filtname)
                                 outp.write_record(rec)
+        if utils.file_exists(out_file + ".gz"):
+            out_file = out_file + ".gz"
         gt_vcfs[base_name] = vcfutils.bgzip_and_index(out_file, data["config"])
     return gt_vcfs
 
