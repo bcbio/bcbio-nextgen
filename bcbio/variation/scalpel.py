@@ -11,13 +11,33 @@ try:
 except ImportError:
     vcf = None
 
-from bcbio import bam, utils
+from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation
+from bcbio.variation import annotation, vcfutils
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
+
+def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
+    variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
+    target = subset_variant_regions(variant_regions, region, out_file, items)
+    if target:
+        if isinstance(target, basestring) and os.path.isfile(target):
+            target_bed = target
+        else:
+            target_bed = os.path.join(tmp_path, "tmp.bed")
+            if not utils.file_exists(target_bed):
+                with file_transaction(config, target_bed) as tx_tmp_bed:
+                    if not isinstance(region, (list, tuple)):
+                        message = ("Region must be a tuple - something odd just happened")
+                        raise ValueError(message)
+                    chrom, start, end = region
+                    with open(tx_tmp_bed, "w") as out_handle:
+                        print("%s\t%s\t%s" % (chrom, start, end), file=out_handle)
+        return ["--bed", remove_lcr_regions(target_bed, items)]
+    else:
+        return []
 
 def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
     opts = []
@@ -27,21 +47,7 @@ def _scalpel_options_from_config(items, config, out_file, region, tmp_path):
     opts += ["--covthr 3", "--lowcov 1"]
     # Avoid oversampling in repeat regions
     opts += ["--pathlimit", "10000"]
-    variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
-    target = subset_variant_regions(variant_regions, region, out_file, items)
-    if target:
-        if isinstance(target, basestring) and os.path.isfile(target):
-            target_bed = target
-        else:
-            target_bed = os.path.join(tmp_path, "tmp.bed")
-            with file_transaction(config, target_bed) as tx_tmp_bed:
-                if not isinstance(region, (list, tuple)):
-                    message = ("Region must be a tuple - something odd just happened")
-                    raise ValueError(message)
-                chrom, start, end = region
-                with open(tx_tmp_bed, "w") as out_handle:
-                    print("%s\t%s\t%s" % (chrom, start, end), file=out_handle)
-        opts += ["--bed", remove_lcr_regions(target_bed, items)]
+    opts += _scalpel_bed_file_opts(items, config, out_file, region, tmp_path)
     resources = config_utils.get_resources("scalpel", config)
     if resources.get("options"):
         opts += resources["options"]
@@ -57,7 +63,7 @@ def is_installed(config):
     """Check for scalpel installation on machine.
     """
     try:
-        config_utils.get_program("scalpel", config)
+        config_utils.get_program("scalpel-discovery", config)
         return True
     except config_utils.CmdNotFound:
         return False
@@ -88,28 +94,30 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
-            for align_bam in align_bams:
-                bam.index(align_bam, config)
-            scalpel = config_utils.get_program("scalpel", config)
             if len(align_bams) > 1:
                 message = ("Scalpel does not currently support batch calling!")
                 raise ValueError(message)
             input_bams = " ".join("%s" % x for x in align_bams)
-            tmp_path = os.path.dirname(tx_out_file)
+            tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
+            if os.path.exists(tmp_path):
+                utils.remove_safe(tmp_path)
             opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
             opts += " --dir %s" % tmp_path
             min_cov = "3"  # minimum coverage
             opts += " --mincov %s" % min_cov
-            cmd = ("{scalpel} --single {opts} --ref {ref_file} --bam {input_bams} ")
-            # first run into temp folder
+            perllib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
+                                   "lib", "perl5")
+            cmd = ("export PERL5LIB={perllib}:$PERL5LIB && "
+                   "scalpel-discovery --single {opts} --ref {ref_file} --bam {input_bams} ")
             do.run(cmd.format(**locals()), "Genotyping with Scalpel", {})
             # parse produced variant file further
             scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "variants." + min_cov + "x.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             sample_name_str = items[0]["name"][1]
+            fix_ambig = vcfutils.fix_ambiguous_cl()
             cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' | "
-                   "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort "
+                   "| {fix_ambig} | vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -134,31 +142,40 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                                                assoc_files, region, out_file)
                 return ann_file
             vcffilter = config_utils.get_program("vcffilter", config)
-            scalpel = config_utils.get_program("scalpel", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-            tmp_path = os.path.dirname(tx_out_file)
+            tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
+            if os.path.exists(tmp_path):
+                utils.remove_safe(tmp_path)
+            perllib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
+                                   "lib", "perl5")
             opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
             opts += " --ref {}".format(ref_file)
             opts += " --dir %s" % tmp_path
-            min_cov = "3"  # minimum coverage
-            opts += " --mincov %s" % min_cov
-            cl = ("{scalpel} --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
-            bam.index(paired.tumor_bam, config)
-            bam.index(paired.normal_bam, config)
+            # caling
+            cl = ("export PERL5LIB={perllib}:$PERL5LIB && "
+                  "scalpel-discovery --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
             do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
-            # somatic
-            scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "main/somatic." + min_cov + "x.indel.vcf"), config)
-            # common
-            scalpel_tmp_file_common = bgzip_and_index(os.path.join(tmp_path, "main/common." + min_cov + "x.indel.vcf"), config)
+            # filtering to adjust input parameters
+            bed_opts = " ".join(_scalpel_bed_file_opts(items, config, out_file, region, tmp_path))
+            # More lenient filters for low-frequency variations
+            db_file = os.path.join(tmp_path, "main", "somatic.db")
+            scalpel_tmp_file = os.path.join(tmp_path, "main/somatic-indel-filter.vcf.gz")
+            with file_transaction(config, scalpel_tmp_file) as tx_indel_file:
+                cmd = ("export PERL5LIB={perllib}:$PERL5LIB && "
+                       "scalpel-export --somatic {bed_opts} --ref {ref_file} --db {db_file} "
+                       "--min-alt-count-tumor 2 --min-phred-fisher 5 | bgzip -c > {tx_indel_file}")
+                do.run(cmd.format(**locals()), "Scalpel somatic indel filter", {})
+            scalpel_tmp_file = bgzip_and_index(scalpel_tmp_file, config)
+            scalpel_tmp_file_common = bgzip_and_index(os.path.join(tmp_path, "main/common.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             bcftools_cmd_common = get_scalpel_bcftools_filter_expression("reject", config)
+            fix_ambig = vcfutils.fix_ambiguous_cl()
             cl2 = ("vcfcat <({bcftools_cmd_chi2} {scalpel_tmp_file}) "
                    "<({bcftools_cmd_common} {scalpel_tmp_file_common}) | "
-                   " sed 's/sample_name/{paired.tumor_name}/g' | "
-                   "{vcfstreamsort} {compress_cmd} > {tx_out_file}")
+                   " {fix_ambig} | {vcfstreamsort} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
-            
+
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"), ref_file,
                                                config)

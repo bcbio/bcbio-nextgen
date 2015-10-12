@@ -14,7 +14,6 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils, scalpel
 from bcbio.variation.vcfutils import bgzip_and_index
-from bcbio.structural import pindel
 from bcbio.log import logger
 
 _PASS_EXCEPTIONS = set(["java.lang.RuntimeException: "
@@ -134,14 +133,13 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
             if scalpel.is_installed(items[0]["config"]):
-                with file_transaction(config, out_file_indels) as tx_out_file2:
-                    if not is_paired:
-                        vcfutils.check_paired_problems(items)
-                        scalpel._run_scalpel_caller(align_bams, items, ref_file, assoc_files,
-                                                    region=region, out_file=tx_out_file2)
-                    else:
-                        scalpel._run_scalpel_paired(align_bams, items, ref_file, assoc_files,
-                                                    region=region, out_file=tx_out_file2)
+                if not is_paired:
+                    vcfutils.check_paired_problems(items)
+                    scalpel._run_scalpel_caller(align_bams, items, ref_file, assoc_files,
+                                                region=region, out_file=out_file_indels)
+                else:
+                    scalpel._run_scalpel_paired(align_bams, items, ref_file, assoc_files,
+                                                region=region, out_file=out_file_indels)
                 out_file = vcfutils.combine_variant_files(orig_files=[out_file_mutect, out_file_indels],
                                                           out_file=out_file,
                                                           ref_file=items[0]["sam_ref"],
@@ -150,6 +148,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             else:
                 utils.symlink_plus(out_file_mutect, out_file)
         elif "pindel" in indelcaller.lower():
+            from bcbio.structural import pindel
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
             if pindel.is_installed(items[0]["config"]):
