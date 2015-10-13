@@ -53,7 +53,6 @@ def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
     """
     cl = _gatk_extract_reads_cl(data, region, prep_params, tmp_dir)
     sel_file = data["work_bam"]
-    bam.index(sel_file, data["config"])
     return sel_file, " ".join(cl)
 
 def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
