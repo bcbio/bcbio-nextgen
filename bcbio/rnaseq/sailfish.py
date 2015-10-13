@@ -13,19 +13,21 @@ def run_sailfish(sample):
     else:
         fq1, fq2 = sample["files"][0], None
     align_dir = os.path.join(sample["dirs"]["work"], "sailfish", names["sample"])
-    safe_makedir(align_dir)
     gtf_file = sample["genome_resources"]["rnaseq"].get("transcripts")
     assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = get_in(sample, ("reference", "fasta", "base"))
     assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     stranded = get_in(sample["config"], ("algorithm", "strandedness"),
                       "unstranded").lower()
-    out_dir = sailfish(fq1, fq2, align_dir, gtf_file, fasta_file, stranded, sample)
-    sample["sailfish_dir"] = out_dir
+    out_file = sailfish(fq1, fq2, align_dir, gtf_file, fasta_file, stranded, sample)
+    sample = dd.set_sailfish(sample, out_file)
     return [[sample]]
 
-
 def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
+    safe_makedir(align_dir)
+    out_file = os.path.join(align_dir, "quant.sf")
+    if file_exists(out_file):
+        return out_file
     sailfish_idx = sailfish_index(gtf_file, ref_file, data)
     num_cores = dd.get_num_cores(data)
     sailfish = config_utils.get_program("sailfish", data["config"])
@@ -43,7 +45,7 @@ def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, align_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
-    return align_dir
+    return out_file
 
 def sailfish_index(gtf_file, ref_file, data):
     sailfish = config_utils.get_program("sailfish", data["config"])
