@@ -4,8 +4,7 @@ import shutil
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.utils import (file_exists, get_in, safe_makedir, is_gzipped, rbind,
-                         partition)
+from bcbio.utils import (file_exists, safe_makedir, is_gzipped, rbind, partition)
 from bcbio.pipeline import config_utils
 import pandas as pd
 
