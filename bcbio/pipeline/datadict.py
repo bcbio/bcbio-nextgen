@@ -89,6 +89,7 @@ LOOKUPS = {
     "callable_regions": {"keys": ["regions", "callable"]},
     "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
     "sailfish": {"keys": ["sailfish"]},
+    "sailfish_combined": {"keys": ["sailfish_combined"]},
     "sample_callable": {"keys": ["regions", "sample_callable"]},
     "coverage_interval": {"keys": ["config", "algorithm", "coverage_interval"]},
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
@@ -195,3 +196,12 @@ def sample_data_iterator(samples):
     """
     for sample in samples:
         yield sample[0]
+
+def get_in_samples(samples, fn):
+    """
+    for a list of samples, return the value of a global option
+    """
+    for sample in samples:
+        if fn(sample[0], None):
+            return fn(sample[0])
+    return None

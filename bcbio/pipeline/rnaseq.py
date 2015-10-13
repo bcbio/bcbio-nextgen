@@ -1,7 +1,7 @@
 import os
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, gtf, stringtie)
-from bcbio.ngsalign import bwa, bowtie2, alignprep
+                          express, variation, stringtie, sailfish)
+from bcbio.ngsalign import bowtie2, alignprep
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
 from bcbio.log import logger
@@ -45,6 +45,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     data = samples[0][0]
     if "sailfish" in dd.get_expression_caller(data):
         samples = run_parallel("run_sailfish", samples)
+        samples = sailfish.combine_sailfish(samples)
     #samples = run_parallel("run_stringtie_expression", samples)
     return samples
 

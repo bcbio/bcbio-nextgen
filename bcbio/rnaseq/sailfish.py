@@ -1,31 +1,36 @@
 import tempfile
 import os
+import shutil
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.utils import file_exists, get_in, safe_makedir, is_gzipped
+from bcbio.utils import (file_exists, get_in, safe_makedir, is_gzipped, rbind,
+                         partition)
 from bcbio.pipeline import config_utils
+import pandas as pd
 
-def run_sailfish(sample):
-    names = sample["rgnames"]
-    if len(sample["files"]) == 2:
-        fq1, fq2 = sample["files"]
+def run_sailfish(data):
+    samplename = dd.get_sample_name(data)
+    files = dd.get_input_sequence_files(data)
+    work_dir = dd.get_work_dir(data)
+    if len(files) == 2:
+        fq1, fq2 = files
     else:
-        fq1, fq2 = sample["files"][0], None
-    align_dir = os.path.join(sample["dirs"]["work"], "sailfish", names["sample"])
-    gtf_file = sample["genome_resources"]["rnaseq"].get("transcripts")
+        fq1, fq2 = files[0], None
+    align_dir = os.path.join(work_dir, "sailfish", samplename)
+    gtf_file = dd.get_gtf_file(data)
     assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
-    fasta_file = get_in(sample, ("reference", "fasta", "base"))
+    fasta_file = dd.get_ref_file(data)
     assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
-    stranded = get_in(sample["config"], ("algorithm", "strandedness"),
-                      "unstranded").lower()
-    out_file = sailfish(fq1, fq2, align_dir, gtf_file, fasta_file, stranded, sample)
-    sample = dd.set_sailfish(sample, out_file)
-    return [[sample]]
+    stranded = dd.get_strandedness(data).lower()
+    out_file = sailfish(fq1, fq2, align_dir, gtf_file, fasta_file, stranded, data)
+    data = dd.set_sailfish(data, out_file)
+    return [[data]]
 
 def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
     safe_makedir(align_dir)
-    out_file = os.path.join(align_dir, "quant.sf")
+    samplename = dd.get_sample_name(data)
+    out_file = os.path.join(align_dir, samplename + ".sf")
     if file_exists(out_file):
         return out_file
     sailfish_idx = sailfish_index(gtf_file, ref_file, data)
@@ -45,6 +50,7 @@ def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, align_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
+    shutil.move(os.path.join(align_dir, "quant.sf"), out_file)
     return out_file
 
 def sailfish_index(gtf_file, ref_file, data):
@@ -92,3 +98,38 @@ def _clean_gtf_fa(gtf_fa, data):
                     line = ">" + line.split()[1] + "\n"
                 out_handle.write(line)
     return out_file
+
+def combine_sailfish(samples):
+    work_dir = dd.get_in_samples(samples, dd.get_work_dir)
+    dont_combine, to_combine = partition(dd.get_sailfish,
+                                         dd.sample_data_iterator(samples), True)
+    if not to_combine:
+        return samples
+
+    out_file = os.path.join(work_dir, "sailfish", "combined.sf")
+    if not file_exists(out_file):
+        df = None
+        for data in to_combine:
+            sailfish_file = dd.get_sailfish(data)
+            samplename = dd.get_sample_name(data)
+            new_df = _sailfish_expression_parser(sailfish_file, samplename)
+            if not df:
+                df = new_df
+            else:
+                df = rbind([df, new_df])
+        with file_transaction(out_file) as tx_out_file:
+            df.to_csv(tx_out_file, sep="\t", index_label="name")
+
+    updated_samples = []
+    for data in dd.sample_data_iterator(samples):
+        data = dd.set_sailfish_combined(data, out_file)
+        updated_samples.append([data])
+    return updated_samples
+
+def _sailfish_expression_parser(sailfish_file, samplename):
+    col_names = ["name", "length", "tpm", "numreads"]
+    df = pd.io.parsers.read_table(sailfish_file, skiprows=11, header=None,
+                                  index_col=0,
+                                  names=col_names)
+    df["sample"] = samplename
+    return df
