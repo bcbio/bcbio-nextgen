@@ -30,8 +30,6 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
     if file_exists(out_file):
         return out_file
 
-    df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
-                                  names=[col_names[0]])
     for i, f in enumerate(files):
         if i == 0:
             df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
