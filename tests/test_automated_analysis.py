@@ -192,6 +192,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(rnaseq=True)
+    @attr(rnaseq_standard=True)
     @attr(star=True)
     def test_2_star(self):
         """Run an RNA-seq analysis with STAR and generate gene-level counts.
@@ -202,20 +203,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
                   os.path.join(self.data_dir, "run_info-star.yaml")]
-            subprocess.check_call(cl)
-
-    @attr(rnaseq=True)
-    @attr(star=True)
-    @attr(rnaseq_variantcall=True)
-    def test_2_rnaseq_variant(self):
-        """Run an RNA-seq analysis with STAR and generate gene-level counts.
-        """
-        self._install_test_files(self.data_dir)
-        with make_workdir() as workdir:
-            cl = ["bcbio_nextgen.py",
-                  get_post_process_yaml(self.data_dir, workdir),
-                  os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
-                  os.path.join(self.data_dir, "run_info-rnaseq-variantcall.yaml")]
             subprocess.check_call(cl)
 
     @attr(explant=True)

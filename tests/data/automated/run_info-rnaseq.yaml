@@ -5,11 +5,13 @@ fc_name: ERP000591
 details:
   - analysis: RNA-seq
     algorithm:
+      variantcaller: gatk
       transcriptome_align: True
       aligner: tophat2
       trim_reads: read_through
       adapters: [truseq, polya]
       assemble_transcripts: True
+      expression_caller: ["sailfish"]
     description: Test1
     files:
       - ../data/110907_ERP000591/1_110907_ERP000591_1_fastq.txt
