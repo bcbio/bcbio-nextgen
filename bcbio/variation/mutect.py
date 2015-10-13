@@ -121,12 +121,14 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
                 vcfutils.write_empty_vcf(out_file)
                 return
         out_file_orig = "%s-orig%s" % utils.splitext_plus(out_file_mutect)
-        with file_transaction(config, out_file_orig) as tx_out_file:
-            # Rationale: MuTect writes another table to stdout, which we don't need
-            params += ["--vcf", tx_out_file, "-o", os.devnull]
-            broad_runner.run_mutect(params)
+        if not file_exists(out_file_orig):
+            with file_transaction(config, out_file_orig) as tx_out_file:
+                # Rationale: MuTect writes another table to stdout, which we don't need
+                params += ["--vcf", tx_out_file, "-o", os.devnull]
+                broad_runner.run_mutect(params)
         is_paired = "-I:normal" in params
-        out_file_mutect = _fix_mutect_output(out_file_orig, config, out_file_mutect, is_paired)
+        if not utils.file_uptodate(out_file_mutect, out_file_orig):
+            out_file_mutect = _fix_mutect_output(out_file_orig, config, out_file_mutect, is_paired)
         indelcaller = vcfutils.get_indelcaller(base_config)
         if "scalpel" in indelcaller.lower():
             # Scalpel InDels

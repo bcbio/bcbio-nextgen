@@ -9,7 +9,7 @@
   validation.
 - Avoid need to set LD_LIBRARY_PATH and PERL5LIB on installations.
 - Update Scalpel to latest version (0.5.1) and improve sensitivity for low
-  frequency indels.
+  frequency indels: http://imgur.com/a/7Dzd3
 - Drop `coverage_depth_max` for downsampling, which no longer works in GATK 3.4.
   The option wasn't supported by other callers so was more confusing than useful.
 - Fix missing BAM index when running with `align: false`. Thanks to Stephan

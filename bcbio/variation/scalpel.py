@@ -143,28 +143,35 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                 return ann_file
             vcffilter = config_utils.get_program("vcffilter", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-            tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
-            if os.path.exists(tmp_path):
-                utils.remove_safe(tmp_path)
             perllib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                    "lib", "perl5")
-            opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
-            opts += " --ref {}".format(ref_file)
-            opts += " --dir %s" % tmp_path
-            # caling
-            cl = ("export PERL5LIB={perllib}:$PERL5LIB && "
-                  "scalpel-discovery --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
-            do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
+            tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
+            db_file = os.path.join(tmp_path, "main", "somatic.db")
+            if not os.path.exists(db_file + ".dir"):
+                if os.path.exists(tmp_path):
+                    utils.remove_safe(tmp_path)
+                opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
+                opts += " --ref {}".format(ref_file)
+                opts += " --dir %s" % tmp_path
+                # caling
+                cl = ("export PERL5LIB={perllib}:$PERL5LIB && "
+                      "scalpel-discovery --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
+                do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
             # filtering to adjust input parameters
             bed_opts = " ".join(_scalpel_bed_file_opts(items, config, out_file, region, tmp_path))
-            # More lenient filters for low-frequency variations
-            db_file = os.path.join(tmp_path, "main", "somatic.db")
-            scalpel_tmp_file = os.path.join(tmp_path, "main/somatic-indel-filter.vcf.gz")
-            with file_transaction(config, scalpel_tmp_file) as tx_indel_file:
-                cmd = ("export PERL5LIB={perllib}:$PERL5LIB && "
-                       "scalpel-export --somatic {bed_opts} --ref {ref_file} --db {db_file} "
-                       "--min-alt-count-tumor 2 --min-phred-fisher 5 | bgzip -c > {tx_indel_file}")
-                do.run(cmd.format(**locals()), "Scalpel somatic indel filter", {})
+            use_defaults = True
+            if use_defaults:
+                scalpel_tmp_file = os.path.join(tmp_path, "main/somatic.indel.vcf")
+            # Uses default filters but can tweak min-alt-count-tumor and min-phred-fisher
+            # to swap precision for sensitivity
+            else:
+                scalpel_tmp_file = os.path.join(tmp_path, "main/somatic-indel-filter.vcf.gz")
+                with file_transaction(config, scalpel_tmp_file) as tx_indel_file:
+                    cmd = ("export PERL5LIB={perllib}:$PERL5LIB && "
+                           "scalpel-export --somatic {bed_opts} --ref {ref_file} --db {db_file} "
+                           "--min-alt-count-tumor 5 --min-phred-fisher 10 --min-vaf-tumor 0.1 "
+                           "| bgzip -c > {tx_indel_file}")
+                    do.run(cmd.format(**locals()), "Scalpel somatic indel filter", {})
             scalpel_tmp_file = bgzip_and_index(scalpel_tmp_file, config)
             scalpel_tmp_file_common = bgzip_and_index(os.path.join(tmp_path, "main/common.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
