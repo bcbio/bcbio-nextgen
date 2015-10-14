@@ -194,8 +194,6 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = population.prep_db_parallel(samples, run_parallel)
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
-            with profile.report("report", dirs):
-                samples = qcsummary.report_summary(samples, run_parallel)
             with profile.report("archive", dirs):
                 samples = archive.compress(samples, run_parallel)
             with profile.report("upload", dirs):
@@ -250,8 +248,6 @@ class StandardPipeline(AbstractPipeline):
                         samples, config, dirs, "multicore2") as run_parallel:
             with profile.report("quality control", dirs):
                 samples = qcsummary.generate_parallel(samples, run_parallel)
-            with profile.report("report", dirs):
-                samples = qcsummary.report_summary(samples, run_parallel)
             with profile.report("upload", dirs):
                 samples = run_parallel("upload_samples", samples)
                 for sample in samples:
