@@ -61,12 +61,18 @@ def _get_machine_info(parallel, sys_config, dirs, config):
 def _slurm_info(queue):
     """Returns machine information for a slurm job scheduler.
     """
-    cl = "sinfo -h -p {} --format '%c %m'".format(queue)
-    num_cpus, mem = subprocess.check_output(shlex.split(cl)).split()
+    cl = "sinfo -h -p {} --format '%c %m %D'".format(queue)
+    num_cpus, mem, num_nodes = subprocess.check_output(shlex.split(cl)).split()
     # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
-    mem = mem.replace('+', '')
+    mem = float(mem.replace('+', ''))
     num_cpus = int(num_cpus.replace('+', ''))
-    return [{"cores": int(num_cpus), "memory": float(mem) / 1024.0, "name": "slurm_machine"}]
+    # handle small clusters where we need to allocate memory for bcbio and the controller
+    # This will typically be on cloud AWS machines
+    bcbio_mem = 2000
+    controller_mem = 4000
+    if int(num_codes) < 3 and mem > (bcbio_mem + controller_mem) * 2:
+        mem = mem - bcbio_mem - controller_mem
+    return [{"cores": int(num_cpus), "memory": mem / 1024.0, "name": "slurm_machine"}]
 
 def _torque_info(queue):
     """Return machine information for a torque job scheduler using pbsnodes.
