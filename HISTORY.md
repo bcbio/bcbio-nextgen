@@ -1,4 +1,4 @@
-## 0.9.4 (in progress)
+## 0.9.4 (14 October 2015)
 
 - Ensure genome data sort order is identical to BED files when annotating
   structural variant calls. Thanks To Miika Ahdesmaki.

@@ -1,0 +1,29 @@
+upload:
+  dir: upload
+details:
+  - analysis: variant2
+    algorithm:
+      aligner: bwa
+      #aligner: novoalign
+      variantcaller: [samtools, gatk-haplotype, freebayes]
+      #variantcaller: gatk-haplotype
+      #variantcaller: freebayes
+      #variantcaller: cortex
+      #sv_detection: hydra
+      recalibrate: false
+      realign: false
+      ensemble:
+        numpass: 2
+      quality_format: Standard
+      tools_off: [gemini]
+      trim_reads: true
+      align_split_size: 9000
+      variant_regions: ../data/automated/variant_regions-variantcall.bed
+      coverage: ../data/automated/variant_regions-variantcall.bed
+      validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+    description: Test1
+    metadata:
+      batch: TestBatch1
+    genome_build: hg19
+    files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
+    lane: 7

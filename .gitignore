@@ -22,4 +22,3 @@ cwl/*-workflow
 .env
 *~
 \#*
-*.yaml

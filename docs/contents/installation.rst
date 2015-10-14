@@ -98,8 +98,6 @@ access to the executables, system libraries and Perl libraries update
 your `~/.bashrc` with::
 
     export PATH=/path_to_bcbio/bin:$PATH
-    export LD_LIBRARY_PATH=/path_to_bcbio/lib:$LD_LIBRARY_PATH
-    export PERL5LIB=/path_to_bcbio/lib/perl5:${PERL5LIB}
 
 This installation process is not easily re-locatable due to absolute
 filesystem pointers within the installation directory. We plan to move
