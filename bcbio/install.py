@@ -216,7 +216,7 @@ def _update_conda_packages():
     channels = ["-c", "bcbio", "-c", "bioconda"]
     conda_bin = _get_conda_bin()
     if conda_bin:
-        subprocess.check_call([conda_bin, "install", "--yes"] + channels + pkgs)
+        subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + channels + pkgs)
         return os.path.dirname(os.path.dirname(conda_bin))
 
 def _get_data_dir():

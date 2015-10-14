@@ -102,7 +102,7 @@ def install_conda_pkgs(anaconda):
             "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",
             "sqlalchemy", "statsmodels", "toolz", "tornado", "seqcluster_lite"]
     channels = ["-c", "bcbio", "-c", "bioconda"]
-    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels + pkgs)
+    subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes"] + channels + pkgs)
 
 def _guess_distribution():
     """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.
