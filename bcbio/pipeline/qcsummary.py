@@ -50,8 +50,9 @@ def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
     sum_samples = run_parallel("pipeline_summary", samples)
+    samples_coverage = report_summary(sum_samples, run_parallel)
     qsign_info = run_parallel("qsignature_summary", [sum_samples])
-    summary_file = write_project_summary(sum_samples, qsign_info)
+    summary_file = write_project_summary(samples_coverage, qsign_info)
     samples = []
     for data in sum_samples:
         if "summary" not in data[0]:
@@ -1015,14 +1016,14 @@ def _slice_chr22(in_bam, data):
             out = subprocess.check_output(cmd, shell=True)
     return out_file
 
+## report and coverage
 def report_summary(samples, run_parallel):
     """
     Run coverage report with bcbiocov package
     """
     work_dir = dd.get_work_dir(samples[0][0])
-    yaml_file = os.path.join(work_dir, "project-summary.yaml")
 
-    parent_dir = utils.safe_makedir(os.path.join(work_dir,"report"))
+    parent_dir = utils.safe_makedir(os.path.join(work_dir, "report"))
     qsignature_fn = os.path.join(work_dir, "qc", "qsignature", "qsignature.ma")
     with utils.chdir(parent_dir):
 
@@ -1030,8 +1031,6 @@ def report_summary(samples, run_parallel):
         if qsignature_fn:
             if utils.file_exists(qsignature_fn) and not utils.file_exists("qsignature.ma"):
                 shutil.copy(qsignature_fn, "qsignature.ma")
-        logger.info("summarize metrics")
-        _merge_metrics(yaml.load(open(yaml_file)))
 
         out_dir = utils.safe_makedir("fastqc")
         logger.info("summarize fastqc")
@@ -1049,9 +1048,10 @@ def report_summary(samples, run_parallel):
             logger.info("skipping report. No bcbreport installed.")
             pass
 
-    return samples
+        logger.info("summarize metrics")
+        samples = _merge_metrics(samples)
 
-## report and coverage
+    return samples
 
 def coverage_report(data):
     """
@@ -1072,21 +1072,34 @@ def coverage_report(data):
 
     return [[data]]
 
-def _merge_metrics(yaml_data):
+def _get_coverage_per_region(name):
+    """
+    Parse coverage file if it exists to get average value.
+    """
+    fn = os.path.join("coverage", name + "_coverage.bed")
+    if utils.file_exists(fn):
+        dt = pd.read_csv(fn, sep="\t", index_col=False)
+        return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
+    return "NA"
+
+def _merge_metrics(samples):
     """
     parse project.yaml file to get metrics for each bam
     """
-    project = yaml_data
     out_file = os.path.join("metrics", "metrics.tsv")
     dt_together = []
+    cov = {}
     with file_transaction(out_file) as out_tx:
-        for s in project['samples']:
+        for s in samples:
+            s = s[0]
             m = tz.get_in(['summary', 'metrics'], s)
             if m:
                 for me in m:
                     if isinstance(m[me], list):
                         m[me] = ":".join(m[me])
                 dt = pd.DataFrame(m, index=['1'])
+                dt['avg_coverage_per_region'] = _get_coverage_per_region(s['description'])
+                cov[s['description']] = dt['avg_coverage_per_region'][0]
                 # dt = pd.DataFrame.from_dict(m)
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = s['description']
@@ -1094,6 +1107,10 @@ def _merge_metrics(yaml_data):
         if len(dt_together) > 0:
             dt_together = utils.rbind(dt_together)
             dt_together.to_csv(out_tx, index=False, sep="\t")
+
+    for i, s in enumerate(samples):
+        samples[i][0]['summary']['metrics']['avg_coverage_per_region'] = cov[s[0]['description']]
+    return samples
 
 def _merge_fastqc(data):
     """
