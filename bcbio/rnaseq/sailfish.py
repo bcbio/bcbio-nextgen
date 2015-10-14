@@ -45,6 +45,7 @@ def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
         fq2_cmd = "{fq2}" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
         fq2_cmd = fq2_cmd.format(fq2=fq2)
         cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
+        cmd += "--useVBOpt --numBootstraps 30 "
     cmd += "-o {tx_out_dir}"
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, align_dir) as tx_out_dir:
@@ -127,8 +128,7 @@ def combine_sailfish(samples):
 
 def _sailfish_expression_parser(sailfish_file, samplename):
     col_names = ["name", "length", "tpm", "numreads"]
-    df = pd.io.parsers.read_table(sailfish_file, skiprows=11, header=None,
-                                  index_col=0,
-                                  names=col_names)
+    df = pd.read_csv(sailfish_file, comment="#", header=None, index_col=0,
+                     names=col_names, sep="\t")
     df["sample"] = samplename
     return df
