@@ -70,7 +70,7 @@ def _slurm_info(queue):
     # This will typically be on cloud AWS machines
     bcbio_mem = 2000
     controller_mem = 4000
-    if int(num_codes) < 3 and mem > (bcbio_mem + controller_mem) * 2:
+    if int(num_nodes) < 3 and mem > (bcbio_mem + controller_mem) * 2:
         mem = mem - bcbio_mem - controller_mem
     return [{"cores": int(num_cpus), "memory": mem / 1024.0, "name": "slurm_machine"}]
 
