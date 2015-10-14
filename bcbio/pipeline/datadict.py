@@ -89,6 +89,7 @@ LOOKUPS = {
     "callable_regions": {"keys": ["regions", "callable"]},
     "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
     "sailfish": {"keys": ["sailfish"]},
+    "sailfish_dir": {"keys": ["sailfish_dir"]},
     "sailfish_combined": {"keys": ["sailfish_combined"]},
     "sample_callable": {"keys": ["regions", "sample_callable"]},
     "coverage_interval": {"keys": ["config", "algorithm", "coverage_interval"]},

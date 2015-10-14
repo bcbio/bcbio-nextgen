@@ -16,20 +16,21 @@ def run_sailfish(data):
         fq1, fq2 = files
     else:
         fq1, fq2 = files[0], None
-    align_dir = os.path.join(work_dir, "sailfish", samplename)
+    sailfish_dir = os.path.join(work_dir, "sailfish", samplename)
     gtf_file = dd.get_gtf_file(data)
     assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = dd.get_ref_file(data)
     assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     stranded = dd.get_strandedness(data).lower()
-    out_file = sailfish(fq1, fq2, align_dir, gtf_file, fasta_file, stranded, data)
+    out_file = sailfish(fq1, fq2, sailfish_dir, gtf_file, fasta_file, stranded, data)
     data = dd.set_sailfish(data, out_file)
+    data = dd.set_sailfish_dir(data, sailfish_dir)
     return [[data]]
 
-def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
-    safe_makedir(align_dir)
+def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
+    safe_makedir(sailfish_dir)
     samplename = dd.get_sample_name(data)
-    out_file = os.path.join(align_dir, samplename + ".sf")
+    out_file = os.path.join(sailfish_dir, samplename + ".sf")
     if file_exists(out_file):
         return out_file
     sailfish_idx = sailfish_index(gtf_file, ref_file, data)
@@ -48,9 +49,9 @@ def sailfish(fq1, fq2, align_dir, gtf_file, ref_file, strandedness, data):
         cmd += "--useVBOpt --numBootstraps 30 "
     cmd += "-o {tx_out_dir}"
     message = "Quantifying transcripts in {fq1} and {fq2}."
-    with file_transaction(data, align_dir) as tx_out_dir:
+    with file_transaction(data, sailfish_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
-    shutil.move(os.path.join(align_dir, "quant.sf"), out_file)
+    shutil.move(os.path.join(sailfish_dir, "quant.sf"), out_file)
     return out_file
 
 def sailfish_index(gtf_file, ref_file, data):

@@ -49,17 +49,9 @@ def _get_files(sample):
         return _get_files_srnaseq(sample)
     elif analysis.lower() in ["chip-seq"]:
         return _get_files_chipseq(sample)
-    elif analysis.lower() in ["sailfish"]:
-        return _get_files_sailfish(sample)
     else:
         return []
 
-def _get_files_sailfish(sample):
-    out = []
-    out.append({"path": sample["sailfish_dir"],
-                "type": "directory",
-                "ext": "sailfish"})
-    return _add_meta(out, sample)
 
 def _get_files_rnaseq(sample):
     out = []
@@ -71,6 +63,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_cufflinks(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
     out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
+    out = _maybe_add_sailfish_files(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_srnaseq(sample):
@@ -211,6 +204,13 @@ def _get_variant_file(x, key):
                         "type": ftype,
                         "ext": x["variantcaller"],
                         "variantcaller": x["variantcaller"]})
+    return out
+
+def _maybe_add_sailfish_files(algorithm, sample, out):
+    if "sailfish" in dd.get_expression_caller(sample):
+        out.append({"path": dd.get_sailfish_dir(sample),
+                    "type": "directory",
+                    "ext": "sailfish"})
     return out
 
 def _maybe_add_summary(algorithm, sample, out):
