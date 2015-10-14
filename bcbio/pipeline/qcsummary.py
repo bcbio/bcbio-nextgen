@@ -130,9 +130,12 @@ def _run_qc_tools(bam_file, data):
         cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
         metrics.update(cur_metrics)
     if data['config']["algorithm"].get("kraken", None):
-        ratio = bam.get_aligned_reads(bam_file, data)
-        cur_metrics = _run_kraken(data, ratio)
-        metrics.update(cur_metrics)
+        if data["analysis"].lower().startswith("smallrna-seq"):
+            logger.info("Kraken is not compatible with srnaseq pipeline yet.")
+        else:
+            ratio = bam.get_aligned_reads(bam_file, data)
+            cur_metrics = _run_kraken(data, ratio)
+            metrics.update(cur_metrics)
 
     bam.remove("%s-downsample%s" % os.path.splitext(bam_file))
 
@@ -783,6 +786,7 @@ def _parse_offtargets(bam_file):
     off_target = bam_file.replace(".bam", "-offtarget-stats.yaml")
     if os.path.exists(off_target):
         res = yaml.load(open(off_target))
+        res['offtarget_pct'] = "%.3f" % (float(res['offtarget']) / float(res['mapped']))
         return res
     return {}
 
