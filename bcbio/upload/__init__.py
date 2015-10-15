@@ -210,7 +210,7 @@ def _maybe_add_sailfish_files(algorithm, sample, out):
     if "sailfish" in dd.get_expression_caller(sample):
         out.append({"path": dd.get_sailfish_dir(sample),
                     "type": "directory",
-                    "ext": "sailfish"})
+                    "ext": os.path.join("sailfish", dd.get_sample_name(sample))})
     return out
 
 def _maybe_add_summary(algorithm, sample, out):
