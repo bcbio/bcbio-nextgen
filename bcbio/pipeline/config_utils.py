@@ -196,6 +196,9 @@ def _get_check_program_cmd(fn):
         for adir in os.environ['PATH'].split(":"):
             if is_ok(os.path.join(adir, program)):
                 return os.path.join(adir, program)
+        # support bioconda installed programs
+        if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
+            return (os.path.join(os.path.dirname(sys.executable), name))
         else:
             raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, config, default))))
     return wrap
