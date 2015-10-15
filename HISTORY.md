@@ -1,3 +1,8 @@
+## 0.9.5 (in progress)
+
+- Annotate ensemble calls with information about supporting callers. Thanks to
+  Pär Larsson and Son Pham.
+
 ## 0.9.4 (14 October 2015)
 
 - Ensure genome data sort order is identical to BED files when annotating
