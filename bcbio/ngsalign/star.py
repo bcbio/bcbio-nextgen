@@ -53,7 +53,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
            "--outStd SAM {srna_opts} "
            "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
     cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file)
-    cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else cmd
+    cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
     cmd += _read_group_option(names)
     fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
     if fusion_mode:
