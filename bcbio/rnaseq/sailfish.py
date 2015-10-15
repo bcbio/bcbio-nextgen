@@ -30,7 +30,7 @@ def run_sailfish(data):
 def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     safe_makedir(sailfish_dir)
     samplename = dd.get_sample_name(data)
-    out_file = os.path.join(sailfish_dir, samplename + ".sf")
+    out_file = os.path.join(sailfish_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
     sailfish_idx = sailfish_index(gtf_file, ref_file, data)
@@ -51,7 +51,6 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, sailfish_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
-    shutil.move(os.path.join(sailfish_dir, "quant.sf"), out_file)
     return out_file
 
 def sailfish_index(gtf_file, ref_file, data):
@@ -109,12 +108,12 @@ def combine_sailfish(samples):
 
     out_file = os.path.join(work_dir, "sailfish", "combined.sf")
     if not file_exists(out_file):
-        df = None
+        df = pd.DataFrame()
         for data in to_combine:
             sailfish_file = dd.get_sailfish(data)
             samplename = dd.get_sample_name(data)
             new_df = _sailfish_expression_parser(sailfish_file, samplename)
-            if not df:
+            if df.empty:
                 df = new_df
             else:
                 df = rbind([df, new_df])
