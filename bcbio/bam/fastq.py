@@ -226,7 +226,7 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
     estimate average read length of a fastq file
     """
 
-    in_handle = SeqIO.parse(fastq_file, quality_format)
+    in_handle = SeqIO.parse(open_fastq(fastq_file), quality_format)
     read = in_handle.next()
     average = len(read.seq)
     for _ in range(nreads):
@@ -236,6 +236,21 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
             break
     in_handle.close()
     return average
+
+def estimate_maximum_read_length(fastq_file, quality_format="fastq-sanger",
+                                 nreads=1000):
+    """
+    estimate average read length of a fastq file
+    """
+    in_handle = SeqIO.parse(open_fastq(fastq_file), quality_format)
+    lengths = []
+    for _ in range(nreads):
+        try:
+            lengths.append(len(in_handle.next().seq))
+        except StopIteration:
+            break
+    in_handle.close()
+    return max(lengths)
 
 def open_fastq(in_file):
     """ open a fastq file, using gzip if it is gzipped
