@@ -1079,9 +1079,11 @@ def _get_coverage_per_region(name):
     """
     fn = os.path.join("coverage", name + "_coverage.bed")
     if utils.file_exists(fn):
-        dt = pd.read_csv(fn, sep="\t", index_col=False)
-        if not isinstance(dt['meanCoverage'], bool):
+        try:
+            dt = pd.read_csv(fn, sep="\t", index_col=False)
             return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
+        except TypeError:
+            logger.debug("%s has no lines in coverage.bed" % name)
     return "NA"
 
 def _merge_metrics(samples):
@@ -1111,7 +1113,8 @@ def _merge_metrics(samples):
             dt_together.to_csv(out_tx, index=False, sep="\t")
 
     for i, s in enumerate(samples):
-        samples[i][0]['summary']['metrics']['avg_coverage_per_region'] = cov[s[0]['description']]
+        if s[0]['description'] in cov:
+            samples[i][0]['summary']['metrics']['avg_coverage_per_region'] = cov[s[0]['description']]
     return samples
 
 def _merge_fastqc(data):
