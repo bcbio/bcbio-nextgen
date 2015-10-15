@@ -155,6 +155,7 @@ if __name__ == "__main__":
         raise ValueError("--mirbase and --srna_gtf both need a value.")
 
     env.hosts = ["localhost"]
+    os.environ["PATH"] += os.pathsep + os.path.dirname(sys.executable)
     cbl = get_cloudbiolinux(REMOTES)
     sys.path.insert(0, cbl["dir"])
     genomemod = __import__("cloudbio.biodata", fromlist=["genomes"])
