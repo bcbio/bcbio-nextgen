@@ -1080,7 +1080,7 @@ def _get_coverage_per_region(name):
     fn = os.path.join("coverage", name + "_coverage.bed")
     if utils.file_exists(fn):
         dt = pd.read_csv(fn, sep="\t", index_col=False)
-        if not isinstance(dt['meantCoverage'], bool):
+        if not isinstance(dt['meanCoverage'], bool):
             return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
     return "NA"
 
