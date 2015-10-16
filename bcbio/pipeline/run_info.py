@@ -635,6 +635,8 @@ def _add_algorithm_defaults(algorithm):
         if k in convert_to_list:
             if v and not isinstance(v, (list, tuple)):
                 algorithm[k] = [v]
+            elif v is None:
+                algorithm[k] = []
     return algorithm
 
 def _replace_global_vars(xs, global_vars):
