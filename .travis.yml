@@ -1,9 +1,7 @@
 sudo: required
+dist: trusty
 
-language: python
-
-services:
-  - docker
+language: generic
 
 env:
   - BCBIO_DOCKER_PRIVILEGED=True
