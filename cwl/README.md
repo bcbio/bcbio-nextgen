@@ -5,9 +5,13 @@ This directory contains exploratory work to run bcbio using the
 system YAML file and run info YAML file to produce a CWL workflow and run that
 handles multiple samples.
 
-To prepare your system for running this you first need to install cwl-runner
-from the [common workflow language reference implementation][1].
-
+To prepare your system for running this you first need to install cwltool
+from the [common workflow language reference implementation][1]:
+```
+git clone https://github.com/common-workflow-language/cwltool.git
+cd cwltool
+python setup.py install
+```
 Then you either need a working [local installation of bcbio][3] or you can run
 off a minimal installation of bcbio python code and test data without the third
 party dependencies and reference data:
@@ -21,13 +25,17 @@ party dependencies and reference data:
   CWL testing you shouldn't need third party tools so this is okay:
   `cd tests && ./run_tests.sh devel`
 
-Then run locally with:
+Then run locally using the tests:
 ```
-cwl-runner --verbose --preserve-env HOME PATH --no-container bcbio2cwl.cwl testinput-args.json
+cd tests && ./run_tests.sh cwl
+```
+or manually with:
+```
+cwltool --verbose --preserve-env HOME PATH --no-container bcbio2cwl.cwl testinput-args.json
 ```
 or
 ```
-cwl-runner --verbose --no-container bcbio2cwl.cwl \
+cwltool --verbose --no-container bcbio2cwl.cwl \
   --run_config ../tests/data/automated/run_info-bam.yaml \
   --system_config testinput-bcbio_system.yaml
 ```
@@ -38,9 +46,9 @@ information.`
 Docker support is a work in progress and not expected to work right now. To test
 and develop, run:
 ```
-cwl-runner --verbose bcbio2cwl.cwl testinput-args.json
+cwltool --verbose bcbio2cwl.cwl testinput-args.json
 ```
 [0]: https://github.com/common-workflow-language/common-workflow-language
-[1]: https://github.com/common-workflow-language/common-workflow-language/tree/master/reference
+[1]: https://github.com/common-workflow-language/cwltool
 [2]: https://github.com/chapmanb/bcbio-nextgen
 [3]: https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html

@@ -6,7 +6,7 @@ import yaml
 
 from bcbio import utils
 
-def from_world(world_yaml, run_info_file):
+def from_world(world, run_info_file):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
     out_dir = utils.safe_makedir("%s-workflow" % (base))
     out_file = os.path.join(out_dir, "%s-main.cwl" % (base))
