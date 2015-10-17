@@ -12,6 +12,7 @@ small blocks.
 import contextlib
 import copy
 import os
+import shutil
 import subprocess
 
 import numpy
@@ -63,7 +64,7 @@ def calc_callable_loci(data, region=None, out_file=None):
         # special case, do not calculate if we are in a chromosome not covered by BED file
         else:
             with file_transaction(data, out_file) as tx_out_file:
-                os.rename(region_file, tx_out_file)
+                shutil.move(region_file, tx_out_file)
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
 def _group_by_ctype(bed_file, depth, region, region_file, out_file, data):
