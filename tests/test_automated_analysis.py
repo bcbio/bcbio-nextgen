@@ -208,6 +208,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
     @attr(rnaseq=True)
     @attr(rnaseq_standard=True)
     @attr(hisat2=True)
+    @expected_failure
     def test_2_hisat2(self):
         """Run an RNA-seq analysis with hisat2 and generate gene-level counts.
         """
