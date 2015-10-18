@@ -1,5 +1,7 @@
 ## 0.9.5 (in progress)
 
+- Update VarScan to 2.4.0 and rework support to allow piping between mpileup
+  and VarScan to avoid filesystem IO.
 - Annotate ensemble calls with information about supporting callers. Thanks to
   Pär Larsson and Son Pham.
 

@@ -82,7 +82,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-                         DlInfo("genomes_automated_test.tar.gz", "genomes", 25),
+                         DlInfo("genomes_automated_test.tar.gz", "genomes", 26),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 8),
                          DlInfo("tcga_benchmark.tar.gz", None, 3)]
@@ -208,7 +208,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
     @attr(rnaseq=True)
     @attr(rnaseq_standard=True)
     @attr(hisat2=True)
-    @expected_failure
     def test_2_hisat2(self):
         """Run an RNA-seq analysis with hisat2 and generate gene-level counts.
         """
