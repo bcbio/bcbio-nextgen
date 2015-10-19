@@ -83,13 +83,13 @@ def get_paired_phenotype(data):
 
 # ## General utilities
 
-def fix_ambiguous_cl():
+def fix_ambiguous_cl(column=4):
     """awk command to replace non-N ambiguous REF bases with N.
 
     Some callers include these if present in the reference genome but GATK does
     not like them.
     """
-    return r"""awk -F$'\t' -v OFS='\t' '{if ($0 !~ /^#/) gsub(/[KMRYSWBVHDX]/, "N", $4) } {print}'"""
+    return r"""awk -F$'\t' -v OFS='\t' '{if ($0 !~ /^#/) gsub(/[KMRYSWBVHDX]/, "N", $%s) } {print}'""" % column
 
 def remove_dup_cl():
     """awk command line to remove duplicate alleles where the ref and alt are the same.

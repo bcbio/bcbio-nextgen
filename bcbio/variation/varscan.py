@@ -98,15 +98,16 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             if utils.file_exists(fname):
                 fix_file = "%s-fix.vcf.gz" % (utils.splitext_plus(fname)[0])
                 with file_transaction(config, fix_file) as tx_fix_file:
-                    fix_ambig = vcfutils.fix_ambiguous_cl()
+                    fix_ambig_ref = vcfutils.fix_ambiguous_cl()
+                    fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                     py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                     normal_name = paired.normal_name
                     tumor_name = paired.tumor_name
                     cmd = ("cat {fname} | "
                            "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x,"
                             """ "{normal_name}", "{tumor_name}")' | """
-                           "{fix_ambig} | ifne vcfuniqalleles | "
-                           """bcftools filter -m + -s REJECT -e 'SS != "." && SS != "2"' 2> /dev/null | """
+                           "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles | "
+                           """bcftools filter -m + -s REJECT -e "SS != '.' && SS != '2'" 2> /dev/null | """
                            " bgzip -c > {tx_fix_file}")
                     do.run(cmd.format(**locals()), "Varscan paired fix")
                 to_combine.append(fix_file)
@@ -255,13 +256,14 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # http://manpages.ubuntu.com/manpages/natty/man1/ifne.1.html
     with tx_tmpdir(items[0]) as tmp_dir:
         jvm_opts = _get_varscan_opts(config, tmp_dir)
-        fix_ambig = vcfutils.fix_ambiguous_cl()
+        fix_ambig_ref = vcfutils.fix_ambiguous_cl()
+        fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
         py_cl = os.path.join(os.path.dirname(sys.executable), "py")
         cmd = ("{mpileup} | {remove_zerocoverage} | "
                 "ifne varscan {jvm_opts} mpileup2cns --min-coverage 5 --p-value 0.98 "
                 "  --vcf-sample-list {sample_list} --output-vcf --variants | "
                "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x)' | "
-                "{fix_ambig} | ifne vcfuniqalleles > {out_file}")
+                "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles > {out_file}")
         do.run(cmd.format(**locals()), "Varscan", None,
                 [do.file_exists(out_file)])
     os.remove(sample_list)
