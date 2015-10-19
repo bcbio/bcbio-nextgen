@@ -6,6 +6,7 @@ details:
   - analysis: smallRNA-seq
     algorithm:
       aligner: star
+      # aligner: hisat2
       adapters: ["TGGAATTCTCGGGTGC"]
       species: hsa
     description: miRQCa
