@@ -641,10 +641,13 @@ Post-processing
 - ``tools_off`` Specify third party tools to skip as part of analysis
   pipeline. Enables turning off specific components of pipelines if not
   needed. ``gemini`` provides a `GEMINI database`_ of variants for downstream
-  query during variant calling pipelines. ``vardict_somatic_filter`` runs
-  a post calling filter to remove variants found in normal samples. ``bwa-mem``
-  forces use of original ``bwa aln`` alignment. Without this, we use bwa mem with
-  70bp or longer reads. ``fastqc`` turns off quality control FastQC usage.
+  query during variant calling pipelines. ``vardict_somatic_filter`` disables 
+  running a post calling filter for VarDict to remove variants found in normal 
+  samples. Without ``vardict_somatic_filter`` in paired analyses no soft 
+  filtering of germline variants is performed but all high quality variants pass.
+  ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this, 
+  we use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality 
+  control FastQC usage. 
   ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.

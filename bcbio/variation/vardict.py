@@ -262,22 +262,24 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 if any("vardict_somatic_filter" in tz.get_in(("config", "algorithm", "tools_off"), data, [])
                        for data in items):
                     somatic_filter = ""
+                    freq_filter = ""
                 else:
-                    somatic_filter = ("| %s -x 'bcbio.variation.freebayes.call_somatic(x)'" %
+                    var2vcf_opts += " -M " # this makes VarDict soft filter non-differential variants
+                    somatic_filter = (  "| sed 's/\\\\.*Somatic\\\\/Somatic/' "
+                                        "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
+                                        "| %s -x 'bcbio.variation.freebayes.call_somatic(x)'" %
                                       os.path.join(os.path.dirname(sys.executable), "py"))
-                freq_filter = (" %s -x 'bcbio.variation.vardict.depth_freq_filter(x, %s, \"%s\")'" %
-                               (os.path.join(os.path.dirname(sys.executable), "py"),
-                                0, dd.get_aligner(paired.tumor_data)))
+                    freq_filter = ( "| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
+                                    "| %s -x 'bcbio.variation.vardict.depth_freq_filter(x, %s, \"%s\")'" %
+                                   (os.path.join(os.path.dirname(sys.executable), "py"),
+                                     0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 cmd = ("{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| {strandbias} "
-                       "| {var2vcf} -M -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
+                       "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
-                       "| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
-                       "| {freq_filter} "
-                       "| sed 's/\\\\.*Somatic\\\\/Somatic/' "
-                       "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
+                       "{freq_filter} "
                        "{somatic_filter} | {fix_ambig} | {remove_dup} | {vcfstreamsort} "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
