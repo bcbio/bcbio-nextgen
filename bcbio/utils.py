@@ -14,6 +14,7 @@ import collections
 import fnmatch
 import subprocess
 import sys
+import subprocess
 
 import toolz as tz
 import yaml
@@ -655,10 +656,14 @@ def max_command_length():
     """
     get the maximum length of the command line, in bytes, defaulting
     to a conservative number if not set
+    http://www.in-ulm.de/~mascheck/various/argmax/
     """
     DEFAULT_MAX_LENGTH = 150000 # lowest seen so far is 200k
     try:
-        arg_length = os.sysconf('SC_ARG_MAX')
+        arg_max = os.sysconf('SC_ARG_MAX')
+        env_lines = len(os.environ) * 4
+        env_chars = sum([len(x) + len(y) for x, y in os.environ.iteritems()])
+        arg_length = arg_max - env_lines - 2048
     except ValueError:
         arg_length = DEFAULT_MAX_LENGTH
     return arg_length if arg_length > 0 else DEFAULT_MAX_LENGTH
