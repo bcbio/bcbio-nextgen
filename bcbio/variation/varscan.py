@@ -74,8 +74,8 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                                                  target_regions=target_regions,
                                                  want_bcf=False)
         base, ext = utils.splitext_plus(out_file)
-        indel_file = base + ".indel.vcf"
-        snp_file = base + ".snp.vcf"
+        indel_file = base + "-indel.vcf"
+        snp_file = base + "-snp.vcf"
         with file_transaction(config, indel_file, snp_file) as (tx_indel, tx_snp):
             with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
@@ -163,17 +163,27 @@ def fix_varscan_output(line, normal_name="", tumor_name=""):
         return "\t".join(line)
 
     if len(line) > 10:
+        #print line
         Ifreq = line[8].split(":").index("FREQ")
+        #print repr(Ifreq)
         ndat = line[9].split(":")
         tdat = line[10].split(":")
+        #print ndat
+        #print tdat
         somatic_status = line[7].split(";")  # SS=<number>
         # HACK: The position of the SS= changes, so we just search for it
         somatic_status = [item for item in somatic_status
                           if item.startswith("SS=")][0]
         somatic_status = int(somatic_status.split("=")[1])  # Get the number
 
-        ndat[Ifreq] = str(float(ndat[Ifreq].rstrip("%")) / 100)
-        tdat[Ifreq] = str(float(tdat[Ifreq].rstrip("%")) / 100)
+        try:
+            ndat[Ifreq] = str(float(ndat[Ifreq].rstrip("%")) / 100)
+        except ValueError:  # illegal binary characters -- set frequency to zero
+            ndat[Ifreq] = "0.0"
+        try:
+            tdat[Ifreq] = str(float(tdat[Ifreq].rstrip("%")) / 100)
+        except ValueError:  # illegal binary characters -- set frequency to zero
+            tdat[Ifreq] = "0.0"
         line[9] = ":".join(ndat)
         line[10] = ":".join(tdat)
         if somatic_status == 5:
