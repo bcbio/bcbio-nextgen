@@ -23,6 +23,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += "-1 {fastq_file} -2 {pair_file} "
     else:
         cmd += "-U {fastq_file} "
+    if dd.get_analysis(data).lower() == "smallrna-seq":
+        cmd += "-k 1000 "
     # if assembling transcripts, set flags that cufflinks can use
     if dd.get_assemble_transcripts(data):
         cmd += "--dta-cufflinks "
