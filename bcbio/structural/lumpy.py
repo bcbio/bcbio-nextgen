@@ -127,7 +127,7 @@ def run(items):
         sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
                                             utils.append_stem(lumpy_vcf, "-%s" % sample),
                                             data["config"])
-        gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, data)
+        gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, exclude_file, data)
         gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
     if paired and paired.normal_name:
         gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
@@ -143,8 +143,11 @@ def run(items):
         out.append(data)
     return out
 
-def _run_svtyper(in_file, full_bam, sr_bam, data):
+def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
     """Genotype structural variant calls with SVtyper.
+
+    Removes calls in high depth regions to avoid slow runtimes:
+    https://github.com/hall-lab/svtyper/issues/16
     """
     out_file = "%s-wgts.vcf.gz" % utils.splitext_plus(in_file)[0]
     if not utils.file_uptodate(out_file, in_file):
@@ -154,7 +157,11 @@ def _run_svtyper(in_file, full_bam, sr_bam, data):
             else:
                 python = sys.executable
                 svtyper = os.path.join(os.path.dirname(sys.executable), "svtyper")
-                cmd = ("gunzip -c {in_file} | "
+                if exclude_file and utils.file_exists(exclude_file):
+                    regions_to_rm = "-T ^%s" % (exclude_file)
+                else:
+                    regions_to_rm = ""
+                cmd = ("bcftools view {in_file} {regions_to_rm} | "
                        "{python} {svtyper} -B {full_bam} -S {sr_bam} | "
                        "bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "SV genotyping with svtyper")
