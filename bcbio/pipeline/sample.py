@@ -40,8 +40,9 @@ def trim_sample(data):
     config = data["config"]
     # this block is to maintain legacy configuration files
     trim_reads = config["algorithm"].get("trim_reads", False)
+    sample_name = dd.get_sample_name(data)
     if not trim_reads:
-        logger.info("Skipping trimming of %s." % (", ".join(to_trim)))
+        logger.info("Skipping trimming of %s." % sample_name)
         return [[data]]
 
     if trim_reads == "read_through":
