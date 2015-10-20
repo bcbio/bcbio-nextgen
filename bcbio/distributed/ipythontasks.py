@@ -7,7 +7,7 @@ try:
 except ImportError:
     from IPython.parallel import require
 
-from bcbio import heterogeneity, chipseq, structural, upload
+from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
 from bcbio.rnaseq import sailfish
 from bcbio.distributed import ipython
@@ -282,6 +282,12 @@ def prep_gemini_db(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(population.prep_gemini_db, *args))
+
+@require(hla)
+def call_hla(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(hla.call_hla, *args))
 
 @require(structural)
 def detect_sv(*args):

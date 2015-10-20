@@ -12,7 +12,7 @@ import tempfile
 
 import yaml
 
-from bcbio import log, heterogeneity, structural, utils
+from bcbio import log, heterogeneity, hla, structural, utils
 from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.log import logger
@@ -20,7 +20,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, config_utils, disambiguate, region,
                             run_info, qcsummary, rnaseq)
 from bcbio.provenance import profile, system
-from bcbio.variation import coverage, ensemble, genotype, population, validate, joint
+from bcbio.variation import ensemble, genotype, population, validate, joint
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -151,6 +151,8 @@ class Variant2Pipeline(AbstractPipeline):
                 samples = region.clean_sample_data(samples)
             with profile.report("structural variation initial", dirs):
                 samples = structural.run(samples, run_parallel, "initial")
+            with profile.report("hla typing", dirs):
+                samples = hla.run(samples, run_parallel)
 
         ## Variant calling on sub-regions of the input file (full cluster)
         with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),

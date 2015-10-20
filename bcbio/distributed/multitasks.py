@@ -1,6 +1,6 @@
 """Multiprocessing ready entry points for sample analysis.
 """
-from bcbio import heterogeneity, structural, utils, chipseq, upload
+from bcbio import heterogeneity, hla, structural, utils, chipseq, upload
 from bcbio.bam import callable
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
@@ -148,6 +148,10 @@ def concat_variant_files(*args):
 @utils.map_wrap
 def merge_variant_files(*args):
     return vcfutils.merge_variant_files(*args)
+
+@utils.map_wrap
+def call_hla(*args):
+    return hla.call_hla(*args)
 
 @utils.map_wrap
 def detect_sv(*args):
