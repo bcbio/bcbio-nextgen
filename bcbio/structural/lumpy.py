@@ -127,7 +127,11 @@ def run(items):
         sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
                                             utils.append_stem(lumpy_vcf, "-%s" % sample),
                                             data["config"])
-        gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, exclude_file, data)
+        std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
+        std_gt_vcf = _run_svtyper(std_vcf, dedup_bam, sr_bam, exclude_file, data)
+        gt_vcf = vcfutils.combine_variant_files(orig_files=[std_gt_vcf, bnd_vcf],
+                                                out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
+                                                ref_file=dd.get_ref_file(data), config=data["config"])
         gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
     if paired and paired.normal_name:
         gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
@@ -142,6 +146,23 @@ def run(items):
                            "exclude_file": exclude_file})
         out.append(data)
     return out
+
+def _split_breakends(in_file, data):
+    """Skip genotyping on breakends. This is often slow in high depth regions with many breakends.
+    """
+    bnd_file = "%s-bnd.vcf.gz" % utils.splitext_plus(in_file)[0]
+    std_file = "%s-std.vcf.gz" % utils.splitext_plus(in_file)[0]
+    if not utils.file_uptodate(bnd_file, in_file):
+        with file_transaction(data, bnd_file) as tx_out_file:
+            cmd = """bcftools view -O z -o {tx_out_file} -i "SVTYPE='BND'" {in_file}"""
+            do.run(cmd.format(**locals()), "Select Lumpy breakends")
+    vcfutils.bgzip_and_index(bnd_file, data["config"])
+    if not utils.file_uptodate(std_file, in_file):
+        with file_transaction(data, std_file) as tx_out_file:
+            cmd = """bcftools view -O z -o {tx_out_file} -e "SVTYPE='BND'" {in_file}"""
+            do.run(cmd.format(**locals()), "Select Lumpy non-breakends")
+    vcfutils.bgzip_and_index(std_file, data["config"])
+    return std_file, bnd_file
 
 def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
     """Genotype structural variant calls with SVtyper.
@@ -162,7 +183,7 @@ def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
                 else:
                     regions_to_rm = ""
                 cmd = ("bcftools view {in_file} {regions_to_rm} | "
-                       "{python} {svtyper} -B {full_bam} -S {sr_bam} | "
+                       "{python} {svtyper} -M -B {full_bam} -S {sr_bam} | "
                        "bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "SV genotyping with svtyper")
     return vcfutils.sort_by_ref(out_file, data)
