@@ -25,7 +25,7 @@ def run(data):
         out_file = hla_base + ".top"
         if not utils.file_exists(out_file):
             cmd = "{bwakit_dir}/run-HLA {hla_base}"
-            #do.run(cmd.format(**locals()), "HLA typing with bwakit")
+            do.run(cmd.format(**locals()), "HLA typing with bwakit")
             out_file = _organize_calls(out_file, hla_base, data)
         data["hla"] = {"calls": out_file}
     return data
@@ -39,22 +39,39 @@ def _organize_calls(out_file, hla_base, data):
     with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
             writer = csv.writer(out_handle)
-            writer.writerow(["sample", "locus", "mismatches", "options", "alleles", "expected"])
+            writer.writerow(["sample", "locus", "mismatches", "options", "alleles", "expected", "validates"])
             for genotype_file in glob.glob("%s.HLA-*.gt" % (hla_base)):
                 hla_locus = os.path.basename(genotype_file).replace(
                         "%s.hla.HLA-" % os.path.basename(align_file), "").replace(".gt", "")
                 with open(genotype_file) as in_handle:
-                    total_options = 0
+                    total_options = set([])
                     for i, line in enumerate(in_handle):
+                        _, aone, atwo, m = line.split("\t")[:4]
                         if i == 0:
-                            _, allele_one, allele_two, mismatches = line.split("\t")[:4]
-                        total_options += 1
-                    if total_options > 0:
+                            call_alleles = [aone, atwo]
+                            mismatches = m
+                        alleles = (_hla_protein(aone), _hla_protein(atwo))
+                        total_options.add(alleles)
+                    if len(total_options) > 0:
                         truth_alleles = tz.get_in([sample, hla_locus], hla_truth, [])
-                        writer.writerow([sample, hla_locus, mismatches, total_options,
-                                         ";".join([allele_one, allele_two]),
-                                         ";".join(truth_alleles)])
+                        if truth_alleles:
+                            t_cmp = set([_hla_protein(x) for x in truth_alleles])
+                            c_cmp = set([_hla_protein(x) for x in call_alleles])
+                            valstatus = "yes" if len(t_cmp.intersection(c_cmp)) == len(c_cmp) else "no"
+                        else:
+                            valstatus = ""
+                        writer.writerow([sample, hla_locus, mismatches, len(total_options),
+                                         ";".join(call_alleles), ";".join(truth_alleles), valstatus])
     return out_file
+
+def _hla_protein(name):
+    """Parse the HLA base name (group + protein) from a full name.
+
+    Separates out synonymous and non-coding indicators.
+
+    http://hla.alleles.org/nomenclature/naming.html
+    """
+    return ":".join(name.split(":")[:2])
 
 def get_hla_truthset(data):
     """Retrieve expected truth calls for annotating HLA called output.
@@ -66,5 +83,5 @@ def get_hla_truthset(data):
             reader = csv.reader(in_handle)
             reader.next() # header
             for sample, locus, alleles in (l for l in reader if l):
-                out = tz.update_in(out, [sample, locus], lambda x: alleles.split(";"))
+                out = tz.update_in(out, [sample, locus], lambda x: [x.strip() for x in alleles.split(";")])
     return out
