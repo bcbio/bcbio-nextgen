@@ -41,8 +41,11 @@ def identify(data):
                    "--window-size {window_size} {work_bam} "
                    "| head -n {sample_size} "
                    """| cut -f 5 | {py_cl} -l 'numpy.median([float(x) for x in l if not x.startswith("mean")])'""")
-            median_cov = float(subprocess.check_output(cmd.format(**locals()), shell=True))
-            if not numpy.isnan(median_cov):
+            try:
+                median_cov = float(subprocess.check_output(cmd.format(**locals()), shell=True))
+            except ValueError:
+                median_cov = None
+            if median_cov and not numpy.isnan(median_cov):
                 high_thresh = int(high_multiplier * median_cov)
                 cmd = ("sambamba depth window -t {cores} -c {median_cov} "
                        "--window-size {window_size} -T {high_thresh} {work_bam} "
