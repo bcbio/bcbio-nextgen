@@ -49,6 +49,46 @@ def _get_varscan_opts(config, tmp_dir):
     jvm_opts += broad.get_default_jvm_opts(tmp_dir)
     return " ".join(jvm_opts)
 
+def _safe_to_float(x):
+    if x is None:
+        return None
+    else:
+        try:
+            return float(x)
+        except ValueError:
+            return None
+
+def spv_freq_filter(line, tumor_index):
+    """Filter VarScan calls based on the SPV value and frequency.
+
+    Removes calls with SPV < 0.05 and a tumor FREQ > 0.35.
+
+    False positives dominate these higher frequency, low SPV calls. They appear
+    to be primarily non-somatic/germline variants not removed by other filters.
+    """
+    if line.startswith("#CHROM"):
+        headers = [('##FILTER=<ID=SpvFreq,Description="High frequency (tumor FREQ > 0.35) '
+                    'and low p-value for somatic (SPV < 0.05)">')]
+        return "\n".join(headers) + "\n" + line
+    elif line.startswith("#"):
+        return line
+    else:
+        parts = line.split("\t")
+        sample_ft = {a: v for (a, v) in zip(parts[8].split(":"), parts[9 + tumor_index].split(":"))}
+        freq = _safe_to_float(sample_ft.get("FREQ"))
+        spvs = [x for x in parts[7].split(";") if x.startswith("SPV=")]
+        spv = _safe_to_float(spvs[0].split("=")[-1] if spvs else None)
+        fname = None
+        if spv is not None and freq is not None:
+            if spv < 0.05 and freq > 0.35:
+                fname = "SpvFreq"
+        if fname:
+            if parts[6] in set([".", "PASS"]):
+                parts[6] = fname
+            else:
+                parts[6] += ";%s" % fname
+        line = "\t".join(parts)
+        return line
 
 def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
 
@@ -79,7 +119,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         with file_transaction(config, indel_file, snp_file) as (tx_indel, tx_snp):
             with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
-                remove_zerocoverage = "grep -v -P '\t0\t\t$'"
+                remove_zerocoverage = r"grep -v -P '\t0\t\t$'"
                 varscan_cmd = ("varscan {jvm_opts} somatic "
                                " <({normal_mpileup_cl} | {remove_zerocoverage}) "
                                "<({tumor_mpileup_cl} | {remove_zerocoverage}) "
@@ -108,7 +148,8 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                             """ "{normal_name}", "{tumor_name}")' | """
                            "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles | "
                            """bcftools filter -m + -s REJECT -e "SS != '.' && SS != '2'" 2> /dev/null | """
-                           " bgzip -c > {tx_fix_file}")
+                           "{py_cl} -x 'bcbio.variation.varscan.spv_freq_filter(x, 1)' | "
+                           "bgzip -c > {tx_fix_file}")
                     do.run(cmd.format(**locals()), "Varscan paired fix")
                 to_combine.append(fix_file)
 
