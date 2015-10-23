@@ -150,12 +150,14 @@ def _fill_validation_targets(data):
     """Fill validation targets pointing to globally installed truth sets.
     """
     ref_file = dd.get_ref_file(data)
-    for vtarget in ["validate", "validate_regions"]:
-        val = tz.get_in(["config", "algorithm", vtarget], data)
+    sv_targets = zip(itertools.repeat("svvalidate"),
+                     tz.get_in(["config", "algorithm", "svvalidate"], data, {}).keys())
+    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"]] + sv_targets]:
+        val = tz.get_in(["config", "algorithm"] + vtarget, data)
         if val and not os.path.exists(val):
             installed_val = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "validation", val))
             if os.path.exists(installed_val):
-                data["config"]["algorithm"][vtarget] = installed_val
+                data = tz.update_in(data, ["config", "algorithm"] + vtarget, lambda x: installed_val)
             else:
                 raise ValueError("Configuration problem. Validation file not found for %s: %s" %
                                  (vtarget, val))
