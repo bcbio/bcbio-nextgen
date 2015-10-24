@@ -437,6 +437,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
         with tx_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 cl = [config_utils.get_program("fastqc", data["config"]),
+                      "-d", tx_tmp_dir,
                       "-t", str(num_cores), "--extract", "-o", tx_tmp_dir, "-f", frmt, bam_file]
                 do.run(cl, "FastQC: %s" % data["name"][-1])
                 tx_fastqc_out = os.path.join(tx_tmp_dir, "%s_fastqc" % fastqc_name)
