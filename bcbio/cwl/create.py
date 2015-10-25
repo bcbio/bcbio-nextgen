@@ -1,7 +1,9 @@
 """Create Common Workflow Language (CWL) runnable files and tools from a world object.
 """
+import json
 import os
 
+import toolz as tz
 import yaml
 
 from bcbio import utils
@@ -18,7 +20,7 @@ def from_world(world, run_info_file):
     else:
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses.pop())
 
-def _standard_bcbio_cwl(samples):
+def _standard_bcbio_cwl(samples, inputs):
     """Retrieve CWL inputs shared amongst different workflows.
 
     ToDo: calculate system requirements (cores/memory) from input configuration.
@@ -29,25 +31,110 @@ def _standard_bcbio_cwl(samples):
                        "dockerImageId": "bcbio/bcbio"}],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]}],
-            "inputs": [],
+            "inputs": inputs,
             "outputs": [],
             "steps": []}
 
-def _step_template(name, inputs, outputs):
+def _step_template(name, inputs, outputs, source=""):
     """Templating function for writing a step to avoid repeating namespaces.
     """
     step_file = "steps/%s.cwl" % name
+    outputs = [x for x in inputs if x["id"].endswith(tuple(outputs))]
     return {"run": {"import": step_file},
             "id": "#%s" % name,
-            "inputs": [{"id": "#%s.%s" % (name, input), "source": []} for input, source in inputs],
-            "outputs": [{"id": "#%s.%s" % (name, output)} for output in outputs]}
+            "inputs": [{"id": "#%s.%s" % (name, inp["id"].replace("#", "")),
+                        "source": "#" + ("%s." % source if source else "") + inp["id"].replace("#", "")}
+                       for inp in inputs],
+            "outputs": [{"id": "#%s.%s" % (name, output["id"].replace("#", ""))} for output in outputs]}
 
 def prep_variant_cwl(samples, out_dir, out_file):
     """Output a CWL decription for running a variant calling workflow.
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
-    out = _standard_bcbio_cwl(samples)
-    out["steps"] = [_step_template("prep_align_inputs", [("files", ""), ("algorithm", "")], ["files"])]
+    sample_json, variables = _flatten_samples(samples, out_file)
+    out = _standard_bcbio_cwl(samples, variables)
+    s1 = _step_template("prep_align_inputs", variables, ["/files"]) 
+    out["steps"] = [s1]
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
-    return out_file
+    return out_file, sample_json
+
+def _flatten_samples(samples, base_file):
+    """Create a flattened JSON representation of data from the bcbio world map.
+    """
+    out_file = "%s-samples.json" % utils.splitext_plus(base_file)[0]
+    out = {}
+    for data in samples:
+        #import pprint
+        #pprint.pprint(data)
+        ns = data["description"]
+        for key_path in [["rgnames"], ["config", "algorithm"], ["metadata"], ["genome_build"], ["files"],
+                         ["reference"], ["genome_resources"], ["vrn_file"]]:
+            cur_key = "%s/%s" % (ns, "/".join(key_path))
+            for flat_key, flat_val in _to_cwldata(cur_key, tz.get_in(key_path, data)):
+                out[flat_key] = flat_val
+    with open(out_file, "w") as out_handle:
+        json.dump(out, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
+        return out_file, _samplejson_to_inputs(out)
+
+def _add_avro_type(inp, val):
+    """Infer avro type for the current input.
+    """
+    if isinstance(val, dict):
+        if val.get("class") == "File":
+            inp["type"] = "File"
+        else:
+            inp["type"] = "map"
+    elif isinstance(val, (tuple, list)):
+        if isinstance(val[0], dict):
+            if val[0].get("class") == "File":
+                cur_type = "File"
+            else:
+                cur_type = "map"
+        else:
+            cur_type = "string"
+        inp["type"] = {"type": "array", "items": cur_type}
+    else:
+        inp["type"] = "string"
+    return inp
+
+def _samplejson_to_inputs(svals):
+    """Convert sample output into inputs for CWL configuration files, with types.
+    """
+    out = []
+    for key, val in svals.items():
+        out.append(_add_avro_type({"id": "#%s" % key}, val))
+    return out
+    
+def _to_cwldata(key, val):
+    """Convert nested dictionary into CWL data, flatening and marking up files.
+
+    Moves file objects to the top level, enabling 
+    """
+    out = []
+    if isinstance(val, dict):
+        remain_val = {}
+        for nkey, nval in val.items():
+            cur_nkey = "%s/%s" % (key, nkey)
+            cwl_nval = _item_to_cwldata(nval)
+            if isinstance(cwl_nval, dict):
+                out.extend(_to_cwldata(cur_nkey, nval))
+            elif cwl_nval == nval:
+                remain_val[nkey] = nval
+            else:
+                out.append((cur_nkey, cwl_nval))
+        if remain_val:
+            out.append((key, remain_val))
+    else:
+        out.append((key, _item_to_cwldata(val)))
+    return out
+
+def _item_to_cwldata(x):
+    """"Markup an item with CWL specific metadata.
+    """
+    if isinstance(x, (list, tuple)):
+        return [_item_to_cwldata(subx) for subx in x]
+    elif x and isinstance(x, basestring) and os.path.isfile(x) and os.path.exists(x):
+        return {"class": "File", "path": x}
+    else:
+        return x
