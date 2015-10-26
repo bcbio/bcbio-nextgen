@@ -8,7 +8,7 @@ upload:
 details:
   - description: VarOnly
     analysis: variant2
-    vrn_file: [../data/reference_material/7_100326_FC6107FAAXX-grade.vcf]
+    vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     genome_build: hg19
     algorithm:
       tools_off: [gemini]

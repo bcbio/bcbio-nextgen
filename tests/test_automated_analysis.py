@@ -389,21 +389,15 @@ class CWLTest(unittest.TestCase):
     def setUp(self):
         self.data_dir = os.path.join(os.path.dirname(__file__), "data", "automated")
 
-    #@attr(speed=1)
-    #@attr(cwl=True)
-    #def test_1_cwl_docker(self):
-    #    cl = ["cwltool", "--verbose", "../cwl/bcbio2cwl.cwl", "../cwl/testinput-args.json"]
-    #
-    #    subprocess.check_call(cl)
-
     @attr(speed=2)
     @attr(cwl=True)
-    def test_2_cwl_nocontainer(self):
+    def test_1_cwl(self):
+        """Create a common workflow language description and run.
+        """
         with make_workdir() as workdir:
             cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-bam.yaml",
                   "--systemconfig", get_post_process_yaml(self.data_dir, workdir)]
-            # cl = ["cwltool", "--verbose", "--preserve-environment", "PATH", "HOME", "--no-container",
-            #       "../../cwl/bcbio2cwl.cwl",
-            #       "--run_config", "../data/automated/run_info-bam.yaml",
-            #       "--system_config", get_post_process_yaml(self.data_dir, workdir)]
             subprocess.check_call(cl)
+            out_base = "run_info-bam-workflow/run_info-bam-mail"
+            #cl = ["cwltool", "--verbose", "--preserve-environment", "PATH", "HOME", "--no-container",
+            #      out_base + ".cwl", out_base + "-samples.json"]

@@ -603,7 +603,9 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
         elif "files" in item:
             del item["files"]
         if item.get("vrn_file") and isinstance(item["vrn_file"], basestring):
-            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(item["vrn_file"]), config)
+            inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs"))
+            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(item["vrn_file"]), config,
+                                                        remove_orig=False, out_dir=inputs_dir)
         item = _clean_metadata(item)
         item = _clean_algorithm(item)
         # Add any global resource specifications
