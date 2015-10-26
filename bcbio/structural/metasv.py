@@ -37,7 +37,7 @@ def run(items):
             cmd += ["--workdir", tx_work_dir, "--num_threads", str(dd.get_num_cores(data))]
             cmd += ["--spades", utils.which("spades.py"), "--age", utils.which("age_align")]
             cmd += ["--assembly_max_tools=1", "--assembly_pad=500"]
-            cmd += ["--boost_ins", "--isize_mean", ins_stats["mean"], "--isize_sd", ins_stats["std"]]
+            cmd += ["--boost_sc", "--isize_mean", ins_stats["mean"], "--isize_sd", ins_stats["std"]]
             do.run(cmd, "Combine variant calls with MetaSV")
         filters = ("(NUM_SVTOOLS = 1 && ABS(SVLEN)>50000) || "
                    "(NUM_SVTOOLS = 1 && ABS(SVLEN)<4000 && BA_FLANK_PERCENT>80) || "
