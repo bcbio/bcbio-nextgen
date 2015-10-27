@@ -42,6 +42,8 @@ LOOKUPS = {
     "work_bam": {"keys": ["work_bam"]},
     "count_file": {"keys": ["count_file"]},
     "combined_counts": {"keys": ["combined_counts"]},
+    "mirna_counts": {"keys": ["mirna_counts"]},
+    "isomir_counts": {"keys": ["isomir_counts"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "ref_file": {"keys": ["reference", "fasta", "base"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},

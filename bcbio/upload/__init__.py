@@ -369,6 +369,10 @@ def _get_files_project(sample, upload_config):
         if all_coverage:
             out.append({"path": all_coverage, "type": "bed", "ext": "coverage"})
 
+    if dd.get_mirna_counts(sample):
+        out.append({"path": dd.get_mirna_counts(sample)})
+    if dd.get_isomir_counts(sample):
+        out.append({"path": dd.get_isomir_counts(sample)})
     if dd.get_combined_counts(sample):
         out.append({"path": dd.get_combined_counts(sample)})
     if dd.get_annotated_combined_counts(sample):

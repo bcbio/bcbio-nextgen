@@ -113,9 +113,20 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
     if resources and resources.get("jvm_opts"):
         jvm_opts = " ".join(resources.get("jvm_opts"))
 
-    cmd = ("miraligner {jvm_opts} -freq -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
+    cmd = ("miraligner {jvm_opts} -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
     if not file_exists(out_file + ".mirna"):
         with file_transaction(out_file) as tx_out_file:
             do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % fastq_file)
+            if _old_version(tx_out_file + ".mirna"):
+                raise ValueError("Please install last version for miraligner."
+                                 "bcbio_nextgen.py upgrade -u deps --tools.")
             shutil.move(tx_out_file + ".mirna", out_file + ".mirna")
     return out_file + ".mirna"
+
+def _old_version(fn):
+    """Check if miraligner is old version."""
+    with open(fn) as in_handle:
+        h = in_handle.next()
+        if h.find("freq") == -1:
+            return True
+    return False
