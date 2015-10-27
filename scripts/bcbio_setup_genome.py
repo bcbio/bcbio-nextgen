@@ -214,7 +214,7 @@ if __name__ == "__main__":
     if args.gtf:
         "Preparing transcriptome."
         with chdir(os.path.join(build_dir, os.pardir)):
-            cmd = ("{sys.executable} {prepare_tx} --gtf {gtf_file} {args.build}")
+            cmd = ("{sys.executable} {prepare_tx} --genome-dir {genome_dir} --gtf {gtf_file} {args.name} {args.build}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
     if args.mirbase:
         "Preparing smallRNA data."
