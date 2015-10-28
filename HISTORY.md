@@ -2,6 +2,8 @@
 
 - Speed improvements for Lumpy genotyping. Move to latest svtyper and avoid
   genotyping breakends.
+- Remove ENCODE blacklist regions when calling with VarDict on whole genomes.
+  Avoids long run times due to collapsed repeats near centromeres.
 - Update VarScan to 2.4.0 and rework support to allow piping between mpileup
   and VarScan to avoid filesystem IO.
 - Annotate ensemble calls with information about supporting callers. Thanks to
