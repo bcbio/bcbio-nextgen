@@ -28,7 +28,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     # if assembling transcripts, set flags that cufflinks can use
     if dd.get_assemble_transcripts(data):
         cmd += "--dta-cufflinks "
-    if dd.get_analysis(data) == "rna-seq":
+    if dd.get_analysis(data).lower() == "rna-seq":
+        gtf_file = dd.get_gtf_file(data)
         splicesites = os.path.join(os.path.dirname(gtf_file),
                                    "ref-transcripts-splicesites.txt")
         cmd += "--known-splicesite-infile {splicesites} "
