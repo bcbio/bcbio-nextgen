@@ -1102,6 +1102,8 @@ def _merge_metrics(samples):
     with file_transaction(out_file) as out_tx:
         for s in samples:
             s = s[0]
+            if s['description'] in cov:
+                continue
             m = tz.get_in(['summary', 'metrics'], s)
             if m:
                 for me in m:
@@ -1128,13 +1130,18 @@ def _merge_fastqc(data):
     merge all fastqc samples into one by module
     """
     fastqc_list = defaultdict(list)
+    seen = set()
     for sample in data:
         name = dd.get_sample_name(sample[0])
+        if name in seen:
+            continue
+        seen.add(name)
         fns = glob.glob(os.path.join(dd.get_work_dir(sample[0]), "qc", dd.get_sample_name(sample[0]), "fastqc") + "/*")
         for fn in fns:
             if fn.endswith("tsv"):
                 metric = os.path.basename(fn)
                 fastqc_list[metric].append([name, fn])
+
     for metric in fastqc_list:
         dt_by_sample = []
         for fn in fastqc_list[metric]:

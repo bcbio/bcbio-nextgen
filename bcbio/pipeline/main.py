@@ -373,7 +373,6 @@ class smallRnaseqPipeline(AbstractPipeline):
                 srna_report(samples)
             with profile.report("upload", dirs):
                 samples = run_parallel("upload_samples", samples)
-
                 for sample in samples:
                     run_parallel("upload_samples_project", [sample])
 
