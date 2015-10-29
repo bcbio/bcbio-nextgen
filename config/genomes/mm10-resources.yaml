@@ -1,4 +1,4 @@
-version: 12
+version: 13
 
 aliases:
   snpeff: GRCm38.78
@@ -6,7 +6,7 @@ aliases:
 
 variation:
   dbsnp: ../variation/mm10-dbSNP-2013-09-12.vcf.gz
-  lcr: ../variation/LCR.bed.gz
+  lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
