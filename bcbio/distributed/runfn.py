@@ -3,8 +3,10 @@
 Enables command line access and alternative interfaces to run specific
 functionality within bcbio-nextgen.
 """
+import json
 import os
 
+import toolz as tz
 import yaml
 
 from bcbio import log, utils
@@ -26,6 +28,8 @@ def process(args):
             fnargs = yaml.safe_load(in_handle)
         work_dir = os.path.dirname(args.argfile)
         fnargs = config_utils.merge_resources(fnargs)
+    if len(fnargs) > 0 and fnargs[0] == "cwl":
+        fnargs = _world_from_cwl(fnargs[1:])
     if not work_dir:
         work_dir = os.getcwd()
     with utils.chdir(work_dir):
@@ -34,6 +38,24 @@ def process(args):
     out_file = args.outfile if args.outfile else "%s-out%s" % os.path.splitext(args.argfile)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+
+def _world_from_cwl(fnargs):
+    """Reconstitute a bcbio world data object from flattened CWL-compatible inputs.
+
+    Converts the flat CWL object into nested, potentially multi-sample bcbio world
+    objects.
+    """
+    samples = {}
+    for fnarg in fnargs:
+        key, val = fnarg.split("=")
+        key = key.split("__")
+        if val.startswith(("{", "[")):
+            val = json.loads(val)
+        samples = tz.update_in(samples, key, lambda x: val)
+    out = []
+    for sample in sorted(samples.keys()):
+        out.append(samples[sample])
+    return [out]
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser("runfn", help=("Run a specific bcbio-nextgen function."

@@ -391,8 +391,9 @@ class CWLTest(unittest.TestCase):
 
     @attr(speed=2)
     @attr(cwl=True)
-    def test_1_cwl(self):
-        """Create a common workflow language description and run.
+    @attr(cwl_local=True)
+    def test_1_cwl_local(self):
+        """Create a common workflow language description and run on local installation.
         """
         with make_workdir() as workdir:
             cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-bam.yaml",
@@ -401,3 +402,16 @@ class CWLTest(unittest.TestCase):
             out_base = "run_info-bam-workflow/run_info-bam-mail"
             #cl = ["cwltool", "--verbose", "--preserve-environment", "PATH", "HOME", "--no-container",
             #      out_base + ".cwl", out_base + "-samples.json"]
+
+    @attr(speed=2)
+    @attr(cwl=True)
+    @attr(cwl_docker=True)
+    def test_2_cwl_docker(self):
+        """Create a common workflow language description and run on a Docker installation.
+        """
+        with make_workdir() as workdir:
+            cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-bam.yaml",
+                  "--systemconfig", get_post_process_yaml(self.data_dir, workdir)]
+            subprocess.check_call(cl)
+            out_base = "run_info-bam-workflow/run_info-bam-mail"
+            #cl = ["cwltool", "--verbose", out_base + ".cwl", out_base + "-samples.json"]
