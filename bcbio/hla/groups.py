@@ -3,6 +3,17 @@
 Uses p-groups with identical protein sequences in the antigen binding domains:
 
 http://hla.alleles.org/alleles/p_groups.html
+
+HLA allele nomenclature:
+
+https://www.ebi.ac.uk/ipd/imgt/hla/
+https://github.com/jrob119/IMGTHLA
+
+HLA sequences are from the 1000 genomes build 38 reference:
+
+ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/
+
+based on IMGT/HLA-3.18.0
 """
 import toolz as tz
 

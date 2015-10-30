@@ -33,7 +33,7 @@ def main(fasta_fai, pgroup_file):
     pprint.pprint(final)
 
 def hla_choices(orig_hla, min_parts=2):
-    """Provide a range of options for HLA type, with decreassing resolution.
+    """Provide a range of options for HLA type, with decreasing resolution.
     """
     yield orig_hla
     try:
