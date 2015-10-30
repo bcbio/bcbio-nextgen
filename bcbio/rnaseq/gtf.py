@@ -251,3 +251,40 @@ def get_transcript_source_set(gtf):
         gene_id = feature['gene_id'][0]
         transcript_to_source[feature['transcript_id'][0]] = gene_to_source[gene_id]
     return transcript_to_source
+
+def get_rRNA(gtf):
+    """
+    extract rRNA genes and transcripts from a gtf file
+    """
+    rRNA_biotypes = ["rRNA", "Mt_rRNA", "tRNA", "MT_tRNA"]
+    db = get_gtf_db(gtf)
+    biotype_lookup = _biotype_lookup_fn(gtf)
+    features = []
+    if not biotype_lookup:
+        return None
+    for feature in db.features_of_type("transcript"):
+        biotype = biotype_lookup(feature)
+        if biotype in rRNA_biotypes:
+            features.append((feature['gene_id'], feature['transcript_id']))
+    return features
+
+def _biotype_lookup_fn(gtf):
+    """
+    return a function that will look up the biotype of a feature
+    this checks for either gene_biotype or biotype being set or for the source
+    column to have biotype information
+    """
+    db = get_gtf_db(gtf)
+    sources = set([feature.source for feature in db.all_features()])
+    gene_biotypes = set([feature.attributes.get("gene_biotype", [None])[0]
+                         for feature in db.all_features()])
+    biotypes = set([feature.attributes.get("biotype", [None])[0]
+                    for feature in db.all_features()])
+    if "protein_coding" in sources:
+        return lambda feature: feature.source
+    elif "protein_coding" in biotypes:
+        return lambda feature: feature.attributes.get("biotype", [None])[0]
+    elif "protein_coding" in gene_biotypes:
+        return lambda feature: feature.attributes.get("gene_biotype", [None])[0]
+    else:
+        return None
