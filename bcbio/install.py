@@ -222,7 +222,7 @@ def _update_conda_packages():
         return os.path.dirname(os.path.dirname(conda_bin))
 
 def _get_data_dir():
-    base_dir = os.path.realpath(os.path.dirname(os.path.dirname(sys.executable)))
+    base_dir = os.path.realpath(os.path.dirname(os.path.dirname(os.path.realpath(sys.executable))))
     if "anaconda" not in os.path.basename(base_dir) and "virtualenv" not in os.path.basename(base_dir):
         raise ValueError("Cannot update data for bcbio-nextgen not installed by installer.\n"
                          "bcbio-nextgen needs to be installed inside an anaconda environment \n"

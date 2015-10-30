@@ -8,6 +8,7 @@ from distutils.version import LooseVersion
 import os
 import glob
 import shutil
+import subprocess
 import string
 
 import toolz as tz
@@ -91,13 +92,21 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
                 os.path.dirname(os.path.dirname(ref_file)), "vep")))
             out_dir = os.path.join(vep_dir, species, vepv)
             if not os.path.exists(out_dir):
+                tmp_dir = utils.safe_makedir(os.path.join(vep_dir, species, "txtmp"))
+                eversion = vepv.split("_")[0]
+                url = "ftp://ftp.ensembl.org/pub/release-%s/variation/VEP/%s.tar.gz" % (eversion, ensembl_name)
+                with utils.chdir(tmp_dir):
+                    subprocess.check_call(["wget", "--no-check-certificate", "-c", url])
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
                 cmd = ["%svep_install.pl" % vep_path, "-a", "c", "-s", ensembl_name,
-                       "-c", vep_dir]
+                       "-c", vep_dir, "-u", tmp_dir]
                 do.run(cmd, "Prepare VEP directory for %s" % ensembl_name)
                 cmd = ["%svep_convert_cache.pl" % vep_path, "-species", species, "-version", vepv,
                        "-d", vep_dir]
                 do.run(cmd, "Convert VEP cache to tabix %s" % ensembl_name)
+                for tmp_fname in os.listdir(tmp_dir):
+                    os.remove(os.path.join(tmp_dir, tmp_fname))
+                os.rmdir(tmp_dir)
             tmp_dir = os.path.join(vep_dir, "tmp")
             if os.path.exists(tmp_dir):
                 shutil.rmtree(tmp_dir)
