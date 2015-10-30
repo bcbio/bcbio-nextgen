@@ -43,6 +43,7 @@ from bcbio import broad
 from bcbio.variation import coverage_experimental as cov
 from bcbio.variation.coverage import decorate_problem_regions
 from bcbio.ngsalign.postalign import dedup_bam
+from bcbio.rnaseq import gtf
 # ## High level functions to generate summary
 
 
@@ -666,41 +667,13 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
                 if bio.startswith("rRNA"):
                     out_handle.write(("{0}:{1}-{2}\n").format(c, s, e))
 
-def _detect_rRNA(config, bam_file, rRNA_file, ref_file, out_dir, single_end):
-    """
-    Calculate rRNA with gatk-framework
-    """
-    if not utils.file_exists(rRNA_file):
-        return {'rRNA': 0}
-    out_file = os.path.join(out_dir, "rRNA.counts")
-    if not utils.file_exists(out_file):
-        out_file = _count_rRNA_reads(bam_file, out_file, ref_file, rRNA_file, single_end, config)
-    with open(out_file) as in_handle:
-        for line in in_handle:
-            if line.find("CountReads counted") > -1:
-                rRNA_reads = line.split()[6]
-                break
-    return {'rRNA': rRNA_reads}
-
-def _count_rRNA_reads(in_bam, out_file, ref_file, rRNA_interval, single_end, config):
-    """Use GATK counter to count reads in rRNA genes
-    """
-    bam.index(in_bam, config)
-    if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out_file:
-            rRNA_coor = os.path.join(os.path.dirname(out_file), "rRNA.list")
-            _transform_browser_coor(rRNA_interval, rRNA_coor)
-            params = ["-T", "CountReads",
-                      "-R", ref_file,
-                      "-I", in_bam,
-                      "-log", tx_out_file,
-                      "-L", rRNA_coor,
-                      "--filter_reads_with_N_cigar",
-                      "-allowPotentiallyMisencodedQuals"]
-            jvm_opts = broad.get_gatk_framework_opts(config)
-            cmd = [config_utils.get_program("gatk-framework", config)] + jvm_opts + params
-            do.run(cmd, "counts rRNA for %s" % in_bam)
-        return out_file
+def _detect_rRNA(data):
+    gtf_file = dd.get_gtf_file(data)
+    count_file = dd.get_count_file(data)
+    rrna_features = gtf.get_rRNA(gtf_file)
+    genes = [x[0] for x in rrna_features if x]
+    count_table = pd.read_csv(count_file, sep="\t", names=["id", "counts"])
+    return {'rRNA': sum(count_table.ix[genes]["counts"])}
 
 def _parse_qualimap_rnaseq(table):
     """
@@ -745,7 +718,7 @@ def _rnaseq_qualimap(bam_file, data, out_dir):
         do.run(cmd, "Qualimap for {}".format(data["name"][-1]))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, out_dir, data))
-    metrics.update(_detect_rRNA(config, bam_file, gtf_file, ref_file, out_dir, single_end))
+    metrics.update(_detect_rRNA(data))
     metrics.update({"Fragment Length Mean": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
     return metrics
