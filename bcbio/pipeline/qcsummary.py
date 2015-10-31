@@ -601,22 +601,25 @@ def _parse_metrics(metrics):
 
     missing = set(["Genes Detected", "Transcripts Detected",
                    "Mean Per Base Cov."])
-    correct = set(["Intergenic pct", "Intronic pct", "Exonic pct"])
+    correct = set(["rRNA", "rRNA_rate"])
+    percentages = set(["Intergenic pct", "Intronic pct", "Exonic pct"])
     to_change = dict({"5'-3' bias": 1, "Intergenic pct": "Intergenic Rate",
-                      "Intronic pct": "Intronic Rate", "Exonic pct": "Exonic Rate",
-                      "Not aligned": 0, 'Aligned to genes': 0, 'Non-unique alignment': 0,
-                      "No feature assigned": 0, "Duplication Rate of Mapped": 1,
-                      "Fragment Length Mean": 1,
-                      "rRNA": 1, "Ambiguou alignment": 0})
+                      "Intronic pct": "Intronic Rate",
+                      "Exonic pct": "Exonic Rate",
+                      "Not aligned": 0, 'Aligned to genes': 0,
+                      'Non-unique alignment': 0, "No feature assigned": 0,
+                      "Duplication Rate of Mapped": 1, "Fragment Length Mean": 1,
+                      "Ambiguou alignment": 0})
     total = ["Not aligned", "Aligned to genes", "No feature assigned"]
 
     out = {}
     total_reads = sum([int(metrics[name]) for name in total])
-    out['rRNA rate'] = 1.0 * int(metrics["rRNA"]) / total_reads
     out['Mapped'] = sum([int(metrics[name]) for name in total[1:]])
     out['Mapping Rate'] = 1.0 * int(out['Mapped']) / total_reads
     [out.update({name: 0}) for name in missing]
-    [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in correct]
+    out.update({key: val for key, val in metrics.iteritems() if key in correct})
+    [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
+     percentages]
 
     for name in to_change:
         if not to_change[name]:
@@ -672,8 +675,12 @@ def _detect_rRNA(data):
     count_file = dd.get_count_file(data)
     rrna_features = gtf.get_rRNA(gtf_file)
     genes = [x[0] for x in rrna_features if x]
+    if not genes:
+        return {'rRNA': "NA", "rRNA_rate": "NA"}
     count_table = pd.read_csv(count_file, sep="\t", names=["id", "counts"])
-    return {'rRNA': sum(count_table.ix[genes]["counts"])}
+    rrna = sum(count_table.ix[genes]["counts"])
+    rrna_rate = float(rrna) / sum(count_table["counts"])
+    return {'rRNA': rrna, 'rRNA_rate': rrna_rate}
 
 def _parse_qualimap_rnaseq(table):
     """
