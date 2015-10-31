@@ -4,6 +4,7 @@ details:
   - analysis: smallRNA-seq
     algorithm:
       aligner: star
-      adapters: ["TGGAATTCTCGGGTGC"]
+      # change adapter according project
+      adapters: ["TGGAATTCTCGGGTGC"] 
       species: hsa
     genome_build: hg19
