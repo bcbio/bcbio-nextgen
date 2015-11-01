@@ -354,7 +354,7 @@ def summarize_grading(samples):
             writer.writerow(header)
             plot_data = []
             plot_files = []
-            for data in vitems:
+            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
                 for variant in data.get("variants", []):
                     if variant.get("validate"):
                         variant["validate"]["grading_summary"] = out_csv

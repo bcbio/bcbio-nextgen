@@ -28,11 +28,18 @@ from bcbio.variation import bamprep
 def classifyplot_from_plotfiles(plot_files, out_csv, outtype="png", title=None, size=None):
     """Create a plot from individual summary csv files with classification metrics.
     """
-    df = pd.concat([pd.read_csv(x) for x in plot_files])
+    dfs = [pd.read_csv(x) for x in plot_files]
+    samples = []
+    for df in dfs:
+        for sample in df["sample"].unique():
+            if sample not in samples:
+                samples.append(sample)
+    df = pd.concat(dfs)
     df.to_csv(out_csv, index=False)
-    return classifyplot_from_valfile(out_csv, outtype, title, size)
+    return classifyplot_from_valfile(out_csv, outtype, title, size, samples)
 
-def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None):
+def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None,
+                              samples=None):
     """Create a plot from a summarized validation file.
 
     Does new-style plotting of summarized metrics of
@@ -44,7 +51,7 @@ def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None):
     df = grouped.apply(_calculate_fnr_fdr)
     df = df.reset_index()
     out_file = "%s.%s" % (os.path.splitext(val_file)[0], outtype)
-    _do_classifyplot(df, out_file, title, size)
+    _do_classifyplot(df, out_file, title, size, samples)
     return [out_file]
 
 def _calculate_fnr_fdr(group):
@@ -56,7 +63,7 @@ def _calculate_fnr_fdr(group):
                           "tpr": "TP: %s FN: %s" % (data["tp"], data["fn"]),
                           "spc": "FP: %s" % (data["fp"])}])
 
-def _do_classifyplot(df, out_file, title=None, size=None):
+def _do_classifyplot(df, out_file, title=None, size=None, samples=None):
     """Plot using classification-based plot using seaborn.
     """
     metric_labels = {"fdr": "False discovery rate",
@@ -68,7 +75,8 @@ def _do_classifyplot(df, out_file, title=None, size=None):
     sns.set(style='white')
     vtypes = sorted(df["vtype"].unique(), reverse=True)
     callers = sorted(df["caller"].unique())
-    samples = sorted(df["sample"].unique())
+    if not samples:
+        samples = sorted(df["sample"].unique())
     if len(samples) >= len(callers):
         cats, groups = (samples, callers)
         data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
