@@ -30,7 +30,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils
+from bcbio.variation import bedutils, realign
 from bcbio.variation import multi as vmulti
 
 def parallel_callable_loci(in_bam, ref_file, data):
@@ -109,11 +109,22 @@ def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, 
 
 def _regions_for_coverage(data, region, ref_file, out_file):
     """Retrieve BED file of regions we need to calculate coverage in.
+
+    Checks for variant region specifications that do not overlap contigs
+    (in which case we do not calculate coverage) and regions smaller than
+    callable_min_size (in which case we assign everything as callable).
+    callable_min_size avoids calculations for small chromosomes we won't
+    split on later, saving computation and disk IO.
     """
     variant_regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
     ready_region = shared.subset_variant_regions(variant_regions, region, out_file)
     custom_file = "%s-coverageregions.bed" % utils.splitext_plus(out_file)[0]
-    if not ready_region:
+    region_size = _get_region_size(ref_file, data, region)
+    if variant_regions is None and region_size is not None and region_size < dd.get_callable_min_size(data):
+        coverage_str = "CALLABLE" if realign.has_aligned_reads(dd.get_work_bam(data), region) else "NO_COVERAGE"
+        custom_file = _write_all_chrom_file(coverage_str, custom_file, ref_file, region, data)
+        return custom_file, False
+    elif not ready_region:
         get_ref_bedtool(ref_file, data["config"]).saveas(custom_file)
         return custom_file, True
     elif os.path.isfile(ready_region):
@@ -123,11 +134,25 @@ def _regions_for_coverage(data, region, ref_file, out_file):
         pybedtools.BedTool("%s\t%s\t%s\n" % (c, s, e), from_string=True).saveas(custom_file)
         return custom_file, True
     else:
-        with file_transaction(data, custom_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                for feat in get_ref_bedtool(ref_file, data["config"], region):
-                    out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, "NO_COVERAGE"))
+        custom_file = _write_all_chrom_file("NO_COVERAGE", custom_file, ref_file, region, data)
         return custom_file, variant_regions is None
+
+def _write_all_chrom_file(coverage_str, out_file, ref_file, region, data):
+    """Write a coverage calculation for an entire chromosome, skipping work of running bedtools.
+    """
+    with file_transaction(data, out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            for feat in get_ref_bedtool(ref_file, data["config"], region):
+                out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, coverage_str))
+    return out_file
+
+def _get_region_size(ref_file, data, region=None):
+    """Retrieve size of a region, potentially returning None if not set.
+    """
+    if region:
+        for contig in ref.file_contigs(ref_file, data["config"]):
+            if contig.name == region:
+                return contig.size
 
 def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.

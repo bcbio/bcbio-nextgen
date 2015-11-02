@@ -90,6 +90,8 @@ LOOKUPS = {
     "vrn_file": {"keys": ["vrn_file"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "callable_regions": {"keys": ["regions", "callable"]},
+    "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
+                          "default": 1000000},
     "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
     "sailfish": {"keys": ["sailfish"]},
     "sailfish_dir": {"keys": ["sailfish_dir"]},

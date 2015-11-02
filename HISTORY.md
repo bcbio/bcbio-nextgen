@@ -1,5 +1,8 @@
 ## 0.9.5 (in progress)
 
+- Avoid running callability checks on smaller chromosomes less than 1 million
+  basepairs. Saves computation and disk IO on alt and support regions we don't
+  split on.
 - Speed improvements for Lumpy genotyping. Move to latest svtyper and avoid
   genotyping breakends.
 - Remove ENCODE blacklist regions when calling with VarDict on whole genomes.

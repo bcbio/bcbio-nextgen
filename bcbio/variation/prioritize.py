@@ -51,8 +51,7 @@ def _apply_priority_filter(in_file, priority_file, data):
             cmd = ("bcftools annotate -a {priority_file} -h {header_file} "
                    "-c CHROM,FROM,TO,REF,ALT,INFO/EPR {in_file} | "
                    "bcftools filter -m '+' -s 'LowPriority' "
-                   "-e 'EPR[*] != \"pass\"' | "
-                   r"""sed 's/\\\"pass\\\"/pass/' | bgzip -c > {tx_out_file}""")
+                   """-e "EPR[*] != 'pass'" | bgzip -c > {tx_out_file}""")
             do.run(cmd.format(**locals()), "Run external annotation based prioritization filtering")
     vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
