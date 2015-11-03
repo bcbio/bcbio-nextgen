@@ -52,10 +52,14 @@ def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
                       "-R", ref_file,
                       "--input", in_file,
                       "--out", tx_out_file,
-                      "--ts_filter_level", sensitivity_cutoff,
                       "--tranches_file", tranch_file,
                       "--recal_file", recal_file,
                       "--mode", filter_type]
+            resources = config_utils.get_resources("gatk_apply_recalibration", data["config"])
+            opts = resources.get("options", [])
+            if not opts:
+                ops += ["--ts_filter_level", sensitivity_cutoff]
+            params += opts
             broad_runner.run_gatk(params)
     return out_file
 
@@ -129,11 +133,15 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
                       "--mode", filter_type,
                       "--recal_file", tx_recal,
                       "--tranches_file", tx_tranches]
-            for cutoff in cutoffs:
-                params += ["-tranche", str(cutoff)]
             params += _get_vqsr_training(filter_type, vrn_files)
-            for a in _get_vqsr_annotations(filter_type):
-                params += ["-an", a]
+            resources = config_utils.get_resources("gatk_variant_recalibrator", data["config"])
+            opts = resources.get("options", [])
+            if not opts:
+                for cutoff in cutoffs:
+                    opts += ["-tranche", str(cutoff)]
+                for a in _get_vqsr_annotations(filter_type):
+                    opts += ["-an", a]
+            params += opts
             cores = dd.get_cores(data)
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             try:
