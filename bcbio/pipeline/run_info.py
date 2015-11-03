@@ -27,7 +27,7 @@ from bcbio.bam.fastq import open_fastq
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
                          "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
 
-def organize(dirs, config, run_info_yaml, sample_names=None):
+def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True):
     """Organize run information from a passed YAML file or the Galaxy API.
 
     Creates the high level structure used for subsequent processing.
@@ -63,19 +63,21 @@ def organize(dirs, config, run_info_yaml, sample_names=None):
                 tmp_dir = genome.abs_file_paths(tmp_dir)
             item["config"]["resources"]["tmp"]["dir"] = tmp_dir
         out.append(item)
-    out = _add_provenance(out, dirs, config)
+    out = _add_provenance(out, dirs, config, add_provenance)
     return out
 
-def _add_provenance(items, dirs, config):
-    p = programs.write_versions(dirs, config=config)
-    versioncheck.testall(items)
-    p_db = diagnostics.initialize(dirs)
+def _add_provenance(items, dirs, config, add_provenance=True):
+    if add_provenance:
+        p = programs.write_versions(dirs, config=config)
+        versioncheck.testall(items)
+        p_db = diagnostics.initialize(dirs)
     out = []
     for item in items:
-        entity_id = diagnostics.store_entity(item)
-        item["config"]["resources"]["program_versions"] = p
-        item["provenance"] = {"programs": p, "entity": entity_id,
-                              "db": p_db}
+        if add_provenance:
+            entity_id = diagnostics.store_entity(item)
+            item["config"]["resources"]["program_versions"] = p
+            item["provenance"] = {"programs": p, "entity": entity_id,
+                                "db": p_db}
         out.append([item])
     return out
 
