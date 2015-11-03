@@ -128,19 +128,27 @@ def run_vep(in_file, data):
                 cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
-                dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
-                loftee_args, loftee_fields = _get_loftee(data)
+                is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
+                if is_human:
+                    dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
+                    loftee_args, loftee_fields = _get_loftee(data)
+                    prediction_args = ["--sift", "b", "--polyphen", "b"]
+                    prediction_fields = ["PolyPhen", "SIFT"]
+                else:
+                    dbnsfp_args, dbnsfp_fields = [], []
+                    loftee_args, loftee_fields = [], []
+                    prediction_args, prediction_fields = [], []
                 std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
-                              "EXON", "PolyPhen", "SIFT", "Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
+                              "EXON"] + prediction_fields + ["Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 resources = config_utils.get_resources("vep", data["config"])
                 extra_args = [str(x) for x in resources.get("options", [])]
                 cmd = [vep, "--vcf", "-o", "stdout", "-i", in_file] + fork_args + extra_args + \
                       ["--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
-                       "--sift", "b", "--polyphen", "b", "--symbol", "--numbers", "--biotype", "--total_length",
-                       "--canonical", "--ccds",
-                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + dbnsfp_args + loftee_args
+                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--ccds",
+                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + \
+                       prediction_args + dbnsfp_args + loftee_args
 
                 if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
 

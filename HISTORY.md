@@ -5,6 +5,7 @@
   split on.
 - Speed improvements for Lumpy genotyping. Move to latest svtyper and avoid
   genotyping breakends.
+- Allow use of VEP annotations on non-human analyses.
 - Remove ENCODE blacklist regions when calling with VarDict on whole genomes.
   Avoids long run times due to collapsed repeats near centromeres.
 - Update VarScan to 2.4.0 and rework support to allow piping between mpileup
