@@ -181,6 +181,8 @@ def combine_files(samples):
     all samples
     """
     gtf_file = dd.get_gtf_file(samples[0][0], None)
+    dexseq_gff = dd.get_dexseq_gff(samples[0][0])
+
     # combine featureCount files
     count_files = filter_missing([dd.get_count_file(x[0]) for x in samples])
     combined = count.combine_count_files(count_files, ext=".counts")
@@ -210,6 +212,7 @@ def combine_files(samples):
     if to_combine_dexseq:
         dexseq_combined = count.combine_count_files(to_combine_dexseq,
                                                     dexseq_combined_file, ".dexseq")
+        dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
     else:
         dexseq_combined = None
     updated_samples = []
