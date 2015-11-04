@@ -340,6 +340,11 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["summary"]["mixup_check"],
                     "type": "directory", "ext": "mixup_check"})
 
+    report = os.path.join(dd.get_work_dir(sample), "report")
+    if utils.file_exists(report):
+        out.append({"path": report,
+            "type": "directory", "ext": "report"})
+
     if sample.get("seqcluster", None):
         out.append({"path": sample["seqcluster"],
                     "type": "directory", "ext": "seqcluster"})
