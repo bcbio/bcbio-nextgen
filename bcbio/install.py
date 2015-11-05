@@ -184,7 +184,7 @@ def _install_container_bcbio_system(datadir):
     return expose_file
 
 def _get_conda_bin():
-    conda_bin = os.path.join(os.path.dirname(sys.executable), "conda")
+    conda_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "conda")
     if os.path.exists(conda_bin):
         return conda_bin
 

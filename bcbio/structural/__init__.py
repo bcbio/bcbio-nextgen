@@ -8,7 +8,7 @@ import toolz as tz
 
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import (battenberg, cn_mops, cnvkit, delly,
-                              lumpy, manta, metasv, plot, validate, wham)
+                              lumpy, manta, metasv, prioritize, plot, validate, wham)
 from bcbio.variation import vcfutils
 
 # Stratify callers by stage -- see `run` documentation below for definitions
@@ -17,7 +17,8 @@ _CALLERS = {
               "battenberg": battenberg.run},
   "standard": {"cn.mops": cn_mops.run, "manta": manta.run,
                "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run},
-  "ensemble": {"metasv": metasv.run}}
+  "ensemble": {"metasv": metasv.run,
+               "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
 
 def _get_svcallers(data):
@@ -32,18 +33,20 @@ def _handle_multiple_svcallers(data, stage):
     """Retrieve configured structural variation caller, handling multiple.
     """
     svs = _get_svcallers(data)
+    # special cases -- prioritization
+    if stage == "ensemble" and tz.get_in(["config", "algorithm", "svprioritize"], data):
+        svs.append("prioritize")
     out = []
     for svcaller in svs:
         if svcaller in _CALLERS[stage]:
             base = copy.deepcopy(data)
+            base["config"]["algorithm"]["svcaller"] = svs
             base["config"]["algorithm"]["svcaller_active"] = svcaller
             out.append(base)
     return out
 
 def finalize_sv(samples, config):
     """Combine results from multiple sv callers into a single ordered 'sv' key.
-
-    Handles ensemble calling and plotting of results.
     """
     by_bam = collections.OrderedDict()
     for x in samples:
@@ -92,7 +95,7 @@ def run(samples, run_parallel, stage):
     The stage indicates which level of structural variant calling to run.
       - initial, run prior to other callers and variant calling
       - standard, regular batch calling
-      - ensemble, post-calling, combine other callers-
+      - ensemble, post-calling, combine other callers or prioritize results
     """
     to_process = collections.OrderedDict()
     extras = []

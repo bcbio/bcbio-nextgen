@@ -196,7 +196,7 @@ def _get_variant_file(x, key):
                             "index": True,
                             "ext": x["variantcaller"],
                             "variantcaller": x["variantcaller"]})
-        elif fname.endswith((".vcf", ".bed", ".bedpe", ".bedgraph", ".cnr", ".cns", ".cnn", ".txt")):
+        elif fname.endswith((".vcf", ".bed", ".bedpe", ".bedgraph", ".cnr", ".cns", ".cnn", ".txt", ".tsv")):
             ftype = utils.splitext_plus(fname)[-1][1:]
             if ftype == "txt":
                 ftype = fname.split("-")[-1]
