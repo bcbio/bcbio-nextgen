@@ -1,6 +1,18 @@
 Presentations
 =============
 
+- Supporting the common workflow language and Docker in bcbio
+  `Bio in Docker symposium
+  <http://core.brc.iop.kcl.ac.uk/events/compbio-docker-symposium-2015/>`_
+  (9 November 2015): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/bioindocker2015_bcbio/chapman_bioindocker.pdf>`_
+
+- Validation on human build 38, HLA typing, low frequency cancer calling and
+  structural variation for `Boston Bioinformatics Interest Group (BIG) meeting
+  <http://openwetware.org/wiki/BioMicroCenter:BIG_meeting>`_
+  (5 November 2015):
+  `slides <https://github.com/chapmanb/bcbb/blob/master/talks/big2015_bcbio/big2015_bcbio.pdf>`_
+
 - Presentation on Research Scientist Careers for `Iowa State Bioinformatics
   Course <https://bcbio.las.iastate.edu/>`_ (23 September 2015): `slides
   <https://github.com/chapmanb/bcbb/blob/master/talks/2015_iowast_career/chapman_career.pdf>`_
