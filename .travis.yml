@@ -21,7 +21,7 @@ install:
   # Install bcbio-nextgen and bcbio-nextgen-vm
   - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
   #- conda install --yes -c bcbio bcbio-nextgen-vm -q #XXX bcbio-nextgen-vm changes not yet in conda
-  - pip install https://github.com/brainstorm/bcbio-nextgen-vm/tree/dockerhub/master
+  - pip install https://github.com/brainstorm/bcbio-nextgen-vm/tarball/dockerhub/master
   - pip install https://github.com/brainstorm/bcbio-nextgen/tarball/dockerhub_nos3/master
   # Get docker container
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
