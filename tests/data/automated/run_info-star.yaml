@@ -5,6 +5,8 @@ fc_name: ERP000591
 details:
   - analysis: RNA-seq
     algorithm:
+      fusion_mode: True
+      variantcaller: [gatk]
       transcriptome_align: True
       aligner: star
       quality_format: Standard
