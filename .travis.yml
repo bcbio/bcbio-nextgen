@@ -6,6 +6,10 @@ language: generic
 env:
   - BCBIO_DOCKER_PRIVILEGED=True
 
+branches:
+  only:
+    - dockerhub_nos3
+
 before_install:
   # Temporal fix for networking problem: https://github.com/travis-ci/travis-ci/issues/1484
   - echo "127.0.1.1 "`hostname` | sudo tee /etc/hosts
