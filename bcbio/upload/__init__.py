@@ -58,6 +58,7 @@ def _get_files_rnaseq(sample):
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_transcriptome_alignment(sample, out)
     out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
@@ -271,6 +272,14 @@ def _maybe_add_disambiguate(algorithm, sample, out):
                                 "plus": True,
                                 "index": True,
                                 "ext": "disambiguate-%s" % extra_name})
+    return out
+
+def _maybe_add_transcriptome_alignment(sample, out):
+    transcriptome_bam = dd.get_transcriptome_bam(sample)
+    if transcriptome_bam and utils.file_exists(transcriptome_bam):
+        out.append({"path": transcriptome_bam,
+                    "type": "bam",
+                    "ext": "transcriptome"})
     return out
 
 def _maybe_add_counts(algorithm, sample, out):

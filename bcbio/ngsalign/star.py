@@ -64,8 +64,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if strandedness == "unstranded" and not srna:
         cmd += " --outSAMstrandField intronMotif "
 
-    if dd.get_transcriptome_align(data) and not is_transcriptome_broken(data):
-        cmd += " --quantMode TranscriptomeSAM "
+    cmd += " --quantMode TranscriptomeSAM "
 
     with file_transaction(data, final_out) as tx_final_out:
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
@@ -95,17 +94,21 @@ def _has_sj_index(ref_file):
 def _update_data(align_file, out_dir, names, data):
     data = dd.set_work_bam(data, align_file)
     data = dd.set_align_bam(data, align_file)
-    if dd.get_transcriptome_align(data) and not is_transcriptome_broken(data):
-        transcriptome_file = _move_transcriptome_file(out_dir, names)
-        data = dd.set_transcriptome_bam(data, transcriptome_file)
+    transcriptome_file = _move_transcriptome_file(out_dir, names)
+    data = dd.set_transcriptome_bam(data, transcriptome_file)
     return data
 
 def _move_transcriptome_file(out_dir, names):
     out_file = os.path.join(out_dir, "{0}.transcriptome.bam".format(names["sample"]))
+    star_file = os.path.join(out_dir, os.pardir,
+                            "{0}Aligned.toTranscriptome.out.bam".format(names["lane"]))
+    # if the out_file or the star_file doesn't exist, we didn't run the
+    # transcriptome mapping
     if not file_exists(out_file):
-        tmp_file = os.path.join(out_dir, os.pardir,
-                                "{0}Aligned.toTranscriptome.out.bam".format(names["lane"]))
-        shutil.move(tmp_file, out_file)
+        if not file_exists(star_file):
+            return None
+        else:
+            shutil.move(star_file, out_file)
     return out_file
 
 def _read_group_option(names):
@@ -162,11 +165,3 @@ def get_star_version(data):
             if "STAR_" in line:
                 version = line.split("STAR_")[1].strip()
     return version
-
-def is_transcriptome_broken(data):
-    """
-    mapping to the transcriptome causes segfaults, but will be supported later
-    until it is fixed, skip this and use the fallback mapping instead
-    """
-    version = get_star_version(data)
-    return LooseVersion(version) >= LooseVersion("2.4.0g")
