@@ -44,17 +44,22 @@ def get_fastq_files(data):
 
 def _gzip_fastq(in_file):
     """
-    gzip a fastq file if it is not already gzipped
+    gzip a fastq file if it is not already compressed
     """
-    if (fastq.is_fastq(in_file) and not utils.is_gzipped(in_file)
-          and not objectstore.is_remote(in_file)):
-        gzipped_file = in_file + ".gz"
-        if file_exists(gzipped_file):
+    if fastq.is_fastq(in_file) and not objectstore.is_remote(in_file):
+        if utils.is_bzipped(in_file):
+            return _bzip_gzip(in_file)
+        elif not utils.is_gzipped(in_file):
+            gzipped_file = in_file + ".gz"
+            if file_exists(gzipped_file):
+                return gzipped_file
+            message = "gzipping {in_file}.".format(in_file=in_file)
+            with file_transaction(gzipped_file) as tx_gzipped_file:
+                do.run("gzip -c {in_file} > {tx_gzipped_file}".format(**locals()),
+                       message)
             return gzipped_file
-        message = "gzipping {in_file}.".format(in_file=in_file)
-        do.run("gzip -c {in_file} > {gzipped_file}".format(**locals()), message)
-        return gzipped_file
-    return in_file
+    else:
+        return in_file
 
 def _bzip_gzip(in_file):
     """
@@ -70,7 +75,8 @@ def _bzip_gzip(in_file):
         if file_exists(gzipped_file):
             return gzipped_file
         message = "gzipping {in_file}.".format(in_file=in_file)
-        do.run("bunzip2 -c {in_file} | gzip > {gzipped_file}".format(**locals()), message)
+        with file_transaction(gzipped_file) as tx_gzipped_file:
+            do.run("bunzip2 -c {in_file} | gzip > {tx_gzipped_file}".format(**locals()), message)
         return gzipped_file
     return in_file
 

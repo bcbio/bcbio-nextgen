@@ -69,7 +69,10 @@ def _prep_fastq_input(fs, base):
 KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".fastq": "fastq", ".txt": "fastq",
               ".fastq.gz": "fastq", ".fq.gz": "fastq",
-              ".txt.gz": "fastq", ".gz": "fastq"}
+              ".txt.gz": "fastq", ".gz": "fastq",
+              ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
+              ".txt.bz2": "fastq", ".bz2": "fastq"}
+
 
 def _prep_items_from_base(base, in_files):
     """Prepare a set of configuration items for input files.
