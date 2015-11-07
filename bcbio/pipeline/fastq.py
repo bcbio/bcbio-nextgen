@@ -44,7 +44,8 @@ def get_fastq_files(data):
 
 def _gzip_fastq(in_file):
     """
-    gzip a fastq file if it is not already compressed
+    gzip a fastq file if it is not already gzipped, handling conversion
+    from bzip to gzipped files
     """
     if fastq.is_fastq(in_file) and not objectstore.is_remote(in_file):
         if utils.is_bzipped(in_file):
