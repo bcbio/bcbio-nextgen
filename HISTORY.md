@@ -3,6 +3,8 @@
 - Avoid running callability checks on smaller chromosomes less than 1 million
   basepairs. Saves computation and disk IO on alt and support regions we don't
   split on.
+- Enable nested batch specifications, allowing samples in partially overlapping
+  batches.
 - Speed improvements for Lumpy genotyping. Move to latest svtyper and avoid
   genotyping breakends.
 - Allow use of VEP annotations on non-human analyses.

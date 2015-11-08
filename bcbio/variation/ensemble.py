@@ -19,7 +19,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import population, validate, vcfutils
+from bcbio.variation import population, validate, vcfutils, multi
 
 def combine_calls(batch_id, samples, data):
     """Combine multiple callsets into a final set of merged calls.
@@ -82,12 +82,7 @@ def _group_by_batches(samples, check_fn):
     extras = []
     for data in [x[0] for x in samples]:
         if check_fn(data):
-            batch = data.get("metadata", {}).get("batch")
-            if batch:
-                batch_groups[batch].append(data)
-            else:
-                assert data["name"][-1] not in batch_groups
-                batch_groups[data["name"][-1]] = [data]
+            batch_groups[multi.get_batch_for_key(data)].append(data)
         else:
             extras.append([data])
     return batch_groups, extras

@@ -21,8 +21,10 @@ def group_by_batch(items, require_bam=True):
     out = collections.defaultdict(list)
     batch_groups = _get_representative_batch(_merge_batches(_find_all_groups(items, require_bam)))
     for data in items:
-        batch = batch_groups[_get_batches(data, require_bam)[0]]
-        out[batch].append(data)
+        batches = _get_batches(data, require_bam)
+        # take first batch as representative
+        batch = batch_groups[batches[0]]
+        out[batch].append(utils.deepish_copy(data))
     return dict(out)
 
 def bam_needs_processing(data):
@@ -32,6 +34,15 @@ def bam_needs_processing(data):
             any(tz.get_in(["config", "algorithm", x], data) for x in
                 ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
                  "jointcaller"]))
+
+def get_batch_for_key(data):
+    """Retrieve batch information useful as a unique key for the sample.
+    """
+    batches = _get_batches(data, require_bam=False)
+    if len(batches) == 1:
+        return batches[0]
+    else:
+        return tuple(batches)
 
 def _get_batches(data, require_bam=True):
     if bam_needs_processing(data) or not require_bam:
@@ -111,6 +122,10 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
     batches = []
     for batch, items in batch_groups.iteritems():
         batch_data = utils.deepish_copy(_pick_lead_item(items))
+        # For nested primary batches, split permanently by batch
+        if tz.get_in(["metadata", "batch"], batch_data):
+            batch_name = batch[0]
+            batch_data["metadata"]["batch"] = batch_name
         batch_data = prep_data_fn(batch_data, items)
         batch_data["group_orig"] = _collapse_subitems(batch_data, items)
         batch_data["group"] = batch
@@ -232,6 +247,9 @@ def split_variants_by_sample(data):
         out = []
         for i, sub_data in enumerate(get_orig_items(data)):
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":
+                cur_batch = tz.get_in(["metadata", "batch"], data)
+                if cur_batch:
+                    sub_data["metadata"]["batch"] = cur_batch
                 sub_data["vrn_file"] = data["vrn_file"]
             else:
                 sub_data.pop("vrn_file", None)
@@ -241,6 +259,9 @@ def split_variants_by_sample(data):
     elif tz.get_in(("config", "algorithm", "jointcaller"), data):
         out = []
         for sub_data in get_orig_items(data):
+            cur_batch = tz.get_in(["metadata", "batch"], data)
+            if cur_batch:
+                sub_data["metadata"]["batch"] = cur_batch
             sub_data["vrn_file_batch"] = data["vrn_file"]
             sub_data["vrn_file"] = data["vrn_file"]
             out.append([sub_data])
@@ -254,6 +275,9 @@ def split_variants_by_sample(data):
                 vcfutils.select_sample(data["vrn_file"], str(sub_data["name"][-1]), sub_vrn_file, data["config"])
             elif not os.path.exists(sub_vrn_file):
                 utils.symlink_plus(data["vrn_file"], sub_vrn_file)
+            cur_batch = tz.get_in(["metadata", "batch"], data)
+            if cur_batch:
+                sub_data["metadata"]["batch"] = cur_batch
             sub_data["vrn_file_batch"] = data["vrn_file"]
             sub_data["vrn_file"] = sub_vrn_file
             out.append([sub_data])

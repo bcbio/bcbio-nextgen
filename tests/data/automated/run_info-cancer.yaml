@@ -28,7 +28,7 @@ details:
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
     genome_build: hg19
     metadata:
-      batch: PairedBatch
+      batch: [TumorOnly, PairedBatch]
       phenotype: tumor
     algorithm:
       aligner: bwa

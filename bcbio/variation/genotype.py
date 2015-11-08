@@ -47,7 +47,7 @@ def combine_multiple_callers(samples):
         work_bam = tz.get_in(("combine", "work_bam", "out"), data, data.get("align_bam"))
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         variantcaller = get_variantcaller(data)
-        key = (data["description"], work_bam)
+        key = (multi.get_batch_for_key(data), work_bam)
         if key not in by_bam:
             by_bam[key] = []
         by_bam[key].append((variantcaller, jointcaller, data))
@@ -123,7 +123,7 @@ def _split_by_ready_regions(ext, file_key, dir_ext_fn):
     return _do_work
 
 def _collapse_by_bam_variantcaller(samples):
-    """Collapse regions to a single representative by BAM input and variant caller.
+    """Collapse regions to a single representative by BAM input, variant caller and batch.
     """
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
@@ -131,7 +131,7 @@ def _collapse_by_bam_variantcaller(samples):
         variantcaller = get_variantcaller(data)
         if isinstance(work_bam, list):
             work_bam = tuple(work_bam)
-        key = (data["description"], work_bam, variantcaller)
+        key = (multi.get_batch_for_key(data), work_bam, variantcaller)
         try:
             by_bam[key].append(data)
         except KeyError:
