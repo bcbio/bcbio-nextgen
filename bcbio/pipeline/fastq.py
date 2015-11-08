@@ -59,8 +59,7 @@ def _gzip_fastq(in_file):
                 do.run("gzip -c {in_file} > {tx_gzipped_file}".format(**locals()),
                        message)
             return gzipped_file
-    else:
-        return in_file
+    return in_file
 
 def _bzip_gzip(in_file):
     """
