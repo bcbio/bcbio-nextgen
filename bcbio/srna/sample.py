@@ -109,11 +109,12 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
     parameters.
     """
     resources = config_utils.get_resources("miraligner", config)
+    miraligner = config_utils.get_program("miraligner", config)
     jvm_opts =  "-Xms750m -Xmx4g"
     if resources and resources.get("jvm_opts"):
         jvm_opts = " ".join(resources.get("jvm_opts"))
 
-    cmd = ("miraligner {jvm_opts} -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
+    cmd = ("{miraligner} {jvm_opts} -freq -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
     if not file_exists(out_file + ".mirna"):
         with file_transaction(out_file) as tx_out_file:
             do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % fastq_file)
