@@ -678,7 +678,7 @@ def _detect_rRNA(data):
     if not genes:
         return {'rRNA': "NA", "rRNA_rate": "NA"}
     count_table = pd.read_csv(count_file, sep="\t", names=["id", "counts"])
-    rrna = sum(count_table.ix[genes]["counts"])
+    rrna = sum(count_table[count_table["id"].isin(genes)]["counts"])
     rrna_rate = float(rrna) / sum(count_table["counts"])
     return {'rRNA': rrna, 'rRNA_rate': rrna_rate}
 

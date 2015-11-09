@@ -265,7 +265,7 @@ def get_rRNA(gtf):
     for feature in db.features_of_type("transcript"):
         biotype = biotype_lookup(feature)
         if biotype in rRNA_biotypes:
-            features.append((feature['gene_id'], feature['transcript_id']))
+            features.append((feature['gene_id'][0], feature['transcript_id'][0]))
     return features
 
 def _biotype_lookup_fn(gtf):
