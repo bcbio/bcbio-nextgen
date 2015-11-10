@@ -27,7 +27,7 @@ def _standard_bcbio_cwl(samples, inputs):
     """
     return {"class": "Workflow",
             "hints": [{"class": "DockerRequirement",
-                       "dockerImport": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz",
+                       "dockerPull": "bcbio/bcbio",
                        "dockerImageId": "chapmanb/bcbio-nextgen-devel"}],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]}],
