@@ -1067,7 +1067,8 @@ def _get_coverage_per_region(name):
     if utils.file_exists(fn):
         try:
             dt = pd.read_csv(fn, sep="\t", index_col=False)
-            return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
+            if len(dt["meanCoverage"]) > 0:
+                return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
         except TypeError:
             logger.debug("%s has no lines in coverage.bed" % name)
     return "NA"
