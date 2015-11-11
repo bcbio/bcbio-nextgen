@@ -129,9 +129,10 @@ def _rtg_add_summary_file(eval_files, base_dir, data):
                 writer.writerow(["sample", "caller", "vtype", "metric", "value"])
                 base = _get_sample_and_caller(data)
                 for metric in ["tp", "fp", "fn"]:
-                    for vtype, bcftools_types in [("SNPs", "snps"), ("Indels", "indels,mnps,other")]:
+                    for vtype, bcftools_types in [("SNPs", "--types snps"),
+                                                  ("Indels", "--exclude-types snps")]:
                         in_file = eval_files[metric]
-                        cmd = ("bcftools view --types {bcftools_types} {in_file} | grep -v ^# | wc -l")
+                        cmd = ("bcftools view {bcftools_types} {in_file} | grep -v ^# | wc -l")
                         count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
                         writer.writerow(base + [vtype, metric, count])
     eval_files["summary"] = out_file
@@ -166,10 +167,11 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         # flexible quality scores for building ROC curves, handle multiple cases
         # MuTect has no quality scores
         if caller == "mutect":
-            cmd +=  ["--vcf-score-field=BQ"]
+            cmd += ["--vcf-score-field=BQ"]
         # otherwise use quality score as a standarde
         else:
-            cmd +=  ["--vcf-score-field=QUAL"]
+            cmd += ["--vcf-score-field=QUAL"]
+        cmd = "export RTG_JAVA_OPTS='-Xms1g' export RTG_MEM=2g && " + " ".join(cmd)
         do.run(cmd, "Validate calls using rtg vcfeval", data)
     return {"tp": os.path.join(out_dir, "tp.vcf.gz"),
             "fp": os.path.join(out_dir, "fp.vcf.gz"),
