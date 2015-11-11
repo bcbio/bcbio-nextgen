@@ -21,14 +21,15 @@ command line wrapper. The actual code runs can be from either bcbio_vm.py, with
 the Docker container running tools, or a [local installation of bcbio][3].
 You don't need to install genome data since the tests use small local data.
 
-Next clone the [bcbio GitHub repository locally][2] to get the test suite:
+Next clone the [bcbio GitHub repository locally][2] to get the test suite and
+run a minimal CWL workflow generated automatically by bcbio from the inputs:
 ```
 git clone https://github.com/chapmanb/bcbio-nextgen.git
 cd bcbio-nextgen/tests
 ./run_tests.sh cwl_local
 ```
 This will create a CWL workflow inside `test_automated_output` which you can run
-with either a local bcbio installation:
+again manually with either a local bcbio installation:
 ```
 cwltool --verbose --preserve-environment PATH HOME --no-container \
   run_info-bam-workflow/run_info-bam-main.cwl \
@@ -55,19 +56,12 @@ CWL model.
 The generated `run_info-bam-workflow/run_info-bam-main-samples.json` file
 contains the flattened bcbio structure represented as CWL.
 
-Current items to do:
+Current integration points:
 
-- Handle parallelization of multiple samples by using arrays of values and a
-  [dotproduct scatter](http://common-workflow-language.github.io/draft-2/#workflowstep).
-  Example
-  [JSON input](https://github.com/common-workflow-language/common-workflow-language/blob/master/draft-2/draft-2/scatter-job2.json)
-  and
-  [CWL description](https://github.com/common-workflow-language/common-workflow-language/blob/master/draft-2/draft-2/scatter-wf4.cwl).
+- Uses temporary working directory from CWL runner as output directory by
+  specifying `data["dirs"]["work"]` using the temporary directory.
 
-- Remove requirement and assumptions for a shared filesystem/work directory in
-  bcbio (`dirs` object) or model with the local CWL temporary directory.
-  Specifically do this for the first step `prep_align_inputs` so we can get a
-  single step fully running.
+### ToDo
 
 - Create new docker container and test with the new CWL structure/approach.
 

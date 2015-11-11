@@ -1,6 +1,8 @@
 """Create Common Workflow Language (CWL) runnable files and tools from a world object.
 """
+import copy
 import json
+import operator
 import os
 
 import toolz as tz
@@ -13,12 +15,12 @@ def from_world(world, run_info_file):
     out_dir = utils.safe_makedir("%s-workflow" % (base))
     out_file = os.path.join(out_dir, "%s-main.cwl" % (base))
     samples = [xs[0] for xs in world]  # unpack world data objects
-    analyses = set([x["analysis"] for x in samples])
+    analyses = list(set([x["analysis"] for x in samples]))
     assert len(analyses) == 1, "Currently support writing CWL for a single analysis type"
-    if analyses.pop().startswith("variant"):
+    if analyses[0].startswith("variant"):
         prep_variant_cwl(samples, out_dir, out_file)
     else:
-        raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses.pop())
+        raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
 
 def _standard_bcbio_cwl(samples, inputs):
     """Retrieve CWL inputs shared amongst different workflows.
@@ -27,10 +29,11 @@ def _standard_bcbio_cwl(samples, inputs):
     """
     return {"class": "Workflow",
             "hints": [{"class": "DockerRequirement",
-                       "dockerImport": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz",
-                       "dockerImageId": "chapmanb/bcbio-nextgen-devel"}],
+                       "dockerImport": "bcbio/bcbio",
+                       "dockerImageId": "bcbio/bcbio"}],
             "requirements": [{"class": "EnvVarRequirement",
-                              "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]}],
+                              "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
+                             {"class": "ScatterFeatureRequirement"}],
             "inputs": inputs,
             "outputs": [],
             "steps": []}
@@ -42,9 +45,20 @@ def _write_tool(step_dir, name, inputs, outputs):
            "inputs": [],
            "outputs": []}
     for i, inp in enumerate(inputs):
-        out["inputs"].append(tz.assoc(inp, "inputBinding",
-                                      {"prefix": "%s=" % inp["id"].replace("#", ""), "separate": False,
-                                       "itemSeparator": ";;", "position": i}))
+        assert inp["type"]["type"] == "array", inp
+        inp_tool = copy.deepcopy(inp)
+        inp_tool["inputBinding"] = {"prefix": "%s=" % inp["id"].replace("#", ""), "separate": False,
+                                     "itemSeparator": ";;", "position": i}
+        inp_tool["type"] = inp["type"]["items"]
+        out["inputs"].append(inp_tool)
+    # XXX Need to generalize outputs, just a hack for now to test align_prep
+    for outp in outputs:
+        outp_tool = copy.deepcopy(outp)
+        outp_tool["type"] = {"type": "array", "items": "File"}
+        outp_tool["default"] = None
+        outp_tool["outputBinding"] = {"glob": "align_prep/*.gz",
+                                      "secondaryFiles": [".gbi"]}
+        out["outputs"].append(outp_tool)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
@@ -52,13 +66,16 @@ def _write_tool(step_dir, name, inputs, outputs):
 def _step_template(name, step_dir, inputs, outputs, source=""):
     """Templating function for writing a step to avoid repeating namespaces.
     """
-    step_file = _write_tool(step_dir, name, inputs, outputs)
     outputs = [x for x in inputs if x["id"].endswith(tuple(outputs))]
+    step_file = _write_tool(step_dir, name, inputs, outputs)
+    inputs = [{"id": "#%s.%s" % (name, inp["id"].replace("#", "")),
+               "source": "#" + ("%s." % source if source else "") + inp["id"].replace("#", "")}
+              for inp in inputs]
     return {"run": {"import": step_file},
             "id": "#%s" % name,
-            "inputs": [{"id": "#%s.%s" % (name, inp["id"].replace("#", "")),
-                        "source": "#" + ("%s." % source if source else "") + inp["id"].replace("#", "")}
-                       for inp in inputs],
+            "scatterMethod": "dotproduct",
+            "scatter": [x["id"] for x in inputs],
+            "inputs": inputs,
             "outputs": [{"id": "#%s.%s" % (name, output["id"].replace("#", ""))} for output in outputs]}
 
 def prep_variant_cwl(samples, out_dir, out_file):
@@ -67,7 +84,7 @@ def prep_variant_cwl(samples, out_dir, out_file):
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
     sample_json, variables = _flatten_samples(samples, out_file)
     out = _standard_bcbio_cwl(samples, variables)
-    s1 = _step_template("prep_align_inputs", step_dir, variables, ["/files"])
+    s1 = _step_template("prep_align_inputs", step_dir, variables, ["files"])
     out["steps"] = [s1]
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
@@ -77,36 +94,48 @@ def _flatten_samples(samples, base_file):
     """Create a flattened JSON representation of data from the bcbio world map.
     """
     out_file = "%s-samples.json" % utils.splitext_plus(base_file)[0]
-    out = {}
+    flat_data = []
     for data in samples:
-        ns = data["description"]
-        for key_path in [["rgnames"], ["config", "algorithm"], ["metadata"], ["genome_build"], ["files"],
-                         ["reference"], ["genome_resources"], ["vrn_file"]]:
-            cur_key = "%s__%s" % (ns, "__".join(key_path))
+        cur_flat = {}
+        for key_path in [["description"], ["rgnames"], ["config", "algorithm"], ["metadata"], ["genome_build"],
+                         ["files"], ["reference"], ["genome_resources"], ["vrn_file"]]:
+            cur_key = "__".join(key_path)
             for flat_key, flat_val in _to_cwldata(cur_key, tz.get_in(key_path, data)):
-                out[flat_key] = flat_val
+                cur_flat[flat_key] = flat_val
+        flat_data.append(cur_flat)
+    out = {}
+    for key in sorted(list(set(reduce(operator.add, [d.keys() for d in flat_data])))):
+        out[key] = []
+        for cur_flat in flat_data:
+            out[key].append(cur_flat.get(key))
     with open(out_file, "w") as out_handle:
         json.dump(out, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
         return out_file, _samplejson_to_inputs(out)
 
 def _add_avro_type(inp, val):
+    inp["type"] = _get_avro_type(val)
+    return inp
+
+def _get_avro_type(val):
     """Infer avro type for the current input.
     """
     if isinstance(val, dict):
         assert val.get("class") == "File"
-        inp["type"] = "File"
+        return "File"
     elif isinstance(val, (tuple, list)):
-        if isinstance(val[0], dict):
-            assert val[0].get("class") == "File"
-            cur_type = "File"
-        else:
-            cur_type = "string"
-        inp["type"] = {"type": "array", "items": cur_type}
+        types = []
+        for ctype in [_get_avro_type(v) for v in val]:
+            if isinstance(ctype, dict):
+                nested_types = [x["items"] for x in types if isinstance(x, dict)]
+                if ctype["items"] not in nested_types:
+                    types.append(ctype)
+            elif ctype not in types:
+                types.append(ctype)
+        return {"type": "array", "items": (types[0] if len(types) == 1 else types)}
     elif val is None:
-        inp["type"] = "null"
+        return "null"
     else:
-        inp["type"] = "string"
-    return inp
+        return "string"
 
 def _samplejson_to_inputs(svals):
     """Convert sample output into inputs for CWL configuration files, with types.

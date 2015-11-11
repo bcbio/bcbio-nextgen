@@ -66,6 +66,12 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
     out = _add_provenance(out, dirs, config, add_provenance)
     return out
 
+def normalize_world(data):
+    """Normalize a data object, useful after serializetion via CWL.
+    """
+    data = _normalize_files(data)
+    return data
+
 def _add_provenance(items, dirs, config, add_provenance=True):
     if add_provenance:
         p = programs.write_versions(dirs, config=config)
@@ -511,7 +517,7 @@ def _file_to_abs(x, dnames, makedir=False):
                     return normx
         raise ValueError("Did not find input file %s in %s" % (x, dnames))
 
-def _normalize_files(item, fc_dir):
+def _normalize_files(item, fc_dir=None):
     """Ensure the files argument is a list of absolute file names.
     Handles BAM, single and paired end fastq.
     """
