@@ -6,6 +6,7 @@ next gen LIMS system or an on-file YAML configuration.
 import collections
 from contextlib import closing
 import copy
+import glob
 import itertools
 import os
 import string
@@ -148,6 +149,7 @@ def add_reference_resources(data):
     if effects.get_type(data) == "snpeff":
         data["reference"]["snpeff"] = effects.get_snpeff_files(data)
     data = _fill_validation_targets(data)
+    data = _fill_prioritization_targets(data)
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
         if population.do_db_build([data], check_gemini=False, need_bam=False):
@@ -169,6 +171,33 @@ def _fill_validation_targets(data):
             else:
                 raise ValueError("Configuration problem. Validation file not found for %s: %s" %
                                  (vtarget, val))
+    return data
+
+def _fill_prioritization_targets(data):
+    """Fill in globally installed files for prioritization.
+    """
+    ref_file = dd.get_ref_file(data)
+    for target in [["svprioritize"]]:
+        val = tz.get_in(["config", "algorithm"] + target, data)
+        if val and not os.path.exists(val):
+            installed_vals = glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
+                                                                     "coverage", "prioritize", val + "*.bed.gz")))
+            if len(installed_vals) == 0:
+                raise ValueError("Configuration problem. Prioritization file not found for %s: %s" %
+                                 (target, val))
+            elif len(installed_vals) == 1:
+                installed_val = installed_vals[0]
+            else:
+                # check for partial matches
+                installed_val = None
+                for v in installed_vals:
+                    if v.endswith(val + ".bed.gz"):
+                        installed_val = v
+                        break
+                # handle date-stamped inputs
+                if not installed_val:
+                    installed_val = sorted(installed_vals, reverse=True)[0]
+            data = tz.update_in(data, ["config", "algorithm"] + target, lambda x: installed_val)
     return data
 
 # ## Sample and BAM read group naming
