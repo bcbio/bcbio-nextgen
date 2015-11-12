@@ -544,7 +544,7 @@ def _create_access_file(ref_file, out_dir, data):
     out_file = os.path.join(out_dir, "%s-access.bed" % os.path.splitext(os.path.basename(ref_file))[0])
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = [os.path.join(os.path.dirname(sys.executable), "genome2access.py"),
+            cmd = [_get_cmd(), "access",
                    ref_file, "-s", "10000", "-o", tx_out_file]
             do.run(cmd, "Create CNVkit access file")
     return out_file

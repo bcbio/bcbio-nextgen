@@ -6,10 +6,11 @@ https://github.com/ekg/freebayes
 import os
 import sys
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import subset_variant_regions
+from bcbio.pipeline import config_utils, shared
 from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils, ploidy, vcfutils
 from bcbio.variation.vcfutils import (get_paired_bams, is_paired_analysis,
@@ -33,9 +34,12 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
 
     variant_regions = bedutils.merge_overlaps(utils.get_in(config, ("algorithm", "variant_regions")),
                                               items[0])
-    target = subset_variant_regions(variant_regions, region, out_file, items)
+    target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
+            if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
+                   for x in items):
+                target = shared.remove_highdepth_regions(target, items)
             opts += ["--targets", target]
         else:
             opts += ["--region", region_to_freebayes(target)]
