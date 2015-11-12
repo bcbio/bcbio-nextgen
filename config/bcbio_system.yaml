@@ -83,6 +83,8 @@ resources:
     dir: /usr/local/share/java/oncofuse
   express:
     memory: 8g
+  dexseq:
+    memory: 10g
   seqcluster:
     memory: 8g
   wham:
