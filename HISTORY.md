@@ -14,6 +14,8 @@
   and VarScan to avoid filesystem IO.
 - Annotate ensemble calls with information about supporting callers. Thanks to
   Pär Larsson and Son Pham.
+- Move eXpress to expression_caller instead of being run by default.
+
 
 ## 0.9.4 (14 October 2015)
 
