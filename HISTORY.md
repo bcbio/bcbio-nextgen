@@ -15,7 +15,11 @@
 - Annotate ensemble calls with information about supporting callers. Thanks to
   Pär Larsson and Son Pham.
 - Move eXpress to expression_caller instead of being run by default.
-
+- rRNA calculation uses the count file instead of using counts from GATK.
+- Merge STAR fusion calls back into the BAM file. Thanks to Miika Ahdesmaki.
+- Added preliminary support for the hisat2 aligner.
+- Swapped STAR indexing to use on the fly splice junction indexing.
+- Slightly inceased default DEXseq memory requirements in bcbio_system.yaml.
 
 ## 0.9.4 (14 October 2015)
 
