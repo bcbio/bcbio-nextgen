@@ -54,11 +54,11 @@ def _combine_calls(hla_calls, hla_dir, data):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle)
-                writer.writerow(["sample", "locus", "score", "alleles", "expected", "validates"])
+                writer.writerow(["sample", "locus", "alleles", "expected", "validates"])
                 for hla_locus, result_file in hla_calls:
                     truth_alleles = tz.get_in([sample, hla_locus], hla_truth, [])
                     call_alleles, score = _parse_result_file(result_file, hla_locus)
-                    writer.writerow([sample, hla_locus, score,
+                    writer.writerow([sample, hla_locus,
                                      ";".join(call_alleles), ";".join(truth_alleles),
                                      bwakit.matches_truth(call_alleles, truth_alleles, data)])
     return out_file

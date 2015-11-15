@@ -68,10 +68,11 @@ def matches_truth(call_alleles, truth_alleles, data):
     if not truth_alleles:
         return ""
     else:
-        call_pgroups = [hla_groups.hla_protein(x, data) for x in call_alleles]
-        t_cmp = set([hla_groups.hla_protein(x, data) for x in truth_alleles])
-        c_cmp = set(call_pgroups + [x[:-1] for x in call_pgroups if x.endswith("P")])
-        return "yes" if len(t_cmp.intersection(c_cmp)) == len(set(call_pgroups)) else "no"
+        def _remove_p(x):
+            return x[:-1] if x.endswith("P") else x
+        t_cmp = set([_remove_p(hla_groups.hla_protein(x, data)) for x in truth_alleles])
+        c_cmp = set([_remove_p(hla_groups.hla_protein(x, data)) for x in call_alleles])
+        return "yes" if len(t_cmp.intersection(c_cmp)) == len(t_cmp) else "no"
 
 def get_hla_truthset(data):
     """Retrieve expected truth calls for annotating HLA called output.
