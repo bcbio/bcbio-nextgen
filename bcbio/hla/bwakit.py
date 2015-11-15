@@ -26,7 +26,7 @@ def run(data):
         out_file = hla_base + ".top"
         if not utils.file_exists(out_file):
             cmd = "{bwakit_dir}/run-HLA {hla_base}"
-            #do.run(cmd.format(**locals()), "HLA typing with bwakit")
+            do.run(cmd.format(**locals()), "HLA typing with bwakit")
             out_file = _organize_calls(out_file, hla_base, data)
         data["hla"] = {"calls": out_file}
     return data
@@ -59,10 +59,10 @@ def _organize_calls(out_file, hla_base, data):
                         truth_alleles = tz.get_in([sample, hla_locus], hla_truth, [])
                         writer.writerow([sample, hla_locus, mismatches, len(total_options),
                                          ";".join(call_alleles), ";".join(call_pgroups),
-                                         ";".join(truth_alleles), _matches_truth(call_alleles, truth_alleles, data)])
+                                         ";".join(truth_alleles), matches_truth(call_alleles, truth_alleles, data)])
     return out_file
 
-def _matches_truth(call_alleles, truth_alleles, data):
+def matches_truth(call_alleles, truth_alleles, data):
     """Flexibly check if truth and call alleles match, using p-groups.
     """
     if not truth_alleles:

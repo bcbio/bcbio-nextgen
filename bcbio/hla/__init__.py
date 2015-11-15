@@ -2,9 +2,10 @@
 """
 import toolz as tz
 
-from bcbio.hla import bwakit
+from bcbio.hla import bwakit, optitype
 
-_CALLERS = {"bwakit": bwakit.run}
+_CALLERS = {"bwakit": bwakit.run,
+            "optitype": optitype.run}
 
 def call_hla(data):
     hlacaller = tz.get_in(["config", "algorithm", "hlacaller"], data)
