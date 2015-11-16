@@ -19,7 +19,6 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.sample import process_alignment
 
-
 def run_prepare(*data):
     """
     Run seqcluster prepare to merge all samples in one file
@@ -78,6 +77,8 @@ def run_cluster(*data):
     out_mirna, out_isomir = _make_isomir_counts(data)
     data[0][0]["mirna_counts"] = out_mirna
     data[0][0]["isomir_counts"] = out_isomir
+    # from bcbio.srna import mirdeep
+    # mirdeep.run(data)
     return data
 
 def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
@@ -158,7 +159,7 @@ def _modify_report(summary_path, summary_fn):
     content = open(template).read()
     out_content = string.Template(content).safe_substitute({'path_abs': summary_path,
                                                             'path_summary': os.path.join(summary_path, summary_fn)})
-    out_file = os.path.join(os.path.dirname(summary_fn), "ready_report.rmd")
+    out_file = os.path.join(os.path.dirname(summary_fn), "srna_report.rmd")
     with open(out_file, 'w') as out_handle:
         print >>out_handle, out_content
 
