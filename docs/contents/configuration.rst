@@ -580,10 +580,14 @@ and for cancer validations:
 
 - ``dream-syn3`` -- Synthetic dataset 3 from the `ICGC-TCGA DREAM mutation
   calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_.
-  Truth sets: small_variants, regions, DEL, DUP, INV. Builds: GRCh37.
+  Truth sets: small_variants, regions, DEL, DUP, INV, INS. Builds: GRCh37.
 - ``dream-syn4`` -- Synthetic dataset 4 from the `ICGC-TCGA DREAM mutation
   calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_.
   Truth sets: small_variants, regions, DEL, DUP, INV. Builds: GRCh37.
+- ``dream-syn3-crossmap`` -- Synthetic dataset 3 from the `ICGC-TCGA DREAM mutation
+  calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_
+  converted to human build 38 coordinates with CrossMap.
+  Truth sets: small_variants, regions, DEL, DUP, INV, INS. Builds: hg38.
 - ``dream-syn4-crossmap`` -- Synthetic dataset 4 from the `ICGC-TCGA DREAM mutation
   calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_
   converted to human build 38 coordinates with CrossMap.
