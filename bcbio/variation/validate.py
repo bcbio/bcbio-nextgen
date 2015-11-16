@@ -171,7 +171,7 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         # otherwise use quality score as a standarde
         else:
             cmd += ["--vcf-score-field=QUAL"]
-        cmd = "export RTG_JAVA_OPTS='-Xms1g' export RTG_MEM=2g && " + " ".join(cmd)
+        cmd = "export RTG_JAVA_OPTS='-Xms1g' export RTG_MEM=6g && " + " ".join(cmd)
         do.run(cmd, "Validate calls using rtg vcfeval", data)
     return {"tp": os.path.join(out_dir, "tp.vcf.gz"),
             "fp": os.path.join(out_dir, "fp.vcf.gz"),
