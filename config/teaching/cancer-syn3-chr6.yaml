@@ -1,0 +1,58 @@
+# Cancer tumor/normal calling evaluation using synthetic dataset 3
+# from the ICGC-TCGA DREAM challenge:
+# https://www.synapse.org/#!Synapse:syn312572/wiki/62018
+# Subset to chromosome 6 for teaching purposes
+---
+details:
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    recalibrate: false
+    realign: false
+    remove_lcr: true
+    variant_regions: ../input/NGv3-chr6-hg38.bed
+    min_allele_fraction: 2
+    variantcaller: [vardict, mutect, freebayes]
+    ensemble:
+      numpass: 2
+    svcaller: [lumpy, manta]
+  analysis: variant2
+  description: syn3-normal
+  files: [../input/cancer-syn3-chr6-normal-1.fq.gz, ../input/cancer-syn3-chr6-normal-2.fq.gz]
+  genome_build: hg38
+  metadata:
+    batch: syn3
+    phenotype: normal
+    sex: female
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    recalibrate: false
+    realign: false
+    variant_regions: ../input/NGv3-chr6-hg38.bed
+    min_allele_fraction: 2
+    variantcaller: [vardict, mutect, freebayes]
+    ensemble:
+      numpass: 2
+    svcaller: [lumpy, manta]
+    svprioritize: cancer/civic
+    hlacaller: optitype
+    remove_lcr: true
+    validate: dream-syn3-crossmap/truth_small_variants.vcf.gz
+    validate_regions: dream-syn3-crossmap/truth_regions.bed
+    svvalidate:
+      DEL: dream-syn3-crossmap/truth_DEL.bed
+      DUP: dream-syn3-crossmap/truth_DUP.bed
+      INV: dream-syn3-crossmap/truth_INV.bed
+  analysis: variant2
+  description: syn3-tumor
+  files: [../input/cancer-syn3-chr6-tumor-1.fq.gz, ../input/cancer-syn3-chr6-tumor-2.fq.gz]
+  genome_build: hg38
+  metadata:
+    batch: syn3
+    phenotype: tumor
+    sex: female
+fc_date: '2015-11-18'
+fc_name: syn3-cshl
+upload:
+  dir: ../final
