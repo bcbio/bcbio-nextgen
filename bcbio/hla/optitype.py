@@ -40,7 +40,7 @@ def run(data):
                 out_file = _call_hla(hla_fq, out_dir, data)
             hla_calls.append((hla_type.replace("HLA-", ""), out_file))
         out_file = _combine_calls(hla_calls, hla_dir, data)
-        data["hla"] = {"calls": out_file,
+        data["hla"] = {"call_file": out_file,
                        "hlacaller": "optitype"}
     return data
 

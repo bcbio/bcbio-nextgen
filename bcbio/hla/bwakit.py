@@ -28,7 +28,8 @@ def run(data):
             cmd = "{bwakit_dir}/run-HLA {hla_base}"
             do.run(cmd.format(**locals()), "HLA typing with bwakit")
             out_file = _organize_calls(out_file, hla_base, data)
-        data["hla"] = {"calls": out_file}
+        data["hla"] = {"call_file": out_file,
+                       "hlacaller": "bwakit"}
     return data
 
 def _organize_calls(out_file, hla_base, data):

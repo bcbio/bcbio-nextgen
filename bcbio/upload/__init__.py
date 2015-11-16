@@ -111,6 +111,7 @@ def _get_files_variantcall(sample):
     out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
     out = _maybe_add_sv(algorithm, sample, out)
+    out = _maybe_add_hla(algorithm, sample, out)
     out = _maybe_add_validate(algorithm, sample, out)
     return _add_meta(out, sample)
 
@@ -145,6 +146,13 @@ def _maybe_add_variant_file(algorithm, sample, out):
                                 "type": ext,
                                 "ext": "%s-%s" % (x["variantcaller"], extra),
                                 "variantcaller": x["variantcaller"]})
+    return out
+
+def _maybe_add_hla(algorithm, sample, out):
+    if sample.get("align_bam") is not None and sample.get("hla"):
+        out.append({"path": sample["hla"]["call_file"],
+                    "type": "csv",
+                    "ext": "hla-%s" % (sample["hla"]["hlacaller"])})
     return out
 
 def _maybe_add_sv(algorithm, sample, out):
