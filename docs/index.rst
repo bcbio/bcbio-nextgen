@@ -33,6 +33,7 @@ Contents:
    contents/sequencer
    contents/internals
    contents/presentations
+   contents/teaching
 
 
 Indices and tables

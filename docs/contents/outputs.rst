@@ -14,7 +14,9 @@ The output directory contains sample specific output files labeled by
 sample name and a more general project directory. The sample
 directories contain all of the sample specific output files, while the
 project directory contains global files like project summaries or
-batched population level variant calls.
+batched population level variant calls. See the :ref:`teaching` documentation
+for a full variant calling example with additional details about configuration
+setting and resulting output files.
 
 Project directory
 ~~~~~~~~~~~~~~~~~
