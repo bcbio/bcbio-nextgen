@@ -587,7 +587,7 @@ def Rscript_cmd():
 
     Prefers Rscript version installed via conda to a system version.
     """
-    rscript = which(os.path.join(os.path.dirname(sys.executable), "Rscript"))
+    rscript = which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "Rscript"))
     if rscript:
         return rscript
     else:

@@ -124,7 +124,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 remove_dup = vcfutils.remove_dup_cl()
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
-                cmd = ("{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+                cmd = ("{r_setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                         "-N {sample} -b {bamfile} {opts} "
                         "| {strandbias}"
                         "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
@@ -264,17 +265,18 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                     somatic_filter = ""
                     freq_filter = ""
                 else:
-                    var2vcf_opts += " -M " # this makes VarDict soft filter non-differential variants
-                    somatic_filter = (  "| sed 's/\\\\.*Somatic\\\\/Somatic/' "
-                                        "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
-                                        "| %s -x 'bcbio.variation.freebayes.call_somatic(x)'" %
+                    var2vcf_opts += " -M "  # this makes VarDict soft filter non-differential variants
+                    somatic_filter = ("| sed 's/\\\\.*Somatic\\\\/Somatic/' "
+                                      "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
+                                      "| %s -x 'bcbio.variation.freebayes.call_somatic(x)'" %
                                       os.path.join(os.path.dirname(sys.executable), "py"))
-                    freq_filter = ( "| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
-                                    "| %s -x 'bcbio.variation.vardict.depth_freq_filter(x, %s, \"%s\")'" %
+                    freq_filter = ("| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
+                                   "| %s -x 'bcbio.variation.vardict.depth_freq_filter(x, %s, \"%s\")'" %
                                    (os.path.join(os.path.dirname(sys.executable), "py"),
                                      0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
-                cmd = ("{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+                cmd = ("{r_setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| {strandbias} "
                        "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
