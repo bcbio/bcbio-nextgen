@@ -7,7 +7,6 @@ import shutil
 
 import numpy
 import toolz as tz
-import vcf
 import yaml
 
 from bcbio import broad, utils
@@ -158,6 +157,7 @@ def _freebayes_hard(in_file, data):
 def _do_high_depth_filter(data):
     """Check if we should do high depth filtering -- only on germline non-regional calls.
     """
+    return True
     is_genome = tz.get_in(["config", "algorithm", "coverage_interval"], data, "").lower() == "genome"
     is_paired = vcfutils.get_paired_phenotype(data)
     return is_genome and not is_paired
@@ -179,13 +179,12 @@ def _calc_vcf_stats(in_file):
 def _average_called_depth(in_file):
     """Retrieve the average depth of called reads in the provided VCF.
     """
+    import cyvcf2
     depths = []
-    with utils.open_gzipsafe(in_file) as in_handle:
-        reader = vcf.Reader(in_handle, in_file)
-        for rec in reader:
-            d = rec.INFO.get("DP")
-            if d is not None:
-                depths.append(d)
+    for rec in cyvcf2.VCF(in_file):
+        d = rec.INFO.get("DP")
+        if d is not None:
+            depths.append(int(d))
     return int(math.ceil(numpy.mean(depths)))
 
 def platypus(in_file, data):

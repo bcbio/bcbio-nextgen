@@ -209,7 +209,7 @@ def _default_deploy_args(args):
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
-    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "gffutils",
+    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "cyvcf2", "gffutils",
             "ipyparallel", "ipython-cluster-helper", "joblib", "lxml",
             "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
             "pip", "progressbar", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",

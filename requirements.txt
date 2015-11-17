@@ -22,6 +22,7 @@ awscli>=1.7.14
 bioblend>=0.4.3
 bcbreport>=0.99.16
 click>=3.3
+cyvcf2>=0.2.3
 fadapa>=0.3.1
 fabric>=1.7.0
 gffutils>=0.8.4rc1
