@@ -1,6 +1,12 @@
 Presentations
 =============
 
+- Materials from :ref:`teaching` oriented example at Cold Spring Harbor
+  Laboratory's `Advanced Sequencing Technology and Applications course
+  <http://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15>`_.
+  (18 November 2015): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/cshl2015_bcbio/cshl2015_bcbio.pdf>`_
+
 - Supporting the common workflow language and Docker in bcbio
   `Bio in Docker symposium
   <http://core.brc.iop.kcl.ac.uk/events/compbio-docker-symposium-2015/>`_

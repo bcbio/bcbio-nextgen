@@ -1,7 +1,6 @@
+.. _teaching:
 Teaching
 ========
-.. _teaching:
-
 This is a teaching orientated example of using bcbio from the Cold Spring Harbor
 Laboratory's `Advanced Sequencing Technology and Applications course
 <http://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15>`_. This uses
