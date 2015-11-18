@@ -18,9 +18,6 @@ def run(items):
     data = items[0]
     inputs = []
     for call in data.get("sv", []):
-        # Skip some callers we're currently failing on, upstream fixes are sent
-        if call["variantcaller"] in ["cnvkit", "wham"]:
-            continue
         vcf_file = call.get("vcf_file", call.get("vrn_file"))
         if vcf_file and vcf_file.endswith((".vcf", "vcf.gz")):
             inputs.append((call["variantcaller"], vcf_file))
