@@ -54,6 +54,9 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
     align_dir = utils.safe_makedir(apply(os.path.join, align_dir_parts))
     aligner_indexes = os.path.commonprefix(tz.get_in(("reference", aligner, "indexes"), data))
+    if not aligner_indexes:
+        raise ValueError("Did not find reference indices for aligner %s in genome %s" %
+                         (aligner, data["genome_build"]))
     if aligner_indexes.endswith("."):
         aligner_indexes = aligner_indexes[:-1]
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
