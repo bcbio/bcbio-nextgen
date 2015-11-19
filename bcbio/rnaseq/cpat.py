@@ -52,7 +52,8 @@ def cpat(assembled_fasta, hexamer, logit, out_file=None):
         out_file = tempfile.NamedTemporaryFile(delete=False, suffix=".cpat").name
 
     cpat_cmd = _find_executable("cpat.py")
-    cmd = ("{cpat_cmd} --gene={assembled_fasta} --hex={hexamer} "
+    r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+    cmd = ("{r_setup}{cpat_cmd} --gene={assembled_fasta} --hex={hexamer} "
            "--logitModel={logit} --outfile={tx_out_file}")
     message = "Predicing coding potential of %s." % (assembled_fasta)
     with file_transaction(out_file) as tx_out_file:
@@ -103,10 +104,11 @@ def make_logit_model(coding_fasta, noncoding_fasta, hexamers, out_dir=None):
         return out_file
 
     tx_prefix = tempfile.NamedTemporaryFile(delete=False).name
-    tx_out_file = tx_prefix +  ".logit.RData"
+    tx_out_file = tx_prefix + ".logit.RData"
 
     logit_cmd = _find_executable("make_logitModel.py")
-    cmd = ("{logit_cmd} --cgene={coding_fasta} --ngene={noncoding_fasta} "
+    r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+    cmd = ("{r_setup}{logit_cmd} --cgene={coding_fasta} --ngene={noncoding_fasta} "
            "--hex={hexamers} --outfile={tx_prefix}")
     message = "Building coding/noncoding logistical model."
     do.run(cmd.format(**locals()), message)
