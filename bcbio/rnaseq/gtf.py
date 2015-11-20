@@ -128,6 +128,7 @@ def gtf_to_fasta(gtf_file, ref_fasta, cds=False, out_file=None):
                     line = ">" + transcript + "\n"
                 if not skipping:
                     out_handle.write(line)
+    os.remove(tmp_file)
     return out_file
 
 def partition_gtf(gtf, coding=False, out_file=False):
