@@ -40,8 +40,8 @@ def _run_bubbletree(vcf_csv, cnv_csv, data):
     base = utils.splitext_plus(vcf_csv)[0]
     r_file = "%s-run.R" % base
     bubbles_out = "%s-bubbles.pdf" % base
-    prev_model_out = "%s-bubbletree_prev_model.pdf" % base
     freqs_out = "%s-bubbletree_prevalence.txt" % base
+    sample = dd.get_sample_name(data)
     with open(r_file, "w") as out_handle:
         out_handle.write(_script.format(**locals()))
     if not utils.file_exists(freqs_out):
@@ -67,8 +67,9 @@ def _cns_to_coords(line):
 def _prep_cnv_file(cns_file, svcaller, calls_by_name, work_dir, data):
     """Create a CSV file of CNV calls with log2 and number of marks.
     """
-    in_file = theta.subset_by_supported(cns_file, _cns_to_coords, calls_by_name, work_dir, data,
-                                        headers=("chromosome", "#"))
+    #in_file = theta.subset_by_supported(cns_file, _cns_to_coords, calls_by_name, work_dir, data,
+    #                                    headers=("chromosome", "#"))
+    in_file = cns_file
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           svcaller))
     if not utils.file_uptodate(out_file, in_file):
@@ -183,10 +184,10 @@ def _freqs_by_chromosome(in_file, params, somatic_info):
                     freqs.append([])
                     coords.append([])
                 stats = _tumor_normal_stats(rec, somatic_info)
-                if tz.get_in(["normal", "depth"], stats, 0) > params["min_depth"]:
+                if tz.get_in(["tumor", "depth"], stats, 0) > params["min_depth"]:
                     # not a ref only call
                     if sum(rec.samples[somatic_info.tumor_name].allele_indices) > 0:
-                        freqs[-1].append(tz.get_in(["normal", "freq"], stats))
+                        freqs[-1].append(tz.get_in(["tumor", "freq"], stats))
                         coords[-1].append(rec.start)
     return chroms, freqs, coords
 
@@ -293,16 +294,28 @@ cnv.gr = GRanges(cnv.df$chrom, IRanges(cnv.df$start, cnv.df$end),
 print(vc.gr)
 print(cnv.gr)
 
-rbd = getRBD(snp.gr=vc.gr, cnv.gr=cnv.gr)
-pdf(file="{bubbles_out}", width=8, height=6)
-plotBubbles(rbd)
-dev.off()
-pur = calc.prev(rbd, heurx=FALSE, modex=5, plotx="{prev_model_out}")
+r <- new("RBD")
+rbd <- makeRBD(r, vc.gr, cnv.gr)
+print(rbd)
+calls <- new("BTreePredictor")
+calls <- loadRBD(calls, rbd)
+print(head(calls@rbd))
+calls <- btpredict(calls)
+
+#pdf(file="{bubbles_out}", width=8, height=6)
+#btreeplotter <- new("BTreePlotter", branch.col="gray50")
+#drawBTree(btreeplotter, calls@rbd.adj)
+#dev.off()
 
 sink("{freqs_out}")
-# tumor subclone freqencies
-print(pur[[1]]$ploidy_prev)
-# tumor purity
-print(pur[[2]][nrow(pur[[2]]),2])
+purity <- calls@result$prev[1]
+adj <- calls@result$ploidy.adj["adj"]
+# when purity is low the calculation result is not reliable
+ploidy <- (2*adj -2)/purity + 2
+out <- c(Sample="{sample}",
+         Purity=round(purity,3),
+         Prevalences=paste(round(calls@result$prev,3), collapse=", "),
+         "Tumor ploidy"=round(ploidy,1))
+print(out)
 sink()
 """
