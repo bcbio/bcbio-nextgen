@@ -12,6 +12,7 @@ import shutil
 import vcf
 
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -164,6 +165,14 @@ def _split_breakends(in_file, data):
     vcfutils.bgzip_and_index(std_file, data["config"])
     return std_file, bnd_file
 
+def run_svtyper_prioritize(call):
+    """Run svtyper on prioritized outputs, adding in typing for breakends skipped earlier.
+    """
+    def _run(in_file, work_dir, data):
+        dedup_bam, sr_bam, _ = sshared.get_split_discordants(data, work_dir)
+        return _run_svtyper(in_file, dedup_bam, sr_bam, call.get("exclude_file"), data)
+    return _run
+
 def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
     """Genotype structural variant calls with SVtyper.
 
@@ -182,8 +191,20 @@ def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
                     regions_to_rm = "-T ^%s" % (exclude_file)
                 else:
                     regions_to_rm = ""
+                # add FILTER headers, which are lost during svtyping
+                header_file = "%s-header.txt" % utils.splitext_plus(tx_out_file)[0]
+                with open(header_file, "w") as out_handle:
+                    with utils.open_gzipsafe(in_file) as in_handle:
+                        for line in in_handle:
+                            if not line.startswith("#"):
+                                break
+                            if line.startswith("##FILTER"):
+                                out_handle.write(line)
+                    for region in ref.file_contigs(dd.get_ref_file(data), data["config"]):
+                        out_handle.write("##contig=<ID=%s,length=%s>\n" % (region.name, region.size))
                 cmd = ("bcftools view {in_file} {regions_to_rm} | "
                        "{python} {svtyper} -M -B {full_bam} -S {sr_bam} | "
+                       "bcftools annotate -h {header_file} | "
                        "bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "SV genotyping with svtyper")
     return vcfutils.sort_by_ref(out_file, data)

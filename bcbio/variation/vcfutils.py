@@ -357,11 +357,12 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             params.extend(["--genotypemergeoption", "PRIORITIZE"])
             if quiet_out:
                 params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
-            variant_regions = config["algorithm"].get("variant_regions", None)
-            cur_region = shared.subset_variant_regions(variant_regions, region, out_file)
-            if cur_region:
-                params += ["-L", bamprep.region_to_gatk(cur_region),
-                           "--interval_set_rule", "INTERSECTION"]
+            if region:
+                variant_regions = config["algorithm"].get("variant_regions", None)
+                cur_region = shared.subset_variant_regions(variant_regions, region, out_file)
+                if cur_region:
+                    params += ["-L", bamprep.region_to_gatk(cur_region),
+                               "--interval_set_rule", "INTERSECTION"]
             cores = tz.get_in(["algorithm", "num_cores"], config, 1)
             if cores > 1:
                 params += ["-nt", min(cores, 4)]
