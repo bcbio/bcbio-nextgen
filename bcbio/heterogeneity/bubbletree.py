@@ -18,7 +18,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.heterogeneity import chromhacks, theta
+from bcbio.heterogeneity import chromhacks
 
 def run(vrn_info, calls_by_name, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
@@ -67,8 +67,8 @@ def _cns_to_coords(line):
 def _prep_cnv_file(cns_file, svcaller, calls_by_name, work_dir, data):
     """Create a CSV file of CNV calls with log2 and number of marks.
     """
-    #in_file = theta.subset_by_supported(cns_file, _cns_to_coords, calls_by_name, work_dir, data,
-    #                                    headers=("chromosome", "#"))
+    # in_file = theta.subset_by_supported(cns_file, _cns_to_coords, calls_by_name, work_dir, data,
+    #                                     headers=("chromosome", "#"))
     in_file = cns_file
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           svcaller))
@@ -307,15 +307,13 @@ calls <- btpredict(calls)
 #drawBTree(btreeplotter, calls@rbd.adj)
 #dev.off()
 
-sink("{freqs_out}")
 purity <- calls@result$prev[1]
 adj <- calls@result$ploidy.adj["adj"]
 # when purity is low the calculation result is not reliable
 ploidy <- (2*adj -2)/purity + 2
-out <- c(Sample="{sample}",
-         Purity=round(purity,3),
-         Prevalences=paste(round(calls@result$prev,3), collapse=", "),
-         "Tumor ploidy"=round(ploidy,1))
-print(out)
-sink()
+out <- data.frame(sample="{sample}",
+                  purity=round(purity,3),
+                  prevalences=paste(round(calls@result$prev,3), collapse=";"),
+                  tumor_ploidy=round(ploidy,1))
+write.csv(out, file="{freqs_out}", row.names=FALSE)
 """
