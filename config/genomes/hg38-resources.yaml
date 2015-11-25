@@ -13,3 +13,12 @@ variation:
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
+
+rnaseq:
+  transcripts: ../rnaseq/ref-transcripts.gtf
+  transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
+  transcriptome_index:
+    tophat: ../rnaseq/tophat/hg19_transcriptome.ver
+  dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
+  refflat: ../rnaseq/ref-transcripts.refFlat
+  rRNA_fa: ../rnaseq/rRNA.fa
