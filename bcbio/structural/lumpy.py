@@ -132,9 +132,10 @@ def run(items):
                                             data["config"])
         std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
         std_gt_vcf = _run_svtyper(std_vcf, dedup_bam, sr_bam, exclude_file, data)
-        gt_vcf = vcfutils.combine_variant_files(orig_files=[std_gt_vcf, bnd_vcf],
-                                                out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
-                                                ref_file=dd.get_ref_file(data), config=data["config"])
+        gt_vcf = vcfutils.concat_variant_files_bcftools(
+            orig_files=[std_gt_vcf, bnd_vcf],
+            out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
+            config=data["config"])
         gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
     if paired and paired.normal_name:
         gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
