@@ -12,7 +12,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils, vcfutils
-from bcbio.structural import lumpy
+from bcbio.structural import lumpy, regions
 
 POST_PRIOR_FNS = {"lumpy": lumpy.run_svtyper_prioritize}
 
@@ -54,13 +54,19 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
         simple_vcf = "%s-simple.vcf.gz" % utils.splitext_plus(priority_vcf)[0]
         if not utils.file_exists(simple_vcf):
             with file_transaction(data, simple_vcf) as tx_out_file:
-                cmd = "simple_sv_annotation.py -o - {priority_vcf} | bgzip -c > {tx_out_file}"
+                transcript_file = regions.get_sv_bed(data, "transcripts1000", work_dir)
+                if transcript_file:
+                    transcript_file = vcfutils.bgzip_and_index(transcript_file, data["config"])
+                    ann_opt = "--gene_bed %s" % transcript_file
+                else:
+                    ann_opt = ""
+                cmd = "simple_sv_annotation.py {ann_opt} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prioritize: simplified annotation output")
         simple_vcf = vcfutils.bgzip_and_index(simple_vcf, data["config"])
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("zcat {simple_vcf} | vawk -v SNAME={sample} -v CALLER={caller} "
                    """'{{if (($7 == "PASS" || $7 == ".") && (S${sample}$GT != "0/0")) """
-                   "print CALLER,SNAME,$1,$2,I$END,I$SVTYPE,I$KNOWN,I$LOF,I$SIMPLE_ANN,"
+                   "print CALLER,SNAME,$1,$2,I$END,I$SVTYPE,I$KNOWN,I$END_GENE,I$LOF,I$SIMPLE_ANN,"
                    "S${sample}$SR,S${sample}$PE}}' > {tx_out_file}")
             do.run(cmd.format(**locals()), "Prioritize: convert to tab delimited")
     return out_file
@@ -68,8 +74,8 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
 def _combine_files(tsv_files, work_dir, data):
     """Combine multiple priority tsv files into a final sorted output.
     """
-    header = "\t".join(["caller", "sample", "chrom", "start", "end", "svtype", "known", "lof",
-                        "annotation", "split_read_support", "paired_end_support"])
+    header = "\t".join(["caller", "sample", "chrom", "start", "end", "svtype", "known", "end_gene",
+                        "lof", "annotation", "split_read_support", "paired_end_support"])
     sample = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, "%s-prioritize.tsv" % (sample))
     if not utils.file_exists(out_file):
