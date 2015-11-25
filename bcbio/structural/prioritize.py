@@ -62,7 +62,7 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
                     ann_opt = ""
                 cmd = "simple_sv_annotation.py {ann_opt} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prioritize: simplified annotation output")
-        simple_vcf = vcfutils.bgzip_and_index(simple_vcf, data["config"])
+        simple_vcf = vcfutils.bgzip_and_index(vcfutils.sort_by_ref(simple_vcf, data), data["config"])
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("zcat {simple_vcf} | vawk -v SNAME={sample} -v CALLER={caller} "
                    """'{{if (($7 == "PASS" || $7 == ".") && (S${sample}$GT != "0/0")) """
