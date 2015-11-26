@@ -297,7 +297,7 @@ class RnaseqPipeline(AbstractPipeline):
                 samples = run_parallel("prepare_sample", samples)
                 samples = run_parallel("trim_sample", samples)
         with prun.start(_wres(parallel, ["aligner", "picard"],
-                              ensure_mem={"tophat": 10, "tophat2": 10, "star": 2}),
+                              ensure_mem={"tophat": 10, "tophat2": 10, "star": 2, "hisat2": 8}),
                         samples, config, dirs, "alignment",
                         multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
             with profile.report("alignment", dirs):

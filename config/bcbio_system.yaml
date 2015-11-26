@@ -34,6 +34,9 @@ resources:
   samtools:
     memory: 2G
     cores: 16
+  hisat2:
+    memory: 2G
+    cores: 16
   star:
     memory: 2g
     cores: 16
