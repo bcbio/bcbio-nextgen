@@ -130,7 +130,7 @@ def variants(data):
                 with file_transaction(parse_file) as out_tx:
                     with open(out_tx, 'w') as out_handle:
                         print >>out_handle, "CG\tdepth\tsample"
-                    cmd = ("bcftools query -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
+                    cmd = ("bcftools query -s {sample} -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
                             "{bed_file} {cg_file} >> {out_tx}")
                     do.run(cmd.format(**locals()),
                             "Calculating GC content and depth for %s" % in_vcf)
