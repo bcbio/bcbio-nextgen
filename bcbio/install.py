@@ -585,6 +585,9 @@ def add_install_defaults(args):
                              "After a successful upgrade, the '--tools' parameter will "
                              "work for future upgrades.")
     for attr in ["genomes", "aligners", "toolplus"]:
+        # don't upgrade default genomes if a genome was specified
+        if attr == "genomes" and len(args.genomes) > 0:
+            continue
         for x in default_args.get(attr, []):
             x = Tool(x, None) if attr == "toolplus" else str(x)
             new_val = getattr(args, attr)
