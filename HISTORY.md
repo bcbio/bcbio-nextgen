@@ -20,6 +20,12 @@
 - Added preliminary support for the hisat2 aligner.
 - Swapped STAR indexing to use on the fly splice junction indexing.
 - Slightly inceased default DEXseq memory requirements in bcbio_system.yaml.
+- Add support for RNA-seq for hg38 and hg38-noalt
+- Make Sailfish the default for non-count based expression estimation.
+  Produces isoform-level (combined.isoform.sf.tpm) and gene-level
+  (combined.gene.sf.tpm) TPM expression estimation.
+- Move Cufflinks to be off by default for expression estimation (turn on via
+  expression_callers if needed).
 
 ## 0.9.4 (14 October 2015)
 
