@@ -23,11 +23,11 @@ from bcbio.heterogeneity import chromhacks
 def run(vrn_info, calls_by_name, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
     """
-    work_dir = _cur_workdir(somatic_info.tumor_data)
-    vcf_csv = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], work_dir,
-                             calls_by_name, somatic_info)
     assert "cnvkit" in calls_by_name, "BubbleTree only currently support CNVkit"
     cnv_info = calls_by_name["cnvkit"]
+    work_dir = _cur_workdir(somatic_info.tumor_data)
+    vcf_csv = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], cnv_info["cns"],
+                             work_dir, calls_by_name, somatic_info)
     cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], calls_by_name, work_dir,
                              somatic_info.tumor_data)
     _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data)
@@ -40,6 +40,7 @@ def _run_bubbletree(vcf_csv, cnv_csv, data):
     base = utils.splitext_plus(vcf_csv)[0]
     r_file = "%s-run.R" % base
     bubbles_out = "%s-bubbles.pdf" % base
+    calls_out = "%s-calls.rds" % base
     freqs_out = "%s-bubbletree_prevalence.txt" % base
     sample = dd.get_sample_name(data)
     with open(r_file, "w") as out_handle:
@@ -85,7 +86,7 @@ def _prep_cnv_file(cns_file, svcaller, calls_by_name, work_dir, data):
                             writer.writerow([_to_ucsc_style(chrom), start, end, probes, log2])
     return out_file
 
-def _prep_vrn_file(in_file, vcaller, work_dir, calls_by_name, somatic_info):
+def _prep_vrn_file(in_file, vcaller, seg_file, work_dir, calls_by_name, somatic_info):
     """Select heterozygous variants in the normal sample with sufficient depth.
     """
     data = somatic_info.tumor_data
@@ -97,8 +98,7 @@ def _prep_vrn_file(in_file, vcaller, work_dir, calls_by_name, somatic_info):
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           vcaller))
     if not utils.file_uptodate(out_file, in_file):
-        ready_bed = _identify_heterogenity_blocks(in_file, params, work_dir, somatic_info)
-        #ready_bed = _remove_sv_calls(het_bed, calls_by_name, somatic_info.tumor_data)
+        ready_bed = _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info)
         sub_file = _create_subset_file(in_file, ready_bed, work_dir, data)
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
@@ -111,45 +111,56 @@ def _prep_vrn_file(in_file, vcaller, work_dir, calls_by_name, somatic_info):
                         writer.writerow([_to_ucsc_style(rec.chrom), rec.start, rec.stop, tumor_freq])
     return out_file
 
-def _remove_sv_calls(in_file, calls_by_name, data):
-    """Remove heterogeneity blocks that overlap structural variant calls.
+def _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info):
+    """Identify heterogeneity blocks corresponding to segmentation from CNV input file.
     """
-    out_file = "%s-nosvs%s" % utils.splitext_plus(in_file)
-    if not utils.file_uptodate(out_file, in_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            pass
-    return out_file
+    def _segment_by_cns(target_chrom, freqs, coords):
+        with open(seg_file) as in_handle:
+            reader = csv.reader(in_handle, dialect="excel-tab")
+            reader.next()  # header
+            for cur_chrom, start, end in (xs[:3] for xs in reader):
+                if cur_chrom == target_chrom:
+                    block_freqs = []
+                    for freq, coord in zip(freqs, coords):
+                        if coord >= int(start) and coord < int(end):
+                            block_freqs.append(freq)
+                    if len(block_freqs) > params["hetblock"]["min_alleles"]:
+                        yield start, end
+    return _identify_heterogeneity_blocks_shared(in_file, _segment_by_cns, params, work_dir, somatic_info)
 
-def _identify_heterogenity_blocks(in_file, params, work_dir, somatic_info):
+def _identify_heterogeneity_blocks_hmm(in_file, params, work_dir, somatic_info):
     """Use a HMM to identify blocks of heterogeneity to use for calculating allele frequencies.
 
     The goal is to subset the genome to a more reasonable section that contains potential
     loss of heterogeneity or other allele frequency adjustment based on selection.
     """
+    def _segment_by_hmm(chrom, freqs, coords):
+        cur_coords = []
+        for j, state in enumerate(_predict_states(freqs)):
+            if state == 0:  # heterozygote region
+                if len(cur_coords) == 0:
+                    num_misses = 0
+                cur_coords.append(coords[j])
+            else:
+                num_misses += 1
+            if num_misses > params["hetblock"]["allowed_misses"]:
+                if len(cur_coords) >= params["hetblock"]["min_alleles"]:
+                    yield min(cur_coords), max(cur_coords)
+                cur_coords = []
+        if len(cur_coords) >= params["hetblock"]["min_alleles"]:
+            yield min(cur_coords), max(cur_coords)
+    return _identify_heterogeneity_blocks_shared(in_file, _segment_by_hmm, params, work_dir, somatic_info)
+
+def _identify_heterogeneity_blocks_shared(in_file, segment_fn, params, work_dir, somatic_info):
+    """Identify heterogeneity blocks corresponding to segmentation from CNV input file.
+    """
     out_file = os.path.join(work_dir, "%s-hetblocks.bed" % utils.splitext_plus(os.path.basename(in_file))[0])
     if not utils.file_uptodate(out_file, in_file):
-        chroms, freqs, coords = _freqs_by_chromosome(in_file, params, somatic_info)
-        blocks = []
-        for i, chrom in enumerate(chroms):
-            cur_coords = []
-            num_misses = 0
-            for j, state in enumerate(_predict_states(freqs[i])):
-                if state == 0:  # heterozygote region
-                    if len(cur_coords) == 0:
-                        num_misses = 0
-                    cur_coords.append(coords[i][j])
-                else:
-                    num_misses += 1
-                if num_misses > params["hetblock"]["allowed_misses"]:
-                    if len(cur_coords) >= params["hetblock"]["min_alleles"]:
-                        blocks.append((chrom, min(cur_coords), max(cur_coords)))
-                    cur_coords = []
-            if len(cur_coords) >= params["hetblock"]["min_alleles"]:
-                blocks.append((chrom, min(cur_coords), max(cur_coords)))
         with file_transaction(somatic_info.tumor_data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                for chrom, start, end in blocks:
-                    out_handle.write("%s\t%s\t%s\n" % (chrom, start, end))
+                for chrom, freqs, coords in _freqs_by_chromosome(in_file, params, somatic_info):
+                    for start, end in segment_fn(chrom, freqs, coords):
+                        out_handle.write("%s\t%s\t%s\n" % (chrom, start, end))
     return out_file
 
 def _predict_states(freqs):
@@ -173,23 +184,26 @@ def _predict_states(freqs):
 def _freqs_by_chromosome(in_file, params, somatic_info):
     """Retrieve frequencies across each chromosome as inputs to HMM.
     """
-    chroms = []
     freqs = []
     coords = []
+    cur_chrom = None
     with pysam.VariantFile(in_file) as bcf_in:
         for rec in bcf_in:
             if _is_biallelic_snp(rec) and chromhacks.is_autosomal(rec.chrom):
-                if len(chroms) == 0 or rec.chrom != chroms[-1]:
-                    chroms.append(rec.chrom)
-                    freqs.append([])
-                    coords.append([])
+                if cur_chrom is None or rec.chrom != cur_chrom:
+                    if cur_chrom and len(freqs) > 0:
+                        yield cur_chrom, freqs, coords
+                    cur_chrom = rec.chrom
+                    freqs = []
+                    coords = []
                 stats = _tumor_normal_stats(rec, somatic_info)
                 if tz.get_in(["tumor", "depth"], stats, 0) > params["min_depth"]:
                     # not a ref only call
                     if sum(rec.samples[somatic_info.tumor_name].allele_indices) > 0:
-                        freqs[-1].append(tz.get_in(["tumor", "freq"], stats))
-                        coords[-1].append(rec.start)
-    return chroms, freqs, coords
+                        freqs.append(tz.get_in(["tumor", "freq"], stats))
+                        coords.append(rec.start)
+        if cur_chrom and len(freqs) > 0:
+            yield cur_chrom, freqs, coords
 
 def _create_subset_file(in_file, region_bed, work_dir, data):
     """Subset the VCF to a set of pre-calculated smaller regions.
@@ -270,7 +284,6 @@ def _cur_workdir(data):
 
 if __name__ == "__main__":
     import sys
-    import collections
     bcf_in = pysam.VariantFile(sys.argv[1])
     somatic = collections.namedtuple("Somatic", "normal_name,tumor_name")
     params = {"min_freq": 0.4,
@@ -301,6 +314,8 @@ calls <- new("BTreePredictor")
 calls <- loadRBD(calls, rbd)
 print(head(calls@rbd))
 calls <- btpredict(calls)
+
+saveRDS(calls, "{calls_out}")
 
 #pdf(file="{bubbles_out}", width=8, height=6)
 #btreeplotter <- new("BTreePlotter", branch.col="gray50")
