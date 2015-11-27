@@ -40,12 +40,12 @@ def quantitate_expression_parallel(samples, run_parallel):
     quantitate expression, all programs run here should be multithreaded to
     take advantage of the threaded run_parallel environment
     """
-    samples = run_parallel("generate_transcript_counts", samples)
-    samples = run_parallel("run_cufflinks", samples)
     data = samples[0][0]
-    if "sailfish" in dd.get_expression_caller(data):
-        samples = run_parallel("run_sailfish", samples)
-        samples = sailfish.combine_sailfish(samples)
+    samples = run_parallel("generate_transcript_counts", samples)
+    samples = run_parallel("run_sailfish", samples)
+    samples = sailfish.combine_sailfish(samples)
+    if "cufflinks" in dd.get_expression_caller(data):
+        samples = run_parallel("run_cufflinks", samples)
     #samples = run_parallel("run_stringtie_expression", samples)
     return samples
 

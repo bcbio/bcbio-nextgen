@@ -12,7 +12,7 @@ details:
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
-      expression_caller: [sailfish]
+      expression_caller: [cufflinks]
     description: Test1
     files: [1_110907_ERP000591_1_fastq.txt, 1_110907_ERP000591_2_fastq.txt]
     genome_build: mm9

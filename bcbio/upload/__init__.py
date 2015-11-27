@@ -216,7 +216,7 @@ def _get_variant_file(x, key):
     return out
 
 def _maybe_add_sailfish_files(algorithm, sample, out):
-    if "sailfish" in dd.get_expression_caller(sample):
+    if dd.get_sailfish_dir(sample):
         out.append({"path": dd.get_sailfish_dir(sample),
                     "type": "directory",
                     "ext": os.path.join("sailfish", dd.get_sample_name(sample))})
@@ -417,5 +417,10 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_isoform_to_gene(sample)})
     if dd.get_square_vcf(sample):
         out.append({"path": dd.get_square_vcf(sample)})
-
+    if dd.get_sailfish_tidy(sample):
+        out.append({"path": dd.get_sailfish_tidy(sample)})
+    if dd.get_sailfish_transcript_tpm(sample):
+        out.append({"path": dd.get_sailfish_transcript_tpm(sample)})
+    if dd.get_sailfish_gene_tpm(sample):
+        out.append({"path": dd.get_sailfish_gene_tpm(sample)})
     return _add_meta(out, config=upload_config)

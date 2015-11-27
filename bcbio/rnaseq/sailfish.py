@@ -1,12 +1,13 @@
 import tempfile
 import os
-import shutil
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.utils import (file_exists, safe_makedir, is_gzipped, rbind, partition)
 from bcbio.pipeline import config_utils
+from bcbio.rnaseq import gtf
 import pandas as pd
+import numpy as np
 
 def run_sailfish(data):
     samplename = dd.get_sample_name(data)
@@ -101,13 +102,19 @@ def _clean_gtf_fa(gtf_fa, data):
 
 def combine_sailfish(samples):
     work_dir = dd.get_in_samples(samples, dd.get_work_dir)
+    gtf_file = dd.get_in_samples(samples, dd.get_gtf_file)
     dont_combine, to_combine = partition(dd.get_sailfish,
                                          dd.sample_data_iterator(samples), True)
     if not to_combine:
         return samples
 
-    out_file = os.path.join(work_dir, "sailfish", "combined.sf")
-    if not file_exists(out_file):
+    tidy_file = os.path.join(work_dir, "sailfish", "combined.sf")
+    transcript_tpm_file = os.path.join(work_dir, "sailfish",
+                                       "combined.isoform.sf.tpm")
+    gene_tpm_file = os.path.join(work_dir, "sailfish",
+                                 "combined.gene.sf.tpm")
+    if not all([file_exists(x) for x in [gene_tpm_file, tidy_file,
+                                         transcript_tpm_file]]):
         df = pd.DataFrame()
         for data in to_combine:
             sailfish_file = dd.get_sailfish(data)
@@ -117,12 +124,27 @@ def combine_sailfish(samples):
                 df = new_df
             else:
                 df = rbind([df, new_df])
-        with file_transaction(out_file) as tx_out_file:
+
+        with file_transaction(tidy_file) as tx_out_file:
             df.to_csv(tx_out_file, sep="\t", index_label="name")
+
+        with file_transaction(transcript_tpm_file) as  tx_out_file:
+            df.pivot(None, "sample", "tpm").to_csv(tx_out_file, sep="\t")
+
+        with file_transaction(gene_tpm_file) as  tx_out_file:
+            pivot = df.pivot(None, "sample", "tpm")
+            tdf = pd.DataFrame.from_dict(gtf.transcript_to_gene(gtf_file),
+                                         orient="index")
+            tdf.columns = ["gene_id"]
+            pivot = pivot.join(tdf)
+            pivot = pivot.groupby("gene_id").agg(np.sum)
+            pivot.to_csv(tx_out_file, sep="\t")
 
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
-        data = dd.set_sailfish_combined(data, out_file)
+        data = dd.set_sailfish_tidy(data, tidy_file)
+        data = dd.set_sailfish_transcript_tpm(data, transcript_tpm_file)
+        data = dd.set_sailfish_gene_tpm(data, gene_tpm_file)
         updated_samples.append([data])
     return updated_samples
 
