@@ -149,7 +149,7 @@ def partition_gtf(gtf, coding=False, out_file=False):
     else:
         pred = lambda biotype: biotype and biotype != "protein_coding"
 
-    biotype_lookup = biotype_lookup_fn(gtf)
+    biotype_lookup = _biotype_lookup_fn(gtf)
 
     db = get_gtf_db(gtf)
     with file_transaction(out_file) as tx_out_file:
@@ -159,27 +159,6 @@ def partition_gtf(gtf, coding=False, out_file=False):
                 if pred(biotype):
                     out_handle.write(str(feature) + "\n")
     return out_file
-
-def biotype_lookup_fn(gtf):
-    """
-    return a function that will look up the biotype of a feature
-    this checks for either gene_biotype or biotype being set or for the source
-    column to have biotype information
-    """
-    db = get_gtf_db(gtf)
-    sources = set([feature.source for feature in db.all_features()])
-    gene_biotypes = set([feature.attributes.get("gene_biotype", [None])[0]
-                         for feature in db.all_features()])
-    biotypes = set([feature.attributes.get("biotype", [None])[0]
-                    for feature in db.all_features()])
-    if "protein_coding" in sources:
-        return lambda feature: feature.source
-    elif "protein_coding" in biotypes:
-        return lambda feature: feature.attributes.get("biotype", [None])[0]
-    elif "protein_coding" in gene_biotypes:
-        return lambda feature: feature.attributes.get("gene_biotype", [None])[0]
-    else:
-        return None
 
 def split_gtf(gtf, sample_size=None, out_dir=None):
     """
