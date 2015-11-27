@@ -109,6 +109,7 @@ LOOKUPS = {
     "align_bam": {"keys": ["align_bam"]},
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": []},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": []},
+    "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
 }
 
 def get_batches(data):
