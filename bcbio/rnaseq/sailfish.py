@@ -77,7 +77,6 @@ def _sailfish_strand_string(strandedness):
             'firststrand': "SR",
             'secondstrand': "SF"}.get(strandedness, "U")
 
-
 def _gtf_to_fasta(gtf_file, ref_file, data):
     gtf_fa = tempfile.NamedTemporaryFile(delete=False, suffix=".fa").name
     with file_transaction(data, gtf_fa) as tx_gtf_fa:
@@ -124,13 +123,10 @@ def combine_sailfish(samples):
                 df = new_df
             else:
                 df = rbind([df, new_df])
-
         with file_transaction(tidy_file) as tx_out_file:
             df.to_csv(tx_out_file, sep="\t", index_label="name")
-
         with file_transaction(transcript_tpm_file) as  tx_out_file:
             df.pivot(None, "sample", "tpm").to_csv(tx_out_file, sep="\t")
-
         with file_transaction(gene_tpm_file) as  tx_out_file:
             pivot = df.pivot(None, "sample", "tpm")
             tdf = pd.DataFrame.from_dict(gtf.transcript_to_gene(gtf_file),
