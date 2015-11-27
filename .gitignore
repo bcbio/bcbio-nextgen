@@ -5,6 +5,7 @@ bcbio_nextgen.egg-info/
 build/
 docs/_build
 dist/
+tests/data/test_srnaseq/
 tests/unit/bcbio-nextgen-test-data/
 tests/data/100326*
 tests/data/110106*
