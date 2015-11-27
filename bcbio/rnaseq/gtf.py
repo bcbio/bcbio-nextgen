@@ -81,7 +81,7 @@ def gtf_to_bed(gtf, alt_out_dir=None):
 def complete_features(db):
     """
     iterator returning features which are complete (have a 'gene_id' and a
-    'transcript_id') and not
+    'transcript_id')
     """
     for feature in db.all_features():
         gene_id = feature.attributes.get('gene_id', [None])[0]
@@ -268,3 +268,14 @@ def _biotype_lookup_fn(gtf):
         return lambda feature: feature.attributes.get("gene_biotype", [None])[0]
     else:
         return None
+
+def transcript_to_gene(gtf):
+    """
+    return a dictionary keyed by transcript_id of the associated gene_id
+    """
+    gene_lookup = {}
+    for feature in complete_features(get_gtf_db(gtf)):
+        gene_id = feature.attributes.get('gene_id', [None])[0]
+        transcript_id = feature.attributes.get('transcript_id', [None])[0]
+        gene_lookup[transcript_id] = gene_id
+    return gene_lookup
