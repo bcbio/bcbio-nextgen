@@ -16,8 +16,10 @@ from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.bam import callable
 from bcbio.ngsalign import postalign
+from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import shared, config_utils
 from bcbio.provenance import do
+from bcbio.structural import regions
 from bcbio.variation import population
 
 # ## Case/control
@@ -74,6 +76,26 @@ def remove_exclude_regions(orig_bed, base_file, items, remove_entire_feature=Fal
         return out_bed
     else:
         return orig_bed
+
+def get_base_cnv_regions(data, work_dir):
+    """Retrieve set of target regions for CNV analysis.
+
+    Subsets to extended transcript regions for WGS experiments to avoid
+    long runtimes.
+    """
+    cov_interval = dd.get_coverage_interval(data)
+    base_regions = regions.get_sv_bed(data)
+    # if we don't have a configured BED or regions to use for SV caling
+    if not base_regions:
+        # For genome calls, subset to regions within 10kb of genes
+        if cov_interval == "genome":
+            base_regions = regions.get_sv_bed(data, "transcripts1e4", work_dir)
+            if base_regions:
+                base_regions = remove_exclude_regions(base_regions, base_regions, [data])
+        # Finally, default to the defined variant regions
+        if not base_regions:
+            base_regions = dd.get_variant_regions(data)
+    return base_regions
 
 def prepare_exclude_file(items, base_file, chrom=None):
     """Prepare a BED file for exclusion.

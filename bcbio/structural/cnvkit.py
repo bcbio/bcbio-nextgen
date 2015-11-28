@@ -20,7 +20,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.variation import bedutils, effects, vcfutils
 from bcbio.provenance import do
-from bcbio.structural import annotate, shared, regions, plot
+from bcbio.structural import annotate, shared, plot
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -297,18 +297,7 @@ def _get_target_access_files(cov_interval, data, work_dir):
     pick targets, anti-targets and access files based on analysis type
     http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
     """
-    base_regions = regions.get_sv_bed(data)
-    # if we don't have a configured BED or regions to use for SV caling
-    if not base_regions:
-        # For genome calls, subset to regions within 10kb of genes
-        if cov_interval == "genome":
-            base_regions = regions.get_sv_bed(data, "transcripts1e4", work_dir)
-            if base_regions:
-                base_regions = shared.remove_exclude_regions(base_regions, base_regions, [data])
-        # Finally, default to the defined variant regions
-        if not base_regions:
-            base_regions = dd.get_variant_regions(data)
-
+    base_regions = shared.get_base_cnv_regions(data, work_dir)
     target_bed = bedutils.merge_overlaps(base_regions, data, out_dir=work_dir)
     if cov_interval == "amplicon":
         return target_bed, target_bed

@@ -19,6 +19,8 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.heterogeneity import chromhacks
+from bcbio.structural import shared
+from bcbio.variation import bedutils
 
 def run(vrn_info, calls_by_name, somatic_info):
     """Run BubbleTree given variant calls, CNVs and somatic
@@ -122,9 +124,13 @@ def _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, soma
             for cur_chrom, start, end in (xs[:3] for xs in reader):
                 if cur_chrom == target_chrom:
                     block_freqs = []
-                    for freq, coord in zip(freqs, coords):
+                    for i, (freq, coord) in enumerate(zip(freqs, coords)):
                         if coord >= int(start) and coord < int(end):
                             block_freqs.append(freq)
+                        elif coord >= int(end):
+                            break
+                    coords = coords[max(0, i - 1):]
+                    freqs = freqs[max(0, i - 1):]
                     if len(block_freqs) > params["hetblock"]["min_alleles"]:
                         yield start, end
     return _identify_heterogeneity_blocks_shared(in_file, _segment_by_cns, params, work_dir, somatic_info)
@@ -190,7 +196,7 @@ def _freqs_by_chromosome(in_file, params, somatic_info):
     cur_chrom = None
     with pysam.VariantFile(in_file) as bcf_in:
         for rec in bcf_in:
-            if _is_biallelic_snp(rec) and chromhacks.is_autosomal(rec.chrom):
+            if _is_biallelic_snp(rec) and _passes_plus_germline(rec) and chromhacks.is_autosomal(rec.chrom):
                 if cur_chrom is None or rec.chrom != cur_chrom:
                     if cur_chrom and len(freqs) > 0:
                         yield cur_chrom, freqs, coords
@@ -206,9 +212,11 @@ def _freqs_by_chromosome(in_file, params, somatic_info):
         if cur_chrom and len(freqs) > 0:
             yield cur_chrom, freqs, coords
 
-def _create_subset_file(in_file, region_bed, work_dir, data):
+def _create_subset_file(in_file, het_region_bed, work_dir, data):
     """Subset the VCF to a set of pre-calculated smaller regions.
     """
+    cnv_regions = shared.get_base_cnv_regions(data, work_dir)
+    region_bed = bedutils.intersect_two(het_region_bed, cnv_regions, work_dir, data)
     out_file = os.path.join(work_dir, "%s-origsubset.bcf" % utils.splitext_plus(os.path.basename(in_file))[0])
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
@@ -221,6 +229,13 @@ def _to_ucsc_style(chrom):
     """BubbleTree assumes hg19 UCSC style chromosome inputs.
     """
     return "chr%s" % chrom if not str(chrom).startswith("chr") else chrom
+
+def _passes_plus_germline(rec):
+    """Check if a record passes filters (but might be germline -- labelled with REJECT).
+    """
+    allowed = set(["PASS", "REJECT"])
+    filters = [x for x in rec.filter.keys() if x not in allowed]
+    return len(filters) > 0
 
 def _is_biallelic_snp(rec):
     return _is_snp(rec) and len(rec.alts) == 1
@@ -250,7 +265,7 @@ def _is_possible_loh(rec, params, somatic_info):
 
     Only returns SNPs, since indels tend to have less precise frequency measurements.
     """
-    if _is_biallelic_snp(rec):
+    if _is_biallelic_snp(rec) and _passes_plus_germline(rec):
         stats = _tumor_normal_stats(rec, somatic_info)
         if all([tz.get_in([x, "depth"], stats) > params["min_depth"] for x in ["normal", "tumor"]]):
             if (tz.get_in(["normal", "freq"], stats) >= params["min_freq"]
@@ -296,6 +311,7 @@ _script = """
 .libPaths(c("{local_sitelib}"))
 library(BubbleTree)
 library(GenomicRanges)
+library(ggplot2)
 
 vc.df = read.csv("{vcf_csv}", header=T)
 vc.gr = GRanges(vc.df$chrom, IRanges(vc.df$start, vc.df$end),
@@ -326,21 +342,25 @@ out <- data.frame(sample="{sample}",
                   tumor_ploidy=round(ploidy,1))
 write.csv(out, file="{freqs_out}", row.names=FALSE)
 
+title <- sprintf("{sample} (%s)", info(calls))
+
 # XXX Needs to be generalized for non-build 37/hg19 plots
 # hg19.seqinfo is hardcoded in TrackPlotter but we might
 # be able to work around with just an external centromere.dat import
 load(system.file("data", "centromere.dat.rda", package="BubbleTree"))
 load(system.file("data", "hg19.seqinfo.rda", package="BubbleTree"))
 trackplotter <- new("TrackPlotter")
-z1 <- heteroLociTrack(trackplotter,  calls@result, centromere.dat, vc.gr)
+z1 <- heteroLociTrack(trackplotter,  calls@result, centromere.dat, vc.gr) + ggplot2::labs(title=title)
 z2 <- RscoreTrack(trackplotter, calls@result, centromere.dat, cnv.gr)
 t2 <- getTracks(z1, z2)
 pdf(file="{trackplot_out}", width=8, height=6)
-gridExtra::grid.arrange(t2, ncol=1)
+g <- gridExtra::grid.arrange(t2, ncol=1)
+print(g)
 dev.off()
 
 pdf(file="{bubbleplot_out}", width=8, height=6)
 btreeplotter <- new("BTreePlotter")
-drawBTree(btreeplotter, calls@rbd.adj)
+g <- drawBTree(btreeplotter, calls@rbd.adj) + ggplot2::labs(title=title)
+print(g)
 dev.off()
 """

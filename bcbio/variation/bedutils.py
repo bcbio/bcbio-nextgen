@@ -118,3 +118,22 @@ def combine(in_files, out_file, config):
                     with open(in_file) as in_handle:
                         shutil.copyfileobj(in_handle, out_handle)
     return out_file
+
+def intersect_two(f1, f2, work_dir, data):
+    """Intersect two regions, handling cases where either file is not present.
+    """
+    f1_exists = f1 and utils.file_exists(f1)
+    f2_exists = f2 and utils.file_exists(f2)
+    if not f1_exists and not f2_exists:
+        return None
+    elif f1_exists and not f2_exists:
+        return f1
+    elif f2_exists and not f1_exists:
+        return f2
+    else:
+        out_file = os.path.join(work_dir, "%s-merged.bed" % (utils.splitext_plus(os.path.basename(f1))[0]))
+        if not utils.file_exists(out_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                cmd = "bedtools intersect -a {f1} -b {f2} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Intersect BED files", data)
+        return out_file
