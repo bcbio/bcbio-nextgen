@@ -39,7 +39,8 @@ def _run_bubbletree(vcf_csv, cnv_csv, data):
                                  "lib", "R", "site-library")
     base = utils.splitext_plus(vcf_csv)[0]
     r_file = "%s-run.R" % base
-    bubbles_out = "%s-bubbles.pdf" % base
+    bubbleplot_out = "%s-bubbleplot.pdf" % base
+    trackplot_out = "%s-trackplot.pdf" % base
     calls_out = "%s-calls.rds" % base
     freqs_out = "%s-bubbletree_prevalence.txt" % base
     sample = dd.get_sample_name(data)
@@ -252,10 +253,8 @@ def _is_possible_loh(rec, params, somatic_info):
     if _is_biallelic_snp(rec):
         stats = _tumor_normal_stats(rec, somatic_info)
         if all([tz.get_in([x, "depth"], stats) > params["min_depth"] for x in ["normal", "tumor"]]):
-            if((tz.get_in(["normal", "freq"], stats) >= params["min_freq"]
-                and tz.get_in(["normal", "freq"], stats) <= params["max_freq"])
-               and (tz.get_in(["tumor", "freq"], stats) < params["min_freq"]
-                    or tz.get_in(["tumor", "freq"], stats) > params["max_freq"])):
+            if (tz.get_in(["normal", "freq"], stats) >= params["min_freq"]
+                  and tz.get_in(["normal", "freq"], stats) <= params["max_freq"]):
                 return stats["tumor"]["freq"]
 
 def sample_alt_and_depth(sample):
@@ -299,28 +298,23 @@ library(BubbleTree)
 library(GenomicRanges)
 
 vc.df = read.csv("{vcf_csv}", header=T)
-vc.gr = GRanges(vc.df$chrom, IRanges(vc.df$start, vc.df$end), freq=vc.df$freq)
+vc.gr = GRanges(vc.df$chrom, IRanges(vc.df$start, vc.df$end),
+                freq=vc.df$freq, score=vc.df$freq)
 
 cnv.df = read.csv("{cnv_csv}", header=T)
 cnv.gr = GRanges(cnv.df$chrom, IRanges(cnv.df$start, cnv.df$end),
-                 num.mark=cnv.df$num.mark, seg.mean=cnv.df$seg.mean)
+                 num.mark=cnv.df$num.mark, seg.mean=cnv.df$seg.mean,
+                 score=cnv.df$seg.mean)
 print(vc.gr)
 print(cnv.gr)
 
 r <- new("RBD")
 rbd <- makeRBD(r, vc.gr, cnv.gr)
-print(rbd)
-calls <- new("BTreePredictor")
-calls <- loadRBD(calls, rbd)
-print(head(calls@rbd))
+print(head(rbd))
+calls <- new("BTreePredictor", rbd=rbd)
 calls <- btpredict(calls)
 
 saveRDS(calls, "{calls_out}")
-
-#pdf(file="{bubbles_out}", width=8, height=6)
-#btreeplotter <- new("BTreePlotter", branch.col="gray50")
-#drawBTree(btreeplotter, calls@rbd.adj)
-#dev.off()
 
 purity <- calls@result$prev[1]
 adj <- calls@result$ploidy.adj["adj"]
@@ -331,4 +325,22 @@ out <- data.frame(sample="{sample}",
                   prevalences=paste(round(calls@result$prev,3), collapse=";"),
                   tumor_ploidy=round(ploidy,1))
 write.csv(out, file="{freqs_out}", row.names=FALSE)
+
+# XXX Needs to be generalized for non-build 37/hg19 plots
+# hg19.seqinfo is hardcoded in TrackPlotter but we might
+# be able to work around with just an external centromere.dat import
+load(system.file("data", "centromere.dat.rda", package="BubbleTree"))
+load(system.file("data", "hg19.seqinfo.rda", package="BubbleTree"))
+trackplotter <- new("TrackPlotter")
+z1 <- heteroLociTrack(trackplotter,  calls@result, centromere.dat, vc.gr)
+z2 <- RscoreTrack(trackplotter, calls@result, centromere.dat, cnv.gr)
+t2 <- getTracks(z1, z2)
+pdf(file="{trackplot_out}", width=8, height=6)
+gridExtra::grid.arrange(t2, ncol=1)
+dev.off()
+
+pdf(file="{bubbleplot_out}", width=8, height=6)
+btreeplotter <- new("BTreePlotter")
+drawBTree(btreeplotter, calls@rbd.adj)
+dev.off()
 """
