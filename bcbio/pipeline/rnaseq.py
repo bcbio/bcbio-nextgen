@@ -1,7 +1,9 @@
 import os
+import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish)
 from bcbio.ngsalign import bowtie2, alignprep
+from bcbio.variation import vardict
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing
 from bcbio.log import logger
@@ -16,13 +18,24 @@ def rnaseq_variant_calling(samples, run_parallel):
 
 def run_rnaseq_variant_calling(data):
     variantcaller = dd.get_variantcaller(data)
+    if isinstance(variantcaller, list) and len(variantcaller) > 1:
+        logger.error("Only one variantcaller can be run for RNA-seq at "
+                     "this time. Post an issue here "
+                     "(https://github.com/chapmanb/bcbio-nextgen/issues) "
+                     "if this is something you need to do.")
+        sys.exit(1)
+
     if variantcaller and "gatk" in variantcaller:
         data = variation.rnaseq_gatk_variant_calling(data)
+    if vardict.get_vardict_command(data):
+        data = variation.rnaseq_vardict_variant_calling(data)
     return [[data]]
 
 def run_rnaseq_joint_genotyping(*samples):
     data = samples[0][0]
     variantcaller = dd.get_variantcaller(data)
+    if "gatk" not in variantcaller:
+        return samples
     ref_file = dd.get_ref_file(data)
     out_file = os.path.join(dd.get_work_dir(data, "."), "variation", "combined.vcf")
     if variantcaller and "gatk" in variantcaller:

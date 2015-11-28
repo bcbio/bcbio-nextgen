@@ -6,7 +6,7 @@ details:
   - analysis: RNA-seq
     algorithm:
       fusion_mode: True
-      variantcaller: [gatk]
+      variantcaller: [vardict]
       transcriptome_align: True
       aligner: star
       quality_format: Standard

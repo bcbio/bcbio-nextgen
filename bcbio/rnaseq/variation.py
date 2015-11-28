@@ -1,10 +1,15 @@
 import os
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, Rscript_cmd, safe_makedir
 import bcbio.pipeline.datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.ngsalign.postalign import dedup_bam
 from bcbio.distributed.transaction import file_transaction
+from bcbio.provenance import do
+from bcbio.variation import vardict
 from bcbio import broad, bam
-
+from bcbio.variation import vcfutils
+from bcbio.rnaseq import gtf
+from bcbio import bed
 
 def rnaseq_gatk_variant_calling(data):
     data = dd.set_deduped_bam(data, dedup_bam(dd.get_work_bam(data), data))
@@ -96,3 +101,39 @@ def _run_genotype_gvcfs(data, vrn_files, ref_file, out_file):
                 memscale = None
             broad_runner.run_gatk(params, memscale=memscale)
     return out_file
+
+def rnaseq_vardict_variant_calling(data):
+    sample = dd.get_sample_name(data)
+    variation_dir = os.path.join(dd.get_work_dir(data), "variation")
+    safe_makedir(variation_dir)
+    out_file = os.path.join(variation_dir, sample + ".vcf.gz")
+    if file_exists(out_file):
+        data = dd.set_vrn_file(data, out_file)
+        return data
+    vardict_cmd = vardict.get_vardict_command(data)
+    strandbias = "teststrandbias.R"
+    var2vcf = "var2vcf_valid.pl"
+    vcfstreamsort = config_utils.get_program("vcfstreamsort", data)
+    compress_cmd = "| bgzip -c"
+    freq = float(dd.get_min_allele_fraction(data, 20) / 100.0)
+    var2vcf_opts = "-v 50"
+    fix_ambig = vcfutils.fix_ambiguous_cl()
+    remove_dup = vcfutils.remove_dup_cl()
+    r_setup = ("unset R_HOME && export PATH=%s:$PATH && "
+                % os.path.dirname(Rscript_cmd()))
+    ref_file = dd.get_ref_file(data)
+    bamfile = dd.get_work_bam(data)
+    bed_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
+    opts = " -c 1 -S 2 -E 3 -g 4 "
+    with file_transaction(out_file) as tx_out_file:
+        jvm_opts = vardict._get_jvm_opts(data, tx_out_file)
+        cmd = ("{r_setup}{jvm_opts}{vardict_cmd} -G {ref_file} -f {freq} "
+                "-N {sample} -b {bamfile} {opts} {bed_file} "
+                "| {strandbias}"
+                "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
+                "| {fix_ambig} | {remove_dup} | {vcfstreamsort} {compress_cmd} "
+                "> {tx_out_file}")
+        message = "Calling RNA-seq variants with VarDict"
+        do.run(cmd.format(**locals()), message)
+    data = dd.set_vrn_file(data, out_file)
+    return data

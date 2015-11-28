@@ -85,7 +85,7 @@ def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
 def _get_jvm_opts(data, out_file):
     """Retrieve JVM options when running the Java version of VarDict.
     """
-    if not dd.get_variantcaller(data).endswith("-perl"):
+    if get_vardict_command(data) == "vardict-java":
         resources = config_utils.get_resources("vardict", data["config"])
         jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx4g"])
         jvm_opts += broad.get_default_jvm_opts(os.path.dirname(out_file))
@@ -296,7 +296,7 @@ def get_vardict_command(data):
     if isinstance(vcaller, list):
         vardict = [x for x in vcaller if "vardict" in x]
         if not vardict:
-            return "vardict-java"
+            return None
         vardict = vardict[0]
     else:
         vardict = vcaller

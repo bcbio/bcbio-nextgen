@@ -92,6 +92,7 @@ LOOKUPS = {
     "callable_regions": {"keys": ["regions", "callable"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
+    "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},
     "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
     "sailfish": {"keys": ["sailfish"]},
     "sailfish_dir": {"keys": ["sailfish_dir"]},
