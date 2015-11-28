@@ -109,8 +109,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
             for bamfile, item in itertools.izip(align_bams, items):
                 # prepare commands
                 sample = dd.get_sample_name(item)
-                vardict = dd.get_variantcaller(items[0])
-                vardict = "vardict-java" if not vardict.endswith("-perl") else "vardict"
+                vardict = get_vardict_command(items[0])
                 strandbias = "teststrandbias.R"
                 var2vcf = "var2vcf_valid.pl"
                 opts = (" ".join(_vardict_options_from_config(items, config, out_file, target))
@@ -246,8 +245,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                                    assoc_files, region, out_file)
                     return ann_file
                 vcffilter = config_utils.get_program("vcffilter", config)
-                vardict = dd.get_variantcaller(items[0])
-                vardict = "vardict-java" if not vardict.endswith("-perl") else "vardict"
+                vardict = get_vardict_command(items[0])
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 strandbias = "testsomatic.R"
                 var2vcf = "var2vcf_paired.pl"
@@ -288,3 +286,19 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
     out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
                 if assoc_files.get("dbsnp") else out_file)
     return out_file
+
+def get_vardict_command(data):
+    """
+    convert variantcaller specification to proper vardict command, handling
+    string or list specification
+    """
+    vcaller = dd.get_variantcaller(data)
+    if isinstance(vcaller, list):
+        vardict = [x for x in vcaller if "vardict" in x]
+        if not vardict:
+            return "vardict-java"
+        vardict = vardict[0]
+    else:
+        vardict = vcaller
+    vardict = "vardict-java" if not vardict.endswith("-perl") else "vardict"
+    return vardict
