@@ -66,7 +66,9 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("zcat {simple_vcf} | vawk -v SNAME={sample} -v CALLER={caller} "
                    """'{{if (($7 == "PASS" || $7 == ".") && (S${sample}$GT != "0/0")) """
-                   "print CALLER,SNAME,$1,$2,I$END,I$SVTYPE,I$KNOWN,I$END_GENE,I$LOF,I$SIMPLE_ANN,"
+                   "print CALLER,SNAME,$1,$2,I$END,"
+                   """I$SVTYPE=="BND" ? I$SVTYPE":"$3":"I$MATEID : I$SVTYPE,"""
+                   "I$KNOWN,I$END_GENE,I$LOF,I$SIMPLE_ANN,"
                    "S${sample}$SR,S${sample}$PE}}' > {tx_out_file}")
             do.run(cmd.format(**locals()), "Prioritize: convert to tab delimited")
     return out_file
