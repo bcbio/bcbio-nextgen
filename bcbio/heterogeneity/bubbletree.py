@@ -95,6 +95,7 @@ def _prep_vrn_file(in_file, vcaller, seg_file, work_dir, calls_by_name, somatic_
     data = somatic_info.tumor_data
     params = {"min_freq": 0.4,
               "max_freq": 0.6,
+              "tumor_only": {"min_freq": 0.15, "max_freq": 0.85},
               "min_depth": 15,
               "hetblock": {"min_alleles": 25,
                            "allowed_misses": 2}}
@@ -246,7 +247,7 @@ def _is_snp(rec):
 def _tumor_normal_stats(rec, somatic_info):
     """Retrieve depth and frequency of tumor and normal samples.
     """
-    out = {"normal": {"depth": 0, "freq": None},
+    out = {"normal": {"depth": None, "freq": None},
            "tumor": {"depth": 0, "freq": None}}
     for name, sample in rec.samples.items():
         alt, depth = sample_alt_and_depth(sample)
@@ -267,9 +268,16 @@ def _is_possible_loh(rec, params, somatic_info):
     """
     if _is_biallelic_snp(rec) and _passes_plus_germline(rec):
         stats = _tumor_normal_stats(rec, somatic_info)
-        if all([tz.get_in([x, "depth"], stats) > params["min_depth"] for x in ["normal", "tumor"]]):
-            if (tz.get_in(["normal", "freq"], stats) >= params["min_freq"]
-                  and tz.get_in(["normal", "freq"], stats) <= params["max_freq"]):
+        depths = [tz.get_in([x, "depth"], stats) for x in ["normal", "tumor"]]
+        depths = [d for d in depths if d is not None]
+        normal_freq = tz.get_in(["normal", "freq"], stats)
+        tumor_freq = tz.get_in(["tumor", "freq"], stats)
+        if all([d > params["min_depth"] for d in depths]):
+            if normal_freq is not None:
+                if normal_freq >= params["min_freq"] and normal_freq <= params["max_freq"]:
+                    return stats["tumor"]["freq"]
+            elif (tumor_freq >= params["tumor_only"]["min_freq"] and
+                    tumor_freq <= params["tumor_only"]["max_freq"]):
                 return stats["tumor"]["freq"]
 
 def sample_alt_and_depth(sample):
