@@ -10,6 +10,7 @@ import sys
 
 LOOKUPS = {
     "config": {"keys": ['config']},
+    "tmp_dir": {"keys": ['config', 'resources', 'tmp', 'dir']},
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
                   "default": 1},
     "priority_regions": {"keys": ['config', 'algorithm', 'priority_regions']},

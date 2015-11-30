@@ -58,7 +58,8 @@ def sailfish_index(gtf_file, ref_file, data):
     sailfish = config_utils.get_program("sailfish", data["config"])
     gtf_fa_dirty = _gtf_to_fasta(gtf_file, ref_file, data)
     gtf_fa = _clean_gtf_fa(gtf_fa_dirty, data)
-    out_dir = tempfile.mkdtemp(prefix="sailfish_index")
+    tmpdir = dd.get_tmp_dir(data)
+    out_dir = tempfile.mkdtemp(prefix="sailfish_index", dir=tmpdir)
     cmd = "{sailfish} index -t {gtf_fa} -o {out_dir} -k 25"
     message = "Creating sailfish index for {gtf_fa}."
     do.run(cmd.format(**locals()), message.format(**locals()), None)
@@ -78,7 +79,8 @@ def _sailfish_strand_string(strandedness):
             'secondstrand': "SF"}.get(strandedness, "U")
 
 def _gtf_to_fasta(gtf_file, ref_file, data):
-    gtf_fa = tempfile.NamedTemporaryFile(delete=False, suffix=".fa").name
+    tmpdir = dd.get_tmp_dir(data)
+    gtf_fa = tempfile.NamedTemporaryFile(delete=False, suffix=".fa", dir=tmpdir).name
     with file_transaction(data, gtf_fa) as tx_gtf_fa:
         cmd = "gtf_to_fasta {gtf_file} {ref_file} {tx_gtf_fa}"
         message = "Extracting genomic sequences of {gtf_file}."
@@ -90,7 +92,8 @@ def _clean_gtf_fa(gtf_fa, data):
     convert the gtf_to_fasta sequence names to just the transcript ID
     >1 ENST00000389680 chrM+ 648-1601 -> >ENST00000389680
     """
-    out_file = tempfile.NamedTemporaryFile(delete=False, suffix=".fa").name
+    tmpdir = dd.get_tmp_dir(data)
+    out_file = tempfile.NamedTemporaryFile(delete=False, suffix=".fa", dir=tmpdir).name
     with file_transaction(data, out_file) as tx_out_file:
         with open(gtf_fa) as in_handle, open(tx_out_file, "w") as out_handle:
             for line in in_handle:
