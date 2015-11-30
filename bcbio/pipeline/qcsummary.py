@@ -583,7 +583,7 @@ def _run_qualimap(bam_file, data, out_dir):
                                              num_cores)
         cmd = ("unset DISPLAY && {qualimap} bamqc -bam {bam_file} -outdir {out_dir} "
                "-nt {num_cores} --java-mem-size={max_mem}")
-        species = data["genome_resources"]["aliases"].get("ensembl", "").upper()
+        species = tz.get_in(("genome_resources", "aliases", "ensembl"), data, "")
         if species in ["HUMAN", "MOUSE"]:
             cmd += " -gd {species}"
         regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
