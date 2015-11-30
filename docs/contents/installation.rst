@@ -15,25 +15,30 @@ and RNA-seq analysis, bundled into an isolated directory or virtual environment:
 bcbio should install cleanly on most Linux systems. For Mac OSX, we suggest
 trying `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ which runs
 bcbio on :ref:`docs-cloud` or isolates all the third party tools inside a
-Docker container.
+Docker container. bcbio-vm is still a work in progress but not all of the
+dependencies bcbio uses install cleanly on OSX.
 
-It places genomes, indexes and associated data files in
+With the command line above, indexes and associated data files go in
 ``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``. You should edit
 the pre-created system configuration file in
-``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml``
-to match your local system or cluster configuration.
+``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml`` to match your local
+system or cluster configuration. If you don't have write permissions to install
+into the ``/usr/local`` directories you can install elsewhere or use ``sudo
+chmod`` to give your standard user permissions. Please don't run the installer
+as the root user.
 
 The installation is highly customizable, and you can install
 additional software and data later using ``bcbio_nextgen.py upgrade``.
 Run ``python bcbio_nextgen_install.py`` with no arguments to see options
 for configuring the installation process. Some useful arguments are:
 
-- ``--sudo`` Enable installation in privileged directories and allow the
-  installer to update system packages.
 - ``--isolate`` Avoid updating the user's ``~/.bashrc`` if installing in a
   non-standard PATH. This facilitates creation of isolated modules
   without disrupting the user's environmental setup.
 - ``--nodata`` Do not install genome data.
+- ``--sudo`` Enable installation in privileged directories and allow the
+  installer to update system packages. We recommend avoiding this
+  option unless inside a Docker container, cloud instance or virtual machine.
 
 To bootstrap installation, the machine will need to have some basic
 requirements:
@@ -48,11 +53,10 @@ requirements:
 - unzip
 - zlib (with development libraries)
 
-If you're not using the ``--sudo`` option, please see :ref:`isolated-install`
-for additional system requirements needed to bootstrap the full system on
-minimal machines. The
-`bcbio-nextgen Dockerfile <https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_
-contains bootstrap package information to install on bare Ubuntu systems.
+Please see :ref:`isolated-install` for additional system requirements needed to
+bootstrap the full system on minimal machines. The `bcbio-nextgen Dockerfile
+<https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_ contains
+bootstrap package information to install on bare Ubuntu systems.
 
 The automated installer creates a fully integrated environment that
 allows simultaneous updates of the framework, third party tools and
@@ -362,7 +366,7 @@ You can install the latest release code with::
 Or the latest development version from GitHub::
 
       git clone https://github.com/chapmanb/bcbio-nextgen.git
-      cd bcbio-nextgen && python setup.py build && sudo python setup.py install
+      cd bcbio-nextgen && python setup.py build && python setup.py install
 
 This requires Python 2.7. The setup script installs
 required Python library dependencies. If you'd like to install the
