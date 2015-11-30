@@ -1,5 +1,6 @@
 ## 0.9.5 (in progress)
 
+- Add tRNA count and figures by tdrmapper for srna-seq pipeline.
 - Avoid running callability checks on smaller chromosomes less than 1 million
   basepairs. Saves computation and disk IO on alt and support regions we don't
   split on.
