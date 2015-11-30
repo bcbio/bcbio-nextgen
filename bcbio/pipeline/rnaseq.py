@@ -34,6 +34,8 @@ def run_rnaseq_variant_calling(data):
 def run_rnaseq_joint_genotyping(*samples):
     data = samples[0][0]
     variantcaller = dd.get_variantcaller(data)
+    if not variantcaller:
+      return samples
     if "gatk" not in variantcaller:
         return samples
     ref_file = dd.get_ref_file(data)
