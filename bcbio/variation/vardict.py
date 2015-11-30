@@ -298,6 +298,8 @@ def get_vardict_command(data):
         if not vardict:
             return None
         vardict = vardict[0]
+    elif not vcaller:
+        return None
     else:
         vardict = vcaller
     vardict = "vardict-java" if not vardict.endswith("-perl") else "vardict"
