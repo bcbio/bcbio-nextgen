@@ -1,5 +1,10 @@
 ## 0.9.5 (in progress)
 
+- Enable calling of HLA alleles with human build 38 (hg38). Turn on with the
+  `hlacaller` option.
+- Structural variant prioritization with BED files of known biologically
+  important regions. Extracts SV calls in these regions and produces a tab
+  delimited high level summary. Use the `svprioritize` option to enable.
 - Add tRNA count and figures by tdrmapper for srna-seq pipeline.
 - Avoid running callability checks on smaller chromosomes less than 1 million
   basepairs. Saves computation and disk IO on alt and support regions we don't

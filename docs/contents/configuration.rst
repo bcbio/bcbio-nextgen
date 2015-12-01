@@ -518,6 +518,15 @@ Structural variant calling
 
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, manta,
   cnvkit]. LUMPY, Manta and DELLY require paired end reads.
+- ``svprioritize`` --  Produce a tab separated summary file of structural
+  variants in regions of interest. This complements the full VCF files of
+  structural variant calls to highlight changes in known genes. This can be
+  either the path to a BED file (with ``chrom start end gene_name``) or the name
+  of one of the pre-installed prioritization files:
+   - ``cancer/civic`` (hg19, GRCh37, hg38) -- Known cancer associated genes from
+     `CIViC <https://civic.genome.wustl.edu>`_.
+   - ``cancer/az300`` (hg19, GRCh37, hg38) -- 300 cancer associated genes
+     contributed by `AstraZeneca oncology <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
 - ``sv_regions`` -- A specification of regions to target during structural
   variant calling. By default, bcbio uses regions specified in
   ``variant_regions`` but this allows custom specification for structural
@@ -531,6 +540,14 @@ Structural variant calling
   or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
   ``disambiguate`` enables disambiguation of ``STAR`` output [false, true].
+
+HLA typing
+==========
+- ``hlacaller`` -- Perform identification of highly polymorphic HLAs with human
+  build 38 (hg38). The recommended options is ``optitype``, using the `OptiType
+  <https://github.com/FRED-2/OptiType>`_ caller. Also supports using the `bwa
+  HLA typing implementation
+  <https://github.com/lh3/bwa/blob/master/README-alt.md#hla-typing>`_ with ``bwakit``
 
 Validation
 ===========
