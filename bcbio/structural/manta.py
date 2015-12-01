@@ -68,7 +68,7 @@ def _prep_config(items, paired, work_dir):
     assert utils.which("configManta.py"), "Could not find installed configManta.py"
     out_file = os.path.join(work_dir, "runWorkflow.py")
     if not utils.file_exists(out_file) or _out_of_date(out_file):
-        cmd = [sys.executable, utils.which("configManta.py")]
+        cmd = [sys.executable, os.path.realpath(utils.which("configManta.py"))]
         if paired:
             if paired.normal_bam:
                 cmd += ["--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
