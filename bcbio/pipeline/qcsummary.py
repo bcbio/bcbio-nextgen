@@ -39,7 +39,6 @@ from bcbio.provenance import do
 import bcbio.rnaseq.qc
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import bedutils
-from bcbio import broad
 from bcbio.variation import coverage_experimental as cov
 from bcbio.variation.coverage import decorate_problem_regions
 from bcbio.ngsalign.postalign import dedup_bam
