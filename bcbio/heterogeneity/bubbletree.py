@@ -32,9 +32,9 @@ def run(vrn_info, calls_by_name, somatic_info):
                              work_dir, calls_by_name, somatic_info)
     cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], calls_by_name, work_dir,
                              somatic_info.tumor_data)
-    _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data)
+    _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data, somatic_info.normal_bam is not None)
 
-def _run_bubbletree(vcf_csv, cnv_csv, data):
+def _run_bubbletree(vcf_csv, cnv_csv, data, has_normal=True):
     """Create R script and run on input data
     """
     local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
@@ -46,6 +46,12 @@ def _run_bubbletree(vcf_csv, cnv_csv, data):
     calls_out = "%s-calls.rds" % base
     freqs_out = "%s-bubbletree_prevalence.txt" % base
     sample = dd.get_sample_name(data)
+    # BubbleTree has some internal hardcoded paramters that assume
+    # a smaller distribution of log2 scores. This is not true for
+    # tumor-only calls, so we scale the calculations to actually
+    # get calls. Need to better long term solution with flexible
+    # parameters.
+    lrr_scale = 1.0 if has_normal else 10.0
     with open(r_file, "w") as out_handle:
         out_handle.write(_script.format(**locals()))
     if not utils.file_exists(freqs_out):
@@ -84,7 +90,7 @@ def _prep_cnv_file(cns_file, svcaller, calls_by_name, work_dir, data):
                     writer = csv.writer(out_handle)
                     writer.writerow(["chrom", "start", "end", "num.mark", "seg.mean"])
                     reader.next()  # header
-                    for chrom, start, end, _, log2, probes in reader:
+                    for chrom, start, end, _, log2, probes in (xs[:6] for xs in reader):
                         if chromhacks.is_autosomal(chrom):
                             writer.writerow([_to_ucsc_style(chrom), start, end, probes, log2])
     return out_file
@@ -334,6 +340,7 @@ print(cnv.gr)
 
 r <- new("RBD")
 rbd <- makeRBD(r, vc.gr, cnv.gr)
+rbd$lrr <- rbd$lrr / {lrr_scale}
 print(head(rbd))
 calls <- new("BTreePredictor", rbd=rbd)
 calls <- btpredict(calls)
