@@ -47,7 +47,7 @@ def trim_srna_sample(data):
     data["size_stats"] = _summary(data['collapse'])
     return [[data]]
 
-def mirbase(data):
+def sample_annotation(data):
     """
     Annotate miRNAs using miRBase database with seqbuster tool
     """

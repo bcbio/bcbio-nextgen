@@ -85,10 +85,10 @@ def trim_srna_sample(*args):
         return ipython.zip_args(apply(srna.trim_srna_sample, *args))
 
 @require(srna)
-def seqbuster(*args):
+def srna_annotation(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(srna.mirbase, *args))
+        return ipython.zip_args(apply(srna.sample_annotation, *args))
 
 @require(seqcluster)
 def seqcluster_prepare(*args):

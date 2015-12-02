@@ -1,16 +1,11 @@
 import os
-import string
 import os.path as op
-import sys
-import shutil
-from collections import namedtuple
 
 import pysam
 
 from bcbio.utils import file_exists, safe_makedir, chdir
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 
@@ -24,6 +19,7 @@ def run(data):
     species = dd.get_species(data[0][0])
     hairpin = op.join(mirbase, "hairpin.fa")
     mature = op.join(mirbase, "mature.fa")
+    rfam_file = op.join(mirbase, "Rfam_for_miRDeep.fa")
     bam_file = op.join(work_dir, "align", "seqs.bam")
     seqs_dir = op.join(work_dir, "seqcluster", "prepare")
     collapsed = op.join(seqs_dir, "seqs.ma")
@@ -32,17 +28,18 @@ def run(data):
     safe_makedir(out_dir)
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
-        cmd = ("{mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -r simple -c -d -P -t {species} -z res").format(**locals())
-        if mirdeep2 and not file_exists(out_file) and file_exists(mature):
+        cmd = ("{mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -d -P -t {species} -z res").format(**locals())
+        if mirdeep2 and not file_exists(out_file) and file_exists(mature) and file_exists(rfam_file):
             do.run(cmd.format(**locals()), "Running mirdeep2.")
-        _parse_novel(out_file)
+        if file_exists(out_file):
+            _parse_novel(out_file)
 
 def _prepare_inputs(ma_fn, bam_file, out_dir):
     """
     Convert to fastq with counts
     """
     fixed_fa = os.path.join(out_dir, "file_reads.fa")
-    count_name =dict() 
+    count_name =dict()
     with file_transaction(fixed_fa) as out_tx:
         with open(out_tx, 'w') as out_handle:
             with open(ma_fn) as in_handle:

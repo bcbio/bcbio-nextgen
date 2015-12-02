@@ -46,8 +46,8 @@ def prep_samples(*args):
     return sample.prep_samples(*args)
 
 @utils.map_wrap
-def seqbuster(*args):
-    return srna.mirbase(*args)
+def srna_annotation(*args):
+    return srna.sample_annotation(*args)
 
 @utils.map_wrap
 def seqcluster_prepare(*args):
