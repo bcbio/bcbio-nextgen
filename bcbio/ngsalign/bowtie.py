@@ -9,9 +9,10 @@ from bcbio.provenance import do
 
 galaxy_location_file = "bowtie_indices.loc"
 
-def _bowtie_args_from_config(config):
+def _bowtie_args_from_config(data):
     """Configurable high level options for bowtie.
     """
+    config = data['config']
     qual_format = config["algorithm"].get("quality_format", None)
     if qual_format is None or qual_format.lower() == "illumina":
         qual_flags = ["--phred64-quals"]
@@ -19,6 +20,7 @@ def _bowtie_args_from_config(config):
         qual_flags = []
     multi_mappers = config["algorithm"].get("multiple_mappers", True)
     multi_flags = ["-M", 1] if multi_mappers else ["-m", 1]
+    multi_flags = [] if data["analysis"].lower().startswith("smallrna-seq") else multi_flags
     cores = config.get("resources", {}).get("bowtie", {}).get("cores", None)
     num_cores = config["algorithm"].get("num_cores", 1)
     core_flags = ["-p", str(num_cores)] if num_cores > 1 else []
@@ -36,7 +38,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
     if not file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cl = [config_utils.get_program("bowtie", config)]
-            cl += _bowtie_args_from_config(config)
+            cl += _bowtie_args_from_config(data)
             cl += extra_args if extra_args is not None else []
             cl += ["-q",
                    "-v", 2,
