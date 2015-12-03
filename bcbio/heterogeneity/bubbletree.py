@@ -46,11 +46,10 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, has_normal=True):
     calls_out = "%s-calls.rds" % base
     freqs_out = "%s-bubbletree_prevalence.txt" % base
     sample = dd.get_sample_name(data)
-    # BubbleTree has some internal hardcoded paramters that assume
-    # a smaller distribution of log2 scores. This is not true for
-    # tumor-only calls, so we scale the calculations to actually
-    # get calls. Need to better long term solution with flexible
-    # parameters.
+    # BubbleTree has some internal hardcoded paramters that assume a smaller
+    # distribution of log2 scores. This is not true for tumor-only calls and
+    # normal contamination, so we scale the calculations to actually get calls.
+    # Need a better long term solution with flexible parameters.
     lrr_scale = 1.0 if has_normal else 10.0
     with open(r_file, "w") as out_handle:
         out_handle.write(_script.format(**locals()))

@@ -79,9 +79,9 @@ def _group_coords(rs):
     """Organize coordinate regions into groups for each transcript.
 
     Avoids collapsing very large introns or repetitive genes spread across
-    the chromosome by limiting the intron size to 10kb for creating a single transcript
+    the chromosome by limiting the intron size to 100kb for creating a single transcript
     """
-    max_intron_size = 1e4
+    max_intron_size = 1e5
     coords = []
     for r in rs:
         coords.append(r.start)

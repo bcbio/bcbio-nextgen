@@ -15,8 +15,7 @@ from bcbio.log import logbook_zmqpush
 LOG_NAME = "bcbio-nextgen"
 
 def get_log_dir(config):
-    d = config.get("log_dir",
-                   config.get("resources", {}).get("log", {}).get("dir", "log"))
+    d = config.get("log_dir", "log")
     return d
 
 logger = logbook.Logger(LOG_NAME)
