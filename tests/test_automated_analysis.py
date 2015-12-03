@@ -235,16 +235,27 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(srnaseq=True)
-    def test_srnaseq(self):
+    @attr(srnaseq_star=True)
+    def test_srnaseq_star(self):
         """Run an sRNA-seq analysis.
         """
         self._install_test_files(self.data_dir)
         with make_workdir() as workdir:
             cl = ["bcbio_nextgen.py",
                   get_post_process_yaml(self.data_dir, workdir),
-                  os.path.join(self.data_dir, "run_info-srnaseq.yaml")]
+                  os.path.join(self.data_dir, "run_info-srnaseq_star.yaml")]
             subprocess.check_call(cl)
 
+    @attr(srnaseq=True)
+    @attr(srnaseq_bowtie=True)
+    def test_srnaseq_bowtie(self):
+        """Run an sRNA-seq analysis.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, "run_info-srnaseq_bowtie.yaml")]
 
     @attr(chipseq=True)
     def test_chipseq(self):

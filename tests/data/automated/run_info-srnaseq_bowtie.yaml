@@ -5,7 +5,8 @@ fc_name: miRQC
 details:
   - analysis: smallRNA-seq
     algorithm:
-      aligner: star
+      quality_format: "Standard"
+      aligner: bowtie
       # aligner: hisat2
       adapters: ["TGGAATTCTCGGGTGC"]
       species: hsa

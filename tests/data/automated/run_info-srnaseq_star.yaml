@@ -1,0 +1,18 @@
+upload:
+  dir: upload
+fc_date: '150803'
+fc_name: miRQC
+details:
+  - analysis: smallRNA-seq
+    algorithm:
+      quality_format: "Standard"
+      aligner: star
+      # aligner: hisat2
+      adapters: ["TGGAATTCTCGGGTGC"]
+      species: hsa
+    description: miRQCa
+    files:
+      - ../data/test_srnaseq/mirqca.fastq
+    genome_build: hg19
+    metadata:
+      type: mirqc
