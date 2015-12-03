@@ -56,11 +56,12 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
 
 def sailfish_index(gtf_file, ref_file, data):
     sailfish = config_utils.get_program("sailfish", data["config"])
+    num_cores = dd.get_num_cores(data)
     gtf_fa_dirty = _gtf_to_fasta(gtf_file, ref_file, data)
     gtf_fa = _clean_gtf_fa(gtf_fa_dirty, data)
     tmpdir = dd.get_tmp_dir(data)
     out_dir = tempfile.mkdtemp(prefix="sailfish_index", dir=tmpdir)
-    cmd = "{sailfish} index -t {gtf_fa} -o {out_dir} -k 25"
+    cmd = "{sailfish} index -p {num_cores} -t {gtf_fa} -o {out_dir} -k 25"
     message = "Creating sailfish index for {gtf_fa}."
     do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
