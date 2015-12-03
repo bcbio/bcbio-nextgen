@@ -99,8 +99,8 @@ def filter_multimappers(align_file, data):
 ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
             "variant2": {"params": ["-X", 2000]},
             "standard": {"params": ["-X", 2000]},
-            "rna-seq": {"params": ["--sensitive", "-X", 200]},
-            "smallrna-seq": {"params": ["-N", 1, "-k", 1000, "--sensitive", "-X", 2000]}}
+            "rna-seq": {"params": ["--sensitive", "-X", 2000]},
+            "smallrna-seq": {"params": ["-N", 1, "-k", 1000, "--sensitive", "-X", 200]}}
 
 def index_transcriptome(gtf_file, ref_file, data):
     """

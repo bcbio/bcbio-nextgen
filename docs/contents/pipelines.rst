@@ -257,7 +257,7 @@ detection.
 
 - Sequence alignment:
   - `STAR`_ for genome annotation
-  - hisat2 for genome annotation as an option
+  - bowtie, `bowtie2` and  hisat2 for genome annotation as an option
   - `seqbuster <https://github.com/lpantano/seqbuster>`_ for miRNA annotation
 
 - Quality control:
