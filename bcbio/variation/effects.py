@@ -83,6 +83,10 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             resources = yaml.load(in_handle)
         ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
         symlink_dir = _special_dbkey_maps(dbkey, ref_file)
+        if ensembl_name and ensembl_name.find("_vep_") == -1:
+            raise ValueError("%s has ensembl an incorrect value."
+                             "It should have _vep_ in the name."
+                             "Remove line or fix the name to avoid error.")
         if symlink_dir and ensembl_name:
             species, vepv = ensembl_name.split("_vep_")
             return symlink_dir, species
