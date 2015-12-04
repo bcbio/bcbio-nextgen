@@ -42,7 +42,7 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     fq1_cmd = "{fq1}" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
-        cmd = " -r {fq1_cmd} "
+        cmd += " -r {fq1_cmd} "
     else:
         fq2_cmd = "{fq2}" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
         fq2_cmd = fq2_cmd.format(fq2=fq2)
