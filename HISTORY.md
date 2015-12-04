@@ -32,6 +32,10 @@
   (combined.gene.sf.tpm) TPM expression estimation.
 - Move Cufflinks to be off by default for expression estimation (turn on via
   expression_callers if needed).
+- Add STAR fusion gene parameters suggested by @felixschlesinger.
+- Add disambiguation to Sailfish by creating a master FASTA file of all transcripts from
+  all organisms, quantitating each and separating out the organism-specific
+  transcripts after.
 
 ## 0.9.4 (14 October 2015)
 
