@@ -57,7 +57,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     cmd += _read_group_option(names)
     fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
     if fusion_mode:
-        cmd += (" --chimSegmentMin 15 --chimJunctionOverhangMin 15 "
+        cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                "--chimScoreSeparation 5 "
                 "--chimOutType WithinSAM ")
     strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                 "unstranded").lower()
