@@ -15,6 +15,7 @@ LOOKUPS = {
                   "default": 1},
     "priority_regions": {"keys": ['config', 'algorithm', 'priority_regions']},
     "problem_region_dir": {"keys": ["config", "algorithm", "problem_region_dir"]},
+    "genome_build": {"keys": ["genome_build"]},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
     "srna_gtf_file": {"keys": ['genome_resources', 'srnaseq', 'srna-transcripts'],
