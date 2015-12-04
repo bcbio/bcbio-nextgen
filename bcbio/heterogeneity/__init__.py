@@ -75,6 +75,7 @@ def estimate(items, batch, config):
     paired = vcfutils.get_paired_bams([dd.get_align_bam(d) for d in items], items)
     calls = _get_calls(paired.tumor_data)
     variants = _get_variants(paired.tumor_data)
+    het_info = []
     for hetcaller in _get_hetcallers(items):
         try:
             hetfn = hetcallers[hetcaller]
@@ -83,9 +84,14 @@ def estimate(items, batch, config):
             print "%s not yet implemented" % hetcaller
         if hetfn:
             hetout = hetfn(variants[0], calls, paired)
+            if hetout:
+                het_info.append(hetout)
     out = []
     for data in items:
         if batch == _get_batches(data)[0]:
+            if dd.get_sample_name(data) == paired.tumor_name:
+                if het_info:
+                    data["heterogeneity"] = het_info
             out.append([data])
     return out
 

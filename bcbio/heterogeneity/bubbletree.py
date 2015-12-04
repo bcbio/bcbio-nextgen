@@ -32,7 +32,7 @@ def run(vrn_info, calls_by_name, somatic_info):
                              work_dir, calls_by_name, somatic_info)
     cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], calls_by_name, work_dir,
                              somatic_info.tumor_data)
-    _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data, somatic_info.normal_bam is not None)
+    return _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data, somatic_info.normal_bam is not None)
 
 def _run_bubbletree(vcf_csv, cnv_csv, data, has_normal=True):
     """Create R script and run on input data
@@ -63,6 +63,9 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, has_normal=True):
             else:
                 logger.exception()
                 raise
+    return {"caller": "bubbletree",
+            "report": freqs_out,
+            "plots": {"bubble": bubbleplot_out, "track": trackplot_out}}
 
 def _allowed_bubbletree_errorstates(msg):
     allowed = ["Error in p[i, ] : subscript out of bounds",

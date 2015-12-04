@@ -112,6 +112,7 @@ def _get_files_variantcall(sample):
     out = _maybe_add_variant_file(algorithm, sample, out)
     out = _maybe_add_sv(algorithm, sample, out)
     out = _maybe_add_hla(algorithm, sample, out)
+    out = _maybe_add_heterogeneity(algorithm, sample, out)
     out = _maybe_add_validate(algorithm, sample, out)
     return _add_meta(out, sample)
 
@@ -153,6 +154,19 @@ def _maybe_add_hla(algorithm, sample, out):
         out.append({"path": sample["hla"]["call_file"],
                     "type": "csv",
                     "ext": "hla-%s" % (sample["hla"]["hlacaller"])})
+    return out
+
+def _maybe_add_heterogeneity(algorithm, sample, out):
+    for hetinfo in sample.get("heterogeneity", []):
+        report = hetinfo.get("report")
+        if report:
+            out.append({"path": report,
+                        "type": utils.splitext_plus(report)[-1].replace(".", "").replace("-", ""),
+                        "ext": "%s-report" % (hetinfo["caller"])})
+        for plot_type, plot_file in hetinfo.get("plots", {}).items():
+            out.append({"path": plot_file,
+                        "type": utils.splitext_plus(plot_file)[-1].replace(".", ""),
+                        "ext": "%s-%s-plot" % (hetinfo["caller"], plot_type)})
     return out
 
 def _maybe_add_sv(algorithm, sample, out):
