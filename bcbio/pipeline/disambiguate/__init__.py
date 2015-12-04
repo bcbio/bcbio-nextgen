@@ -27,8 +27,9 @@ def split(*items):
     for data in [x[0] for x in items]:
         dis_orgs = data["config"]["algorithm"].get("disambiguate")
         if dis_orgs:
-            data["disambiguate"] = {"genome_build": data["genome_build"],
-                                    "base": True}
+            if not data.get("disambiguate", None):
+                data["disambiguate"] = {"genome_build": data["genome_build"],
+                                        "base": True}
             out.append([data])
             # handle the instance where a single organism is disambiguated
             if isinstance(dis_orgs, basestring):
