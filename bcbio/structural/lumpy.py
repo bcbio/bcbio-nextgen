@@ -35,7 +35,7 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                 full_bams = ",".join(full_bams)
                 sr_bams = ",".join(sr_bams)
                 disc_bams = ",".join(disc_bams)
-                exclude = "-x %s" % sv_exclude_bed if utils.file_exists(sv_exclude_bed) else ""
+                exclude = "-x %s" % sv_exclude_bed if (sv_exclude_bed and utils.file_exists(sv_exclude_bed)) else ""
                 ref_file = dd.get_ref_file(items[0])
                 # use our bcbio python for runs within lumpyexpress
                 curpython_dir = os.path.dirname(sys.executable)

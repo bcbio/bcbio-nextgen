@@ -32,7 +32,7 @@ def identify(data):
     min_coverage = 10
     window_size = 250
     work_bam, out_file, stats_file = _get_files(data)
-    if not os.path.exists(out_file):
+    if not os.path.exists(out_file) and dd.get_coverage_interval(data) == "genome":
         cores = dd.get_num_cores(data)
         with file_transaction(data, out_file) as tx_out_file:
             tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)

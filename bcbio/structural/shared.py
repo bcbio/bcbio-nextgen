@@ -115,7 +115,8 @@ def prepare_exclude_file(items, base_file, chrom=None):
             sv_exclude_bed = _get_sv_exclude_file(items)
             if sv_exclude_bed and len(want_bedtool) > 0:
                 want_bedtool = want_bedtool.subtract(sv_exclude_bed, nonamecheck=True).saveas()
-            want_bedtool = pybedtools.BedTool(shared.remove_highdepth_regions(want_bedtool.saveas().fn, items))
+            if any(dd.get_coverage_interval(d) == "genome" for d in items):
+                want_bedtool = pybedtools.BedTool(shared.remove_highdepth_regions(want_bedtool.saveas().fn, items))
             with file_transaction(items[0], out_file) as tx_out_file:
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
