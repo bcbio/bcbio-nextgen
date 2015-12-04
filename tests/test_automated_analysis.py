@@ -256,6 +256,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
             cl = ["bcbio_nextgen.py",
                   get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, "run_info-srnaseq_bowtie.yaml")]
+            subprocess.check_call(cl)
 
     @attr(chipseq=True)
     def test_chipseq(self):
