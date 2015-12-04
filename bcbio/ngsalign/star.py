@@ -64,7 +64,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if strandedness == "unstranded" and not srna:
         cmd += " --outSAMstrandField intronMotif "
 
-    cmd += " --quantMode TranscriptomeSAM "
+    if not srna:
+        cmd += " --quantMode TranscriptomeSAM "
 
     with file_transaction(data, final_out) as tx_final_out:
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
