@@ -267,7 +267,8 @@ def upgrade_bcbio_data(args, remotes):
         extras = []
         if "cadd" in toolplus:
             extras.extend(["--extra", "cadd_score"])
-        subprocess.check_call([gemini, "update", "--dataonly"] + extras)
+        ann_dir = get_gemini_dir()
+        subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -392,18 +393,16 @@ def _install_toolplus(args):
     system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
     toolplus_dir = os.path.join(_get_data_dir(), "toolplus")
     for tool in args.toolplus:
-        if tool.name == "data":
-            _install_gemini(args.tooldir, _get_data_dir(), args)
-        elif tool.name == "kraken":
+        if tool.name == "kraken":
             _install_kraken_db(_get_data_dir(), args)
         elif tool.name in set(["gatk", "mutect"]):
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
         elif tool.name in set(["protected"]):  # back compatibility
             pass
-        elif tool.name in set(["cadd", "dbnsfp"]):  # larger data targets
+        elif tool.name in set(["cadd", "dbnsfp", "data"]):  # larger data targets
             pass
         else:
-            raise ValueError("Unexpected toolplus argument: %s %s" (tool.name, tool.fname))
+            raise ValueError("Unexpected toolplus argument: %s %s" % (tool.name, tool.fname))
 
 def get_gatk_jar_version(name, fname):
     if name == "gatk":
@@ -452,32 +451,6 @@ def _update_system_file(system_file, name, new_kvs):
     config["resources"] = new_rs
     with open(system_file, "w") as out_handle:
         yaml.safe_dump(config, out_handle, default_flow_style=False, allow_unicode=False)
-
-def _install_gemini(tooldir, datadir, args):
-    """Install gemini layered on top of bcbio-nextgen, sharing anaconda framework.
-    """
-    # check if we have an up to date version, upgrading if needed
-    gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
-    if os.path.exists(gemini):
-        vurl = "https://raw.github.com/arq5x/gemini/master/requirements.txt"
-        requests.packages.urllib3.disable_warnings()
-        r = requests.get(vurl, verify=False)
-        for line in r.text.split():
-            if line.startswith(("gemini=", "gemini>")):
-                latest_version = line.split("=")[-1].split(">")[-1]
-        cur_version = subprocess.check_output([gemini, "-v"], stderr=subprocess.STDOUT).strip().split()[-1]
-        if LooseVersion(latest_version) > LooseVersion(cur_version):
-            subprocess.check_call([gemini, "update"])
-    # install from scratch inside existing Anaconda python
-    else:
-        url = "https://raw.github.com/arq5x/gemini/master/gemini/scripts/gemini_install.py"
-        script = os.path.basename(url)
-        subprocess.check_call(["wget", "-O", script, url, "--no-check-certificate"])
-        cmd = [sys.executable, "-Es", script, tooldir, datadir, "--notools", "--nodata", "--sharedpy"]
-        if not args.sudo:
-            cmd.append("--nosudo")
-        subprocess.check_call(cmd)
-        os.remove(script)
 
 def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
