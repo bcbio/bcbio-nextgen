@@ -64,11 +64,13 @@ def compress(in_bam, ref_file, config):
     return out_file
 
 def index(in_cram, config):
-    """Ensure CRAM file has a .crai index file using cram_index from scramble.
+    """Ensure CRAM file has a .crai index file.
     """
-    if not utils.file_exists(in_cram + ".crai"):
+    out_file = in_cram + ".crai"
+    if not utils.file_uptodate(out_file, in_cram):
         with file_transaction(config, in_cram + ".crai") as tx_out_file:
             tx_in_file = os.path.splitext(tx_out_file)[0]
             utils.symlink_plus(in_cram, tx_in_file)
-            cmd = "cram_index {tx_in_file}"
+            cmd = "samtools index {tx_in_file}"
             subprocess.check_call(cmd.format(**locals()), shell=True)
+    return out_file
