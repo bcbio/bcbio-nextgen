@@ -157,12 +157,15 @@ def combine_sailfish(samples):
                 df = new_df
             else:
                 df = rbind([df, new_df])
+        df["id"] = df.index
+        # some versions of the transcript annotations can have duplicated entries
+        df = df.drop_duplicates(["id", "sample"])
         with file_transaction(tidy_file) as tx_out_file:
             df.to_csv(tx_out_file, sep="\t", index_label="name")
         with file_transaction(transcript_tpm_file) as  tx_out_file:
-            df.pivot(None, "sample", "tpm").to_csv(tx_out_file, sep="\t")
+            df.pivot("id", "sample", "tpm").to_csv(tx_out_file, sep="\t")
         with file_transaction(gene_tpm_file) as  tx_out_file:
-            pivot = df.pivot(None, "sample", "tpm")
+            pivot = df.pivot("id", "sample", "tpm")
             tdf = pd.DataFrame.from_dict(gtf.transcript_to_gene(gtf_file),
                                          orient="index")
             tdf.columns = ["gene_id"]
