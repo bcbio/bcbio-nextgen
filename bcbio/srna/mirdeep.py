@@ -32,7 +32,7 @@ def run(data):
         if mirdeep2 and not file_exists(out_file) and file_exists(mature) and file_exists(rfam_file):
             do.run(cmd.format(**locals()), "Running mirdeep2.")
         if file_exists(out_file):
-            _parse_novel(out_file)
+            _parse_novel(out_file, dd.get_species(data[0][0]))
 
 def _prepare_inputs(ma_fn, bam_file, out_dir):
     """
@@ -58,7 +58,7 @@ def _prepare_inputs(ma_fn, bam_file, out_dir):
 
     return fixed_fa, fixed_bam
 
-def _parse_novel(csv_file):
+def _parse_novel(csv_file,sps="new"):
     """Create input of novel miRNAs from miRDeep2"""
     read = 0
     seen = set()
@@ -82,6 +82,6 @@ def _parse_novel(csv_file):
                     m3p_end = m3p_start + len(m3p) - 1
                     if m5p in seen:
                         continue
-                    print >>fa_handle, (">new-{name} {start}\n{pre}").format(**locals())
-                    print >>str_handle, (">new-{name} ({score}) [new-{name}-5p:{m5p_start}-{m5p_end}] [new-{name}-3p:{m3p_start}-{m3p_end}]").format(**locals())
+                    print >>fa_handle, (">{sps}-{name} {start}\n{pre}").format(**locals())
+                    print >>str_handle, (">{sps}-{name} ({score}) [{sps}-{name}-5p:{m5p_start}-{m5p_end}] [{sps}-{name}-3p:{m3p_start}-{m3p_end}]").format(**locals())
                     seen.add(m5p)
