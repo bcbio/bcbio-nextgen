@@ -176,7 +176,7 @@ def _make_isomir_counts(data):
         miraligner_fn = sample[0]["seqbuster"]
         reads = _read_miraligner(miraligner_fn)
         if reads:
-            out_file, dt = _tab_output(reads, miraligner_fn + ".back", dd.get_sample_name(sample[0]))
+            out_file, dt, dt_pre = _tab_output(reads, miraligner_fn + ".back", dd.get_sample_name(sample[0]))
             out_dts.append(dt)
         else:
             logger.log("WARNING::%s has NOT miRNA annotated. Check if fasta files is small or species value." % dd.get_sample_name(sample[0]))
