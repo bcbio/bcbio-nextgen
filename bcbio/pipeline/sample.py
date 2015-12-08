@@ -124,7 +124,7 @@ def process_alignment(data, alt_input=None):
     else:
         raise ValueError("Could not process input file from sample configuration. \n" +
                          fastq1 +
-                         "\nIs the path to the file correct?\n" +
+                         "\nIs the path to the file correct or is empty?\n" +
                          "If it is a fastq file (not pre-aligned BAM or CRAM), "
                          "is an aligner specified in the input configuration?")
     return [[data]]
