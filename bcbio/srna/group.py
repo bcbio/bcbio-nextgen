@@ -78,7 +78,7 @@ def run_cluster(*data):
     out_mirna, out_isomir = _make_isomir_counts(data)
     data[0][0]["mirna_counts"] = out_mirna
     data[0][0]["isomir_counts"] = out_isomir
-    mirdeep.run(data)
+    novel_db = mirdeep.run(data)
     return data
 
 def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):

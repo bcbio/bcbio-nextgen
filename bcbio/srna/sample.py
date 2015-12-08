@@ -62,6 +62,8 @@ def sample_annotation(data):
     mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
 
     data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
+    if file_exists(op.join(dd.get_work_dir(data), "mirdeep2", "novel", "hairpin.fa")):
+        data['seqbuster_novel'] = _miraligner(data["collapse"], "%s_novel" % out_file, dd.get_species(data), op.join(dd.get_work_dir(data), "mirdeep2", "novel"), data['config'])
     data['trna'] = _trna_annotation(data)
     return [[data]]
 

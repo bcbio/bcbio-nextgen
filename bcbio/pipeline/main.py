@@ -406,7 +406,7 @@ class smallRnaseqPipeline(AbstractPipeline):
         # causes a circular import at the top level
         from bcbio.srna.group import report as srna_report
 
-        with prun.start(_wres(parallel, ["picard", "cutadapt", "miraligner"]),
+        with prun.start(_wres(parallel, ["picard", "cutadapt"]),
                         samples, config, dirs, "trimming") as run_parallel:
             with profile.report("organize samples", dirs):
                 samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
@@ -414,7 +414,6 @@ class smallRnaseqPipeline(AbstractPipeline):
             with profile.report("adapter trimming", dirs):
                 samples = run_parallel("prepare_sample", samples)
                 samples = run_parallel("trim_srna_sample", samples)
-                samples = run_parallel("srna_annotation", samples)
 
         with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
                               ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
@@ -423,6 +422,11 @@ class smallRnaseqPipeline(AbstractPipeline):
                 samples = run_parallel("seqcluster_prepare", [samples])
             with profile.report("alignment", dirs):
                 samples = run_parallel("srna_alignment", [samples])
+
+        with prun.start(_wres(parallel, ["picard", "miraligner"]),
+                        samples, config, dirs, "annotation") as run_parallel:
+            with profile.report("small RNA annotation", dirs):
+                samples = run_parallel("srna_annotation", samples)
 
         with prun.start(_wres(parallel, ["seqcluster"],
                               ensure_mem={"seqcluster": 8}),
