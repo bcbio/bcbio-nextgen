@@ -20,10 +20,10 @@ def _silence_run(cmd):
 def checkpoint(stem):
     def check_file(f):
         def wrapper(*args, **kwargs):
-            out_file = append_stem(args[0], "_summary")
+            out_file = append_stem(args[0], stem)
             if file_exists(out_file):
                 logger.debug("Skipping %s" % out_file)
-                return None
+                return out_file
             return f(*args, **kwargs)
         return wrapper
     return check_file
@@ -68,6 +68,41 @@ def _calculate_percentiles(in_file, sample):
                 print >>out_handle, "\t".join(map(str, [k[0], k[1], pct[k], sample]))
     return out_file
 
+def _read_regions(fn):
+    """
+    Save in a dict the position of regions with
+    the information of the coverage stats.
+    """
+    regions = {}
+    with open(fn) as in_handle:
+        for line in in_handle:
+            if line.startswith("chrom"):
+                regions["header"] = line.strip()
+                continue
+            idx = "".join(line.split("\t")[:2])
+            regions[idx] = line.strip()
+    return regions
+
+@checkpoint("_fixed")
+def _add_high_covered_regions(in_file, bed_file, sample):
+    """
+    Add regions with higher coverage than the limit
+    as fully covered.
+    """
+    out_file = append_stem(in_file, "_fixed")
+    regions = _read_regions(in_file)
+    with file_transaction(out_file) as out_tx:
+        with open(bed_file) as in_handle:
+            with open(out_tx, 'w') as out_handle:
+                print >>out_handle, regions["header"]
+                for line in in_handle:
+                    idx = "".join(line.split("\t")[:2])
+                    if idx not in regions:
+                        print >>out_handle, "%s\t1000\t1000\t100\t100\t100\t100\t100\t100\t100\t100\t100\t100\t%s" % (line.strip(), sample)
+                    else:
+                        print >>out_handle, regions[idx]
+    return out_file
+
 def coverage(data):
     """
     Calculate coverage at different completeness cutoff
@@ -87,8 +122,9 @@ def coverage(data):
         cores = dd.get_num_cores(data)
         if not file_exists(parse_file):
             with file_transaction(parse_file) as out_tx:
-                cmd = ("sambamba depth region -F \"not unmapped\" -t {cores} -C 200 -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 -T 80 -T 100 -L {bed_file}  {in_bam} | sed 's/# chrom/chrom/' > {parse_file}")
+                cmd = ("sambamba depth region -F \"not unmapped\" -t {cores} -C 1000 -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 -T 80 -T 100 -L {bed_file}  {in_bam} | sed 's/# chrom/chrom/' > {parse_file}")
                 do.run(cmd.format(**locals()), "Run coverage for {}".format(sample))
+        parse_file = _add_high_covered_regions(parse_file, bed_file, sample)
         _calculate_percentiles(parse_file, sample)
         data['coverage'] = os.path.abspath(parse_file)
         return data
