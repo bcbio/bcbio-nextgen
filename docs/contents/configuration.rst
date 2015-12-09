@@ -371,7 +371,8 @@ Alignment
   supports cleaning a single organism. For example, with ``genome_build: hg19``
   and ``disambiguate: [mm10]``, it will align to hg19 and mm10, run
   disambiguation and continue with reads confidently aligned to hg19. Affects
-  fusion detection when ``star`` is chosen as the aligner.
+  fusion detection when ``star`` is chosen as the aligner. Aligner must be
+  set to a non false value for this to run.
 - ``trim_reads`` Can be set to trim low quality ends or to also trim off,
   in conjunction with the ``adapters`` field a set of adapter sequences or
   poly-A tails that could appear on the ends of reads. Only used in RNA-seq
