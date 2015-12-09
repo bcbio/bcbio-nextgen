@@ -1,4 +1,5 @@
 import os
+import sys
 import os.path as op
 
 import pysam
@@ -14,7 +15,7 @@ def run(data):
     config = data[0][0]['config']
     work_dir = dd.get_work_dir(data[0][0])
     genome = dd.get_ref_file(data[0][0])
-    mirdeep2 = config_utils.get_program("miRDeep2.pl", config)
+    mirdeep2 = os.path.join(os.path.dirname(sys.executable), "miRDeep2.pl")
     mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data[0][0])))
     species = dd.get_species(data[0][0])
     hairpin = op.join(mirbase, "hairpin.fa")
