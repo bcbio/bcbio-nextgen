@@ -152,7 +152,7 @@ def add_reference_resources(data):
     data = _fill_prioritization_targets(data)
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
-        if population.do_db_build([data], check_gemini=False, need_bam=False):
+        if population.do_db_build([data], need_bam=False):
             data["reference"]["gemini"] = population.get_gemini_files(data)
     return data
 

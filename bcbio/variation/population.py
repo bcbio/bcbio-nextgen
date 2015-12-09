@@ -27,7 +27,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
     gemini_vcf = multiallelic.to_single(multisample_vcf, data)
-    use_gemini_quick = (do_db_build(samples, check_gemini=False) and
+    use_gemini_quick = (do_db_build(samples) and
                         any(vcfutils.vcf_has_variants(f) for f in fnames))
     if not utils.file_exists(gemini_db) and use_gemini_quick:
         use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
@@ -195,22 +195,13 @@ def get_multisample_vcf(fnames, name, caller, data):
         utils.symlink_plus(unique_fnames[0], gemini_vcf)
         return gemini_vcf
 
-def _has_gemini(config):
-    try:
-        gemini = config_utils.get_program("gemini", config)
-    except config_utils.CmdNotFound:
-        return False
-    try:
-        p = subprocess.Popen([gemini, "-h"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        p.wait()
-        p.stdout.close()
-        if p.returncode not in [0, 1]:
-            return False
-    except OSError:
-        return False
-    return True
+def _has_gemini(data):
+    from bcbio import install
+    gemini_dir = install.get_gemini_dir(data)
+    return ((os.path.exists(gemini_dir) and len(os.listdir(gemini_dir)) > 0)
+            and os.path.exists(os.path.join(os.path.dirname(gemini_dir), "gemini-config.yaml")))
 
-def do_db_build(samples, check_gemini=True, need_bam=True, gresources=None):
+def do_db_build(samples, need_bam=True, gresources=None):
     """Confirm we should build a gemini database: need gemini + human samples + not in tool_skip.
     """
     genomes = set()
@@ -223,7 +214,7 @@ def do_db_build(samples, check_gemini=True, need_bam=True, gresources=None):
         if not gresources:
             gresources = samples[0]["genome_resources"]
         return (tz.get_in(["aliases", "human"], gresources, False)
-                and (not check_gemini or _has_gemini(samples[0]["config"])))
+                and _has_gemini(samples[0]))
     else:
         return False
 
@@ -281,7 +272,7 @@ def prep_db_parallel(samples, parallel_fn):
         has_batches = True
     for name, caller, data, fname in singles:
         to_process.append([[fname], (str(name), caller, False), [data], extras])
-    if len(samples) > 0 and not do_db_build([x[0] for x in samples], check_gemini=False) and not has_batches:
+    if len(samples) > 0 and not do_db_build([x[0] for x in samples]) and not has_batches:
         return samples
     output = parallel_fn("prep_gemini_db", to_process)
     out_fetch = {}
