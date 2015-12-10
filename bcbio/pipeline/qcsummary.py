@@ -39,8 +39,7 @@ from bcbio.provenance import do
 import bcbio.rnaseq.qc
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import bedutils
-from bcbio.variation import coverage_experimental as cov
-from bcbio.variation.coverage import decorate_problem_regions
+from bcbio.variation import coverage as cov
 from bcbio.ngsalign.postalign import dedup_bam
 from bcbio.rnaseq import gtf
 # ## High level functions to generate summary
@@ -1052,7 +1051,7 @@ def coverage_report(data):
         coverage = data['coverage']
         annotated = None
         if problem_regions and coverage:
-             annotated = decorate_problem_regions(coverage, problem_regions)
+             annotated = cov.decorate_problem_regions(coverage, problem_regions)
         data['coverage'] = {'all': coverage, 'problems': annotated}
 
     return [[data]]
