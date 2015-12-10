@@ -58,8 +58,6 @@ resources:
     dir: /usr/local/share/java/mutect
   cram:
     dir: /usr/local/share/java/cram
-  rnaseqc:
-    dir: /usr/local/share/java/RNA-SeQC
   stampy:
     dir: ~/install/stampy-1.0.18
   cortex:

@@ -97,8 +97,6 @@ _alt_progs = [{"name": "bcbio_variation",
               {"name": "mutect",
                "version_fn": _broad_versioner("mutect")},
               {"name": "picard", "version_fn": _broad_versioner("picard")},
-              {"name": "rnaseqc",
-               "version_fn": jar_versioner("rnaseqc", "RNA-SeQC")},
               {"name": "snpeff",
                "version_fn": java_versioner("snpeff", "snpEff", stdout_flag="snpEff version SnpEff")},
               {"name": "varscan",
@@ -203,7 +201,7 @@ def _get_manifest_dir(data=None):
     it prefers, in order:
     1. locating it from the bcbio_system.yaml file
     2. locating it from the galaxy directory
-    3. location it from the python executable. 
+    3. location it from the python executable.
 
     it can accept either the data or config dictionary
     """
