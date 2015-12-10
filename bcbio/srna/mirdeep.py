@@ -4,7 +4,7 @@ import os.path as op
 
 import pysam
 
-from bcbio.utils import file_exists, safe_makedir, chdir
+from bcbio.utils import file_exists, safe_makedir, chdir, get_perl_exports
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -16,6 +16,7 @@ def run(data):
     work_dir = dd.get_work_dir(data[0][0])
     genome = dd.get_ref_file(data[0][0])
     mirdeep2 = os.path.join(os.path.dirname(sys.executable), "miRDeep2.pl")
+    perl_exports = get_perl_exports()
     mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data[0][0])))
     species = dd.get_species(data[0][0])
     hairpin = op.join(mirbase, "hairpin.fa")
@@ -29,8 +30,8 @@ def run(data):
     safe_makedir(out_dir)
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
-        cmd = ("{mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -d -P -t {species} -z res").format(**locals())
-        if mirdeep2 and not file_exists(out_file) and file_exists(mature) and file_exists(rfam_file):
+        cmd = ("{perl_exports} && {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -d -P -t {species} -z res").format(**locals())
+        if file_exists(mirdeep2) and not file_exists(out_file) and file_exists(mature) and file_exists(rfam_file):
             do.run(cmd.format(**locals()), "Running mirdeep2.")
         if file_exists(out_file):
             novel_db = _parse_novel(out_file, dd.get_species(data[0][0]))
