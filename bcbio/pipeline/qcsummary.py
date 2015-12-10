@@ -828,12 +828,28 @@ def _run_gemini_stats(bam_file, data, out_dir):
         else:
             with open(gemini_stat_file) as in_handle:
                 out = yaml.safe_load(in_handle)
+    else:
+        vcf_file = dd.get_vrn_file(data)
+        if isinstance(vcf_file, list):
+            vcf_file = vcf_file[0]
+        if vcf_file:
+            out_file = "%s-bcfstats.tsv" % utils.splitext_plus(vcf_file)[0]
+            bcftools = config_utils.get_program("bcftools", data["config"])
+            if not utils.file_exists(out_file):
+                cmd = ("{bcftools} stats -f PASS {vcf_file} > {out_file}")
+                do.run(cmd.format(**locals()), "basic vcf stats %s" % data["name"][-1])
+            with open(out_file) as in_handle:
+                for line in in_handle:
+                    if line.startswith("SN") and line.find("records") > -1:
+                        cols = line.split()
+                        print line
+                        out["Variations (total)"] = cols[-1]
 
     res = {}
     for k, v in out.iteritems():
         if not isinstance(v, dict):
             res.update({k: v})
-        if k == data['name'][-1]:
+        if k == data["name"][-1]:
             res.update(v)
     return res
 
