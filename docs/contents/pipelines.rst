@@ -221,6 +221,7 @@ quality control, adapter trimming, alignment and post-alignment quantitation
 - Sequence alignment:
   - `tophat2`_
   - `STAR`_
+  - `hisat2`_
 
 - Quality control:
   - `qualimap`_
@@ -229,14 +230,12 @@ quality control, adapter trimming, alignment and post-alignment quantitation
 - Quantitation:
   - `featureCounts`_
   - `DEXSeq`_
-  - `eXpress`_
+  - `Sailfish`_
 
 After a run you will have in the ``upload`` directory a directory for each
 sample which contains a BAM file of the aligned and unaligned reads, a
-``cufflinks`` directory with the output of Cufflinks, including FPKM values,
-and a ``qc`` directory with plots from FastQC and RNA-SeQC. It is useful to look
-at the fastqc report an the RNA-SeQC report for each of your samples to ensure
-nothing looks abnormal.
+``Sailfish`` directory with the output of Sailfish, including TPM values,
+and a ``qc`` directory with plots from FastQC and qualimap.
 
 In addition to directories for each sample, in the ``upload`` directory there is
 a project directory which contains a YAML file describing some summary statistics
@@ -424,7 +423,6 @@ templating system.
 .. _tophat2: http://tophat.cbcb.umd.edu/
 .. _STAR: http://code.google.com/p/rna-star/
 .. _cutadapt: http://cutadapt.readthedocs.org/en/latest/guide.html
-.. _RNA-SeQC: https://www.broadinstitute.org/cancer/cga/rna-seqc
 .. _qualimap: http://qualimap.bioinfo.cipf.es
 .. _FastQC: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _HTSeq: http://www-huber.embl.de/users/anders/HTSeq/doc/index.html
@@ -437,3 +435,5 @@ templating system.
 .. _eXpress: http://bio.math.berkeley.edu/eXpress/overview.html
 .. _featureCounts: http://bioinf.wehi.edu.au/featureCounts/
 .. _DEXSeq: https://bioconductor.org/packages/release/bioc/html/DEXSeq.html
+.. _Sailfish: https://github.com/kingsfordgroup/sailfish
+.. _hisat2: https://ccb.jhu.edu/software/hisat2/index.shtml
