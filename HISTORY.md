@@ -36,7 +36,8 @@
 - Add disambiguation to Sailfish by creating a master FASTA file of all
   transcripts from all organisms, quantitating each and separating out the
   organism-specific transcripts after.
-- Add VarDict support for RNA-seq variant calling.
+- Add VarDict support for RNA-seq variant calling. Thanks to Miika Ahdesmaki and
+  Sven-Eric Schelhorn.
 
 ## 0.9.4 (14 October 2015)
 
