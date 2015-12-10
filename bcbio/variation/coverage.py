@@ -2,25 +2,16 @@
 
 Provides estimates of coverage intervals based on callable regions
 """
-import collections
 import os
-import sys
-import shutil
-import glob
-
-import toolz as tz
 import yaml
-import sqlite3
-from pybedtools import BedTool
 import pybedtools
 
-from bcbio import utils, bed
+from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils
 
 def assign_interval(data):
     """Identify coverage based on percent of genome covered and relation to targets.
