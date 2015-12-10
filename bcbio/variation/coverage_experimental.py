@@ -219,7 +219,7 @@ def priority_coverage(data):
 
 def priority_total_coverage(data):
     """
-    calculate coverage at depth 20 in the priority regions
+    calculate coverage at 10 depth intervals in the priority regions
     """
     bed_file = dd.get_priority_regions(data)
     if not bed_file:
@@ -237,7 +237,8 @@ def priority_total_coverage(data):
     with file_transaction(out_file) as tx_out_file:
         cmd = ("{sambamba} depth region -t {nthreads} -L {bed_file} "
                "-F \"not unmapped\" "
-               "-T 20 {in_bam} -o {tx_out_file}")
+               "-T 10 -T 20 -T 30 -T 40 -T 50 -T 60 -T 70 -T 80 -T 90 -T 100 "
+               "{in_bam} -o {tx_out_file}")
         message = "Calculating coverage of {bed_file} regions in {in_bam}"
         do.run(cmd.format(**locals()), message.format(**locals()))
     data['priority_total_coverage'] = os.path.abspath(out_file)
