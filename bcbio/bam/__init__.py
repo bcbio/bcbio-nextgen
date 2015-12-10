@@ -362,6 +362,9 @@ def sort(in_bam, config, order="coordinate"):
                         os.path.basename(sort_file)))
             except:
                 logger.exception("Multi-core sorting failed, reverting to single core")
+                resources = config_utils.get_resources("samtools", config)
+                mem = resources.get("memory", "2G")
+                cores = 1
                 order_flag = "-n" if order == "queryname" else ""
                 do.run(samtools_cmd.format(**locals()),
                        "Sort BAM file (single core, %s): %s to %s" %
