@@ -677,7 +677,8 @@ Post-processing
 - ``tools_on`` Specify functionality to enable that is off by default.
   ``svplots`` adds additional coverage and summary plots for CNVkit and
   detected ensemble variants. ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap uses downsampled files and numbers here are an estimation of 1e7 reads.).
-  quality control, which can be slow.
+  quality control, which can be slow. ``bwa-mem`` forces use of bwa mem
+  even for samples with less than 70bp reads.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini
