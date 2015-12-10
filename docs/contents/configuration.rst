@@ -407,9 +407,8 @@ Alignment
    Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for
    Scriptseq prepared libraries, secondstrand is correct.
 
-Experimental information
-========================
-
+Coverage information
+====================
 - ``coverage_interval`` Regions covered by sequencing. bcbio calculates this
   automatically from alignment coverage information, so you only need to
   specify it in the input configuration if you have specific needs or bcbio
@@ -425,14 +424,15 @@ Experimental information
 -  ``coverage_depth_min`` Minimum depth of coverage. Regions with less reads
    will not get called. Defaults to 4. Setting lower than 4 will trigger
    low-depth calling options for GATK.
--  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
 - ``coverage`` A BED file of regions to check for coverage. Coverage
   and completeness are calculated over these regions and a Rmarkdown
   report is generated in the `report` directory.
-- ``expression_caller`` A list of optional expression callers to turn on.
-  Supports ['sailfish', 'express'].
 
-.. _Chanjo: http://www.chanjo.co/en/latest/
+
+Experimental information
+========================
+
+-  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
 
 .. _variant-config:
 
@@ -634,6 +634,8 @@ RNA sequencing
   isoforms using Cufflinks.
 - ``transcriptome_align`` If set to True, will also align reads to just the
   transcriptome, for use with EBSeq and others.
+- ``expression_caller`` A list of optional expression callers to turn on.
+  Supports ['cufflinks', 'express'].
 
 smallRNA sequencing
 =====================
