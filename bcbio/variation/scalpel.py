@@ -105,9 +105,8 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             opts += " --dir %s" % tmp_path
             min_cov = "3"  # minimum coverage
             opts += " --mincov %s" % min_cov
-            perllib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
-                                   "lib", "perl5")
-            cmd = ("export PERL5LIB={perllib}:$PERL5LIB && "
+            perl_exports = utils.get_perl_exports()
+            cmd = ("{perl_exports} && "
                    "scalpel-discovery --single {opts} --ref {ref_file} --bam {input_bams} ")
             do.run(cmd.format(**locals()), "Genotyping with Scalpel", {})
             # parse produced variant file further
@@ -143,8 +142,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                 return ann_file
             vcffilter = config_utils.get_program("vcffilter", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-            perllib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
-                                   "lib", "perl5")
+            perl_exports = utils.get_perl_exports()
             tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
             db_file = os.path.join(tmp_path, "main", "somatic.db")
             if not os.path.exists(db_file + ".dir"):
@@ -154,7 +152,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                 opts += " --ref {}".format(ref_file)
                 opts += " --dir %s" % tmp_path
                 # caling
-                cl = ("export PERL5LIB={perllib}:$PERL5LIB && "
+                cl = ("{perl_exports} && "
                       "scalpel-discovery --somatic {opts} --tumor {paired.tumor_bam} --normal {paired.normal_bam}")
                 do.run(cl.format(**locals()), "Genotyping paired variants with Scalpel", {})
             # filtering to adjust input parameters
@@ -167,7 +165,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
             else:
                 scalpel_tmp_file = os.path.join(tmp_path, "main/somatic-indel-filter.vcf.gz")
                 with file_transaction(config, scalpel_tmp_file) as tx_indel_file:
-                    cmd = ("export PERL5LIB={perllib}:$PERL5LIB && "
+                    cmd = ("{perl_exports} && "
                            "scalpel-export --somatic {bed_opts} --ref {ref_file} --db {db_file} "
                            "--min-alt-count-tumor 5 --min-phred-fisher 10 --min-vaf-tumor 0.1 "
                            "| bgzip -c > {tx_indel_file}")

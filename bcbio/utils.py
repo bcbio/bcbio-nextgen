@@ -619,6 +619,25 @@ def R_package_path(package):
             return dirname
     return None
 
+def perl_cmd():
+    """Retrieve path to locally installed conda Perl or first in PATH.
+    """
+    perl = which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "perl"))
+    if perl:
+        return perl
+    else:
+        return which("perl")
+
+def get_perl_exports(tooldir=None):
+    """Environmental exports to use conda install perl and site library.
+    """
+    from bcbio import install
+    if tooldir is None:
+        tooldir = install.get_defaults().get("tooldir", "/usr/local")
+    perllib = "%s/lib/perl5" % tooldir
+    perl_path = os.path.dirname(perl_cmd())
+    return "export PATH=%s:$PATH && export PERL5LIB=%s:$PERL5LIB" % (perl_path, perllib)
+
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
     return ext in [".gz", "gzip"]

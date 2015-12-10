@@ -86,9 +86,6 @@ This requires the following additional system requirements to be in place:
 - Ruby (including libraries and irb. On recent CentOS and other rpm systems
   these are separate packages:
   ``ruby-libs`` and ``ruby-irb``)
-- Perl with development libraries (On Ubuntu or other deb systems:
-  ``perl, libperl-dev`` On RedHat or other rpm systems:
-  ``perl perl-devel perl-core``)
 - bzip2 (with development libraries)
 - curl and SSL (with development libraries; On Ubuntu: ``libssl-dev libcurl4-openssl-dev``, On
   RedHat: ``openssl-devel libcurl-devel``). Building R and git on older systems requires a relatively
