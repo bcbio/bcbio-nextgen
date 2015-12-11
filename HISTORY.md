@@ -1,5 +1,7 @@
 ## 0.9.5 (in progress)
 
+- Add miRDeep2 to small RNA-seq analysis and quantify the novel miRNAs for
+  all samples.
 - Enable calling of HLA alleles with human build 38 (hg38). Turn on with the
   `hlacaller` option.
 - Structural variant prioritization with BED files of known biologically
