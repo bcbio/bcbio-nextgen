@@ -34,6 +34,8 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     # ["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
     #  "-k", "3", "-r", "4", "-m", "8"]
 
+    # remove low mapping quality reads
+    opts += ["-Q", "10"]
     resources = config_utils.get_resources("vardict", config)
     if resources.get("options"):
         opts += resources["options"]

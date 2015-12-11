@@ -14,6 +14,8 @@
 - Speed improvements for Lumpy genotyping. Move to latest svtyper and avoid
   genotyping breakends.
 - Allow use of VEP annotations on non-human analyses.
+- Filter VarDict calls with poor mapping quality support (-Q 10) which
+  trigger low frequency false positives.
 - Remove ENCODE blacklist regions when calling with VarDict and FreeBayes on
   whole genomes. Avoids long run times due to collapsed repeats near centromeres.
 - Update VarScan to 2.4.0 and rework support to allow piping between mpileup

@@ -1,11 +1,14 @@
 """Run Broad's RNA-SeqQC tool and handle reporting of useful summary metrics.
 """
-import pandas as pd
-import statsmodels.formula.api as sm
+# soft imports
+try:
+    import pandas as pd
+    import statsmodels.formula.api as sm
+except ImportError:
+    pd, sm = None, None
 
 from bcbio import bam
 import bcbio.pipeline.datadict as dd
-
 
 def starts_by_depth(bam_file, data, sample_size=10000000):
     """
@@ -13,7 +16,6 @@ def starts_by_depth(bam_file, data, sample_size=10000000):
     y is the number of unique start sites identified
     If sample size < total reads in a file the file will be downsampled.
     """
-    config = dd.get_config(data)
     binsize = (sample_size / 100) + 1
     seen_starts = set()
     counted = 0
