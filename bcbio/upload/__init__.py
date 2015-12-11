@@ -159,14 +159,15 @@ def _maybe_add_hla(algorithm, sample, out):
 def _maybe_add_heterogeneity(algorithm, sample, out):
     for hetinfo in sample.get("heterogeneity", []):
         report = hetinfo.get("report")
-        if report:
+        if report and os.path.exists(report):
             out.append({"path": report,
                         "type": utils.splitext_plus(report)[-1].replace(".", "").replace("-", ""),
                         "ext": "%s-report" % (hetinfo["caller"])})
         for plot_type, plot_file in hetinfo.get("plots", {}).items():
-            out.append({"path": plot_file,
-                        "type": utils.splitext_plus(plot_file)[-1].replace(".", ""),
-                        "ext": "%s-%s-plot" % (hetinfo["caller"], plot_type)})
+            if plot_file and os.path.exists(plot_file):
+                out.append({"path": plot_file,
+                            "type": utils.splitext_plus(plot_file)[-1].replace(".", ""),
+                            "ext": "%s-%s-plot" % (hetinfo["caller"], plot_type)})
     return out
 
 def _maybe_add_sv(algorithm, sample, out):
