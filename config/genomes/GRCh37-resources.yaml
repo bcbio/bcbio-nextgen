@@ -1,9 +1,9 @@
-version: 23
+version: 24
 
 aliases:
   human: true
   snpeff: GRCh37.75
-  ensembl: homo_sapiens_vep_81_GRCh37
+  ensembl: homo_sapiens_vep_83_GRCh37
 
 variation:
   dbsnp: ../variation/dbsnp_138.vcf.gz
