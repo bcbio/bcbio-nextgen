@@ -1,4 +1,4 @@
-## 0.9.5 (in progress)
+## 0.9.5 (12 December 2015)
 
 - Add miRDeep2 to small RNA-seq analysis and quantify the novel miRNAs for
   all samples.
