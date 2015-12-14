@@ -120,7 +120,7 @@ def _run_qc_tools(bam_file, data):
         to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
     if data["analysis"].lower().startswith(("standard", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
-        if "qualimap" in tz.get_in(("config", "algorithm", "tools_on"), data, []):
+        if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, []) for tool in ["qualimap", "qualimap_full"]]):
             to_run.append(("qualimap", _run_qualimap))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
@@ -534,6 +534,8 @@ def _parse_qualimap_insertsize(table):
 def _parse_qualimap_metrics(report_file):
     """Extract useful metrics from the qualimap HTML report file.
     """
+    if not utils.file_exists(report_file):
+        return {}
     out = {}
     parsers = {"Globals": _parse_qualimap_globals,
                "Globals (inside of regions)": _parse_qualimap_globals_inregion,
@@ -568,18 +570,26 @@ def _bed_to_bed6(orig_file, out_dir):
 def _run_qualimap(bam_file, data, out_dir):
     """Run qualimap to assess alignment quality metrics.
     """
+    resources = config_utils.get_resources("qualimap", data["config"])
+    options = " ".join(resources.get("options", ""))
     report_file = os.path.join(out_dir, "qualimapReport.html")
-    if not os.path.exists(report_file):
-        ds_bam = bam.downsample(bam_file, data, 1e7)
-        bam_file = ds_bam if ds_bam else bam_file
+    pdf_file = "qualimapReport.pdf"
+    if not utils.file_exists(report_file) and not utils.file_exists(os.path.join(out_dir, pdf_file)):
+        if "qualimap_full" in tz.get_in(("config", "algorithm", "tools_on"), data, []):
+            logger.info("Full qualimap analysis for %s may be slow." % bam_file)
+            ds_bam = bam_file
+        else:
+            ds_bam = bam.downsample(bam_file, data, 1e7)
+            bam_file = ds_bam if ds_bam else bam_file
+        if options.find("PDF") > -1:
+            options = "%s -outfile %s" % (options, pdf_file)
         utils.safe_makedir(out_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         qualimap = config_utils.get_program("qualimap", data["config"])
-        resources = config_utils.get_resources("qualimap", data["config"])
         max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                              num_cores)
         cmd = ("unset DISPLAY && {qualimap} bamqc -bam {bam_file} -outdir {out_dir} "
-               "-nt {num_cores} --java-mem-size={max_mem}")
+               "-nt {num_cores} --java-mem-size={max_mem} {options}")
         species = tz.get_in(("genome_resources", "aliases", "ensembl"), data, "")
         if species in ["HUMAN", "MOUSE"]:
             cmd += " -gd {species}"
@@ -588,6 +598,7 @@ def _run_qualimap(bam_file, data, out_dir):
             bed6_regions = _bed_to_bed6(regions, out_dir)
             cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % data["name"][-1])
+
     return _parse_qualimap_metrics(report_file)
 
 # ## RNAseq Qualimap
