@@ -344,7 +344,12 @@ def _maybe_add_seqbuster(algorithm, sample, out):
         out.append({"path": fn,
                     "type": "counts",
                     "ext": "ready"})
-        return out
+    fn = sample.get("seqbuster_novel")
+    if fn and utils.file_exists(fn):
+        out.append({"path": fn,
+                    "type": "counts",
+                    "ext": "ready"})
+    return out
 
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
@@ -410,6 +415,10 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_mirna_counts(sample)})
     if dd.get_isomir_counts(sample):
         out.append({"path": dd.get_isomir_counts(sample)})
+    if dd.get_novel_mirna_counts(sample):
+        out.append({"path": dd.get_novel_mirna_counts(sample)})
+    if dd.get_novel_isomir_counts(sample):
+        out.append({"path": dd.get_novel_isomir_counts(sample)})
     if dd.get_combined_counts(sample):
         out.append({"path": dd.get_combined_counts(sample)})
     if dd.get_annotated_combined_counts(sample):

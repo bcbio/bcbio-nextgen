@@ -258,6 +258,17 @@ def remove_safe(f):
     except OSError:
         pass
 
+def move_safe(origin, target):
+    """
+    Move file, skip if exists
+    """
+    if origin == target:
+        return origin
+    if file_exists(target):
+        return target
+    shutil.move(origin, target)
+    return target
+
 def file_plus_index(fname):
     """Convert a file name into the file plus required indexes.
     """
@@ -317,7 +328,6 @@ def append_stem(to_transform, word):
     else:
         raise ValueError("append_stem takes a single filename as a string or "
                          "a list of filenames to transform.")
-
 
 def replace_suffix(to_transform, suffix):
     """

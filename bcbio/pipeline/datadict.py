@@ -46,6 +46,8 @@ LOOKUPS = {
     "combined_counts": {"keys": ["combined_counts"]},
     "mirna_counts": {"keys": ["mirna_counts"]},
     "isomir_counts": {"keys": ["isomir_counts"]},
+    "novel_mirna_counts": {"keys": ["novel_mirna_counts"]},
+    "novel_isomir_counts": {"keys": ["novel_isomir_counts"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "ref_file": {"keys": ["reference", "fasta", "base"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},

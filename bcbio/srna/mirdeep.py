@@ -78,6 +78,8 @@ def _parse_novel(csv_file,sps="new"):
                 if read and line.strip():
                     cols = line.strip().split("\t")
                     name, start, score = cols[0], cols[16], cols[1]
+                    if score < 1:
+                        continue
                     m5p, m3p, pre = cols[13], cols[14], cols[15].replace('u','t').upper()
                     m5p_start = cols[15].find(m5p) + 1
                     m3p_start = cols[15].find(m3p) + 1

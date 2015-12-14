@@ -12,7 +12,7 @@ try:
 except ImportError:
     pass
 
-from bcbio.utils import file_exists, safe_makedir
+from bcbio.utils import file_exists, safe_makedir, move_safe, append_stem
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -50,9 +50,9 @@ def run_align(*data):
     Prepare data to run alignment step, only once for each project
     """
     work_dir = dd.get_work_dir(data[0][0])
-    out_dir = os.path.join(work_dir, "seqcluster", "prepare")
+    out_dir = op.join(work_dir, "seqcluster", "prepare")
     seq_out = op.join(out_dir, "seqs.fastq")
-    bam_dir = os.path.join(work_dir, "align")
+    bam_dir = op.join(work_dir, "align")
     new_bam_file = op.join(bam_dir, "seqs.bam")
     if not file_exists(new_bam_file):
         sample = process_alignment(data[0][0], [seq_out, None])
@@ -66,26 +66,34 @@ def run_cluster(*data):
     """
     Run seqcluster cluster to detect smallRNA clusters
     """
-    work_dir = dd.get_work_dir(data[0][0])
-    out_dir = os.path.join(work_dir, "seqcluster", "cluster")
-    out_dir = os.path.abspath(safe_makedir(out_dir))
+    sample = data[0][0]
+    work_dir = dd.get_work_dir(sample)
+    out_dir = op.join(work_dir, "seqcluster", "cluster")
+    out_dir = op.abspath(safe_makedir(out_dir))
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = op.join(work_dir, "align", "seqs.bam")
-    cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(data[0][0]), dd.get_srna_gtf_file(data[0][0]))
-    report_file = _report(data[0][0], dd.get_ref_file(data[0][0]))
-    for sample in data:
-        sample[0]["seqcluster"] = out_dir
-    out_mirna, out_isomir = _make_isomir_counts(data)
-    data[0][0]["mirna_counts"] = out_mirna
-    data[0][0]["isomir_counts"] = out_isomir
+    cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
+    report_file = _report(sample, dd.get_ref_file(sample))
+    sample["seqcluster"] = out_dir
+
+    out_mirna = _make_isomir_counts(data)
+    if out_mirna:
+        sample = dd.set_mirna_counts(sample, out_mirna[0])
+        sample = dd.set_isomir_counts(sample, out_mirna[1])
+
+    out_novel = _make_isomir_counts(data, "seqbuster_novel", op.join(work_dir, "mirdeep2"), "_novel")
     novel_db = mirdeep.run(data)
+    if out_novel:
+        sample = dd.set_novel_mirna_counts(sample, out_novel[0])
+        sample = dd.set_novel_isomir_counts(sample, out_novel[1])
+    data[0][0] = sample
     return data
 
 def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
     """
     Connect to seqcluster to run cluster with python directly
     """
-    seqcluster = os.path.join(os.path.dirname(sys.executable), "seqcluster")
+    seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
     ma_file = op.join(prepare_dir, "seqs.ma")
     # cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
@@ -102,7 +110,7 @@ def _report(data, reference):
     """
     Run report of seqcluster to get browser options for results
     """
-    seqcluster = os.path.join(os.path.dirname(sys.executable), "seqcluster")
+    seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
     work_dir = dd.get_work_dir(data)
     out_dir = safe_makedir(os.path.join(work_dir, "seqcluster", "report"))
     out_file = op.join(out_dir, "seqcluster.db")
@@ -115,9 +123,9 @@ def _report(data, reference):
 def report(data):
     """Create a Rmd report for small RNAseq analysis"""
     work_dir = dd.get_work_dir(data[0][0])
-    out_dir = os.path.join(work_dir, "report")
+    out_dir = op.join(work_dir, "report")
     safe_makedir(out_dir)
-    summary_file = os.path.join(out_dir, "summary.csv")
+    summary_file = op.join(out_dir, "summary.csv")
     with file_transaction(summary_file) as out_tx:
         with open(out_tx, 'w') as out_handle:
             print >>out_handle, "sample_id,size_stats,miraligner,group"
@@ -140,13 +148,13 @@ def _guess_group(info):
 
 def _create_rmd(summary_fn):
     """Create relatie path files for Rmd report"""
-    root_path, fn = os.path.split(os.path.abspath(summary_fn))
-    out_file = os.path.join(root_path, fn.replace(".csv", "_re.csv"))
+    root_path, fn = op.split(os.path.abspath(summary_fn))
+    out_file = op.join(root_path, fn.replace(".csv", "_re.csv"))
     with open(summary_fn) as in_handle:
         with open(out_file, 'w') as out_handle:
             for line in in_handle:
                 cols = line.strip().split(",")
-                fix_line = ",".join([os.path.relpath(c, root_path) if os.path.exists(c) else c for c in cols])
+                fix_line = ",".join([op.relpath(c, root_path) if op.exists(c) else c for c in cols])
                 print >>out_handle, fix_line
     report_file = _modify_report(root_path, out_file)
 
@@ -154,34 +162,41 @@ def _create_rmd(summary_fn):
 
 def _modify_report(summary_path, summary_fn):
     """Read Rmd template and dump with project path."""
-    summary_path = os.path.abspath(summary_path)
-    template = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(template_seqcluster.__file__)), "report.rmd"))
+    summary_path = op.abspath(summary_path)
+    template = op.normpath(op.join(op.dirname(op.realpath(template_seqcluster.__file__)), "report.rmd"))
     content = open(template).read()
     out_content = string.Template(content).safe_substitute({'path_abs': summary_path,
                                                             'path_summary': os.path.join(summary_path, summary_fn)})
-    out_file = os.path.join(os.path.dirname(summary_fn), "srna_report.rmd")
+    out_file = op.join(op.dirname(summary_fn), "srna_report.rmd")
     with open(out_file, 'w') as out_handle:
         print >>out_handle, out_content
 
     return out_file
 
-def _make_isomir_counts(data):
+def _make_isomir_counts(data, srna_type="seqbuster", out_dir=None, stem=""):
     """
     Parse miraligner files to create count matrix.
     """
     work_dir = dd.get_work_dir(data[0][0])
-    out_dir = os.path.join(work_dir, "mirbase")
+    if not out_dir:
+        out_dir = op.join(work_dir, "mirbase")
+    out_novel_isomir = append_stem(op.join(out_dir, "counts.tsv"), stem)
+    out_novel_mirna = append_stem(op.join(out_dir, "counts_mirna.tsv"), stem)
+    if file_exists(out_novel_mirna):
+        return [out_novel_mirna, out_novel_isomir]
     out_dts = []
     for sample in data:
-        miraligner_fn = sample[0]["seqbuster"]
-        reads = _read_miraligner(miraligner_fn)
-        if reads:
-            out_file, dt, dt_pre = _tab_output(reads, miraligner_fn + ".back", dd.get_sample_name(sample[0]))
-            out_dts.append(dt)
-        else:
-            logger.log("WARNING::%s has NOT miRNA annotated. Check if fasta files is small or species value." % dd.get_sample_name(sample[0]))
+        if sample[0].get(srna_type):
+            miraligner_fn = sample[0][srna_type]
+            reads = _read_miraligner(miraligner_fn)
+            if reads:
+                out_file, dt, dt_pre = _tab_output(reads, miraligner_fn + ".back", dd.get_sample_name(sample[0]))
+                out_dts.append(dt)
+            else:
+                logger.debug("WARNING::%s has NOT miRNA annotated for %s. Check if fasta files is small or species value." % (dd.get_sample_name(sample[0]), srna_type))
     if out_dts:
         out_files = _create_counts(out_dts, out_dir)
+        out_files = [move_safe(out_files[0], out_novel_isomir), move_safe(out_files[1], out_novel_mirna)]
+        return out_files
     else:
-        logger.log("WARNING::any samples have miRNA annotated. Check if fasta files is small or species value.")
-    return out_files
+        logger.debug("WARNING::any samples have miRNA annotated for %s. Check if fasta files is small or species value." % srna_type)
