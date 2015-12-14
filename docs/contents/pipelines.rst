@@ -256,17 +256,34 @@ detection.
 
 - Sequence alignment:
   - `STAR`_ for genome annotation
-  - bowtie, `bowtie2` and  hisat2 for genome annotation as an option
+  - bowtie, `bowtie2` and  `hisat2`_ for genome annotation as an option
+
+- Known small RNAs quantification:
   - `seqbuster <https://github.com/lpantano/seqbuster>`_ for miRNA annotation
+  - `tdrmapper`_ for tRNA fragments annotation
 
 - Quality control:
   - `FastQC`_
 
-- Other small RNAs:
+- Other small RNAs quantification:
   - `seqcluster <https://github.com/lpantano/seqcluster>`_
+  - `mirDeep2`_ for miRNA prediction
 
-The pipeline generates a RMD template file that can be rendered with knitr.
-An example of the report can be seen `here <https://github.com/lpantano/mypubs/blob/master/srnaseq/mirqc/ready_report.md>`_.
+The pipeline generates a _RMD_ template file inside ``report`` folder
+that can be rendered with knitr. An example of the report is at `here <https://github.com/lpantano/mypubs/blob/master/srnaseq/mirqc/ready_report.md>`_.
+Count table (``counts_mirna.tst``) from mirbase miRNAs will be
+inside ``mirbase`` or final project folder.
+Input files for `isomiRs`_ package for isomiRs analysis will be
+inside each sample in ``mirbase`` folder..
+If mirdeep2 can run, count table (``counts_mirna_novel.tsv``)
+for novel miRNAs will be inside
+``mirdeep2`` or final project folder.
+tdrmapper results will be inside each sample
+inside ``tdrmapper`` or final project folder.
+
+.. _tdrmapper: https://github.com/sararselitsky/tDRmapper
+.. _miRDeep2: https://www.mdc-berlin.de/8551903/en/
+.. _isomiRs: https://github.com/lpantano/isomiRs
 
 ChIP-seq
 ~~~~~~~~
