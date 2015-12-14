@@ -1,7 +1,7 @@
 FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
-# Release 0.9.5 -- https://github.com/chapmanb/bcbio-nextgen/commit/1f39359
+# v0.9.6a -- https://github.com/chapmanb/bcbio-nextgen/commit/254bf6d
 
 # Setup a base system 
 RUN apt-get update && \
@@ -47,7 +47,6 @@ RUN apt-get update && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --yes qt && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda clean --yes --tarballs && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/qt* && \
-    rm -rf $(brew --cache) && \
     rm -rf /usr/local/.git && \
     rm -rf /.cpanm && \
     rm -rf /tmp/bcbio-nextgen-install && \
@@ -64,7 +63,6 @@ RUN apt-get update && \
     chmod a+rwx /usr/local/share/bcbio-nextgen && \
     chmod a+rwx /usr/local/share/bcbio-nextgen/config && \
     chmod a+rwx /usr/local/share/bcbio-nextgen/config/*.yaml && \
-    chmod a+rwx /usr/local/share/bcbio-nextgen/gemini-config.yaml && \
 
 # Ensure permissions are set for update in place by arbitrary users
     find /usr/local -perm /u+x -execdir chmod a+x {} \; && \

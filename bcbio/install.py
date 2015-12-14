@@ -55,18 +55,16 @@ def upgrade_bcbio(args):
     elif args.upgrade in ["stable", "system"]:
         anaconda_dir = _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest stable version")
-        _set_pip_ssl(anaconda_dir)
-        subprocess.check_call([pip_bin, "install", "-r", REMOTES["requirements"]])
+        _pip_safe_ssl([[pip_bin, "install", "-r", REMOTES["requirements"]]], anaconda_dir)
         print("Upgrade of bcbio-nextgen code complete.")
     elif args.upgrade in ["deps"]:
         _update_conda_packages()
     else:
         anaconda_dir = _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest development version")
-        _set_pip_ssl(anaconda_dir)
-        subprocess.check_call([pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
-        subprocess.check_call([pip_bin, "install", "--upgrade", "--no-deps",
-                               "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
+        _pip_safe_ssl([[pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]],
+                       [pip_bin, "install", "--upgrade", "--no-deps",
+                        "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]]], anaconda_dir)
         print("Upgrade of bcbio-nextgen development code complete.")
 
     try:
@@ -106,6 +104,17 @@ def upgrade_bcbio(args):
     _install_container_bcbio_system(args.datadir)
     print("Upgrade completed successfully.")
     return args
+
+def _pip_safe_ssl(cmds, anaconda_dir):
+    """Run pip, retrying with conda SSL certificate if global certificate fails.
+    """
+    try:
+        for cmd in cmds:
+            subprocess.check_call(cmd)
+    except subprocess.CalledProcessError:
+        _set_pip_ssl(anaconda_dir)
+        for cmd in cmds:
+            subprocess.check_call(cmd)
 
 def _set_pip_ssl(anaconda_dir):
     """Set PIP SSL certificate to installed conda certificate to avoid SSL errors
