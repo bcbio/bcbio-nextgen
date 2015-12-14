@@ -84,13 +84,12 @@ def bootstrap_bcbionextgen(anaconda, args, remotes):
         ve_script = os.path.join(anaconda["dir"], "bin", script)
         if args.tooldir:
             final_script = os.path.join(args.tooldir, "bin", script)
-            sudo_cmd = ["sudo"] if args.sudo else []
-            subprocess.check_call(sudo_cmd + ["mkdir", "-p", os.path.dirname(final_script)])
+            subprocess.check_call(["mkdir", "-p", os.path.dirname(final_script)])
             if os.path.lexists(final_script):
                 cmd = ["rm", "-f", final_script]
-                subprocess.check_call(sudo_cmd + cmd)
+                subprocess.check_call(cmd)
             cmd = ["ln", "-s", ve_script, final_script]
-            subprocess.check_call(sudo_cmd + cmd)
+            subprocess.check_call(cmd)
         out[script] = ve_script
     return out
 
@@ -181,11 +180,7 @@ def write_system_config(base_url, datadir, tooldir):
 def setup_data_dir(args):
     if not os.path.exists(args.datadir):
         cmd = ["mkdir", "-p", args.datadir]
-        if args.sudo:
-            cmd.insert(0, "sudo")
         subprocess.check_call(cmd)
-    if args.sudo:
-        subprocess.check_call(["sudo", "chown", "-R", os.environ["USER"], args.datadir])
 
 @contextlib.contextmanager
 def bcbio_tmpdir():
@@ -260,8 +255,6 @@ if __name__ == "__main__":
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "rtg", "snap", "star", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
-    parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",
-                        dest="sudo", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to install",

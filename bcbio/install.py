@@ -56,8 +56,7 @@ def upgrade_bcbio(args):
         anaconda_dir = _update_conda_packages()
         print("Upgrading bcbio-nextgen to latest stable version")
         _set_pip_ssl(anaconda_dir)
-        sudo_cmd = [] if args.upgrade == "stable" else ["sudo"]
-        subprocess.check_call(sudo_cmd + [pip_bin, "install", "-r", REMOTES["requirements"]])
+        subprocess.check_call([pip_bin, "install", "-r", REMOTES["requirements"]])
         print("Upgrade of bcbio-nextgen code complete.")
     elif args.upgrade in ["deps"]:
         _update_conda_packages()
@@ -147,12 +146,14 @@ def _symlink_bcbio(args, script="bcbio_nextgen.py"):
     """Ensure a bcbio-nextgen script symlink in final tool directory.
     """
     bcbio_anaconda = os.path.join(os.path.dirname(sys.executable), script)
-    bcbio_final = os.path.join(args.tooldir, "bin", script)
-    sudo_cmd = ["sudo"] if args.sudo else []
+    bindir = os.path.join(args.tooldir, "bin")
+    if not os.path.exists(bindir):
+        os.makedirs(bindir)
+    bcbio_final = os.path.join(bindir, script)
     if not os.path.exists(bcbio_final):
         if os.path.lexists(bcbio_final):
-            subprocess.check_call(sudo_cmd + ["rm", "-f", bcbio_final])
-        subprocess.check_call(sudo_cmd + ["ln", "-s", bcbio_anaconda, bcbio_final])
+            subprocess.check_call(["rm", "-f", bcbio_final])
+        subprocess.check_call(["ln", "-s", bcbio_anaconda, bcbio_final])
 
 def _install_container_bcbio_system(datadir):
     """Install limited bcbio_system.yaml file for setting core and memory usage.
@@ -200,7 +201,7 @@ def _default_deploy_args(args):
             "vm_provider": "novm",
             "hostname": "localhost",
             "fabricrc_overrides": {"edition": "minimal",
-                                   "use_sudo": args.sudo,
+                                   "use_sudo": False,
                                    "keep_isolated": args.isolate,
                                    "conda_cmd": _get_conda_bin(),
                                    "distribution": args.distribution or "__auto__",
@@ -366,7 +367,7 @@ def upgrade_thirdparty_tools(args, remotes):
                                 "local_install": os.path.join(args.tooldir, "local_install"),
                                 "distribution": args.distribution,
                                 "conda_cmd": _get_conda_bin(),
-                                "use_sudo": args.sudo,
+                                "use_sudo": False,
                                 "edition": "minimal"}}
     s = _default_deploy_args(args)
     s["actions"] = ["install_biolinux"]
@@ -514,7 +515,6 @@ def save_install_defaults(args):
         cur_config = {}
     if args.tooldir:
         cur_config["tooldir"] = args.tooldir
-    cur_config["sudo"] = args.sudo
     cur_config["isolate"] = args.isolate
     for attr in ["genomes", "aligners"]:
         if not cur_config.get(attr):
@@ -567,8 +567,6 @@ def add_install_defaults(args):
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
-    if "sudo" in default_args and args.sudo is not False:
-        args.sudo = default_args["sudo"]
     if "isolate" in default_args and args.isolate is not True:
         args.isolate = default_args["isolate"]
     return args
@@ -615,8 +613,6 @@ def add_subparser(subparsers):
                         choices=SUPPORTED_INDEXES)
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
-    parser.add_argument("--sudo", help="Use sudo for the installation, enabling install of system packages",
-                        dest="sudo", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("--distribution", help="Operating system distribution",

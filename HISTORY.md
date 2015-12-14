@@ -1,3 +1,8 @@
+## 0.9.6 (in progress)
+
+- Remove `--sudo` flag from installer. bcbio requires install into a directory
+  structure with user permissions.
+
 ## 0.9.5 (12 December 2015)
 
 - Add miRDeep2 to small RNA-seq analysis and quantify the novel miRNAs for

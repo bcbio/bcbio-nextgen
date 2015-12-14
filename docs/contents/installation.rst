@@ -12,20 +12,18 @@ and RNA-seq analysis, bundled into an isolated directory or virtual environment:
      python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
        --genomes GRCh37 --aligners bwa --aligners bowtie2
 
-bcbio should install cleanly on most Linux systems. For Mac OSX, we suggest
+bcbio should install cleanly on Linux systems. For Mac OSX, we suggest
 trying `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ which runs
 bcbio on :ref:`docs-cloud` or isolates all the third party tools inside a
 Docker container. bcbio-vm is still a work in progress but not all of the
 dependencies bcbio uses install cleanly on OSX.
 
 With the command line above, indexes and associated data files go in
-``/usr/local/share/bcbio-nextgen`` and tools in ``/usr/local``. You should edit
-the pre-created system configuration file in
-``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml`` to match your local
-system or cluster configuration. If you don't have write permissions to install
-into the ``/usr/local`` directories you can install elsewhere or use ``sudo
-chmod`` to give your standard user permissions. Please don't run the installer
-as the root user.
+``/usr/local/share/bcbio-nextgen`` and tools are in ``/usr/local``. If you don't
+have write permissions to install into the ``/usr/local`` directories you can
+install in a user directory like ``~/local`` or use ``sudo chmod`` to give your
+standard user permissions. Please don't run the installer with sudo or as the
+root user.
 
 The installation is highly customizable, and you can install
 additional software and data later using ``bcbio_nextgen.py upgrade``.
@@ -34,115 +32,50 @@ for configuring the installation process. Some useful arguments are:
 
 - ``--isolate`` Avoid updating the user's ``~/.bashrc`` if installing in a
   non-standard PATH. This facilitates creation of isolated modules
-  without disrupting the user's environmental setup.
+  without disrupting the user's environmental setup. Manually edit your
+  `~/.bashrc` to allow bcbio runs with::
+
+       export PATH=/path_to_bcbio/bin:$PATH
+
 - ``--nodata`` Do not install genome data.
-- ``--sudo`` Enable installation in privileged directories and allow the
-  installer to update system packages. We recommend avoiding this
-  option unless inside a Docker container, cloud instance or virtual machine.
 
-To bootstrap installation, the machine will need to have some basic
-requirements:
+The machine will need to have some basic requirements for installing and running
+bcbio:
 
-- Python 2.7, Python 3.x or Python 2.6 plus the argparse dependency
-  with the development libraries installed (the python-dev or python-devel
-  packages).
-- Compilers: Recent versions of gcc, g++ and gfortran. gcc 4.8.x
+- Python 2.7, Python 3.x, or Python 2.6 plus the argparse dependency.
+- Java 1.7
+- System compilers: Recent versions of gcc and g++. gcc 4.8.x
   is well tested, although other versions should work.
-- The git version control system (http://git-scm.com/).
+- The git version control system (http://git-scm.com/)
 - wget for file retrieval (https://www.gnu.org/software/wget/)
 - unzip
-- zlib (with development libraries)
 
-Please see :ref:`isolated-install` for additional system requirements needed to
-bootstrap the full system on minimal machines. The `bcbio-nextgen Dockerfile
+If you want to install all R packages, you'll also need:
+
+- A fortran compiler (On Ubuntu/deb systems: ``gfortran``; On RedHat/rpm
+  systems: ``gcc-gfortran``)
+- An OpenGL library, like `Mesa
+  <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
+  On RedHat/rpm systems: ``mesa-libGLU-devel``)
+
+The `bcbio-nextgen Dockerfile
 <https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_ contains
-bootstrap package information to install on bare Ubuntu systems.
+the packages needed to install on bare Ubuntu systems.
 
-The automated installer creates a fully integrated environment that
-allows simultaneous updates of the framework, third party tools and
-biological data. This offers the advantage over manual installation of
-being able to manage and evolve a consistent analysis environment as
-algorithms continue to evolve and improve. The installer is flexible
-enough to handle both system integrations into standard directories
-like /usr/local, as well as custom isolated installations in non-root
-directories. The :ref:`upgrade-install` section has additional
-documentation on including additional genome data, and the section on
-:ref:`toolplus-install` describes how to add commercially restricted software
-like GATK.
-
-.. _isolated-install:
-
-Isolated installations
-======================
-
-To install bcbio-nextgen in an isolated non-root environment::
-
-    python bcbio_nextgen_install.py /path_to_bcbio --tooldir=/path_to_bcbio --isolate \
-       --genomes GRCh37 --aligners bwa --aligners bowtie2
-
-This requires the following additional system requirements to be in place:
-
-- Java 1.7
-- Ruby (including libraries and irb. On recent CentOS and other rpm systems
-  these are separate packages:
-  ``ruby-libs`` and ``ruby-irb``)
-- bzip2 (with development libraries)
-- curl and SSL (with development libraries; On Ubuntu: ``libssl-dev libcurl4-openssl-dev``, On
-  RedHat: ``openssl-devel libcurl-devel``). Building R and git on older systems requires a relatively
-  recent version of curl (newer than v7.28).
-- XML development libraries (On Ubuntu: ``libxml2-dev``, on RedHat: ``libxml2-devel``)
-- curses with development libraries (On Ubuntu: ``libncurses5-dev``, on RedHat ``ncurses-devel``)
-
-Installing this way is as isolated and self-contained as possible
-without virtual machines or lightweight system containers. To ensure
-access to the executables, system libraries and Perl libraries update
-your `~/.bashrc` with::
-
-    export PATH=/path_to_bcbio/bin:$PATH
-
-This installation process is not easily re-locatable due to absolute
-filesystem pointers within the installation directory. We plan to move
-towards utilizing `Docker`_ containers to provide a fully isolated software
-installation.
+The automated installer creates a fully integrated environment that allows
+simultaneous updates of the framework, third party tools and biological data.
+This offers the advantage over manual installation of being able to manage and
+evolve a consistent analysis environment as algorithms continue to evolve and
+improve. Installing this way is as isolated and self-contained as possible
+without virtual machines or lightweight system containers like `Docker`_. The
+:ref:`upgrade-install` section has additional documentation on including
+additional genome data, and the section on :ref:`toolplus-install` describes how
+to add commercially restricted software like GATK. Following installation, you
+should edit the pre-created system configuration file in
+``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml`` to match your local
+system or cluster configuration.
 
 .. _Docker: http://www.docker.io/
-
-
-.. _private-install:
-
-local/private bcbio installation
-================================
-
-This is for if you have a previously installed version of bcbio-nextgen and you
-want to make changes to the code and test them without disrupting your
-installation.
-
-Install `Miniconda`_::
-
-  wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
-  bash Miniconda-latest-Linux-x86_64.sh
-
-With Miniconda installed create a (private) conda environment to be used for
-this bcbio installation::
-
-  conda create -n bcbio pip distribute
-
-The environment can then be switched on with `source activate bcbio` and off
-with `source deactivate`. Activate the environment and install bcbio within it::
-
-  source activate bcbio
-  conda install -c bcbio bcbio-nextgen # This will install dependencies
-  git clone https://github.com/chapmanb/bcbio-nextgen.git
-  cd bcbio-nextgen
-  python setup.py install
-
-If you want to use a different (e.g., system-wide) bcbio installation for
-genomes, indices and the various tools point to that
-installation's `bcbio_system.yaml`, for example::
-
-  bcbio_nextgen.py /path-to-your-system-wide/bcbio_system.yaml ../config/NA12878-exome-methodcmp.yaml -n 16 ...
-
-.. _Miniconda: http://conda.pydata.org/miniconda.html
 
 .. _upgrade-install:
 
@@ -288,8 +221,6 @@ not installed by default such as kraken database::
 
     bcbio_nextgen.py upgrade --tools --toolplus kraken
 
-
-
 Troubleshooting
 ===============
 
@@ -343,6 +274,41 @@ upgrade -u stable`` to get the latest version, then proceed
 again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
 ``bcbio_nextgen.py -u stable`` to get up to date.
 
+.. _private-install:
+
+local/private bcbio installation
+================================
+
+This is for if you have a previously installed version of bcbio-nextgen and you
+want to make changes to the code and test them without disrupting your
+installation.
+
+Install `Miniconda`_::
+
+  wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+  bash Miniconda-latest-Linux-x86_64.sh
+
+With Miniconda installed create a (private) conda environment to be used for
+this bcbio installation::
+
+  conda create -n bcbio pip distribute
+
+The environment can then be switched on with `source activate bcbio` and off
+with `source deactivate`. Activate the environment and install bcbio within it::
+
+  source activate bcbio
+  conda install -c bcbio bcbio-nextgen # This will install dependencies
+  git clone https://github.com/chapmanb/bcbio-nextgen.git
+  cd bcbio-nextgen
+  python setup.py install
+
+If you want to use a different (e.g., system-wide) bcbio installation for
+genomes, indices and the various tools point to that
+installation's `bcbio_system.yaml`, for example::
+
+  bcbio_nextgen.py /path-to-your-system-wide/bcbio_system.yaml ../config/NA12878-exome-methodcmp.yaml -n 16 ...
+
+.. _Miniconda: http://conda.pydata.org/miniconda.html
 
 Manual process
 ==============
