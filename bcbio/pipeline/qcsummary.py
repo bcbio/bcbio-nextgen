@@ -70,6 +70,9 @@ def pipeline_summary(data):
     if data["analysis"].lower().startswith("smallrna-seq"):
         work_bam = data["clean_fastq"]
         data["summary"] = _run_qc_tools(work_bam, data)
+    elif data["analysis"].lower().startswith("chip-seq"):
+        work_bam = data["raw_bam"]
+        data["summary"] = _run_qc_tools(work_bam, data)
     elif data["sam_ref"] is not None and work_bam and work_bam.endswith(".bam"):
         logger.info("Generating summary files: %s" % str(data["name"]))
         data["summary"] = _run_qc_tools(work_bam, data)
