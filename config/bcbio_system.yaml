@@ -79,6 +79,9 @@ resources:
     memory: 8g
   dexseq:
     memory: 10g
+  sailfish:
+    cores: 16
+    memory: 1g
   seqcluster:
     memory: 8g
   wham:

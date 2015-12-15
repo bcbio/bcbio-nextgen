@@ -368,7 +368,7 @@ class RnaseqPipeline(AbstractPipeline):
             with profile.report("alignment", dirs):
                 samples = run_parallel("disambiguate_split", [samples])
                 samples = run_parallel("process_alignment", samples)
-        with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
+        with prun.start(_wres(parallel, ["samtools", "cufflinks", "sailfish"]),
                         samples, config, dirs, "rnaseqcount") as run_parallel:
             with profile.report("disambiguation", dirs):
                 samples = disambiguate.resolve(samples, run_parallel)
