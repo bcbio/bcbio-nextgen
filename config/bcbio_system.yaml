@@ -22,12 +22,6 @@ resources:
     memory: 2G
     cores: 16
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
-  log:
-    dir: log
-  tmp:
-    dir: null
-  ucsc_bigwig:
-    memory: 36g
   bwa:
     cmd: bwa
     cores: 16
