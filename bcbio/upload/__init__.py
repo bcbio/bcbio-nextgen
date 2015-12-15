@@ -147,6 +147,8 @@ def _maybe_add_variant_file(algorithm, sample, out):
                                 "type": ext,
                                 "ext": "%s-%s" % (x["variantcaller"], extra),
                                 "variantcaller": x["variantcaller"]})
+            if x.get("germline") and os.path.exists(x["germline"]):
+                out.extend(_get_variant_file(x, ("germline",), "-germline"))
     return out
 
 def _maybe_add_hla(algorithm, sample, out):
@@ -200,7 +202,7 @@ def _maybe_add_sv(algorithm, sample, out):
                                     "ext": "sv-validate%s" % ext})
     return out
 
-def _get_variant_file(x, key):
+def _get_variant_file(x, key, suffix=""):
     """Retrieve VCF file with the given key if it exists, handling bgzipped.
     """
     out = []
@@ -212,13 +214,13 @@ def _get_variant_file(x, key):
         if fname.endswith(".vcf.gz"):
             out.append({"path": fname,
                         "type": "vcf.gz",
-                        "ext": x["variantcaller"],
+                        "ext": "%s%s" % (x["variantcaller"], suffix),
                         "variantcaller": x["variantcaller"]})
             if utils.file_exists(fname + ".tbi"):
                 out.append({"path": fname + ".tbi",
                             "type": "vcf.gz.tbi",
                             "index": True,
-                            "ext": x["variantcaller"],
+                            "ext": "%s%s" % (x["variantcaller"], suffix),
                             "variantcaller": x["variantcaller"]})
         elif fname.endswith((".vcf", ".bed", ".bedpe", ".bedgraph", ".cnr", ".cns", ".cnn", ".txt", ".tsv")):
             ftype = utils.splitext_plus(fname)[-1][1:]
@@ -226,7 +228,7 @@ def _get_variant_file(x, key):
                 ftype = fname.split("-")[-1]
             out.append({"path": fname,
                         "type": ftype,
-                        "ext": x["variantcaller"],
+                        "ext": "%s%s" % (x["variantcaller"], suffix),
                         "variantcaller": x["variantcaller"]})
     return out
 

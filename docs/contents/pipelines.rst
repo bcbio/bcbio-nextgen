@@ -163,6 +163,21 @@ mark them with the phenotype::
 Other :ref:`config-cancer` configuration options allow tweaking of the
 processing parameters.
 
+Cancer calling handles both tumor-normal paired calls and tumor-only calling.
+For tumor-only samples, bcbio will try to remove likely germline variants
+present in the public databases like 1000 genome and ExAC, and not in COSMID.
+This runs as long as you have a local GEMINI installation and marks likely
+germline variants with a ``LowPriority`` filter. `This post has more details
+<http://bcb.io/2015/03/05/cancerval/>`_ on the approach and validation.
+
+The standard variant outputs (``sample-caller.vcf.gz``) for tumor calling
+emphasize somatic differences, those likely variants unique to the cancer. In
+addition to this file, we also produce a ``sample-caller-germline.vcf.gz`` file
+containing likely germline mutations. These are useful for identifying
+pre-existing genomic changes that can contribute to cancer development, or in
+paired cases like pre and post treatment where you may want to identify
+maintained mutations after treatment.
+
 We're actively working on improving calling to better account for the
 heterogeneity and structural variability that define cancer genomes.
 

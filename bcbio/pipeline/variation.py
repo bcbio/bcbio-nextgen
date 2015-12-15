@@ -3,15 +3,16 @@
 import toolz as tz
 
 from bcbio.log import logger
+from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
-from bcbio.variation import effects, prioritize
+from bcbio.variation import effects, germline, prioritize
 
 # ## Genotyping
 
 def postprocess_variants(data):
     """Provide post-processing of variant calls: filtering and effects annotation.
     """
-    cur_name = "%s, %s" % (data["name"][-1], get_variantcaller(data))
+    cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data))
     logger.info("Finalizing variant calls: %s" % cur_name)
     if data.get("align_bam") and data.get("vrn_file"):
         logger.info("Calculating variation effects for %s" % cur_name)
@@ -26,4 +27,6 @@ def postprocess_variants(data):
                                               data)
         logger.info("Prioritization for %s" % cur_name)
         data["vrn_file"] = prioritize.handle_vcf_calls(data["vrn_file"], data)
+        logger.info("Germline extraction for %s" % cur_name)
+        data = germline.extract(data)
     return [[data]]

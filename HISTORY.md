@@ -1,5 +1,8 @@
 ## 0.9.6 (in progress)
 
+- Add germline output files for somatic calling pipelines. The standard variant
+  calls identify somatic mutations different from a normal, while the
+  germline has pre-existing mutations which might contribute to cancer development.
 - Remove `--sudo` flag from installer. bcbio requires install into a directory
   structure with user permissions.
 
