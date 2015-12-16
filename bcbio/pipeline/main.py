@@ -23,6 +23,7 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, region,
                             run_info, qcsummary, rnaseq)
 from bcbio.provenance import profile, system
 from bcbio.variation import ensemble, genotype, population, validate, joint
+from bcbio.chipseq import peaks
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -467,6 +468,7 @@ class ChipseqPipeline(AbstractPipeline):
             with profile.report("disambiguation", dirs):
                 samples = disambiguate.resolve(samples, run_parallel)
             samples = run_parallel("clean_chipseq_alignment", samples)
+            samples = peaks.peakcall_prepare(samples, run_parallel)
             samples = qcsummary.generate_parallel(samples, run_parallel)
             with profile.report("upload", dirs):
                 samples = run_parallel("upload_samples", samples)

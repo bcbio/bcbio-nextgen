@@ -123,6 +123,7 @@ out of the final output YAML::
 
 
 .. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
+
 .. _multi-files-sample-configuration:
 
 Multiple files per sample
@@ -166,8 +167,6 @@ See more examples at `parallelize pipeline`_.
 
 .. _parallelize pipeline: https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html
 
-.. _sample-configuration:
-
 In case of paired reads, the CSV file should contain all files::
 
         samplename,description,batch,phenotype,sex,variant_regions
@@ -184,6 +183,8 @@ The output CSV will look like and is compatible with bcbio::
         samplename,description,batch,phenotype,sex,variant_regions
         sample1,sample1,batch1,normal,female,/path/to/regions.bed
 
+
+.. _sample-configuration:
 
 Sample information
 ~~~~~~~~~~~~~~~~~~
@@ -524,10 +525,11 @@ Structural variant calling
   structural variant calls to highlight changes in known genes. This can be
   either the path to a BED file (with ``chrom start end gene_name``) or the name
   of one of the pre-installed prioritization files:
-   - ``cancer/civic`` (hg19, GRCh37, hg38) -- Known cancer associated genes from
-     `CIViC <https://civic.genome.wustl.edu>`_.
-   - ``cancer/az300`` (hg19, GRCh37, hg38) -- 300 cancer associated genes
-     contributed by `AstraZeneca oncology <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
+
+     - ``cancer/civic`` (hg19, GRCh37, hg38) -- Known cancer associated genes from
+       `CIViC <https://civic.genome.wustl.edu>`_.
+     - ``cancer/az300`` (hg19, GRCh37, hg38) -- 300 cancer associated genes
+       contributed by `AstraZeneca oncology <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
 - ``sv_regions`` -- A specification of regions to target during structural
   variant calling. By default, bcbio uses regions specified in
   ``variant_regions`` but this allows custom specification for structural
@@ -638,11 +640,28 @@ RNA sequencing
   Supports ['cufflinks', 'express'].
 
 smallRNA sequencing
-=====================
+===================
 
 - ``adapter`` The 3' end adapter that needs to be remove.
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
+
+Chip sequencing
+===============
+
+- ``peakcaller`` It can contain a list of tools to call peaks. Right now, bcbio only
+  accept ``macs2``. To run ``macs2``, the ``phenotype`` and ``batch`` tags need to be
+  under ``metadata`` in the config YAML file. It needs the chip and input samples.
+  The chip sample needs to have ``phenotype: chip`` and the input sample needs to have
+  ``phenotype: input``. Paired samples need to have same batch name, like
+  ``batch: pair1``. Same input can be used for different chip samples giving
+  a list of values: ``batch: [sample1, sample2]``. You can pass different parameters
+  for ``macs2`` adding to :ref:`config-resources`::
+
+
+        resources:
+          macs:
+            options: ["--broad"]
 
 Quality control
 ===============
@@ -795,6 +814,8 @@ For GATK you can individually control memory for variant calling (which uses the
 ``gatk`` memory target) and for framework usage like merging and variant file
 preparation (which can optionally use the the ``gatk-framework`` target). If
 you only set ``gatk``, that specification gets used for framework calls as well.
+
+
 
 Temporary directory
 ===================

@@ -312,8 +312,13 @@ where a peak caller like MACS2 can be used.
 - Sequence alignment:
   - `bowtie2`_
 
+- Peak calling:
+  - `macs2`_
+
 - Quality control:
   - `FastQC`_
+
+.. _macs2: https://github.com/taoliu/MACS
 
 Standard
 ~~~~~~~~

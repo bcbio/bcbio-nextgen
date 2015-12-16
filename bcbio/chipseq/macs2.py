@@ -20,22 +20,22 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, config):
     if utils.file_exists(out_file):
         return out_file
     macs2 = config_utils.get_program("macs2", config)
+    options = " ".join(config_utils.get_resources("macs2", config).get("options", ""))
     genome_size = HS[genome_build]
     with utils.chdir(out_dir):
         cmd = _macs2_cmd()
         try:
             do.run(cmd.format(**locals()), "macs2 for %s" % name)
         except subprocess.CalledProcessError:
-            logger.debug("macs2 terminated with an error."
-                         "please, check the message and report "
-                         "error if related to bcbio.")
+            logger.debug("macs2 terminated with an error.\n"
+                         "Please, check the message and report "
+                         "error if it is related to bcbio.")
             # do.run("touch error" , "")
             return "error"
-            pass
     return out_file
 
 def _macs2_cmd():
     """Main command for macs2 tool."""
     cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam}"
-            " -g {genome_size} -n {name} -B")
+            " -g {genome_size} -n {name} -B {options}")
     return cmd

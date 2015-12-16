@@ -1,5 +1,6 @@
 ## 0.9.6 (in progress)
 
+- Add macs2 to chipseq pipeline.
 - Add germline output files for somatic calling pipelines. The standard variant
   calls identify somatic mutations different from a normal, while the
   germline has pre-existing mutations which might contribute to cancer development.

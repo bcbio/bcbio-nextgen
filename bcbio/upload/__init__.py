@@ -80,6 +80,7 @@ def _get_files_chipseq(sample):
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_peaks(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _add_meta(xs, sample=None, config=None):
@@ -351,6 +352,15 @@ def _maybe_add_seqbuster(algorithm, sample, out):
         out.append({"path": fn,
                     "type": "counts",
                     "ext": "ready"})
+    return out
+
+def _maybe_add_peaks(algorithm, sample, out):
+    fns = sample.get("peaks_file", [])
+    for fn in fns:
+        if utils.file_exists(fn):
+            out.append({"path": fn,
+                        "type": "xls",
+                        "ext": "ready"})
     return out
 
 def _has_alignment_file(algorithm, sample):
