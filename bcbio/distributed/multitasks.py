@@ -4,6 +4,7 @@ from bcbio import heterogeneity, hla, structural, utils, chipseq, upload
 from bcbio.bam import callable
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
+from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
 from bcbio.rnaseq import (sailfish)
 from bcbio.ngsalign import alignprep
@@ -60,6 +61,10 @@ def seqcluster_cluster(*args):
 @utils.map_wrap
 def srna_alignment(*args):
     return seqcluster.run_align(*args)
+
+@utils.map_wrap
+def peakcalling(*args):
+    return peaks.calling(*args)
 
 @utils.map_wrap
 def prep_align_inputs(*args):
