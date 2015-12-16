@@ -133,6 +133,8 @@ if __name__ == "__main__":
                    "directory in your bcbio-nextgen installation.")
 
     parser = ArgumentParser(description=description)
+    parser.add_argument("-c", "--cores", default=1,
+                        help="number of cores to use")
     parser.add_argument("-f", "--fasta", required=True,
                         help="FASTA file of the genome.")
     parser.add_argument("--gff3", default=False, action='store_true',
@@ -155,6 +157,7 @@ if __name__ == "__main__":
         raise ValueError("--mirbase and --srna_gtf both need a value.")
 
     env.hosts = ["localhost"]
+    env.cores = args.cores
     os.environ["PATH"] += os.pathsep + os.path.dirname(sys.executable)
     cbl = get_cloudbiolinux(REMOTES)
     sys.path.insert(0, cbl["dir"])
@@ -214,7 +217,7 @@ if __name__ == "__main__":
     if args.gtf:
         "Preparing transcriptome."
         with chdir(os.path.join(build_dir, os.pardir)):
-            cmd = ("{sys.executable} {prepare_tx} --genome-dir {genome_dir} --gtf {gtf_file} {args.name} {args.build}")
+            cmd = ("{sys.executable} {prepare_tx} --cores {args.cores} --genome-dir {genome_dir} --gtf {gtf_file} {args.name} {args.build}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
     if args.mirbase:
         "Preparing smallRNA data."
