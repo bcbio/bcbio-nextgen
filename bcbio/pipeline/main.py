@@ -271,14 +271,7 @@ def standardpipeline(config, run_info_yaml, parallel, dirs, samples):
     return samples
 
 def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
-    with prun.start(_wres(parallel, ["picard", "cutadapt"]),
-                    samples, config, dirs, "trimming", max_multicore=1) as run_parallel:
-        with profile.report("organize samples", dirs):
-            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
-                                                            [x[0]["description"] for x in samples]]])
-        with profile.report("adapter trimming", dirs):
-            samples = run_parallel("prepare_sample", samples)
-            samples = run_parallel("trim_sample", samples)
+    samples = rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples)
     with prun.start(_wres(parallel, ["aligner", "picard"],
                             ensure_mem={"tophat": 10, "tophat2": 10, "star": 2, "hisat2": 8}),
                     samples, config, dirs, "alignment",
@@ -320,15 +313,7 @@ def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     # causes a circular import at the top level
     from bcbio.srna.group import report as srna_report
 
-    with prun.start(_wres(parallel, ["picard", "cutadapt"]),
-                    samples, config, dirs, "trimming") as run_parallel:
-        with profile.report("organize samples", dirs):
-            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
-                                                            [x[0]["description"] for x in samples]]])
-        with profile.report("adapter trimming", dirs):
-            samples = run_parallel("prepare_sample", samples)
-            samples = run_parallel("trim_srna_sample", samples)
-
+    samples = rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples)
     with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
                             ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
                     [samples[0]], config, dirs, "alignment") as run_parallel:
@@ -385,6 +370,32 @@ def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                 run_parallel("upload_samples_project", [sample])
     return samples
 
+
+def rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples):
+    """
+    organizes RNA-seq and small-RNAseq samples, converting from BAM if
+    necessary and trimming if necessary
+    """
+    pipeline = dd.get_in_samples(samples, dd.get_analysis)
+    trim_reads_set = dd.get_in_samples(samples, dd.get_trim_reads)
+    resources = ["picard"]
+    needs_trimming = (_is_smallrnaseq(pipeline) or trim_reads_set)
+    if needs_trimming:
+        resources.append("cutadapt")
+    with prun.start(_wres(parallel, resources),
+                    samples, config, dirs, "trimming", max_multicore=1) as run_parallel:
+        with profile.report("organize samples", dirs):
+            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                            [x[0]["description"] for x in samples]]])
+            samples = run_parallel("prepare_sample", samples)
+        if needs_trimming:
+            with profile.report("adapter trimming", dirs):
+                if _is_smallrnaseq(pipeline):
+                    samples = run_parallel("trim_srna_sample", samples)
+                else:
+                    samples = run_parallel("trim_sample", samples)
+    return samples
+
 def _get_pipeline(item):
     from bcbio.log import logger
     analysis_type = item.get("analysis", "").lower()
@@ -436,3 +447,6 @@ SUPPORTED_PIPELINES = {"variant2": variant2pipeline,
                        "rna-seq": rnaseqpipeline,
                        "smallrna-seq": smallrnaseqpipeline,
                        "chip-seq": chipseqpipeline}
+
+def _is_smallrnaseq(pipeline):
+    return pipeline.lower() == "smallrna-seq"

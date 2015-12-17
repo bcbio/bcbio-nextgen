@@ -72,6 +72,8 @@ LOOKUPS = {
                  "default": []},
     "species": {"keys": ['config', 'algorithm', 'species'],
                  "default": None},
+    "trim_reads": {"keys": ['config', 'algorithm', 'trim_reads'],
+                 "default": None},
     "variation_resources": {"keys": ["genome_resources", "variation"], "default": {}},
     "qsig_file": {"keys": ['genome_resources', 'variation', 'qsignature'],
                   "checker": file_exists},
