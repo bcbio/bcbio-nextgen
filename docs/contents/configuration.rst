@@ -646,7 +646,7 @@ smallRNA sequencing
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
 
-Chip sequencing
+ChIP sequencing
 ===============
 
 - ``peakcaller`` Currently, bcbio only accepts ``macs2``
