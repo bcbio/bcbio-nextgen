@@ -649,10 +649,11 @@ smallRNA sequencing
 ChIP sequencing
 ===============
 
-- ``peakcaller`` Currently, bcbio only accepts ``macs2``
-- To run ``macs2``, the ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``. 
-- You can pass different parameters
-  for ``macs2`` adding to :ref:`config-resources`::
+- ``peakcaller`` bcbio only accepts ``macs2``
+- ``aligner`` Currently ``bowtie2`` is the only one tested
+The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``. 
+
+You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::
 
 
         resources:
