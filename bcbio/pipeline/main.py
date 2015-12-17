@@ -2,7 +2,6 @@
 
 Handles running the full pipeline based on instructions
 """
-import abc
 from collections import defaultdict
 import copy
 import os
@@ -104,24 +103,6 @@ def _wres(parallel, progs, fresources=None, ensure_mem=None):
     if ensure_mem:
         parallel["ensure_mem"] = ensure_mem
     return parallel
-
-class AbstractPipeline:
-    """
-    Implement this class to participate in the Pipeline abstraction.
-    name: the analysis name in the run_info.yaml file:
-        design:
-            - analysis: name
-    run: the steps run to perform the analyses
-    """
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractproperty
-    def name(self):
-        return
-
-    @abc.abstractmethod
-    def run(self, config, run_info_yaml, parallel, dirs, samples):
-        return
 
 class _WorldWatcher:
     """Watch changes in the world and output directory and report.
