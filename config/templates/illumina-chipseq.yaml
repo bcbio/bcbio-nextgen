@@ -7,7 +7,7 @@ details:
     aligner: bowtie2
     adapters: [truseq]
     trim_reads: read_through
-  peakcaller: [macs2]
+    peakcaller: [macs2]
   resources:
     macs2:
       options: ["--broad", "-q 0.05"]
