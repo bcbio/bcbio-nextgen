@@ -35,6 +35,7 @@ def _remove_prioritization(in_file, data):
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
             reader = cyvcf2.VCF(in_file)
+            reader.add_filter_to_header({'ID': 'Somatic', 'Description': 'Variant called as Somatic'})
             with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
                 for rec in reader:
                     writer.write_record(_update_prioritization_filters(rec))
@@ -51,6 +52,7 @@ def _extract_germline(in_file, data):
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
             reader = cyvcf2.VCF(in_file)
+            reader.add_filter_to_header({'ID': 'Somatic', 'Description': 'Variant called as Somatic'})
             with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
                 for rec in reader:
                     writer.write_record(_update_germline_filters(rec))
@@ -63,7 +65,7 @@ def _update_germline_filters(rec):
 
 def _add_somatic_filter(rec):
     if _is_somatic(rec):
-        return _add_filter(rec, "REJECT")
+        return _add_filter(rec, "Somatic")
     return rec
 
 def _remove_germline_filter(rec, name):
@@ -90,7 +92,7 @@ def _is_somatic(rec):
             return True
     status_flag = rec.INFO.get("STATUS")
     if status_flag is not None:
-        if str(status_flag).lower() == "somatic":
+        if str(status_flag).lower() in ["somatic", "likelysomatic", "strongsomatic", "samplespecific"]:
             return True
     return False
 
@@ -105,7 +107,7 @@ def _is_germline(rec):
             return True
     status_flag = rec.INFO.get("STATUS")
     if status_flag is not None:
-        if str(status_flag).lower() == "germline":
+        if str(status_flag).lower() in ["germline", "likelyloh", "strongloh", "afdiff", "deletion"]:
             return True
     return False
 
