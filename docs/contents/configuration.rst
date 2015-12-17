@@ -660,7 +660,7 @@ Chip sequencing
 
 
         resources:
-          macs:
+          macs2:
             options: ["--broad"]
 
 Quality control
