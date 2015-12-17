@@ -163,22 +163,48 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         cmd = ["rtg", "vcfeval", "--threads", "6",
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
-        caller = _get_caller(data)
-        # flexible quality scores for building ROC curves, handle multiple cases
-        # MuTect has no quality scores
-        # not clear how to get t_lod_fstar into VCF cleanly
-        if caller == "mutect":
-            cmd += ["--vcf-score-field=BQ"]
-        # otherwise use quality score as a standard
-        # Discussion point: is it worth using caller specific annotations or settling
-        # on a single metric for comparison
-        else:
-            cmd += ["--vcf-score-field=QUAL"]
-        cmd = "export RTG_JAVA_OPTS='-Xms1g' export RTG_MEM=5g && " + " ".join(cmd)
+        cmd += ["--vcf-score-field='%s'" % (_pick_best_quality_score(vrn_file))]
+        cmd = "export RTG_JAVA_OPTS='-Xms1g' && export RTG_MEM=5g && " + " ".join(cmd)
         do.run(cmd, "Validate calls using rtg vcfeval", data)
-    return {"tp": os.path.join(out_dir, "tp.vcf.gz"),
-            "fp": os.path.join(out_dir, "fp.vcf.gz"),
-            "fn": os.path.join(out_dir, "fn.vcf.gz")}
+    out = {"fp": os.path.join(out_dir, "fp.vcf.gz"),
+           "fn": os.path.join(out_dir, "fn.vcf.gz")}
+    tp_calls = os.path.join(out_dir, "tp.vcf.gz")
+    tp_baseline = os.path.join(out_dir, "tp-baseline.vcf.gz")
+    if os.path.exists(tp_baseline):
+        out["tp"] = tp_baseline
+        out["tp-calls"] = tp_calls
+    else:
+        out["tp"] = tp_calls
+    return out
+
+def _pick_best_quality_score(vrn_file):
+    """Flexible quality score selection, picking the best available.
+
+    Implementation based on discussion:
+
+    https://github.com/chapmanb/bcbio-nextgen/commit/a538cecd86c0000d17d3f9d4f8ac9d2da04f9884#commitcomment-14539249
+
+    (RTG=AVR/GATK=VQSLOD/MuTect=t_lod_fstar, otherwise GQ, otherwise QUAL, otherwise DP.)
+
+    For MuTect, it's not clear how to get t_lod_fstar, the right quality score, into VCF cleanly.
+    """
+    to_check = 25
+    scores = collections.defaultdict(int)
+    with VariantFile(vrn_file) as val_in:
+        for i, rec in enumerate(val_in):
+            if i > to_check:
+                break
+            if rec.info.get("VQSLOD") is not None:
+                scores["INFO=VQSLOD"] += 1
+            for skey in ["AVR", "GQ", "DP"]:
+                if rec.samples[0].get(skey) is not None:
+                    scores[skey] += 1
+            if rec.qual:
+                scores["QUAL"] += 1
+    for key in ["AVR", "INFO=VQSLOD", "GQ", "QUAL", "DP"]:
+        if scores[key] > 0:
+            return key
+    raise ValueError("Did not find quality score for validation from %s" % vrn_file)
 
 def _get_merged_intervals(rm_interval_file, base_dir, data):
     """Retrieve intervals to run validation on, merging reference and callable BED files.

@@ -3,7 +3,10 @@
 - Add macs2 to chipseq pipeline.
 - Add germline output files for somatic calling pipelines. The standard variant
   calls identify somatic mutations different from a normal, while the
-  germline has pre-existing mutations which might contribute to cancer development.
+  germline has pre-existing mutations which might contribute to cancer
+  development.
+- During validation, report truth counts relative to initial truth set
+  representation and pick best metric for plotting ROC scores.
 - Remove `--sudo` flag from installer. bcbio requires install into a directory
   structure with user permissions.
 
