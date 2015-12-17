@@ -23,7 +23,7 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, region,
                             run_info, qcsummary, rnaseq)
 from bcbio.provenance import profile, system
 from bcbio.variation import ensemble, genotype, population, validate, joint
-from bcbio.chipseq import peaks
+
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -80,7 +80,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     with tx_tmpdir(config) as tmpdir:
         tempfile.tempdir = tmpdir
         for pipeline, samples in pipelines.items():
-            for xs in pipeline.run(config, run_info_yaml, parallel, dirs, samples):
+            for xs in pipeline(config, run_info_yaml, parallel, dirs, samples):
                 pass
 
 # ## Generic pipeline framework
@@ -183,280 +183,228 @@ class _WorldWatcher:
         pprint.pprint(file_changes)
         pprint.pprint(world_changes)
 
-class Variant2Pipeline(AbstractPipeline):
-    """Streamlined variant calling pipeline for large files.
-    This is less generalized but faster in standard cases.
-    The goal is to replace the base variant calling approach.
-    """
-    name = "variant2"
+def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
+    ## Alignment and preparation requiring the entire input file (multicore cluster)
+    with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"],
+                            (["reference", "fasta"], ["reference", "aligner"], ["files"])),
+                    samples, config, dirs, "multicore",
+                    multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+        with profile.report("organize samples", dirs):
+            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                            [x[0]["description"] for x in samples]]])
+        ww = _WorldWatcher(dirs["work"], is_on=any([dd.get_cwl_reporting(d[0]) for d in samples]))
+        ww.initialize(samples)
+        with profile.report("alignment preparation", dirs):
+            samples = run_parallel("prep_align_inputs", samples)
+            ww.report("prep_align_inputs", samples)
+            samples = run_parallel("disambiguate_split", [samples])
+        with profile.report("alignment", dirs):
+            samples = run_parallel("process_alignment", samples)
+            samples = disambiguate.resolve(samples, run_parallel)
+            samples = alignprep.merge_split_alignments(samples, run_parallel)
+        with profile.report("callable regions", dirs):
+            samples = run_parallel("prep_samples", [samples])
+            samples = run_parallel("postprocess_alignment", samples)
+            samples = run_parallel("combine_sample_regions", [samples])
+            samples = region.clean_sample_data(samples)
+        with profile.report("structural variation initial", dirs):
+            samples = structural.run(samples, run_parallel, "initial")
+        with profile.report("hla typing", dirs):
+            samples = hla.run(samples, run_parallel)
 
-    @classmethod
-    def run(self, config, run_info_yaml, parallel, dirs, samples):
-        ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"],
-                              (["reference", "fasta"], ["reference", "aligner"], ["files"])),
-                        samples, config, dirs, "multicore",
-                        multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            with profile.report("organize samples", dirs):
-                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
-                                                             [x[0]["description"] for x in samples]]])
-            ww = _WorldWatcher(dirs["work"], is_on=any([dd.get_cwl_reporting(d[0]) for d in samples]))
-            ww.initialize(samples)
-            with profile.report("alignment preparation", dirs):
-                samples = run_parallel("prep_align_inputs", samples)
-                ww.report("prep_align_inputs", samples)
-                samples = run_parallel("disambiguate_split", [samples])
-            with profile.report("alignment", dirs):
-                samples = run_parallel("process_alignment", samples)
-                samples = disambiguate.resolve(samples, run_parallel)
-                samples = alignprep.merge_split_alignments(samples, run_parallel)
-            with profile.report("callable regions", dirs):
-                samples = run_parallel("prep_samples", [samples])
-                samples = run_parallel("postprocess_alignment", samples)
-                samples = run_parallel("combine_sample_regions", [samples])
-                samples = region.clean_sample_data(samples)
-            with profile.report("structural variation initial", dirs):
-                samples = structural.run(samples, run_parallel, "initial")
-            with profile.report("hla typing", dirs):
-                samples = hla.run(samples, run_parallel)
+    ## Variant calling on sub-regions of the input file (full cluster)
+    with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
+                    samples, config, dirs, "full",
+                    multiplier=region.get_max_counts(samples), max_multicore=1) as run_parallel:
+        with profile.report("alignment post-processing", dirs):
+            samples = region.parallel_prep_region(samples, run_parallel)
+        with profile.report("variant calling", dirs):
+            samples = genotype.parallel_variantcall_region(samples, run_parallel)
 
-        ## Variant calling on sub-regions of the input file (full cluster)
-        with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
-                        samples, config, dirs, "full",
-                        multiplier=region.get_max_counts(samples), max_multicore=1) as run_parallel:
-            with profile.report("alignment post-processing", dirs):
-                samples = region.parallel_prep_region(samples, run_parallel)
-            with profile.report("variant calling", dirs):
-                samples = genotype.parallel_variantcall_region(samples, run_parallel)
+    ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
+    with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
+                                     "gemini", "samtools", "fastqc", "bamtools",
+                                     "bcbio-variation-recall", "qsignature",
+                                     "svcaller"]),
+                    samples, config, dirs, "multicore2",
+                    multiplier=structural.parallel_multiplier(samples)) as run_parallel:
+        with profile.report("joint squaring off/backfilling", dirs):
+            samples = joint.square_off(samples, run_parallel)
+        with profile.report("variant post-processing", dirs):
+            samples = run_parallel("postprocess_variants", samples)
+            samples = run_parallel("split_variants_by_sample", samples)
+        with profile.report("prepped BAM merging", dirs):
+            samples = region.delayed_bamprep_merge(samples, run_parallel)
+        with profile.report("validation", dirs):
+            samples = run_parallel("compare_to_rm", samples)
+            samples = genotype.combine_multiple_callers(samples)
+        with profile.report("ensemble calling", dirs):
+            samples = ensemble.combine_calls_parallel(samples, run_parallel)
+        with profile.report("validation summary", dirs):
+            samples = validate.summarize_grading(samples)
+        with profile.report("structural variation final", dirs):
+            samples = structural.run(samples, run_parallel, "standard")
+        with profile.report("structural variation ensemble", dirs):
+            samples = structural.run(samples, run_parallel, "ensemble")
+        with profile.report("structural variation validation", dirs):
+            samples = run_parallel("validate_sv", samples)
+        with profile.report("heterogeneity", dirs):
+            samples = heterogeneity.run(samples, run_parallel)
+        with profile.report("population database", dirs):
+            samples = population.prep_db_parallel(samples, run_parallel)
+        with profile.report("quality control", dirs):
+            samples = qcsummary.generate_parallel(samples, run_parallel)
+        with profile.report("archive", dirs):
+            samples = archive.compress(samples, run_parallel)
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for sample in samples:
+                run_parallel("upload_samples_project", [sample])
+    logger.info("Timing: finished")
+    return samples
 
-        ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
-        with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
-                                         "gemini", "samtools", "fastqc", "bamtools",
-                                         "bcbio-variation-recall", "qsignature",
-                                         "svcaller"]),
-                        samples, config, dirs, "multicore2",
-                        multiplier=structural.parallel_multiplier(samples)) as run_parallel:
-            with profile.report("joint squaring off/backfilling", dirs):
-                samples = joint.square_off(samples, run_parallel)
-            with profile.report("variant post-processing", dirs):
-                samples = run_parallel("postprocess_variants", samples)
-                samples = run_parallel("split_variants_by_sample", samples)
-            with profile.report("prepped BAM merging", dirs):
-                samples = region.delayed_bamprep_merge(samples, run_parallel)
-            with profile.report("validation", dirs):
-                samples = run_parallel("compare_to_rm", samples)
-                samples = genotype.combine_multiple_callers(samples)
-            with profile.report("ensemble calling", dirs):
-                samples = ensemble.combine_calls_parallel(samples, run_parallel)
-            with profile.report("validation summary", dirs):
-                samples = validate.summarize_grading(samples)
-            with profile.report("structural variation final", dirs):
-                samples = structural.run(samples, run_parallel, "standard")
-            with profile.report("structural variation ensemble", dirs):
-                samples = structural.run(samples, run_parallel, "ensemble")
-            with profile.report("structural variation validation", dirs):
-                samples = run_parallel("validate_sv", samples)
-            with profile.report("heterogeneity", dirs):
-                samples = heterogeneity.run(samples, run_parallel)
-            with profile.report("population database", dirs):
-                samples = population.prep_db_parallel(samples, run_parallel)
-            with profile.report("quality control", dirs):
-                samples = qcsummary.generate_parallel(samples, run_parallel)
-            with profile.report("archive", dirs):
-                samples = archive.compress(samples, run_parallel)
-            with profile.report("upload", dirs):
-                samples = run_parallel("upload_samples", samples)
-                for sample in samples:
-                    run_parallel("upload_samples_project", [sample])
-        logger.info("Timing: finished")
-        return samples
+def standardpipeline(config, run_info_yaml, parallel, dirs, samples):
+    ## Alignment and preparation requiring the entire input file (multicore cluster)
+    with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"]),
+                    samples, config, dirs, "multicore") as run_parallel:
+        with profile.report("organize samples", dirs):
+            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                            [x[0]["description"] for x in samples]]])
+        with profile.report("alignment", dirs):
+            samples = run_parallel("process_alignment", samples)
+        with profile.report("callable regions", dirs):
+            samples = run_parallel("prep_samples", [samples])
+            samples = run_parallel("postprocess_alignment", samples)
+            samples = run_parallel("combine_sample_regions", [samples])
+            samples = region.clean_sample_data(samples)
+    ## Quality control
+    with prun.start(_wres(parallel, ["fastqc", "bamtools", "qsignature", "kraken", "gatk", "samtools"]),
+                    samples, config, dirs, "multicore2") as run_parallel:
+        with profile.report("quality control", dirs):
+            samples = qcsummary.generate_parallel(samples, run_parallel)
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for sample in samples:
+                run_parallel("upload_samples_project", [sample])
+    logger.info("Timing: finished")
+    return samples
 
-def _debug_samples(i, samples):
-    print "---", i, len(samples)
-    for sample in (x[0] for x in samples):
-        print "  ", sample["description"], sample.get("region"), \
-            utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
-            utils.get_in(sample, ("config", "algorithm", "jointcaller")), \
-            utils.get_in(sample, ("metadata", "batch")), \
-            [x.get("variantcaller") for x in sample.get("variants", [])], \
-            sample.get("work_bam"), \
-            sample.get("vrn_file")
-
-class SNPCallingPipeline(Variant2Pipeline):
-    """Back compatible: old name for variant analysis.
-    """
-    name = "SNP calling"
-
-class VariantPipeline(Variant2Pipeline):
-    """Back compatibility; old name
-    """
-    name = "variant"
-
-class StandardPipeline(AbstractPipeline):
-    """Minimal pipeline with alignment and QC.
-    """
-    name = "Standard"
-    @classmethod
-    def run(self, config, run_info_yaml, parallel, dirs, samples):
-        ## Alignment and preparation requiring the entire input file (multicore cluster)
-        with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"]),
-                        samples, config, dirs, "multicore") as run_parallel:
-            with profile.report("organize samples", dirs):
-                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
-                                                             [x[0]["description"] for x in samples]]])
-            with profile.report("alignment", dirs):
-                samples = run_parallel("process_alignment", samples)
-            with profile.report("callable regions", dirs):
-                samples = run_parallel("prep_samples", [samples])
-                samples = run_parallel("postprocess_alignment", samples)
-                samples = run_parallel("combine_sample_regions", [samples])
-                samples = region.clean_sample_data(samples)
-        ## Quality control
-        with prun.start(_wres(parallel, ["fastqc", "bamtools", "qsignature", "kraken", "gatk", "samtools"]),
-                        samples, config, dirs, "multicore2") as run_parallel:
-            with profile.report("quality control", dirs):
-                samples = qcsummary.generate_parallel(samples, run_parallel)
-            with profile.report("upload", dirs):
-                samples = run_parallel("upload_samples", samples)
-                for sample in samples:
-                    run_parallel("upload_samples_project", [sample])
-        logger.info("Timing: finished")
-        return samples
-
-class MinimalPipeline(StandardPipeline):
-    name = "Minimal"
-
-class RnaseqPipeline(AbstractPipeline):
-    name = "RNA-seq"
-
-    @classmethod
-    def run(self, config, run_info_yaml, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["picard", "cutadapt"]),
-                        samples, config, dirs, "trimming", max_multicore=1) as run_parallel:
-            with profile.report("organize samples", dirs):
-                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
-                                                             [x[0]["description"] for x in samples]]])
-            with profile.report("adapter trimming", dirs):
-                samples = run_parallel("prepare_sample", samples)
-                samples = run_parallel("trim_sample", samples)
-        with prun.start(_wres(parallel, ["aligner", "picard"],
-                              ensure_mem={"tophat": 10, "tophat2": 10, "star": 2, "hisat2": 8}),
-                        samples, config, dirs, "alignment",
-                        multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            with profile.report("alignment", dirs):
-                samples = run_parallel("disambiguate_split", [samples])
-                samples = run_parallel("process_alignment", samples)
-        with prun.start(_wres(parallel, ["samtools", "cufflinks", "sailfish"]),
-                        samples, config, dirs, "rnaseqcount") as run_parallel:
-            with profile.report("disambiguation", dirs):
-                samples = disambiguate.resolve(samples, run_parallel)
-            with profile.report("transcript assembly", dirs):
-                samples = rnaseq.assemble_transcripts(run_parallel, samples)
-            with profile.report("estimate expression (threaded)", dirs):
-                samples = rnaseq.quantitate_expression_parallel(samples, run_parallel)
-        with prun.start(_wres(parallel, ["dexseq", "express"]), samples, config,
-                        dirs, "rnaseqcount-singlethread", max_multicore=1) as run_parallel:
-            with profile.report("estimate expression (single threaded)", dirs):
-                samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
-        samples = rnaseq.combine_files(samples)
-        with prun.start(_wres(parallel, ["gatk"]), samples, config,
-                        dirs, "rnaseq-variation") as run_parallel:
-            with profile.report("RNA-seq variant calling", dirs):
-                samples = rnaseq.rnaseq_variant_calling(samples, run_parallel)
-
-        with prun.start(_wres(parallel, ["samtools", "fastqc", "qualimap",
-                                         "kraken", "gatk"], ensure_mem={"qualimap": 4}),
-                        samples, config, dirs, "qc") as run_parallel:
-            with profile.report("quality control", dirs):
-                samples = qcsummary.generate_parallel(samples, run_parallel)
-            with profile.report("upload", dirs):
-                samples = run_parallel("upload_samples", samples)
-                for sample in samples:
-                    run_parallel("upload_samples_project", [sample])
-        logger.info("Timing: finished")
-        return samples
-
-class smallRnaseqPipeline(AbstractPipeline):
-    name = "smallRNA-seq"
-
-    @classmethod
-    def run(self, config, run_info_yaml, parallel, dirs, samples):
-        # causes a circular import at the top level
-        from bcbio.srna.group import report as srna_report
-
-        with prun.start(_wres(parallel, ["picard", "cutadapt"]),
-                        samples, config, dirs, "trimming") as run_parallel:
-            with profile.report("organize samples", dirs):
-                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
-                                                             [x[0]["description"] for x in samples]]])
-            with profile.report("adapter trimming", dirs):
-                samples = run_parallel("prepare_sample", samples)
-                samples = run_parallel("trim_srna_sample", samples)
-
-        with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
-                              ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
-                        [samples[0]], config, dirs, "alignment") as run_parallel:
-            with profile.report("prepare", dirs):
-                samples = run_parallel("seqcluster_prepare", [samples])
-            with profile.report("alignment", dirs):
-                samples = run_parallel("srna_alignment", [samples])
-
-        with prun.start(_wres(parallel, ["picard", "miraligner"]),
-                        samples, config, dirs, "annotation") as run_parallel:
-            with profile.report("small RNA annotation", dirs):
-                samples = run_parallel("srna_annotation", samples)
-
-        with prun.start(_wres(parallel, ["seqcluster"],
-                              ensure_mem={"seqcluster": 8}),
-                        [samples[0]], config, dirs, "cluster") as run_parallel:
-            with profile.report("cluster", dirs):
-                samples = run_parallel("seqcluster_cluster", [samples])
-
-        with prun.start(_wres(parallel, ["picard", "fastqc"]),
-                        samples, config, dirs, "qc") as run_parallel:
-            with profile.report("quality control", dirs):
-                samples = qcsummary.generate_parallel(samples, run_parallel)
-            with profile.report("report", dirs):
-                srna_report(samples)
-            with profile.report("upload", dirs):
-                samples = run_parallel("upload_samples", samples)
-                for sample in samples:
-                    run_parallel("upload_samples_project", [sample])
-
-        return samples
-
-class ChipseqPipeline(AbstractPipeline):
-    name = "chip-seq"
-
-    @classmethod
-    def run(self, config, run_info_yaml, parallel, dirs, samples):
-        with prun.start(_wres(parallel, ["aligner", "picard"]),
-                        samples, config, dirs, "multicore",
-                        multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
-            with profile.report("organize samples", dirs):
-                samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
-                                                             [x[0]["description"] for x in samples]]])
+def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
+    with prun.start(_wres(parallel, ["picard", "cutadapt"]),
+                    samples, config, dirs, "trimming", max_multicore=1) as run_parallel:
+        with profile.report("organize samples", dirs):
+            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                            [x[0]["description"] for x in samples]]])
+        with profile.report("adapter trimming", dirs):
             samples = run_parallel("prepare_sample", samples)
             samples = run_parallel("trim_sample", samples)
+    with prun.start(_wres(parallel, ["aligner", "picard"],
+                            ensure_mem={"tophat": 10, "tophat2": 10, "star": 2, "hisat2": 8}),
+                    samples, config, dirs, "alignment",
+                    multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+        with profile.report("alignment", dirs):
             samples = run_parallel("disambiguate_split", [samples])
             samples = run_parallel("process_alignment", samples)
-        with prun.start(_wres(parallel, ["picard", "fastqc"]),
-                        samples, config, dirs, "persample") as run_parallel:
-            with profile.report("disambiguation", dirs):
-                samples = disambiguate.resolve(samples, run_parallel)
-            samples = run_parallel("clean_chipseq_alignment", samples)
-            samples = peaks.peakcall_prepare(samples, run_parallel)
+    with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
+                    samples, config, dirs, "rnaseqcount") as run_parallel:
+        with profile.report("disambiguation", dirs):
+            samples = disambiguate.resolve(samples, run_parallel)
+        with profile.report("transcript assembly", dirs):
+            samples = rnaseq.assemble_transcripts(run_parallel, samples)
+        with profile.report("estimate expression (threaded)", dirs):
+            samples = rnaseq.quantitate_expression_parallel(samples, run_parallel)
+    with prun.start(_wres(parallel, ["dexseq", "express"]), samples, config,
+                    dirs, "rnaseqcount-singlethread", max_multicore=1) as run_parallel:
+        with profile.report("estimate expression (single threaded)", dirs):
+            samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
+    samples = rnaseq.combine_files(samples)
+    with prun.start(_wres(parallel, ["gatk"]), samples, config,
+                    dirs, "rnaseq-variation") as run_parallel:
+        with profile.report("RNA-seq variant calling", dirs):
+            samples = rnaseq.rnaseq_variant_calling(samples, run_parallel)
+
+    with prun.start(_wres(parallel, ["samtools", "fastqc", "qualimap",
+                                        "kraken", "gatk"], ensure_mem={"qualimap": 4}),
+                    samples, config, dirs, "qc") as run_parallel:
+        with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
-            with profile.report("upload", dirs):
-                samples = run_parallel("upload_samples", samples)
-                for sample in samples:
-                    run_parallel("upload_samples_project", [sample])
-        return samples
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for sample in samples:
+                run_parallel("upload_samples_project", [sample])
+    logger.info("Timing: finished")
+    return samples
+
+def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
+    # causes a circular import at the top level
+    from bcbio.srna.group import report as srna_report
+
+    with prun.start(_wres(parallel, ["picard", "cutadapt"]),
+                    samples, config, dirs, "trimming") as run_parallel:
+        with profile.report("organize samples", dirs):
+            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                            [x[0]["description"] for x in samples]]])
+        with profile.report("adapter trimming", dirs):
+            samples = run_parallel("prepare_sample", samples)
+            samples = run_parallel("trim_srna_sample", samples)
+
+    with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
+                            ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
+                    [samples[0]], config, dirs, "alignment") as run_parallel:
+        with profile.report("prepare", dirs):
+            samples = run_parallel("seqcluster_prepare", [samples])
+        with profile.report("alignment", dirs):
+            samples = run_parallel("srna_alignment", [samples])
+
+    with prun.start(_wres(parallel, ["picard", "miraligner"]),
+                    samples, config, dirs, "annotation") as run_parallel:
+        with profile.report("small RNA annotation", dirs):
+            samples = run_parallel("srna_annotation", samples)
+
+    with prun.start(_wres(parallel, ["seqcluster"],
+                            ensure_mem={"seqcluster": 8}),
+                    [samples[0]], config, dirs, "cluster") as run_parallel:
+        with profile.report("cluster", dirs):
+            samples = run_parallel("seqcluster_cluster", [samples])
+
+    with prun.start(_wres(parallel, ["picard", "fastqc"]),
+                    samples, config, dirs, "qc") as run_parallel:
+        with profile.report("quality control", dirs):
+            samples = qcsummary.generate_parallel(samples, run_parallel)
+        with profile.report("report", dirs):
+            srna_report(samples)
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for sample in samples:
+                run_parallel("upload_samples_project", [sample])
+
+    return samples
+
+def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
+    with prun.start(_wres(parallel, ["aligner", "picard"]),
+                    samples, config, dirs, "multicore",
+                    multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+        with profile.report("organize samples", dirs):
+            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                            [x[0]["description"] for x in samples]]])
+        samples = run_parallel("prepare_sample", samples)
+        samples = run_parallel("trim_sample", samples)
+        samples = run_parallel("disambiguate_split", [samples])
+        samples = run_parallel("process_alignment", samples)
+    with prun.start(_wres(parallel, ["picard", "fastqc"]),
+                    samples, config, dirs, "persample") as run_parallel:
+        with profile.report("disambiguation", dirs):
+            samples = disambiguate.resolve(samples, run_parallel)
+        samples = run_parallel("clean_chipseq_alignment", samples)
+        samples = qcsummary.generate_parallel(samples, run_parallel)
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for sample in samples:
+                run_parallel("upload_samples_project", [sample])
+    return samples
 
 def _get_pipeline(item):
     from bcbio.log import logger
-    SUPPORTED_PIPELINES = {x.name.lower(): x for x in
-                           utils.itersubclasses(AbstractPipeline)}
     analysis_type = item.get("analysis", "").lower()
     if analysis_type not in SUPPORTED_PIPELINES:
         logger.error("Cannot determine which type of analysis to run, "
@@ -497,3 +445,12 @@ def _pair_samples_with_pipelines(run_info_yaml, config):
     for x in paired:
         d[x[1]].append([x[0]])
     return d, config
+
+SUPPORTED_PIPELINES = {"variant2": variant2pipeline,
+                       "snp calling": variant2pipeline,
+                       "variant": variant2pipeline,
+                       "standard": standardpipeline,
+                       "minimal": standardpipeline,
+                       "rna-seq": rnaseqpipeline,
+                       "smallrna-seq": smallrnaseqpipeline,
+                       "chip-seq": chipseqpipeline}
