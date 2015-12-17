@@ -815,8 +815,6 @@ For GATK you can individually control memory for variant calling (which uses the
 preparation (which can optionally use the the ``gatk-framework`` target). If
 you only set ``gatk``, that specification gets used for framework calls as well.
 
-
-
 Temporary directory
 ===================
 

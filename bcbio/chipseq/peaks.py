@@ -20,7 +20,7 @@ def peakcall_prepare(data, run_parallel):
     to_process = []
     for sample in data:
         mimic = copy.copy(sample[0])
-        for caller in sample[0]['config']["algorithm"].get("peakcaller", "macs2"):
+        for caller in dd.get_peakcaller(sample[0]):
             if caller in caller_fns and dd.get_phenotype(mimic) == "chip":
                 mimic["peak_fn"] = caller
                 name = dd.get_sample_name(mimic)
@@ -55,7 +55,7 @@ def _sync(original, processed):
         original_sample[0]["peaks_file"] = []
         for processs_sample in processed:
             if dd.get_sample_name(original_sample[0]) == dd.get_sample_name(processs_sample[0]):
-                if processs_sample[0]["peaks_file"] != "error":
+                if utils.file_exists(processs_sample[0]["peaks_file"]):
                     original_sample[0]["peaks_file"].append(processs_sample[0]["peaks_file"])
     return original
 

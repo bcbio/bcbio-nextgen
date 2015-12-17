@@ -52,7 +52,6 @@ def _get_files(sample):
     else:
         return []
 
-
 def _get_files_rnaseq(sample):
     out = []
     algorithm = sample["config"]["algorithm"]
@@ -358,10 +357,19 @@ def _maybe_add_peaks(algorithm, sample, out):
     fns = sample.get("peaks_file", [])
     for fn in fns:
         if utils.file_exists(fn):
+            name, ext = utils.splitext_plus(fn)
+            caller = _get_peak_file(sample, name)
             out.append({"path": fn,
-                        "type": "xls",
-                        "ext": "ready"})
+                        "type": ext,
+                        "ext": caller})
     return out
+
+def _get_peak_file(x, fn_name):
+    """Get peak caller for this file name."""
+    for caller in dd.get_peakcaller(x):
+        if fn_name.find(caller) > -1:
+            return caller
+    return os.path.basename(fn_name)
 
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")

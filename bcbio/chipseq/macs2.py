@@ -9,6 +9,7 @@ import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
 
 HS = {"hg19": "2.7e9",
+      "GRCh37": "2.7e9",
       "mm10": "1.87e9"}
 
 def run(name, chip_bam, input_bam, genome_build, out_dir, config):
@@ -16,22 +17,32 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, config):
     Run macs2 for chip and input samples avoiding
     errors due to samples.
     """
-    out_file = os.path.join(out_dir, name + "_peaks.xls")
+    # output file name need to have the caller name
+    out_file = os.path.join(out_dir, name + "_peaks_macs2.xls")
+    macs2_file = os.path.join(out_dir, name + "_peaks.xls")
     if utils.file_exists(out_file):
         return out_file
     macs2 = config_utils.get_program("macs2", config)
     options = " ".join(config_utils.get_resources("macs2", config).get("options", ""))
+    if genome_build not in HS and options.find("-g") == -1:
+        raise ValueError("This %s genome doesn't have a pre-set value."
+                          "You an add specific values using resources"
+                          "option in the YAML file."
+                          "Check Chip-seq configuration in"
+                          "bcbio-nextgen documentation.")
     genome_size = HS[genome_build]
     with utils.chdir(out_dir):
         cmd = _macs2_cmd()
         try:
             do.run(cmd.format(**locals()), "macs2 for %s" % name)
+            utils.move_safe(macs2_file, out_file)
         except subprocess.CalledProcessError:
-            logger.debug("macs2 terminated with an error.\n"
-                         "Please, check the message and report "
-                         "error if it is related to bcbio.")
-            # do.run("touch error" , "")
-            return "error"
+            raise RuntimeWarning("macs2 terminated with an error.\n"
+                                 "Please, check the message and report "
+                                 "error if it is related to bcbio.\n"
+                                 "You can add specific options for the sample "
+                                 "setting resources as explained in docs: "
+                                 "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#sample-specific-resources")
     return out_file
 
 def _macs2_cmd():
