@@ -2,7 +2,8 @@ import os
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.utils import (file_exists, safe_makedir, is_gzipped, rbind, partition)
+from bcbio.utils import (file_exists, safe_makedir, is_gzipped, rbind, partition,
+                         R_package_path, Rscript_cmd)
 from bcbio.pipeline import config_utils, disambiguate
 from bcbio.rnaseq import gtf
 import pandas as pd
@@ -51,7 +52,21 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, sailfish_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
+    _sleuthify_sailfish(sailfish_dir)
     return out_file
+
+def _sleuthify_sailfish(sailfish_dir):
+    """
+    if installed, use wasabi to create abundance.h5 output for use with
+    sleuth
+    """
+    if not R_package_path("wasabi"):
+        return None
+    else:
+        rscript = Rscript_cmd()
+        cmd = """{rscript} -e 'library("wasabi"); prepare_fish_for_sleuth(c("{sailfish_dir}"))'"""
+        do.run(cmd.format(**locals()), "Converting Sailfish to Sleuth format.")
+    return os.path.join(sailfish_dir, "abundance.h5")
 
 def _create_combined_fasta(data, out_dir):
     """
