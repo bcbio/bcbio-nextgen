@@ -82,6 +82,9 @@ resources:
   sailfish:
     cores: 16
     memory: 1g
+  macs2:
+    cores: 1
+    memory: 8g
   seqcluster:
     memory: 8g
   wham:

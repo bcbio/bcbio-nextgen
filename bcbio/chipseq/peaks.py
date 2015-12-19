@@ -66,3 +66,13 @@ def _get_paired_samples(sample, data):
         if  dd.get_batch(sample) in dd.get_batch(origin[0]) and dd.get_phenotype(origin[0]) == "input":
             sample["work_bam_input"] = dd.get_work_bam(origin[0])
             return [sample]
+
+def _get_multiplier(samples):
+    """Get multiplier to get jobs
+       only for samples that have input
+    """
+    to_process = 1
+    for sample in samples:
+        if dd.get_phenotype(sample[0]) == "chip":
+            to_process += 1
+    return to_process / len(samples)

@@ -353,17 +353,26 @@ def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("organize samples", dirs):
             samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                             [x[0]["description"] for x in samples]]])
-        samples = run_parallel("prepare_sample", samples)
-        samples = run_parallel("trim_sample", samples)
-        samples = run_parallel("disambiguate_split", [samples])
-        samples = run_parallel("process_alignment", samples)
-    with prun.start(_wres(parallel, ["picard", "fastqc"]),
-                    samples, config, dirs, "persample") as run_parallel:
+        with profile.report("alignment", dirs):
+            samples = run_parallel("prepare_sample", samples)
+            samples = run_parallel("trim_sample", samples)
+            samples = run_parallel("disambiguate_split", [samples])
+            samples = run_parallel("process_alignment", samples)
+
         with profile.report("disambiguation", dirs):
             samples = disambiguate.resolve(samples, run_parallel)
-        samples = run_parallel("clean_chipseq_alignment", samples)
-        samples = peaks.peakcall_prepare(samples, run_parallel)
-        samples = qcsummary.generate_parallel(samples, run_parallel)
+            samples = run_parallel("clean_chipseq_alignment", samples)
+
+    with prun.start(_wres(parallel, ["peakcaller"]),
+                    samples, config, dirs, "peakcalling",
+                    multiplier = peaks._get_multiplier(samples)) as run_parallel:
+        with profile.report("peakcalling", dirs):
+            samples = peaks.peakcall_prepare(samples, run_parallel)
+
+    with prun.start(_wres(parallel, ["picard", "fastqc"]),
+                    samples, config, dirs, "qc") as run_parallel:
+        with profile.report("quality control", dirs):
+            samples = qcsummary.generate_parallel(samples, run_parallel)
         with profile.report("upload", dirs):
             samples = run_parallel("upload_samples", samples)
             for sample in samples:

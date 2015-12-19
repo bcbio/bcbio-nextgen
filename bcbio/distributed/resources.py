@@ -24,8 +24,8 @@ def _get_resource_programs(progs, algs):
                 aligner = alg.get("aligner")
                 if aligner:
                     out.add(aligner)
-        elif p in ["variantcaller", "svcaller"]:
-            if p == "variantcaller": 
+        elif p in ["variantcaller", "svcaller", "peakcaller"]:
+            if p == "variantcaller":
                 for key, fn in parent_child.items():
                     if fn(algs):
                         out.add(key)
