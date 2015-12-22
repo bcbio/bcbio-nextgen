@@ -18,16 +18,18 @@ def _stringtie_expression(bam, gtf_file, threads=1, out_dir="."):
     only estimate expression the Stringtie, do not assemble new transcripts
     """
     error_message = "The %s file for %s is missing. StringTie has an error."
-    base_cmd = ("stringtie -e -b {out_dir} -p {threads} -G {gtf_file} {bam}")
+    base_cmd = ("stringtie -e -b {out_dir} -p {threads} -G {gtf_file} "
+                "-o {out_gtf} {bam}")
     transcript_file = os.path.join(out_dir, "t_data.ctab")
     exon_file = os.path.join(out_dir, "e_data.ctab")
+    out_gtf = os.path.join(out_dir, "stringtie-assembly.gtf")
     if file_exists(transcript_file):
-        return exon_file, transcript_file
+        return exon_file, transcript_file, out_gtf
     cmd = base_cmd.format(**locals())
     do.run(cmd, "Running Stringtie on %s." % bam)
     assert file_exists(exon_file), error_message % ("exon", exon_file)
     assert file_exists(transcript_file), error_message % ("transcript", transcript_file)
-    return exon_file, transcript_file
+    return transcript_file
 
 def run_stringtie_expression(data):
     """
@@ -41,19 +43,23 @@ def run_stringtie_expression(data):
     out_dir = os.path.join("stringtie", sample_name)
     isoform_fpkm = os.path.join(out_dir, sample_name + ".isoform.fpkm")
     gene_fpkm = os.path.join(out_dir, sample_name + ".fpkm")
+    assembly = os.path.abspath(os.path.join(out_dir, "stringtie-assembly.gtf"))
     if file_exists(isoform_fpkm) and file_exists(gene_fpkm):
         data = dd.set_cufflinks_dir(data, out_dir)
         data = dd.set_fpkm(data, gene_fpkm)
         data = dd.set_fpkm_isoform(data, isoform_fpkm)
+        if "stringtie" in dd.get_transcript_assembler(data):
+            dd.get_assembled_gtf(data).append(assembly)
         return data
     with file_transaction(data, out_dir) as tx_out_dir:
-        exon_file, transcript_file = _stringtie_expression(bam, gtf_file,
-                                                           num_cores, tx_out_dir)
+        transcript_file = _stringtie_expression(bam, gtf_file, num_cores, tx_out_dir)
         df = _parse_ballgown(transcript_file)
         _write_fpkms(df, tx_out_dir, sample_name)
     data = dd.set_cufflinks_dir(data, out_dir)
     data = dd.set_fpkm(data, gene_fpkm)
     data = dd.set_fpkm_isoform(data, isoform_fpkm)
+    if "stringtie" in dd.get_transcript_assembler(data):
+        dd.get_assembled_gtf(data).append(assembly)
     return data
 
 def _write_fpkms(df, out_dir, sample_name):

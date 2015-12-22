@@ -377,7 +377,8 @@ Alignment
 - ``trim_reads`` Can be set to trim low quality ends or to also trim off,
   in conjunction with the ``adapters`` field a set of adapter sequences or
   poly-A tails that could appear on the ends of reads. Only used in RNA-seq
-  pipelines, not variant calling. [False, read_through]
+  pipelines, not variant calling. [False, read_through]. Default to False,
+  recommended to leave as False unless running Tophat2.
 - ``min_read_length`` Minimum read length to maintain when
   ``read_through`` trimming set in ``trim_reads``. Defaults to 20.
 -  ``adapters`` If trimming adapter read through, trim a set of stock
@@ -632,12 +633,14 @@ Cancer variant calling
 RNA sequencing
 ======================
 
-- ``asssemble_transcripts`` If set to True, will assemble and filter novel
-  isoforms using Cufflinks.
+- ``transcript_assembler`` If set, will assemble novel genes and transcripts and
+  merge the results into the known annotation. Can have multiple values set in a
+  list. Supports ['cufflinks', 'sailfish'].
 - ``transcriptome_align`` If set to True, will also align reads to just the
   transcriptome, for use with EBSeq and others.
 - ``expression_caller`` A list of optional expression callers to turn on.
-  Supports ['cufflinks', 'express'].
+  Supports ['cufflinks', 'express', 'stringtie']. Sailish and count based
+  expression estimation are run by default.
 
 smallRNA sequencing
 ===================
@@ -651,7 +654,7 @@ ChIP sequencing
 
 - ``peakcaller`` bcbio only accepts ``macs2``
 - ``aligner`` Currently ``bowtie2`` is the only one tested
-The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``. 
+The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
 
 You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::
 
@@ -690,7 +693,7 @@ Post-processing
   control FastQC usage.
   ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
-- ``tools_on`` Specify functionality to enable that is off by default. 
+- ``tools_on`` Specify functionality to enable that is off by default.
   ``svplots`` adds additional coverage and summary plots for CNVkit and
   detected ensemble variants. ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap uses downsampled files and numbers here are an estimation of 1e7 reads.). ``qualimap_full`` uses the full bam files but it may be slow. ``bwa-mem`` forces use of bwa mem
   even for samples with less than 70bp reads.

@@ -5,13 +5,14 @@ http://cufflinks.cbcb.umd.edu/manual.html
 import os
 import shutil
 import tempfile
+import pandas as pd
 
 from bcbio.utils import get_in, file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf, annotate_gtf
-import pandas as pd
 
 
 def run(align_file, ref_file, data):
@@ -94,7 +95,8 @@ def _get_output_dir(align_file, data, sample_dir=True):
 def assemble(bam_file, ref_file, num_cores, out_dir, data):
     out_dir = os.path.join(out_dir, data["rgnames"]["sample"])
     safe_makedir(out_dir)
-    out_file = os.path.join(out_dir, "transcripts.gtf")
+    out_file = os.path.join(out_dir, "cufflinks-assembly.gtf")
+    cufflinks_out_file = os.path.join(out_dir, "transcripts.gtf")
     if file_exists(out_file):
         return out_file
     with file_transaction(data, out_dir) as tmp_out_dir:
@@ -103,6 +105,7 @@ def assemble(bam_file, ref_file, num_cores, out_dir, data):
                "--multi-read-correct --upper-quartile-norm {bam_file}")
         cmd = cmd.format(**locals())
         do.run(cmd, "Assembling transcripts with Cufflinks using %s." % bam_file)
+    shutil.move(cufflinks_out_file, out_file)
     return out_file
 
 def clean_assembly(gtf_file, clean=None, dirty=None):
@@ -117,6 +120,7 @@ def clean_assembly(gtf_file, clean=None, dirty=None):
     dirty = dirty if dirty else base + ".dirty" + ext
     if file_exists(clean):
         return clean, dirty
+    logger.info("Cleaning features with an unknown strand from the assembly.")
     with open(clean, "w") as clean_handle, open(dirty, "w") as dirty_handle:
         for gene in db.features_of_type('gene'):
             for transcript in db.children(gene, level=1):
@@ -232,7 +236,9 @@ def merge(assembled_gtfs, ref_file, gtf_file, num_cores, data):
                "--num-threads {num_cores} --ref-sequence {ref_file} "
                "{assembled_file}")
         cmd = cmd.format(**locals())
-        do.run(cmd, "Merging transcript assemblies with reference.")
+        message = ("Merging the following transcript assemblies with Cuffmerge: %s"
+                   % ", ".join(assembled_gtfs))
+        do.run(cmd, message)
     clean, _ = clean_assembly(merged_file)
     fixed = fix_cufflinks_attributes(gtf_file, clean, data)
     classified = annotate_gtf.annotate_novel_coding(fixed, gtf_file, ref_file)

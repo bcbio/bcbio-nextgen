@@ -7,6 +7,6 @@ details:
       aligner: tophat2
       trim_reads: read_through
       adapters: [truseq, polya]
-      strandedness: unstranded 
+      strandedness: unstranded
 upload:
   dir: ../final

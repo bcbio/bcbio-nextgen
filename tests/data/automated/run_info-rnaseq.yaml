@@ -10,7 +10,7 @@ details:
       aligner: tophat2
       trim_reads: read_through
       adapters: [truseq, polya]
-      assemble_transcripts: True
+      transcript_assembler: ["sailfish"]
       expression_caller: ["sailfish"]
     description: Test1
     files:

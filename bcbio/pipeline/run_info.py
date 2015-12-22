@@ -354,7 +354,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "min_read_length", "coverage_depth_min", "callable_min_size",
                       "min_allele_fraction",
                       "remove_lcr", "joint_group_size",
-                      "archive", "tools_off", "tools_on", "assemble_transcripts",
+                      "archive", "tools_off", "tools_on", "transcript_assembler",
                       "mixup_check", "priority_regions", "expression_caller"] +
                      # development
                      ["cwl_reporting"] +

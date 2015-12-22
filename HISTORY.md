@@ -9,6 +9,11 @@
   representation and pick best metric for plotting ROC scores.
 - Remove `--sudo` flag from installer. bcbio requires install into a directory
   structure with user permissions.
+- Re-enable `stringtie` as an expression caller.
+- Allow `stringtie` as a transcript assembler.
+- Replace the `assemble_transcriptome` option with `transcript_assembler`, which
+  accepts a list of assemblers to run. The output of all the assemblers is
+  merged at the end with Cuffmerge.
 
 ## 0.9.5 (12 December 2015)
 

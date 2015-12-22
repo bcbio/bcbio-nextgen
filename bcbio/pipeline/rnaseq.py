@@ -5,7 +5,7 @@ from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import vardict
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing
+from bcbio.utils import filter_missing, flatten
 from bcbio.log import logger
 
 def rnaseq_variant_calling(samples, run_parallel):
@@ -160,22 +160,23 @@ def cufflinks_assemble(data):
     out_dir = os.path.join(dd.get_work_dir(data), "assembly")
     num_cores = dd.get_num_cores(data)
     assembled_gtf = cufflinks.assemble(bam_file, ref_file, num_cores, out_dir, data)
-    data = dd.set_assembled_gtf(data, assembled_gtf)
+    dd.get_assembled_gtf(data).append(assembled_gtf)
     return [[data]]
 
 def cufflinks_merge(*samples):
-    to_merge = filter_missing([dd.get_assembled_gtf(data) for data in
-                            dd.sample_data_iterator(samples)])
+    to_merge = filter_missing(flatten([dd.get_assembled_gtf(data) for data in
+                                       dd.sample_data_iterator(samples)]))
     data = samples[0][0]
     bam_file = dd.get_work_bam(data)
     ref_file = dd.get_sam_ref(data)
     gtf_file = dd.get_gtf_file(data)
     out_dir = os.path.join(dd.get_work_dir(data), "assembly")
     num_cores = dd.get_num_cores(data)
-    merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores, samples[0][0])
+    merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores,
+                                 samples[0][0])
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
-        data = dd.set_assembled_gtf(data, merged_gtf)
+        data = dd.set_merged_gtf(data, merged_gtf)
         updated_samples.append([data])
     return updated_samples
 
@@ -187,8 +188,12 @@ def assemble_transcripts(run_parallel, samples):
     run Cufflinks in without a reference GTF for each individual sample
     merge the assemblies with Cuffmerge using a reference GTF
     """
-    if dd.get_assemble_transcripts(samples[0][0]):
-        samples = run_parallel("cufflinks_assemble", samples)
+    assembler = dd.get_in_samples(samples, dd.get_transcript_assembler)
+    if assembler:
+        if "cufflinks" in assembler:
+            samples = run_parallel("cufflinks_assemble", samples)
+        if "stringtie" in assembler:
+            samples = run_parallel("run_stringtie_expression", samples)
         samples = run_parallel("cufflinks_merge", [samples])
     return samples
 
