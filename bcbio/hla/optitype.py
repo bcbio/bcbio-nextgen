@@ -13,6 +13,7 @@ import toolz as tz
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.hla import bwakit
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
@@ -54,13 +55,21 @@ def _combine_calls(hla_calls, hla_dir, data):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle)
-                writer.writerow(["sample", "locus", "alleles", "expected", "validates"])
-                for hla_locus, result_file in hla_calls:
+                for i, (hla_locus, result_file) in enumerate(hla_calls):
                     truth_alleles = tz.get_in([sample, hla_locus], hla_truth, [])
-                    call_alleles, score = _parse_result_file(result_file, hla_locus)
-                    writer.writerow([sample, hla_locus,
-                                     ";".join(call_alleles), ";".join(truth_alleles),
-                                     bwakit.matches_truth(call_alleles, truth_alleles, data)])
+                    allele_info = _parse_result_file(result_file, hla_locus)
+                    if i == 0:
+                        if len(allele_info) == 1:
+                            writer.writerow(["sample", "locus", "alleles", "expected", "validates"])
+                        else:
+                            writer.writerow(["sample", "local", "index", "alleles", "score"])
+                    for j, (call_alleles, score) in enumerate(allele_info):
+                        if len(allele_info) == 1:
+                            writer.writerow([sample, hla_locus,
+                                             ";".join(call_alleles), ";".join(truth_alleles),
+                                             bwakit.matches_truth(call_alleles, truth_alleles, data)])
+                        else:
+                            writer.writerow([sample, hla_locus, j, ";".join(call_alleles), score])
     return out_file
 
 def _parse_result_file(result_file, hla_locus):
@@ -68,9 +77,12 @@ def _parse_result_file(result_file, hla_locus):
         header = in_handle.readline().rstrip("\r\n").split("\t")
         locus_is = [i for i, h in enumerate(header) if h.startswith(hla_locus)]
         score_i = [i for i, h in enumerate(header) if h == "Objective"][0]
-        hit = in_handle.readline().rstrip("\r\n").split("\t")
-        assert len(hit) == len(header), result_file
-        return ["HLA-%s" % hit[i] for i in locus_is], hit[score_i]
+        hits = []
+        for line in in_handle:
+            hit = line.rstrip("\r\n").split("\t")
+            assert len(hit) == len(header), result_file
+            hits.append((["HLA-%s" % hit[i] for i in locus_is], hit[score_i]))
+        return hits
 
 def _call_hla(hla_fq, out_dir, data):
     """Run OptiType HLA calling for a specific
@@ -83,7 +95,12 @@ def _call_hla(hla_fq, out_dir, data):
             if not os.path.exists(razers3):
                 raise ValueError("Could not find razers3 executable at %s" % (razers3))
             out_handle.write(CONFIG_TMPL.format(razers3=razers3, cores=dd.get_cores(data)))
-        cmd = ("OptiTypePipeline.py -v --dna -o {tx_out_dir} "
+        resources = config_utils.get_resources("optitype", data["config"])
+        if resources.get("options"):
+            opts = " ".join([str(x) for x in resources["options"]])
+        else:
+            opts = ""
+        cmd = ("OptiTypePipeline.py -v --dna {opts} -o {tx_out_dir} "
                 "-i {hla_fq} -c {config_file}")
         do.run(cmd.format(**locals()), "HLA typing with OptiType")
         shutil.move(tx_out_dir, out_dir)
