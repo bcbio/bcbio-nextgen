@@ -447,7 +447,7 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_combined_fpkm(sample)})
     if dd.get_combined_fpkm_isoform(sample):
         out.append({"path": dd.get_combined_fpkm_isoform(sample)})
-    if dd.get_assembled_gtf(sample):
+    if dd.get_assemble_transcripts(sample):
         out.append({"path": dd.get_assembled_gtf(sample)})
     if dd.get_dexseq_counts(sample):
         out.append({"path": dd.get_dexseq_counts(sample)})
