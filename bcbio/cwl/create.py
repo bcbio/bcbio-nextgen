@@ -9,6 +9,7 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
+from bcbio.cwl import workflow
 
 def from_world(world, run_info_file):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
@@ -45,19 +46,16 @@ def _write_tool(step_dir, name, inputs, outputs):
            "inputs": [],
            "outputs": []}
     for i, inp in enumerate(inputs):
-        assert inp["type"]["type"] == "array", inp
+        base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
-        inp_tool["inputBinding"] = {"prefix": "%s=" % inp["id"].replace("#", ""), "separate": False,
-                                     "itemSeparator": ";;", "position": i}
-        inp_tool["type"] = inp["type"]["items"]
+        inp_tool["id"] = "#%s" % base_id
+        inp_tool["inputBinding"] = {"prefix": "%s=" % base_id, "separate": False,
+                                    "itemSeparator": ";;", "position": i}
         out["inputs"].append(inp_tool)
     # XXX Need to generalize outputs, just a hack for now to test align_prep
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
-        outp_tool["type"] = {"type": "array", "items": "File"}
-        outp_tool["default"] = None
-        outp_tool["outputBinding"] = {"glob": "align_prep/*.gz",
-                                      "secondaryFiles": [".gbi"]}
+        outp_tool["id"] = "#%s" % workflow.get_base_id(outp["id"])
         out["outputs"].append(outp_tool)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
@@ -66,17 +64,15 @@ def _write_tool(step_dir, name, inputs, outputs):
 def _step_template(name, step_dir, inputs, outputs, source=""):
     """Templating function for writing a step to avoid repeating namespaces.
     """
-    outputs = [x for x in inputs if x["id"].endswith(tuple(outputs))]
     step_file = _write_tool(step_dir, name, inputs, outputs)
-    inputs = [{"id": "#%s.%s" % (name, inp["id"].replace("#", "")),
-               "source": "#" + ("%s." % source if source else "") + inp["id"].replace("#", "")}
+    inputs = [{"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
               for inp in inputs]
     return {"run": {"import": step_file},
             "id": "#%s" % name,
             "scatterMethod": "dotproduct",
             "scatter": [x["id"] for x in inputs],
             "inputs": inputs,
-            "outputs": [{"id": "#%s.%s" % (name, output["id"].replace("#", ""))} for output in outputs]}
+            "outputs": [{"id": output["id"]} for output in outputs]}
 
 def prep_variant_cwl(samples, out_dir, out_file):
     """Output a CWL decription for running a variant calling workflow.
@@ -84,8 +80,9 @@ def prep_variant_cwl(samples, out_dir, out_file):
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
     sample_json, variables = _flatten_samples(samples, out_file)
     out = _standard_bcbio_cwl(samples, variables)
-    s1 = _step_template("prep_align_inputs", step_dir, variables, ["files"])
-    out["steps"] = [s1]
+    out["steps"] = []
+    for name, inputs, outputs in workflow.variant(variables):
+        out["steps"].append(_step_template(name, step_dir, inputs, outputs))
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file, sample_json

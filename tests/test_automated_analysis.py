@@ -394,10 +394,10 @@ class CWLTest(unittest.TestCase):
         """Create a common workflow language description and run on local installation.
         """
         with make_workdir() as workdir:
-            cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-bam.yaml",
+            cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-cwl.yaml",
                   "--systemconfig", get_post_process_yaml(self.data_dir, workdir)]
             subprocess.check_call(cl)
-            out_base = "run_info-bam-workflow/run_info-bam-main"
+            out_base = "run_info-cwl-workflow/run_info-cwl-main"
             cl = ["cwltool", "--verbose", "--preserve-environment", "PATH", "HOME", "--no-container",
                   out_base + ".cwl", out_base + "-samples.json"]
             subprocess.check_call(cl)
@@ -412,10 +412,10 @@ class CWLTest(unittest.TestCase):
         """Create a common workflow language description and run on a Docker installation.
         """
         with make_workdir() as workdir:
-            cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-bam.yaml",
+            cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-cwl.yaml",
                   "--systemconfig", get_post_process_yaml(self.data_dir, workdir)]
             subprocess.check_call(cl)
-            out_base = "run_info-bam-workflow/run_info-bam-main"
+            out_base = "run_info-cwl-workflow/run_info-cwl-main"
             cl = ["cwltool", "--verbose", out_base + ".cwl", out_base + "-samples.json"]
             subprocess.check_call(cl)
             print

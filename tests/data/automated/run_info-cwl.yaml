@@ -1,0 +1,26 @@
+# Variant calling workflow for testing CWL converstion.
+# Start with a basic workflow to expand with additional support
+# for things like alignment splitting and disambiguation.
+---
+upload:
+  dir: upload
+details:
+  - algorithm:
+      aligner: bwa
+      recalibrate: false
+      realign: false
+      variantcaller: freebayes
+      svcaller: [lumpy]
+      tools_off: [gemini]
+      nomap_split_size: 50
+      nomap_split_targets: 100
+      variant_regions: ../data/automated/variant_regions-bam.bed
+      validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+      cwl_reporting: true
+    metadata:
+      batch: TestBatch1
+    analysis: variant2
+    description: Test1
+    genome_build: hg19
+    lane: 7
+    files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam

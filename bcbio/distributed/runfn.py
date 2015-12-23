@@ -53,6 +53,8 @@ def _world_from_cwl(fnargs, work_dir):
         key = key.split("__")
         if val.startswith(("{", "[")):
             val = json.loads(val)
+        elif val.find(";;"):
+            val = val.split(";;")
         data = tz.update_in(data, key, lambda x: val)
     data["dirs"] = {"work": work_dir}
     # XXX Determine cores and other resources from CWL
