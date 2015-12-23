@@ -31,39 +31,47 @@ def run(data):
         if hla_type in SUPPORTED_HLAS:
             hlas.append((hla_type, hla_fq))
     if len(hlas) > 0:
-        hla_calls = []
-        for hla_type, hla_fq in hlas:
-            out_dir = os.path.join(hla_dir, "OptiType-%s" % hla_type)
-            out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
-            if len(out_file) > 0:
-                out_file = out_file[0]
-            else:
-                out_file = _call_hla(hla_fq, out_dir, data)
-            hla_calls.append((hla_type.replace("HLA-", ""), out_file))
-        out_file = _combine_calls(hla_calls, hla_dir, data)
+        out_dir = os.path.join(hla_dir, "OptiType-HLA-A_B_C")
+        hla_fq = _combine_hla_fqs(hlas, out_dir + "-input.fq", data)
+        out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
+        if len(out_file) > 0:
+            out_file = out_file[0]
+        else:
+            out_file = _call_hla(hla_fq, out_dir, data)
+        out_file = _prepare_calls(out_file, hla_dir, data)
         data["hla"] = {"call_file": out_file,
                        "hlacaller": "optitype"}
     return data
 
-def _combine_calls(hla_calls, hla_dir, data):
+def _combine_hla_fqs(hlas, out_file, data):
+    """OptiType performs best on a combination of all extracted HLAs.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for hla_type, hla_fq in hlas:
+                    with open(hla_fq) as in_handle:
+                        shutil.copyfileobj(in_handle, out_handle)
+    return out_file
+
+def _prepare_calls(result_file, hla_dir, data):
     """Write summary file of results of HLA typing by allele.
     """
     sample = dd.get_sample_name(data)
     out_file = os.path.join(hla_dir, "%s-optitype.csv" % (sample))
-    if not utils.file_uptodate(out_file, hla_calls[0][1]):
+    if not utils.file_uptodate(out_file, result_file):
         hla_truth = bwakit.get_hla_truthset(data)
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle)
-                for i, (hla_locus, result_file) in enumerate(hla_calls):
-                    truth_alleles = tz.get_in([sample, hla_locus], hla_truth, [])
-                    allele_info = _parse_result_file(result_file, hla_locus)
-                    if i == 0:
-                        if len(allele_info) == 1:
-                            writer.writerow(["sample", "locus", "alleles", "expected", "validates"])
-                        else:
-                            writer.writerow(["sample", "local", "index", "alleles", "score"])
-                    for j, (call_alleles, score) in enumerate(allele_info):
+                allele_info = _parse_result_file(result_file)
+                if len(allele_info) == 1:
+                    writer.writerow(["sample", "locus", "alleles", "expected", "validates"])
+                else:
+                    writer.writerow(["sample", "local", "index", "alleles", "score"])
+                for j, (alleles, score) in enumerate(allele_info):
+                    for hla_locus, call_alleles in alleles:
+                        truth_alleles = tz.get_in([sample, hla_locus], hla_truth, [])
                         if len(allele_info) == 1:
                             writer.writerow([sample, hla_locus,
                                              ";".join(call_alleles), ";".join(truth_alleles),
@@ -72,16 +80,22 @@ def _combine_calls(hla_calls, hla_dir, data):
                             writer.writerow([sample, hla_locus, j, ";".join(call_alleles), score])
     return out_file
 
-def _parse_result_file(result_file, hla_locus):
+def _parse_result_file(result_file):
     with open(result_file) as in_handle:
         header = in_handle.readline().rstrip("\r\n").split("\t")
-        locus_is = [i for i, h in enumerate(header) if h.startswith(hla_locus)]
+        all_locus_is = []
+        for hla_locus in SUPPORTED_HLAS:
+            hla_locus = hla_locus.replace("HLA-", "")
+            all_locus_is.append((hla_locus, [i for i, h in enumerate(header) if h.startswith(hla_locus)]))
         score_i = [i for i, h in enumerate(header) if h == "Objective"][0]
         hits = []
         for line in in_handle:
             hit = line.rstrip("\r\n").split("\t")
             assert len(hit) == len(header), result_file
-            hits.append((["HLA-%s" % hit[i] for i in locus_is], hit[score_i]))
+            cur_hlas = []
+            for hla_locus, locus_is in all_locus_is:
+                cur_hlas.append((hla_locus, ["HLA-%s" % hit[i] for i in locus_is]))
+            hits.append((cur_hlas, hit[score_i]))
         return hits
 
 def _call_hla(hla_fq, out_dir, data):
