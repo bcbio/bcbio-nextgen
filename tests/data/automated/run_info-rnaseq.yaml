@@ -10,8 +10,8 @@ details:
       aligner: tophat2
       trim_reads: read_through
       adapters: [truseq, polya]
-      transcript_assembler: ["sailfish"]
-      expression_caller: ["sailfish"]
+      transcript_assembler: ["stringtie"]
+      expression_caller: ["stringtie"]
     description: Test1
     files:
       - ../data/110907_ERP000591/1_110907_ERP000591_1_fastq.txt
