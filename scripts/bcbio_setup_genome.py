@@ -6,6 +6,7 @@ Script to set up a custom genome for bcbio-nextgen
 import argparse
 from argparse import ArgumentParser
 import os
+from Bio import SeqIO
 import toolz as tz
 from bcbio.utils import safe_makedir, file_exists, chdir
 from bcbio.pipeline import config_utils
@@ -13,6 +14,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
                            _get_data_dir)
+from bcbio.pipeline.run_info import ALLOWED_CONTIG_NAME_CHARS
 from bcbio.galaxy import loc
 from fabric.api import *
 import subprocess
@@ -87,8 +89,23 @@ def setup_base_directories(genome_dir, name, build, gtf=None):
 def install_fasta_file(build_dir, fasta, build):
     out_file = os.path.join(build_dir, SEQ_DIR, build + ".fa")
     if not os.path.exists(out_file):
-        shutil.copyfile(fasta, out_file)
+        recs = SeqIO.parse(fasta, "fasta")
+        with open(out_file, "w") as out_handle:
+            SeqIO.write((_clean_rec_name(rec) for rec in recs), out_handle, "fasta")
     return out_file
+
+def _clean_rec_name(rec):
+    """Clean illegal characters in input fasta file which cause problems downstream.
+    """
+    out_id = []
+    for char in list(rec.id):
+        if char in ALLOWED_CONTIG_NAME_CHARS:
+            out_id.append(char)
+        else:
+            out_id.append("_")
+    rec.id = "".join(out_id)
+    rec.description = ""
+    return rec
 
 def install_gtf_file(build_dir, gtf, build):
     out_file = os.path.join(build_dir, RNASEQ_DIR, "ref-transcripts.gtf")

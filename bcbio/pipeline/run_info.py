@@ -15,6 +15,7 @@ import toolz as tz
 import yaml
 
 from bcbio import install, utils
+from bcbio.bam import ref
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.illumina import flowcell
@@ -25,6 +26,7 @@ from bcbio.variation import effects, genotype, population, joint, vcfutils
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
+ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":"])
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
                          "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
 
@@ -141,6 +143,7 @@ def add_reference_resources(data):
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
     data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"], data)
+    _check_ref_files(data["reference"], data)
     # back compatible `sam_ref` target
     data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
     ref_loc = utils.get_in(data, ("config", "resources", "species", "dir"),
@@ -155,6 +158,20 @@ def add_reference_resources(data):
         if population.do_db_build([data], need_bam=False):
             data["reference"]["gemini"] = population.get_gemini_files(data)
     return data
+
+def _check_ref_files(ref_info, data):
+    problems = []
+    for contig in ref.file_contigs(ref_info["fasta"]["base"], data["config"]):
+        cur_problems = set([])
+        for char in list(contig.name):
+            if char not in ALLOWED_CONTIG_NAME_CHARS:
+                cur_problems.add(char)
+        if len(cur_problems) > 0:
+            problems.append("Found non-allowed characters in chromosome name %s: %s" %
+                            (contig.name, " ".join(list(cur_problems))))
+    if len(problems) > 0:
+        msg = ("\nProblems with input reference file %s\n" % ref_info["fasta"]["base"])
+        raise ValueError(msg + "\n".join(problems) + "\n")
 
 def _fill_validation_targets(data):
     """Fill validation targets pointing to globally installed truth sets.
