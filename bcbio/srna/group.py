@@ -76,7 +76,7 @@ def run_cluster(*data):
     report_file = _report(sample, dd.get_ref_file(sample))
     sample["seqcluster"] = out_dir
 
-    out_mirna = _make_isomir_counts(data)
+    out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
     if out_mirna:
         sample = dd.set_mirna_counts(sample, out_mirna[0])
         sample = dd.set_isomir_counts(sample, out_mirna[1])
@@ -182,6 +182,7 @@ def _make_isomir_counts(data, srna_type="seqbuster", out_dir=None, stem=""):
         out_dir = op.join(work_dir, "mirbase")
     out_novel_isomir = append_stem(op.join(out_dir, "counts.tsv"), stem)
     out_novel_mirna = append_stem(op.join(out_dir, "counts_mirna.tsv"), stem)
+    logger.debug("Create %s count data at %s." % (srna_type, out_dir))
     if file_exists(out_novel_mirna):
         return [out_novel_mirna, out_novel_isomir]
     out_dts = []
