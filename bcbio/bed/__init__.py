@@ -1,5 +1,21 @@
 import pybedtools as bt
+from bcbio.utils import file_exists
 import six
+
+def decomment(bed_file, out_file):
+    """
+    clean a BED file
+    """
+    if file_exists(out_file):
+        return out_file
+
+    with open(bed_file) as in_handle, open(out_file, "w") as out_handle:
+        for line in in_handle:
+            if line.startswith("#"):
+                continue
+            else:
+                out_handle.write(line)
+    return out_file
 
 def concat(bed_files, catted=None):
     """
