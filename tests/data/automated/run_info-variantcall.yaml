@@ -21,7 +21,7 @@ details:
       variant_regions: ../data/automated/variant_regions-variantcall.bed
       coverage: ../data/automated/variant_regions-variantcall.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
-      priority_regions: ../data/automated/variant_regions-variantcall.bed
+      priority_regions: ../data/automated/variant_regions-priority.bed
     description: Test1
     metadata:
       batch: TestBatch1

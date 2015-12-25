@@ -8,11 +8,12 @@ import pybedtools
 import pandas as pd
 import numpy as np
 
+import bcbio.bed as bed
 from bcbio.utils import (file_exists, chdir, max_command_length,
                          robust_partition_all, append_stem, is_gzipped,
                          open_gzipsafe)
 from bcbio.bam import ref
-from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -195,6 +196,7 @@ def coverage(data):
     bed_file = dd.get_coverage(data)
     if not bed_file:
         return data
+    cleaned_bed = os.path.splitext(os.path.basename(bed_file))[0] + ".cleaned.bed"
 
     work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
     with chdir(work_dir):
@@ -204,9 +206,16 @@ def coverage(data):
         parse_file = os.path.join(sample + "_coverage.bed")
         parse_total_file = os.path.join(sample + "_cov_total.tsv")
         cores = dd.get_num_cores(data)
-        if not file_exists(parse_file):
+        if file_exists(parse_file):
+            return parse_file
+        with tx_tmpdir(data, work_dir) as tmp_dir:
+            cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file))
+            cleaned_bed = bed.decomment(bed_file, cleaned_bed)
             with file_transaction(parse_file) as out_tx:
-                cmd = ("sambamba depth region -F \"not unmapped\" -t {cores} -C 1000 -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 -T 80 -T 100 -L {bed_file}  {in_bam} | sed 's/# chrom/chrom/' > {parse_file}")
+                cmd = ("sambamba depth region -F \"not unmapped\" -t {cores} "
+                       "-C 1000 -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 "
+                       "-T 80 -T 100 -L {cleaned_bed} {in_bam} | sed 's/# "
+                       "chrom/chrom/' > {parse_file}")
                 do.run(cmd.format(**locals()), "Run coverage for {}".format(sample))
         parse_file = _add_high_covered_regions(parse_file, bed_file, sample)
         _calculate_percentiles(parse_file, sample)
@@ -314,16 +323,18 @@ def priority_total_coverage(data):
     if file_exists(out_file):
         data['priority_total_coverage'] = os.path.abspath(out_file)
         return data
-
     nthreads = dd.get_num_cores(data)
     in_bam = dd.get_work_bam(data)
     sambamba = config_utils.get_program("sambamba", data, default="sambamba")
-    with file_transaction(out_file) as tx_out_file:
-        cmd = ("{sambamba} depth region -t {nthreads} -L {bed_file} "
-               "-F \"not unmapped\" "
-               "-T 10 -T 20 -T 30 -T 40 -T 50 -T 60 -T 70 -T 80 -T 90 -T 100 "
-               "{in_bam} -o {tx_out_file}")
-        message = "Calculating coverage of {bed_file} regions in {in_bam}"
-        do.run(cmd.format(**locals()), message.format(**locals()))
+    with tx_tmpdir(data, work_dir) as tmp_dir:
+        cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file))
+        cleaned_bed = bed.decomment(bed_file, cleaned_bed)
+        with file_transaction(out_file) as tx_out_file:
+            cmd = ("{sambamba} depth region -t {nthreads} -L {cleaned_bed} "
+                "-F \"not unmapped\" "
+                "-T 10 -T 20 -T 30 -T 40 -T 50 -T 60 -T 70 -T 80 -T 90 -T 100 "
+                "{in_bam} -o {tx_out_file}")
+            message = "Calculating coverage of {bed_file} regions in {in_bam}"
+            do.run(cmd.format(**locals()), message.format(**locals()))
     data['priority_total_coverage'] = os.path.abspath(out_file)
     return data
