@@ -279,3 +279,20 @@ def transcript_to_gene(gtf):
         transcript_id = feature.attributes.get('transcript_id', [None])[0]
         gene_lookup[transcript_id] = gene_id
     return gene_lookup
+
+def is_qualimap_compatible(gtf):
+    """
+    Qualimap needs a very specific GTF format or it fails, so skip it if
+    the GTF is not in that format
+    """
+    db = get_gtf_db(gtf)
+    def qualimap_compatible(feature):
+        gene_id = feature.attributes.get('gene_id', [None])[0]
+        transcript_id = feature.attributes.get('transcript_id', [None])[0]
+        exon_number = feature.attributes.get('exon_number', [None])[0]
+        gene_biotype = feature.attributes.get('gene_biotype', [None])[0]
+        return gene_id and transcript_id and exon_number and gene_biotype
+    for feature in db.all_features():
+        if qualimap_compatible(feature):
+            return True
+    return False

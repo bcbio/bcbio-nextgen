@@ -116,7 +116,8 @@ def _run_qc_tools(bam_file, data):
         to_run.append(("fastqc", _run_fastqc))
     if data["analysis"].lower().startswith("rna-seq"):
         to_run.append(("bamtools", _run_bamtools_stats))
-        to_run.append(("qualimap", _rnaseq_qualimap))
+        if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
+            to_run.append(("qualimap", _rnaseq_qualimap))
     elif data["analysis"].lower().startswith("chip-seq"):
         to_run.append(["bamtools", _run_bamtools_stats])
     elif not data["analysis"].lower().startswith("smallrna-seq"):
