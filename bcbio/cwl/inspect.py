@@ -2,6 +2,7 @@
 
 Work toward preparing bcbio to enumerate all inputs and outputs for CWL.
 """
+import copy
 import os
 
 import toolz as tz
@@ -36,8 +37,24 @@ class WorldWatcher:
         world = {}
         for item in items:
             assert len(item) == 1
-            world[dd.get_sample_name(item[0])] = item[0]
+            world[dd.get_sample_name(item[0])] = copy.deepcopy(item[0])
         return world
+
+    def _merge(self, a, b, path=None):
+        """Merge two dictionaries, from http://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge
+        """
+        if path is None: path = []
+        for key in b:
+            if key in a:
+                if isinstance(a[key], dict) and isinstance(b[key], dict):
+                    self._merge(a[key], b[key], path + [str(key)])
+                elif a[key] == b[key]:
+                    pass # same leaf value
+                else:
+                    raise Exception('Conflict at %s' % '.'.join(path + [str(key)]))
+            else:
+                a[key] = b[key]
+        return a
 
     def _compare_dicts(self, orig, new, ns):
         out = {}
@@ -46,9 +63,9 @@ class WorldWatcher:
             orig_val = tz.get_in([key], orig)
             if isinstance(val, dict) and isinstance(orig_val, dict):
                 for nkey, nval in self._compare_dicts(orig_val or {}, val or {}, nskey).items():
-                    out = tz.update_in(out, [nkey], lambda x: nval)
+                    out = self._merge(out, {nkey: nval})
             elif val != orig_val:
-                out = tz.update_in(out, nskey, lambda x: val)
+                out = tz.update_in(out, nskey, lambda x: copy.deepcopy(val))
         return out
 
     def initialize(self, world):
@@ -64,7 +81,7 @@ class WorldWatcher:
         file_changes = new_files - self._lfiles
         self._lfiles = new_files
         world_changes = self._compare_dicts(self._lworld, self._items_to_world(world), [])
-        self._lworld = world
+        self._lworld = self._items_to_world(world)
         out_file = os.path.join(self._out_dir, "%s.yaml" % step)
         with open(out_file, "w") as out_handle:
             out = {"files": file_changes,

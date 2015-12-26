@@ -131,6 +131,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("postprocess_alignment", samples)
             samples = run_parallel("combine_sample_regions", [samples])
             samples = region.clean_sample_data(samples)
+            ww.report("combine_sample_regions", samples)
         with profile.report("structural variation initial", dirs):
             samples = structural.run(samples, run_parallel, "initial")
         with profile.report("hla typing", dirs):
