@@ -58,7 +58,12 @@ def _write_tool(step_dir, name, inputs, outputs):
         outp_tool["id"] = "#%s" % workflow.get_base_id(outp["id"])
         out["outputs"].append(outp_tool)
     with open(out_file, "w") as out_handle:
-        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+        def str_presenter(dumper, data):
+            if len(data.splitlines()) > 1:  # check for multiline string
+                return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+            return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+        yaml.add_representer(str, str_presenter)
+        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
 
 def _step_template(name, step_dir, inputs, outputs, source=""):

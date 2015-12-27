@@ -21,28 +21,76 @@ def variant(variables):
     and can be safely passed to each step. This function keeps track of these
     as they're added and updated by steps, passing this information on to
     creation of the CWL files.
-
-    Working notes/?s:
-     - How do we handle cases where there might or might not be an output, like
-       prep_align_inputs with potential bgzipping?
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
     s = collections.namedtuple("s", "name inputs outputs")
     steps = [s("prep_align_inputs", [["files"]],
-               [{"id": ["files"],
-                 "outputBinding": {"glob": "align_prep/*.gz",
-                                   "secondaryFiles": [".gbi"]
-                                   }}]),
+               [_cwl_file_world(["files"], ".gbi"),
+                _cwl_string_world(["config", "algorithm", "quality_format"])]),
              s("process_alignment",
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
-               [])]
+               [_cwl_file_world(["work_bam"], ".bai"),
+                _cwl_file_glob(["work_bam-plus", "disc"], "'align/' + name + '/' + name + '-sort-disc.bam'",
+                               ".bai"),
+                _cwl_file_glob(["work_bam-plus", "sr"], "'align/' + name + '/' + name + '-sort-sr.bam'",
+                               ".bai")])]
     for step in steps:
         inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in step.outputs])
         std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
         file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
         yield step.name, inputs, file_output + std_output
+
+def _cwl_string_world(key):
+    """Retrieve a string value from a key in the bcbio world object.
+    """
+    converter = ["return val;"]
+    return _cwl_get_from_world(key, converter, "string")
+
+def _cwl_file_world(key, extension=""):
+    """Retrieve a file, or array of files, from a key in the bcbio world object.
+    """
+    secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': dir + val + '%s'}]" % extension) if extension else ""
+    converter = ["if (typeof val === 'string' || val instanceof String)",
+                 "  return [{'path': dir + val, 'class': 'File'%s}];" % secondary_str,
+                 "else",
+                 "  var vals = val;",
+                 "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});" % secondary_str]
+    return _cwl_get_from_world(key, converter, "File")
+
+def _cwl_get_from_world(key, convert_val, valtype):
+    """Generic function to retrieve specific results from a bcbio world object.
+
+    The generic javascript provides `dir`, the directory containing the output files
+    potentially remapped externally for Docker containers and `val` -- the value of
+    the `key` attribute from the bcbio world object.
+    """
+    keygetter = "".join(["['%s']" % k for k in key])
+    getter = ["${",
+              "   var dir = self[0].path.replace(/\/[^\/]*$/,'') + '/';",
+              "   var val = JSON.parse(self[0].contents)%s;" % keygetter] + \
+              ["   %s" % v for v in convert_val] + \
+              ["}"]
+    return {"id": key,
+            "type": valtype,
+            "outputBinding": {"glob": "cwl-*-world.json",
+                              "loadContents": True,
+                              "outputEval": "\n".join(getter)}}
+
+def _cwl_file_glob(key, file_pattern, extension=""):
+    """Retrieve an output CWL file, and extensions, using glob on the filesystem.
+    """
+    file_glob = ["${",
+                 "   var name = JSON.parse(inputs.rgnames)['sample'];",
+                 "   return %s;" % file_pattern,
+                 "}"]
+    out = {"id": key,
+           "type": "File",
+           "outputBinding": {"glob": "\n".join(file_glob)}}
+    if extension:
+        out["outputBinding"]["secondaryFiles"] = [extension]
+    return out
 
 def _flatten_nested_input(v):
     """Flatten a parallel scatterplot input -- we only get one of them to tools.
@@ -60,10 +108,14 @@ def _clean_output(v):
         out.pop(key, None)
     return out
 
+def _get_string_vid(vid):
+    assert isinstance(vid, (list, tuple)), vid
+    return "__".join(vid)
+
 def _get_variable(vid, variables):
     """Retrieve an input variable from our existing pool of options.
     """
-    vid = "__".join(vid)
+    vid = _get_string_vid(vid)
     for v in variables:
         if vid == get_base_id(v["id"]):
             return copy.deepcopy(v)
@@ -76,10 +128,10 @@ def _create_variable(orig_v, step, variables):
     try:
         v = _get_variable(orig_v["id"], variables)
     except ValueError:
-        print orig_v, step
-        raise NotImplementedError("Need to do creation of non-existing variables")
+        v = copy.deepcopy(orig_v)
+        v["id"] = "#" + _get_string_vid(v["id"])
     for key, val in orig_v.items():
-        if key != "id":
+        if key not in ["id", "type"]:
             v[key] = val
     return _convert_to_step_id(v, step)
 
