@@ -76,10 +76,11 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
     """Preparation work for MuTect.
     """
     base_config = items[0]["config"]
+    broad_runner = broad.runner_from_path("picard", base_config)
+    broad_runner.run_fn("picard_index_ref", ref_file)
+
     broad_runner = broad.runner_from_config(base_config, "mutect")
     _check_mutect_version(broad_runner)
-
-    broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
         bam.index(x, base_config)
 

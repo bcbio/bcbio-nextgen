@@ -14,6 +14,8 @@
 - Replace the `assemble_transcriptome` option with `transcript_assembler`, which
   accepts a list of assemblers to run. The output of all the assemblers is
   merged at the end with Cuffmerge.
+- Move Picard to use conda installed `picard` single executable instead of
+  custom installed java directory of jars.
 
 ## 0.9.5 (12 December 2015)
 

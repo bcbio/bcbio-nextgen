@@ -102,7 +102,7 @@ def process_alignment(data, alt_input=None):
             out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], data["sam_ref"], data["dirs"],
                                            data)
         elif sort_method:
-            runner = broad.runner_from_config(config)
+            runner = broad.runner_from_path("picard", config)
             out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
                 os.path.splitext(os.path.basename(fastq1))[0]))
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)

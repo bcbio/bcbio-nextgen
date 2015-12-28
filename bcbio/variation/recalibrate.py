@@ -28,8 +28,8 @@ def prep_recal(data):
         if not dbsnp_file:
             logger.info("Skipping GATK BaseRecalibrator because no VCF file of known variants was found.")
             return [[data]]
-        broad_runner = broad.runner_from_config(config)
         platform = config["algorithm"].get("platform", "illumina")
+        broad_runner = broad.runner_from_path("picard", config)
         broad_runner.run_fn("picard_index_ref", ref_file)
         if config["algorithm"].get("mark_duplicates", True):
             (dup_align_bam, _) = broad_runner.run_fn("picard_mark_duplicates", data["work_bam"])
@@ -38,6 +38,7 @@ def prep_recal(data):
         bam.index(dup_align_bam, config)
         intervals = config["algorithm"].get("variant_regions", None)
         data["work_bam"] = dup_align_bam
+        broad_runner = broad.runner_from_config(config)
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file,
                                                      platform, dbsnp_file, intervals, data)
     return [[data]]

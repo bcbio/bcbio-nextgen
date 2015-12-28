@@ -16,7 +16,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     """
     data = items[0]
     config = data["config"]
-    broad_runner = broad.runner_from_config(config)
+    broad_runner = broad.runner_from_path("picard", config)
     broad_runner.run_fn("picard_index_ref", ref_file)
     for x in align_bams:
         bam.index(x, config)
@@ -36,6 +36,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
+    broad_runner = broad.runner_from_config(config)
     return broad_runner, params
 
 def unified_genotyper(align_bams, items, ref_file, assoc_files,

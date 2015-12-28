@@ -21,7 +21,7 @@ from bcbio.provenance import do
 def combine_bam(in_files, out_file, config):
     """Parallel target to combine multiple BAM files.
     """
-    runner = broad.runner_from_config(config)
+    runner = broad.runner_from_path("picard", config)
     runner.run_fn("picard_merge", in_files, out_file)
     for in_file in in_files:
         save_diskspace(in_file, "Merged into {0}".format(out_file), config)
