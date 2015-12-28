@@ -26,15 +26,36 @@ def variant(variables):
     s = collections.namedtuple("s", "name inputs outputs")
     steps = [s("prep_align_inputs", [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
-                _cwl_string_world(["config", "algorithm", "quality_format"])]),
+                _cwl_nonfile_world(["config", "algorithm", "quality_format"])]),
              s("process_alignment",
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"], ".bai"),
-                _cwl_file_glob(["work_bam-plus", "disc"], "'align/' + name + '/' + name + '-sort-disc.bam'",
-                               ".bai"),
+                _cwl_file_world(["align_bam"], ".bai"),
+                _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_glob(["work_bam-plus", "sr"], "'align/' + name + '/' + name + '-sort-sr.bam'",
-                               ".bai")])]
+                               ".bai")]),
+             s("prep_samples",
+               [["config", "algorithm", "variant_regions"]],
+               [_cwl_file_world(["config", "algorithm", "variant_regions"]),
+                _cwl_file_world(["config", "algorithm", "variant_regions_merged"], ".tbi")]),
+             s("postprocess_alignment",
+               [["align_bam"],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
+                ["config", "algorithm", "variant_regions_merged"]],
+               [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
+                _cwl_file_world(["regions", "callable"]),
+                _cwl_file_world(["regions", "sample_callable"]),
+                _cwl_file_world(["regions", "nblock"]),
+                _cwl_file_world(["regions", "highdepth"], allow_missing=True),
+                _cwl_file_world(["regions", "offtarget_stats"])]),
+             # TODO -- combine sample regions should group into sample batches
+             s("combine_sample_regions",
+               [["regions", "callable"], ["regions", "nblock"],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
+               [_cwl_file_world(["config", "algorithm", "callable_regions"]),
+                _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
+                _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")])]
     for step in steps:
         inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in step.outputs])
@@ -42,22 +63,24 @@ def variant(variables):
         file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
         yield step.name, inputs, file_output + std_output
 
-def _cwl_string_world(key):
-    """Retrieve a string value from a key in the bcbio world object.
+def _cwl_nonfile_world(key, keytype="string"):
+    """Retrieve a non-file value from a key in the bcbio world object.
     """
     converter = ["return val;"]
-    return _cwl_get_from_world(key, converter, "string")
+    return _cwl_get_from_world(key, converter, keytype)
 
-def _cwl_file_world(key, extension=""):
+def _cwl_file_world(key, extension="", allow_missing=False):
     """Retrieve a file, or array of files, from a key in the bcbio world object.
     """
     secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': dir + val + '%s'}]" % extension) if extension else ""
-    converter = ["if (typeof val === 'string' || val instanceof String)",
+    converter = ["if (val === null)",
+                 "  return val;"
+                 "else if (typeof val === 'string' || val instanceof String)",
                  "  return [{'path': dir + val, 'class': 'File'%s}];" % secondary_str,
                  "else",
                  "  var vals = val;",
                  "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});" % secondary_str]
-    return _cwl_get_from_world(key, converter, "File")
+    return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File")
 
 def _cwl_get_from_world(key, convert_val, valtype):
     """Generic function to retrieve specific results from a bcbio world object.
@@ -182,7 +205,7 @@ def _split_variables(variables):
         cur_type = v["type"]
         while isinstance(cur_type, dict):
             cur_type = cur_type["items"]
-        if cur_type == "File":
+        if cur_type == "File" or isinstance(cur_type, (list, tuple)) and "File" in cur_type:
             file_vs.append(v)
         else:
             std_vs.append(v)

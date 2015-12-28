@@ -104,8 +104,9 @@ def clean_inputs(data):
     Per-merges inputs to avoid needing to call multiple times during later parallel steps.
     """
     clean_vr = clean_file(utils.get_in(data, ("config", "algorithm", "variant_regions")), data)
-    merge_overlaps(clean_vr, data)
+    merged_vr = merge_overlaps(clean_vr, data)
     data["config"]["algorithm"]["variant_regions"] = clean_vr
+    data["config"]["algorithm"]["variant_regions_merged"] = merged_vr
     return data
 
 def combine(in_files, out_file, config):

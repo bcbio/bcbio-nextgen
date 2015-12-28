@@ -421,3 +421,41 @@ def runner_from_config_safe(config):
             return None
         else:
             raise
+
+class PicardCmdRunner:
+    def __init__(self, cmd, config):
+        self._cmd = cmd
+        self._config = config
+
+    def run(self, subcmd, opts, memscale=None):
+        jvm_opts = get_picard_opts(self._config, memscale=memscale)
+        cmd = [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
+              ["VALIDATION_STRINGENCY=SILENT"]
+        do.run(cmd, "Picard: %s" % subcmd)
+
+    def run_fn(self, name, *args, **kwds):
+        """Run pre-built functionality that used Broad tools by name.
+
+        See the picardrun module for available functions.
+        """
+        fn = None
+        to_check = [picardrun]
+        for ns in to_check:
+            try:
+                fn = getattr(ns, name)
+                break
+            except AttributeError:
+                pass
+        assert fn is not None, "Could not find function %s in %s" % (name, to_check)
+        return fn(self, *args, **kwds)
+
+def runner_from_path(cmd, config):
+    """Simple command line runner that expects a bash cmd in the PATH.
+
+    This makes Picard tools back compatible with new approach of a single
+    jar + bash script.
+    """
+    if cmd.endswith("picard"):
+        return PicardCmdRunner(cmd, config)
+    else:
+        raise ValueError("Do not support PATH running for %s" % cmd)

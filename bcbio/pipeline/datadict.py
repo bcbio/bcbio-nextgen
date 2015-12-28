@@ -97,6 +97,7 @@ LOOKUPS = {
     "split_bam": {"keys": ["split_bam"]},
     "vrn_file": {"keys": ["vrn_file"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
+    "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
     "callable_regions": {"keys": ["regions", "callable"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},

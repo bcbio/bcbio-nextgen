@@ -124,11 +124,11 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             ww.report("process_alignment", samples)
             samples = disambiguate.resolve(samples, run_parallel)
             samples = alignprep.merge_split_alignments(samples, run_parallel)
-            ww.report("merge_split_alignments", samples)
         with profile.report("callable regions", dirs):
             samples = run_parallel("prep_samples", [samples])
             ww.report("prep_samples", samples)
             samples = run_parallel("postprocess_alignment", samples)
+            ww.report("postprocess_alignment", samples)
             samples = run_parallel("combine_sample_regions", [samples])
             samples = region.clean_sample_data(samples)
             ww.report("combine_sample_regions", samples)

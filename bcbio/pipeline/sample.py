@@ -12,7 +12,7 @@ from bcbio import utils, bam, broad
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.pipeline.merge import merge_bam_files
-from bcbio.bam import fastq, callable, highdepth, trim
+from bcbio.bam import callable, highdepth, trim
 from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
@@ -127,6 +127,9 @@ def process_alignment(data, alt_input=None):
                          "\nIs the path to the file correct or is empty?\n" +
                          "If it is a fastq file (not pre-aligned BAM or CRAM), "
                          "is an aligner specified in the input configuration?")
+    # Add stable 'align_bam' target to use for retrieving raw alignment
+    if data.get("work_bam"):
+        data["align_bam"] = data["work_bam"]
     return [[data]]
 
 def prep_samples(*items):
@@ -136,9 +139,12 @@ def prep_samples(*items):
     on shared files between multiple similar samples.
 
     Cleans input BED files to avoid issues with overlapping input segments.
+
+    Handles both single sample cases (CWL) and all sample cases (standard bcbio).
     """
     out = []
-    for data in (x[0] for x in items):
+    for data in ((x[0] if (isinstance(x, (list, tuple)) and len(x) == 1) else x)
+                 for x in items):
         data = bedutils.clean_inputs(data)
         out.append([data])
     return out
@@ -147,14 +153,20 @@ def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
-    if vmulti.bam_needs_processing(data) and data["work_bam"].endswith(".bam"):
+    bam_file = data.get("align_bam") or data.get("work_bam")
+    if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         ref_file = dd.get_ref_file(data)
+        out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
+                                                  dd.get_sample_name(data)))
+        bam_file_ready = os.path.join(out_dir, os.path.basename(bam_file))
+        if not utils.file_exists(bam_file_ready):
+            utils.symlink_plus(bam_file, bam_file_ready)
+        bam.index(bam_file_ready, data["config"])
         callable_region_bed, nblock_bed, callable_bed = \
-            callable.block_regions(data["work_bam"], ref_file, data)
+            callable.block_regions(bam_file_ready, ref_file, data)
         highdepth_bed = highdepth.identify(data)
-        bam.index(data["work_bam"], data["config"])
-        sample_callable = callable.sample_callable_bed(data["work_bam"], ref_file, data)
-        offtarget_stats = callable.calculate_offtarget(data["work_bam"], ref_file, data)
+        sample_callable = callable.sample_callable_bed(bam_file_ready, ref_file, data)
+        offtarget_stats = callable.calculate_offtarget(bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed, "callable": callable_bed, "highdepth": highdepth_bed,
                            "sample_callable": sample_callable,
                            "offtarget_stats": offtarget_stats}

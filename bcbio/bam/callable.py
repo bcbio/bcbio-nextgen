@@ -30,7 +30,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils, realign
+from bcbio.variation import realign
 from bcbio.variation import multi as vmulti
 
 def parallel_callable_loci(in_bam, ref_file, data):
@@ -116,7 +116,7 @@ def _regions_for_coverage(data, region, ref_file, out_file):
     callable_min_size avoids calculations for small chromosomes we won't
     split on later, saving computation and disk IO.
     """
-    variant_regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
+    variant_regions = dd.get_variant_regions_merged(data)
     ready_region = shared.subset_variant_regions(variant_regions, region, out_file)
     custom_file = "%s-coverageregions.bed" % utils.splitext_plus(out_file)[0]
     region_size = _get_region_size(ref_file, data, region)
@@ -177,7 +177,7 @@ def sample_callable_bed(bam_file, ref_file, data):
 def calculate_offtarget(bam_file, ref_file, data):
     """Generate file of offtarget read counts for inputs with variant regions.
     """
-    vrs_file = dd.get_variant_regions(data)
+    vrs_file = dd.get_variant_regions_merged(data)
     if vrs_file:
         out_file = "%s-offtarget-stats.yaml" % os.path.splitext(bam_file)[0]
         if not utils.file_exists(out_file):
@@ -198,7 +198,7 @@ def calculate_offtarget(bam_file, ref_file, data):
 def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
     """
-    broad_runner = broad.runner_from_config(config, "picard")
+    broad_runner = broad.runner_from_path("picard", config)
     ref_dict = broad_runner.run_fn("picard_index_ref", ref_file)
     ref_lines = []
     with contextlib.closing(pysam.Samfile(ref_dict, "r")) as ref_sam:
@@ -398,7 +398,9 @@ def combine_sample_regions(*samples):
     Intersects all non-callable (nblock) regions from all samples in a batch,
     producing a global set of callable regions.
     """
-    samples = [x[0] for x in samples]
+    # Unpack nested lists of samples grouped together
+    if isinstance(samples[0], (list, tuple)) and len(samples[0]) == 1:
+        samples = [x[0] for x in samples]
     # back compatibility -- global file for entire sample set
     global_analysis_file = os.path.join(samples[0]["dirs"]["work"], "analysis_blocks.bed")
     if utils.file_exists(global_analysis_file) and not _needs_region_update(global_analysis_file, samples):

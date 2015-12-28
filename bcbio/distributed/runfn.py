@@ -58,12 +58,22 @@ def _world_from_cwl(fnargs, work_dir):
             val = json.loads(val)
         elif val.find(";;") >= 0:
             val = val.split(";;")
-        data = tz.update_in(data, key, lambda x: val)
+        data = _update_nested(key, val, data)
     data["dirs"] = {"work": work_dir}
     # XXX Determine cores and other resources from CWL
     data["config"]["resources"] = {}
     data = run_info.normalize_world(data)
     return [data]
+
+def _update_nested(key, val, data):
+    """Update the data object, avoiding over-writing with nested dictionaries.
+    """
+    if isinstance(val, dict):
+        for sub_key, sub_val in val.items():
+            data = _update_nested(key + [sub_key], sub_val, data)
+    else:
+        data = tz.update_in(data, key, lambda x: val)
+    return data
 
 def _remove_work_dir(orig, work_dir):
     """Remove work directory from any file paths to make them relative.
