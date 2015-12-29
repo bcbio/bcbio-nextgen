@@ -180,16 +180,15 @@ def get_program(name, config, ptype="cmd", default=None):
             if not key in pconfig:
                 pconfig[key] = old_config
     if ptype == "cmd":
-        return _get_program_cmd(name, pconfig, default)
+        return _get_program_cmd(name, pconfig, config, default)
     elif ptype == "dir":
         return _get_program_dir(name, pconfig)
     else:
         raise ValueError("Don't understand program type: %s" % ptype)
 
 def _get_check_program_cmd(fn):
-
-    def wrap(name, config, default):
-        program = expand_path(fn(name, config, default))
+    def wrap(name, pconfig, config, default):
+        program = expand_path(fn(name, pconfig, config, default))
         is_ok = lambda f: os.path.isfile(f) and os.access(f, os.X_OK)
         if is_ok(program): return program
 
@@ -199,20 +198,26 @@ def _get_check_program_cmd(fn):
         # support bioconda installed programs
         if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
             return (os.path.join(os.path.dirname(sys.executable), name))
-        else:
-            raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, config, default))))
+        # find system bioconda installed programs if using private code install
+        bcbio_system = config.get("bcbio_system", None)
+        if bcbio_system:
+            system_bcbio_path = os.path.join(os.path.dirname(bcbio_system),
+                                             os.pardir, "anaconda", "bin", name)
+            if is_ok(system_bcbio_path):
+                return system_bcbio_path
+        raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, pconfig, default))))
     return wrap
 
 @_get_check_program_cmd
-def _get_program_cmd(name, config, default):
+def _get_program_cmd(name, pconfig, config, default):
     """Retrieve commandline of a program.
     """
-    if config is None:
+    if pconfig is None:
         return name
-    elif isinstance(config, basestring):
-        return config
-    elif "cmd" in config:
-        return config["cmd"]
+    elif isinstance(pconfig, basestring):
+        return pconfig
+    elif "cmd" in pconfig:
+        return pconfig["cmd"]
     elif default is not None:
         return default
     else:
