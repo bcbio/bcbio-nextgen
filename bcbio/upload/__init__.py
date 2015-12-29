@@ -152,7 +152,7 @@ def _maybe_add_variant_file(algorithm, sample, out):
     return out
 
 def _maybe_add_hla(algorithm, sample, out):
-    if sample.get("align_bam") is not None and sample.get("hla"):
+    if sample.get("align_bam") is not None and sample.get("hla") and "call_file" in sample["hla"]:
         out.append({"path": sample["hla"]["call_file"],
                     "type": "csv",
                     "ext": "hla-%s" % (sample["hla"]["hlacaller"])})
