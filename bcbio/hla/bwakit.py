@@ -19,24 +19,24 @@ def run(data):
     """HLA typing with bwakit, parsing output from called genotype files.
     """
     bwakit_dir = os.path.dirname(os.path.realpath(utils.which("run-bwamem")))
-    align_file = dd.get_align_bam(data)
-    hla_base = os.path.join(utils.safe_makedir(os.path.join(os.path.dirname(align_file), "hla")),
-                            os.path.basename(align_file) + ".hla")
-    if len(glob.glob(hla_base + ".*")) > 0:
+    hla_fqs = tz.get_in(["hla", "fastq"], data, [])
+    if len(hla_fqs) > 0:
+        hla_base = os.path.commonprefix(hla_fqs)
+        while hla_base.endswith("."):
+            hla_base = hla_base[:-1]
         out_file = hla_base + ".top"
         if not utils.file_exists(out_file):
             cmd = "{bwakit_dir}/run-HLA {hla_base}"
             do.run(cmd.format(**locals()), "HLA typing with bwakit")
             out_file = _organize_calls(out_file, hla_base, data)
-        data["hla"] = {"call_file": out_file,
-                       "hlacaller": "bwakit"}
+        data["hla"].update({"call_file": out_file,
+                            "hlacaller": "bwakit"})
     return data
 
 def _organize_calls(out_file, hla_base, data):
     """Prepare genotype calls, reporting best call along with quality metrics.
     """
     hla_truth = get_hla_truthset(data)
-    align_file = dd.get_align_bam(data)
     sample = dd.get_sample_name(data)
     with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
@@ -45,7 +45,7 @@ def _organize_calls(out_file, hla_base, data):
                              "validates"])
             for genotype_file in glob.glob("%s.HLA-*.gt" % (hla_base)):
                 hla_locus = os.path.basename(genotype_file).replace(
-                        "%s.hla.HLA-" % os.path.basename(align_file), "").replace(".gt", "")
+                        "%s.HLA-" % os.path.basename(hla_base), "").replace(".gt", "")
                 with open(genotype_file) as in_handle:
                     total_options = set([])
                     for i, line in enumerate(in_handle):

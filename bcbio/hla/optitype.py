@@ -22,15 +22,13 @@ SUPPORTED_HLAS = ["HLA-A", "HLA-B", "HLA-C"]
 def run(data):
     """HLA typing with OptiType, parsing output from called genotype files.
     """
-    align_file = dd.get_align_bam(data)
-    hla_dir = os.path.join(os.path.dirname(align_file), "hla")
-    hla_base = os.path.join(hla_dir, os.path.basename(align_file) + ".hla")
     hlas = []
-    for hla_fq in glob.glob(hla_base + ".*.fq"):
+    for hla_fq in tz.get_in(["hla", "fastq"], data, []):
         hla_type = os.path.splitext(os.path.splitext(os.path.basename(hla_fq))[0])[1].replace(".", "")
         if hla_type in SUPPORTED_HLAS:
             hlas.append((hla_type, hla_fq))
     if len(hlas) > 0:
+        hla_dir = os.path.dirname(os.path.commonprefix([xs[1] for xs in hlas]))
         out_dir = os.path.join(hla_dir, "OptiType-HLA-A_B_C")
         hla_fq = _combine_hla_fqs(hlas, out_dir + "-input.fq", data)
         out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
@@ -39,8 +37,8 @@ def run(data):
         else:
             out_file = _call_hla(hla_fq, out_dir, data)
         out_file = _prepare_calls(out_file, hla_dir, data)
-        data["hla"] = {"call_file": out_file,
-                       "hlacaller": "optitype"}
+        data["hla"].update({"call_file": out_file,
+                            "hlacaller": "optitype"})
     return data
 
 def _combine_hla_fqs(hlas, out_file, data):

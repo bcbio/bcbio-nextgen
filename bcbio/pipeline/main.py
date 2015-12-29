@@ -134,8 +134,10 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             ww.report("combine_sample_regions", samples)
         with profile.report("structural variation initial", dirs):
             samples = structural.run(samples, run_parallel, "initial")
+            ww.report("sv_initial", samples)
         with profile.report("hla typing", dirs):
             samples = hla.run(samples, run_parallel)
+            ww.report("call_hla", samples)
 
     ## Variant calling on sub-regions of the input file (full cluster)
     with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
@@ -178,7 +180,9 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("population database", dirs):
             samples = population.prep_db_parallel(samples, run_parallel)
         with profile.report("quality control", dirs):
+            ww.report("pre_qc", samples)
             samples = qcsummary.generate_parallel(samples, run_parallel)
+            ww.report("qc_summary", samples)
         with profile.report("archive", dirs):
             samples = archive.compress(samples, run_parallel)
         with profile.report("upload", dirs):

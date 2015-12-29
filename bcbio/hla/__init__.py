@@ -9,7 +9,10 @@ _CALLERS = {"bwakit": bwakit.run,
 
 def call_hla(data):
     hlacaller = tz.get_in(["config", "algorithm", "hlacaller"], data)
-    data = _CALLERS[hlacaller](data)
+    if hlacaller and "hla" in data and tz.get_in(["hla", "fastq"], data):
+        data = _CALLERS[hlacaller](data)
+    elif "hla" not in data:
+        data["hla"] = {}
     return [[data]]
 
 def run(samples, run_parallel):

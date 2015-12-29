@@ -32,6 +32,7 @@ def variant(variables):
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"], ".bai"),
                 _cwl_file_world(["align_bam"], ".bai"),
+                _cwl_file_world(["hla", "fastq"], allow_missing=True),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_glob(["work_bam-plus", "sr"], "'align/' + name + '/' + name + '-sort-sr.bam'",
                                ".bai")]),
@@ -55,7 +56,12 @@ def variant(variables):
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
                 _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
-                _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")])]
+                _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
+             s("call_hla",
+               [["hla", "fastq"]],
+               [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
+                _cwl_file_world(["hla", "call_file"], allow_missing=True)])
+             ]
     for step in steps:
         inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in step.outputs])
@@ -63,23 +69,28 @@ def variant(variables):
         file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
         yield step.name, inputs, file_output + std_output
 
-def _cwl_nonfile_world(key, keytype="string"):
+def _cwl_nonfile_world(key, outtype="string", allow_missing=False):
     """Retrieve a non-file value from a key in the bcbio world object.
     """
-    converter = ["return val;"]
-    return _cwl_get_from_world(key, converter, keytype)
+    converter = ["if (val === null || val === undefined)",
+                 "  return null;",
+                 "else",
+                 "  return val;"]
+    return _cwl_get_from_world(key, converter, [outtype, 'null'] if allow_missing else outtype)
 
 def _cwl_file_world(key, extension="", allow_missing=False):
     """Retrieve a file, or array of files, from a key in the bcbio world object.
     """
     secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': dir + val + '%s'}]" % extension) if extension else ""
-    converter = ["if (val === null)",
-                 "  return val;"
+    converter = ["if (val === null || val === undefined)",
+                 "  return null;"
                  "else if (typeof val === 'string' || val instanceof String)",
                  "  return [{'path': dir + val, 'class': 'File'%s}];" % secondary_str,
-                 "else",
+                 "else if (val.length != null && val.length > 0) {",
                  "  var vals = val;",
-                 "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});" % secondary_str]
+                 "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});}" % secondary_str,
+                 "else",
+                 "  return null;"]
     return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File", extension)
 
 def _cwl_get_from_world(key, convert_val, valtype, extension=""):

@@ -4,6 +4,7 @@ Samples may include multiple lanes, or barcoded subsections of lanes,
 processed together.
 """
 import copy
+import glob
 import os
 
 import toolz as tz
@@ -80,6 +81,17 @@ def _add_supplemental_bams(data):
                 data[sup_key][supext] = test_file
     return data
 
+def _add_hla_files(data):
+    """Add extracted fastq files of HLA alleles for typing.
+    """
+    if "hla" not in data:
+        data["hla"] = {}
+    align_file = dd.get_align_bam(data)
+    hla_dir = os.path.join(os.path.dirname(align_file), "hla")
+    hla_base = os.path.join(hla_dir, os.path.basename(align_file) + ".hla")
+    data["hla"]["fastq"] = sorted(list(glob.glob(hla_base + ".*.fq")))
+    return data
+
 def process_alignment(data, alt_input=None):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
@@ -127,9 +139,10 @@ def process_alignment(data, alt_input=None):
                          "\nIs the path to the file correct or is empty?\n" +
                          "If it is a fastq file (not pre-aligned BAM or CRAM), "
                          "is an aligner specified in the input configuration?")
-    # Add stable 'align_bam' target to use for retrieving raw alignment
     if data.get("work_bam"):
+        # Add stable 'align_bam' target to use for retrieving raw alignment
         data["align_bam"] = data["work_bam"]
+        data = _add_hla_files(data)
     return [[data]]
 
 def prep_samples(*items):
