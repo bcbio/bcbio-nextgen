@@ -38,7 +38,7 @@ def variant(variables):
              s("prep_samples",
                [["config", "algorithm", "variant_regions"]],
                [_cwl_file_world(["config", "algorithm", "variant_regions"]),
-                _cwl_file_world(["config", "algorithm", "variant_regions_merged"], ".tbi")]),
+                _cwl_file_world(["config", "algorithm", "variant_regions_merged"])]),
              s("postprocess_alignment",
                [["align_bam"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
@@ -80,9 +80,9 @@ def _cwl_file_world(key, extension="", allow_missing=False):
                  "else",
                  "  var vals = val;",
                  "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});" % secondary_str]
-    return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File")
+    return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File", extension)
 
-def _cwl_get_from_world(key, convert_val, valtype):
+def _cwl_get_from_world(key, convert_val, valtype, extension=""):
     """Generic function to retrieve specific results from a bcbio world object.
 
     The generic javascript provides `dir`, the directory containing the output files
@@ -95,11 +95,14 @@ def _cwl_get_from_world(key, convert_val, valtype):
               "   var val = JSON.parse(self[0].contents)%s;" % keygetter] + \
               ["   %s" % v for v in convert_val] + \
               ["}"]
-    return {"id": key,
-            "type": valtype,
-            "outputBinding": {"glob": "cwl-*-world.json",
-                              "loadContents": True,
-                              "outputEval": "\n".join(getter)}}
+    out = {"id": key,
+           "type": valtype,
+           "outputBinding": {"glob": "cwl-*-world.json",
+                             "loadContents": True,
+                             "outputEval": "\n".join(getter)}}
+    if extension:
+        out["outputBinding"]["secondaryFiles"] = [extension]
+    return out
 
 def _cwl_file_glob(key, file_pattern, extension=""):
     """Retrieve an output CWL file, and extensions, using glob on the filesystem.
@@ -127,8 +130,9 @@ def _clean_output(v):
     """Remove output specific variables to allow variables to be inputs to next steps.
     """
     out = copy.deepcopy(v)
-    for key in ["outputBinding"]:
-        out.pop(key, None)
+    outb = out.pop("outputBinding", {})
+    if "secondaryFiles" in outb:
+        out["secondaryFiles"] = outb["secondaryFiles"]
     return out
 
 def _get_string_vid(vid):

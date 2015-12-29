@@ -51,6 +51,8 @@ def _write_tool(step_dir, name, inputs, outputs):
         inp_tool["id"] = "#%s" % base_id
         inp_tool["inputBinding"] = {"prefix": "%s=" % base_id, "separate": False,
                                     "itemSeparator": ";;", "position": i}
+        if "secondaryFiles" in inp_tool:
+            inp_tool["inputBinding"]["secondaryFiles"] = inp_tool.pop("secondaryFiles")
         out["inputs"].append(inp_tool)
     # XXX Need to generalize outputs, just a hack for now to test align_prep
     for outp in outputs:
@@ -176,6 +178,12 @@ def _item_to_cwldata(x):
     if isinstance(x, (list, tuple)):
         return [_item_to_cwldata(subx) for subx in x]
     elif x and isinstance(x, basestring) and (os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x):
-        return {"class": "File", "path": x}
+        out = {"class": "File", "path": x}
+        if os.path.isfile(x):
+            if x.endswith(".bam"):
+                out["secondaryFiles"] = [{"class": "File", "path": x + ".bai"}]
+            elif x.endswith((".vcf.gz", ".bed.gz")):
+                out["secondaryFiles"] = [{"class": "File", "path": x + ".tbi"}]
+        return out
     else:
         return x
