@@ -1,16 +1,22 @@
 import os
+
 from bcbio.rnaseq import gtf, cpat
 from bcbio.bam import fasta
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 
-
-def annotate_novel_coding(assembled_gtf, ref_gtf, ref_fasta, out_file=None):
+def annotate_novel_coding(assembled_gtf, ref_gtf, ref_fasta, data, out_file=None):
     if not out_file:
         out_file = os.path.splitext(assembled_gtf)[0] + ".annotated.gtf"
     if file_exists(out_file):
         return out_file
-    classification = cpat.classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta)
+    classification = cpat.classify_with_cpat(assembled_gtf, ref_gtf,
+                                             ref_fasta, data)
+    if not classification:
+        logger.info("Protein coding classification of %s was skipped because "
+                    "CPAT was not found." % assembled_gtf)
+        return assembled_gtf
     ref_db = gtf.get_gtf_db(ref_gtf)
     known_transcript = {feature['transcript_id'][0]: feature.source for feature in
                         gtf.complete_features(ref_db)}
