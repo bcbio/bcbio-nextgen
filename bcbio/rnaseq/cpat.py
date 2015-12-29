@@ -14,14 +14,15 @@ from bcbio.utils import file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.bam import fasta
+from bcbio.pipeline import config_utils
 
-def classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta):
-    cpat_cmd = _find_executable("cpat.py")
+def classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta, data):
+    cpat_cmd = config_utils.get_program("cpat.py", data)
     if not cpat_cmd:
         return {}
-    cutoff, hexamer, logit = get_coding_potential_cutoff(ref_gtf, ref_fasta)
+    cutoff, hexamer, logit = get_coding_potential_cutoff(ref_gtf, ref_fasta, data)
     assembled_fasta = gtf.gtf_to_fasta(assembled_gtf, ref_fasta)
-    cpat_fn = cpat(assembled_fasta, hexamer, logit)
+    cpat_fn = cpat(assembled_fasta, hexamer, logit, data)
     coding_probabilities = load_cpat_coding_prob(cpat_fn)
     lengths = fasta.sequence_length(assembled_fasta)
     classification = {}
@@ -34,24 +35,12 @@ def classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta):
             classification[transcript] = "ncRNA"
     return classification
 
-def _find_executable(name):
-    in_path = utils.which(name)
-    if in_path:
-        return in_path
-    else:
-        in_conda = os.path.join(os.path.dirname(sys.executable), name)
-        if os.path.exists(in_conda):
-            return in_conda
-        else:
-            return None
-
-def cpat(assembled_fasta, hexamer, logit, out_file=None):
+def cpat(assembled_fasta, hexamer, logit, data, out_file=None):
     if out_file and file_exists(out_file):
         return out_file
     if not out_file:
         out_file = tempfile.NamedTemporaryFile(delete=False, suffix=".cpat").name
-
-    cpat_cmd = _find_executable("cpat.py")
+    cpat_cmd = config_utils.get_program("cpat.py", data)
     r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
     cmd = ("{r_setup}{cpat_cmd} --gene={assembled_fasta} --hex={hexamer} "
            "--logitModel={logit} --outfile={tx_out_file}")
@@ -96,28 +85,24 @@ def grade_cpat(coding_transcripts, noncoding_transcripts, cpat, cutoff):
     return {"sensitivity": sensitivity, "specificity": specificity,
             "accuracy": accuracy, "precision": precision}
 
-def make_logit_model(coding_fasta, noncoding_fasta, hexamers, out_dir=None):
+def make_logit_model(coding_fasta, noncoding_fasta, hexamers, data, out_dir=None):
     safe_makedir(out_dir)
     out_prefix = os.path.join(out_dir, "logit")
     out_file = out_prefix + ".logit.RData"
     if file_exists(out_file):
         return out_file
-
     tx_prefix = tempfile.NamedTemporaryFile(delete=False).name
     tx_out_file = tx_prefix + ".logit.RData"
-
-    logit_cmd = _find_executable("make_logitModel.py")
+    logit_cmd = config_utils.get_program("make_logitModel.py", data)
     r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
     cmd = ("{r_setup}{logit_cmd} --cgene={coding_fasta} --ngene={noncoding_fasta} "
            "--hex={hexamers} --outfile={tx_prefix}")
     message = "Building coding/noncoding logistical model."
     do.run(cmd.format(**locals()), message)
-
     shutil.move(tx_out_file, out_file)
-
     return out_file
 
-def get_coding_potential_cutoff(ref_gtf, ref_fasta):
+def get_coding_potential_cutoff(ref_gtf, ref_fasta, data):
     """
     estimate the coding potential cutoff that best classifies
     coding/noncoding transcripts by splitting the reference
@@ -129,12 +114,12 @@ def get_coding_potential_cutoff(ref_gtf, ref_fasta):
     noncoding_gtf = gtf.partition_gtf(train_gtf)
     noncoding_fasta = gtf.gtf_to_fasta(noncoding_gtf, ref_fasta)
     cds_fasta = gtf.gtf_to_fasta(coding_gtf, ref_fasta, cds=True)
-    hexamer_content = hexamer_table(cds_fasta, noncoding_fasta)
+    hexamer_content = hexamer_table(cds_fasta, noncoding_fasta, data)
     coding_fasta = gtf.gtf_to_fasta(coding_gtf, ref_fasta)
     logit_model = make_logit_model(coding_fasta, noncoding_fasta,
-                                       hexamer_content, "test_gtf")
+                                       hexamer_content, data, "test_gtf")
     test_fasta = gtf.gtf_to_fasta(test_gtf, ref_fasta)
-    cpat_fn = cpat(test_fasta, hexamer_content, logit_model)
+    cpat_fn = cpat(test_fasta, hexamer_content, logit_model, data)
     cpat_prob = load_cpat_coding_prob(cpat_fn)
     coding, noncoding = gtf.get_coding_noncoding_transcript_ids(test_gtf)
     best_score = 1
@@ -151,12 +136,12 @@ def get_coding_potential_cutoff(ref_gtf, ref_fasta):
             best_specificity = grade["specificity"]
     return best_cutoff, hexamer_content, logit_model
 
-def hexamer_table(cds_fasta, noncoding_fasta, out_file=None):
+def hexamer_table(cds_fasta, noncoding_fasta, data, out_file=None):
     if out_file and file_exists(out_file):
         return out_file
     if not out_file:
         out_file = tempfile.NamedTemporaryFile(delete=False, suffix=".hexamers").name
-    hex_cmd = _find_executable("make_hexamer_tab.py")
+    hex_cmd = config_utils.get_program("make_hexamer_tab.py", data)
     cmd = ("{hex_cmd} --cod={cds_fasta} --noncod={noncoding_fasta} "
            "> {tx_out_file}")
     with file_transaction(out_file) as tx_out_file:

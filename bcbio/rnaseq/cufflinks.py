@@ -231,17 +231,19 @@ def merge(assembled_gtfs, ref_file, gtf_file, num_cores, data):
     out_file = os.path.join(out_dir, "assembled.gtf")
     if file_exists(out_file):
         return out_file
-    with file_transaction(data, out_dir) as tmp_out_dir:
-        cmd = ("cuffmerge -o {tmp_out_dir} --ref-gtf {gtf_file} "
-               "--num-threads {num_cores} --ref-sequence {ref_file} "
-               "{assembled_file}")
-        cmd = cmd.format(**locals())
-        message = ("Merging the following transcript assemblies with Cuffmerge: %s"
-                   % ", ".join(assembled_gtfs))
-        do.run(cmd, message)
+    if not file_exists(merged_file):
+        with file_transaction(data, out_dir) as tmp_out_dir:
+            cmd = ("cuffmerge -o {tmp_out_dir} --ref-gtf {gtf_file} "
+                "--num-threads {num_cores} --ref-sequence {ref_file} "
+                "{assembled_file}")
+            cmd = cmd.format(**locals())
+            message = ("Merging the following transcript assemblies with "
+                       "Cuffmerge: %s" % ", ".join(assembled_gtfs))
+            do.run(cmd, message)
     clean, _ = clean_assembly(merged_file)
     fixed = fix_cufflinks_attributes(gtf_file, clean, data)
-    classified = annotate_gtf.annotate_novel_coding(fixed, gtf_file, ref_file)
+    classified = annotate_gtf.annotate_novel_coding(fixed, gtf_file, ref_file,
+                                                    data)
     filtered = annotate_gtf.cleanup_transcripts(classified, gtf_file, ref_file)
     shutil.move(filtered, out_file)
     return out_file
