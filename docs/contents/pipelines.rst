@@ -226,38 +226,43 @@ variants of interest.
 
 RNA-seq
 ~~~~~~~
+bcbio can also be use to analyze RNA-seq data. It includes steps for quality
+control, adapter trimming, alignment, variant calling, transcriptome
+reconstruction and post-alignment quantitation at the level of the gene
+and isoform.
 
-bcbio-nextgen also implements a configurable best-practice pipeline for RNA-seq
-quality control, adapter trimming, alignment and post-alignment quantitation
+We currently recommend to not perform adapter trimming for runs not using the
+Tophat2 aligner. Adapter trimming is very slow, and aligners that soft clip the
+ends of reads such as STAR and hisat2, or algorithms using pseudoalignments like
+Sailfish handle contaminant sequences at the ends properly. This makes trimming
+unnecessary. Tophat2 does not perform soft clipping so if that is the aligner
+tha is chosen, trimming must still be done.
 
-- Adapter trimming:
-  - `cutadapt`_
+We recommend using the STAR aligner for all genomes where there are no alt
+alleles. For genomes such as hg38 that have alt alleles, hisat2 should be used
+as it handles the alts correctly and STAR does not yet.
 
-- Sequence alignment:
-  - `tophat2`_
-  - `STAR`_
-  - `hisat2`_
+Sailfish, which is an extremely fast alignment-free method of quantitation, is
+run for all experiments. Sailfish can accurately quantitate the expression of
+genes, even ones which are hard to quantitate with other methods (see `this
+paper <http://www.genomebiology.com/2015/16/1/177>`_ for example). It is likely
+in the future we will recommend skipping alignment and just using Sailfish for
+all experiments not needing transcriptome reconstruction or variant calling.
+Right now we recommend doing an align-and-quantitate method such as STAR and
+looking at a matrix of counts and also running Sailfish and looking at the
+output of both algorithms when performing a downstream analysis.
 
-- Quality control:
-  - `qualimap`_
-  - `FastQC`_
-
-- Quantitation:
-  - `featureCounts`_
-  - `DEXSeq`_
-  - `Sailfish`_
-
-After a run you will have in the ``upload`` directory a directory for each
-sample which contains a BAM file of the aligned and unaligned reads, a
-``Sailfish`` directory with the output of Sailfish, including TPM values,
-and a ``qc`` directory with plots from FastQC and qualimap.
+After a bcbio RNA-seq run there will be in the ``upload`` directory a directory
+for each sample which contains a BAM file of the aligned and unaligned reads, a
+``Sailfish`` directory with the output of Sailfish, including TPM values, and a
+``qc`` directory with plots from FastQC and qualimap.
 
 In addition to directories for each sample, in the ``upload`` directory there is
-a project directory which contains a YAML file describing some summary statistics
-about each sample and some provenance data. In that directory is also a
-``combined.counts`` file which can be used as a starting point for performing
-differential expression calling using any count-based method such as EdgeR,
-DESeq2 or voom+limma, etc.
+a project directory which contains a YAML file describing some summary
+statistics for each sample and some provenance data about the bcbio run. In that
+directory is also a ``combined.counts`` file which can be used as a starting
+point for performing differential expression calling using any count-based
+method such as EdgeR, DESeq2 or voom+limma, etc.
 
 smallRNA-seq
 ~~~~~~~~~~~~
