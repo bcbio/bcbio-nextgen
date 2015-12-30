@@ -89,7 +89,10 @@ def prep_variant_cwl(samples, out_dir, out_file):
     out = _standard_bcbio_cwl(samples, variables)
     out["steps"] = []
     for name, inputs, outputs in workflow.variant(variables):
-        out["steps"].append(_step_template(name, step_dir, inputs, outputs))
+        if name == "upload":
+            out["outputs"] = outputs
+        else:
+            out["steps"].append(_step_template(name, step_dir, inputs, outputs))
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file, sample_json
@@ -101,7 +104,8 @@ def _flatten_samples(samples, base_file):
     flat_data = []
     for data in samples:
         cur_flat = {}
-        for key_path in [["description"], ["rgnames"], ["config", "algorithm"], ["metadata"], ["genome_build"],
+        for key_path in [["analysis"], ["description"], ["rgnames"], ["config", "algorithm"],
+                         ["metadata"], ["genome_build"],
                          ["files"], ["reference"], ["genome_resources"], ["vrn_file"]]:
             cur_key = "__".join(key_path)
             for flat_key, flat_val in _to_cwldata(cur_key, tz.get_in(key_path, data)):

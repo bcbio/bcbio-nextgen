@@ -60,7 +60,19 @@ def variant(variables):
              s("call_hla",
                [["hla", "fastq"]],
                [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
-                _cwl_file_world(["hla", "call_file"], allow_missing=True)])
+                _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
+             s("pipeline_summary",
+               [["align_bam"],
+                ["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
+               [_cwl_file_world(["summary", "qc"])]),
+             # TODO -- optionally get  ["config", "algorithm", "priority_regions"],
+             s("coverage_report",
+               [["work_bam"],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
+                ["config", "algorithm", "coverage"],
+                ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
+               [_cwl_file_world(["coverage", "all"]),
+                _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
              ]
     for step in steps:
         inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs

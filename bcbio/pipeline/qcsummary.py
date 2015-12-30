@@ -66,15 +66,15 @@ def generate_parallel(samples, run_parallel):
 def pipeline_summary(data):
     """Provide summary information on processing sample.
     """
-    work_bam = data.get("work_bam")
+    work_bam = data.get("align_bam")
     if data["analysis"].lower().startswith("smallrna-seq"):
         work_bam = data["clean_fastq"]
         data["summary"] = _run_qc_tools(work_bam, data)
     elif data["analysis"].lower().startswith("chip-seq"):
         work_bam = data["raw_bam"]
         data["summary"] = _run_qc_tools(work_bam, data)
-    elif data["sam_ref"] is not None and work_bam and work_bam.endswith(".bam"):
-        logger.info("Generating summary files: %s" % str(data["name"]))
+    elif dd.get_ref_file(data) is not None and work_bam and work_bam.endswith(".bam"):
+        logger.info("Generating summary files: %s" % dd.get_sample_name(data))
         data["summary"] = _run_qc_tools(work_bam, data)
     return [[data]]
 
@@ -142,7 +142,7 @@ def _run_qc_tools(bam_file, data):
 
     bam.remove("%s-downsample%s" % os.path.splitext(bam_file))
 
-    metrics["Name"] = data["name"][-1]
+    metrics["Name"] = dd.get_sample_name(data)
     metrics["Quality format"] = utils.get_in(data,
                                              ("config", "algorithm",
                                               "quality_format"),
@@ -339,8 +339,8 @@ def _run_kraken(data, ratio):
     """Run kraken, generating report in specified directory and parsing metrics.
        Using only first paired reads.
     """
-    # logger.info("Number of aligned reads < than 0.60 in %s: %s" % (str(data["name"]), ratio))
-    logger.info("Running kraken to determine contaminant: %s" % str(data["name"]))
+    # logger.info("Number of aligned reads < than 0.60 in %s: %s" % (dd.get_sample_name(data), ratio))
+    logger.info("Running kraken to determine contaminant: %s" % dd.get_sample_name(data))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     kraken_out = os.path.join(qc_dir, "kraken")
     out = out_stats = None
@@ -370,7 +370,7 @@ def _run_kraken(data, ratio):
                       "--preload --min-hits 2 "
                       "--threads {num_cores} "
                       "--out {out} --fastq-input /dev/stdin  2> {out_stats}").format(**locals())
-                do.run(cl, "kraken: %s" % data["name"][-1])
+                do.run(cl, "kraken: %s" % dd.get_sample_name(data))
                 if os.path.exists(kraken_out):
                     shutil.rmtree(kraken_out)
                 shutil.move(tx_tmp_dir, kraken_out)
@@ -395,7 +395,7 @@ def _parse_kraken_output(out_dir, db, data):
     if os.path.getsize(in_file) > 0 and not os.path.exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cl = ("{kraken_cmd} --db {db} {in_file} > {tx_out_file}").format(**locals())
-            do.run(cl, "kraken report: %s" % data["name"][-1])
+            do.run(cl, "kraken report: %s" % dd.get_sample_name(data))
     kraken = {"kraken_clas": classify, "kraken_unclas": unclassify}
     kraken_sum = _summarize_kraken(out_file)
     kraken.update(kraken_sum)
@@ -441,7 +441,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
                 cl = [config_utils.get_program("fastqc", data["config"]),
                       "-d", tx_tmp_dir,
                       "-t", str(num_cores), "--extract", "-o", tx_tmp_dir, "-f", frmt, bam_file]
-                do.run(cl, "FastQC: %s" % data["name"][-1])
+                do.run(cl, "FastQC: %s" % dd.get_sample_name(data))
                 tx_fastqc_out = os.path.join(tx_tmp_dir, "%s_fastqc" % fastqc_name)
                 tx_combo_file = os.path.join(tx_tmp_dir, "%s_fastqc.html" % fastqc_name)
                 if not os.path.exists(sentry_file) and os.path.exists(tx_combo_file):
@@ -459,7 +459,7 @@ def _run_fastqc(bam_file, data, fastqc_out):
                     if os.path.exists(fastqc_out):
                         shutil.rmtree(fastqc_out)
                     shutil.move(tx_fastqc_out, fastqc_out)
-    parser = FastQCParser(fastqc_out, data["name"][-1])
+    parser = FastQCParser(fastqc_out, dd.get_sample_name(data))
     stats = parser.get_fastqc_summary()
     parser.save_sections_into_file()
     return stats
@@ -601,7 +601,7 @@ def _run_qualimap(bam_file, data, out_dir):
         if regions:
             bed6_regions = _bed_to_bed6(regions, out_dir)
             cmd += " -gff {bed6_regions}"
-        do.run(cmd.format(**locals()), "Qualimap: %s" % data["name"][-1])
+        do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data))
 
     return _parse_qualimap_metrics(report_file)
 
@@ -734,7 +734,7 @@ def _rnaseq_qualimap(bam_file, data, out_dir):
         utils.safe_makedir(out_dir)
         bam.index(bam_file, config)
         cmd = _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file, single_end)
-        do.run(cmd, "Qualimap for {}".format(data["name"][-1]))
+        do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, out_dir, data))
     metrics.update(_detect_rRNA(data))
@@ -852,7 +852,7 @@ def _run_gemini_stats(bam_file, data, out_dir):
             bcftools = config_utils.get_program("bcftools", data["config"])
             if not utils.file_exists(out_file):
                 cmd = ("{bcftools} stats -f PASS {vcf_file} > {out_file}")
-                do.run(cmd.format(**locals()), "basic vcf stats %s" % data["name"][-1])
+                do.run(cmd.format(**locals()), "basic vcf stats %s" % dd.get_sample_name(data))
             with open(out_file) as in_handle:
                 for line in in_handle:
                     if line.startswith("SN") and line.find("records") > -1:
@@ -864,7 +864,7 @@ def _run_gemini_stats(bam_file, data, out_dir):
     for k, v in out.iteritems():
         if not isinstance(v, dict):
             res.update({k: v})
-        if k == data["name"][-1]:
+        if k == dd.get_sample_name(data):
             res.update(v)
     return res
 
@@ -913,7 +913,7 @@ def _run_qsignature_generator(bam_file, data, out_dir):
             if not down_file:
                 down_file = slice_bam
             file_qsign_out = "{0}.qsig.vcf".format(down_file)
-            do.run(base_cmd.format(**locals()), "qsignature vcf generation: %s" % data["name"][-1])
+            do.run(base_cmd.format(**locals()), "qsignature vcf generation: %s" % dd.get_sample_name(data))
             if os.path.exists(file_qsign_out):
                 with file_transaction(data, out_file) as file_txt_out:
                     shutil.move(file_qsign_out, file_txt_out)
@@ -943,7 +943,7 @@ def qsignature_summary(*samples):
         vcf = tz.get_in(["summary", "metrics", "qsig_vcf"], data)
         if vcf:
             count += 1
-            vcf_name = data["name"][-1] + ".qsig.vcf"
+            vcf_name = dd.get_sample_name(data) + ".qsig.vcf"
             out_dir = utils.safe_makedir(os.path.join(work_dir, "qsignature"))
             if not os.path.lexists(os.path.join(out_dir, vcf_name)):
                 os.symlink(vcf, os.path.join(out_dir, vcf_name))
