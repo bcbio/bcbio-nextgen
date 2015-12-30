@@ -5,7 +5,7 @@ This automates the steps required for installation and setup to make it
 easier to get started with bcbio-nextgen. The defaults provide data files
 for human variant calling.
 
-Requires: git, Python 3.x, Python 2.7 or argparse + Python 2.6 and earlier
+Requires: git, wget, bgzip2, Python 3.x, Python 2.7 or argparse + Python 2.6 and earlier
 """
 from __future__ import print_function
 import collections
@@ -21,13 +21,11 @@ try:
 except ImportError:
     import urllib.request as urllib_request
 
-remotes = {"requirements":
-           "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
-           "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
-           "system_config":
-           "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
-           "anaconda":
-           "http://repo.continuum.io/miniconda/Miniconda-3.5.5-%s-x86_64.sh"}
+REMOTES = {
+    "requirements": "https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/requirements-conda.txt",
+    "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
+    "system_config": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
+    "anaconda": "https://repo.continuum.io/miniconda/Miniconda-latest-%s-x86_64.sh"}
 
 def main(args, sys_argv):
     check_arguments(args)
@@ -35,15 +33,15 @@ def main(args, sys_argv):
     with bcbio_tmpdir():
         setup_data_dir(args)
         print("Installing isolated base python installation")
-        anaconda = install_anaconda_python(args, remotes)
+        anaconda = install_anaconda_python(args)
         print("Installing bcbio-nextgen")
-        install_conda_pkgs(anaconda)
-        bcbio = bootstrap_bcbionextgen(anaconda, args, remotes)
+        bcbio = install_conda_pkgs(anaconda)
+        bootstrap_bcbionextgen(anaconda, args)
     print("Installing data and third party dependencies")
-    system_config = write_system_config(remotes["system_config"], args.datadir,
+    system_config = write_system_config(REMOTES["system_config"], args.datadir,
                                         args.tooldir)
     setup_manifest(args.datadir)
-    subprocess.check_call([bcbio["bcbio_nextgen.py"], "upgrade"] + _clean_args(sys_argv, args, bcbio))
+    subprocess.check_call([bcbio, "upgrade"] + _clean_args(sys_argv, args))
     print("Finished: bcbio-nextgen, tools and data installed")
     print(" Genome data installed in:\n  %s" % args.datadir)
     if args.tooldir:
@@ -51,57 +49,28 @@ def main(args, sys_argv):
     print(" Ready to use system configuration at:\n  %s" % system_config)
     print(" Edit configuration file as needed to match your machine or cluster")
 
-def _clean_args(sys_argv, args, bcbio):
+def _clean_args(sys_argv, args):
     """Remove data directory from arguments to pass to upgrade function.
     """
     base = [x for x in sys_argv if
             x.startswith("-") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
-    # specification of data argument changes in install (default data) to upgrade (default nodata)
-    # in bcbio_nextgen 0.7.5 and beyond
-    process = subprocess.Popen([bcbio["bcbio_nextgen.py"], "--version"], stdout=subprocess.PIPE)
-    version, _ = process.communicate()
-    if version.decode("utf-8").strip() > "0.7.4":
-        if "--nodata" in base:
-            base.remove("--nodata")
-        else:
-            base.append("--data")
+    if "--nodata" in base:
+        base.remove("--nodata")
+    else:
+        base.append("--data")
     return base
 
-def bootstrap_bcbionextgen(anaconda, args, remotes):
-    """Install bcbio-nextgen to bootstrap rest of installation process.
-    """
-    # Set PIP SSL certificate to installed conda certificate to avoid SSL errors
-    cert_file = os.path.join(anaconda["dir"], "ssl", "cert.pem")
-    if os.path.exists(cert_file):
-        os.environ["PIP_CERT"] = cert_file
-    subprocess.check_call([anaconda["pip"], "install", "fabric"])
-    subprocess.check_call([anaconda["pip"], "install", "-r", remotes["requirements"]])
+def bootstrap_bcbionextgen(anaconda, args):
     if args.upgrade == "development":
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
-                               "git+%s#egg=bcbio-nextgen" % remotes["gitrepo"]])
-    out = {}
-    for script in ["bcbio_nextgen.py"]:
-        ve_script = os.path.join(anaconda["dir"], "bin", script)
-        if args.tooldir:
-            final_script = os.path.join(args.tooldir, "bin", script)
-            subprocess.check_call(["mkdir", "-p", os.path.dirname(final_script)])
-            if os.path.lexists(final_script):
-                cmd = ["rm", "-f", final_script]
-                subprocess.check_call(cmd)
-            cmd = ["ln", "-s", ve_script, final_script]
-            subprocess.check_call(cmd)
-        out[script] = ve_script
-    return out
+                               "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
 
 def install_conda_pkgs(anaconda):
-    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "cyvcf2", "gffutils",
-            "ipyparallel", "ipython-cluster-helper", "joblib", "lxml",
-            "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
-            "pip", "progressbar", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",
-            "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",
-            "sqlalchemy", "statsmodels", "toolz", "tornado", "seqcluster_lite"]
-    channels = ["-c", "bcbio", "-c", "bioconda"]
-    subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes"] + channels + pkgs)
+    if not os.path.exists(os.path.basename(REMOTES["requirements"])):
+        subprocess.check_call(["wget", REMOTES["requirements"]])
+    subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes", "-c", "bioconda",
+                           "--file", os.path.basename(REMOTES["requirements"])])
+    return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 def _guess_distribution():
     """Simple approach to identify if we are on a MacOSX or Linux system for Anaconda.
@@ -111,7 +80,7 @@ def _guess_distribution():
     else:
         return "linux"
 
-def install_anaconda_python(args, remotes):
+def install_anaconda_python(args):
     """Provide isolated installation of Anaconda python for running bcbio-nextgen.
     http://docs.continuum.io/anaconda/index.html
     """
@@ -122,7 +91,7 @@ def install_anaconda_python(args, remotes):
         if os.path.exists(anaconda_dir):
             shutil.rmtree(anaconda_dir)
         dist = args.distribution if args.distribution else _guess_distribution()
-        url = remotes["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
+        url = REMOTES["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", url])
         subprocess.check_call("bash %s -b -p %s" %
@@ -207,9 +176,13 @@ def check_dependencies():
                      (["wget", "--version"], "wget"),
                      (["bzip2", "-h"], "bzip2")]:
         try:
-            subprocess.check_call(dep, stderr=subprocess.STDOUT)
+            p = subprocess.Popen(dep, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+            out, code = p.communicate()
         except OSError:
-            raise OSError("bcbio-nextgen installer requires %s" % msg)
+            out = "Executable not found"
+            code = 127
+        if code == 127:
+            raise OSError("bcbio-nextgen installer requires %s\n%s" % (msg, out))
 
 def _check_toolplus(x):
     """Parse options for adding non-standard/commercial tools like GATK and MuTecT.

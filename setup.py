@@ -21,17 +21,9 @@ def write_version_py():
         out_handle.write("\n".join(['__version__ = "%s"' % version,
                                     '__git_revision__ = "%s"' % githash]))
 
-with open("requirements.txt", "r") as f:
-    install_requires = [x.strip() for x in f.readlines() if not x.startswith(("bcbio-nextgen", "#"))]
-
-# library-only install: enable skipping of scripts and requirements for conda builds
-if "--record=/dev/null" in sys.argv:
-    scripts = []
-    install_requires = []
-    zip_safe = True
-else:
-    zip_safe = False
-    scripts = ['scripts/bcbio_nextgen.py', 'scripts/bcbio_setup_genome.py', 'scripts/bcbio_prepare_samples.py']
+install_requires = [] # install dependencies via conda
+zip_safe = False
+scripts = ['scripts/bcbio_nextgen.py', 'scripts/bcbio_setup_genome.py', 'scripts/bcbio_prepare_samples.py']
 
 write_version_py()
 setup(name="bcbio-nextgen",

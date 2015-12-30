@@ -27,7 +27,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 
 REMOTES = {
-    "requirements": "https://raw.github.com/chapmanb/bcbio-nextgen/master/requirements.txt",
+    "requirements": "https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/requirements-conda.txt",
     "gitrepo": "https://github.com/chapmanb/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux.git",
     "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
@@ -49,23 +49,15 @@ def upgrade_bcbio(args):
     Handles bcbio, third party tools and data.
     """
     args = add_install_defaults(args)
-    pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
-    if args.upgrade in ["skip"]:
-        pass
-    elif args.upgrade in ["stable", "system"]:
+    if args.upgrade in ["stable", "system", "deps", "development"]:
         anaconda_dir = _update_conda_packages()
-        print("Upgrading bcbio-nextgen to latest stable version")
-        _pip_safe_ssl([[pip_bin, "install", "-r", REMOTES["requirements"]]], anaconda_dir)
         print("Upgrade of bcbio-nextgen code complete.")
-    elif args.upgrade in ["deps"]:
-        _update_conda_packages()
-    else:
-        anaconda_dir = _update_conda_packages()
-        print("Upgrading bcbio-nextgen to latest development version")
-        _pip_safe_ssl([[pip_bin, "install", "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]],
-                       [pip_bin, "install", "--upgrade", "--no-deps",
-                        "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]]], anaconda_dir)
-        print("Upgrade of bcbio-nextgen development code complete.")
+        if args.upgrade == "development":
+            print("Upgrading bcbio-nextgen to latest development version")
+            pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
+            _pip_safe_ssl([[pip_bin, "install", "--upgrade", "--no-deps",
+                            "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]]], anaconda_dir)
+            print("Upgrade of bcbio-nextgen development code complete.")
 
     try:
         _set_matplotlib_default_backend()
@@ -219,17 +211,13 @@ def _default_deploy_args(args):
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
-    pkgs = ["azure", "biopython", "boto", "cnvkit", "cpat", "cython", "cyvcf2", "gffutils",
-            "ipyparallel", "ipython-cluster-helper", "joblib", "lxml",
-            "matplotlib", "msgpack-python", "nose", "numpy", "openssl", "pandas", "patsy", "pycrypto",
-            "pip", "progressbar", "python-dateutil", "pybedtools", "pysam", "pyvcf", "pyyaml",
-            "pyzmq", "reportlab", "requests", "scikit-learn", "scipy", "seaborn", "setuptools",
-            "sqlalchemy", "statsmodels", "toolz", "tornado", "seqcluster_lite"]
-    channels = ["-c", "bcbio", "-c", "bioconda"]
     conda_bin = _get_conda_bin()
-    if conda_bin:
-        subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + channels + pkgs)
-        return os.path.dirname(os.path.dirname(conda_bin))
+    assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
+    if not os.path.exists(os.path.basename(REMOTES["requirements"])):
+        subprocess.check_call(["wget", REMOTES["requirements"]])
+    subprocess.check_call([conda_bin, "install", "--quiet", "--yes", "-c", "bioconda",
+                           "--file", os.path.basename(REMOTES["requirements"])])
+    return os.path.dirname(os.path.dirname(conda_bin))
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(os.path.realpath(sys.executable))))

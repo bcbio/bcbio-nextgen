@@ -1,5 +1,7 @@
 ## 0.9.6 (in progress)
 
+- Installation uses conda packages from bioconda for Python dependencies and
+  third party tools.
 - Add macs2 to chipseq pipeline.
 - Add germline output files for somatic calling pipelines. The standard variant
   calls identify somatic mutations different from a normal, while the
