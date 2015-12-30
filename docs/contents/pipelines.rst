@@ -245,12 +245,14 @@ as it handles the alts correctly and STAR does not yet.
 Sailfish, which is an extremely fast alignment-free method of quantitation, is
 run for all experiments. Sailfish can accurately quantitate the expression of
 genes, even ones which are hard to quantitate with other methods (see `this
-paper <http://www.genomebiology.com/2015/16/1/177>`_ for example). It is likely
-in the future we will recommend skipping alignment and just using Sailfish for
-all experiments not needing transcriptome reconstruction or variant calling.
-Right now we recommend doing an align-and-quantitate method such as STAR and
-looking at a matrix of counts and also running Sailfish and looking at the
-output of both algorithms when performing a downstream analysis.
+paper <http://www.genomebiology.com/2015/16/1/177>`_ for example). It also
+quantitates at the transcript level which can help gene-level analyses (see
+`this paper <http://f1000research.com/articles/4-1521/v1>`_ for example) It is
+likely in the future we will recommend skipping alignment and just using
+Sailfish for all experiments not needing transcriptome reconstruction or variant
+calling. Right now we recommend doing an align-and-quantitate method such as
+STAR and looking at a matrix of counts and also running Sailfish and looking at
+the output of both algorithms when performing a downstream analysis.
 
 After a bcbio RNA-seq run there will be in the ``upload`` directory a directory
 for each sample which contains a BAM file of the aligned and unaligned reads, a
