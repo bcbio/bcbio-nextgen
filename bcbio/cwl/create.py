@@ -39,7 +39,7 @@ def _standard_bcbio_cwl(samples, inputs):
             "outputs": [],
             "steps": []}
 
-def _write_tool(step_dir, name, inputs, outputs):
+def _write_tool(step_dir, name, inputs, outputs, parallel):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
     out = {"class": "CommandLineTool",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
@@ -49,10 +49,14 @@ def _write_tool(step_dir, name, inputs, outputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
         inp_tool["id"] = "#%s" % base_id
-        inp_tool["inputBinding"] = {"prefix": "%s=" % base_id, "separate": False,
-                                    "itemSeparator": ";;", "position": i}
+        inp_binding = {"prefix": "%s=" % base_id, "separate": False,
+                       "itemSeparator": ";;", "position": i}
         if "secondaryFiles" in inp_tool:
-            inp_tool["inputBinding"]["secondaryFiles"] = inp_tool.pop("secondaryFiles")
+            inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
+        if parallel:
+            inp_tool["inputBinding"] = inp_binding
+        else:
+            inp_tool["type"]["inputBinding"] = inp_binding
         out["inputs"].append(inp_tool)
     # XXX Need to generalize outputs, just a hack for now to test align_prep
     for outp in outputs:
@@ -68,18 +72,20 @@ def _write_tool(step_dir, name, inputs, outputs):
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
 
-def _step_template(name, step_dir, inputs, outputs, source=""):
+def _step_template(name, step_dir, inputs, outputs, parallel):
     """Templating function for writing a step to avoid repeating namespaces.
     """
-    step_file = _write_tool(step_dir, name, inputs, outputs)
+    step_file = _write_tool(step_dir, name, inputs, outputs, parallel)
     inputs = [{"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
               for inp in inputs]
-    return {"run": {"import": step_file},
-            "id": "#%s" % name,
-            "scatterMethod": "dotproduct",
-            "scatter": [x["id"] for x in inputs],
-            "inputs": inputs,
-            "outputs": [{"id": output["id"]} for output in outputs]}
+    out = {"run": {"import": step_file},
+           "id": "#%s" % name,
+           "inputs": inputs,
+           "outputs": [{"id": output["id"]} for output in outputs]}
+    if parallel:
+        out.update({"scatterMethod": "dotproduct",
+                    "scatter": [x["id"] for x in inputs]})
+    return out
 
 def prep_variant_cwl(samples, out_dir, out_file):
     """Output a CWL decription for running a variant calling workflow.
@@ -88,11 +94,11 @@ def prep_variant_cwl(samples, out_dir, out_file):
     sample_json, variables = _flatten_samples(samples, out_file)
     out = _standard_bcbio_cwl(samples, variables)
     out["steps"] = []
-    for name, inputs, outputs in workflow.variant(variables):
+    for name, parallel, inputs, outputs in workflow.variant(variables):
         if name == "upload":
             out["outputs"] = outputs
         else:
-            out["steps"].append(_step_template(name, step_dir, inputs, outputs))
+            out["steps"].append(_step_template(name, step_dir, inputs, outputs, parallel))
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file, sample_json

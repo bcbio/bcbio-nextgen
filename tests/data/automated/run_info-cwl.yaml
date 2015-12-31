@@ -23,5 +23,15 @@ details:
     analysis: variant2
     description: Test1
     genome_build: hg19
-    lane: 7
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
+#  - algorithm:
+#      aligner: bwa
+#      recalibrate: false
+#      realign: false
+#      variantcaller: freebayes
+#    metadata:
+#      batch: TestBatch1
+#    analysis: variant2
+#    description: Test2
+#    genome_build: hg19
+#    files: ../data/100326_FC6107FAAXX/8_100326_FC6107FAAXX.bam

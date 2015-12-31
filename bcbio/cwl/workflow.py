@@ -23,11 +23,12 @@ def variant(variables):
     creation of the CWL files.
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
-    s = collections.namedtuple("s", "name inputs outputs")
-    steps = [s("prep_align_inputs", [["files"]],
+    s = collections.namedtuple("s", "name parallel inputs outputs")
+    steps = [s("prep_align_inputs", True,
+               [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"])]),
-             s("process_alignment",
+             s("process_alignment", True,
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"], ".bai"),
@@ -36,11 +37,11 @@ def variant(variables):
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_glob(["work_bam-plus", "sr"], "'align/' + name + '/' + name + '-sort-sr.bam'",
                                ".bai")]),
-             s("prep_samples",
+             s("prep_samples", True,
                [["config", "algorithm", "variant_regions"]],
-               [_cwl_file_world(["config", "algorithm", "variant_regions"]),
-                _cwl_file_world(["config", "algorithm", "variant_regions_merged"])]),
-             s("postprocess_alignment",
+               [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
+                _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
+             s("postprocess_alignment", True,
                [["align_bam"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
                 ["config", "algorithm", "variant_regions_merged"]],
@@ -51,22 +52,22 @@ def variant(variables):
                 _cwl_file_world(["regions", "highdepth"], allow_missing=True),
                 _cwl_file_world(["regions", "offtarget_stats"])]),
              # TODO -- combine sample regions should group into sample batches
-             s("combine_sample_regions",
+             s("combine_sample_regions", True,
                [["regions", "callable"], ["regions", "nblock"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
                 _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
                 _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
-             s("call_hla",
+             s("call_hla", True,
                [["hla", "fastq"]],
                [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
                 _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
-             s("pipeline_summary",
+             s("pipeline_summary", True,
                [["align_bam"],
                 ["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
                [_cwl_file_world(["summary", "qc"])]),
              # TODO -- optionally get  ["config", "algorithm", "priority_regions"],
-             s("coverage_report",
+             s("coverage_report", True,
                [["work_bam"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
                 ["config", "algorithm", "coverage"],
@@ -79,7 +80,15 @@ def variant(variables):
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in step.outputs])
         std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
         file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-        yield step.name, inputs, file_output + std_output
+        if step.parallel is False:
+            inputs = [_nest_variable(x) for x in inputs]
+            file_output = [_nest_variable(x) for x in file_output]
+            std_output = [_nest_variable(x) for x in std_output]
+        yield step.name, step.parallel, inputs, file_output + std_output
+    # Final outputs
+    outputs = [["work_bam"], ["summary", "qc"]]
+    outputs = []
+    yield "upload", False, [], [_get_upload_output(x, file_vs) for x in outputs]
 
 def _cwl_nonfile_world(key, outtype="string", allow_missing=False):
     """Retrieve a non-file value from a key in the bcbio world object.
@@ -170,6 +179,21 @@ def _get_variable(vid, variables):
         if vid == get_base_id(v["id"]):
             return copy.deepcopy(v)
     raise ValueError("Did not find variable %s in \n%s" % (vid, pprint.pformat(variables)))
+
+def _nest_variable(v):
+    """Nest a variable when moving from scattered back to consolidated.
+    """
+    v["type"] = {"type": "array", "items": v["type"]}
+    return v
+
+def _get_upload_output(vid, variables):
+    v = _nest_variable(_get_variable(vid, variables))
+    v["source"] = v["id"]
+    v["id"] = "#%s" % get_base_id(v["id"])
+    v["linkMerge"] = "merge_flattened"
+    for not_in_output in ["secondaryFiles"]:
+        v.pop(not_in_output, None)
+    return v
 
 def _create_variable(orig_v, step, variables):
     """Create a new output variable, potentially over-writing existing or creating new.
