@@ -51,8 +51,7 @@ def variant(variables):
                 _cwl_file_world(["regions", "nblock"]),
                 _cwl_file_world(["regions", "highdepth"], allow_missing=True),
                 _cwl_file_world(["regions", "offtarget_stats"])]),
-             # TODO -- combine sample regions should group into sample batches
-             s("combine_sample_regions", True,
+             s("combine_sample_regions", False,
                [["regions", "callable"], ["regions", "nblock"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
@@ -72,7 +71,7 @@ def variant(variables):
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
                 ["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
-               [_cwl_file_world(["coverage", "all"]),
+               [_cwl_file_world(["coverage", "all"], allow_missing=True),
                 _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
              ]
     for step in steps:
@@ -86,7 +85,7 @@ def variant(variables):
             std_output = [_nest_variable(x) for x in std_output]
         yield step.name, step.parallel, inputs, file_output + std_output
     # Final outputs
-    outputs = [["work_bam"], ["summary", "qc"]]
+    outputs = [["work_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
     outputs = []
     yield "upload", False, [], [_get_upload_output(x, file_vs) for x in outputs]
 
@@ -104,9 +103,9 @@ def _cwl_file_world(key, extension="", allow_missing=False):
     """
     secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': dir + val + '%s'}]" % extension) if extension else ""
     converter = ["if (val === null || val === undefined)",
-                 "  return null;"
+                 "  return null;",
                  "else if (typeof val === 'string' || val instanceof String)",
-                 "  return [{'path': dir + val, 'class': 'File'%s}];" % secondary_str,
+                 "  return {'path': dir + val, 'class': 'File'%s};" % secondary_str,
                  "else if (val.length != null && val.length > 0) {",
                  "  var vals = val;",
                  "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});}" % secondary_str,
@@ -120,13 +119,23 @@ def _cwl_get_from_world(key, convert_val, valtype, extension=""):
     The generic javascript provides `dir`, the directory containing the output files
     potentially remapped externally for Docker containers and `val` -- the value of
     the `key` attribute from the bcbio world object.
+
+    Will handle both single sample world outputs (a dictionary) as well as multiple world
+    objects (when samples get batched together). It determines which case based on
+    looking at the world object string and determining if it's a list or a dictionary.
     """
     keygetter = "".join(["['%s']" % k for k in key])
     getter = ["${",
+              " function world_to_val(world) {",
               "   var dir = self[0].path.replace(/\/[^\/]*$/,'') + '/';",
-              "   var val = JSON.parse(self[0].contents)%s;" % keygetter] + \
+              "   var val = world%s;" % keygetter] + \
               ["   %s" % v for v in convert_val] + \
-              ["}"]
+              [" }",
+               ' if (self[0].contents.lastIndexOf("[{", 0) === 0)',
+               "   return JSON.parse(self[0].contents).map(function(w){return world_to_val(w)});",
+               " else",
+               "   return world_to_val(JSON.parse(self[0].contents));",
+               "}"]
     out = {"id": key,
            "type": valtype,
            "outputBinding": {"glob": "cwl-*-world.json",
@@ -183,6 +192,7 @@ def _get_variable(vid, variables):
 def _nest_variable(v):
     """Nest a variable when moving from scattered back to consolidated.
     """
+    v = copy.deepcopy(v)
     v["type"] = {"type": "array", "items": v["type"]}
     return v
 

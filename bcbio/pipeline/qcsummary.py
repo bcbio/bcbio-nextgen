@@ -1077,6 +1077,7 @@ def coverage_report(data):
     data = cov.priority_coverage(data)
     data = cov.priority_total_coverage(data)
     problem_regions = dd.get_problem_region_dir(data)
+    data["coverage"] = {}
     if "coverage" in data:
         coverage = data['coverage']
         annotated = None

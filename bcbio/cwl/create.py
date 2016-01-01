@@ -45,6 +45,9 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
            "inputs": [],
            "outputs": []}
+    if not parallel:
+        inputs = [{"id": "#sentinel", "type": {"type": "array", "items": "string"},
+                   "default": ["multisample"]}] + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)

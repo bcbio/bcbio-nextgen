@@ -12,8 +12,6 @@ details:
       variantcaller: freebayes
       svcaller: [lumpy]
       tools_off: [gemini]
-      nomap_split_size: 50
-      nomap_split_targets: 100
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
@@ -24,14 +22,17 @@ details:
     description: Test1
     genome_build: hg19
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
-#  - algorithm:
-#      aligner: bwa
-#      recalibrate: false
-#      realign: false
-#      variantcaller: freebayes
-#    metadata:
-#      batch: TestBatch1
-#    analysis: variant2
-#    description: Test2
-#    genome_build: hg19
-#    files: ../data/100326_FC6107FAAXX/8_100326_FC6107FAAXX.bam
+  - algorithm:
+      aligner: bwa
+      recalibrate: false
+      realign: false
+      variantcaller: freebayes
+      nomap_split_size: 50
+      nomap_split_targets: 100
+      variant_regions: ../data/automated/variant_regions-bam.bed
+    metadata:
+      batch: TestBatch1
+    analysis: variant2
+    description: Test2
+    genome_build: hg19
+    files: ../data/100326_FC6107FAAXX/6_100326_FC6107FAAXX.bam

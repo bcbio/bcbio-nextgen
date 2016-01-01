@@ -5,6 +5,7 @@ functionality within bcbio-nextgen.
 """
 import json
 import os
+import pprint
 
 import toolz as tz
 import yaml
@@ -33,7 +34,7 @@ def process(args):
     if not work_dir:
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
-        fnargs = _world_from_cwl(fnargs[1:], work_dir)
+        fnargs, multisample = _world_from_cwl(fnargs[1:], work_dir)
         argfile = os.path.join(work_dir, "cwl-%s-world.json" % args.name)
     with utils.chdir(work_dir):
         log.setup_local_logging(parallel={"wrapper": "runfn"})
@@ -41,7 +42,10 @@ def process(args):
     if argfile:
         with open(argfile, "w") as out_handle:
             if argfile.endswith(".json"):
-                json.dump(_remove_work_dir(out[0][0], work_dir + "/"), out_handle)
+                if multisample:
+                    json.dump([_remove_work_dir(xs[0], work_dir + "/") for xs in out], out_handle)
+                else:
+                    json.dump(_remove_work_dir(out[0][0], work_dir + "/"), out_handle)
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
@@ -49,21 +53,48 @@ def _world_from_cwl(fnargs, work_dir):
     """Reconstitute a bcbio world data object from flattened CWL-compatible inputs.
 
     Converts the flat CWL representation into a nested bcbio world dictionary.
+
+    Handles single sample inputs (returning a single world object) and multi-sample
+    runs (returning a list of individual samples to get processed together).
     """
+    multisample = False
+    out = []
     data = {}
+    passed_keys = []
     for fnarg in fnargs:
         key, val = fnarg.split("=")
+        if key == "sentinel":
+            if val == "multisample":
+                multisample = True
+            else:
+                raise ValueError("Unexpected sentinel %s" % fnarg)
+        # starting a new record -- duplicated key
+        if key in passed_keys:
+            data["dirs"] = {"work": work_dir}
+            # XXX Determine cores and other resources from CWL
+            data["config"]["resources"] = {}
+            data = run_info.normalize_world(data)
+            out.append(data)
+            data = {}
+            passed_keys = []
+        passed_keys.append(key)
         key = key.split("__")
         if val.startswith(("{", "[")):
             val = json.loads(val)
         elif val.find(";;") >= 0:
             val = val.split(";;")
         data = _update_nested(key, val, data)
-    data["dirs"] = {"work": work_dir}
-    # XXX Determine cores and other resources from CWL
-    data["config"]["resources"] = {}
-    data = run_info.normalize_world(data)
-    return [data]
+    if data:
+        data["dirs"] = {"work": work_dir}
+        # XXX Determine cores and other resources from CWL
+        data["config"]["resources"] = {}
+        data = run_info.normalize_world(data)
+        out.append(data)
+    if multisample:
+        out = [out]
+    else:
+        assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
+    return out, multisample
 
 def _update_nested(key, val, data):
     """Update the data object, avoiding over-writing with nested dictionaries.
@@ -72,6 +103,8 @@ def _update_nested(key, val, data):
         for sub_key, sub_val in val.items():
             data = _update_nested(key + [sub_key], sub_val, data)
     else:
+        if tz.get_in(key, data) is not None:
+            raise ValueError("Duplicated key %s" % key)
         data = tz.update_in(data, key, lambda x: val)
     return data
 
