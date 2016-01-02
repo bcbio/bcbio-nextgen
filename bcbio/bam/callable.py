@@ -398,13 +398,7 @@ def combine_sample_regions(*samples):
     Intersects all non-callable (nblock) regions from all samples in a batch,
     producing a global set of callable regions.
     """
-    # Handle all the nasty ways we can pass multiple samples for back-compatiblility
-    # Unpack nested lists of samples grouped together (old style)
-    if isinstance(samples[0], (list, tuple)) and len(samples[0]) == 1:
-        samples = [x[0] for x in samples]
-    # Unpack a single argument with multiple samples (CWL style)
-    elif isinstance(samples, (list, tuple)) and len(samples) == 1 and isinstance(samples[0], (list, tuple)):
-        samples = samples[0]
+    samples = utils.unpack_worlds(samples)
     # back compatibility -- global file for entire sample set
     global_analysis_file = os.path.join(samples[0]["dirs"]["work"], "analysis_blocks.bed")
     if utils.file_exists(global_analysis_file) and not _needs_region_update(global_analysis_file, samples):

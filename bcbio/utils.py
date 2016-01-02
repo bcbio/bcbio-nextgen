@@ -142,6 +142,21 @@ def memoize_outfile(ext=None, stem=None):
     if stem:
         return filter_to(stem)
 
+def unpack_worlds(items):
+    """Handle all the ways we can pass multiple samples for back-compatibility.
+    """
+    # Unpack nested lists of samples grouped together (old IPython style)
+    if isinstance(items[0], (list, tuple)) and len(items[0]) == 1:
+        out = []
+        for d in items:
+            assert len(d) == 1 and isinstance(d[0], dict), len(d)
+            out.append(d[0])
+    # Unpack a single argument with multiple samples (CWL style)
+    elif isinstance(items, (list, tuple)) and len(items) == 1 and isinstance(items[0], (list, tuple)):
+        out = items[0]
+    else:
+        out = items
+    return out
 
 def safe_makedir(dname):
     """Make a directory if it doesn't exist, handling concurrent race conditions.

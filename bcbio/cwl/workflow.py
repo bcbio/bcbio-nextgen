@@ -73,6 +73,11 @@ def variant(variables):
                 ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
                [_cwl_file_world(["coverage", "all"], allow_missing=True),
                 _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
+             s("qc_report_summary", False,
+               [["work_bam"],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
+                ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
+               [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
     for step in steps:
         inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs

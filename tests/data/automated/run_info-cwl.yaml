@@ -1,6 +1,7 @@
 # Variant calling workflow for testing CWL converstion.
 # Start with a basic workflow to expand with additional support
-# for things like alignment splitting and disambiguation.
+# for things like alignment splitting, disambiguation, variant
+# and SV calling.
 ---
 upload:
   dir: upload

@@ -1033,7 +1033,7 @@ def _slice_chr22(in_bam, data):
     return out_file
 
 ## report and coverage
-def report_summary(*orig_samples):
+def report_summary(*samples):
     """
     Run coverage report with bcbiocov package
     """
@@ -1041,12 +1041,8 @@ def report_summary(*orig_samples):
         import bcbreport.prepare as bcbreport
     except ImportError:
         logger.info("skipping report. No bcbreport installed.")
-        return orig_samples
-    samples = []
-    for d in orig_samples:
-        assert len(d) == 1 and isinstance(d[0], dict)
-        samples.append(d[0])
-
+        return samples
+    samples = utils.unpack_worlds(samples)
     work_dir = dd.get_work_dir(samples[0])
     parent_dir = utils.safe_makedir(os.path.join(work_dir, "report"))
     with utils.chdir(parent_dir):
@@ -1066,21 +1062,25 @@ def report_summary(*orig_samples):
         bcbreport.report(parent_dir)
         out_report = os.path.join(parent_dir, "qc-coverage-report.html")
         if not utils.file_exists(out_report):
-            cmd = """%s -e 'library(rmarkdown); render("report-ready.Rmd")'""" % (utils.Rscript_cmd())
+            rmd_file = os.path.join(parent_dir, "report-ready.Rmd")
+            run_file = "%s-run.R" % (os.path.splitext(out_report)[0])
+            with open(run_file, "w") as out_handle:
+                out_handle.write("""library(rmarkdown)\nrender("%s")\n""" % rmd_file)
+            cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
             try:
                 do.run(cmd, "Prepare coverage summary", log_error=False)
             except subprocess.CalledProcessError, msg:
                 logger.info("Skipping generation of coverage report: %s" % (str(msg)))
             if utils.file_exists("report-ready.html"):
                 shutil.move("report-ready.html", out_report)
-        if utils.file_exists(out_report):
-            out = []
-            for d in samples:
-                if "coverage" not in d:
-                    d["coverage"] = {}
+        out = []
+        for d in samples:
+            if "coverage" not in d:
+                d["coverage"] = {}
+            if utils.file_exists(out_report):
                 d["coverage"]["report"] = out_report
-                out.append(d)
-            samples = out
+            out.append(d)
+        samples = out
 
         logger.info("summarize metrics")
         samples = _merge_metrics(samples)
