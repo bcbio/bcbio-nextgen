@@ -192,6 +192,17 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
     logger.info("Timing: finished")
     return samples
 
+def _debug_samples(i, samples):
+    print "---", i, len(samples)
+    for sample in (x[0] for x in samples):
+        print "  ", sample["description"], sample.get("region"), \
+            utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
+            utils.get_in(sample, ("config", "algorithm", "jointcaller")), \
+            utils.get_in(sample, ("metadata", "batch")), \
+            [x.get("variantcaller") for x in sample.get("variants", [])], \
+            sample.get("work_bam"), \
+            sample.get("vrn_file")
+
 def standardpipeline(config, run_info_yaml, parallel, dirs, samples):
     ## Alignment and preparation requiring the entire input file (multicore cluster)
     with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"]),

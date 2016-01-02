@@ -44,19 +44,21 @@ bcbio:
 
 - Python 2.7, Python 3.x, or Python 2.6 plus the argparse dependency.
 - Java 1.7
-- System compilers: Recent versions of gcc and g++. gcc 4.8.x
-  is well tested, although other versions should work.
+- Basic system setup for unpacking files (tar, gunzip). This should be present
+  on most non-minimal systems. On minimal Ubuntu machines, ``build-essential``
+  provides this in one package.
+- unzip
 - The git version control system (http://git-scm.com/)
 - wget for file retrieval (https://www.gnu.org/software/wget/)
-- unzip
 
-If you want to install all R packages, you'll also need:
+Optional requirements:
 
-- A fortran compiler (On Ubuntu/deb systems: ``gfortran``; On RedHat/rpm
-  systems: ``gcc-gfortran``)
+- `pandoc <http://pandoc.org/>`_ (version >= 1.12.3) for generating coverage
+  output reports.
 - An OpenGL library, like `Mesa
   <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
-  On RedHat/rpm systems: ``mesa-libGLU-devel``)
+  On RedHat/rpm systems: ``mesa-libGLU-devel``). This is only required for
+  cancer heterogeneity analysis with BubbleTree.
 
 The `bcbio-nextgen Dockerfile
 <https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_ contains

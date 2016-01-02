@@ -48,20 +48,21 @@ from bcbio.rnaseq import gtf
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
-    sum_samples = run_parallel("pipeline_summary", samples)
-    samples_coverage = report_summary(sum_samples, run_parallel)
-    qsign_info = run_parallel("qsignature_summary", [sum_samples])
-    summary_file = write_project_summary(samples_coverage, qsign_info)
-    samples = []
-    for data in sum_samples:
+    samples = run_parallel("pipeline_summary", samples)
+    samples = run_parallel("coverage_report", samples)
+    samples = run_parallel("qc_report_summary", [samples])
+    qsign_info = run_parallel("qsignature_summary", [samples])
+    summary_file = write_project_summary(samples, qsign_info)
+    out = []
+    for data in samples:
         if "summary" not in data[0]:
             data[0]["summary"] = {}
         data[0]["summary"]["project"] = summary_file
         if qsign_info:
             data[0]["summary"]["mixup_check"] = qsign_info[0]["out_dir"]
-        samples.append(data)
-    samples = _add_researcher_summary(samples, summary_file)
-    return samples
+        out.append(data)
+    out = _add_researcher_summary(out, summary_file)
+    return out
 
 def pipeline_summary(data):
     """Provide summary information on processing sample.
@@ -1032,17 +1033,25 @@ def _slice_chr22(in_bam, data):
     return out_file
 
 ## report and coverage
-def report_summary(samples, run_parallel):
+def report_summary(*orig_samples):
     """
     Run coverage report with bcbiocov package
     """
-    work_dir = dd.get_work_dir(samples[0][0])
+    try:
+        import bcbreport.prepare as bcbreport
+    except ImportError:
+        logger.info("skipping report. No bcbreport installed.")
+        return orig_samples
+    samples = []
+    for d in orig_samples:
+        assert len(d) == 1 and isinstance(d[0], dict)
+        samples.append(d[0])
 
+    work_dir = dd.get_work_dir(samples[0])
     parent_dir = utils.safe_makedir(os.path.join(work_dir, "report"))
-    qsignature_fn = os.path.join(work_dir, "qc", "qsignature", "qsignature.ma")
     with utils.chdir(parent_dir):
-
         logger.info("copy qsignature")
+        qsignature_fn = os.path.join(work_dir, "qc", "qsignature", "qsignature.ma")
         if qsignature_fn:
             if utils.file_exists(qsignature_fn) and not utils.file_exists("qsignature.ma"):
                 shutil.copy(qsignature_fn, "qsignature.ma")
@@ -1052,21 +1061,31 @@ def report_summary(samples, run_parallel):
         with utils.chdir(out_dir):
             _merge_fastqc(samples)
 
-        out_dir = utils.safe_makedir("coverage")
         out_dir = utils.safe_makedir("variants")
-        samples = run_parallel("coverage_report", samples)
 
-        try:
-            import bcbreport.prepare as bcbreport
-            bcbreport.report(parent_dir)
-        except:
-            logger.info("skipping report. No bcbreport installed.")
-            pass
+        bcbreport.report(parent_dir)
+        out_report = os.path.join(parent_dir, "qc-coverage-report.html")
+        if not utils.file_exists(out_report):
+            cmd = """%s -e 'library(rmarkdown); render("report-ready.Rmd")'""" % (utils.Rscript_cmd())
+            try:
+                do.run(cmd, "Prepare coverage summary", log_error=False)
+            except subprocess.CalledProcessError, msg:
+                logger.info("Skipping generation of coverage report: %s" % (str(msg)))
+            if utils.file_exists("report-ready.html"):
+                shutil.move("report-ready.html", out_report)
+        if utils.file_exists(out_report):
+            out = []
+            for d in samples:
+                if "coverage" not in d:
+                    d["coverage"] = {}
+                d["coverage"]["report"] = out_report
+                out.append(d)
+            samples = out
 
         logger.info("summarize metrics")
         samples = _merge_metrics(samples)
 
-    return samples
+    return [[d] for d in samples]
 
 def coverage_report(data):
     """
@@ -1110,7 +1129,6 @@ def _merge_metrics(samples):
     cov = {}
     with file_transaction(out_file) as out_tx:
         for s in samples:
-            s = s[0]
             if s['description'] in cov:
                 continue
             m = tz.get_in(['summary', 'metrics'], s)
@@ -1129,23 +1147,25 @@ def _merge_metrics(samples):
             dt_together = utils.rbind(dt_together)
             dt_together.to_csv(out_tx, index=False, sep="\t")
 
-    for i, s in enumerate(samples):
-        if s[0]['description'] in cov:
-            samples[i][0]['summary']['metrics']['avg_coverage_per_region'] = cov[s[0]['description']]
+    out = []
+    for s in samples:
+        if s['description'] in cov:
+            s['summary']['metrics']['avg_coverage_per_region'] = cov[s['description']]
+        out.append(s)
     return samples
 
-def _merge_fastqc(data):
+def _merge_fastqc(samples):
     """
     merge all fastqc samples into one by module
     """
     fastqc_list = defaultdict(list)
     seen = set()
-    for sample in data:
-        name = dd.get_sample_name(sample[0])
+    for data in samples:
+        name = dd.get_sample_name(data)
         if name in seen:
             continue
         seen.add(name)
-        fns = glob.glob(os.path.join(dd.get_work_dir(sample[0]), "qc", dd.get_sample_name(sample[0]), "fastqc") + "/*")
+        fns = glob.glob(os.path.join(dd.get_work_dir(data), "qc", dd.get_sample_name(data), "fastqc") + "/*")
         for fn in fns:
             if fn.endswith("tsv"):
                 metric = os.path.basename(fn)
@@ -1158,5 +1178,5 @@ def _merge_fastqc(data):
             dt['sample'] = fn[0]
             dt_by_sample.append(dt)
         dt = utils.rbind(dt_by_sample)
-        dt.to_csv(metric, sep="\t", index=False, mode = 'w')
-    return [data]
+        dt.to_csv(metric, sep="\t", index=False, mode ='w')
+    return samples

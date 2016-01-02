@@ -199,11 +199,16 @@ def coverage_report(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(qcsummary.coverage_report, *args))
 
-@require(qcsummary)
 def qsignature_summary(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(qcsummary.qsignature_summary, *args))
+
+@require(qcsummary)
+def qc_report_summary(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(qcsummary.report_summary, *args))
 
 @require(rnaseq)
 def generate_transcript_counts(*args):
