@@ -27,7 +27,8 @@ def variant(variables):
     steps = [s("prep_align_inputs", True,
                [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
-                _cwl_nonfile_world(["config", "algorithm", "quality_format"])]),
+                _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
+                _cwl_nonfile_world(["align_split"], allow_missing=True)]),
              s("process_alignment", True,
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
@@ -65,11 +66,12 @@ def variant(variables):
                [["align_bam"],
                 ["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
                [_cwl_file_world(["summary", "qc"])]),
-             # TODO -- optionally get  ["config", "algorithm", "priority_regions"],
              s("coverage_report", True,
                [["work_bam"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
                 ["config", "algorithm", "coverage"],
+                # TODO -- need a clean way to make files optional inputs
+                # ["config", "algorithm", "priority_regions"],
                 ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
                [_cwl_file_world(["coverage", "all"], allow_missing=True),
                 _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
@@ -178,7 +180,11 @@ def _clean_output(v):
     out = copy.deepcopy(v)
     outb = out.pop("outputBinding", {})
     if "secondaryFiles" in outb:
-        out["secondaryFiles"] = outb["secondaryFiles"]
+        # TODO Don't know how to handle this correctly, we're missing indices for nested files
+        if isinstance(out["type"], dict) and out["type"].get("type") == "array":
+            out["secondaryFiles"] = outb["secondaryFiles"]
+        else:
+            out["secondaryFiles"] = outb["secondaryFiles"]
     return out
 
 def _get_string_vid(vid):
@@ -271,7 +277,7 @@ def _split_variables(variables):
         cur_type = v["type"]
         while isinstance(cur_type, dict):
             cur_type = cur_type["items"]
-        if cur_type == "File" or isinstance(cur_type, (list, tuple)) and "File" in cur_type:
+        if cur_type == "File" or isinstance(cur_type, (list, tuple)) and "File" in cur_type or cur_type == "null":
             file_vs.append(v)
         else:
             std_vs.append(v)

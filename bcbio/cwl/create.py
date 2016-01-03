@@ -34,7 +34,8 @@ def _standard_bcbio_cwl(samples, inputs):
                        "dockerImageId": "bcbio/bcbio"}],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
-                             {"class": "ScatterFeatureRequirement"}],
+                             {"class": "ScatterFeatureRequirement"},
+                             {"class": "InlineJavascriptRequirement"}],
             "inputs": inputs,
             "outputs": [],
             "steps": []}
@@ -137,7 +138,7 @@ def _get_avro_type(val):
     """Infer avro type for the current input.
     """
     if isinstance(val, dict):
-        assert val.get("class") == "File"
+        assert val.get("class") == "File" or "File" in val.get("class")
         return "File"
     elif isinstance(val, (tuple, list)):
         types = []

@@ -1,12 +1,13 @@
 FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
-# v0.9.6a -- https://github.com/chapmanb/bcbio-nextgen/commit/254bf6d
+# v0.9.6a -- https://github.com/chapmanb/bcbio-nextgen/commit/5cfbc93
 
 # Setup a base system 
 RUN apt-get update && \
     apt-get install -y build-essential unzip wget git openjdk-7-jdk openjdk-7-jre && \
-    apt-get install -y gfortran libglu1-mesa && \
+    apt-get install -y libglu1-mesa && \
+    wget -qO pandoc.deb https://github.com/jgm/pandoc/releases/download/1.15.2/pandoc-1.15.2-1-amd64.deb && dpkg --install pandoc.deb && rm -f pandoc.deb && \
     apt-get install -y curl pigz bsdmainutils && \
 
 # Fake a fuse install; openjdk pulls this in 

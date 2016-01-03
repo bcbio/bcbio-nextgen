@@ -48,7 +48,7 @@ def create_inputs(data):
         out = []
         for split in splits:
             cur_data = copy.deepcopy(data)
-            cur_data["align_split"] = list(split)
+            cur_data["align_split"] = "-".join([str(x) for x in split])
             out.append([cur_data])
         return out
 
@@ -60,7 +60,7 @@ def split_namedpipe_cl(in_file, data):
     """Create a commandline suitable for use as a named pipe with reads in a given region.
     """
     grabix = config_utils.get_program("grabix", data["config"])
-    start, end = data["align_split"]
+    start, end = [int(x) for x in data["align_split"].split("-")]
     return "<({grabix} grab {in_file} {start} {end})".format(**locals())
 
 def fastq_convert_pipe_cl(in_file, data):
@@ -91,7 +91,7 @@ def setup_combine(final_file, data):
     """
     align_dir = os.path.dirname(final_file)
     base, ext = os.path.splitext(os.path.basename(final_file))
-    start, end = data["align_split"]
+    start, end = [int(x) for x in data["align_split"].split("-")]
     out_file = os.path.join(utils.safe_makedir(os.path.join(align_dir, "split")),
                             "%s-%s_%s%s" % (base, start, end, ext))
     data["combine"] = {"work_bam": {"out": final_file, "extras": []}}

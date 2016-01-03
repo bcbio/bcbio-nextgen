@@ -8,6 +8,7 @@ upload:
 details:
   - algorithm:
       aligner: bwa
+      #align_split_size: 15000
       recalibrate: false
       realign: false
       variantcaller: freebayes

@@ -51,7 +51,7 @@ def resolve(items, run_parallel):
     to_process = collections.defaultdict(list)
     for data in [x[0] for x in items]:
         if "disambiguate" in data:
-            split_part = tuple(data["align_split"]) if data.get("combine") else None
+            split_part = tuple([int(x) for x in data["align_split"].split("-")]) if data.get("combine") else None
             to_process[(dd.get_sample_name(data), split_part)].append(data)
         else:
             out.append([data])
@@ -127,7 +127,7 @@ def run(items, config):
         base_dir = utils.safe_makedir(os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
                                                                     os.pardir, os.pardir,
                                                                     "disambiguate_%s" % aligner)))
-        out_dir = os.path.join(base_dir, "_".join([str(x) for x in data_a["align_split"]]))
+        out_dir = os.path.join(base_dir, "_".join([str(x) for x in data_a["align_split"].split("-")]))
     else:
         out_dir = os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
                                                 os.pardir, "disambiguate_%s" % aligner))

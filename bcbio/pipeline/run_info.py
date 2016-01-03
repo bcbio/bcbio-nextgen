@@ -688,7 +688,9 @@ def _add_algorithm_defaults(algorithm):
     """
     defaults = {"archive": [],
                 "tools_off": [],
-                "tools_on": []}
+                "tools_on": [],
+                "priority_regions": None,
+                "variant_regions": None}
     convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller"])
     for k, v in defaults.items():
         if k not in algorithm:
