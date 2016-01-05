@@ -8,10 +8,15 @@ manual: http://ccb.jhu.edu/software/stringtie/#contact
 
 import os
 import pandas as pd
+import subprocess
+import contextlib
+from distutils.version import LooseVersion
+
 from bcbio.provenance import do
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.rnaseq import cufflinks, annotate_gtf
 import bcbio.pipeline.datadict as dd
 
 def _stringtie_expression(bam, data, out_dir="."):
@@ -75,4 +80,34 @@ def _write_fpkms(df, out_dir, sample_name):
     return transcript_file, gene_file
 
 def _parse_ballgown(in_file):
-   return(pd.DataFrame.from_csv(in_file, header=0, sep="\t"))
+    return(pd.DataFrame.from_csv(in_file, header=0, sep="\t"))
+
+def merge(to_merge, ref_file, gtf_file, num_cores, data):
+    stringtie = config_utils.get_program("stringtie", data, default="stringtie")
+    gtf_list = " ".join(to_merge)
+    out_dir = os.path.join("assembly", "stringtie-merge")
+    merged_file = os.path.join(out_dir, "merged.gtf")
+    cmd = "{stringtie} --merge -o {tx_merged_file} -G {gtf_file} {gtf_list}"
+    if not file_exists(merged_file):
+        with file_transaction(merged_file) as tx_merged_file:
+            message = "Merging transcriptome assemblies with Stringtie."
+            do.run(cmd.format(**locals()), message)
+    return merged_file
+
+def version(data):
+    stringtie = config_utils.get_program("stringtie", data, default="stringtie")
+    cmd = "%s --version" % stringtie
+    subp = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            shell=True)
+    with contextlib.closing(subp.stdout) as stdout:
+        for line in stdout:
+            version = line.strip()
+    return LooseVersion(version)
+
+def supports_merge(data):
+    """
+    1.2.0 and up supports the --merge option, obviating the need for cufflinks
+    merge
+    """
+    return version(data) >= LooseVersion("1.2.0")

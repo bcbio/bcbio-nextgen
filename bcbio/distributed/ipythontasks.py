@@ -389,6 +389,12 @@ def cufflinks_merge(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(rnaseq.cufflinks_merge, *args))
 
+@require(rnaseq)
+def stringtie_merge(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.stringtie_merge, *args))
+
 @require(run_info)
 def organize_samples(*args):
     args = ipython.unzip_args(args)

@@ -180,6 +180,22 @@ def cufflinks_merge(*samples):
         updated_samples.append([data])
     return updated_samples
 
+def stringtie_merge(*samples):
+    to_merge = filter_missing(flatten([dd.get_assembled_gtf(data) for data in
+                                       dd.sample_data_iterator(samples)]))
+    data = samples[0][0]
+    bam_file = dd.get_work_bam(data)
+    ref_file = dd.get_sam_ref(data)
+    gtf_file = dd.get_gtf_file(data)
+    out_dir = os.path.join(dd.get_work_dir(data), "assembly")
+    num_cores = dd.get_num_cores(data)
+    merged_gtf = stringtie.merge(to_merge, ref_file, gtf_file, num_cores, data)
+    updated_samples = []
+    for data in dd.sample_data_iterator(samples):
+        data = dd.set_merged_gtf(data, merged_gtf)
+        updated_samples.append([data])
+    return updated_samples
+
 def assemble_transcripts(run_parallel, samples):
     """
     assembly strategy rationale implemented as suggested in
@@ -189,12 +205,17 @@ def assemble_transcripts(run_parallel, samples):
     merge the assemblies with Cuffmerge using a reference GTF
     """
     assembler = dd.get_in_samples(samples, dd.get_transcript_assembler)
+    data = samples[0][0]
     if assembler:
         if "cufflinks" in assembler:
             samples = run_parallel("cufflinks_assemble", samples)
         if "stringtie" in assembler:
             samples = run_parallel("run_stringtie_expression", samples)
-        samples = run_parallel("cufflinks_merge", [samples])
+        if "stringtie" in assembler and stringtie.supports_merge(data):
+            print stringtie.supports_merge(data)
+            samples = run_parallel("stringtie_merge", [samples])
+        else:
+            samples = run_parallel("cufflinks_merge", [samples])
     return samples
 
 def combine_files(samples):

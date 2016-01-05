@@ -235,6 +235,10 @@ def cufflinks_merge(*args):
     return rnaseq.cufflinks_merge(*args)
 
 @utils.map_wrap
+def stringtie_merge(*args):
+    return rnaseq.stringtie_merge(*args)
+
+@utils.map_wrap
 def organize_samples(*args):
     return run_info.organize(*args)
 
