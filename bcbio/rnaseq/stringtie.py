@@ -9,16 +9,20 @@ manual: http://ccb.jhu.edu/software/stringtie/#contact
 import os
 import pandas as pd
 from bcbio.provenance import do
-from bcbio.utils import file_exists, safe_makedir
+from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 import bcbio.pipeline.datadict as dd
 
-def _stringtie_expression(bam, gtf_file, threads=1, out_dir="."):
+def _stringtie_expression(bam, data, out_dir="."):
     """
     only estimate expression the Stringtie, do not assemble new transcripts
     """
+    gtf_file = dd.get_gtf_file(data)
+    num_cores = dd.get_num_cores(data)
     error_message = "The %s file for %s is missing. StringTie has an error."
-    base_cmd = ("stringtie -e -b {out_dir} -p {threads} -G {gtf_file} "
+    stringtie = config_utils.get_program("stringtie", data, default="stringtie")
+    base_cmd = ("{stringtie} -e -b {out_dir} -p {num_cores} -G {gtf_file} "
                 "-o {out_gtf} {bam}")
     transcript_file = os.path.join(out_dir, "t_data.ctab")
     exon_file = os.path.join(out_dir, "e_data.ctab")
@@ -37,8 +41,6 @@ def run_stringtie_expression(data):
     does not do transcriptome assembly
     """
     bam = dd.get_work_bam(data)
-    gtf_file = dd.get_gtf_file(data)
-    num_cores = dd.get_num_cores(data)
     sample_name = dd.get_sample_name(data)
     out_dir = os.path.join("stringtie", sample_name)
     isoform_fpkm = os.path.join(out_dir, sample_name + ".isoform.fpkm")
@@ -52,7 +54,7 @@ def run_stringtie_expression(data):
             dd.get_assembled_gtf(data).append(assembly)
         return data
     with file_transaction(data, out_dir) as tx_out_dir:
-        transcript_file = _stringtie_expression(bam, gtf_file, num_cores, tx_out_dir)
+        transcript_file = _stringtie_expression(bam, data, tx_out_dir)
         df = _parse_ballgown(transcript_file)
         _write_fpkms(df, tx_out_dir, sample_name)
     data = dd.set_cufflinks_dir(data, out_dir)
