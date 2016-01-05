@@ -108,13 +108,11 @@ def _freebayes_custom(in_file, ref_file, data):
     out_file = "%s-filter%s" % os.path.splitext(in_file)
     if not utils.file_exists(out_file):
         tmp_dir = utils.safe_makedir(os.path.join(os.path.dirname(in_file), "tmp"))
-        bv_jar = config_utils.get_jar("bcbio.variation",
-                                      config_utils.get_program("bcbio_variation", config, "dir"))
         resources = config_utils.get_resources("bcbio_variation", config)
         jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
         java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
-        cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-filter", "freebayes",
-                                                 in_file, ref_file]
+        cmd = ["bcbio-variation"] + jvm_opts + java_args + \
+              ["variant-filter", "freebayes", in_file, ref_file]
         do.run(cmd, "Custom FreeBayes filtering using bcbio.variation")
     return out_file
 

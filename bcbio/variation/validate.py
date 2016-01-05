@@ -284,13 +284,10 @@ def bcbio_variation_comparison(config_file, base_dir, data):
     """Run a variant comparison using the bcbio.variation toolkit, given an input configuration.
     """
     tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))
-    bv_jar = config_utils.get_jar("bcbio.variation",
-                                  config_utils.get_program("bcbio_variation",
-                                                           data["config"], "dir"))
     resources = config_utils.get_resources("bcbio_variation", data["config"])
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
-    cmd = ["java"] + jvm_opts + broad.get_default_jvm_opts(tmp_dir) + \
-          ["-jar", bv_jar, "variant-compare", config_file]
+    cmd = ["bcbio-variation"] + jvm_opts + broad.get_default_jvm_opts(tmp_dir) + \
+          ["variant-compare", config_file]
     do.run(cmd, "Comparing variant calls using bcbio.variation", data)
 
 def _create_validate_config_file(vrn_file, rm_file, rm_interval_file,

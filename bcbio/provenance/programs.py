@@ -33,10 +33,11 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
-_manifest_progs = ["BubbleTree", "cufflinks-binary", "cnvkit", "gatk-framework", "grabix", "htseq",
-                   "lumpy-sv", "manta", "metasv", "phylowgs", "platypus-variant", "rna-star",
-                   "rtg-tools","sambamba-binary", "samblaster", "scalpel", "vardict",
-                   "vardict-java", "vep", "vt", "wham"]
+_manifest_progs = ["bcbio-variation", "bioconductor-bubbletree", "cufflinks", "cnvkit", "gatk-framework",
+                   "grabix", "htseq", "lumpy-sv", "manta", "metasv", "oncofuse",
+                   "picard", "phylowgs", "platypus-variant",
+                   "rna-star", "rtg-tools", "sambamba", "samblaster", "scalpel", "snpeff", "vardict",
+                   "vardict-java", "varscan", "variant-effect-predictor", "vt", "wham"]
 
 def _broad_versioner(type):
     def get_version(config):
@@ -47,8 +48,6 @@ def _broad_versioner(type):
             return ""
         if type == "gatk":
             return runner.get_gatk_version()
-        elif type == "picard":
-            return runner.get_picard_version("ViewSam")
         elif type == "mutect":
             try:
                 runner = broad.runner_from_config(config, "mutect")
@@ -91,21 +90,9 @@ def java_versioner(pname, jar_name, **kwargs):
         return _get_cl_version(kwargs, config)
     return get_version
 
-_alt_progs = [{"name": "bcbio_variation",
-               "version_fn": jar_versioner("bcbio_variation", "bcbio.variation")},
-              {"name": "gatk", "version_fn": _broad_versioner("gatk")},
+_alt_progs = [{"name": "gatk", "version_fn": _broad_versioner("gatk")},
               {"name": "mutect",
-               "version_fn": _broad_versioner("mutect")},
-              {"name": "picard", "version_fn": _broad_versioner("picard")},
-              {"name": "snpeff",
-               "version_fn": java_versioner("snpeff", "snpEff", stdout_flag="snpEff version SnpEff")},
-              {"name": "varscan",
-               "version_fn": jar_versioner("varscan", "VarScan")},
-              {"name": "oncofuse",
-               "version_fn": jar_versioner("Oncofuse", "Oncofuse")},
-              {"name": "alientrimmer",
-               "version_fn": jar_versioner("AlienTrimmer", "AlienTrimmer")}
-]
+               "version_fn": _broad_versioner("mutect")}]
 
 def _parse_from_stdoutflag(stdout, x):
     for line in stdout:

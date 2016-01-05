@@ -126,13 +126,11 @@ def _bcbio_variation_ensemble(vrn_files, out_file, ref_file, config_file, base_d
     """
     vrn_files = [_handle_somatic_ensemble(v, data) for v in vrn_files]
     tmp_dir = utils.safe_makedir(os.path.join(base_dir, "tmp"))
-    bv_jar = config_utils.get_jar("bcbio.variation",
-                                  config_utils.get_program("bcbio_variation", data["config"], "dir"))
     resources = config_utils.get_resources("bcbio_variation", data["config"])
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"])
     java_args = ["-Djava.io.tmpdir=%s" % tmp_dir]
-    cmd = ["java"] + jvm_opts + java_args + ["-jar", bv_jar, "variant-ensemble", config_file,
-                                             ref_file, out_file] + vrn_files
+    cmd = ["bcbio-variation"] + jvm_opts + java_args + \
+          ["variant-ensemble", config_file, ref_file, out_file] + vrn_files
     with utils.chdir(base_dir):
         do.run(cmd, "Ensemble calling: %s" % os.path.basename(base_dir))
 

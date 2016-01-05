@@ -158,24 +158,26 @@ GATK and muTect
 
 Calling variants with GATK's HaplotypeCaller or UnifiedGenotyper requires manual
 installation of the latest GATK release. This is freely available for academic
-users, but requires a manual download from the `GATK download`_ site.  Appistry
-provides `a distribution of GATK for commercial users`_. If you don't want to use the restricted
-GATK version, freely available callers like FreeBayes provide a better
-alternative than using older GATK versions. See the `FreeBayes and GATK comparison`_
-for a full evaluation.
+users, but requires a `license for commerical use
+<https://www.broadinstitute.org/gatk/about/#licensing>`_. It is not freely
+redistributable so requires a manual download from the `GATK download`_ site. If
+you don't want to use the restricted GATK version, freely available callers like
+FreeBayes provide a better alternative than using older GATK versions. See the
+`FreeBayes and GATK comparison`_ for a full evaluation.
 
-To install GATK, download and unzip the latest version from the GATK or Appistry
-distributions. Then make this jar available to bcbio-nextgen with::
+To install GATK, download and unzip the latest version from the GATK
+distribution. Then make this jar available to bcbio-nextgen with::
 
     bcbio_nextgen.py upgrade --tools --toolplus gatk=/path/to/gatk/GenomeAnalysisTK.jar
 
 This will copy the jar and update your bcbio_system.yaml and manifest files to
 reflect the new version.
 
-For muTect, we provide the latest 1.1.5 jar, but commercial users need to obtain
-the Appistry muTect distribution. To make this jar available to bcbio-nextgen::
+MuTect also has similar licensing terms and requires a license for commerical
+use. After `downloading the MuTect jar
+<https://www.broadinstitute.org/gatk/download/>`_, make it available to bcbio::
 
-    bcbio_nextgen.py upgrade --tools --toolplus mutect=/path/to/appistry/muTect-1.1.5.jar
+    bcbio_nextgen.py upgrade --tools --toolplus mutect=/path/to/mutect/mutect-1.1.7.jar
 
 Note that muTect does not provide an easy way to query for the current version,
 so your input jar needs to include the version in the name.
