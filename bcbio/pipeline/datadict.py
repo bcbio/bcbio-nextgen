@@ -119,6 +119,7 @@ LOOKUPS = {
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
     "align_bam": {"keys": ["align_bam"]},
+    "align_prep_method": {"keys": ["config", "algorithm", "align_prep_method"], "default": "grabix"},
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": []},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": []},
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},

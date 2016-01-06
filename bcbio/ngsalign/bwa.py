@@ -9,7 +9,7 @@ from bcbio.pipeline import config_utils
 from bcbio import bam, utils
 from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.ngsalign import alignprep, novoalign, postalign
+from bcbio.ngsalign import alignprep, novoalign, postalign, rtg
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
 import bcbio.pipeline.datadict as dd
@@ -84,12 +84,16 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
                "{ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
 
-def _can_use_mem(fastq_file, data):
+def _can_use_mem(fastq_file, data, read_min_size=None):
     """bwa-mem handle longer (> 70bp) reads with improved piping.
     Randomly samples 5000 reads from the first two million.
     Default to no piping if more than 75% of the sampled reads are small.
+    If we've previously calculated minimum read sizes (from rtg SDF output)
+    we can skip the formal check.
     """
     min_size = 70
+    if read_min_size and read_min_size >= min_size:
+        return True
     thresh = 0.75
     head_count = 8000000
     tocheck = 5000
@@ -115,12 +119,13 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
     qual_format = data["config"]["algorithm"].get("quality_format", "").lower()
-    if data.get("align_split"):
+    min_size = None
+    if data.get("align_split") or fastq_file.endswith(".sdf"):
+        if fastq_file.endswith(".sdf"):
+            min_size = rtg.min_read_size(fastq_file)
         final_file = out_file
         out_file, data = alignprep.setup_combine(final_file, data)
-        fastq_file = alignprep.split_namedpipe_cl(fastq_file, data)
-        if pair_file:
-            pair_file = alignprep.split_namedpipe_cl(pair_file, data)
+        fastq_file, pair_file = alignprep.split_namedpipe_cls(fastq_file, pair_file, data)
     else:
         final_file = None
         if qual_format == "illumina":
@@ -131,7 +136,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         # If we cannot do piping, use older bwa aln approach
         if ("bwa-mem" not in dd.get_tools_on(data) and
-              ("bwa-mem" in dd.get_tools_off(data) or not _can_use_mem(fastq_file, data))):
+              ("bwa-mem" in dd.get_tools_off(data) or not _can_use_mem(fastq_file, data, min_size))):
             out_file = _align_backtrack(fastq_file, pair_file, ref_file, out_file,
                                         names, rg_info, data)
         else:
@@ -152,7 +157,6 @@ def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
 def _align_backtrack(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
     """Perform a BWA alignment using 'aln' backtrack algorithm.
     """
-    assert not data.get("align_split"), "Do not handle split alignments with non-piped bwa"
     bwa = config_utils.get_program("bwa", data["config"])
     config = data["config"]
     sai1_file = "%s_1.sai" % os.path.splitext(out_file)[0]

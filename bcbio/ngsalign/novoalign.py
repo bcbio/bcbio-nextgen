@@ -55,12 +55,10 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """
     pair_file = pair_file if pair_file else ""
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
-    if data.get("align_split"):
+    if data.get("align_split") or fastq_file.endswith(".sdf"):
         final_file = out_file
         out_file, data = alignprep.setup_combine(final_file, data)
-        fastq_file = alignprep.split_namedpipe_cl(fastq_file, data)
-        if pair_file:
-            pair_file = alignprep.split_namedpipe_cl(pair_file, data)
+        fastq_file, pair_file = alignprep.split_namedpipe_cls(fastq_file, pair_file, data)
     else:
         final_file = None
     samtools = config_utils.get_program("samtools", data["config"])

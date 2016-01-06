@@ -11,6 +11,8 @@
   representation and pick best metric for plotting ROC scores.
 - Remove `--sudo` flag from installer. bcbio requires install into a directory
   structure with user permissions.
+- Add ability to tweak fastq preparation for alignment splitting so we can
+  explore alternative approaches to bgzip and grabix index.
 - Re-enable `stringtie` as an expression caller.
 - Allow `stringtie` as a transcript assembler.
 - Replace the `assemble_transcriptome` option with `transcript_assembler`, which

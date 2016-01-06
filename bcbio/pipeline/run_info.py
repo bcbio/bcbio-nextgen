@@ -355,7 +355,7 @@ def _check_for_misplaced(xs, subkey, other_keys):
 
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "trim_reads", "adapters", "custom_trim", "species", "kraken",
-                      "align_split_size", "quality_bin", "transcriptome_align",
+                      "align_split_size", "align_prep_method", "quality_bin", "transcriptome_align",
                       "quality_format", "write_summary", "merge_bamprep",
                       "coverage", "coverage_interval", "ploidy", "indelcaller",
                       "variantcaller", "jointcaller", "variant_regions", "peakcaller",

@@ -21,6 +21,7 @@ details:
       #quality_bin: [prealignment, postrecal]
       #archive: cram
       align_split_size: 15000
+      #align_prep_method: grabix
       aligner: bwa
       #aligner: false
       #bam_clean: picard

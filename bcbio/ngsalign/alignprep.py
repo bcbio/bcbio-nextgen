@@ -2,6 +2,7 @@
 """
 import collections
 import copy
+import glob
 import os
 import shutil
 import subprocess
@@ -14,6 +15,7 @@ from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
+from bcbio.ngsalign import rtg
 from bcbio.pipeline import config_utils, tools
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -22,7 +24,10 @@ def create_inputs(data):
     """Index input reads and prepare groups of reads to process concurrently.
 
     Allows parallelization of alignment beyond processors available on a single
-    machine. Uses bgzip and grabix to prepare an indexed fastq file.
+    machine. Prepares a rtg SDF format file with build in indexes for retrieving
+    sections of files.
+
+    Retains back compatibility with bgzip/grabix approach.
     """
     aligner = tz.get_in(("config", "algorithm", "aligner"), data)
     # CRAM files must be converted to bgzipped fastq, unless not aligning.
@@ -30,38 +35,54 @@ def create_inputs(data):
     if not ("files" in data and data["files"] and aligner and (_is_cram_input(data["files"]) or
                                                                objectstore.is_remote(data["files"][0]))):
         # skip indexing on samples without input files or not doing alignment
-        # skip if we're not BAM and not doing alignment splitting
-        if ("files" not in data or not data["files"] or data["files"][0] is None or not aligner
-              or _no_index_needed(data)):
+        if ("files" not in data or not data["files"] or data["files"][0] is None or not aligner):
             return [[data]]
-    ready_files = _prep_grabix_indexes(data["files"], data["dirs"], data)
-    data["files"] = ready_files
-    # bgzip preparation takes care of converting illumina into sanger format
+    approach = "grabix" if _has_grabix_indices(data) else dd.get_align_prep_method(data)
+    if approach == "rtg":
+        data["files"] = [rtg.to_sdf(data["files"], data)]
+    else:
+        data["files"] = _prep_grabix_indexes(data["files"], data["dirs"], data)
+    # preparation converts illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
     if tz.get_in(["config", "algorithm", "align_split_size"], data):
-        splits = _find_read_splits(ready_files[0], data["config"]["algorithm"]["align_split_size"])
-    else:
-        splits = [None]
-    if len(splits) == 1:
-        return [[data]]
-    else:
         out = []
+        if approach == "rtg":
+            splits = rtg.calculate_splits(data["files"][0], data["config"]["algorithm"]["align_split_size"])
+        else:
+            splits = _find_read_splits(data["files"][0], data["config"]["algorithm"]["align_split_size"])
         for split in splits:
             cur_data = copy.deepcopy(data)
-            cur_data["align_split"] = "-".join([str(x) for x in split])
+            cur_data["align_split"] = split
             out.append([cur_data])
         return out
+    else:
+        return [[data]]
 
-def _no_index_needed(data):
-    return (not data["files"][0].endswith(".bam")
-            and data["config"]["algorithm"].get("align_split_size") is None)
+def _has_grabix_indices(data):
+    """Back compatibility with existing runs, look for grabix indexes.
+    """
+    work_dir = (os.path.join(data["dirs"]["work"], "align_prep"))
+    return len(glob.glob(os.path.join(work_dir, "*.gbi"))) > 0
 
-def split_namedpipe_cl(in_file, data):
+def split_namedpipe_cls(pair1_file, pair2_file, data):
     """Create a commandline suitable for use as a named pipe with reads in a given region.
     """
-    grabix = config_utils.get_program("grabix", data["config"])
-    start, end = [int(x) for x in data["align_split"].split("-")]
-    return "<({grabix} grab {in_file} {start} {end})".format(**locals())
+    if "align_split" in data:
+        start, end = [int(x) for x in data["align_split"].split("-")]
+    else:
+        start, end = None, None
+    if pair1_file.endswith(".sdf"):
+        assert not pair2_file, pair2_file
+        return rtg.to_fastq_apipe_cl(pair1_file, start, end)
+    else:
+        out = []
+        for in_file in pair1_file, pair2_file:
+            if in_file:
+                assert os.path.exists(in_file + ".gbi"), "Need grabix index for %s" % in_file
+                out.append("<(grabix grab {in_file} {start} {end})".format(**locals()))
+            else:
+                out.append(None)
+        return out
 
 def fastq_convert_pipe_cl(in_file, data):
     """Create an anonymous pipe converting Illumina 1.3-1.7 to Sanger.
@@ -89,6 +110,8 @@ def parallel_multiplier(items):
 def setup_combine(final_file, data):
     """Setup the data and outputs to allow merging data back together.
     """
+    if "align_split" not in data:
+        return final_file, data
     align_dir = os.path.dirname(final_file)
     base, ext = os.path.splitext(os.path.basename(final_file))
     start, end = [int(x) for x in data["align_split"].split("-")]
@@ -149,7 +172,7 @@ def _find_read_splits(in_file, split_size):
         new = last + split_lines - 1
         chunks.append((last, min(new, num_lines)))
         last = new + 1
-    return chunks
+    return ["%s-%s" % (s, e) for s, e in chunks]
 
 # ## bgzip and grabix
 
