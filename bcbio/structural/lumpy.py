@@ -130,13 +130,16 @@ def run(items):
         sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
                                             utils.append_stem(lumpy_vcf, "-%s" % sample),
                                             data["config"])
-        std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
-        std_gt_vcf = _run_svtyper(std_vcf, dedup_bam, sr_bam, exclude_file, data)
-        gt_vcf = vcfutils.concat_variant_files_bcftools(
-            orig_files=[std_gt_vcf, bnd_vcf],
-            out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
-            config=data["config"])
-        gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
+        if "bnd-genotype" in dd.get_tools_on(data):
+            gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, exclude_file, data)
+        else:
+            std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
+            std_gt_vcf = _run_svtyper(std_vcf, dedup_bam, sr_bam, exclude_file, data)
+            gt_vcf = vcfutils.concat_variant_files_bcftools(
+                orig_files=[std_gt_vcf, bnd_vcf],
+                out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
+                config=data["config"])
+            gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
     if paired and paired.normal_name:
         gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
     out = []

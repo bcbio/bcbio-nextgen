@@ -694,9 +694,14 @@ Post-processing
   ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
-  ``svplots`` adds additional coverage and summary plots for CNVkit and
-  detected ensemble variants. ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap uses downsampled files and numbers here are an estimation of 1e7 reads.). ``qualimap_full`` uses the full bam files but it may be slow. ``bwa-mem`` forces use of bwa mem
-  even for samples with less than 70bp reads.
+  ``svplots`` adds additional coverage and summary plots for CNVkit and detected
+  ensemble variants. ``qualimap`` runs `Qualimap
+  <http://qualimap.bioinfo.cipf.es/>`_ (qualimap uses downsampled files and
+  numbers here are an estimation of 1e7 reads.). ``qualimap_full`` uses the full
+  bam files but it may be slow. ``bwa-mem`` forces use of bwa mem even for
+  samples with less than 70bp reads. ``pbgzip`` enables use of parallel bgzip
+  during preparation of alignment inputs. ``bnd-genotype`` enables genotyping
+  of breakends in Lumpy calls, which improves accuracy but can be slow.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini
