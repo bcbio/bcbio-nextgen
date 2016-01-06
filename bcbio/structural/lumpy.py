@@ -139,7 +139,7 @@ def run(items):
                 orig_files=[std_gt_vcf, bnd_vcf],
                 out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
                 config=data["config"])
-            gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
+        gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
     if paired and paired.normal_name:
         gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
     out = []
