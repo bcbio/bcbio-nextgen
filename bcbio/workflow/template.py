@@ -128,7 +128,8 @@ def name_to_config(template):
     if objectstore.is_remote(template):
         with objectstore.open(template) as in_handle:
             config = yaml.load(in_handle)
-        txt_config = None
+        with objectstore.open(template) as in_handle:
+            txt_config = in_handle.read()
     elif os.path.isfile(template):
         with open(template) as in_handle:
             txt_config = in_handle.read()
