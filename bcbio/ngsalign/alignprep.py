@@ -188,10 +188,12 @@ def _prep_grabix_indexes(in_files, dirs, data):
     elif _is_cram_input(in_files):
         out = _bgzip_from_cram(in_files[0], dirs, data)
     else:
-        out = run_multicore(_bgzip_from_fastq,
-                            [[{"in_file": x, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}]
-                             for x in in_files if x],
-                            data["config"])
+        inputs = [{"in_file": x, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}
+                  for x in in_files if x]
+        if "pbgzip" in dd.get_tools_on(data):
+            out = [_bgzip_from_fastq(d) for d in inputs]
+        else:
+            out = run_multicore(_bgzip_from_fastq_parallel, [[d] for d in inputs], data["config"])
     items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in out if x]
     run_multicore(_grabix_index, items, data["config"])
     return out
@@ -398,6 +400,9 @@ def _is_partial_index(gbi_file):
 
 @utils.map_wrap
 @zeromq_aware_logging
+def _bgzip_from_fastq_parallel(data):
+    return [_bgzip_from_fastq(data)]
+
 def _bgzip_from_fastq(data):
     """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).
     """
@@ -418,7 +423,7 @@ def _bgzip_from_fastq(data):
     else:
         out_file = os.path.join(work_dir, "%s_%s" % (dd.get_sample_name(data), os.path.basename(in_file)))
         utils.symlink_plus(in_file, out_file)
-    return [out_file]
+    return out_file
 
 def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert):
     """Handle bgzip of input file, potentially gunzipping an existing file.
