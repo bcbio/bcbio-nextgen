@@ -27,7 +27,10 @@ def _stringtie_expression(bam, data, out_dir="."):
     num_cores = dd.get_num_cores(data)
     error_message = "The %s file for %s is missing. StringTie has an error."
     stringtie = config_utils.get_program("stringtie", data, default="stringtie")
-    base_cmd = ("{stringtie} -e -b {out_dir} -p {num_cores} -G {gtf_file} "
+    # don't assemble transcripts unless asked
+    exp_flag = ("-e" if "stringtie" not in dd.get_transcript_assembler(data)
+                else "")
+    base_cmd = ("{stringtie} {exp_flag} -b {out_dir} -p {num_cores} -G {gtf_file} "
                 "-o {out_gtf} {bam}")
     transcript_file = os.path.join(out_dir, "t_data.ctab")
     exon_file = os.path.join(out_dir, "e_data.ctab")
