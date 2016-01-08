@@ -90,7 +90,7 @@ def merge_overlaps(in_file, data, distance=None, out_dir=None):
         else:
             bedprep_dir = os.path.dirname(in_file)
         out_file = os.path.join(bedprep_dir, "%s-merged.bed" % (utils.splitext_plus(os.path.basename(in_file))[0]))
-        if not utils.file_exists(out_file):
+        if not utils.file_uptodate(out_file, in_file):
             with file_transaction(data, out_file) as tx_out_file:
                 distance = "-d %s" % distance if distance else ""
                 cmd = "{bedtools} merge {distance} -i {in_file} > {tx_out_file}"
