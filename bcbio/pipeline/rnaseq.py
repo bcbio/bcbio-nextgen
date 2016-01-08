@@ -167,10 +167,8 @@ def cufflinks_merge(*samples):
     to_merge = filter_missing(flatten([dd.get_assembled_gtf(data) for data in
                                        dd.sample_data_iterator(samples)]))
     data = samples[0][0]
-    bam_file = dd.get_work_bam(data)
     ref_file = dd.get_sam_ref(data)
     gtf_file = dd.get_gtf_file(data)
-    out_dir = os.path.join(dd.get_work_dir(data), "assembly")
     num_cores = dd.get_num_cores(data)
     merged_gtf = cufflinks.merge(to_merge, ref_file, gtf_file, num_cores,
                                  samples[0][0])
@@ -184,10 +182,8 @@ def stringtie_merge(*samples):
     to_merge = filter_missing(flatten([dd.get_assembled_gtf(data) for data in
                                        dd.sample_data_iterator(samples)]))
     data = samples[0][0]
-    bam_file = dd.get_work_bam(data)
     ref_file = dd.get_sam_ref(data)
     gtf_file = dd.get_gtf_file(data)
-    out_dir = os.path.join(dd.get_work_dir(data), "assembly")
     num_cores = dd.get_num_cores(data)
     merged_gtf = stringtie.merge(to_merge, ref_file, gtf_file, num_cores, data)
     updated_samples = []
