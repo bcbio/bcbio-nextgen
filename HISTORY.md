@@ -7,6 +7,9 @@
   calls identify somatic mutations different from a normal, while the
   germline has pre-existing mutations which might contribute to cancer
   development.
+- Avoid extacting individual sample calls from pooled variant call runs for
+  samples with more than 5 individuals in a batch. Avoids slow extraction run
+  times. Thanks to Neill Gibson.
 - During validation, report truth counts relative to initial truth set
   representation and pick best metric for plotting ROC scores.
 - Remove `--sudo` flag from installer. bcbio requires install into a directory

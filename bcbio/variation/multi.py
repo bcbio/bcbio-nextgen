@@ -255,8 +255,9 @@ def split_variants_by_sample(data):
                 sub_data.pop("vrn_file", None)
             out.append([sub_data])
         return out
-    # joint calling, do not split back up due to potentially large sample sizes
-    elif tz.get_in(("config", "algorithm", "jointcaller"), data):
+    # joint calling or larger runs, do not split back up and keep in batches
+    elif (tz.get_in(("config", "algorithm", "jointcaller"), data)
+          or len(get_orig_items(data)) > 5):
         out = []
         for sub_data in get_orig_items(data):
             cur_batch = tz.get_in(["metadata", "batch"], data)

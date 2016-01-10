@@ -134,7 +134,8 @@ def _maybe_add_rnaseq_variant_file(algorithm, sample, out):
 def _maybe_add_variant_file(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("vrn_file"):
         for x in sample["variants"]:
-            out.extend(_get_variant_file(x, ("vrn_file",)))
+            if not _sample_variant_file_in_population(x):
+                out.extend(_get_variant_file(x, ("vrn_file",)))
             if x.get("bed_file"):
                 out.append({"path": x["bed_file"],
                             "type": "bed",
@@ -201,6 +202,18 @@ def _maybe_add_sv(algorithm, sample, out):
                                     "type": vext,
                                     "ext": "sv-validate%s" % ext})
     return out
+
+def _sample_variant_file_in_population(x):
+    """Check if a sample file is the same as the population file.
+
+    This is true for batches where we don't extract into samples.
+    '"""
+    if "population" in x:
+        a = _get_variant_file(x, ("population", "vcf"))
+        b = _get_variant_file(x, ("vrn_file",))
+        if os.path.getsize(a[0]["path"]) == os.path.getsize(b[0]["path"]):
+            return True
+    return False
 
 def _get_variant_file(x, key, suffix=""):
     """Retrieve VCF file with the given key if it exists, handling bgzipped.
