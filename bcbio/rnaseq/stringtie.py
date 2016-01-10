@@ -110,7 +110,9 @@ def version(data):
 
 def supports_merge(data):
     """
-    1.2.0 and up supports the --merge option, obviating the need for cufflinks
-    merge
+    1.2.0 and up supports the --merge option and a planned utility gffcompare
+    (https://github.com/gpertea/stringtie/issues/29) will add the class codes
+    which will remove the need for cufflinks merge
     """
-    return version(data) >= LooseVersion("1.2.0")
+    gffcompare_installed = config_utils.program_installed("gffcompare", data)
+    return version(data) >= LooseVersion("1.2.0") and gffcompare_installed
