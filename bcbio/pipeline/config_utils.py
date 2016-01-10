@@ -432,3 +432,13 @@ def get_transcript_refflat(genome_dir):
 
 def get_rRNA_sequence(genome_dir):
     return os.path.join(genome_dir, "rnaseq", "rRNA.fa")
+
+def program_installed(program, data):
+    """
+    returns True if the path to a program can be found
+    """
+    try:
+        path = get_program(program, data)
+    except CmdNotFound:
+        return False
+    return True
