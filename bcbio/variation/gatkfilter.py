@@ -27,13 +27,26 @@ def run(call_file, ref_file, vrn_files, data):
     combined_file = vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
     return _filter_nonref(combined_file, data)
 
+_MISSING_HEADERS = """##FORMAT=<ID=PGT,Number=1,Type=String,Description="Physical phasing haplotype information, describing how the alternate alleles are phased in relation to one another">
+##FORMAT=<ID=PID,Number=1,Type=String,Description="Physical phasing ID information, where each unique ID within a given sample (but not across samples) connects records within a phasing group">
+"""
+
 def _filter_nonref(in_file, data):
-    """Remove NON_REF gVCF items from GATK VCF output; these occasionally sneak through in joint calling.
+    """Fixes potential issues from GATK processing and merging
+
+    - Remove NON_REF gVCF items from GATK VCF output; these occasionally sneak
+      through in joint calling.
+    - Add headers for physical phasing. These are not always present and the
+      header definitions can be lost during merging.
     """
     out_file = "%s-gatkclean%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = "gunzip -c {in_file} | grep -v NON_REF | bgzip -c > {tx_out_file}"
+            header_file = "%s-updateheaders.txt" % utils.splitext_plus(tx_out_file)[0]
+            with open(header_file, "w") as out_handle:
+                out_handle.write(_MISSING_HEADERS)
+            cmd = ("bcftools annotate -h {header_file} -o - {in_file} | "
+                   "grep -v NON_REF | bgzip -c > {tx_out_file}")
             do.run(cmd.format(**locals()), "Remove stray NON_REF gVCF information from VCF output", data)
         vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
