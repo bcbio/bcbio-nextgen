@@ -35,7 +35,7 @@ def run_rnaseq_joint_genotyping(*samples):
     data = samples[0][0]
     variantcaller = dd.get_variantcaller(data)
     if not variantcaller:
-      return samples
+       return samples
     if "gatk" not in variantcaller:
         return samples
     ref_file = dd.get_ref_file(data)
@@ -208,7 +208,6 @@ def assemble_transcripts(run_parallel, samples):
         if "stringtie" in assembler:
             samples = run_parallel("run_stringtie_expression", samples)
         if "stringtie" in assembler and stringtie.supports_merge(data):
-            print stringtie.supports_merge(data)
             samples = run_parallel("stringtie_merge", [samples])
         else:
             samples = run_parallel("cufflinks_merge", [samples])
