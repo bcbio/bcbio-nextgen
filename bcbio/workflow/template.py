@@ -227,7 +227,7 @@ def _parse_metadata(in_handle):
         if not header[0].startswith("#"):
             break
     keys = [x.strip() for x in header[1:]]
-    for sinfo in (x for x in reader if not x[0].startswith("#")):
+    for sinfo in (x for x in reader if x and not x[0].startswith("#")):
         sinfo = [_strip_and_convert_lists(x) for x in sinfo]
         sample = sinfo[0]
         # sanity check to avoid duplicate rows
