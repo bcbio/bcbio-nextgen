@@ -67,7 +67,7 @@ def remove_bad(line):
     """Remove non-increasing BED lines which will cause variant callers to choke.
     """
     parts = line.strip().split("\t")
-    if int(parts[2]) > int(parts[1]):
+    if line.strip() and len(parts) > 2 and int(parts[2]) > int(parts[1]):
         return line
     else:
         return None
