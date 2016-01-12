@@ -41,7 +41,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
     Checks system open file limit and merges in batches if necessary to avoid
     file handle limits.
     """
-    if len(bam_files) == 1:
+    if len(bam_files) == 1 and bam.bam_already_sorted(bam_files[0], config, "coordinate"):
         bam.index(bam_files[0], config)
         return bam_files[0]
     else:
