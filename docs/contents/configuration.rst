@@ -690,7 +690,8 @@ Post-processing
   filtering of germline variants is performed but all high quality variants pass.
   ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this,
   we use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality
-  control FastQC usage.
+  control FastQC usage. ``pbgzip`` turns off use of parallel bgzip
+  during preparation of alignment inputs.
   ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
@@ -699,8 +700,7 @@ Post-processing
   <http://qualimap.bioinfo.cipf.es/>`_ (qualimap uses downsampled files and
   numbers here are an estimation of 1e7 reads.). ``qualimap_full`` uses the full
   bam files but it may be slow. ``bwa-mem`` forces use of bwa mem even for
-  samples with less than 70bp reads. ``pbgzip`` enables use of parallel bgzip
-  during preparation of alignment inputs. ``bnd-genotype`` enables genotyping
+  samples with less than 70bp reads.  ``bnd-genotype`` enables genotyping
   of breakends in Lumpy calls, which improves accuracy but can be slow.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit

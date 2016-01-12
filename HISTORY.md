@@ -7,6 +7,8 @@
   calls identify somatic mutations different from a normal, while the
   germline has pre-existing mutations which might contribute to cancer
   development.
+- Use parallel bgzip for preparation of input fastq files for parallelization
+  and alignment. Thanks to Guillermo Carrasco.
 - Avoid extacting individual sample calls from pooled variant call runs for
   samples with more than 5 individuals in a batch. Avoids slow extraction run
   times. Thanks to Neill Gibson.
