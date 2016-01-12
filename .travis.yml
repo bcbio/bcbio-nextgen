@@ -16,7 +16,7 @@ before_install:
 install:
   # Install bcbio-nextgen and bcbio-nextgen-vm
   - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
-  - conda install --yes -c bcbio bcbio-nextgen-vm -q
+  - conda install --yes -c bioconda -c r bcbio-nextgen-vm -q
   # Get docker container
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
   # Update to bcbio-nextgen latest code within the container
