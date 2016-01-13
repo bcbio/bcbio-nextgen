@@ -10,11 +10,14 @@ def samtools(config, items):
     """Ensure samtools has parallel processing required for piped analysis.
     """
     samtools = config_utils.get_program("samtools", config)
-    p = subprocess.Popen([samtools, "sort"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output, _ = p.communicate()
+    p = subprocess.Popen([samtools, "sort", "-h"], stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    output, stderr = p.communicate()
     p.stdout.close()
-    if output.find("-@") == -1:
-        return ("Installed version of samtools sort does not have support for multithreading (-@ option) "
+    p.stderr.close()
+    if output.find("-@") == -1 and stderr.find("-@") == -1:
+        return ("Installed version of samtools sort does not have support for "
+                "multithreading (-@ option) "
                 "required to support bwa piped alignment and BAM merging. "
                 "Please upgrade to the latest version "
                 "from http://samtools.sourceforge.net/")
