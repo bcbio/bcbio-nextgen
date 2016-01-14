@@ -56,13 +56,22 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
         inp_binding = {"prefix": "%s=" % base_id, "separate": False,
                        "itemSeparator": ";;", "position": i}
         if "secondaryFiles" in inp_tool:
-            inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
+            # if we have a nested list of files, ensure we pass the index for each
+            # Need a second input binding we ignore to get the secondaryFiles
+            # XXX Ideally could use `valueFrom: null` but that doesn't seem to work
+            if parallel and tz.get_in(["type", "type"], inp_tool) == "array":
+                nested_inp_binding = copy.deepcopy(inp_binding)
+                nested_inp_binding["prefix"] = "ignore="
+                nested_inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
+                inp_tool["type"]["inputBinding"] = nested_inp_binding
+            # otherwise, add it at the top level
+            else:
+                inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
         if parallel:
             inp_tool["inputBinding"] = inp_binding
         else:
             inp_tool["type"]["inputBinding"] = inp_binding
         out["inputs"].append(inp_tool)
-    # XXX Need to generalize outputs, just a hack for now to test align_prep
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
         outp_tool["id"] = "#%s" % workflow.get_base_id(outp["id"])

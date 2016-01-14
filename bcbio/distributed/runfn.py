@@ -63,11 +63,15 @@ def _world_from_cwl(fnargs, work_dir):
     passed_keys = []
     for fnarg in fnargs:
         key, val = fnarg.split("=")
+        # extra values pulling in nested indexes
+        if key == "ignore":
+            continue
         if key == "sentinel":
             if val == "multisample":
                 multisample = True
             else:
                 raise ValueError("Unexpected sentinel %s" % fnarg)
+            continue
         # starting a new record -- duplicated key
         if key in passed_keys:
             data["dirs"] = {"work": work_dir}
