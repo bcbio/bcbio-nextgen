@@ -269,6 +269,20 @@ by running ``bcbio_vm.py graph bcbio-nextgen.log --cluster none``.
 If you'd like to run graphing from a local non-AWS run, such as a local HPC cluster,
 run ``bcbio_vm.py graph bcbio-nextgen.log --cluster local`` instead.
 
+For convenience, there's a "serialize" flag ('-s') that saves the dataframe used
+for plotting. In order to explore the data and extract specific datapoints
+or zoom, one could just deserialize the ouput like a python pickle file:
+
+```
+    import cPickle as pickle
+    with gzip.open("./monitoring/collectl_info.pickle.gz", "rb") as decomp:
+        collectl_info = pickle.load(decomp)
+        data, hardware, steps = collectl_info[1][0], collectl_info[1][1], collectl_info[1][2]
+```
+
+And plot, slice, zoom it in an jupyter notebook using matplotlib,
+[highcharts](https://github.com/arnoutaertgeerts/python-highcharts).
+
 In addition to plots, the
 `summarize_timing.py <https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/utils/summarize_timing.py>`_
 utility script prepares a summary table of run times per step.
