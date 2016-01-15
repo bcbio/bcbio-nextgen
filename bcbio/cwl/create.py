@@ -35,6 +35,7 @@ def _standard_bcbio_cwl(samples, inputs):
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
                              {"class": "ScatterFeatureRequirement"},
+                             {"class": "SubworkflowFeatureRequirement"},
                              {"class": "InlineJavascriptRequirement"}],
             "inputs": inputs,
             "outputs": [],
@@ -46,9 +47,11 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
            "inputs": [],
            "outputs": []}
-    if not parallel:
-        inputs = [{"id": "#sentinel", "type": {"type": "array", "items": "string"},
-                   "default": ["multisample"]}] + inputs
+    pinputs = [{"id": "#sentinel-pin", "type": {"type": "array", "items": "string"},
+                "default": [parallel.input]},
+               {"id": "#sentinel-pout", "type": {"type": "array", "items": "string"},
+                "default": [parallel.output]}]
+    inputs = pinputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
@@ -59,7 +62,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # if we have a nested list of files, ensure we pass the index for each
             # Need a second input binding we ignore to get the secondaryFiles
             # XXX Ideally could use `valueFrom: null` but that doesn't seem to work
-            if parallel and tz.get_in(["type", "type"], inp_tool) == "array":
+            if parallel.input in ["sample", "batch"] and tz.get_in(["type", "type"], inp_tool) == "array":
                 nested_inp_binding = copy.deepcopy(inp_binding)
                 nested_inp_binding["prefix"] = "ignore="
                 nested_inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
@@ -67,7 +70,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # otherwise, add it at the top level
             else:
                 inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
-        if parallel:
+        if parallel.input == "sample":
             inp_tool["inputBinding"] = inp_binding
         else:
             inp_tool["type"]["inputBinding"] = inp_binding
@@ -95,7 +98,7 @@ def _step_template(name, step_dir, inputs, outputs, parallel):
            "id": "#%s" % name,
            "inputs": inputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
-    if parallel:
+    if parallel.input in ["sample", "batch"]:
         out.update({"scatterMethod": "dotproduct",
                     "scatter": [x["id"] for x in inputs]})
     return out

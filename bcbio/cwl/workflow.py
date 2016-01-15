@@ -23,13 +23,14 @@ def variant(variables):
     creation of the CWL files.
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
+    par = collections.namedtuple("par", "input output")
     s = collections.namedtuple("s", "name parallel inputs outputs")
-    steps = [s("prep_align_inputs", True,
+    steps = [s("prep_align_inputs", par("sample", "sample"),
                [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
-             s("process_alignment", True,
+             s("process_alignment", par("sample", "sample"),
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"], ".bai"),
@@ -85,8 +86,9 @@ def variant(variables):
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in step.outputs])
         std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
         file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-        if step.parallel is False:
+        if step.parallel.input == "batch":
             inputs = [_nest_variable(x) for x in inputs]
+        if step.parallel.output == "batch":
             file_output = [_nest_variable(x) for x in file_output]
             std_output = [_nest_variable(x) for x in std_output]
         yield step.name, step.parallel, inputs, file_output + std_output

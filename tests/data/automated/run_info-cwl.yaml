@@ -8,7 +8,7 @@ upload:
 details:
   - algorithm:
       aligner: bwa
-      align_split_size: 15000
+      align_split_size: 50000
       recalibrate: false
       realign: false
       variantcaller: freebayes
@@ -26,7 +26,7 @@ details:
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
   - algorithm:
       aligner: bwa
-      align_split_size: 15000
+      align_split_size: 50000
       recalibrate: false
       realign: false
       variantcaller: freebayes
