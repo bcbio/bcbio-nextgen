@@ -25,7 +25,7 @@ def _configured_ploidy_sex(items):
     ploidies = set([tz.get_in(["config", "algorithm", "ploidy"], data, 2) for data in items])
     assert len(ploidies) == 1, "Multiple ploidies set for group calling: %s" % ploidies
     ploidy = ploidies.pop()
-    sexes = set([tz.get_in(["metadata", "sex"], data, "").lower() for data in items])
+    sexes = set([str(tz.get_in(["metadata", "sex"], data, "")).lower() for data in items])
     return ploidy, sexes
 
 def get_ploidy(items, region):
@@ -40,9 +40,9 @@ def get_ploidy(items, region):
         return 1
     elif chrom == "X":
         # Do standard diploid calling if we have any females or unspecified.
-        if "female" in sexes:
+        if "female" in sexes or "f" in sexes:
             return 2
-        elif "male" in sexes:
+        elif "male" in sexes or "m" in sexes:
             return 1
         else:
             return 2
