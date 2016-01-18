@@ -397,7 +397,7 @@ class CWLTest(unittest.TestCase):
             cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-cwl.yaml",
                   "--systemconfig", get_post_process_yaml(self.data_dir, workdir)]
             subprocess.check_call(cl)
-            out_base = "run_info-cwl-workflow/run_info-cwl-main"
+            out_base = "run_info-cwl-workflow/main-run_info-cwl"
             cl = ["cwltool", "--verbose", "--preserve-environment", "PATH", "HOME", "--no-container",
                   out_base + ".cwl", out_base + "-samples.json"]
             subprocess.check_call(cl)
@@ -415,7 +415,7 @@ class CWLTest(unittest.TestCase):
             cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-cwl.yaml",
                   "--systemconfig", get_post_process_yaml(self.data_dir, workdir)]
             subprocess.check_call(cl)
-            out_base = "run_info-cwl-workflow/run_info-cwl-main"
+            out_base = "run_info-cwl-workflow/main-run_info-cwl"
             cl = ["cwltool", "--verbose", out_base + ".cwl", out_base + "-samples.json"]
             subprocess.check_call(cl)
             print

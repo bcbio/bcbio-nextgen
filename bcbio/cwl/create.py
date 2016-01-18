@@ -14,7 +14,7 @@ from bcbio.cwl import workflow
 def from_world(world, run_info_file):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
     out_dir = utils.safe_makedir("%s-workflow" % (base))
-    out_file = os.path.join(out_dir, "%s-main.cwl" % (base))
+    out_file = os.path.join(out_dir, "main-%s.cwl" % (base))
     samples = [xs[0] for xs in world]  # unpack world data objects
     analyses = list(set([x["analysis"] for x in samples]))
     assert len(analyses) == 1, "Currently support writing CWL for a single analysis type"
@@ -23,10 +23,8 @@ def from_world(world, run_info_file):
     else:
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
 
-def _standard_bcbio_cwl(samples, inputs):
+def _cwl_workflow_template(inputs):
     """Retrieve CWL inputs shared amongst different workflows.
-
-    ToDo: calculate system requirements (cores/memory) from input configuration.
     """
     return {"class": "Workflow",
             "hints": [{"class": "DockerRequirement",
@@ -70,7 +68,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # otherwise, add it at the top level
             else:
                 inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
-        if parallel.input == "sample":
+        if parallel.input == "sample" or not isinstance(inp_tool["type"], dict):
             inp_tool["inputBinding"] = inp_binding
         else:
             inp_tool["type"]["inputBinding"] = inp_binding
@@ -88,17 +86,16 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
 
-def _step_template(name, step_dir, inputs, outputs, parallel):
+def _step_template(name, run_file, inputs, outputs, parallel):
     """Templating function for writing a step to avoid repeating namespaces.
     """
-    step_file = _write_tool(step_dir, name, inputs, outputs, parallel)
     inputs = [{"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
               for inp in inputs]
-    out = {"run": {"import": step_file},
+    out = {"run": {"import": run_file},
            "id": "#%s" % name,
            "inputs": inputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
-    if parallel.input in ["sample", "batch"]:
+    if parallel.input in ["batch"]:
         out.update({"scatterMethod": "dotproduct",
                     "scatter": [x["id"] for x in inputs]})
     return out
@@ -108,13 +105,28 @@ def prep_variant_cwl(samples, out_dir, out_file):
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
     sample_json, variables = _flatten_samples(samples, out_file)
-    out = _standard_bcbio_cwl(samples, variables)
-    out["steps"] = []
-    for name, parallel, inputs, outputs in workflow.variant(variables):
-        if name == "upload":
-            out["outputs"] = outputs
+    out = _cwl_workflow_template(variables)
+    parent_wfs = []
+    for cur in workflow.variant(variables):
+        if cur[0] == "step":
+            _, name, parallel, inputs, outputs = cur
+            step_file = _write_tool(step_dir, name, inputs, outputs, parallel)
+            out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
+        elif cur[0] == "upload":
+            out["outputs"] = cur[1]
+        elif cur[0] == "wf_start":
+            parent_wfs.append(out)
+            out = _cwl_workflow_template(cur[1])
+        elif cur[0] == "wf_finish":
+            _, name, parallel, inputs, outputs = cur
+            wf_out_file = "wf-%s.cwl" % name
+            with open(os.path.join(out_dir, wf_out_file), "w") as out_handle:
+                yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+            out = parent_wfs.pop(-1)
+            out["steps"].append(_step_template(name, wf_out_file, inputs, outputs, parallel))
         else:
-            out["steps"].append(_step_template(name, step_dir, inputs, outputs, parallel))
+            raise ValueError("Unexpected workflow value %s" % str(cur))
+
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file, sample_json

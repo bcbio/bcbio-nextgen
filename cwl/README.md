@@ -72,13 +72,13 @@ This will create a CWL workflow inside `test_automated_output` which you can run
 again manually with either a local bcbio installation:
 ```
 cwltool --verbose --preserve-environment PATH HOME --no-container \
-  run_info-bam-workflow/run_info-bam-main.cwl \
-  run_info-bam-workflow/run_info-bam-main-samples.json
+  run_info-bam-workflow/main-run_info-cwl.cwl \
+  run_info-bam-workflow/main-run_info-cwl-samples.json
 ```
 or with bcbio inside a Docker container:
 
 ```
-cwltool --verbose run_info-bam-workflow/run_info-bam-main.cwl run_info-bam-workflow/run_info-bam-main-samples.json
+cwltool --verbose run_info-bam-workflow/main-run_info-cwl.cwl run_info-bam-workflow/main-run_info-cwl-samples.json
 ```
 To generate CWL directly from a sample input and the test bcbio system file:
 ```
@@ -99,9 +99,11 @@ CWL model.
 
 The generated CWL workflow is in `run_info-cwl-workflow`:
 
-- `*-main.cwl` -- the top level CWL file describing the workflow steps
-- `*-main-samples.json` -- the flattened bcbio world structure represented as
+- `main-*.cwl` -- the top level CWL file describing the workflow steps
+- `main*-samples.json` -- the flattened bcbio world structure represented as
   CWL inputs
+- `wf-*.cwl` -- CWL sub-workflows, describing sample level parallel processing
+  of a section of the workflow, with potential internal parallelization.
 - `steps/*.cwl` -- CWL descriptions of sections of code run inside bcbio. Each
   of these are potential parallelization points and make up the nodes in the
   workflow.

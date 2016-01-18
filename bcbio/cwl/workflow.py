@@ -25,12 +25,13 @@ def variant(variables):
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
     par = collections.namedtuple("par", "input output")
     s = collections.namedtuple("s", "name parallel inputs outputs")
-    steps = [s("prep_align_inputs", par("sample", "sample"),
+    w = collections.namedtuple("w", "name parallel workflow internal")
+    align = [s("prep_align_inputs", par("sample", "batch"),
                [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
-             s("process_alignment", par("sample", "sample"),
+             s("process_alignment", par("batch", "sample"),
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"], ".bai"),
@@ -38,6 +39,14 @@ def variant(variables):
                 _cwl_file_world(["hla", "fastq"], allow_missing=True),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai")]),
+             s("delayed_bam_merge", par("sample", "sample"),
+               [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"]],
+               [_cwl_file_world(["work_bam"], ".bai"),
+                _cwl_file_world(["align_bam"], ".bai"),
+                _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
+                _cwl_file_world(["work_bam-plus", "sr"], ".bai")])]
+    steps = [w("alignment", par("batch", "batch"), align,
+               [["align_split"]]),
              # s("prep_samples", True,
              #   [["config", "algorithm", "variant_regions"]],
              #   [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
@@ -82,20 +91,91 @@ def variant(variables):
              #   [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
     for step in steps:
-        inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs
-        file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in step.outputs])
-        std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
-        file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-        if step.parallel.input == "batch":
-            inputs = [_nest_variable(x) for x in inputs]
-        if step.parallel.output == "batch":
-            file_output = [_nest_variable(x) for x in file_output]
-            std_output = [_nest_variable(x) for x in std_output]
-        yield step.name, step.parallel, inputs, file_output + std_output
+        if hasattr(step, "workflow"):
+            wf_inputs = []
+            wf_outputs = []
+            wf_steps = []
+            for i, wf_step in enumerate(step.workflow):
+                inputs = _get_step_inputs(wf_step, file_vs, std_vs)
+                outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
+                for o in outputs:
+                    if "secondaryFiles" in o:
+                        raise ValueError(o)
+                wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs))
+                wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel.input)
+                wf_outputs = _merge_wf_outputs(outputs, wf_outputs, step.internal, wf_step.parallel.output)
+            yield "wf_start", wf_inputs
+            for wf_step in wf_steps:
+                yield wf_step
+            yield "upload", wf_outputs
+            wf_outputs, file_vs, std_vs = _get_step_outputs(step, wf_outputs, file_vs, std_vs)
+            yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs
+        else:
+            inputs = _get_step_inputs(step, file_vs, std_vs)
+            outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
+            yield "step", step.name, step.parallel, inputs, outputs
     # Final outputs
     outputs = [["work_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
-    outputs = []
-    yield "upload", False, [], [_get_upload_output(x, file_vs) for x in outputs]
+    outputs = [["work_bam"]]
+    yield "upload", [_get_upload_output(x, file_vs) for x in outputs]
+
+def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel):
+    """Merge inputs for a sub-workflow, adding any not present inputs in out.
+
+    Skips inputs that are internally generated or generated and ignored.
+    """
+    ignore_ids = set(["#%s" % _get_string_vid(v) for v in to_ignore] +
+                     [v["id"] for v in wf_outputs])
+    cur_ids = set([v["id"] for v in out])
+    for v in new:
+        outv = copy.deepcopy(v)
+        outv["id"] = "#%s" % get_base_id(v["id"])
+        if outv["id"] not in cur_ids and outv["id"] not in ignore_ids:
+            #if parallel == "batch":
+            #    outv = _flatten_nested_input(outv)
+            out.append(outv)
+    return out
+
+def _merge_wf_outputs(new, cur, to_ignore, parallel):
+    """Merge outputs for a sub-workflow, replacing variables changed in later steps.
+
+    ignore_ids are those used internally in a sub-workflow but not exposed to subsequent steps
+    """
+    ignore_ids = set(["#%s" % _get_string_vid(v) for v in to_ignore])
+    new_ids = set([])
+    out = []
+    for v in new:
+        outv = {}
+        outv["source"] = v["id"]
+        outv["id"] = "#%s" % get_base_id(v["id"])
+        outv["type"] = v["type"]
+        if outv["id"] not in ignore_ids:
+            new_ids.add(outv["id"])
+            if parallel == "batch":
+                outv = _flatten_nested_input(outv)
+            out.append(outv)
+    for outv in cur:
+        if outv["id"] not in new_ids:
+            out.append(outv)
+    return out
+
+def _get_step_inputs(step, file_vs, std_vs):
+    """Retrieve inputs for a step from existing variables.
+    """
+    inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs
+    #if step.parallel.input == "batch":
+    #    inputs = [_nest_variable(x) for x in inputs]
+    return inputs
+
+def _get_step_outputs(step, outputs, file_vs, std_vs):
+    file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
+    file_output = [_clean_output_extras(x) for x in file_output]
+    std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
+    file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
+    if step.parallel.output == "batch":
+        file_output = [_nest_variable(x) for x in file_output]
+        std_output = [_nest_variable(x) for x in std_output]
+    return file_output + std_output, file_vs, std_vs
 
 def _cwl_nonfile_world(key, outtype="string", allow_missing=False):
     """Retrieve a non-file value from a key in the bcbio world object.
@@ -168,11 +248,18 @@ def _cwl_file_glob(key, file_pattern, extension=""):
     return out
 
 def _flatten_nested_input(v):
-    """Flatten a parallel scatterplot input -- we only get one of them to tools.
+    """Flatten a parallel scatter input -- we only get one of them to tools.
     """
     v = copy.deepcopy(v)
     assert v["type"]["type"] == "array"
     v["type"] = v["type"]["items"]
+    return v
+
+def _nest_variable(v):
+    """Nest a variable when moving from scattered back to consolidated.
+    """
+    v = copy.deepcopy(v)
+    v["type"] = {"type": "array", "items": v["type"]}
     return v
 
 def _clean_output(v):
@@ -181,11 +268,7 @@ def _clean_output(v):
     out = copy.deepcopy(v)
     outb = out.pop("outputBinding", {})
     if "secondaryFiles" in outb:
-        # TODO Don't know how to handle this correctly, we're missing indices for nested files
-        if isinstance(out["type"], dict) and out["type"].get("type") == "array":
-            out["secondaryFiles"] = outb["secondaryFiles"]
-        else:
-            out["secondaryFiles"] = outb["secondaryFiles"]
+        out["secondaryFiles"] = outb["secondaryFiles"]
     return out
 
 def _get_string_vid(vid):
@@ -195,27 +278,31 @@ def _get_string_vid(vid):
 def _get_variable(vid, variables):
     """Retrieve an input variable from our existing pool of options.
     """
-    vid = _get_string_vid(vid)
+    if isinstance(vid, basestring):
+        vid = get_base_id(vid)
+    else:
+        vid = _get_string_vid(vid)
     for v in variables:
         if vid == get_base_id(v["id"]):
             return copy.deepcopy(v)
     raise ValueError("Did not find variable %s in \n%s" % (vid, pprint.pformat(variables)))
 
-def _nest_variable(v):
-    """Nest a variable when moving from scattered back to consolidated.
+def _clean_output_extras(v):
+    """Remove extra variables we don't want in output.
+
+    secondaryFiles is nested in outputBinding
     """
-    v = copy.deepcopy(v)
-    v["type"] = {"type": "array", "items": v["type"]}
-    return v
+    out = copy.deepcopy(v)
+    for not_in_output in ["secondaryFiles"]:
+        out.pop(not_in_output, None)
+    return out
 
 def _get_upload_output(vid, variables):
     v = _nest_variable(_get_variable(vid, variables))
     v["source"] = v["id"]
     v["id"] = "#%s" % get_base_id(v["id"])
     v["linkMerge"] = "merge_flattened"
-    for not_in_output in ["secondaryFiles"]:
-        v.pop(not_in_output, None)
-    return v
+    return _clean_output_extras(v)
 
 def _create_variable(orig_v, step, variables):
     """Create a new output variable, potentially over-writing existing or creating new.
@@ -225,7 +312,8 @@ def _create_variable(orig_v, step, variables):
         v = _get_variable(orig_v["id"], variables)
     except ValueError:
         v = copy.deepcopy(orig_v)
-        v["id"] = "#" + _get_string_vid(v["id"])
+        if not isinstance(v["id"], basestring):
+            v["id"] = "#" + _get_string_vid(v["id"])
     for key, val in orig_v.items():
         if key not in ["id", "type"]:
             v[key] = val
@@ -256,7 +344,7 @@ def _merge_variables(new, cur):
 def get_base_id(vid):
     """Retrieve the base id for a variant, ignoring prefixes and steps.
     """
-    assert vid[0] == "#"
+    assert vid[0] == "#", vid
     parts = vid[1:].split(".")
     return parts[-1]
 
