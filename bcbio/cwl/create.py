@@ -60,7 +60,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # if we have a nested list of files, ensure we pass the index for each
             # Need a second input binding we ignore to get the secondaryFiles
             # XXX Ideally could use `valueFrom: null` but that doesn't seem to work
-            if parallel.input in ["sample", "batch"] and tz.get_in(["type", "type"], inp_tool) == "array":
+            if parallel.input in ["sample"] and tz.get_in(["type", "type"], inp_tool) == "array":
                 nested_inp_binding = copy.deepcopy(inp_binding)
                 nested_inp_binding["prefix"] = "ignore="
                 nested_inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
@@ -89,15 +89,21 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
 def _step_template(name, run_file, inputs, outputs, parallel):
     """Templating function for writing a step to avoid repeating namespaces.
     """
-    inputs = [{"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
-              for inp in inputs]
+    scatter_inputs = []
+    sinputs = []
+    for inp in inputs:
+        step_inp = {"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
+        sinputs.append(step_inp)
+        # scatter on inputs from previous processes that have been arrayed
+        if parallel.baseline == "multi" or len(inp["id"].split(".")) > 1:
+            scatter_inputs.append(step_inp["id"])
     out = {"run": {"import": run_file},
            "id": "#%s" % name,
-           "inputs": inputs,
+           "inputs": sinputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
     if parallel.input in ["batch"]:
         out.update({"scatterMethod": "dotproduct",
-                    "scatter": [x["id"] for x in inputs]})
+                    "scatter": scatter_inputs})
     return out
 
 def prep_variant_cwl(samples, out_dir, out_file):

@@ -23,15 +23,15 @@ def variant(variables):
     creation of the CWL files.
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
-    par = collections.namedtuple("par", "input output")
+    par = collections.namedtuple("par", "input output baseline")
     s = collections.namedtuple("s", "name parallel inputs outputs")
     w = collections.namedtuple("w", "name parallel workflow internal")
-    align = [s("prep_align_inputs", par("sample", "batch"),
+    align = [s("prep_align_inputs", par("sample", "batch", "single"),
                [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
-             s("process_alignment", par("batch", "sample"),
+             s("process_alignment", par("batch", "batch", "single"),
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"], ".bai"),
@@ -39,13 +39,13 @@ def variant(variables):
                 _cwl_file_world(["hla", "fastq"], allow_missing=True),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai")]),
-             s("delayed_bam_merge", par("sample", "sample"),
+             s("delayed_bam_merge", par("sample", "sample", "single"),
                [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"]],
                [_cwl_file_world(["work_bam"], ".bai"),
                 _cwl_file_world(["align_bam"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai")])]
-    steps = [w("alignment", par("batch", "batch"), align,
+    steps = [w("alignment", par("batch", "batch", "multi"), align,
                [["align_split"]]),
              # s("prep_samples", True,
              #   [["config", "algorithm", "variant_regions"]],
@@ -290,11 +290,12 @@ def _get_variable(vid, variables):
 def _clean_output_extras(v):
     """Remove extra variables we don't want in output.
 
-    secondaryFiles is nested in outputBinding
+    We want secondaryFiles nested in outputBinding.
     """
     out = copy.deepcopy(v)
     for not_in_output in ["secondaryFiles"]:
-        out.pop(not_in_output, None)
+        if not_in_output in out and not_in_output in out.get("outputBinding", {}):
+            out.pop(not_in_output, None)
     return out
 
 def _get_upload_output(vid, variables):
@@ -302,6 +303,7 @@ def _get_upload_output(vid, variables):
     v["source"] = v["id"]
     v["id"] = "#%s" % get_base_id(v["id"])
     v["linkMerge"] = "merge_flattened"
+    v.pop("secondaryFiles", None)
     return _clean_output_extras(v)
 
 def _create_variable(orig_v, step, variables):
