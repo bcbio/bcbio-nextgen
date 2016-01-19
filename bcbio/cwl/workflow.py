@@ -31,7 +31,7 @@ def variant(variables):
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
-             s("process_alignment", par("batch", "batch", "single"),
+             s("process_alignment", par("batch", "sample", "single"),
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"], ".bai"),

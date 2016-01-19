@@ -95,6 +95,7 @@ def _add_hla_files(data):
 def process_alignment(data, alt_input=None):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
+    data = to_single_data(data)
     fastq1, fastq2 = dd.get_input_sequence_files(data)
     if alt_input:
         fastq1, fastq2 = alt_input
@@ -145,6 +146,17 @@ def process_alignment(data, alt_input=None):
         data = _add_hla_files(data)
     return [[data]]
 
+def to_single_data(input):
+    """Convert an input to a single bcbio data/world object.
+
+    Handles both single sample cases (CWL) and all sample cases (standard bcbio).
+    """
+    if (isinstance(input, (list, tuple)) and len(input) == 1):
+        return input[0]
+    else:
+        assert isinstance(input, dict), input
+        return input
+
 def prep_samples(*items):
     """Handle any global preparatory steps for samples with potentially shared data.
 
@@ -152,12 +164,9 @@ def prep_samples(*items):
     on shared files between multiple similar samples.
 
     Cleans input BED files to avoid issues with overlapping input segments.
-
-    Handles both single sample cases (CWL) and all sample cases (standard bcbio).
     """
     out = []
-    for data in ((x[0] if (isinstance(x, (list, tuple)) and len(x) == 1) else x)
-                 for x in items):
+    for data in (to_single_data(x) for x in items):
         data = bedutils.clean_inputs(data)
         out.append([data])
     return out

@@ -60,7 +60,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # if we have a nested list of files, ensure we pass the index for each
             # Need a second input binding we ignore to get the secondaryFiles
             # XXX Ideally could use `valueFrom: null` but that doesn't seem to work
-            if parallel.input in ["sample"] and tz.get_in(["type", "type"], inp_tool) == "array":
+            if parallel.baseline in ["single"] and tz.get_in(["type", "type"], inp_tool) == "array":
                 nested_inp_binding = copy.deepcopy(inp_binding)
                 nested_inp_binding["prefix"] = "ignore="
                 nested_inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
@@ -68,7 +68,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # otherwise, add it at the top level
             else:
                 inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
-        if parallel.input == "sample" or not isinstance(inp_tool["type"], dict):
+        if parallel.baseline == "single" or not isinstance(inp_tool["type"], dict):
             inp_tool["inputBinding"] = inp_binding
         else:
             inp_tool["type"]["inputBinding"] = inp_binding
