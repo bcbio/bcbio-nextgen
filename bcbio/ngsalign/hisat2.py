@@ -78,6 +78,6 @@ def _get_rg_flags(names):
     return flags.format(**locals())
 
 def remap_index_fn(ref_file):
-    """Map sequence references to equivalent star indexes
+    """Map sequence references to equivalent hisat2 indexes
     """
-    return os.path.join(os.path.dirname(os.path.dirname(ref_file)), "hisat2")
+    return os.path.splitext(ref_file)[0].replace("/seq/", "/hisat2/")
