@@ -330,7 +330,7 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     """
     item_md = metadata.get(item["description"],
                            metadata.get(os.path.basename(item["files"][0]),
-                                        metadata.get(os.path.splitext(os.path.basename(item["files"][0]))[0], {})))
+                                        metadata.get(utils.splitext_plus(os.path.basename(item["files"][0]))[0], {})))
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
     TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_files", "files", "analysis"])
