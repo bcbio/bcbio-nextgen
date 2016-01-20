@@ -135,19 +135,19 @@ def fix_nonref_positions(in_file, ref_file):
                     parts = line.rstrip("\r\n").split("\t")
                     pos = int(parts[1])
                     # handle chr/non-chr naming
-                    if parts[0] not in ref2bit.keys():
+                    if parts[0] not in ref2bit.keys() and parts[0].replace("chr", "") in ref2bit.keys():
                         parts[0] = parts[0].replace("chr", "")
+                    # handle X chromosome
+                    elif parts[0] not in ref2bit.keys() and parts[0] == "23":
+                        for test in ["X", "chrX"]:
+                            if test in ref2bit.keys():
+                                parts[0] == test
                     ref_base = None
                     if parts[0] not in ignore_chrs:
                         try:
                             ref_base = ref2bit[parts[0]].get(pos-1, pos).upper()
                         except Exception, msg:
-                            # off the end of the chromosome
-                            if str(msg).startswith("end before start"):
-                                print msg
-                            else:
-                                print parts
-                                raise
+                            print "Skipping line. Failed to retrieve reference base for %s\n%s" % (str(parts), msg)
                     parts = fix_vcf_line(parts, ref_base)
                     if parts is not None:
                         out_handle.write("\t".join(parts) + "\n")
