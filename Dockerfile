@@ -45,6 +45,7 @@ RUN apt-get update && \
     chmod a+x createsetuser && mv createsetuser /sbin && \
 
 # clean filesystem
+    cd /usr/local && \ 
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/tmp/* && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --yes qt && \
