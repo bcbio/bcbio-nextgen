@@ -1,7 +1,7 @@
 FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
-# v0.9.6a -- https://github.com/chapmanb/bcbio-nextgen/commit/5cfbc93
+# v0.9.6a -- https://github.com/chapmanb/bcbio-nextgen/commit/f377b65
 
 # Setup a base system 
 RUN apt-get update && \
@@ -9,6 +9,8 @@ RUN apt-get update && \
     apt-get install -y libglu1-mesa && \
     wget -qO pandoc.deb https://github.com/jgm/pandoc/releases/download/1.15.2/pandoc-1.15.2-1-amd64.deb && dpkg --install pandoc.deb && rm -f pandoc.deb && \
     apt-get install -y curl pigz bsdmainutils && \
+# Support inclusion in Arvados pipelines
+    apt-get install -y --no-install-recommends libcurl4-gnutls-dev mbuffer python2.7-dev python-virtualenv && \
 
 # Fake a fuse install; openjdk pulls this in 
 # https://github.com/dotcloud/docker/issues/514
