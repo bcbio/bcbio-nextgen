@@ -647,6 +647,8 @@ RNA sequencing
 - ``expression_caller`` A list of optional expression callers to turn on.
   Supports ['cufflinks', 'express', 'stringtie']. Sailish and count based
   expression estimation are run by default.
+-  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data.
+  Supports [gatk] or [vardict].
 
 smallRNA sequencing
 ===================
