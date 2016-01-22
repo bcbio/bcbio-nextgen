@@ -24,27 +24,30 @@ def variant(variables):
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
     par = collections.namedtuple("par", "input output baseline")
-    s = collections.namedtuple("s", "name parallel inputs outputs")
+    s = collections.namedtuple("s", "name parallel inputs noinputs outputs")
     w = collections.namedtuple("w", "name parallel workflow internal")
     align = [s("prep_align_inputs", par("sample", "batch", "single"),
-               [["files"]],
+               [["files"]], [],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
              s("process_alignment", par("batch", "sample", "single"),
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
-                ["reference", "bwa", "indexes"]],
-               [_cwl_file_world(["work_bam"], ".bai"),
-                _cwl_file_world(["align_bam"], ".bai"),
+                ["reference", "bwa", "indexes"]], [],
+               [_cwl_file_world(["work_bam"]),
+                _cwl_file_world(["align_bam"]),
                 _cwl_file_world(["hla", "fastq"], allow_missing=True),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai")]),
-             s("delayed_bam_merge", par("sample", "sample", "single"),
-               [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"]],
+             s("merge_split_alignments", par("batch", "sample", "merge"),
+               [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
+                ["hla", "fastq"]],
+               [["align_split"], ["config", "algorithm", "quality_format"]],
                [_cwl_file_world(["work_bam"], ".bai"),
                 _cwl_file_world(["align_bam"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "sr"], ".bai")])]
+                _cwl_file_world(["work_bam-plus", "sr"], ".bai"),
+                _cwl_file_world(["hla", "fastq"], allow_missing=True)])]
     steps = [w("alignment", par("batch", "batch", "multi"), align,
                [["align_split"]]),
              # s("prep_samples", True,
@@ -90,19 +93,19 @@ def variant(variables):
              #    ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
              #   [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
+    parallel_ids = []
     for step in steps:
         if hasattr(step, "workflow"):
             wf_inputs = []
             wf_outputs = []
             wf_steps = []
             for i, wf_step in enumerate(step.workflow):
-                inputs = _get_step_inputs(wf_step, file_vs, std_vs)
+                inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
-                for o in outputs:
-                    if "secondaryFiles" in o:
-                        raise ValueError(o)
+                parallel_ids = _find_split_vs(outputs, wf_step.parallel)
                 wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs))
-                wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel.input)
+                wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
+                                             nested_inputs)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, step.internal, wf_step.parallel.output)
             yield "wf_start", wf_inputs
             for wf_step in wf_steps:
@@ -111,15 +114,16 @@ def variant(variables):
             wf_outputs, file_vs, std_vs = _get_step_outputs(step, wf_outputs, file_vs, std_vs)
             yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs
         else:
-            inputs = _get_step_inputs(step, file_vs, std_vs)
+            inputs, parallel_ids, nested_inputs = _get_step_inputs(step, file_vs, std_vs, parallel_ids)
             outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
+            parallel_ids = _find_split_vs(outputs, step.parallel)
             yield "step", step.name, step.parallel, inputs, outputs
     # Final outputs
     outputs = [["work_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
     outputs = [["work_bam"]]
     yield "upload", [_get_upload_output(x, file_vs) for x in outputs]
 
-def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel):
+def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     """Merge inputs for a sub-workflow, adding any not present inputs in out.
 
     Skips inputs that are internally generated or generated and ignored.
@@ -131,8 +135,8 @@ def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel):
         outv = copy.deepcopy(v)
         outv["id"] = "#%s" % get_base_id(v["id"])
         if outv["id"] not in cur_ids and outv["id"] not in ignore_ids:
-            #if parallel == "batch":
-            #    outv = _flatten_nested_input(outv)
+            if nested_inputs and v["id"] in nested_inputs:
+                outv = _flatten_nested_input(outv)
             out.append(outv)
     return out
 
@@ -159,13 +163,32 @@ def _merge_wf_outputs(new, cur, to_ignore, parallel):
             out.append(outv)
     return out
 
-def _get_step_inputs(step, file_vs, std_vs):
-    """Retrieve inputs for a step from existing variables.
+def _find_split_vs(out_vs, parallel):
+    """Find variables created by splitting samples.
     """
-    inputs = [_get_variable(x, file_vs) for x in step.inputs] + std_vs
-    #if step.parallel.input == "batch":
-    #    inputs = [_nest_variable(x) for x in inputs]
-    return inputs
+    # split parallel job
+    if parallel == ("batch", "sample", "single"):
+        return [v["id"] for v in out_vs]
+    else:
+        return []
+
+def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
+    """Retrieve inputs for a step from existing variables.
+
+    Potentially nests inputs to deal with merging split variables. If
+    we split previously and are merging now, then we only nest those
+    combing from the split process.
+    """
+    skip_inputs = set([_get_string_vid(x) for x in step.noinputs])
+    inputs = [_get_variable(x, file_vs) for x in step.inputs] + \
+             [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
+    nested_inputs = []
+    if step.parallel.input == "batch" and step.parallel.baseline == "merge":
+        if parallel_ids:
+            inputs = [_nest_variable(x) if x["id"] in parallel_ids else x for x in inputs]
+            nested_inputs = parallel_ids[:]
+            parallel_ids = []
+    return inputs, parallel_ids, nested_inputs
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
