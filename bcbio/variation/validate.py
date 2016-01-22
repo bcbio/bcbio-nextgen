@@ -5,6 +5,7 @@ to identify discordant variants. This provides a baseline for ensuring the
 validity of pipeline updates and algorithm changes.
 """
 import collections
+import contextlib
 import csv
 import os
 import shutil
@@ -190,7 +191,11 @@ def _pick_best_quality_score(vrn_file):
     """
     to_check = 25
     scores = collections.defaultdict(int)
-    with VariantFile(vrn_file) as val_in:
+    try:
+        in_handle = VariantFile(vrn_file)
+    except ValueError:
+        raise ValueError("Failed to parse input file %s" % vrn_file)
+    with contextlib.closing(in_handle) as val_in:
         for i, rec in enumerate(val_in):
             if i > to_check:
                 break
