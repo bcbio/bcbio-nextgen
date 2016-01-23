@@ -43,13 +43,12 @@ def variant(variables):
                [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
                 ["hla", "fastq"]],
                [["align_split"], ["config", "algorithm", "quality_format"]],
-               [_cwl_file_world(["work_bam"], ".bai"),
-                _cwl_file_world(["align_bam"], ".bai"),
+               [_cwl_file_world(["align_bam"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai"),
                 _cwl_file_world(["hla", "fastq"], allow_missing=True)])]
     steps = [w("alignment", par("batch", "batch", "multi"), align,
-               [["align_split"]]),
+               [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              # s("prep_samples", True,
              #   [["config", "algorithm", "variant_regions"]],
              #   [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
@@ -106,10 +105,12 @@ def variant(variables):
                 wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs))
                 wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
                                              nested_inputs)
-                wf_outputs = _merge_wf_outputs(outputs, wf_outputs, step.internal, wf_step.parallel.output)
+                wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel.output)
             yield "wf_start", wf_inputs
             for wf_step in wf_steps:
                 yield wf_step
+            wf_outputs = [v for v in wf_outputs
+                          if v["id"] not in set(["#%s" % _get_string_vid(x) for x in step.internal])]
             yield "upload", wf_outputs
             wf_outputs, file_vs, std_vs = _get_step_outputs(step, wf_outputs, file_vs, std_vs)
             yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs
@@ -119,17 +120,24 @@ def variant(variables):
             parallel_ids = _find_split_vs(outputs, step.parallel)
             yield "step", step.name, step.parallel, inputs, outputs
     # Final outputs
-    outputs = [["work_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
-    outputs = [["work_bam"]]
+    outputs = [["align_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
+    outputs = [["align_bam"]]
     yield "upload", [_get_upload_output(x, file_vs) for x in outputs]
 
 def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     """Merge inputs for a sub-workflow, adding any not present inputs in out.
 
-    Skips inputs that are internally generated or generated and ignored.
+    Skips inputs that are internally generated or generated and ignored, keeping
+    only as inputs those that we do not generate interally.
     """
-    ignore_ids = set(["#%s" % _get_string_vid(v) for v in to_ignore] +
-                     [v["id"] for v in wf_outputs])
+    internal_generated_ids = []
+    for vignore in to_ignore:
+        vignore_id = "#%s" % _get_string_vid(vignore)
+        # ignore anything we generate internally, but not those we need to pull in
+        # from the external process'
+        if vignore_id in [v["id"] for v in wf_outputs]:
+            internal_generated_ids.append(vignore_id)
+    ignore_ids = set(internal_generated_ids + [v["id"] for v in wf_outputs])
     cur_ids = set([v["id"] for v in out])
     for v in new:
         outv = copy.deepcopy(v)
@@ -140,12 +148,11 @@ def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
             out.append(outv)
     return out
 
-def _merge_wf_outputs(new, cur, to_ignore, parallel):
+def _merge_wf_outputs(new, cur, parallel):
     """Merge outputs for a sub-workflow, replacing variables changed in later steps.
 
     ignore_ids are those used internally in a sub-workflow but not exposed to subsequent steps
     """
-    ignore_ids = set(["#%s" % _get_string_vid(v) for v in to_ignore])
     new_ids = set([])
     out = []
     for v in new:
@@ -153,11 +160,10 @@ def _merge_wf_outputs(new, cur, to_ignore, parallel):
         outv["source"] = v["id"]
         outv["id"] = "#%s" % get_base_id(v["id"])
         outv["type"] = v["type"]
-        if outv["id"] not in ignore_ids:
-            new_ids.add(outv["id"])
-            if parallel == "batch":
-                outv = _flatten_nested_input(outv)
-            out.append(outv)
+        new_ids.add(outv["id"])
+        if parallel == "batch":
+            outv = _flatten_nested_input(outv)
+        out.append(outv)
     for outv in cur:
         if outv["id"] not in new_ids:
             out.append(outv)

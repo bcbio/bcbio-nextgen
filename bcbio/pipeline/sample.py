@@ -284,14 +284,15 @@ def merge_split_alignments(data):
 def _merge_align_bams(data):
     """Merge multiple alignment BAMs, including split and discordant reads.
     """
-    for keys in (["work_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"]):
-        in_files = tz.get_in(keys, data)
+    for key in (["work_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"]):
+        in_files = tz.get_in(key, data)
         if in_files:
-            ext = "-%s" % keys[-1] if len(keys) > 1 else ""
+            ext = "-%s" % key[-1] if len(key) > 1 else ""
             out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
                                     "%s-sort%s.bam" % (dd.get_sample_name(data), ext))
-            merged_file = merge_bam_files(in_files, os.path.dirname(out_file), data["config"], out_file=out_file)
-            data = tz.update_in(data, keys, lambda x: merged_file)
+            merged_file = merge_bam_files(in_files, utils.safe_makedir(os.path.dirname(out_file)),
+                                          data["config"], out_file=out_file)
+            data = tz.update_in(data, key, lambda x: merged_file)
     if "align_bam" in data and "work_bam" in data:
         data["align_bam"] = data["work_bam"]
     return data
