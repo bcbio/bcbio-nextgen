@@ -36,7 +36,6 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
 from bcbio.install import _get_data_dir
 from bcbio.provenance import do
-import bcbio.rnaseq.qc
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import bedutils
 from bcbio.variation import coverage as cov
@@ -464,29 +463,6 @@ def _run_fastqc(bam_file, data, fastqc_out):
     stats = parser.get_fastqc_summary()
     parser.save_sections_into_file()
     return stats
-
-def _run_complexity(bam_file, data, out_dir):
-    try:
-        import pandas as pd
-        import statsmodels.formula.api as sm
-    except ImportError:
-        return {"Unique Starts Per Read": "NA"}
-
-    SAMPLE_SIZE = 1000000
-    base, _ = os.path.splitext(os.path.basename(bam_file))
-    utils.safe_makedir(out_dir)
-    out_file = os.path.join(out_dir, base + ".pdf")
-    df = bcbio.rnaseq.qc.starts_by_depth(bam_file, data["config"], SAMPLE_SIZE)
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tmp_out_file:
-            df.plot(x='reads', y='starts', title=bam_file + " complexity")
-            fig = plt.gcf()
-            fig.savefig(tmp_out_file)
-
-    print "file saved as", out_file
-    print "out_dir is", out_dir
-    return bcbio.rnaseq.qc.estimate_library_complexity(df)
-
 
 # ## Qualimap
 
