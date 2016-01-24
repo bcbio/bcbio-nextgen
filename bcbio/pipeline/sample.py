@@ -179,6 +179,7 @@ def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
+    data = to_single_data(data)
     bam_file = data.get("align_bam") or data.get("work_bam")
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         ref_file = dd.get_ref_file(data)
@@ -287,6 +288,8 @@ def _merge_align_bams(data):
     for key in (["work_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"]):
         in_files = tz.get_in(key, data)
         if in_files:
+            if not isinstance(in_files, (list, tuple)):
+                in_files = [in_files]
             ext = "-%s" % key[-1] if len(key) > 1 else ""
             out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
                                     "%s-sort%s.bam" % (dd.get_sample_name(data), ext))
@@ -304,6 +307,8 @@ def _merge_hla_fastq_inputs(data):
     hla_dirs = tz.get_in(hla_key, data)
     hla_outdir = None
     if hla_dirs:
+        if not isinstance(hla_dirs, (list, tuple)):
+            hla_dirs = [hla_dirs]
         hla_files = collections.defaultdict(list)
         for hla_dir in hla_dirs:
             if hla_dir and hla_dir != "None":

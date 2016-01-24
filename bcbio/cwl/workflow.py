@@ -47,32 +47,31 @@ def variant(variables):
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai"),
                 _cwl_file_world(["hla", "fastq"], allow_missing=True)])]
-    steps = [w("alignment", par("batch", "batch", "multi"), align,
+    steps = [w("alignment", par("batch", "sample", "multi"), align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             # s("prep_samples", True,
-             #   [["config", "algorithm", "variant_regions"]],
-             #   [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
-             #    _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
-             # s("postprocess_alignment", True,
-             #   [["align_bam"],
-             #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
-             #    ["config", "algorithm", "variant_regions_merged"]],
-             #   [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
-             #    _cwl_file_world(["regions", "callable"]),
-             #    _cwl_file_world(["regions", "sample_callable"]),
-             #    _cwl_file_world(["regions", "nblock"]),
-             #    _cwl_file_world(["regions", "highdepth"], allow_missing=True),
-             #    _cwl_file_world(["regions", "offtarget_stats"])]),
+             s("prep_samples", par("batch", "sample", "multi"),
+               [["config", "algorithm", "variant_regions"]], [],
+               [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
+                _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
+             s("postprocess_alignment", par("batch", "sample", "multi"),
+               [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
+               [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
+                _cwl_file_world(["regions", "callable"]),
+                _cwl_file_world(["regions", "sample_callable"]),
+                _cwl_file_world(["regions", "nblock"]),
+                _cwl_file_world(["regions", "highdepth"], allow_missing=True),
+                _cwl_file_world(["regions", "offtarget_stats"])]),
+             s("call_hla", par("batch", "sample", "multi"),
+               [["hla", "fastq"]], [],
+               [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
+                _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
              # s("combine_sample_regions", False,
              #   [["regions", "callable"], ["regions", "nblock"],
              #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
              #   [_cwl_file_world(["config", "algorithm", "callable_regions"]),
              #    _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
              #    _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
-             # s("call_hla", True,
-             #   [["hla", "fastq"]],
-             #   [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
-             #    _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
              # s("pipeline_summary", True,
              #   [["align_bam"],
              #    ["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
@@ -105,7 +104,7 @@ def variant(variables):
                 wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs))
                 wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
                                              nested_inputs)
-                wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel.output)
+                wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
             yield "wf_start", wf_inputs
             for wf_step in wf_steps:
                 yield wf_step
@@ -114,6 +113,8 @@ def variant(variables):
             yield "upload", wf_outputs
             wf_outputs, file_vs, std_vs = _get_step_outputs(step, wf_outputs, file_vs, std_vs)
             yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs
+            file_vs = _extract_from_subworkflow(file_vs, step)
+            std_vs = _extract_from_subworkflow(std_vs, step)
         else:
             inputs, parallel_ids, nested_inputs = _get_step_inputs(step, file_vs, std_vs, parallel_ids)
             outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
@@ -161,12 +162,29 @@ def _merge_wf_outputs(new, cur, parallel):
         outv["id"] = "#%s" % get_base_id(v["id"])
         outv["type"] = v["type"]
         new_ids.add(outv["id"])
-        if parallel == "batch":
+        if parallel.output == "batch" and parallel.baseline == "single":
             outv = _flatten_nested_input(outv)
         out.append(outv)
     for outv in cur:
         if outv["id"] not in new_ids:
             out.append(outv)
+    return out
+
+def _extract_from_subworkflow(vs, step):
+    """Remove internal variable names when moving from sub-workflow to main.
+    """
+    substep_ids = set([x.name for x in step.workflow])
+    out = []
+    for var in vs:
+        internal = False
+        parts = var["id"].split(".")
+        if len(parts) > 1:
+            ns = parts[0].replace("#", "")
+            if ns in substep_ids:
+                internal = True
+        if not internal:
+            var.pop("source", None)
+            out.append(var)
     return out
 
 def _find_split_vs(out_vs, parallel):
@@ -201,7 +219,7 @@ def _get_step_outputs(step, outputs, file_vs, std_vs):
     file_output = [_clean_output_extras(x) for x in file_output]
     std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
     file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-    if step.parallel.output == "batch":
+    if step.parallel.output == "batch" and step.parallel.baseline == "single":
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs

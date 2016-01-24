@@ -3,11 +3,13 @@
 import toolz as tz
 
 from bcbio.hla import bwakit, optitype
+from bcbio.pipeline import sample
 
 _CALLERS = {"bwakit": bwakit.run,
             "optitype": optitype.run}
 
 def call_hla(data):
+    data = sample.to_single_data(data)
     hlacaller = tz.get_in(["config", "algorithm", "hlacaller"], data)
     if hlacaller and "hla" in data and tz.get_in(["hla", "fastq"], data):
         data = _CALLERS[hlacaller](data)
