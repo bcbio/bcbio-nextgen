@@ -480,4 +480,6 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_sailfish_transcript_tpm(sample)})
     if dd.get_sailfish_gene_tpm(sample):
         out.append({"path": dd.get_sailfish_gene_tpm(sample)})
+    if dd.get_tx2gene(sample):
+        out.append({"path": dd.get_tx2gene(sample)})
     return _add_meta(out, config=upload_config)

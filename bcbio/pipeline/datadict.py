@@ -18,6 +18,7 @@ LOOKUPS = {
     "genome_build": {"keys": ["genome_build"]},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
+    "tx2gene": {"keys": ["tx2gene"]},
     "srna_gtf_file": {"keys": ['genome_resources', 'srnaseq', 'srna-transcripts'],
                       "checker": file_exists},
     "mirbase_ref": {"keys": ['genome_resources', 'srnaseq', 'mirbase'],
