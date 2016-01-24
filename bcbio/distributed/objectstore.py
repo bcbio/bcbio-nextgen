@@ -246,7 +246,7 @@ class StorageManager(object):
         pass
 
     @abc.abstractmethod
-    def connect(self, resource):
+    def connect(self, resource, context):
         """Return a connection object pointing to the endpoint
         associated to the received resource.
         """
@@ -275,7 +275,7 @@ class AmazonS3(StorageManager):
     """Amazon Simple Storage Service (Amazon S3) Manager."""
 
     _DEFAULT_REGION = "us-east-1"
-    _REMOTE_FILE = collections.namedtuple(
+    REMOTE_FILE = collections.namedtuple(
         "RemoteFile", ["store", "bucket", "key", "region"])
     _S3_FILE = "s3://%(bucket)s%(region)s/%(key)s"
 
@@ -296,7 +296,7 @@ class AmazonS3(StorageManager):
         else:
             region = None
 
-        return cls._REMOTE_FILE("s3", bucket, key, region)
+        return cls.REMOTE_FILE("s3", bucket, key, region)
 
     @classmethod
     def _cl_aws_cli(cls, file_info, region):
@@ -364,7 +364,7 @@ class AmazonS3(StorageManager):
         return False
 
     @classmethod
-    def connect(cls, resource):
+    def connect(cls, resource, context=None):
         """Connect to this Region's endpoint.
 
         Returns a connection object pointing to the endpoint associated
@@ -458,7 +458,7 @@ class AzureBlob(StorageManager):
 
     _BLOB_FILE = ("https://{storage}.blob.core.windows.net/"
                   "{container}/{blob}")
-    _REMOTE_FILE = collections.namedtuple(
+    REMOTE_FILE = collections.namedtuple(
         "RemoteFile", ["store", "storage", "container", "blob"])
     _URL_FORMAT = re.compile(r'http.*\/\/(?P<storage>[^.]+)[^/]+\/'
                              r'(?P<container>[^/]+)\/*(?P<blob>.*)')
@@ -478,18 +478,29 @@ class AzureBlob(StorageManager):
     def parse_remote(cls, filename):
         """Parses a remote filename into blob information."""
         blob_file = cls._URL_FORMAT.search(filename)
-        return cls._REMOTE_FILE("blob",
-                                storage=blob_file.group("storage"),
-                                container=blob_file.group("container"),
-                                blob=blob_file.group("blob"))
+        return cls.REMOTE_FILE("blob",
+                               storage=blob_file.group("storage"),
+                               container=blob_file.group("container"),
+                               blob=blob_file.group("blob"))
 
     @classmethod
-    def connect(cls, resource):
+    def connect(cls, resource, context=None):
         """Returns a connection object pointing to the endpoint
         associated to the received resource.
         """
-        file_info = cls.parse_remote(resource)
-        return azure_storage.BlobService(file_info.storage)
+        credentials = (context or {}).get("credentials", {})
+        if isinstance(resource, cls.REMOTE_FILE):
+            file_info = resource
+        else:
+            file_info = cls.parse_remote(resource)
+
+        if "storage_access_key" in credentials:
+            account_key = credentials["storage_access_key"]
+        else:
+            account_key = os.environ.get("STORAGE_ACCESS_KEY", None)
+
+        return azure_storage.BlobService(account_name=file_info.storage,
+                                         account_key=account_key)
 
     @classmethod
     def download(cls, filename, input_dir, dl_dir=None):
