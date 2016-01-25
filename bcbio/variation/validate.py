@@ -189,12 +189,15 @@ def _pick_best_quality_score(vrn_file):
 
     For MuTect, it's not clear how to get t_lod_fstar, the right quality score, into VCF cleanly.
     """
+    # pysam fails on checking reference contigs if input is empty
+    if not vcfutils.vcf_has_variants(vrn_file):
+        return "DP"
     to_check = 25
     scores = collections.defaultdict(int)
     try:
         in_handle = VariantFile(vrn_file)
     except ValueError:
-        raise ValueError("Failed to parse input file %s" % vrn_file)
+        raise ValueError("Failed to parse input file in preparation for validation: %s" % vrn_file)
     with contextlib.closing(in_handle) as val_in:
         for i, rec in enumerate(val_in):
             if i > to_check:
