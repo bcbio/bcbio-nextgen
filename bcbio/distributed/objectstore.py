@@ -118,6 +118,11 @@ class S3Handle(FileHandle):
         else:
             self._decompress = lambda value: value
 
+    @property
+    def size(self):
+        """Return the file size."""
+        return self._key.size
+
     def _chunk_iter(self):
         """Iterator over the S3 file."""
         for chunk in self._key:
@@ -475,7 +480,7 @@ class AmazonS3(StorageManager):
                 else:
                     raise NotImplementedError(
                         "Unexpected download program %s" % prog)
-                subprocess.check_call(command)
+                subprocess.check_call(command, stdout=sys.stdout)
         return out_file
 
     @classmethod
@@ -520,6 +525,9 @@ class AmazonS3(StorageManager):
         file_info = cls.parse_remote(filename)
         s3_bucket = cls.get_bucket(file_info.bucket)
         s3_key = s3_bucket.get_key(file_info.key)
+        if not s3_key:
+            raise ValueError("The file %r is not available." %
+                             file_info.key)
         return S3Handle(s3_key)
 
     @classmethod
