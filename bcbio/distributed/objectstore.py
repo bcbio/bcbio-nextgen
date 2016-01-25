@@ -20,6 +20,7 @@ except ImportError:
     azure, azure_storage = None, None
 import boto
 import six
+import requests
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
@@ -269,18 +270,68 @@ class StorageManager(object):
         """Provide a handle-like object for streaming."""
         pass
 
+    @abc.abstractmethod
+    def cl_input(self, filename, unpack=True, anonpipe=True):
+        """Return command line input for a file, handling streaming
+        remote cases.
+        """
+        pass
+
+    @abc.abstractmethod
+    def resource_exists(self, resource, context=None):
+        """Check if the received resource exists on storage service."""
+        pass
+
+    @abc.abstractmethod
+    def exists(self, container, filename, context=None):
+        """Check if the received file name exists in the container."""
+        pass
+
+    @abc.abstractmethod
+    def upload(self, path, filename, container, context=None):
+        """Upload the received file.
+
+        :path:      The path of the file that should be uploaded.
+        :container: The name of the container.
+        :filename:  The name of the item from the container.
+        :context:   More information required by the storage manager.
+        """
+        pass
+
 
 class AmazonS3(StorageManager):
 
     """Amazon Simple Storage Service (Amazon S3) Manager."""
 
-    _DEFAULT_REGION = "us-east-1"
     REMOTE_FILE = collections.namedtuple(
         "RemoteFile", ["store", "bucket", "key", "region"])
+
+    _DEFAULT_REGION = "us-east-1"
     _S3_FILE = "s3://%(bucket)s%(region)s/%(key)s"
+    _S3_URL = "https://s3{region}.amazonaws.com/{bucket}/{key}"
+    _UPLOAD_HEADERS = {
+        "x-amz-storage-class": "REDUCED_REDUNDANCY",
+        "x-amz-server-side-encryption": "AES256",
+    }
 
     def __init__(self):
         super(AmazonS3, self).__init__()
+
+    @classmethod
+    def get_bucket(cls, bucket_name):
+        """Retrieves a bucket by name."""
+        connection = boto.connect_s3()
+        try:
+            # If the bucket does not exist, an S3ResponseError
+            # will be raised.
+            bucket = connection.get_bucket(bucket_name)
+        except boto.exception.S3ResponseError as exc:
+            if exc.status == 404:
+                bucket = connection.create_bucket(bucket_name)
+            else:
+                raise
+
+        return bucket
 
     @classmethod
     def parse_remote(cls, filename):
@@ -320,6 +371,26 @@ class AmazonS3(StorageManager):
             command += ["--endpoint=s3-%s.amazonaws.com" % region]
         return (command, "gof3r")
 
+    @staticmethod
+    def _cl_bcbio_tool(file_info, region):
+        """Command line required for download file ussing bcbio_tools.py."""
+
+        def _check_script(script):
+            """Check if the script is available."""
+            return subprocess.call(
+                ["type", script], shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE) == 0
+
+        binaries = ("bcbio_vm.py", "bcbio_tools.py")
+        for script in binaries:
+            if _check_script(script):
+                command = [script, "download",
+                           "--key", file_info.key,
+                           "--bucket", file_info.bucket]
+                return (command, script)
+
+        raise ValueError("No commandline tool available.")
+
     @classmethod
     def _download_cl(cls, filename):
         """Provide potentially streaming download from S3 using gof3r
@@ -334,6 +405,10 @@ class AmazonS3(StorageManager):
         """
         file_info = cls.parse_remote(filename)
         region = cls.get_region(filename)
+
+        if "AWS_ACCESS_KEY_ID" not in os.environ:
+            return cls._cl_bcbio_tool(file_info, region)
+
         if region in REGIONS_NEWPERMS["s3"]:
             return cls._cl_aws_cli(file_info, region)
         else:
@@ -392,6 +467,11 @@ class AmazonS3(StorageManager):
                     command.extend(["-p", tx_out_file])
                 elif prog == "awscli":
                     command.extend([tx_out_file])
+                elif prog == "bcbio_vm.py":
+                    command[1:2] = ["tools", "download", "s3"]
+                    command.extend(["--file", tx_out_file])
+                elif prog == "bcbio_tools.py":
+                    command.extend(["--file", tx_out_file])
                 else:
                     raise NotImplementedError(
                         "Unexpected download program %s" % prog)
@@ -406,6 +486,8 @@ class AmazonS3(StorageManager):
         command, prog = cls._download_cl(filename)
         if prog == "awscli":
             command.append("-")
+        elif prog == "bcbio_vm.py":
+            command[1:2] = ["tools", "download", "s3"]
 
         command = " ".join(command)
         if filename.endswith(".gz") and unpack:
@@ -436,20 +518,59 @@ class AmazonS3(StorageManager):
     def open(cls, filename):
         """Return a handle like object for streaming from S3."""
         file_info = cls.parse_remote(filename)
-        connection = cls.connect(filename)
-        try:
-            s3_bucket = connection.get_bucket(file_info.bucket)
-        except boto.exception.S3ResponseError as error:
-            # if we don't have bucket permissions but folder permissions,
-            # try without validation
-            if error.status == 403:
-                s3_bucket = connection.get_bucket(file_info.bucket,
-                                                  validate=False)
-            else:
-                raise
-
+        s3_bucket = cls.get_bucket(file_info.bucket)
         s3_key = s3_bucket.get_key(file_info.key)
         return S3Handle(s3_key)
+
+    @classmethod
+    def resource_exists(cls, resource, context=None):
+        """Check if the received key name exists in the bucket."""
+        file_info = cls.parse_remote(resource)
+        context = (context or {})["region"] = file_info.region
+
+        return cls.exists(file_info.bucket, file_info.key, context)
+
+    @classmethod
+    def exists(cls, container, filename, context=None):
+        """Check if the received key name exists in the bucket.
+
+        :container: The name of the bucket.
+        :filename:  The name of the key.
+        :context:   More information required by the storage manager.
+        """
+        if "AWS_ACCESS_KEY_ID" not in os.environ:
+            region = (context or {}).get("region", "")
+            s3_url = cls._S3_URL.format(region=region, bucket=container,
+                                        key=filename)
+            response = requests.head(s3_url)
+            # pylint: disable=no-member
+            return response.status_code == requests.codes.ok
+
+        bucket = cls.get_bucket(container)
+        key = bucket.get_key(filename)
+        return True if key else False
+
+    @classmethod
+    def upload(cls, path, filename, container, context=None):
+        """Upload the received file.
+
+        :path:      The path of the file that should be uploaded.
+        :container: The name of the bucket.
+        :filename:  The name of the key.
+        :context:   More information required by the storage manager.
+        """
+        headers = (context or {}).get("headers", cls._UPLOAD_HEADERS)
+        arguments = (context or {}).get("arguments", [])
+
+        command = ["gof3r", "put", "-p", path,
+                   "-k", filename, "-b", container]
+        command.extend(arguments)
+
+        if headers:
+            for header, value in headers.items():
+                command.extend(("-m", "{0}:{1}".format(header, value)))
+
+        subprocess.check_call(command)
 
 
 class AzureBlob(StorageManager):
@@ -466,6 +587,20 @@ class AzureBlob(StorageManager):
 
     def __init__(self):
         super(AzureBlob, self).__init__()
+
+    @classmethod
+    def _get_credentials(cls, context=None):
+        """Get AzureBlob credentials from environment or context data."""
+        credentials = (context or {}).get("credentials", {})
+
+        if "storage_account" in credentials:
+            account_name = credentials["storage_account"]
+            account_key = credentials.get("storage_access_key", None)
+        else:
+            account_name = os.environ.get("STORAGE_ACCOUNT", None)
+            account_key = os.environ.get("STORAGE_ACCESS_KEY", None)
+
+        return (account_name, account_key)
 
     @classmethod
     def check_resource(cls, resource):
@@ -488,18 +623,17 @@ class AzureBlob(StorageManager):
         """Returns a connection object pointing to the endpoint
         associated to the received resource.
         """
-        credentials = (context or {}).get("credentials", {})
         if isinstance(resource, cls.REMOTE_FILE):
             file_info = resource
         else:
             file_info = cls.parse_remote(resource)
 
-        if "storage_access_key" in credentials:
-            account_key = credentials["storage_access_key"]
-        else:
-            account_key = os.environ.get("STORAGE_ACCESS_KEY", None)
+        account_name, account_key = cls._get_credentials(context)
+        if account_name != file_info.storage and file_info.storage:
+            account_name = file_info.storage
+            account_key = None
 
-        return azure_storage.BlobService(account_name=file_info.storage,
+        return azure_storage.BlobService(account_name=account_name,
                                          account_key=account_key)
 
     @classmethod
@@ -550,6 +684,87 @@ class AzureBlob(StorageManager):
                           container=file_info.container,
                           blob=file_info.blob,
                           chunk_size=cls._BLOB_CHUNK_DATA_SIZE)
+
+    @classmethod
+    def cl_input(cls, filename, unpack=True, anonpipe=True):
+        """Return command line input for a file, handling streaming
+        remote cases.
+        """
+        file_info = cls.parse_remote(filename)
+        command = " ".join([
+            "bcbio_tools.py", "download", "blob",
+            "--blob", file_info.blob,
+            "--container", file_info.container,
+            "--account_name", file_info.storage,
+        ])
+
+        if filename.endswith(".gz") and unpack:
+            command = "%(command)s | gunzip -c" % {"command": command}
+        if anonpipe:
+            command = "<(%(command)s)" % {"command": command}
+
+        return command
+
+    @classmethod
+    def resource_exists(cls, resource, context=None):
+        """Check if the received key name exists in the bucket."""
+        file_info = cls.parse_remote(resource)
+        return cls.exists(file_info.container, file_info.blob, context)
+
+    @classmethod
+    def exists(cls, container, filename, context=None):
+        """Check if the received key name exists in the bucket.
+
+        :container: The name of the container that contains the blob. All
+                    blobs must be in a container.
+        :filename:  The name of the blob.
+        :context:   More information required by the storage manager.
+
+        :notes:
+            The context should contain the storage account name.
+            All access to Azure Storage is done through a storage account.
+        """
+
+        account_name, _ = cls._get_credentials(context)
+        if not account_name:
+            raise ValueError("The account_name was not found in %s." %
+                             {"container": "context: {0}".format(context)})
+
+        blob_service = cls.connect(cls.REMOTE_FILE("blob", account_name,
+                                                   container, filename))
+        blob_handle = BlobHandle(blob_service=blob_service, blob=filename,
+                                 container=container, chunk_size=32)
+        try:
+            blob_handle.read(1024)
+        except azure.WindowsAzureMissingResourceError:
+            return False
+
+        return True
+
+    @classmethod
+    def upload(cls, path, filename, container, context=None):
+        """Upload the received file.
+
+        :path:       The path of the file that should be uploaded.
+        :container:  The name of the container that contains the blob. All
+                     blobs must be in a container.
+        :filename:   The name of the blob.
+        :context:    More information required by the storage manager.
+
+        :notes:
+            The context should contain the storage account name.
+            All access to Azure Storage is done through a storage account.
+        """
+        file_info = cls.REMOTE_FILE("blob", "", container, filename)
+        blob_service = cls.connect(file_info, context=context)
+        # Ensure that the container exists.
+        blob_service.create_container(container_name=container,
+                                      x_ms_blob_public_access='container',
+                                      fail_on_exist=False)
+        # Upload the received file.
+        blob_service.put_block_blob_from_path(container_name=container,
+                                              blob_name=filename,
+                                              file_path=path)
 
 
 def _get_storage_manager(resource):
@@ -644,3 +859,9 @@ def parse_remote(fname):
     """
     manager = _get_storage_manager(fname)
     return manager.parse_remote(fname)
+
+
+def resource_exists(resource, context=None):
+    """Check if the received resource exists on storage service."""
+    manager = _get_storage_manager(resource)
+    return manager.resource_exists(resource, context)

@@ -255,10 +255,9 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
                 # XXX Currently only supports genomes from S3 us-east-1 bucket.
                 # Need to assess how slow this is from multiple regions and generalize to non-AWS.
                 fname = objectstore.BIODATA_INFO["s3"].format(build=genome_build, target=target)
-                try:
-                    objectstore.connect(fname)
-                except:
+                if not objectstore.resource_exists(fname):
                     raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
+
                 with utils.chdir(out_dir):
                     cmd = objectstore.cl_input(fname, unpack=False, anonpipe=False) + " | pigz -d -c | tar -xvp"
                     do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
