@@ -179,7 +179,7 @@ def downsample(f1, f2, data, N, quick=False):
     else:
         records = sum(1 for _ in open(f1)) / 4
         N = records if N > records else N
-        rand_records = random.sample(xrange(records), N)
+        rand_records = sorted(random.sample(xrange(records), N))
 
     fh1 = open_possible_gzip(f1)
     fh2 = open_possible_gzip(f2) if f2 else None
