@@ -1,9 +1,11 @@
 """Read genome build configurations from Galaxy *.loc and bcbio-nextgen resource files.
 """
+import contextlib
 import ConfigParser
 import glob
 import os
 import sys
+import tarfile
 from xml.etree import ElementTree
 
 import toolz as tz
@@ -16,6 +18,26 @@ from bcbio.ngsalign import star
 from bcbio.pipeline import alignment
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
+
+
+def _decompress(source, destination=".", compression="gz"):
+    """Extract all files from the received archive to the current
+    working directory or directory path.
+
+    :param source:      the path of the files that will be saved together
+    :param destination: the path of the output
+    :param compression: the compression level of the file
+
+    :raises:
+        If a compression method is not supported, CompressionError is raised.
+    """
+    open_mode = "r:{0}".format(compression) if compression else ""
+
+    with contextlib.closing(tarfile.open(source, open_mode)) as archive:
+        archive.extractall(destination)
+
+    return destination
+
 
 # ## bcbio-nextgen genome resource files
 
@@ -254,13 +276,21 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
             else:
                 # XXX Currently only supports genomes from S3 us-east-1 bucket.
                 # Need to assess how slow this is from multiple regions and generalize to non-AWS.
-                fname = objectstore.BIODATA_INFO["s3"].format(build=genome_build, target=target)
+                fname = objectstore.BIODATA_INFO["s3"].format(
+                    build=genome_build, target=target)
                 if not objectstore.resource_exists(fname):
-                    raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
+                    raise ValueError("Could not find reference genome "
+                                     "file %s %s" % (genome_build, name))
 
                 with utils.chdir(out_dir):
-                    cmd = objectstore.cl_input(fname, unpack=False, anonpipe=False) + " | pigz -d -c | tar -xvp"
-                    do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
+                    logger.info("Download pre-prepared genome data: %s",
+                                genome_build)
+                    temp_file = objectstore.download(fname, input_dir=None,
+                                                     dl_dir=out_dir)
+                    logger.info("Decompress the genome data: %s" % temp_file)
+                    _decompress(temp_file)
+                    os.remove(temp_file)
+
     ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
     if data.get("genome_build"):
         gresources = get_resources(data["genome_build"], ref_file, data)
