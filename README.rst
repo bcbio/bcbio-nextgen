@@ -138,7 +138,7 @@ Contributors
 .. _Jeff Hammerbacher: https://github.com/hammer
 .. _Matt Edwards: https://github.com/matted
 .. _Saket Choudhary: https://github.com/saketkc
--- _Vlad Saveliev: https://github.com/vladsaveliev
+.. _Vlad Saveliev: https://github.com/vladsaveliev
 
 License
 -------
