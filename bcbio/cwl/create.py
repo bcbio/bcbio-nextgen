@@ -45,10 +45,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
            "inputs": [],
            "outputs": []}
-    pinputs = [{"id": "#sentinel-pin", "type": {"type": "array", "items": "string"},
-                "default": [parallel.input]},
-               {"id": "#sentinel-pout", "type": {"type": "array", "items": "string"},
-                "default": [parallel.output]}]
+    pinputs = [{"id": "#sentinel-parallel", "type": "string",
+                "default": parallel}]
     inputs = pinputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
@@ -60,7 +58,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # if we have a nested list of files, ensure we pass the index for each
             # Need a second input binding we ignore to get the secondaryFiles
             # XXX Ideally could use `valueFrom: null` but that doesn't seem to work
-            if parallel.baseline in ["single", "merge", "multi"] and tz.get_in(["type", "type"], inp_tool) == "array":
+            if tz.get_in(["type", "type"], inp_tool) == "array":
                 nested_inp_binding = copy.deepcopy(inp_binding)
                 nested_inp_binding["prefix"] = "ignore="
                 nested_inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
@@ -68,10 +66,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
             # otherwise, add it at the top level
             else:
                 inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
-        if parallel.baseline in ["single", "merge", "multi"] or not isinstance(inp_tool["type"], dict):
-            inp_tool["inputBinding"] = inp_binding
-        else:
-            inp_tool["type"]["inputBinding"] = inp_binding
+        inp_tool["inputBinding"] = inp_binding
         out["inputs"].append(inp_tool)
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
@@ -95,13 +90,13 @@ def _step_template(name, run_file, inputs, outputs, parallel):
         step_inp = {"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
-        if parallel.baseline == "multi" or len(inp["id"].split(".")) > 1:
+        if parallel == "multi-parallel" or len(inp["id"].split(".")) > 1:
             scatter_inputs.append(step_inp["id"])
     out = {"run": {"import": run_file},
            "id": "#%s" % name,
            "inputs": sinputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
-    if parallel.input in ["batch"] and parallel.baseline in ["single", "multi"]:
+    if parallel in ["single-parallel", "multi-parallel"]:
         out.update({"scatterMethod": "dotproduct",
                     "scatter": scatter_inputs})
     return out

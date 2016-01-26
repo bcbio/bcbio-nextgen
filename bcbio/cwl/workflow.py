@@ -23,15 +23,14 @@ def variant(variables):
     creation of the CWL files.
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
-    par = collections.namedtuple("par", "input output baseline")
     s = collections.namedtuple("s", "name parallel inputs noinputs outputs")
     w = collections.namedtuple("w", "name parallel workflow internal")
-    align = [s("prep_align_inputs", par("sample", "batch", "single"),
+    align = [s("prep_align_inputs", "single-split",
                [["files"]], [],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
-             s("process_alignment", par("batch", "sample", "single"),
+             s("process_alignment", "single-parallel",
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]], [],
                [_cwl_file_world(["work_bam"]),
@@ -39,7 +38,7 @@ def variant(variables):
                 _cwl_file_world(["hla", "fastq"], allow_missing=True),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai")]),
-             s("merge_split_alignments", par("batch", "sample", "merge"),
+             s("merge_split_alignments", "single-merge",
                [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
                 ["hla", "fastq"]],
                [["align_split"], ["config", "algorithm", "quality_format"]],
@@ -47,13 +46,13 @@ def variant(variables):
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai"),
                 _cwl_file_world(["hla", "fastq"], allow_missing=True)])]
-    steps = [w("alignment", par("batch", "sample", "multi"), align,
+    steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             s("prep_samples", par("batch", "sample", "multi"),
+             s("prep_samples", "multi-parallel",
                [["config", "algorithm", "variant_regions"]], [],
                [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
                 _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
-             s("postprocess_alignment", par("batch", "sample", "multi"),
+             s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
                [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
@@ -62,13 +61,13 @@ def variant(variables):
                 _cwl_file_world(["regions", "nblock"]),
                 _cwl_file_world(["regions", "highdepth"], allow_missing=True),
                 _cwl_file_world(["regions", "offtarget_stats"])]),
-             s("call_hla", par("batch", "sample", "multi"),
+             s("call_hla", "multi-parallel",
                [["hla", "fastq"]], [],
                [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
                 _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
-             # s("combine_sample_regions", False,
+             # s("combine_sample_regions", "multi-combined",
              #   [["regions", "callable"], ["regions", "nblock"],
-             #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
+             #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
              #   [_cwl_file_world(["config", "algorithm", "callable_regions"]),
              #    _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
              #    _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
@@ -162,7 +161,7 @@ def _merge_wf_outputs(new, cur, parallel):
         outv["id"] = "#%s" % get_base_id(v["id"])
         outv["type"] = v["type"]
         new_ids.add(outv["id"])
-        if parallel.output == "batch" and parallel.baseline == "single":
+        if parallel == "single-split":
             outv = _flatten_nested_input(outv)
         out.append(outv)
     for outv in cur:
@@ -191,7 +190,7 @@ def _find_split_vs(out_vs, parallel):
     """Find variables created by splitting samples.
     """
     # split parallel job
-    if parallel == ("batch", "sample", "single"):
+    if parallel == "single-parallel":
         return [v["id"] for v in out_vs]
     else:
         return []
@@ -207,7 +206,7 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
     inputs = [_get_variable(x, file_vs) for x in step.inputs] + \
              [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
-    if step.parallel.input == "batch" and step.parallel.baseline == "merge":
+    if step.parallel == "single-merge":
         if parallel_ids:
             inputs = [_nest_variable(x) if x["id"] in parallel_ids else x for x in inputs]
             nested_inputs = parallel_ids[:]
@@ -219,7 +218,7 @@ def _get_step_outputs(step, outputs, file_vs, std_vs):
     file_output = [_clean_output_extras(x) for x in file_output]
     std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
     file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-    if step.parallel.output == "batch" and step.parallel.baseline == "single":
+    if step.parallel == "single-split":
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs
