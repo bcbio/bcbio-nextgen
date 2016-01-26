@@ -105,7 +105,10 @@ def compare_to_rm(data):
                                                    data["genome_build"], base_dir, data)
                             if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "rtg")
-        if vmethod == "rtg":
+        if not vcfutils.vcf_has_variants(vrn_file):
+            # RTG can fail on totally empty files. Skip these since we have nothing.
+            pass
+        elif vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "bcbio.variation":
