@@ -211,7 +211,7 @@ def _sample_variant_file_in_population(x):
     if "population" in x:
         a = _get_variant_file(x, ("population", "vcf"))
         b = _get_variant_file(x, ("vrn_file",))
-        if os.path.getsize(a[0]["path"]) == os.path.getsize(b[0]["path"]):
+        if a and b and len(a) > 0 and len(b) > 0 and os.path.getsize(a[0]["path"]) == os.path.getsize(b[0]["path"]):
             return True
     return False
 
