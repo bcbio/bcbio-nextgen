@@ -3,7 +3,6 @@
 http://varscan.sourceforge.net/
 """
 
-from collections import namedtuple
 import contextlib
 import os
 import sys
@@ -119,7 +118,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         with file_transaction(config, indel_file, snp_file) as (tx_indel, tx_snp):
             with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
-                remove_zerocoverage = r"grep -v -P '\t0\t\t$'"
+                remove_zerocoverage = r"ifne grep -v -P '\t0\t\t$'"
                 varscan_cmd = ("varscan {jvm_opts} somatic "
                                " <({normal_mpileup_cl} | {remove_zerocoverage}) "
                                "<({tumor_mpileup_cl} | {remove_zerocoverage}) "
@@ -292,7 +291,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # VarScan fails to generate a header on files that start with
     # zerocoverage calls; strip these with grep, we're not going to
     # call on them
-    remove_zerocoverage = r"grep -v -P '\t0\t\t$'"
+    remove_zerocoverage = r"ifne grep -v -P '\t0\t\t$'"
     # we use ifne from moreutils to ensure we process only on files with input, skipping otherwise
     # http://manpages.ubuntu.com/manpages/natty/man1/ifne.1.html
     with tx_tmpdir(items[0]) as tmp_dir:
