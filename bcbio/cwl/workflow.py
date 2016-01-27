@@ -65,29 +65,29 @@ def variant(variables):
                [["hla", "fastq"]], [],
                [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
                 _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
-             # s("combine_sample_regions", "multi-combined",
-             #   [["regions", "callable"], ["regions", "nblock"],
-             #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
-             #   [_cwl_file_world(["config", "algorithm", "callable_regions"]),
-             #    _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
-             #    _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
-             # s("pipeline_summary", True,
+             s("combine_sample_regions", "multi-combined",
+               [["regions", "callable"], ["regions", "nblock"],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
+               [_cwl_file_world(["config", "algorithm", "callable_regions"]),
+                _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
+                _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
+             # s("pipeline_summary", "multi-parallel",
              #   [["align_bam"],
-             #    ["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
+             #    ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]], [],
              #   [_cwl_file_world(["summary", "qc"])]),
-             # s("coverage_report", True,
-             #   [["work_bam"],
+             # s("coverage_report", "multi-parallel",
+             #   [["align_bam"],
              #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
              #    ["config", "algorithm", "coverage"],
              #    # TODO -- need a clean way to make files optional inputs
              #    # ["config", "algorithm", "priority_regions"],
-             #    ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
+             #    ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]], [],
              #   [_cwl_file_world(["coverage", "all"], allow_missing=True),
              #    _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
-             # s("qc_report_summary", False,
-             #   [["work_bam"],
+             # s("qc_report_summary", "multi-parallel",
+             #   [["align_bam"],
              #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
-             #    ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
+             #    ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]], [],
              #   [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
     parallel_ids = []
@@ -206,11 +206,16 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
     inputs = [_get_variable(x, file_vs) for x in step.inputs] + \
              [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
-    if step.parallel == "single-merge":
+    if step.parallel in ["single-merge"]:
         if parallel_ids:
             inputs = [_nest_variable(x) if x["id"] in parallel_ids else x for x in inputs]
             nested_inputs = parallel_ids[:]
             parallel_ids = []
+    elif step.parallel in ["multi-combined"]:
+        assert len(parallel_ids) == 0
+        nested_inputs = [x["id"] for x in inputs]
+        inputs = [_nest_variable(x) for x in inputs]
+
     return inputs, parallel_ids, nested_inputs
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
@@ -218,7 +223,7 @@ def _get_step_outputs(step, outputs, file_vs, std_vs):
     file_output = [_clean_output_extras(x) for x in file_output]
     std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
     file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-    if step.parallel == "single-split":
+    if step.parallel in ["single-split", "multi-combined"]:
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs

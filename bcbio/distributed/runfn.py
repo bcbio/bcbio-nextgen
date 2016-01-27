@@ -42,7 +42,7 @@ def process(args):
     if argfile:
         with open(argfile, "w") as out_handle:
             if argfile.endswith(".json"):
-                if parallel in ["single-split"]:
+                if parallel in ["single-split", "multi-combined"]:
                     json.dump([_remove_work_dir(xs[0], work_dir + "/") for xs in out], out_handle)
                 else:
                     assert len(out) == 1, pprint.pformat(out)
@@ -92,7 +92,7 @@ def _world_from_cwl(fnargs, work_dir):
         data["config"]["resources"] = {}
         data = run_info.normalize_world(data)
         out.append(data)
-    if parallel in ["single-parallel", "single-merge", "multi-parallel"]:
+    if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))

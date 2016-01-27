@@ -28,7 +28,7 @@ def _cwl_workflow_template(inputs):
     """
     return {"class": "Workflow",
             "hints": [{"class": "DockerRequirement",
-                       "dockerImport": "bcbio/bcbio",
+                       "dockerPull": "bcbio/bcbio",
                        "dockerImageId": "bcbio/bcbio"}],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
@@ -54,19 +54,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
         inp_tool["id"] = "#%s" % base_id
         inp_binding = {"prefix": "%s=" % base_id, "separate": False,
                        "itemSeparator": ";;", "position": i}
-        if "secondaryFiles" in inp_tool:
-            # if we have a nested list of files, ensure we pass the index for each
-            # Need a second input binding we ignore to get the secondaryFiles
-            # XXX Ideally could use `valueFrom: null` but that doesn't seem to work
-            if tz.get_in(["type", "type"], inp_tool) == "array":
-                nested_inp_binding = copy.deepcopy(inp_binding)
-                nested_inp_binding["prefix"] = "ignore="
-                nested_inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
-                inp_tool["type"]["inputBinding"] = nested_inp_binding
-            # otherwise, add it at the top level
-            else:
-                inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
-        inp_tool["inputBinding"] = inp_binding
+        inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
+        inp_tool = _place_secondary_files(inp_tool, inp_binding)
         out["inputs"].append(inp_tool)
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
@@ -80,6 +69,41 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
         yaml.add_representer(str, str_presenter)
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
+
+def _place_input_binding(inp_tool, inp_binding, parallel):
+    """Check nesting of variables to determine where to place the input binding.
+
+    We want to allow having multiple files together (like fasta_indices), combined
+    with the itemSeparator, but also support having multiple samples where we pass
+    things independently.
+    """
+    if parallel == "multi-combined" and tz.get_in(["type", "type"], inp_tool) == "array":
+        inp_tool["type"]["inputBinding"] = inp_binding
+    else:
+        inp_tool["inputBinding"] = inp_binding
+    return inp_tool
+
+def _place_secondary_files(inp_tool, inp_binding):
+    """Put secondaryFiles at the level of the File item to ensure indexes get passed.
+
+    This involves using a second input binding to get the secondaryFiles, that
+    we ignore downstream. Ideally we could use `valueFrom: null` but that doesn't
+    seem to work right now.
+    """
+    secondary_files = inp_tool.pop("secondaryFiles", None)
+    if secondary_files:
+        key = []
+        while tz.get_in(key + ["type"], inp_tool) != "File" and tz.get_in(key + ["items"], inp_tool) != "File":
+            key.append("type")
+        secondary_key = key + ["inputBinding"]
+        if tz.get_in(secondary_key, inp_tool):
+            inp_tool = tz.update_in(inp_tool, secondary_key + ["secondaryFiles"], lambda x: secondary_files)
+        else:
+            nested_inp_binding = copy.deepcopy(inp_binding)
+            nested_inp_binding["prefix"] = "ignore="
+            nested_inp_binding["secondaryFiles"] = secondary_files
+            inp_tool = tz.update_in(inp_tool, secondary_key, lambda x: nested_inp_binding)
+    return inp_tool
 
 def _step_template(name, run_file, inputs, outputs, parallel):
     """Templating function for writing a step to avoid repeating namespaces.
