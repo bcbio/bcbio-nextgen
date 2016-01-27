@@ -267,7 +267,7 @@ def variants(data):
 
 def priority_coverage(data):
     AVERAGE_REGION_STRING_LENGTH = 100
-    bed_file = dd.get_priority_regions(data)
+    bed_file = dd.get_svprioritize(data)
     if not bed_file:
         return data
 
@@ -313,7 +313,7 @@ def priority_total_coverage(data):
     """
     calculate coverage at 10 depth intervals in the priority regions
     """
-    bed_file = dd.get_priority_regions(data)
+    bed_file = dd.get_svprioritize(data)
     if not bed_file:
         return data
     work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")

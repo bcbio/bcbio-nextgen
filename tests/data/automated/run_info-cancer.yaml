@@ -22,7 +22,6 @@ details:
       svcaller: [cnvkit]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
-      priority_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
     description: c-tumor
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
@@ -44,7 +43,7 @@ details:
       #tools_on: [svplots]
       tools_off: [vardict_somatic_filter]
       variant_regions: ../data/automated/variant_regions-cancer.bed
-      priority_regions: ../data/automated/variant_regions-cancer.bed
+      svprioritize: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
     description: c-tumor2
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
@@ -62,6 +61,7 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 5.0
+      #tools_on: [svplots]
       svcaller: [cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed
-      priority_regions: ../data/automated/variant_regions-cancer.bed
+      svprioritize: ../data/automated/variant_regions-cancer.bed

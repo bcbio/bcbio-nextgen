@@ -34,7 +34,7 @@ def _handle_multiple_svcallers(data, stage):
     """
     svs = _get_svcallers(data)
     # special cases -- prioritization
-    if stage == "ensemble" and tz.get_in(["config", "algorithm", "svprioritize"], data):
+    if stage == "ensemble" and dd.get_svprioritize(data):
         svs.append("prioritize")
     out = []
     for svcaller in svs:
@@ -106,10 +106,9 @@ def run(samples, run_parallel, stage):
             background.append(data)
             for x in ready_data:
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
+                batch = dd.get_batch(x) or dd.get_sample_name(x)
                 if stage == "ensemble":  # no batching for ensemble methods
-                    batch = dd.get_sample_name(x)
-                else:
-                    batch = dd.get_batch(x) or dd.get_sample_name(x)
+                    batch = "%s-%s" % (dd.get_sample_name(x), batch)
                 batches = batch if isinstance(batch, (list, tuple)) else [batch]
                 for b in batches:
                     try:

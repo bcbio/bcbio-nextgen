@@ -13,7 +13,7 @@ LOOKUPS = {
     "tmp_dir": {"keys": ['config', 'resources', 'tmp', 'dir']},
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
                   "default": 1},
-    "priority_regions": {"keys": ['config', 'algorithm', 'priority_regions']},
+    "svprioritize": {"keys": ['config', 'algorithm', 'svprioritize']},
     "problem_region_dir": {"keys": ["config", "algorithm", "problem_region_dir"]},
     "genome_build": {"keys": ["genome_build"]},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],

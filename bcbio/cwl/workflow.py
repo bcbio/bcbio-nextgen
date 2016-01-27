@@ -79,8 +79,6 @@ def variant(variables):
              #   [["align_bam"],
              #    ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
              #    ["config", "algorithm", "coverage"],
-             #    # TODO -- need a clean way to make files optional inputs
-             #    # ["config", "algorithm", "priority_regions"],
              #    ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]], [],
              #   [_cwl_file_world(["coverage", "all"], allow_missing=True),
              #    _cwl_file_world(["coverage", "problems"], allow_missing=True)]),

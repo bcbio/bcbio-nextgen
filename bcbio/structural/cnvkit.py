@@ -474,10 +474,10 @@ def _remove_haplotype_chroms(in_file, data):
 
 def _add_scatter_plot(out, data):
     out_file = "%s-scatter.pdf" % os.path.splitext(out["cnr"])[0]
-    priority_regions = dd.get_priority_regions(data)
-    if not priority_regions:
+    priority_bed = dd.get_svprioritize(data)
+    if not priority_bed:
         return None
-    priority_bed = plot._prioritize_plot_regions(pybedtools.BedTool(priority_regions), data)
+    priority_bed = plot._prioritize_plot_regions(pybedtools.BedTool(priority_bed), data)
     if utils.file_exists(out_file):
         return out_file
     cnr = _remove_haplotype_chroms(out["cnr"], data)
