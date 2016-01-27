@@ -99,7 +99,7 @@ def delta_from_prev(prev_values, tstamps, value):
 
     # Take the difference from the previous value and divide by the interval
     # since the previous sample, so we always return values in units/second.
-    return (value - prev_val) / (cur_tstamp - prev_tstamp).seconds
+    return (prev_val - value) / (prev_tstamp - cur_tstamp).seconds
 
 
 def calc_deltas(data_frame, series=None):
@@ -108,7 +108,7 @@ def calc_deltas(data_frame, series=None):
     for the current interval.
     """
     series = series or []
-    data_frame = data_frame.sort(ascending=False)
+    data_frame = data_frame.sort_index(ascending=True)
 
     for s in series:
         prev_values = iter(data_frame[s])
