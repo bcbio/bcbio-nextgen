@@ -99,7 +99,7 @@ def _add_hla_files(data):
 def process_alignment(data, alt_input=None):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
-    data = to_single_data(data)
+    data = utils.to_single_data(data)
     fastq1, fastq2 = dd.get_input_sequence_files(data)
     if alt_input:
         fastq1, fastq2 = alt_input
@@ -150,17 +150,6 @@ def process_alignment(data, alt_input=None):
         data = _add_hla_files(data)
     return [[data]]
 
-def to_single_data(input):
-    """Convert an input to a single bcbio data/world object.
-
-    Handles both single sample cases (CWL) and all sample cases (standard bcbio).
-    """
-    if (isinstance(input, (list, tuple)) and len(input) == 1):
-        return input[0]
-    else:
-        assert isinstance(input, dict), input
-        return input
-
 def prep_samples(*items):
     """Handle any global preparatory steps for samples with potentially shared data.
 
@@ -170,7 +159,7 @@ def prep_samples(*items):
     Cleans input BED files to avoid issues with overlapping input segments.
     """
     out = []
-    for data in (to_single_data(x) for x in items):
+    for data in (utils.to_single_data(x) for x in items):
         data = bedutils.clean_inputs(data)
         out.append([data])
     return out
@@ -179,7 +168,7 @@ def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
-    data = to_single_data(data)
+    data = utils.to_single_data(data)
     bam_file = data.get("align_bam") or data.get("work_bam")
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         ref_file = dd.get_ref_file(data)

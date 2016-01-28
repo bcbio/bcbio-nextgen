@@ -66,6 +66,7 @@ def generate_parallel(samples, run_parallel):
 def pipeline_summary(data):
     """Provide summary information on processing sample.
     """
+    data = utils.to_single_data(data)
     work_bam = data.get("align_bam")
     if data["analysis"].lower().startswith("smallrna-seq"):
         work_bam = data["clean_fastq"]
@@ -1081,6 +1082,7 @@ def coverage_report(data):
     """
     Run heavy coverage and variants process in parallel
     """
+    data = utils.to_single_data(data)
     data = cov.coverage(data)
     data = cov.variants(data)
     data = cov.priority_coverage(data)
@@ -1093,7 +1095,6 @@ def coverage_report(data):
         if problem_regions and coverage:
             annotated = cov.decorate_problem_regions(coverage, problem_regions)
         data['coverage'] = {'all': coverage, 'problems': annotated}
-
     return [[data]]
 
 def _get_coverage_per_region(name):

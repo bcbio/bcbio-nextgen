@@ -200,7 +200,7 @@ def coverage(data):
 
     work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
     with chdir(work_dir):
-        in_bam = data['work_bam']
+        in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
         sample = dd.get_sample_name(data)
         logger.debug("doing coverage for %s" % sample)
         parse_file = os.path.join(sample + "_coverage.bed")
@@ -230,12 +230,12 @@ def variants(data):
     in_vcf = data['vrn_file']
     work_dir = os.path.join(dd.get_work_dir(data), "report", "variants")
     with chdir(work_dir):
-        in_bam = data['work_bam']
+        in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
         ref_file = dd.get_ref_file(data)
         assert ref_file, "Need the reference genome fasta file."
         bed_file = dd.get_variant_regions(data)
         sample = dd.get_sample_name(data)
-        in_bam = data.get("work_bam")
+        in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
         cg_file = os.path.join(sample + "_with-gc.vcf.gz")
         parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
         num_cores = dd.get_num_cores(data)
@@ -280,7 +280,7 @@ def priority_coverage(data):
         data['priority_coverage'] = os.path.abspath(out_file)
         return data
     with chdir(work_dir):
-        in_bam = data['work_bam']
+        in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
         logger.debug("Calculating priority coverage for %s" % sample)
         region_bed = pybedtools.BedTool(bed_file)
         with file_transaction(out_file) as tx_out_file:
@@ -323,7 +323,7 @@ def priority_total_coverage(data):
         data['priority_total_coverage'] = os.path.abspath(out_file)
         return data
     nthreads = dd.get_num_cores(data)
-    in_bam = dd.get_work_bam(data)
+    in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     sambamba = config_utils.get_program("sambamba", data, default="sambamba")
     with tx_tmpdir(data, work_dir) as tmp_dir:
         cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file))
