@@ -214,7 +214,7 @@ def _update_conda_packages():
     conda_bin = _get_conda_bin()
     assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
-        subprocess.check_call(["wget", REMOTES["requirements"]])
+        subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     subprocess.check_call([conda_bin, "install", "--quiet", "--yes", "-c", "bioconda",
                            "--file", os.path.basename(REMOTES["requirements"])])
     return os.path.dirname(os.path.dirname(conda_bin))
