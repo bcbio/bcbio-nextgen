@@ -217,7 +217,7 @@ def handle_multiple_callers(data, key, default=None):
         return out
 
 def get_variantcallers():
-    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, platypus, scalpel, vardict, qsnp
+    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, mutect2, platypus, scalpel, vardict, qsnp
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "mutect2": mutect2.mutect2_caller,
