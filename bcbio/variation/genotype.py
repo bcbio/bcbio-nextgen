@@ -220,6 +220,7 @@ def get_variantcallers():
     from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, platypus, scalpel, vardict, qsnp
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
+            "mutect2": mutect2.mutect2_caller,
             "freebayes": freebayes.run_freebayes,
             "cortex": cortex.run_cortex,
             "samtools": samtools.run_samtools,
