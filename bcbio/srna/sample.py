@@ -146,6 +146,7 @@ def _trna_annotation(data):
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trna", name))
     in_file = op.basename(data["clean_fastq"])
     tdrmapper = os.path.join(os.path.dirname(sys.executable), "TdrMappingScripts.pl")
+    perl_export = utils.get_perl_exports()
     if not file_exists(trna_ref) or not file_exists(tdrmapper):
         logger.info("There is no tRNA annotation to run TdrMapper.")
         return None
@@ -154,7 +155,7 @@ def _trna_annotation(data):
         with tx_tmpdir(data) as txdir:
             with utils.chdir(txdir):
                 utils.symlink_plus(data["clean_fastq"], op.join(txdir, in_file))
-                cmd = ("perl {tdrmapper} {trna_ref} {in_file}").format(**locals())
+                cmd = ("{perl_export} && perl {tdrmapper} {trna_ref} {in_file}").format(**locals())
                 do.run(cmd, "tRNA for %s" % name)
                 for filename in glob.glob("*mapped*"):
                     shutil.move(filename, work_dir)
