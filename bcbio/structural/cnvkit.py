@@ -477,7 +477,7 @@ def _add_scatter_plot(out, data):
     priority_bed = dd.get_svprioritize(data)
     if not priority_bed:
         return None
-    priority_bed = plot._prioritize_plot_regions(pybedtools.BedTool(priority_bed), data)
+    priority_bed = plot._prioritize_plot_regions(pybedtools.BedTool(priority_bed), data, os.path.dirname(out_file))
     if utils.file_exists(out_file):
         return out_file
     cnr = _remove_haplotype_chroms(out["cnr"], data)
