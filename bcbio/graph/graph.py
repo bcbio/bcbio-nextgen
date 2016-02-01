@@ -10,17 +10,23 @@ import pytz
 import re
 import socket
 
-import matplotlib
-matplotlib.use('Agg')
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pylab
-pylab.rcParams['figure.figsize'] = (35.0, 12.0)
 import pandas as pd
 import cPickle as pickle
 
 from bcbio import utils
 from bcbio.graph.collectl import load_collectl
 
+plt.style.use('ggplot')
+
+mpl.use('Agg')
+pylab.rcParams['image.cmap'] = 'viridis'
+pylab.rcParams['figure.figsize'] = (35.0, 12.0)
+#pylab.rcParams['figure.figsize'] = (100, 100)
+pylab.rcParams['figure.dpi'] = 300
+pylab.rcParams['font.size'] = 25
 
 def get_bcbio_nodes(path):
     """Fetch the local nodes (-c local) that contain collectl files from
@@ -57,11 +63,13 @@ def get_bcbio_timings(path):
             tstamp = matches.group(1)
             msg = matches.group(2)
 
-            if not msg.find('Timing: ') >= 0:
-                continue
+            # XXX: new special logs do not have this
+            #if not msg.find('Timing: ') >= 0:
+            #    continue
 
             when = datetime.strptime(tstamp, '%Y-%m-%dT%H:%MZ').replace(
                 tzinfo=pytz.timezone('UTC'))
+
             step = msg.split(":")[-1].strip()
             steps[when] = step
 
@@ -159,13 +167,15 @@ def add_common_plot_features(plot, steps):
         if step == 'finished':
             continue
         plot.vlines(tstamp, 0, ymax, linestyles='dashed')
+        tstamp = mpl.dates.num2epoch(mpl.dates.date2num(tstamp))
         ticks[tstamp] = step
     tick_kvs = sorted(ticks.iteritems())
     top_axis = plot.twiny()
     top_axis.set_xlim(*plot.get_xlim())
     top_axis.set_xticks([k for k, v in tick_kvs])
     top_axis.set_xticklabels([v for k, v in tick_kvs],
-                             rotation=45, ha='left', size=16)
+                             rotation=45, ha='left', size=pylab.rcParams['font.size'])
+
     plot.set_ylim(0)
 
     return plot
@@ -209,6 +219,8 @@ def graph_net_bytes(data_frame, steps, ifaces):
 
     plot = graph.plot()
     plot.set_ylabel('mbits/s')
+    plot.set_ylim(0, 1000)
+
     add_common_plot_features(plot, steps)
 
     plot_inline_jupyter(plot)
