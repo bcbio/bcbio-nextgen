@@ -19,7 +19,7 @@ import cPickle as pickle
 from bcbio import utils
 from bcbio.graph.collectl import load_collectl
 
-plt.style.use('ggplot')
+#plt.style.use('ggplot')
 
 mpl.use('Agg')
 pylab.rcParams['image.cmap'] = 'viridis'
@@ -219,7 +219,7 @@ def graph_net_bytes(data_frame, steps, ifaces):
 
     plot = graph.plot()
     plot.set_ylabel('mbits/s')
-    plot.set_ylim(0, 1000)
+    plot.set_ylim(0, 2000)
 
     add_common_plot_features(plot, steps)
 
