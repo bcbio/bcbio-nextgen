@@ -26,6 +26,7 @@
 - Move Picard to use conda installed `picard` single executable instead of
   custom installed java directory of jars.
 - Add library type option to Cufflinks assembly. Thanks to Konstantin (@dezzan).
+- Tag variants decomposed with vcfallelicprimitives. Thanks to Neill Gibson.
 
 ## 0.9.5 (12 December 2015)
 

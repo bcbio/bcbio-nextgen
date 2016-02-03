@@ -116,7 +116,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             sample_name_str = items[0]["name"][1]
             fix_ambig = vcfutils.fix_ambiguous_cl()
             cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' "
-                   "| {fix_ambig} | vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort "
+                   "| {fix_ambig} | vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
