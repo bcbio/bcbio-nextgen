@@ -25,9 +25,10 @@ def trim_adapters(data):
                 "sequence from %s." % (", ".join(to_trim)))
     out_dir = os.path.join(dd.get_work_dir(data), "trimmed")
     config = dd.get_config(data)
-    return _trim_adapters(to_trim, out_dir, config)
+    name = dd.get_sample_name(data)
+    return _trim_adapters(to_trim, out_dir, name, config)
 
-def _trim_adapters(fastq_files, out_dir, config):
+def _trim_adapters(fastq_files, out_dir, name, config):
     """
     for small insert sizes, the read length can be longer than the insert
     resulting in the reverse complement of the 3' adapter being sequenced.
@@ -39,7 +40,7 @@ def _trim_adapters(fastq_files, out_dir, config):
     """
     quality_format = _get_quality_format(config)
     to_trim = _get_sequences_to_trim(config, SUPPORTED_ADAPTERS)
-    out_files = replace_directory(append_stem(fastq_files, ".trimmed"), out_dir)
+    out_files = replace_directory(append_stem(fastq_files, "_%s.trimmed" % name), out_dir)
     out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, config)
     return out_files
 

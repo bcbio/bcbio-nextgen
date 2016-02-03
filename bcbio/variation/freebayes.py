@@ -122,7 +122,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                        "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
                        "bcftools view -a - 2> /dev/null | "
                        "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
-                       "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
+                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
                        "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
@@ -168,7 +168,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                       "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
                       "| {fix_ambig} | bcftools view -a - 2> /dev/null | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
-                      "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
+                      "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
                       "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
                       "{compress_cmd} > {tx_out_file}")
                 do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})

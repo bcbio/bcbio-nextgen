@@ -208,7 +208,7 @@ def coverage(data):
         cores = dd.get_num_cores(data)
         if not file_exists(parse_file):
             with tx_tmpdir(data, work_dir) as tmp_dir:
-                cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file))
+                cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file)).replace(".bed.gz", ".bed")
                 cleaned_bed = bed.decomment(bed_file, cleaned_bed)
                 with file_transaction(parse_file) as out_tx:
                     cmd = ("sambamba depth region -F \"not unmapped\" -t {cores} "
@@ -330,9 +330,9 @@ def priority_total_coverage(data):
         cleaned_bed = bed.decomment(bed_file, cleaned_bed)
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{sambamba} depth region -t {nthreads} -L {cleaned_bed} "
-                "-F \"not unmapped\" "
-                "-T 10 -T 20 -T 30 -T 40 -T 50 -T 60 -T 70 -T 80 -T 90 -T 100 "
-                "{in_bam} -o {tx_out_file}")
+                   "-F \"not unmapped\" "
+                   "-T 10 -T 20 -T 30 -T 40 -T 50 -T 60 -T 70 -T 80 -T 90 -T 100 "
+                   "{in_bam} -o {tx_out_file}")
             message = "Calculating coverage of {bed_file} regions in {in_bam}"
             do.run(cmd.format(**locals()), message.format(**locals()))
     data['priority_total_coverage'] = os.path.abspath(out_file)
