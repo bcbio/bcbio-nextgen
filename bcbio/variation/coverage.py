@@ -275,7 +275,7 @@ def priority_coverage(data):
     batch_size = max_command_length() / AVERAGE_REGION_STRING_LENGTH
 
     sample = dd.get_sample_name(data)
-    out_file = os.path.join(sample + "_priority_depth.bed")
+    out_file = os.path.join(work_dir, sample + "_priority_depth.bed")
     if file_exists(out_file):
         data['priority_coverage'] = os.path.abspath(out_file)
         return data

@@ -427,9 +427,12 @@ def _add_plots_to_output(out, data):
     loh_plot = _add_loh_plot(out, data)
     if loh_plot:
         out["plot"]["loh"] = loh_plot
-    scatter_plot = _add_scatter_plot(out, data)
-    if scatter_plot:
-        out["plot"]["scatter"] = scatter_plot
+    scatter = _add_scatter_plot(out, data)
+    if scatter:
+        out["plot"]["scatter"] = scatter
+    scatter_global = _add_global_scatter_plot(out, data)
+    if scatter_global:
+        out["plot"]["scatter_global"] = scatter_global
     return out
 
 def _get_larger_chroms(ref_file):
@@ -470,6 +473,17 @@ def _remove_haplotype_chroms(in_file, data):
                     for line in in_handle:
                         if line.startswith("chromosome") or line.split()[0] in larger_chroms:
                             out_handle.write(line)
+    return out_file
+
+def _add_global_scatter_plot(out, data):
+    out_file = "%s-scatter_global.pdf" % os.path.splitext(out["cnr"])[0]
+    if utils.file_exists(out_file):
+        return out_file
+    cnr = _remove_haplotype_chroms(out["cnr"], data)
+    cns = _remove_haplotype_chroms(out["cns"], data)
+    with file_transaction(data, out_file) as tx_out_file:
+        cmd = [_get_cmd(), "scatter", "-s", cns, "-o", tx_out_file, cnr]
+        do.run(cmd, "CNVkit global scatter plot")
     return out_file
 
 def _add_scatter_plot(out, data):
