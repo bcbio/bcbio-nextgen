@@ -23,38 +23,44 @@ def variant(variables):
     creation of the CWL files.
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
-    s = collections.namedtuple("s", "name parallel inputs noinputs outputs")
+    def s(name, parallel, inputs, outputs, programs=None, noinputs=None):
+        Step = collections.namedtuple("Step", "name parallel inputs outputs programs noinputs")
+        if programs is None: programs = []
+        if noinputs is None: noinputs = []
+        return Step(name, parallel, inputs, outputs, programs, noinputs)
     w = collections.namedtuple("w", "name parallel workflow internal")
     align = [s("prep_align_inputs", "single-split",
-               [["files"]], [],
+               [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
              s("process_alignment", "single-parallel",
                [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
-                ["reference", "bwa", "indexes"]], [],
+                ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"]),
                 _cwl_file_world(["align_bam"]),
                 _cwl_file_world(["hla", "fastq"], allow_missing=True),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "sr"], ".bai")]),
+                _cwl_file_world(["work_bam-plus", "sr"], ".bai")],
+               ["aligner", "samtools", "sambamba"]),
              s("merge_split_alignments", "single-merge",
                [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
                 ["hla", "fastq"]],
-               [["align_split"], ["config", "algorithm", "quality_format"]],
                [_cwl_file_world(["align_bam"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
                 _cwl_file_world(["work_bam-plus", "sr"], ".bai"),
-                _cwl_file_world(["hla", "fastq"], allow_missing=True)])]
+                _cwl_file_world(["hla", "fastq"], allow_missing=True)],
+               ["biobambam"],
+               noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples", "multi-parallel",
-               [["config", "algorithm", "variant_regions"]], [],
+               [["config", "algorithm", "variant_regions"]],
                [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
                 _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
              s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
                [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
                 _cwl_file_world(["regions", "callable"]),
                 _cwl_file_world(["regions", "sample_callable"]),
@@ -62,30 +68,31 @@ def variant(variables):
                 _cwl_file_world(["regions", "highdepth"], allow_missing=True),
                 _cwl_file_world(["regions", "offtarget_stats"])]),
              s("call_hla", "multi-parallel",
-               [["hla", "fastq"]], [],
+               [["hla", "fastq"]],
                [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
                 _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
+                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
                 _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
                 _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
              s("pipeline_summary", "multi-parallel",
                [["align_bam"],
-                ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]], [],
-               [_cwl_file_world(["summary", "qc"])]),
+                ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
+               [_cwl_file_world(["summary", "qc"])],
+               ["samtools", "bamtools"]),
              s("coverage_report", "multi-parallel",
                [["align_bam"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
                 ["config", "algorithm", "coverage"],
-                ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]], [],
+                ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
                [_cwl_file_world(["coverage", "all"], allow_missing=True),
                 _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
              s("qc_report_summary", "multi-combined",
                [["align_bam"],
                 ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
-                ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]], [],
+                ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
                [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
     parallel_ids = []
@@ -98,7 +105,7 @@ def variant(variables):
                 inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
                 parallel_ids = _find_split_vs(outputs, wf_step.parallel)
-                wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs))
+                wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs, wf_step.programs))
                 wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
                                              nested_inputs)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
@@ -116,10 +123,10 @@ def variant(variables):
             inputs, parallel_ids, nested_inputs = _get_step_inputs(step, file_vs, std_vs, parallel_ids)
             outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
             parallel_ids = _find_split_vs(outputs, step.parallel)
-            yield "step", step.name, step.parallel, inputs, outputs
+            yield "step", step.name, step.parallel, inputs, outputs, step.programs
     # Final outputs
     outputs = [["align_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
-    outputs = [["align_bam"], ["summary", "qc"]]
+    outputs = [["align_bam"]]
     yield "upload", [_get_upload_output(x, file_vs) for x in outputs]
 
 def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):

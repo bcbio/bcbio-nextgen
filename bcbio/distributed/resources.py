@@ -123,6 +123,33 @@ def _scale_jobs_to_memory(jobs, mem_per_core, sysinfo):
     else:
         return jobs, 1.0
 
+def cpu_and_memory(programs, items):
+    """Retrieve CPU and memory/core specified in configuration input.
+    """
+    assert len(items) > 0, "Finding job resources but no items to process"
+    config = items[0]["config"]
+    all_cores = []
+    all_memory = []
+    algs = [config_utils.get_algorithm_config(x) for x in items]
+    progs = _get_resource_programs(programs, algs)
+    # Calculate cores
+    for prog in progs:
+        resources = config_utils.get_resources(prog, config)
+        all_cores.append(resources.get("cores", 1))
+    if len(all_cores) == 0:
+        all_cores.append(1)
+    cores_per_job = max(all_cores)
+    # Calculate memory. Use 1Gb memory usage per core as min baseline if not specified
+    for prog in progs:
+        resources = config_utils.get_resources(prog, config)
+        memory = _get_prog_memory(resources, cores_per_job)
+        if memory:
+            all_memory.append(memory)
+    if len(all_memory) == 0:
+        all_memory.append(1)
+    memory_per_core = max(all_memory)
+    return cores_per_job, memory_per_core
+
 def calculate(parallel, items, sysinfo, config, multiplier=1,
               max_multicore=None):
     """Determine cores and workers to use for this stage based on used programs.

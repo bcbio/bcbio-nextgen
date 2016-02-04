@@ -5,6 +5,7 @@ import collections
 import glob
 import math
 import os
+import pprint
 import sys
 import yaml
 
@@ -260,6 +261,8 @@ def is_nested_config_arg(x):
 def get_algorithm_config(xs):
     """Flexibly extract algorithm configuration for a sample from any function arguments.
     """
+    if isinstance(xs, dict):
+        xs = [xs]
     for x in xs:
         if is_std_config_arg(x):
             return x["algorithm"]
@@ -268,7 +271,7 @@ def get_algorithm_config(xs):
         elif isinstance(x, (list, tuple)) and is_nested_config_arg(x[0]):
             return x[0]["config"]["algorithm"]
     raise ValueError("Did not find algorithm configuration in items: {0}"
-                     .format(xs))
+                     .format(pprint.pformat(xs)))
 
 def get_dataarg(args):
     """Retrieve the world 'data' argument from a set of input parameters.

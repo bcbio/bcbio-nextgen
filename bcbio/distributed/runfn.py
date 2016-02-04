@@ -50,6 +50,12 @@ def process(args):
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
+def _add_resources(data, runtime):
+    data["config"]["resources"] = {"default": {"cores": runtime["cores"],
+                                                "memory": "%sM" % int(float(runtime["ram"]) / runtime["cores"])}}
+    data["config"]["algorithm"]["num_cores"] = runtime["cores"]
+    return data
+
 def _world_from_cwl(fnargs, work_dir):
     """Reconstitute a bcbio world data object from flattened CWL-compatible inputs.
 
@@ -59,6 +65,7 @@ def _world_from_cwl(fnargs, work_dir):
     runs (returning a list of individual samples to get processed together).
     """
     parallel = None
+    runtime = {}
     out = []
     data = {}
     passed_keys = []
@@ -70,11 +77,12 @@ def _world_from_cwl(fnargs, work_dir):
         if key == "sentinel-parallel":
             parallel = val
             continue
+        if key == "sentinel-runtime":
+            runtime = json.loads(val)
         # starting a new record -- duplicated key
         if key in passed_keys:
             data["dirs"] = {"work": work_dir}
-            # XXX Determine cores and other resources from CWL
-            data["config"]["resources"] = {}
+            data = _add_resources(data, runtime)
             data = run_info.normalize_world(data)
             out.append(data)
             data = {}
@@ -88,8 +96,7 @@ def _world_from_cwl(fnargs, work_dir):
         data = _update_nested(key, val, data)
     if data:
         data["dirs"] = {"work": work_dir}
-        # XXX Determine cores and other resources from CWL
-        data["config"]["resources"] = {}
+        data = _add_resources(data, runtime)
         data = run_info.normalize_world(data)
         out.append(data)
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined"]:
