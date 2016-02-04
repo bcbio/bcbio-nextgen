@@ -138,7 +138,7 @@ def _trna_annotation(data):
     """
     use tDRmapper to quantify tRNAs
     """
-    mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
+    mirbase = op.abspath(op.dirname(dd.get_srna_gtf_file(data)))
     trna_ref = op.join(mirbase, "trna_mature_pre.fa")
     name = dd.get_sample_name(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trna", name))
