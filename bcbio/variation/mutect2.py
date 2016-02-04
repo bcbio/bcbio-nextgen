@@ -5,6 +5,7 @@ from distutils.version import LooseVersion
 import toolz as tz
 
 from bcbio import bam, broad, utils
+from bcbio.utils import file_exists, get_in, open_gzipsafe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
@@ -79,5 +80,50 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                 params += [str(x) for x in resources.get("options", [])]
             broad_runner.new_resources("mutect2")
             broad_runner.run_gatk(params)
+	    """
+	    Trying to access the  out_file and to fix the MuTect2 output
+	    Any Suggestion?
+	    
+	    data = items[0]
+	    config = data["config"]
+	    paired = vcfutils.get_paired_bams(align_bams, items)
+	    normal_name = paired.normal_name
+	    tumor_name = paired.tumor_name
+	    out_file_mutect = (out_file.replace(".vcf", "-mutect.vcf")
+				if ".vcf" in out_file else out_file + "-mutect.vcf")
+	    if not utils.file_uptodate(out_file, out_file_mutect):
+        	out_file_mutect = _fix_mutect_output(out_file, config, out_file_mutect, normal_name, tumor_name)
+        utils.symlink_plus(out_file_mutect, out_file)
+        
+        """
     return out_file
 
+def _fix_mutect_output(orig_file, config, out_file, normal_name, tumor_name):
+    """Adjust MuTect2 output to match other callers.
+
+    - Rename allelic fraction field in mutect output from FA to FREQ to standarize with other tools
+    - Rename NORMAL and TUMOR samples
+    """
+    out_file_noc = out_file.replace(".vcf.gz", ".vcf")
+    none_index = -1
+    with file_transaction(config, out_file_noc) as tx_out_file:
+        with open_gzipsafe(orig_file) as in_handle:
+            with open(tx_out_file, 'w') as out_handle:
+                for line in in_handle:
+                    if line.startswith("#CHROM"):
+                        parts = line.rstrip().split("\t")
+                        none_index = parts.index("NORMAL")
+                        parts[none_index] = normal_name
+                        none_index = parts.index("TUMOR")
+                        parts[none_index] = tumor_name
+                        line = "\t".join(parts) + "\n"
+                    elif line.startswith("##FORMAT=<ID=FA"):
+                        line = line.replace("=FA", "=FREQ")
+                    elif not line.startswith("#"):
+                        if none_index > 0:
+                            parts = line.rstrip().split("\t")
+                            del parts[none_index]
+                            line = "\t".join(parts) + "\n"
+                        line = line.replace("FA", "FREQ")
+                    out_handle.write(line)
+    return bgzip_and_index(out_file_noc, config)
