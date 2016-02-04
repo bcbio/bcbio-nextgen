@@ -12,7 +12,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.variation import annotation, bamprep, vcfutils, ploidy
 from bcbio.variation.vcfutils import bgzip_and_index
 
-def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file):
+def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, cosmic, region, out_file):
     """Shared preparation work for GATK variant calling.
     """
     data = items[0]
@@ -30,7 +30,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     for a in annotation.get_gatk_annotations(config):
         params += ["--annotation", a]
     for x in align_bams:
-        bam.index(x, base_config)
+        bam.index(x, config)
 
     paired = vcfutils.get_paired_bams(align_bams, items)
     if not paired:
@@ -39,10 +39,8 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
                          "pipelines.html#cancer-variant-calling\n"
                          "for samples: %s" % ", " .join([dd.get_sample_name(x) for x in items]))
     params += ["-I:tumor", paired.tumor_bam]
-    params += ["--tumor_sample_name", paired.tumor_name]
     if paired.normal_bam is not None:
         params += ["-I:normal", paired.normal_bam]
-        params += ["--normal_sample_name", paired.normal_name]
     if paired.normal_panel is not None:
         params += ["--normal_panel", paired.normal_panel]
     if dbsnp:
@@ -67,7 +65,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         broad_runner, params = \
             _shared_gatk_call_prep(align_bams, items,
-                                   ref_file, assoc_files.get("dbsnp"),
+                                   ref_file, assoc_files.get("dbsnp"), assoc_files.get("cosmic"),
                                    region, out_file)
         assert LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"), \
             "Require full version of GATK 3.5+ for mutect2 calling"
