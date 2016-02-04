@@ -661,15 +661,17 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
                     out_handle.write(("{0}:{1}-{2}\n").format(c, s, e))
 
 def _detect_rRNA(data):
+    sample = dd.get_sample_name(data)
     gtf_file = dd.get_gtf_file(data)
-    count_file = dd.get_count_file(data)
+    tidy_file = dd.get_sailfish_tidy_file(data)
     rrna_features = gtf.get_rRNA(gtf_file)
-    genes = [x[0] for x in rrna_features if x]
-    if not genes:
+    transcripts = set([x[1] for x in rrna_features if x])
+    if not transcripts:
         return {'rRNA': "NA", "rRNA_rate": "NA"}
-    count_table = pd.read_csv(count_file, sep="\t", names=["id", "counts"])
-    rrna = sum(count_table[count_table["id"].isin(genes)]["counts"])
-    rrna_rate = float(rrna) / sum(count_table["counts"])
+    count_table = pd.read_csv(tidy_file, sep="\t")
+    sample_table = count_table[count_table["sample"].isin([sample])]
+    rrna = sum(sample_table[sample_table["id"].isin(transcripts)]["numreads"])
+    rrna_rate = float(rrna) / sum(sample_table["numreads"])
     return {'rRNA': str(rrna), 'rRNA_rate': str(rrna_rate)}
 
 def _parse_qualimap_rnaseq(table):
