@@ -175,8 +175,6 @@ def combine_sailfish(samples):
         df["id"] = df.index
         # some versions of the transcript annotations can have duplicated entries
         df = df.drop_duplicates(["id", "sample"])
-        # drop the first row which are the old column names
-        df = df.ix[1:]
         with file_transaction(tidy_file) as tx_out_file:
             df.to_csv(tx_out_file, sep="\t", index_label="name")
         with file_transaction(transcript_tpm_file) as  tx_out_file:
