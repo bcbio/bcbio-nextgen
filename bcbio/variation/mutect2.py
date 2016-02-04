@@ -79,24 +79,18 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
             broad_runner.new_resources("mutect2")
-            broad_runner.run_gatk(params)
-	    """
-	    Trying to access the  out_file and to fix the MuTect2 output
-	    Any Suggestion?
-	    
-	    data = items[0]
-	    config = data["config"]
-	    paired = vcfutils.get_paired_bams(align_bams, items)
-	    normal_name = paired.normal_name
-	    tumor_name = paired.tumor_name
-	    out_file_mutect = (out_file.replace(".vcf", "-mutect.vcf")
-				if ".vcf" in out_file else out_file + "-mutect.vcf")
-	    if not utils.file_uptodate(out_file, out_file_mutect):
+            broad_runner.run_gatk(params)	   	    
+        data = items[0]
+        config = data["config"]
+        paired = vcfutils.get_paired_bams(align_bams, items)
+        normal_name = paired.normal_name
+        tumor_name = paired.tumor_name
+        out_file_mutect = (out_file.replace(".vcf", "-mutect.vcf")
+                           if "vcf" in out_file else out_file + "-mutect.vcf")
+        if not utils.file_uptodate(out_file, out_file_mutect):
         	out_file_mutect = _fix_mutect_output(out_file, config, out_file_mutect, normal_name, tumor_name)
-        utils.symlink_plus(out_file_mutect, out_file)
-        
-        """
-    return out_file
+        """utils.symlink_plus(out_file_mutect, out_file)"""
+	return out_file_mutect
 
 def _fix_mutect_output(orig_file, config, out_file, normal_name, tumor_name):
     """Adjust MuTect2 output to match other callers.
@@ -117,13 +111,13 @@ def _fix_mutect_output(orig_file, config, out_file, normal_name, tumor_name):
                         none_index = parts.index("TUMOR")
                         parts[none_index] = tumor_name
                         line = "\t".join(parts) + "\n"
-                    elif line.startswith("##FORMAT=<ID=FA"):
-                        line = line.replace("=FA", "=FREQ")
+                    elif line.startswith("##FORMAT=<ID=AF"):
+                        line = line.replace("=AF", "=FREQ")
                     elif not line.startswith("#"):
                         if none_index > 0:
                             parts = line.rstrip().split("\t")
                             del parts[none_index]
                             line = "\t".join(parts) + "\n"
-                        line = line.replace("FA", "FREQ")
+                        line = line.replace("AF", "FREQ")
                     out_handle.write(line)
     return bgzip_and_index(out_file_noc, config)
