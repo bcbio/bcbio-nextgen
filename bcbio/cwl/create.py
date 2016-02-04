@@ -10,6 +10,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.cwl import workflow
+from bcbio.distributed import resources
 
 def from_world(world, run_info_file):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
@@ -39,15 +40,22 @@ def _cwl_workflow_template(inputs):
             "outputs": [],
             "steps": []}
 
-def _write_tool(step_dir, name, inputs, outputs, parallel):
+def _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
+    cores, mem_gb_per_core = resources.cpu_and_memory(programs if programs else ["default"], samples)
+    mem_mb_total = int(mem_gb_per_core * cores * 1024)
     out = {"class": "CommandLineTool",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
+           "hints": [{"class": "ResourceRequirement",
+                      "coresMin": cores, "ramMin": mem_mb_total}],
+           "arguments": [],
            "inputs": [],
            "outputs": []}
-    pinputs = [{"id": "#sentinel-parallel", "type": "string",
-                "default": parallel}]
-    inputs = pinputs + inputs
+    out["arguments"].append({"position": 0, "prefix": "sentinel-runtime=", "separate": False,
+                             "valueFrom": "$(JSON.stringify(runtime))"})
+    std_inputs = [{"id": "#sentinel-parallel", "type": "string",
+                   "default": parallel}]
+    inputs = std_inputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
@@ -134,8 +142,8 @@ def prep_variant_cwl(samples, out_dir, out_file):
     parent_wfs = []
     for cur in workflow.variant(variables):
         if cur[0] == "step":
-            _, name, parallel, inputs, outputs = cur
-            step_file = _write_tool(step_dir, name, inputs, outputs, parallel)
+            _, name, parallel, inputs, outputs, programs = cur
+            step_file = _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
         elif cur[0] == "upload":
             out["outputs"] = cur[1]

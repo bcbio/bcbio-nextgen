@@ -56,14 +56,12 @@ def sample_annotation(data):
     out_dir = os.path.join(work_dir, names)
     utils.safe_makedir(out_dir)
     out_file = op.join(out_dir, names)
-    if not dd.get_mirbase_ref(data):
-        raise ValueError("There is no smallRNA genome data."
-                         "Please, run bcbio_nextgen.py upgrade -u skip --genome build_name.")
-    mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
-
-    data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
+    if dd.get_mirbase_ref(data):
+        mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
+        data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
     if file_exists(op.join(dd.get_work_dir(data), "mirdeep2", "novel", "hairpin.fa")):
         data['seqbuster_novel'] = _miraligner(data["collapse"], "%s_novel" % out_file, dd.get_species(data), op.join(dd.get_work_dir(data), "mirdeep2", "novel"), data['config'])
+
     data['trna'] = _trna_annotation(data)
     return [[data]]
 
@@ -140,7 +138,7 @@ def _trna_annotation(data):
     """
     use tDRmapper to quantify tRNAs
     """
-    mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
+    mirbase = op.abspath(op.dirname(dd.get_srna_gtf_file(data)))
     trna_ref = op.join(mirbase, "trna_mature_pre.fa")
     name = dd.get_sample_name(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trna", name))
