@@ -18,6 +18,8 @@ def run(data):
     mirdeep2 = os.path.join(os.path.dirname(sys.executable), "miRDeep2.pl")
     perl_exports = get_perl_exports()
     hairpin, mature, species = "none", "none", "na"
+    if not file_exists(dd.get_srna_gtf_file(data)):
+        return None
     if file_exists(dd.get_mirbase_ref(data[0][0])):
         mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data[0][0])))
         species = dd.get_species(data[0][0])
