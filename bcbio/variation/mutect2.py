@@ -114,10 +114,6 @@ def _fix_mutect_output(orig_file, config, out_file, normal_name, tumor_name):
                     elif line.startswith("##FORMAT=<ID=AF"):
                         line = line.replace("=AF", "=FREQ")
                     elif not line.startswith("#"):
-                        if none_index > 0:
-                            parts = line.rstrip().split("\t")
-                            del parts[none_index]
-                            line = "\t".join(parts) + "\n"
                         line = line.replace("AF", "FREQ")
                     out_handle.write(line)
     return bgzip_and_index(out_file_noc, config)
