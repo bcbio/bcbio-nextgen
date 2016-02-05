@@ -132,9 +132,10 @@ def report(data):
             for sample in data:
                 info = sample[0]
                 group = _guess_group(info)
+                files = info["seqbuster"] if "seqbuster" in info else "None"
                 print >>out_handle, ",".join([dd.get_sample_name(info),
-                                              info['size_stats'],
-                                              info['seqbuster'], group])
+                                              info["size_stats"],
+                                              files, group])
     _create_rmd(summary_file)
     return summary_file
 

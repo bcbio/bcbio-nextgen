@@ -17,11 +17,14 @@ def run(data):
     genome = dd.get_ref_file(data[0][0])
     mirdeep2 = os.path.join(os.path.dirname(sys.executable), "miRDeep2.pl")
     perl_exports = get_perl_exports()
-    mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data[0][0])))
-    species = dd.get_species(data[0][0])
-    hairpin = op.join(mirbase, "hairpin.fa")
-    mature = op.join(mirbase, "mature.fa")
-    rfam_file = op.join(mirbase, "Rfam_for_miRDeep.fa")
+    hairpin, mature, species = "none", "none", "na"
+    if file_exists(dd.get_mirbase_ref(data[0][0])):
+        mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data[0][0])))
+        species = dd.get_species(data[0][0])
+        hairpin = op.join(mirbase, "hairpin.fa")
+        mature = op.join(mirbase, "mature.fa")
+
+    rfam_file = op.join(op.dirname(op.abspath(dd.get_srna_gtf_file(data[0][0]))), "Rfam_for_miRDeep.fa")
     bam_file = op.join(work_dir, "align", "seqs.bam")
     seqs_dir = op.join(work_dir, "seqcluster", "prepare")
     collapsed = op.join(seqs_dir, "seqs.ma")
@@ -31,7 +34,7 @@ def run(data):
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
         cmd = ("{perl_exports} && {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -d -P -t {species} -z res").format(**locals())
-        if file_exists(mirdeep2) and not file_exists(out_file) and file_exists(mature) and file_exists(rfam_file):
+        if file_exists(mirdeep2) and not file_exists(out_file) and file_exists(rfam_file):
             do.run(cmd.format(**locals()), "Running mirdeep2.")
         if file_exists(out_file):
             novel_db = _parse_novel(out_file, dd.get_species(data[0][0]))
