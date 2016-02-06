@@ -148,19 +148,25 @@ def _collapse_by_bam_variantcaller(samples):
         out.append([cur])
     return out
 
-def parallel_variantcall_region(samples, run_parallel):
-    """Perform variant calling and post-analysis on samples by region.
+def _dup_samples_by_variantcaller(samples):
+    """Prepare samples vy variant callers, duplicating any with multiple callers.
     """
     to_process = []
     extras = []
-    for data in [x[0] for x in samples]:
+    for data in [utils.to_single_data(x) for x in samples]:
         added = False
-        for add in handle_multiple_callers(data, "variantcaller", "gatk"):
+        for add in handle_multiple_callers(data, "variantcaller"):
             added = True
             to_process.append([add])
         if not added:
             data = _handle_precalled(data)
             extras.append([data])
+    return to_process, extras
+
+def parallel_variantcall_region(samples, run_parallel):
+    """Perform variant calling and post-analysis on samples by region.
+    """
+    to_process, extras = _dup_samples_by_variantcaller(samples)
     split_fn = _split_by_ready_regions(".vcf.gz", "work_bam", get_variantcaller)
     samples = _collapse_by_bam_variantcaller(
         grouped_parallel_split_combine(to_process, split_fn,
@@ -168,6 +174,22 @@ def parallel_variantcall_region(samples, run_parallel):
                                        "variantcall_sample", "concat_variant_files",
                                        "vrn_file", ["region", "sam_ref", "config"]))
     return extras + samples
+
+def batch_for_variantcall(samples):
+    """Prepare a set of samples for parallel variant calling.
+
+    CWL input target that groups samples into batches and variant callers
+    for parallel processing.
+    """
+    to_process, extras = _dup_samples_by_variantcaller(samples)
+    batch_groups = collections.defaultdict(list)
+    for data in [utils.to_single_data(x) for x in to_process]:
+        batches = dd.get_batches(data) or dd.get_sample_name(data)
+        if not isinstance(batches, (list, tuple)):
+            batches = [batches]
+        for b in batches:
+            batch_groups[b].append(utils.deepish_copy(data))
+    return list(batch_groups.values()) + extras
 
 def _handle_precalled(data):
     """Copy in external pre-called variants fed into analysis.

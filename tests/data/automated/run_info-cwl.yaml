@@ -11,7 +11,7 @@ details:
       align_split_size: 25000
       recalibrate: false
       realign: false
-      variantcaller: freebayes
+      variantcaller: [freebayes, vardict]
       svcaller: [lumpy]
       tools_off: [gemini]
       variant_regions: ../data/automated/variant_regions-bam.bed
@@ -19,7 +19,8 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       cwl_reporting: true
     metadata:
-      batch: TestBatch1
+      batch: b1
+      phenotype: tumor
     analysis: variant2
     description: Test1
     genome_build: hg19
@@ -29,12 +30,13 @@ details:
       align_split_size: 25000
       recalibrate: false
       realign: false
-      variantcaller: freebayes
+      variantcaller: [freebayes, vardict]
       nomap_split_size: 50
       nomap_split_targets: 100
       variant_regions: ../data/automated/variant_regions-bam.bed
     metadata:
-      batch: TestBatch1
+      batch: b1
+      phenotype: normal
     analysis: variant2
     description: Test2
     genome_build: hg19

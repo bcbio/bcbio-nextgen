@@ -44,6 +44,8 @@ def process(args):
             if argfile.endswith(".json"):
                 if parallel in ["single-split", "multi-combined"]:
                     json.dump([_remove_work_dir(xs[0], work_dir + "/") for xs in out], out_handle)
+                elif parallel in ["multi-batch"]:
+                    json.dump([_collapse_to_cwl_record(xs) for xs in out], out_handle)
                 else:
                     assert len(out) == 1, pprint.pformat(out)
                     json.dump(_remove_work_dir(out[0][0], work_dir + "/"), out_handle)
@@ -79,9 +81,11 @@ def _world_from_cwl(fnargs, work_dir):
             continue
         if key == "sentinel-runtime":
             runtime = json.loads(val)
+            continue
         # starting a new record -- duplicated key
         if key in passed_keys:
             data["dirs"] = {"work": work_dir}
+            data["cwl_keys"] = passed_keys
             data = _add_resources(data, runtime)
             data = run_info.normalize_world(data)
             out.append(data)
@@ -96,14 +100,40 @@ def _world_from_cwl(fnargs, work_dir):
         data = _update_nested(key, val, data)
     if data:
         data["dirs"] = {"work": work_dir}
+        data["cwl_keys"] = passed_keys
         data = _add_resources(data, runtime)
         data = run_info.normalize_world(data)
         out.append(data)
-    if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined"]:
+    if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
     return out, parallel
+
+def _collapse_to_cwl_record(samples):
+    """Convert nested samples from batches into a CWL record, based on input keys.
+    """
+    all_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])))
+    out = {}
+    for key in all_keys:
+        key_parts = key.split("__")
+        vals = []
+        for d in samples:
+            val = tz.get_in(key_parts, d)
+            if isinstance(val, basestring):
+                if os.path.exists(val):
+                    val = {"class": "File", "path": val}
+                    secondary = []
+                    for idx in [".bai", ".tbi"]:
+                        if os.path.exists(val["path"] + idx):
+                            secondary.append({"class": "File", "path": val["path"] + idx})
+                    if secondary:
+                        val["secondaryFiles"] = secondary
+            elif isinstance(val, dict):
+                val = json.dumps(val)
+            vals.append(val)
+        out[key] = vals
+    return out
 
 def _update_nested(key, val, data):
     """Update the data object, avoiding over-writing with nested dictionaries.

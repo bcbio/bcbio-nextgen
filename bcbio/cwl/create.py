@@ -85,7 +85,7 @@ def _place_input_binding(inp_tool, inp_binding, parallel):
     with the itemSeparator, but also support having multiple samples where we pass
     things independently.
     """
-    if parallel == "multi-combined" and tz.get_in(["type", "type"], inp_tool) == "array":
+    if parallel in ["multi-combined", "multi-batch"] and tz.get_in(["type", "type"], inp_tool) == "array":
         inp_tool["type"]["inputBinding"] = inp_binding
     else:
         inp_tool["inputBinding"] = inp_binding
