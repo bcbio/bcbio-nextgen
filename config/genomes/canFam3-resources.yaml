@@ -1,8 +1,8 @@
-version: 11
+version: 12
 
 aliases:
   ensembl: canis_familiaris_vep_83_CanFam3.1
-  snpeff: CanFam3.1.78
+  snpeff: CanFam3.1.82
 
 variation:
   dbsnp: ../variation/canFam3-dbSNP-2014-05-10.vcf.gz

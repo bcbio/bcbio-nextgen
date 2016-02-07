@@ -1,8 +1,8 @@
-version: 9
+version: 10
 
 aliases:
   human: true
-  snpeff: GRCh38.78
+  snpeff: GRCh38.82
   ensembl: homo_sapiens_vep_83_GRCh38
 
 variation:

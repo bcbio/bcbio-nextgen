@@ -1,5 +1,5 @@
-version: 1
+version: 2
 
 aliases:
   ensembl: rattus_norvegicus_vep_83_Rnor_6.0
-  # not yet available in snpEff/Ensembl 79
+  snpeff: Rnor_6.0.82
