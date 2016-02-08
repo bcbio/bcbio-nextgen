@@ -108,20 +108,24 @@ def get_affected_status(data):
     else:
         return 0
 
+def get_gender(data):
+    """Retrieve gender from metadata, codified as male/female/unknown.
+    """
+    g = dd.get_gender(data)
+    if g and str(g).lower() in ["male", "m"]:
+        return "male"
+    elif g and str(g).lower() in ["female", "f"]:
+        return "female"
+    else:
+        return "unknown"
+
 def create_ped_file(samples, base_vcf):
     """Create a GEMINI-compatible PED file, including gender, family and phenotype information.
 
     Checks for a specified `ped` file in metadata, and will use sample information from this file
     before reconstituting from metadata information.
     """
-    def _code_gender(data):
-        g = dd.get_gender(data)
-        if g and str(g).lower() in ["male", "m"]:
-            return 1
-        elif g and str(g).lower() in ["female", "f"]:
-            return 2
-        else:
-            return 0
+    gender = {"male": 1, "female": 2, "unknown": 0}.get(get_gender(paired.tumor_data))
     out_file = "%s.ped" % utils.splitext_plus(base_vcf)[0]
     sample_ped_lines = {}
     header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID", "Sex", "Phenotype", "Ethnicity"]
@@ -146,7 +150,7 @@ def create_ped_file(samples, base_vcf):
                         writer.writerow(sample_ped_lines[sname])
                     else:
                         writer.writerow([batch, sname, "-9", "-9",
-                                         _code_gender(data), get_affected_status(data), "-9"])
+                                         gender, get_affected_status(data), "-9"])
     return out_file
 
 def _find_shared_batch(samples):
