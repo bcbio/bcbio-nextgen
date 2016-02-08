@@ -10,7 +10,7 @@ from bcbio.rnaseq import (sailfish)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, sample,
                             main, shared, variation, run_info, rnaseq)
-from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble,
+from bcbio.variation import (bamprep, bedutils, genotype, ensemble,
                              joint, multi, population, recalibrate, validate,
                              vcfutils)
 
@@ -145,6 +145,10 @@ def run_rnaseq_joint_genotyping(*args):
 @utils.map_wrap
 def combine_bam(*args):
     return shared.combine_bam(*args)
+
+@utils.map_wrap
+def batch_for_variantcall(*args):
+    return genotype.batch_for_variantcall(*args)
 
 @utils.map_wrap
 def variantcall_sample(*args):

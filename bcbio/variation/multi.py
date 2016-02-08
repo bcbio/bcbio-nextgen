@@ -108,8 +108,7 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
     singles = []
     batch_groups = collections.defaultdict(list)
     for args in xs:
-        assert len(args) == 1
-        data = args[0]
+        data = utils.to_single_data(args)
         caller, batch = caller_batch_fn(data)
         region = _list_to_tuple(data["region"]) if "region" in data else ()
         if batch is not None:

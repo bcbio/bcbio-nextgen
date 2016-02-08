@@ -354,6 +354,8 @@ def _maybe_add_trimming(algorithm, sample, out):
         return out
 
 def _maybe_add_seqbuster(algorithm, sample, out):
+    if "seqbuster" not in sample:
+        return out
     fn = sample["seqbuster"]
     if utils.file_exists(fn):
         out.append({"path": fn,

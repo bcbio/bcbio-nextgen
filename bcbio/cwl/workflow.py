@@ -54,6 +54,9 @@ def variant(variables):
                noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
+             s("batch_for_variantcall", "multi-batch",
+               [["align_bam"]], "batch_rec"),
+             #w("variantcall", "multi-parallel", [], []),
              s("prep_samples", "multi-parallel",
                [["config", "algorithm", "variant_regions"]],
                [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
@@ -216,7 +219,7 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
             inputs = [_nest_variable(x) if x["id"] in parallel_ids else x for x in inputs]
             nested_inputs = parallel_ids[:]
             parallel_ids = []
-    elif step.parallel in ["multi-combined"]:
+    elif step.parallel in ["multi-combined", "multi-batch"]:
         assert len(parallel_ids) == 0
         nested_inputs = [x["id"] for x in inputs]
         inputs = [_nest_variable(x) for x in inputs]
@@ -224,11 +227,15 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
     return inputs, parallel_ids, nested_inputs
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
-    file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
-    file_output = [_clean_output_extras(x) for x in file_output]
-    std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
-    file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-    if step.parallel in ["single-split", "multi-combined"]:
+    if step.parallel in ["multi-batch"]:
+        file_output = []
+        std_output = [_create_record(outputs, step.inputs, file_vs, std_vs)]
+    else:
+        file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
+        file_output = [_clean_output_extras(x) for x in file_output]
+        std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
+        file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
+    if step.parallel in ["single-split", "multi-combined", "multi-batch"]:
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs
@@ -361,6 +368,27 @@ def _get_upload_output(vid, variables):
     v["linkMerge"] = "merge_flattened"
     v.pop("secondaryFiles", None)
     return _clean_output_extras(v)
+
+def _create_record(name, inputs, file_vs, std_vs):
+    """Create an input record created from rearranging inputs.
+
+    Batching processes create records that reformat the inputs for
+    parallelization.
+    """
+    fields = []
+    input_vids = set([_get_string_vid(v) for v in inputs])
+    for orig_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
+        cur_v = {}
+        cur_v["name"] = get_base_id(orig_v["id"])
+        cur_v["type"] = orig_v["type"]
+        fields.append(_nest_variable(cur_v))
+    return {"id": "#%s" % name,
+            "type": {"name": name,
+                     "type": "record",
+                     "fields": fields},
+            "outputBinding": {"glob": "cwl-*-world.json",
+                              "loadContents": True,
+                              "outputEval": "${return JSON.parse(self[0].contents)}"}}
 
 def _create_variable(orig_v, step, variables):
     """Create a new output variable, potentially over-writing existing or creating new.
