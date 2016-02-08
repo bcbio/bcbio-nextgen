@@ -94,7 +94,6 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
 
 def _fix_mutect_output(orig_file, config, out_file, normal_name, tumor_name):
     """Adjust MuTect2 output to match other callers.
-
     - Rename allelic fraction field in mutect output from FA to FREQ to standarize with other tools
     - Rename NORMAL and TUMOR samples
     """
