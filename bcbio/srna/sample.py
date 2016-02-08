@@ -56,8 +56,8 @@ def sample_annotation(data):
     out_dir = os.path.join(work_dir, names)
     utils.safe_makedir(out_dir)
     out_file = op.join(out_dir, names)
-    if dd.get_mirbase_ref(data):
-        mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data)))
+    if dd.get_mirbase_hairpin(data):
+        mirbase = op.abspath(op.dirname(dd.get_mirbase_hairpin(data)))
         data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
 
     sps = dd.get_species(data) if not dd.get_species(data) else "None"
@@ -140,10 +140,7 @@ def _trna_annotation(data):
     """
     use tDRmapper to quantify tRNAs
     """
-    if not file_exists(dd.get_srna_gtf_file(data)):
-        return None
-    mirbase = op.abspath(op.dirname(dd.get_srna_gtf_file(data)))
-    trna_ref = op.join(mirbase, "trna_mature_pre.fa")
+    trna_ref = op.join(dd.get_srna_trna_file(data))
     name = dd.get_sample_name(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trna", name))
     in_file = op.basename(data["clean_fastq"])
