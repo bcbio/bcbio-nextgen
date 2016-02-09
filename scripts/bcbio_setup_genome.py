@@ -3,13 +3,11 @@
 Script to set up a custom genome for bcbio-nextgen
 """
 
-import argparse
 from argparse import ArgumentParser
 import os
 from Bio import SeqIO
 import toolz as tz
 from bcbio.utils import safe_makedir, file_exists, chdir
-from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
