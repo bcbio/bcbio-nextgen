@@ -60,7 +60,7 @@ def sample_annotation(data):
         mirbase = op.abspath(op.dirname(dd.get_mirbase_hairpin(data)))
         data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
 
-    sps = dd.get_species(data) if not dd.get_species(data) else "None"
+    sps = dd.get_species(data) if dd.get_species(data) else "None"
     if file_exists(op.join(dd.get_work_dir(data), "mirdeep2", "novel", "hairpin.fa")):
         data['seqbuster_novel'] = _miraligner(data["collapse"], "%s_novel" % out_file, sps,  op.join(dd.get_work_dir(data), "mirdeep2", "novel"), data['config'])
 
