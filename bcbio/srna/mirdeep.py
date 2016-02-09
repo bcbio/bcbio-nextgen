@@ -32,7 +32,7 @@ def run(data):
     safe_makedir(out_dir)
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
-        cmd = ("{perl_exports} && {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -d -P -t {species} -z res").format(**locals())
+        cmd = ("{perl_exports} && perl {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -d -P -t {species} -z res").format(**locals())
         if file_exists(mirdeep2) and not file_exists(out_file) and file_exists(rfam_file):
             do.run(cmd.format(**locals()), "Running mirdeep2.")
         if file_exists(out_file):
