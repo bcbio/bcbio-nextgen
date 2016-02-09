@@ -186,11 +186,6 @@ if __name__ == "__main__":
     fabutils = getattr(fabmod, 'fabutils')
     fabutils.configure_runsudo(env)
 
-    system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
-    with open(system_config) as in_handle:
-        config = yaml.load(in_handle)
-    env.picard_home = config_utils.get_program("picard", config, ptype="dir")
-
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
     args.gtf = os.path.abspath(args.gtf) if args.gtf else None
