@@ -421,6 +421,10 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["seqcluster"],
                     "type": "directory", "ext": "seqcluster"})
 
+    if sample.get("report", None):
+        out.append({"path": os.path.dirname(sample["report"]),
+                    "type": "directory", "ext": "seqclusterViz"})
+
     for x in sample.get("variants", []):
         if "pop_db" in x:
             out.append({"path": x["pop_db"],

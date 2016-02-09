@@ -3,13 +3,11 @@
 Script to set up a custom genome for bcbio-nextgen
 """
 
-import argparse
 from argparse import ArgumentParser
 import os
 from Bio import SeqIO
 import toolz as tz
 from bcbio.utils import safe_makedir, file_exists, chdir
-from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
@@ -185,11 +183,6 @@ if __name__ == "__main__":
     fabmod = __import__("cloudbio", fromlist=["fabutils"])
     fabutils = getattr(fabmod, 'fabutils')
     fabutils.configure_runsudo(env)
-
-    system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
-    with open(system_config) as in_handle:
-        config = yaml.load(in_handle)
-    env.picard_home = config_utils.get_program("picard", config, ptype="dir")
 
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
