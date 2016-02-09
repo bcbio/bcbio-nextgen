@@ -73,7 +73,7 @@ def run_cluster(*data):
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = op.join(work_dir, "align", "seqs.bam")
     cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
-    report_file = _report(sample, dd.get_ref_file(sample))
+    sample["report"] = _report(sample, dd.get_ref_file(sample))
     sample["seqcluster"] = out_dir
 
     out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
