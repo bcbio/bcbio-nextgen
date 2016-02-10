@@ -9,6 +9,8 @@ import copy
 import collections
 import pprint
 
+import toolz as tz
+
 def variant(variables):
     """Variant calling workflow implementation in CWL.
 
@@ -52,11 +54,11 @@ def variant(variables):
                 _cwl_file_world(["hla", "fastq"], allow_missing=True)],
                ["biobambam"],
                noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
+    vc = [s("get_parallel_regions", "batch-split",
+            [["batch_rec"]],
+            [_cwl_nonfile_world(["region"])])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             s("batch_for_variantcall", "multi-batch",
-               [["align_bam"]], "batch_rec"),
-             #w("variantcall", "multi-parallel", [], []),
              s("prep_samples", "multi-parallel",
                [["config", "algorithm", "variant_regions"]],
                [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
@@ -80,6 +82,9 @@ def variant(variables):
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
                 _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
                 _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
+             s("batch_for_variantcall", "multi-batch", [], "batch_rec",
+               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
+             w("variantcall", "multi-parallel", vc, [["region"]]),
              s("pipeline_summary", "multi-parallel",
                [["align_bam"],
                 ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
@@ -108,7 +113,8 @@ def variant(variables):
                 inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
                 parallel_ids = _find_split_vs(outputs, wf_step.parallel)
-                wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs, wf_step.programs))
+                wf_steps.append(("step", wf_step.name, wf_step.parallel, [_clean_record(x) for x in inputs],
+                                 outputs, wf_step.programs))
                 wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
                                              nested_inputs)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
@@ -169,7 +175,7 @@ def _merge_wf_outputs(new, cur, parallel):
         outv["id"] = "#%s" % get_base_id(v["id"])
         outv["type"] = v["type"]
         new_ids.add(outv["id"])
-        if parallel == "single-split":
+        if parallel in ["single-split", "batch-split"]:
             outv = _flatten_nested_input(outv)
         out.append(outv)
     for outv in cur:
@@ -210,9 +216,13 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
     we split previously and are merging now, then we only nest those
     combing from the split process.
     """
+    inputs = [_get_variable(x, file_vs) for x in step.inputs]
+    is_record_input = len(inputs) == 1 and tz.get_in(["type", "type"], inputs[0]) == "record"
     skip_inputs = set([_get_string_vid(x) for x in step.noinputs])
-    inputs = [_get_variable(x, file_vs) for x in step.inputs] + \
-             [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
+    if is_record_input:
+        inputs = _unpack_record(inputs[0], skip_inputs)
+    else:
+        inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
     if step.parallel in ["single-merge"]:
         if parallel_ids:
@@ -223,19 +233,36 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
         assert len(parallel_ids) == 0
         nested_inputs = [x["id"] for x in inputs]
         inputs = [_nest_variable(x) for x in inputs]
-
     return inputs, parallel_ids, nested_inputs
+
+def _unpack_record(rec, noinputs):
+    """Unpack a record object, extracting individual elements.
+    """
+    out = []
+    for field in rec["type"]["fields"]:
+        if field["name"] not in noinputs:
+            out.append({"id": "#%s" % field["name"], "type": field["type"],
+                        "source": rec["id"], "valueFrom": "$(self.%s)" % field["name"]})
+    return out
+
+def _clean_record(var):
+    """Remove record source information from an input variant.
+    """
+    out = copy.deepcopy(var)
+    for attr in ["source", "valueFrom"]:
+        out.pop(attr, None)
+    return out
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     if step.parallel in ["multi-batch"]:
-        file_output = []
-        std_output = [_create_record(outputs, step.inputs, file_vs, std_vs)]
+        file_output = [_create_record(outputs, step.inputs, step.noinputs, file_vs, std_vs)]
+        std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
         file_output = [_clean_output_extras(x) for x in file_output]
-        std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
-        file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-    if step.parallel in ["single-split", "multi-combined", "multi-batch"]:
+    std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
+    file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
+    if step.parallel in ["single-split", "batch-split", "multi-combined", "multi-batch"]:
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs
@@ -323,6 +350,8 @@ def _nest_variable(v):
     """
     v = copy.deepcopy(v)
     v["type"] = {"type": "array", "items": v["type"]}
+    if "secondaryFiles" in v:
+        v["type"]["secondaryFiles"] = v.pop("secondaryFiles")
     return v
 
 def _clean_output(v):
@@ -369,19 +398,22 @@ def _get_upload_output(vid, variables):
     v.pop("secondaryFiles", None)
     return _clean_output_extras(v)
 
-def _create_record(name, inputs, file_vs, std_vs):
+def _create_record(name, inputs, noinputs, file_vs, std_vs):
     """Create an input record created from rearranging inputs.
 
     Batching processes create records that reformat the inputs for
     parallelization.
     """
+    skip_inputs = set([_get_string_vid(x) for x in noinputs])
     fields = []
     input_vids = set([_get_string_vid(v) for v in inputs])
     for orig_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
-        cur_v = {}
-        cur_v["name"] = get_base_id(orig_v["id"])
-        cur_v["type"] = orig_v["type"]
-        fields.append(_nest_variable(cur_v))
+        if get_base_id(orig_v["id"]) not in skip_inputs:
+            cur_v = {}
+            cur_v["name"] = get_base_id(orig_v["id"])
+            cur_v["type"] = orig_v["type"]
+            fields.append(_nest_variable(cur_v))
+
     return {"id": "#%s" % name,
             "type": {"name": name,
                      "type": "record",

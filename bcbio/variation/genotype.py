@@ -35,8 +35,8 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
 
 # ## High level functionality to run genotyping in parallel
 
-def get_variantcaller(data, key="variantcaller", default="gatk"):
-    if data.get("align_bam"):
+def get_variantcaller(data, key="variantcaller", default="gatk", require_bam=True):
+    if not require_bam or data.get("align_bam"):
         return tz.get_in(["config", "algorithm", key], data, default)
 
 def combine_multiple_callers(samples):
@@ -148,14 +148,14 @@ def _collapse_by_bam_variantcaller(samples):
         out.append([cur])
     return out
 
-def _dup_samples_by_variantcaller(samples):
+def _dup_samples_by_variantcaller(samples, require_bam=True):
     """Prepare samples vy variant callers, duplicating any with multiple callers.
     """
     to_process = []
     extras = []
     for data in [utils.to_single_data(x) for x in samples]:
         added = False
-        for add in handle_multiple_callers(data, "variantcaller"):
+        for add in handle_multiple_callers(data, "variantcaller", require_bam=require_bam):
             added = True
             to_process.append([add])
         if not added:
@@ -181,14 +181,15 @@ def batch_for_variantcall(samples):
     CWL input target that groups samples into batches and variant callers
     for parallel processing.
     """
-    to_process, extras = _dup_samples_by_variantcaller(samples)
+    to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     for data in [utils.to_single_data(x) for x in to_process]:
+        vc = get_variantcaller(data, require_bam=False)
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
         for b in batches:
-            batch_groups[b].append(utils.deepish_copy(data))
+            batch_groups[(b, vc)].append(utils.deepish_copy(data))
     return list(batch_groups.values()) + extras
 
 def _handle_precalled(data):
@@ -207,10 +208,10 @@ def _handle_precalled(data):
         data["vrn_file"] = our_vrn_file
     return data
 
-def handle_multiple_callers(data, key, default=None):
+def handle_multiple_callers(data, key, default=None, require_bam=True):
     """Split samples that potentially require multiple variant calling approaches.
     """
-    callers = get_variantcaller(data, key, default)
+    callers = get_variantcaller(data, key, default, require_bam=require_bam)
     if isinstance(callers, basestring):
         return [data]
     elif not callers:

@@ -41,15 +41,7 @@ def _split_by_regions(dirname, out_ext, in_key):
     def _do_work(data):
         # XXX Need to move retrieval of regions into preparation to avoid
         # need for files when running in non-shared filesystems
-        callable_regions = tz.get_in(["config", "algorithm", "callable_regions"], data)
-        if not callable_regions:
-            raise ValueError("Did not find any callable regions for sample: %s\n"
-                             "Check 'align/%s/*-callableblocks.bed' and 'regions' to examine callable regions"
-                             % (dd.get_sample_name(data), dd.get_sample_name(data)))
-        with open(callable_regions) as in_handle:
-            regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
-                       (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
-                                                                       not xs[0].startswith(("track", "browser",)))]
+        regions = _get_parallel_regions(data)
         bam_file = data[in_key]
         if bam_file is None:
             return None, []
@@ -65,6 +57,28 @@ def _split_by_regions(dirname, out_ext, in_key):
                                 "%s%s" % (base_out, out_ext))
         return out_file, part_info
     return _do_work
+
+def _get_parallel_regions(data):
+    callable_regions = tz.get_in(["config", "algorithm", "callable_regions"], data)
+    if not callable_regions:
+        raise ValueError("Did not find any callable regions for sample: %s\n"
+                            "Check 'align/%s/*-callableblocks.bed' and 'regions' to examine callable regions"
+                            % (dd.get_sample_name(data), dd.get_sample_name(data)))
+    with open(callable_regions) as in_handle:
+        regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
+                    (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
+                                                                    not xs[0].startswith(("track", "browser",)))]
+    return regions
+
+def get_parallel_regions(samples):
+    """CWL target to retrieve a list of callable regions for parallelization.
+
+    XXX To do, currently not passing in input files until we have way to manage
+    this with batches.
+    """
+    # regions = _get_parallel_regions(samples[0])
+    regions = ["chr22:1-100", "chr22:250-500"]
+    return [{"region": r} for r in regions]
 
 def _add_combine_info(output, combine_map, file_key):
     """Do not actually combine, but add details for later combining work.

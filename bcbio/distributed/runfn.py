@@ -42,10 +42,11 @@ def process(args):
     if argfile:
         with open(argfile, "w") as out_handle:
             if argfile.endswith(".json"):
-                if parallel in ["single-split", "multi-combined"]:
-                    json.dump([_remove_work_dir(xs[0], work_dir + "/") for xs in out], out_handle)
+                if parallel in ["single-split", "multi-combined", "batch-split"]:
+                    json.dump([_remove_work_dir(utils.to_single_data(xs), work_dir + "/") for xs in out],
+                              out_handle)
                 elif parallel in ["multi-batch"]:
-                    json.dump([_collapse_to_cwl_record(xs) for xs in out], out_handle)
+                    json.dump([_collapse_to_cwl_record(xs, work_dir) for xs in out], out_handle)
                 else:
                     assert len(out) == 1, pprint.pformat(out)
                     json.dump(_remove_work_dir(out[0][0], work_dir + "/"), out_handle)
@@ -104,36 +105,50 @@ def _world_from_cwl(fnargs, work_dir):
         data = _add_resources(data, runtime)
         data = run_info.normalize_world(data)
         out.append(data)
-    if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch"]:
+    if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
+                    "batch-split"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
     return out, parallel
 
-def _collapse_to_cwl_record(samples):
+def _collapse_to_cwl_record(samples, work_dir):
     """Convert nested samples from batches into a CWL record, based on input keys.
     """
-    all_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])))
+    all_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])), key=lambda x: (-len(x), tuple(x)))
     out = {}
     for key in all_keys:
         key_parts = key.split("__")
         vals = []
+        cur = []
         for d in samples:
             val = tz.get_in(key_parts, d)
             if isinstance(val, basestring):
                 if os.path.exists(val):
-                    val = {"class": "File", "path": val}
+                    # XXX Need reference to file in original directory if not worked on.
+                    val = _remove_work_dir({"class": "File", "path": val}, work_dir)
                     secondary = []
                     for idx in [".bai", ".tbi"]:
                         if os.path.exists(val["path"] + idx):
-                            secondary.append({"class": "File", "path": val["path"] + idx})
+                            secondary.append(_remove_work_dir({"class": "File", "path": val["path"] + idx},
+                                                              work_dir))
                     if secondary:
                         val["secondaryFiles"] = secondary
             elif isinstance(val, dict):
                 val = json.dumps(val)
             vals.append(val)
+            # Remove nested keys to avoid specifying multiple times
+            cur.append(_dissoc_in(d, key_parts) if len(key_parts) > 1 else d)
+        samples = cur
         out[key] = vals
     return out
+
+def _dissoc_in(d, key_parts):
+    if len(key_parts) > 1:
+        d[key_parts[0]] = _dissoc_in(d[key_parts[0]], key_parts[1:])
+    else:
+        del d[key_parts[0]]
+    return d
 
 def _update_nested(key, val, data):
     """Update the data object, avoiding over-writing with nested dictionaries.
@@ -152,6 +167,8 @@ def _remove_work_dir(orig, work_dir):
 
     CWL needs to work off relative paths since files change on reloads.
     """
+    if not work_dir.endswith("/"):
+        work_dir += "/"
     def startswith_work_dir(x):
         return x and isinstance(x, basestring) and x.startswith(work_dir)
     out = {}
