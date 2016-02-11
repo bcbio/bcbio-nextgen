@@ -72,13 +72,11 @@ def _get_parallel_regions(data):
 
 def get_parallel_regions(samples):
     """CWL target to retrieve a list of callable regions for parallelization.
-
-    XXX To do, currently not passing in input files until we have way to manage
-    this with batches.
     """
-    # regions = _get_parallel_regions(samples[0])
-    regions = ["chr22:1-100", "chr22:250-500"]
-    return [{"region": r} for r in regions]
+    regions = _get_parallel_regions(samples[0])
+    return [{"region": "%s:%s-%s" % (c, s, e)} for c, s, e in regions]
+    # testing use
+    # return [{"region": "chrM:0-16571"}]
 
 def _add_combine_info(output, combine_map, file_key):
     """Do not actually combine, but add details for later combining work.

@@ -82,7 +82,9 @@ def variant(variables):
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
                 _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
                 _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
-             s("batch_for_variantcall", "multi-batch", [], "batch_rec",
+             s("batch_for_variantcall", "multi-batch",
+               [["align_bam"], ["config", "algorithm", "callable_regions"]],
+               "batch_rec",
                noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
              w("variantcall", "multi-parallel", vc, [["region"]]),
              s("pipeline_summary", "multi-parallel",
@@ -174,6 +176,10 @@ def _merge_wf_outputs(new, cur, parallel):
         outv["source"] = v["id"]
         outv["id"] = "#%s" % get_base_id(v["id"])
         outv["type"] = v["type"]
+        if "secondaryFiles" in v:
+            outv["secondaryFiles"] = v["secondaryFiles"]
+        if tz.get_in(["outputBinding", "secondaryFiles"], v):
+            outv["secondaryFiles"] = tz.get_in(["outputBinding", "secondaryFiles"], v)
         new_ids.add(outv["id"])
         if parallel in ["single-split", "batch-split"]:
             outv = _flatten_nested_input(outv)
@@ -259,7 +265,7 @@ def _get_step_outputs(step, outputs, file_vs, std_vs):
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
-        file_output = [_clean_output_extras(x) for x in file_output]
+        #file_output = [_clean_output_extras(x) for x in file_output]
     std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
     file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
     if step.parallel in ["single-split", "batch-split", "multi-combined", "multi-batch"]:
@@ -279,14 +285,14 @@ def _cwl_nonfile_world(key, outtype="string", allow_missing=False):
 def _cwl_file_world(key, extension="", allow_missing=False):
     """Retrieve a file, or array of files, from a key in the bcbio world object.
     """
-    secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': dir + val + '%s'}]" % extension) if extension else ""
+    secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': val + '%s'}]" % extension) if extension else ""
     converter = ["if (val === null || val === undefined)",
                  "  return null;",
                  "else if (typeof val === 'string' || val instanceof String)",
-                 "  return {'path': dir + val, 'class': 'File'%s};" % secondary_str,
+                 "  return {'path': val, 'class': 'File'%s};" % secondary_str,
                  "else if (val.length != null && val.length > 0) {",
                  "  var vals = val;",
-                 "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});}" % secondary_str,
+                 "  return vals.map(function(val){return {'path': val, 'class': 'File'%s};});}" % secondary_str,
                  "else",
                  "  return null;"]
     return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File", extension)
@@ -294,9 +300,8 @@ def _cwl_file_world(key, extension="", allow_missing=False):
 def _cwl_get_from_world(key, convert_val, valtype, extension=""):
     """Generic function to retrieve specific results from a bcbio world object.
 
-    The generic javascript provides `dir`, the directory containing the output files
-    potentially remapped externally for Docker containers and `val` -- the value of
-    the `key` attribute from the bcbio world object.
+    For global variables we provide `val` -- the value of the `key` attribute
+    from the bcbio world object.
 
     Will handle both single sample world outputs (a dictionary) as well as multiple world
     objects (when samples get batched together). It determines which case based on
@@ -305,7 +310,6 @@ def _cwl_get_from_world(key, convert_val, valtype, extension=""):
     keygetter = "".join(["['%s']" % k for k in key])
     getter = ["${",
               " function world_to_val(world) {",
-              "   var dir = self[0].path.replace(/\/[^\/]*$/,'') + '/';",
               "   var val = world%s;" % keygetter] + \
               ["   %s" % v for v in convert_val] + \
               [" }",

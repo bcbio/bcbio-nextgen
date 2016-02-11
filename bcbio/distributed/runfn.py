@@ -43,13 +43,13 @@ def process(args):
         with open(argfile, "w") as out_handle:
             if argfile.endswith(".json"):
                 if parallel in ["single-split", "multi-combined", "batch-split"]:
-                    json.dump([_remove_work_dir(utils.to_single_data(xs), work_dir + "/") for xs in out],
+                    json.dump([utils.to_single_data(xs) for xs in out],
                               out_handle)
                 elif parallel in ["multi-batch"]:
                     json.dump([_collapse_to_cwl_record(xs, work_dir) for xs in out], out_handle)
                 else:
                     assert len(out) == 1, pprint.pformat(out)
-                    json.dump(_remove_work_dir(out[0][0], work_dir + "/"), out_handle)
+                    json.dump(out[0][0], out_handle)
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
@@ -125,13 +125,11 @@ def _collapse_to_cwl_record(samples, work_dir):
             val = tz.get_in(key_parts, d)
             if isinstance(val, basestring):
                 if os.path.exists(val):
-                    # XXX Need reference to file in original directory if not worked on.
-                    val = _remove_work_dir({"class": "File", "path": val}, work_dir)
+                    val = {"class": "File", "path": val}
                     secondary = []
-                    for idx in [".bai", ".tbi"]:
+                    for idx in [".bai", ".tbi", ".gbi"]:
                         if os.path.exists(val["path"] + idx):
-                            secondary.append(_remove_work_dir({"class": "File", "path": val["path"] + idx},
-                                                              work_dir))
+                            secondary.append({"class": "File", "path": val["path"] + idx})
                     if secondary:
                         val["secondaryFiles"] = secondary
             elif isinstance(val, dict):
@@ -161,25 +159,6 @@ def _update_nested(key, val, data):
             raise ValueError("Duplicated key %s" % key)
         data = tz.update_in(data, key, lambda x: val)
     return data
-
-def _remove_work_dir(orig, work_dir):
-    """Remove work directory from any file paths to make them relative.
-
-    CWL needs to work off relative paths since files change on reloads.
-    """
-    if not work_dir.endswith("/"):
-        work_dir += "/"
-    def startswith_work_dir(x):
-        return x and isinstance(x, basestring) and x.startswith(work_dir)
-    out = {}
-    for key, val in orig.items():
-        if isinstance(val, dict):
-            out[key] = _remove_work_dir(val, work_dir)
-        elif isinstance(val, (list, tuple)):
-            out[key] = [x.replace(work_dir, "") if startswith_work_dir(x) else x for x in val]
-        else:
-            out[key] = val.replace(work_dir, "") if startswith_work_dir(val) else val
-    return out
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser("runfn", help=("Run a specific bcbio-nextgen function."
