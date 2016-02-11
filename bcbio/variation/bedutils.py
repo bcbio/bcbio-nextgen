@@ -8,8 +8,10 @@ import subprocess
 import toolz as tz
 
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
@@ -30,6 +32,20 @@ def get_sort_cmd():
     else:
         return "sort"
 
+def check_bed_contigs(in_file, data):
+    """Ensure BED file contigs match the reference genome.
+    """
+    contigs = set([])
+    with open(in_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith(("#", "track", "browser")):
+                contigs.add(line.split()[0])
+    ref_contigs = set([x.name for x in ref.file_contigs(dd.get_ref_file(data))])
+    if len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
+        raise ValueError("Contigs in BED file %s not in reference genome:\n %s\n"
+                         % (in_file, list(contigs - ref_contigs)) +
+                         "This is typically due to chr1 versus 1 differences in BED file and reference.)
+
 def clean_file(in_file, data, prefix="", bedprep_dir=None):
     """Prepare a clean sorted input BED file without headers
     """
@@ -38,6 +54,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None):
             bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file))).replace(".gz", "")
         if not utils.file_uptodate(out_file, in_file):
+            check_bed_contigs(in_file, data)
             with file_transaction(data, out_file) as tx_out_file:
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"

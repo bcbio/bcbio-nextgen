@@ -12,6 +12,7 @@
 - Avoid extacting individual sample calls from pooled variant call runs for
   samples with more than 5 individuals in a batch. Avoids slow extraction run
   times. Thanks to Neill Gibson.
+- Add explicit check for BED file mismatches with reference genome.
 - During validation, report truth counts relative to initial truth set
   representation and pick best metric for plotting ROC scores.
 - Remove `--sudo` flag from installer. bcbio requires install into a directory
