@@ -44,7 +44,7 @@ def check_bed_contigs(in_file, data):
     if len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
         raise ValueError("Contigs in BED file %s not in reference genome:\n %s\n"
                          % (in_file, list(contigs - ref_contigs)) +
-                         "This is typically due to chr1 versus 1 differences in BED file and reference.)
+                         "This is typically due to chr1 versus 1 differences in BED file and reference.")
 
 def clean_file(in_file, data, prefix="", bedprep_dir=None):
     """Prepare a clean sorted input BED file without headers
