@@ -1,4 +1,4 @@
-## 0.9.6 (in progress)
+## 0.9.6 (12 February 2016)
 
 - Installation uses conda packages from bioconda for Python dependencies and
   third party tools.
