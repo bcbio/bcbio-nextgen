@@ -29,7 +29,7 @@ from bcbio.pipeline import datadict as dd
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/requirements-conda.txt",
     "gitrepo": "https://github.com/chapmanb/bcbio-nextgen.git",
-    "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux.git",
+    "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux/archive/master.tar.gz",
     "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
     "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
                       "snpEff_v{snpeff_ver}_{genome}.zip")}
@@ -620,7 +620,8 @@ def add_subparser(subparsers):
 def get_cloudbiolinux(remotes):
     base_dir = os.path.join(os.getcwd(), "cloudbiolinux")
     if not os.path.exists(base_dir):
-        subprocess.check_call(["git", "clone", remotes["cloudbiolinux"]])
+        subprocess.check_call("wget --no-check-certificate -O- %s | tar xz && mv cloudbiolinux-master cloudbiolinux"
+                              % remotes["cloudbiolinux"], shell=True)
     return {"biodata": os.path.join(base_dir, "config", "biodata.yaml"),
             "dir": base_dir}
 
