@@ -664,14 +664,10 @@ def perl_cmd():
         return which("perl")
 
 def get_perl_exports(tooldir=None):
-    """Environmental exports to use conda install perl and site library.
+    """Environmental exports to use conda installed perl.
     """
-    from bcbio import install
-    if tooldir is None:
-        tooldir = install.get_defaults().get("tooldir", "/usr/local")
-    perllib = "%s/lib/perl5" % tooldir
     perl_path = os.path.dirname(perl_cmd())
-    return "export PATH=%s:$PATH && export PERL5LIB=%s:$PERL5LIB" % (perl_path, perllib)
+    return "export PATH=%s:$PATH" % (perl_path)
 
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
