@@ -4,22 +4,22 @@ calculate coverage across a list of regions
 import os
 
 import six
-import matplotlib as mpl
-mpl.use('Agg', force=True)
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib
-import seaborn as sns
 import pandas as pd
 import pybedtools
 
+from bcbio import utils
 from bcbio.utils import rbind, file_exists
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 import bcbio.pipeline.datadict as dd
-from pylab import stem, setp
 from collections import defaultdict
 from itertools import repeat
+
+mpl = utils.LazyImport("matplotlib")
+plt = utils.LazyImport("matplotlib.pyplot")
+pylab = utils.LazyImport("pylab")
+backend_pdf = utils.LazyImport("matplotlib.backends.backend_pdf")
+sns = utils.LazyImport("seaborn")
 
 def _calc_regional_coverage(in_bam, chrom, start, end, samplename, work_dir):
     """
@@ -59,7 +59,7 @@ def _combine_regional_coverage(in_bams, samplenames, chrom, start, end, work_dir
     return rbind(dfs)
 
 def _get_caller_colormap(callers):
-    colors = matplotlib.colors.ColorConverter.colors.keys()
+    colors = mpl.colors.ColorConverter.colors.keys()
     return {caller: colors[index] for index, caller in enumerate(callers)}
 
 def _get_caller_heights(callers, plot):
@@ -84,10 +84,10 @@ def _add_stems_to_plot(interval, stem_bed, samples, plot):
         stem_color = caller_colormap[caller]
         caller_stems = stems[caller]
         stem_heights = list(repeat(caller_heights[caller], len(caller_stems)))
-        markerline, _, baseline = stem(caller_stems, stem_heights, '-.',
-                                       label=caller)
-        setp(markerline, 'markerfacecolor', stem_color)
-        setp(baseline, 'color', 'r', 'linewidth', 0)
+        markerline, _, baseline = pylab.stem(caller_stems, stem_heights, '-.',
+                                             label=caller)
+        pylab.setp(markerline, 'markerfacecolor', stem_color)
+        pylab.setp(baseline, 'color', 'r', 'linewidth', 0)
         plt.legend()
 
 def _split_regions(chrom, start, end):
@@ -112,6 +112,7 @@ def plot_multiple_regions_coverage(samples, out_file, region_bed=None, stem_bed=
     if given a bed file or BedTool of locations in stem_bed with a label,
     plots lollipops at those locations
     """
+    mpl.use('Agg', force=True)
     PAD = 100
     if file_exists(out_file):
         return out_file
@@ -126,7 +127,7 @@ def plot_multiple_regions_coverage(samples, out_file, region_bed=None, stem_bed=
     plt.clf()
     plt.cla()
     with file_transaction(out_file) as tx_out_file:
-        with PdfPages(tx_out_file) as pdf_out:
+        with backend_pdf.PdfPages(tx_out_file) as pdf_out:
             sns.despine()
             for line in region_bed:
                 for chrom, start, end in _split_regions(line.chrom, max(line.start - PAD, 0),

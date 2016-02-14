@@ -13,14 +13,7 @@ import lxml.html
 import yaml
 from datetime import datetime
 from collections import defaultdict
-# allow graceful during upgrades
-try:
-    import matplotlib
-    matplotlib.use('Agg', force=True)
-    import matplotlib.pyplot as plt
-    plt.ioff()
-except ImportError:
-    plt = None
+
 try:
     from fadapa import Fadapa
 except ImportError:
@@ -41,8 +34,8 @@ from bcbio.variation import bedutils
 from bcbio.variation import coverage as cov
 from bcbio.ngsalign.postalign import dedup_bam
 from bcbio.rnaseq import gtf
-# ## High level functions to generate summary
 
+# ## High level functions to generate summary
 
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.

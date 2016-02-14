@@ -1,3 +1,7 @@
+## 0.9.7 (in progress)
+
+- Lazy import of matplotlib libraries on usage to avoid slow startup times.
+
 ## 0.9.6 (12 February 2016)
 
 - Installation uses conda packages from bioconda for Python dependencies and
