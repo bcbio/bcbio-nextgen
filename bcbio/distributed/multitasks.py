@@ -151,6 +151,10 @@ def batch_for_variantcall(*args):
     return genotype.batch_for_variantcall(*args)
 
 @utils.map_wrap
+def variantcall_batch_region(*args):
+    return genotype.variantcall_batch_region(*args)
+
+@utils.map_wrap
 def get_parallel_regions(*args):
     return region.get_parallel_regions(*args)
 

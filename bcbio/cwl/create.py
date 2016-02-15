@@ -94,7 +94,7 @@ def _place_input_binding(inp_tool, inp_binding, parallel):
     with the itemSeparator, but also support having multiple samples where we pass
     things independently.
     """
-    if (parallel in ["multi-combined", "multi-batch", "batch-split"] and
+    if (parallel in ["multi-combined", "multi-batch", "batch-split", "batch-parallel"] and
           tz.get_in(["type", "type"], inp_tool) == "array"):
         inp_tool["type"]["inputBinding"] = inp_binding
     else:
@@ -141,7 +141,7 @@ def _step_template(name, run_file, inputs, outputs, parallel):
            "id": "#%s" % name,
            "inputs": sinputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
-    if parallel in ["single-parallel", "multi-parallel"]:
+    if parallel in ["single-parallel", "multi-parallel", "batch-parallel"]:
         out.update({"scatterMethod": "dotproduct",
                     "scatter": scatter_inputs})
     return out
@@ -268,6 +268,11 @@ def _item_to_cwldata(x):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".bai"}]
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".tbi"}]
+            elif x.endswith(".fa"):
+                secondary = [x + ".fai", os.path.splitext(x)[0] + ".dict"]
+                secondary = [x for x in secondary if os.path.exists(x)]
+                if secondary:
+                    out["secondaryFiles"] = [{"class": "File", "path": x} for x in secondary]
         return out
     else:
         return x

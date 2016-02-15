@@ -283,3 +283,33 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
         data["region"] = region
     data["vrn_file"] = out_file
     return [data]
+
+def variantcall_batch_region(items):
+    """CWL entry point for variant calling a batch of samples in a region.
+    """
+    align_bams = [dd.get_align_bam(x) for x in items]
+    variantcaller = list(set([get_variantcaller(x) for x in items]))
+    assert len(variantcaller) == 1
+    variantcaller = variantcaller[0]
+    region = list(set([x.get("region") for x in items if "region" in x]))
+    assert len(region) == 1, region
+    region = region[0]
+    caller_fn = get_variantcallers()[variantcaller]
+    assoc_files = tz.get_in(("genome_resources", "variation"), items[0], {})
+    batch_names = collections.defaultdict(int)
+    for data in items:
+        batches = dd.get_batches(data) or dd.get_sample_name(data)
+        if not isinstance(batches, (list, tuple)):
+            batches = [batches]
+        for b in batches:
+            batch_names[b] += 1
+    batch_name = sorted(batch_names.items(), key=lambda x: x[-1], reverse=True)[0][0]
+    chrom, coords = region.split(":")
+    start, end = coords.split("-")
+    region = (chrom, int(start), int(end))
+    region_str = "_".join(str(x) for x in region)
+    out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, chrom,
+                            "%s-%s.vcf.gz" % (batch_name, region_str))
+    utils.safe_makedir(os.path.dirname(out_file))
+    call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files, region, out_file)
+    return {"vrn_file_region": call_file}

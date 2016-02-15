@@ -48,8 +48,7 @@ def process(args):
                 elif parallel in ["multi-batch"]:
                     json.dump([_collapse_to_cwl_record(xs, work_dir) for xs in out], out_handle)
                 else:
-                    assert len(out) == 1, pprint.pformat(out)
-                    json.dump(out[0][0], out_handle)
+                    json.dump(utils.to_single_data(utils.to_single_data(out)), out_handle)
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
@@ -106,7 +105,7 @@ def _world_from_cwl(fnargs, work_dir):
         data = run_info.normalize_world(data)
         out.append(data)
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
-                    "batch-split"]:
+                    "batch-split", "batch-parallel"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
@@ -127,9 +126,14 @@ def _collapse_to_cwl_record(samples, work_dir):
                 if os.path.exists(val):
                     val = {"class": "File", "path": val}
                     secondary = []
-                    for idx in [".bai", ".tbi", ".gbi"]:
-                        if os.path.exists(val["path"] + idx):
-                            secondary.append({"class": "File", "path": val["path"] + idx})
+                    for idx in [".bai", ".tbi", ".gbi", ".fai"]:
+                        idx_file = val["path"] + idx
+                        if os.path.exists(idx_file):
+                            secondary.append({"class": "File", "path": idx_file})
+                    for idx in [".dict"]:
+                        idx_file = os.path.splitext(val["path"])[0] + idx
+                        if os.path.exists(idx_file):
+                            secondary.append({"class": "File", "path": idx_file})
                     if secondary:
                         val["secondaryFiles"] = secondary
             elif isinstance(val, dict):

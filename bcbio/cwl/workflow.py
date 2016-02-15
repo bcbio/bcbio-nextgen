@@ -30,14 +30,17 @@ def variant(variables):
         if programs is None: programs = []
         if noinputs is None: noinputs = []
         return Step(name, parallel, inputs, outputs, programs, noinputs)
-    w = collections.namedtuple("w", "name parallel workflow internal")
+    def w(name, parallel, workflow, internal, noinputs=None):
+        Workflow = collections.namedtuple("Workflow", "name parallel workflow internal noinputs")
+        if noinputs is None: noinputs = []
+        return Workflow(name, parallel, workflow, internal, noinputs)
     align = [s("prep_align_inputs", "single-split",
                [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
              s("process_alignment", "single-parallel",
-               [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
+               [["files"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"]),
                 _cwl_file_world(["align_bam"]),
@@ -56,17 +59,20 @@ def variant(variables):
                noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
     vc = [s("get_parallel_regions", "batch-split",
             [["batch_rec"]],
-            [_cwl_nonfile_world(["region"])])]
+            [_cwl_nonfile_world(["region"])]),
+          s("variantcall_batch_region", "batch-parallel",
+            [["batch_rec"]],
+            [_cwl_file_world(["vrn_file_region"], ".tbi")])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples", "multi-parallel",
                [["config", "algorithm", "variant_regions"],
-                ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
+                ["reference", "fasta", "base"]],
                [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
                 _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
              s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
+                ["reference", "fasta", "base"] ],
                [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
                 _cwl_file_world(["regions", "callable"]),
                 _cwl_file_world(["regions", "sample_callable"]),
@@ -79,30 +85,34 @@ def variant(variables):
                 _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
+                ["reference", "fasta", "base"]],
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
                 _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
                 _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
              s("batch_for_variantcall", "multi-batch",
-               [["align_bam"], ["config", "algorithm", "callable_regions"]],
+               [["align_bam"], ["config", "algorithm", "callable_regions"],
+                ["config", "algorithm", "variant_regions"],
+                ["reference", "fasta", "base"],
+                ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
                "batch_rec",
                noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
-             w("variantcall", "multi-parallel", vc, [["region"]]),
+             w("variantcall", "multi-parallel", vc,
+               [["region"], ["vrn_file_region"]],
+               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
              s("pipeline_summary", "multi-parallel",
-               [["align_bam"],
-                ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
+               [["align_bam"], ["reference", "fasta", "base"]],
                [_cwl_file_world(["summary", "qc"])],
                ["samtools", "bamtools"]),
              s("coverage_report", "multi-parallel",
                [["align_bam"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
+                ["reference", "fasta", "base"],
                 ["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
                [_cwl_file_world(["coverage", "all"], allow_missing=True),
                 _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
              s("qc_report_summary", "multi-combined",
                [["align_bam"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
+                ["reference", "fasta", "base"],
                 ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
                [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
@@ -113,7 +123,7 @@ def variant(variables):
             wf_outputs = []
             wf_steps = []
             for i, wf_step in enumerate(step.workflow):
-                inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids)
+                inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids, step)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
                 parallel_ids = _find_split_vs(outputs, wf_step.parallel)
                 wf_steps.append(("step", wf_step.name, wf_step.parallel, [_clean_record(x) for x in inputs],
@@ -211,12 +221,12 @@ def _find_split_vs(out_vs, parallel):
     """Find variables created by splitting samples.
     """
     # split parallel job
-    if parallel == "single-parallel":
+    if parallel in ["single-parallel", "batch-parallel"]:
         return [v["id"] for v in out_vs]
     else:
         return []
 
-def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
+def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     """Retrieve inputs for a step from existing variables.
 
     Potentially nests inputs to deal with merging split variables. If
@@ -226,10 +236,12 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
     inputs = [_get_variable(x, file_vs) for x in step.inputs]
     is_record_input = len(inputs) == 1 and tz.get_in(["type", "type"], inputs[0]) == "record"
     skip_inputs = set([_get_string_vid(x) for x in step.noinputs])
+    if wf:
+        skip_inputs = skip_inputs | set([_get_string_vid(x) for x in wf.noinputs])
     if is_record_input:
         inputs = _unpack_record(inputs[0], skip_inputs)
-    else:
-        inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
+        skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in inputs])
+    inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
     if step.parallel in ["single-merge"]:
         if parallel_ids:
