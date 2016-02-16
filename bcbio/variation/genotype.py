@@ -35,8 +35,8 @@ def variant_filtration(call_file, ref_file, vrn_files, data):
 
 # ## High level functionality to run genotyping in parallel
 
-def get_variantcaller(data, key="variantcaller", default="gatk"):
-    if data.get("align_bam"):
+def get_variantcaller(data, key="variantcaller", default="gatk", require_bam=True):
+    if not require_bam or data.get("align_bam"):
         return tz.get_in(["config", "algorithm", key], data, default)
 
 def combine_multiple_callers(samples):
@@ -148,14 +148,14 @@ def _collapse_by_bam_variantcaller(samples):
         out.append([cur])
     return out
 
-def _dup_samples_by_variantcaller(samples):
+def _dup_samples_by_variantcaller(samples, require_bam=True):
     """Prepare samples vy variant callers, duplicating any with multiple callers.
     """
     to_process = []
     extras = []
     for data in [utils.to_single_data(x) for x in samples]:
         added = False
-        for add in handle_multiple_callers(data, "variantcaller"):
+        for add in handle_multiple_callers(data, "variantcaller", require_bam=require_bam):
             added = True
             to_process.append([add])
         if not added:
@@ -181,14 +181,15 @@ def batch_for_variantcall(samples):
     CWL input target that groups samples into batches and variant callers
     for parallel processing.
     """
-    to_process, extras = _dup_samples_by_variantcaller(samples)
+    to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     for data in [utils.to_single_data(x) for x in to_process]:
+        vc = get_variantcaller(data, require_bam=False)
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
         for b in batches:
-            batch_groups[b].append(utils.deepish_copy(data))
+            batch_groups[(b, vc)].append(utils.deepish_copy(data))
     return list(batch_groups.values()) + extras
 
 def _handle_precalled(data):
@@ -207,10 +208,10 @@ def _handle_precalled(data):
         data["vrn_file"] = our_vrn_file
     return data
 
-def handle_multiple_callers(data, key, default=None):
+def handle_multiple_callers(data, key, default=None, require_bam=True):
     """Split samples that potentially require multiple variant calling approaches.
     """
-    callers = get_variantcaller(data, key, default)
+    callers = get_variantcaller(data, key, default, require_bam=require_bam)
     if isinstance(callers, basestring):
         return [data]
     elif not callers:
@@ -282,3 +283,33 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
         data["region"] = region
     data["vrn_file"] = out_file
     return [data]
+
+def variantcall_batch_region(items):
+    """CWL entry point for variant calling a batch of samples in a region.
+    """
+    align_bams = [dd.get_align_bam(x) for x in items]
+    variantcaller = list(set([get_variantcaller(x) for x in items]))
+    assert len(variantcaller) == 1
+    variantcaller = variantcaller[0]
+    region = list(set([x.get("region") for x in items if "region" in x]))
+    assert len(region) == 1, region
+    region = region[0]
+    caller_fn = get_variantcallers()[variantcaller]
+    assoc_files = tz.get_in(("genome_resources", "variation"), items[0], {})
+    batch_names = collections.defaultdict(int)
+    for data in items:
+        batches = dd.get_batches(data) or dd.get_sample_name(data)
+        if not isinstance(batches, (list, tuple)):
+            batches = [batches]
+        for b in batches:
+            batch_names[b] += 1
+    batch_name = sorted(batch_names.items(), key=lambda x: x[-1], reverse=True)[0][0]
+    chrom, coords = region.split(":")
+    start, end = coords.split("-")
+    region = (chrom, int(start), int(end))
+    region_str = "_".join(str(x) for x in region)
+    out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, chrom,
+                            "%s-%s.vcf.gz" % (batch_name, region_str))
+    utils.safe_makedir(os.path.dirname(out_file))
+    call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files, region, out_file)
+    return {"vrn_file_region": call_file}

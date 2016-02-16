@@ -14,6 +14,7 @@ import collections
 import fnmatch
 import subprocess
 import sys
+import types
 
 import toolz as tz
 import yaml
@@ -664,14 +665,10 @@ def perl_cmd():
         return which("perl")
 
 def get_perl_exports(tooldir=None):
-    """Environmental exports to use conda install perl and site library.
+    """Environmental exports to use conda installed perl.
     """
-    from bcbio import install
-    if tooldir is None:
-        tooldir = install.get_defaults().get("tooldir", "/usr/local")
-    perllib = "%s/lib/perl5" % tooldir
     perl_path = os.path.dirname(perl_cmd())
-    return "export PATH=%s:$PATH && export PERL5LIB=%s:$PERL5LIB" % (perl_path, perllib)
+    return "export PATH=%s:$PATH" % (perl_path)
 
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
@@ -721,3 +718,48 @@ def max_command_length():
     except ValueError:
         arg_length = DEFAULT_MAX_LENGTH
     return arg_length if arg_length > 0 else DEFAULT_MAX_LENGTH
+
+# LazyImport from NIPY
+# https://github.com/nipy/nitime/blob/master/nitime/lazyimports.py
+
+class LazyImport(types.ModuleType):
+    """
+    This class takes the module name as a parameter, and acts as a proxy for
+    that module, importing it only when the module is used, but effectively
+    acting as the module in every other way (including inside IPython with
+    respect to introspection and tab completion) with the *exception* of
+    reload()- reloading a :class:`LazyImport` raises an :class:`ImportError`.
+    >>> mlab = LazyImport('matplotlib.mlab')
+    No import happens on the above line, until we do something like call an
+    ``mlab`` method or try to do tab completion or introspection on ``mlab``
+    in IPython.
+    >>> mlab
+    <module 'matplotlib.mlab' will be lazily loaded>
+    Now the :class:`LazyImport` will do an actual import, and call the dist
+    function of the imported module.
+    >>> mlab.dist(1969,2011)
+    42.0
+    """
+    def __getattribute__(self, x):
+        # This method will be called only once, since we'll change
+        # self.__class__ to LoadedLazyImport, and __getattribute__ will point
+        # to module.__getattribute__
+        name = object.__getattribute__(self, '__name__')
+        __import__(name)
+        # if name above is 'package.foo.bar', package is returned, the docs
+        # recommend that in order to get back the full thing, that we import
+        # and then lookup the full name is sys.modules, see:
+        # http://docs.python.org/library/functions.html#__import__
+        module = sys.modules[name]
+        # Now that we've done the import, cutout the middleman and make self
+        # act as the imported module
+        class LoadedLazyImport(types.ModuleType):
+            __getattribute__ = module.__getattribute__
+            __repr__ = module.__repr__
+        object.__setattr__(self, '__class__', LoadedLazyImport)
+        # The next line will make "reload(l)" a silent no-op
+        # sys.modules[name] = self
+        return module.__getattribute__(x)
+    def __repr__(self):
+        return "<module '%s' will be lazily loaded>" %\
+                object.__getattribute__(self,'__name__')

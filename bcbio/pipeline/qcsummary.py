@@ -13,14 +13,7 @@ import lxml.html
 import yaml
 from datetime import datetime
 from collections import defaultdict
-# allow graceful during upgrades
-try:
-    import matplotlib
-    matplotlib.use('Agg', force=True)
-    import matplotlib.pyplot as plt
-    plt.ioff()
-except ImportError:
-    plt = None
+
 try:
     from fadapa import Fadapa
 except ImportError:
@@ -41,8 +34,8 @@ from bcbio.variation import bedutils
 from bcbio.variation import coverage as cov
 from bcbio.ngsalign.postalign import dedup_bam
 from bcbio.rnaseq import gtf
-# ## High level functions to generate summary
 
+# ## High level functions to generate summary
 
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
@@ -880,13 +873,9 @@ def _run_qsignature_generator(bam_file, data, out_dir):
                         % tz.get_in(['genome_build'], data))
             return {}
         jvm_opts = "-Xms750m -Xmx2g"
-        limit_reads = 20000000
         if mixup_check == "qsignature_full":
             jvm_opts = "-Xms750m -Xmx8g"
-            limit_reads = 100000000
-            down_bam = bam.downsample(bam_file, data, limit_reads)
-            if not down_bam:
-                down_bam = bam_file
+            down_bam = bam_file
         else:
             down_bam = _slice_bam_chr21(bam_file, data)
             position = _slice_vcf_chr21(position, out_dir)

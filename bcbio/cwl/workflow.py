@@ -9,6 +9,8 @@ import copy
 import collections
 import pprint
 
+import toolz as tz
+
 def variant(variables):
     """Variant calling workflow implementation in CWL.
 
@@ -28,14 +30,17 @@ def variant(variables):
         if programs is None: programs = []
         if noinputs is None: noinputs = []
         return Step(name, parallel, inputs, outputs, programs, noinputs)
-    w = collections.namedtuple("w", "name parallel workflow internal")
+    def w(name, parallel, workflow, internal, noinputs=None):
+        Workflow = collections.namedtuple("Workflow", "name parallel workflow internal noinputs")
+        if noinputs is None: noinputs = []
+        return Workflow(name, parallel, workflow, internal, noinputs)
     align = [s("prep_align_inputs", "single-split",
                [["files"]],
                [_cwl_file_world(["files"], ".gbi"),
                 _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
              s("process_alignment", "single-parallel",
-               [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
+               [["files"], ["reference", "fasta", "base"],
                 ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"]),
                 _cwl_file_world(["align_bam"]),
@@ -52,18 +57,22 @@ def variant(variables):
                 _cwl_file_world(["hla", "fastq"], allow_missing=True)],
                ["biobambam"],
                noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
+    vc = [s("get_parallel_regions", "batch-split",
+            [["batch_rec"]],
+            [_cwl_nonfile_world(["region"])]),
+          s("variantcall_batch_region", "batch-parallel",
+            [["batch_rec"]],
+            [_cwl_file_world(["vrn_file_region"], ".tbi")])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             s("batch_for_variantcall", "multi-batch",
-               [["align_bam"]], "batch_rec"),
-             #w("variantcall", "multi-parallel", [], []),
              s("prep_samples", "multi-parallel",
-               [["config", "algorithm", "variant_regions"]],
+               [["config", "algorithm", "variant_regions"],
+                ["reference", "fasta", "base"]],
                [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
                 _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
              s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
+                ["reference", "fasta", "base"] ],
                [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
                 _cwl_file_world(["regions", "callable"]),
                 _cwl_file_world(["regions", "sample_callable"]),
@@ -76,25 +85,34 @@ def variant(variables):
                 _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]],
+                ["reference", "fasta", "base"]],
                [_cwl_file_world(["config", "algorithm", "callable_regions"]),
                 _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
                 _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
+             s("batch_for_variantcall", "multi-batch",
+               [["align_bam"], ["config", "algorithm", "callable_regions"],
+                ["config", "algorithm", "variant_regions"],
+                ["reference", "fasta", "base"],
+                ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
+               "batch_rec",
+               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
+             w("variantcall", "multi-parallel", vc,
+               [["region"], ["vrn_file_region"]],
+               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
              s("pipeline_summary", "multi-parallel",
-               [["align_bam"],
-                ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]],
+               [["align_bam"], ["reference", "fasta", "base"]],
                [_cwl_file_world(["summary", "qc"])],
                ["samtools", "bamtools"]),
              s("coverage_report", "multi-parallel",
                [["align_bam"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
+                ["reference", "fasta", "base"],
                 ["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
                [_cwl_file_world(["coverage", "all"], allow_missing=True),
                 _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
              s("qc_report_summary", "multi-combined",
                [["align_bam"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
+                ["reference", "fasta", "base"],
                 ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
                [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
@@ -105,10 +123,11 @@ def variant(variables):
             wf_outputs = []
             wf_steps = []
             for i, wf_step in enumerate(step.workflow):
-                inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids)
+                inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids, step)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
                 parallel_ids = _find_split_vs(outputs, wf_step.parallel)
-                wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs, wf_step.programs))
+                wf_steps.append(("step", wf_step.name, wf_step.parallel, [_clean_record(x) for x in inputs],
+                                 outputs, wf_step.programs))
                 wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
                                              nested_inputs)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
@@ -168,8 +187,12 @@ def _merge_wf_outputs(new, cur, parallel):
         outv["source"] = v["id"]
         outv["id"] = "#%s" % get_base_id(v["id"])
         outv["type"] = v["type"]
+        if "secondaryFiles" in v:
+            outv["secondaryFiles"] = v["secondaryFiles"]
+        if tz.get_in(["outputBinding", "secondaryFiles"], v):
+            outv["secondaryFiles"] = tz.get_in(["outputBinding", "secondaryFiles"], v)
         new_ids.add(outv["id"])
-        if parallel == "single-split":
+        if parallel in ["single-split", "batch-split"]:
             outv = _flatten_nested_input(outv)
         out.append(outv)
     for outv in cur:
@@ -198,21 +221,27 @@ def _find_split_vs(out_vs, parallel):
     """Find variables created by splitting samples.
     """
     # split parallel job
-    if parallel == "single-parallel":
+    if parallel in ["single-parallel", "batch-parallel"]:
         return [v["id"] for v in out_vs]
     else:
         return []
 
-def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
+def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     """Retrieve inputs for a step from existing variables.
 
     Potentially nests inputs to deal with merging split variables. If
     we split previously and are merging now, then we only nest those
     combing from the split process.
     """
+    inputs = [_get_variable(x, file_vs) for x in step.inputs]
+    is_record_input = len(inputs) == 1 and tz.get_in(["type", "type"], inputs[0]) == "record"
     skip_inputs = set([_get_string_vid(x) for x in step.noinputs])
-    inputs = [_get_variable(x, file_vs) for x in step.inputs] + \
-             [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
+    if wf:
+        skip_inputs = skip_inputs | set([_get_string_vid(x) for x in wf.noinputs])
+    if is_record_input:
+        inputs = _unpack_record(inputs[0], skip_inputs)
+        skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in inputs])
+    inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
     if step.parallel in ["single-merge"]:
         if parallel_ids:
@@ -223,19 +252,36 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
         assert len(parallel_ids) == 0
         nested_inputs = [x["id"] for x in inputs]
         inputs = [_nest_variable(x) for x in inputs]
-
     return inputs, parallel_ids, nested_inputs
+
+def _unpack_record(rec, noinputs):
+    """Unpack a record object, extracting individual elements.
+    """
+    out = []
+    for field in rec["type"]["fields"]:
+        if field["name"] not in noinputs:
+            out.append({"id": "#%s" % field["name"], "type": field["type"],
+                        "source": rec["id"], "valueFrom": "$(self.%s)" % field["name"]})
+    return out
+
+def _clean_record(var):
+    """Remove record source information from an input variant.
+    """
+    out = copy.deepcopy(var)
+    for attr in ["source", "valueFrom"]:
+        out.pop(attr, None)
+    return out
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     if step.parallel in ["multi-batch"]:
-        file_output = []
-        std_output = [_create_record(outputs, step.inputs, file_vs, std_vs)]
+        file_output = [_create_record(outputs, step.inputs, step.noinputs, file_vs, std_vs)]
+        std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
-        file_output = [_clean_output_extras(x) for x in file_output]
-        std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
-        file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-    if step.parallel in ["single-split", "multi-combined", "multi-batch"]:
+        #file_output = [_clean_output_extras(x) for x in file_output]
+    std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
+    file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
+    if step.parallel in ["single-split", "batch-split", "multi-combined", "multi-batch"]:
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs
@@ -252,14 +298,14 @@ def _cwl_nonfile_world(key, outtype="string", allow_missing=False):
 def _cwl_file_world(key, extension="", allow_missing=False):
     """Retrieve a file, or array of files, from a key in the bcbio world object.
     """
-    secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': dir + val + '%s'}]" % extension) if extension else ""
+    secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': val + '%s'}]" % extension) if extension else ""
     converter = ["if (val === null || val === undefined)",
                  "  return null;",
                  "else if (typeof val === 'string' || val instanceof String)",
-                 "  return {'path': dir + val, 'class': 'File'%s};" % secondary_str,
+                 "  return {'path': val, 'class': 'File'%s};" % secondary_str,
                  "else if (val.length != null && val.length > 0) {",
                  "  var vals = val;",
-                 "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});}" % secondary_str,
+                 "  return vals.map(function(val){return {'path': val, 'class': 'File'%s};});}" % secondary_str,
                  "else",
                  "  return null;"]
     return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File", extension)
@@ -267,9 +313,8 @@ def _cwl_file_world(key, extension="", allow_missing=False):
 def _cwl_get_from_world(key, convert_val, valtype, extension=""):
     """Generic function to retrieve specific results from a bcbio world object.
 
-    The generic javascript provides `dir`, the directory containing the output files
-    potentially remapped externally for Docker containers and `val` -- the value of
-    the `key` attribute from the bcbio world object.
+    For global variables we provide `val` -- the value of the `key` attribute
+    from the bcbio world object.
 
     Will handle both single sample world outputs (a dictionary) as well as multiple world
     objects (when samples get batched together). It determines which case based on
@@ -278,7 +323,6 @@ def _cwl_get_from_world(key, convert_val, valtype, extension=""):
     keygetter = "".join(["['%s']" % k for k in key])
     getter = ["${",
               " function world_to_val(world) {",
-              "   var dir = self[0].path.replace(/\/[^\/]*$/,'') + '/';",
               "   var val = world%s;" % keygetter] + \
               ["   %s" % v for v in convert_val] + \
               [" }",
@@ -323,6 +367,8 @@ def _nest_variable(v):
     """
     v = copy.deepcopy(v)
     v["type"] = {"type": "array", "items": v["type"]}
+    if "secondaryFiles" in v:
+        v["type"]["secondaryFiles"] = v.pop("secondaryFiles")
     return v
 
 def _clean_output(v):
@@ -369,19 +415,22 @@ def _get_upload_output(vid, variables):
     v.pop("secondaryFiles", None)
     return _clean_output_extras(v)
 
-def _create_record(name, inputs, file_vs, std_vs):
+def _create_record(name, inputs, noinputs, file_vs, std_vs):
     """Create an input record created from rearranging inputs.
 
     Batching processes create records that reformat the inputs for
     parallelization.
     """
+    skip_inputs = set([_get_string_vid(x) for x in noinputs])
     fields = []
     input_vids = set([_get_string_vid(v) for v in inputs])
     for orig_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
-        cur_v = {}
-        cur_v["name"] = get_base_id(orig_v["id"])
-        cur_v["type"] = orig_v["type"]
-        fields.append(_nest_variable(cur_v))
+        if get_base_id(orig_v["id"]) not in skip_inputs:
+            cur_v = {}
+            cur_v["name"] = get_base_id(orig_v["id"])
+            cur_v["type"] = orig_v["type"]
+            fields.append(_nest_variable(cur_v))
+
     return {"id": "#%s" % name,
             "type": {"name": name,
                      "type": "record",

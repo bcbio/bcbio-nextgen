@@ -1,4 +1,8 @@
-## 0.9.6 (in progress)
+## 0.9.7 (in progress)
+
+- Lazy import of matplotlib libraries on usage to avoid slow startup times.
+
+## 0.9.6 (12 February 2016)
 
 - Installation uses conda packages from bioconda for Python dependencies and
   third party tools.
@@ -12,6 +16,7 @@
 - Avoid extacting individual sample calls from pooled variant call runs for
   samples with more than 5 individuals in a batch. Avoids slow extraction run
   times. Thanks to Neill Gibson.
+- Add explicit check for BED file mismatches with reference genome.
 - During validation, report truth counts relative to initial truth set
   representation and pick best metric for plotting ROC scores.
 - Remove `--sudo` flag from installer. bcbio requires install into a directory
@@ -27,6 +32,8 @@
   custom installed java directory of jars.
 - Add library type option to Cufflinks assembly. Thanks to Konstantin (@dezzan).
 - Tag variants decomposed with vcfallelicprimitives. Thanks to Neill Gibson.
+- Fix Platypus problem where we weren't correctly specifying BED regions since
+  latest update skips over files not ending with".txt" or ".bed".
 
 ## 0.9.5 (12 December 2015)
 

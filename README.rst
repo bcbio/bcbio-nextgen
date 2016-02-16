@@ -106,6 +106,7 @@ Contributors
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Karl Gutwin <https://twitter.com/kgutwin>`_, Biogen
 - `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
+- `Oliver Hofmann <https://github.com/ohofmann>`_, Wolfson Wohl Cancer Research Center
 - `John Kern <https://github.com/kern3020>`_
 - `Rory Kirchner`_, Harvard Chan Bioinformatics Core
 - `Jakub Nowacki`_, AstraZeneca

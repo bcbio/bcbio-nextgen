@@ -9,21 +9,14 @@ import os
 import numpy as np
 import pandas as pd
 
-try:
-    import matplotlib as mpl
-    mpl.use('Agg', force=True)
-    import matplotlib.pyplot as plt
-    from matplotlib.ticker import FuncFormatter
-except ImportError:
-    mpl, plt = None, None
-try:
-    import seaborn as sns
-except ImportError:
-    sns = None
-
 from bcbio.log import logger
 from bcbio import utils
 from bcbio.variation import bamprep
+
+mpl = utils.LazyImport("matplotlib")
+plt = utils.LazyImport("matplotlib.pyplot")
+mpl_ticker = utils.LazyImport("matplotlib.ticker")
+sns = utils.LazyImport("seaborn")
 
 def classifyplot_from_plotfiles(plot_files, out_csv, outtype="png", title=None, size=None):
     """Create a plot from individual summary csv files with classification metrics.
@@ -46,6 +39,7 @@ def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None,
     false negative rate and false discovery rate.
     https://en.wikipedia.org/wiki/Sensitivity_and_specificity
     """
+    mpl.use('Agg', force=True)
     df = pd.read_csv(val_file)
     grouped = df.groupby(["sample", "caller", "vtype"])
     df = grouped.apply(_calculate_fnr_fdr)
@@ -118,7 +112,7 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None):
                 if gi == len(groups) - 1:
                     cur_plot.tick_params(axis='x', which='major', labelsize=8)
                     cur_plot.get_xaxis().set_major_formatter(
-                        FuncFormatter(lambda v, p: "%s%%" % (int(v) if round(v) == v else v)))
+                        mpl_ticker.FuncFormatter(lambda v, p: "%s%%" % (int(v) if round(v) == v else v)))
                     if vi == len(vtypes) - 1:
                         cur_plot.get_xaxis().set_label_text(metric_labels[metric], size=12)
                 else:
@@ -146,6 +140,7 @@ def create(plot_data, header, ploti, sample_config, out_file_base, outtype="png"
         not_found = ", ".join([x for x in ['mpl', 'plt', 'sns'] if eval(x) is None])
         logger.info("No validation plot. Missing imports: %s" % not_found)
         return None
+    mpl.use('Agg', force=True)
 
     if header:
         df = pd.DataFrame(plot_data, columns=header)

@@ -242,7 +242,8 @@ def split_variants_by_sample(data):
     if "group_orig" not in data:
         return [[data]]
     # cancer tumor/normal
-    elif vcfutils.get_paired_phenotype(data):
+    elif (vcfutils.get_paired_phenotype(data)
+            and "tumor" in [vcfutils.get_paired_phenotype(d) for d in get_orig_items(data)]):
         out = []
         for i, sub_data in enumerate(get_orig_items(data)):
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":

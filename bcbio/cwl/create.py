@@ -27,6 +27,12 @@ def from_world(world, run_info_file):
 def _cwl_workflow_template(inputs):
     """Retrieve CWL inputs shared amongst different workflows.
     """
+    ready_inputs = []
+    for inp in inputs:
+        cur_inp = copy.deepcopy(inp)
+        for attr in ["source", "valueFrom"]:
+            cur_inp.pop(attr, None)
+        ready_inputs.append(cur_inp)
     return {"class": "Workflow",
             "hints": [{"class": "DockerRequirement",
                        "dockerPull": "bcbio/bcbio",
@@ -34,9 +40,10 @@ def _cwl_workflow_template(inputs):
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
                              {"class": "ScatterFeatureRequirement"},
+                             {"class": "StepInputExpressionRequirement"},
                              {"class": "SubworkflowFeatureRequirement"},
                              {"class": "InlineJavascriptRequirement"}],
-            "inputs": inputs,
+            "inputs": ready_inputs,
             "outputs": [],
             "steps": []}
 
@@ -60,6 +67,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
         inp_tool["id"] = "#%s" % base_id
+        for attr in ["source", "valueFrom"]:
+            inp_tool.pop(attr, None)
         inp_binding = {"prefix": "%s=" % base_id, "separate": False,
                        "itemSeparator": ";;", "position": i}
         inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
@@ -85,7 +94,8 @@ def _place_input_binding(inp_tool, inp_binding, parallel):
     with the itemSeparator, but also support having multiple samples where we pass
     things independently.
     """
-    if parallel in ["multi-combined", "multi-batch"] and tz.get_in(["type", "type"], inp_tool) == "array":
+    if (parallel in ["multi-combined", "multi-batch", "batch-split", "batch-parallel"] and
+          tz.get_in(["type", "type"], inp_tool) == "array"):
         inp_tool["type"]["inputBinding"] = inp_binding
     else:
         inp_tool["inputBinding"] = inp_binding
@@ -120,6 +130,9 @@ def _step_template(name, run_file, inputs, outputs, parallel):
     sinputs = []
     for inp in inputs:
         step_inp = {"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
+        for attr in ["source", "valueFrom"]:
+            if attr in inp:
+                step_inp[attr] = inp[attr]
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
         if parallel == "multi-parallel" or len(inp["id"].split(".")) > 1:
@@ -128,7 +141,7 @@ def _step_template(name, run_file, inputs, outputs, parallel):
            "id": "#%s" % name,
            "inputs": sinputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
-    if parallel in ["single-parallel", "multi-parallel"]:
+    if parallel in ["single-parallel", "multi-parallel", "batch-parallel"]:
         out.update({"scatterMethod": "dotproduct",
                     "scatter": scatter_inputs})
     return out
@@ -255,6 +268,11 @@ def _item_to_cwldata(x):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".bai"}]
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".tbi"}]
+            elif x.endswith(".fa"):
+                secondary = [x + ".fai", os.path.splitext(x)[0] + ".dict"]
+                secondary = [x for x in secondary if os.path.exists(x)]
+                if secondary:
+                    out["secondaryFiles"] = [{"class": "File", "path": x} for x in secondary]
         return out
     else:
         return x

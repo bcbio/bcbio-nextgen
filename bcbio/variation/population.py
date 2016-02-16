@@ -125,7 +125,6 @@ def create_ped_file(samples, base_vcf):
     Checks for a specified `ped` file in metadata, and will use sample information from this file
     before reconstituting from metadata information.
     """
-    gender = {"male": 1, "female": 2, "unknown": 0}.get(get_gender(paired.tumor_data))
     out_file = "%s.ped" % utils.splitext_plus(base_vcf)[0]
     sample_ped_lines = {}
     header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID", "Sex", "Phenotype", "Ethnicity"]
@@ -145,6 +144,7 @@ def create_ped_file(samples, base_vcf):
                 writer.writerow(header)
                 batch = _find_shared_batch(samples)
                 for data in samples:
+                    gender = {"male": 1, "female": 2, "unknown": 0}.get(get_gender(data))
                     sname = dd.get_sample_name(data)
                     if sname in sample_ped_lines:
                         writer.writerow(sample_ped_lines[sname])
