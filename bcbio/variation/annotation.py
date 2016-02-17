@@ -33,12 +33,12 @@ def add_dbsnp(orig_file, dbsnp_file, config):
     """Annotate a VCF file with dbSNP.
     """
     orig_file = vcfutils.bgzip_and_index(orig_file, config)
-    out_file = "%s-wdbsnp%s" % utils.splitext_plus(orig_file)
+    out_file = "%s-wdbsnp.vcf.gz" % utils.splitext_plus(orig_file)[0]
     if not utils.file_uptodate(out_file, orig_file):
         with file_transaction(config, out_file) as tx_out_file:
             cmd = "bcftools annotate -c ID -a {dbsnp_file} -o {tx_out_file} -O z {orig_file}"
             do.run(cmd.format(**locals()), "Annotate with dbSNP")
-    return out_file
+    return vcfutils.bgzip_and_index(out_file, config)
 
 def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
     """Annotate a VCF file with dbSNP and standard GATK called annotations.

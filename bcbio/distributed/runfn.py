@@ -53,9 +53,10 @@ def process(args):
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
 def _add_resources(data, runtime):
-    data["config"]["resources"] = {"default": {"cores": runtime["cores"],
-                                                "memory": "%sM" % int(float(runtime["ram"]) / runtime["cores"])}}
-    data["config"]["algorithm"]["num_cores"] = runtime["cores"]
+    if "config" in data:
+        data["config"]["resources"] = {"default": {"cores": runtime["cores"],
+                                                    "memory": "%sM" % int(float(runtime["ram"]) / runtime["cores"])}}
+        data["config"]["algorithm"]["num_cores"] = runtime["cores"]
     return data
 
 def _world_from_cwl(fnargs, work_dir):
@@ -105,7 +106,7 @@ def _world_from_cwl(fnargs, work_dir):
         data = run_info.normalize_world(data)
         out.append(data)
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
-                    "batch-split", "batch-parallel"]:
+                    "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
