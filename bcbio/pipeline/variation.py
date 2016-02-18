@@ -53,7 +53,7 @@ def _symlink_to_workdir(data, key):
     """For CWL support, symlink files into a working directory if in read-only imports.
     """
     orig_file = tz.get_in(key, data)
-    if not orig_file.startswith(dd.get_work_dir(data)):
+    if orig_file and not orig_file.startswith(dd.get_work_dir(data)):
         variantcaller = genotype.get_variantcaller(data)
         out_file = os.path.join(dd.get_work_dir(data), variantcaller, os.path.basename(orig_file))
         utils.safe_makedir(os.path.dirname(out_file))
