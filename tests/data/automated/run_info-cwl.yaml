@@ -14,6 +14,7 @@ details:
       variantcaller: [freebayes, vardict]
       svcaller: [lumpy]
       tools_off: [gemini]
+      effects: false
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
@@ -31,6 +32,8 @@ details:
       recalibrate: false
       realign: false
       variantcaller: [freebayes, vardict]
+      tools_off: [gemini]
+      effects: false
       nomap_split_size: 50
       nomap_split_targets: 100
       variant_regions: ../data/automated/variant_regions-bam.bed

@@ -67,11 +67,10 @@ def variant(variables):
           s("concat_batch_variantcalls", "batch-merge",
             [["batch_rec"], ["vrn_file_region"]],
             [_cwl_file_world(["vrn_file"], ".tbi")]),
-          #s("postprocess_variants", "batch-single",
-          #  [["batch_rec"], ["vrn_file"]],
-          #  [_cwl_file_world(["vrn_file"], ".tbi")],
-          #  noinputs=[["region"]])
-          ]
+          s("postprocess_variants", "batch-single",
+            [["batch_rec"], ["vrn_file"]],
+            [_cwl_file_world(["vrn_file"], ".tbi")],
+            noinputs=[["region"]])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples", "multi-parallel",
