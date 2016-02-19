@@ -71,8 +71,8 @@ def _get_multiplier(samples):
     """Get multiplier to get jobs
        only for samples that have input
     """
-    to_process = 1
+    to_process = 1.0
     for sample in samples:
         if dd.get_phenotype(sample[0]) == "chip":
-            to_process += 1
+            to_process += 1.0
     return to_process / len(samples)
