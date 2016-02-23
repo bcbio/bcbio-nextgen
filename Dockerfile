@@ -34,7 +34,7 @@ RUN apt-get update && \
       --isolate --nodata -u development && \
     git config --global url.https://github.com/.insteadOf git://github.com/ && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate --tooldir=/usr/local --tools && \
-    /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools --toolplus data  && \
+    /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools && \
 
 # setup paths
     echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile.d/bcbio.sh && \

@@ -494,7 +494,7 @@ Variant calling
 - ``effects`` Method used to calculate expected variant effects. Defaults to
   `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
   with support for `dbNSFP`_ annotation, when downloaded using
-  :ref:`toolplus-install`. [snpeff, vep, false]
+  :ref:`datatarget-install`. [snpeff, vep, false]
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 -  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
